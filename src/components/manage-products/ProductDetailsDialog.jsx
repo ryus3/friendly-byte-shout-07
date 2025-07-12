@@ -28,7 +28,7 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
 
   if (!product) return null;
 
-  const mainImage = selectedVariant?.image || product.images?.[0] || product.image || "https://via.placeholder.com/150";
+  const mainImage = selectedVariant?.image || product.images?.[0] || product.image || "/api/placeholder/150/150";
   const totalStock = product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
 
   const handleVariantSelect = (variant) => {

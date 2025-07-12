@@ -125,7 +125,7 @@ const CreateOrderPage = () => {
   const handleAddToCart = (product, variant, quantity) => {
      const cartItem = {
       id: `${product.id}-${variant.sku}`, productId: product.id, sku: variant.sku, productName: product.name,
-      image: variant.image || product.images?.[0] || "https://via.placeholder.com/150",
+      image: variant.image || product.images?.[0] || "/api/placeholder/150/150",
       color: variant.color, size: variant.size, quantity, price: variant.price || product.price,
       costPrice: variant.costPrice, stock: variant.quantity, total: (variant.price || product.price) * quantity
     };

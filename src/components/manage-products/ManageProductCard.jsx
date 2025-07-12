@@ -37,7 +37,7 @@ import React, { useMemo } from 'react';
           </div>
           <div className="aspect-square w-full overflow-hidden relative" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
             <img
-              src={product.image || product.images?.[0] || "https://via.placeholder.com/300"}
+              src={product.image || product.images?.[0] || "/api/placeholder/300/300"}
               alt={product.name}
               className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             />

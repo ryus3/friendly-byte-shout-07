@@ -47,7 +47,7 @@ const ProductCard = React.memo(({ product, onSelect }) => {
       <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden relative">
         {inView ? (
           <img
-            src={product.images?.[0] || "https://via.placeholder.com/300"}
+            src={product.images?.[0] || "/api/placeholder/300/300"}
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             loading="lazy"

@@ -75,7 +75,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     }}
                     className="flex items-center gap-3 cursor-pointer"
                   >
-                    <img src={product.image || "https://via.placeholder.com/40"} alt={product.name} className="w-8 h-8 rounded-md object-cover" />
+                    <img src={product.image || "/api/placeholder/40/40"} alt={product.name} className="w-8 h-8 rounded-md object-cover" />
                     <div className="flex-1">
                       <p className="font-medium">{product.name}</p>
                       <p className="text-xs text-muted-foreground">{product.brand}</p>

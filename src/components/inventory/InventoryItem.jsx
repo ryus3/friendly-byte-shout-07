@@ -32,7 +32,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
       className="grid grid-cols-12 items-center gap-4 p-3 bg-card/50 rounded-lg border border-border/60 hover:bg-accent/50 transition-colors"
     >
       <div className="col-span-4 md:col-span-3 flex items-center gap-3">
-        <img src={variant.image || product.images?.[0] || 'https://via.placeholder.com/150'} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
+        <img src={variant.image || product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
         <div>
           <p className="font-semibold text-foreground text-sm">{variant.size}</p>
           <p className="text-xs text-muted-foreground">{variant.color}</p>

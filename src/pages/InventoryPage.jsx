@@ -60,7 +60,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                 onCheckedChange={(checked) => onSelectionChange(product.id, checked)}
                 onClick={(e) => e.stopPropagation()}
               />
-              <img src={product.images?.[0] || 'https://via.placeholder.com/150'} alt={product.name} className="w-12 h-12 rounded-md object-cover" />
+              <img src={product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-12 h-12 rounded-md object-cover" />
               <div className="flex-1 text-right">
                 <p className="font-semibold text-foreground">{product.name}</p>
                 <p className="text-sm text-muted-foreground">{product.variants?.length || 0} متغيرات</p>

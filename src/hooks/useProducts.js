@@ -355,7 +355,7 @@ export const useProducts = (initialProducts, settings) => {
                         ...variant,
                         productName: product.name,
                         productId: product.id,
-                        productImage: product.images?.[0] || 'https://via.placeholder.com/150',
+                        productImage: product.images?.[0] || '/api/placeholder/150/150',
                         lowStockThreshold: lowStockThreshold,
                     });
                 }

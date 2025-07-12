@@ -44,7 +44,7 @@ const EditStockDialog = ({ item, open, onOpenChange }) => {
         <div className="space-y-6">
           <div className="text-center">
             <img 
-              src={variant.image || product.image || "https://via.placeholder.com/150"}
+              src={variant.image || product.image || "/api/placeholder/150/150"}
               alt={product.name}
               className="w-20 h-20 object-cover rounded-lg mx-auto mb-4"
              />
