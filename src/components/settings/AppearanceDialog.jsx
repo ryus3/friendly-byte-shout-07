@@ -51,6 +51,10 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     return parseInt(radius) || 8;
   });
 
+  const [notificationVolume, setNotificationVolume] = useState(() => {
+    return parseFloat(localStorage.getItem('notificationVolume')) || 0.7;
+  });
+
   const colorSchemes = [
     { 
       id: 'blue', 
@@ -59,6 +63,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '59 130 246',
       secondary: '210 40% 98%',
       accent: '221 83% 53%',
+      gradient: 'linear-gradient(135deg, hsl(221, 83%, 53%), hsl(221, 83%, 63%))',
       description: 'النمط الافتراضي المناسب للأعمال' 
     },
     { 
@@ -68,6 +73,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '34 197 94',
       secondary: '138 76% 97%',
       accent: '142 86% 28%',
+      gradient: 'linear-gradient(135deg, hsl(142, 76%, 36%), hsl(142, 76%, 46%))',
       description: 'مريح للعين ومناسب للاستخدام المطول' 
     },
     { 
@@ -77,6 +83,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '147 51 234',
       secondary: '270 100% 98%',
       accent: '262 90% 50%',
+      gradient: 'linear-gradient(135deg, hsl(262, 83%, 58%), hsl(262, 83%, 68%))',
       description: 'جذاب وحديث للواجهات الإبداعية' 
     },
     { 
@@ -86,6 +93,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '249 115 22',
       secondary: '25 100% 97%',
       accent: '25 95% 47%',
+      gradient: 'linear-gradient(135deg, hsl(25, 95%, 53%), hsl(25, 95%, 63%))',
       description: 'نشيط ومحفز للإنتاجية' 
     },
     { 
@@ -95,6 +103,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '244 63 94',
       secondary: '330 100% 98%',
       accent: '330 81% 50%',
+      gradient: 'linear-gradient(135deg, hsl(330, 81%, 60%), hsl(330, 81%, 70%))',
       description: 'دافئ وودود للتطبيقات الاجتماعية' 
     },
     { 
@@ -104,6 +113,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '20 184 166',
       secondary: '173 100% 97%',
       accent: '173 80% 30%',
+      gradient: 'linear-gradient(135deg, hsl(173, 80%, 40%), hsl(173, 80%, 50%))',
       description: 'هادئ ومتوازن للتركيز' 
     },
     { 
@@ -113,6 +123,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '99 102 241',
       secondary: '239 100% 98%',
       accent: '239 84% 60%',
+      gradient: 'linear-gradient(135deg, hsl(239, 84%, 67%), hsl(239, 84%, 77%))',
       description: 'أنيق وملكي للتطبيقات الراقية' 
     },
     { 
@@ -122,11 +133,52 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       primaryRgb: '71 85 105',
       secondary: '210 40% 98%',
       accent: '215 25% 21%',
+      gradient: 'linear-gradient(135deg, hsl(215, 25%, 27%), hsl(215, 25%, 37%))',
       description: 'كلاسيكي ومتوازن' 
+    },
+    { 
+      id: 'sunset', 
+      name: 'غروب ذهبي', 
+      primary: '45 93% 47%',
+      primaryRgb: '251 191 36',
+      secondary: '45 100% 97%',
+      accent: '45 93% 37%',
+      gradient: 'linear-gradient(135deg, hsl(45, 93%, 47%), hsl(25, 93%, 57%))',
+      description: 'دافئ ومشرق مثل غروب الشمس' 
+    },
+    { 
+      id: 'ocean', 
+      name: 'محيط عميق', 
+      primary: '200 100% 40%',
+      primaryRgb: '0 160 230',
+      secondary: '200 100% 97%',
+      accent: '200 100% 30%',
+      gradient: 'linear-gradient(135deg, hsl(200, 100%, 40%), hsl(180, 100%, 50%))',
+      description: 'هادئ وعميق مثل المحيط' 
+    },
+    { 
+      id: 'forest', 
+      name: 'غابة خضراء', 
+      primary: '120 60% 25%',
+      primaryRgb: '25 102 25',
+      secondary: '120 60% 97%',
+      accent: '120 60% 15%',
+      gradient: 'linear-gradient(135deg, hsl(120, 60%, 25%), hsl(140, 60%, 35%))',
+      description: 'طبيعي ومنعش مثل الغابة' 
+    },
+    { 
+      id: 'royal', 
+      name: 'ملكي أرجواني', 
+      primary: '280 100% 35%',
+      primaryRgb: '102 0 204',
+      secondary: '280 100% 97%',
+      accent: '280 100% 25%',
+      gradient: 'linear-gradient(135deg, hsl(280, 100%, 35%), hsl(300, 100%, 45%))',
+      description: 'فخم وملكي بتدرج أرجواني' 
     }
   ];
 
-  const applyColorScheme = (scheme) => {
+  const applyColorScheme = (scheme, preview = false) => {
     const root = document.documentElement;
     
     // Apply HSL values for CSS variables
@@ -139,15 +191,19 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     
     // Apply RGB values for gradient compatibility
     root.style.setProperty('--primary-rgb', scheme.primaryRgb);
+    root.style.setProperty('--gradient-primary', scheme.gradient);
     
-    // Save to localStorage
-    localStorage.setItem('colorScheme', scheme.id);
-    localStorage.setItem('colorSchemeData', JSON.stringify(scheme));
+    // Save to localStorage only if not preview
+    if (!preview) {
+      localStorage.setItem('colorScheme', scheme.id);
+      localStorage.setItem('colorSchemeData', JSON.stringify(scheme));
+    }
   };
 
   const handleSchemeChange = (scheme) => {
     setCurrentScheme(scheme.id);
-    // لا نطبق فوراً - فقط نحدث حالة العرض
+    // معاينة مباشرة للألوان
+    applyColorScheme(scheme, true);
   };
 
   const handleFontSizeChange = (value) => {
@@ -170,29 +226,47 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     setSoundEnabled(enabled);
     
     if (enabled) {
-      // تشغيل صوت حقيقي للاختبار
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.3);
-      } catch (error) {
-        console.log('تعذر تشغيل الصوت:', error);
-      }
+      playNotificationSound();
     }
-    
-    // لا نحفظ فوراً - فقط نحدث حالة العرض
+  };
+
+  const handleVolumeChange = (value) => {
+    const newVolume = value[0];
+    setNotificationVolume(newVolume);
+    // تشغيل صوت للاختبار بالمستوى الجديد
+    playNotificationSound(newVolume);
+  };
+
+  const playNotificationSound = (volume = notificationVolume) => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator1 = audioContext.createOscillator();
+      const oscillator2 = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      // صوت أنيق مثل iPhone
+      oscillator1.connect(gainNode);
+      oscillator2.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // نغمات متناغمة
+      oscillator1.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
+      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime + 0.15); // C5
+      
+      oscillator2.frequency.setValueAtTime(523.25, audioContext.currentTime + 0.1); // C5
+      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.25); // E5
+      
+      gainNode.gain.setValueAtTime(volume * 0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+      
+      oscillator1.start(audioContext.currentTime);
+      oscillator1.stop(audioContext.currentTime + 0.2);
+      
+      oscillator2.start(audioContext.currentTime + 0.1);
+      oscillator2.stop(audioContext.currentTime + 0.35);
+    } catch (error) {
+      console.log('تعذر تشغيل الصوت:', error);
+    }
   };
 
   const handleLayoutDensityChange = (density) => {
@@ -217,6 +291,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     setCurrentScheme('blue');
     setLayoutDensity('comfortable');
     setBorderRadius(8);
+    setNotificationVolume(0.7);
     
     // Apply defaults to DOM
     document.documentElement.style.fontSize = '16px';
@@ -238,6 +313,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     localStorage.removeItem('borderRadius');
     localStorage.removeItem('colorScheme');
     localStorage.removeItem('colorSchemeData');
+    localStorage.removeItem('notificationVolume');
     
     toast({
       title: "تم إعادة التعيين",
@@ -245,69 +321,6 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     });
   };
 
-  const exportSettings = () => {
-    const settings = {
-      theme,
-      fontSize,
-      animationsEnabled,
-      highContrast,
-      soundEnabled,
-      reducedMotion,
-      currentScheme,
-      layoutDensity,
-      borderRadius,
-      colorSchemeData: localStorage.getItem('colorSchemeData')
-    };
-    
-    const dataStr = JSON.stringify(settings, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `ryus-appearance-settings-${new Date().toISOString().split('T')[0]}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
-    
-    toast({
-      title: "تم تصدير الإعدادات",
-      description: "تم حفظ إعدادات المظهر في ملف JSON"
-    });
-  };
-
-  const importSettings = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const settings = JSON.parse(e.target.result);
-        
-        // Apply imported settings
-        if (settings.theme) setTheme(settings.theme);
-        if (settings.fontSize) setFontSize(settings.fontSize);
-        if (typeof settings.animationsEnabled === 'boolean') setAnimationsEnabled(settings.animationsEnabled);
-        if (typeof settings.highContrast === 'boolean') setHighContrast(settings.highContrast);
-        if (typeof settings.soundEnabled === 'boolean') setSoundEnabled(settings.soundEnabled);
-        if (settings.layoutDensity) setLayoutDensity(settings.layoutDensity);
-        if (settings.borderRadius) setBorderRadius(settings.borderRadius);
-        if (settings.currentScheme) setCurrentScheme(settings.currentScheme);
-        
-        toast({
-          title: "تم استيراد الإعدادات",
-          description: "تم تطبيق جميع الإعدادات المستوردة بنجاح"
-        });
-      } catch (error) {
-        toast({
-          title: "خطأ في الاستيراد",
-          description: "فشل في قراءة ملف الإعدادات",
-          variant: "destructive"
-        });
-      }
-    };
-    reader.readAsText(file);
-  };
 
   const applyAllSettings = () => {
     // تطبيق نمط الألوان
@@ -358,8 +371,9 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
     document.documentElement.style.setProperty('--radius', `${borderRadius}px`);
     localStorage.setItem('borderRadius', borderRadius.toString());
 
-    // حفظ إعداد الصوت
+    // حفظ إعداد الصوت ومستوى الصوت
     localStorage.setItem('soundEnabled', soundEnabled.toString());
+    localStorage.setItem('notificationVolume', notificationVolume.toString());
 
     // عرض رسالة نجاح
     toast({
@@ -589,14 +603,28 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
                     onCheckedChange={handleSoundToggle}
                   />
                 </div>
+
+                {soundEnabled && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">مستوى الصوت: {Math.round(notificationVolume * 100)}%</Label>
+                    <Slider
+                      value={[notificationVolume]}
+                      onValueChange={handleVolumeChange}
+                      max={1}
+                      min={0}
+                      step={0.1}
+                      className="w-full"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             <Separator />
 
-            {/* Preview & Export */}
+            {/* Preview */}
             <div className="space-y-4">
-              <Label className="text-base font-semibold">معاينة وتصدير</Label>
+              <Label className="text-base font-semibold">معاينة التصميم</Label>
               
               <div className="space-y-3">
                 <div className="p-3 bg-primary text-primary-foreground rounded-lg">
@@ -613,47 +641,16 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
                   <Badge variant="outline">تسمية فرعية</Badge>
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={exportSettings} className="flex-1">
-                  <Download className="w-4 h-4 ml-1" />
-                  تصدير
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => document.getElementById('import-settings').click()}>
-                  <Upload className="w-4 h-4 ml-1" />
-                  استيراد
-                </Button>
-                <input
-                  id="import-settings"
-                  type="file"
-                  accept=".json"
-                  style={{ display: 'none' }}
-                  onChange={importSettings}
-                />
-              </div>
             </div>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={exportSettings}>
-              <Download className="w-4 h-4 ml-1" />
-              تصدير
-            </Button>
-            <label>
-              <input type="file" accept=".json" onChange={importSettings} className="hidden" />
-              <Button variant="outline" as="span">
-                <Upload className="w-4 h-4 ml-1" />
-                استيراد
-              </Button>
-            </label>
-            <Button onClick={applyAllSettings} className="bg-primary hover:bg-primary/90">
-              <Check className="w-4 h-4 ml-1" />
-              حفظ وإغلاق
-            </Button>
-          </div>
+          <Button onClick={applyAllSettings} className="bg-primary hover:bg-primary/90">
+            <Check className="w-4 h-4 ml-1" />
+            حفظ وإغلاق
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
