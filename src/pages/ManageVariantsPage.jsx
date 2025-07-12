@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManager from '@/components/manage-variants/CategoriesManager';
@@ -12,7 +12,6 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useVariants } from '@/contexts/VariantsContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect, useState } from 'react';
 
 const ManageVariantsPage = () => {
   const navigate = useNavigate();
