@@ -54,6 +54,7 @@ const AddProductPage = () => {
   });
   const [selectedColors, setSelectedColors] = useState([]);
   const [sizeType, setSizeType] = useState('letter');
+  const [colorSizeTypes, setColorSizeTypes] = useState({});
   const [variants, setVariants] = useState([]);
   const [colorImages, setColorImages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +62,10 @@ const AddProductPage = () => {
   const [departments, setDepartments] = useState([]);
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
-  const allSizesForType = useMemo(() => sizes.filter(s => s.type === sizeType), [sizes, sizeType]);
+  const allSizesForType = useMemo(() => {
+    const typeToFilter = sizeType || 'letter';
+    return sizes.filter(s => s.type === typeToFilter);
+  }, [sizes, sizeType]);
 
   // جلب الأقسام
   useEffect(() => {
@@ -82,36 +86,46 @@ const AddProductPage = () => {
 
   useEffect(() => {
     const generateVariants = () => {
-      if (selectedColors.length === 0 || allSizesForType.length === 0) {
+      if (selectedColors.length === 0) {
         setVariants([]);
         return;
       }
   
       const newVariants = [];
       selectedColors.forEach(color => {
-        allSizesForType.forEach(size => {
-          const sku = `${settings?.sku_prefix || 'PROD'}-${color.name.slice(0,3)}-${size.value}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase().replace(/\s+/g, '-');
-          newVariants.push({
-            colorId: color.id,
-            sizeId: size.id,
-            color: color.name,
-            color_hex: color.hex_code,
-            size: size.value,
-            quantity: 0,
-            price: parseFloat(productInfo.price) || 0,
-            costPrice: parseFloat(productInfo.costPrice) || 0,
-            sku: sku,
-            barcode: sku,
-            hint: ''
-          });
+        // للألوان التي لها أنواع قياسات محددة
+        const colorSizes = colorSizeTypes[color.id] || [sizeType];
+        
+        colorSizes.forEach(sizeTypeForColor => {
+          const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+          
+          if (sizesForThisType.length > 0) {
+            sizesForThisType.forEach(size => {
+              const sku = `${settings?.sku_prefix || 'PROD'}-${color.name.slice(0,3)}-${size.name}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase().replace(/\s+/g, '-');
+              newVariants.push({
+                colorId: color.id,
+                sizeId: size.id,
+                color: color.name,
+                color_hex: color.hex_code,
+                size: size.name,
+                sizeType: sizeTypeForColor,
+                quantity: 0,
+                price: parseFloat(productInfo.price) || 0,
+                costPrice: parseFloat(productInfo.costPrice) || 0,
+                sku: sku,
+                barcode: sku,
+                hint: ''
+              });
+            });
+          }
         });
       });
       setVariants(newVariants);
     };
-    if (settings) {
+    if (settings && sizes.length > 0) {
         generateVariants();
     }
-  }, [selectedColors, allSizesForType, productInfo.price, productInfo.costPrice, settings]);
+  }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -266,6 +280,8 @@ const AddProductPage = () => {
                   setSelectedColors={setSelectedColors}
                   sizeType={sizeType}
                   setSizeType={setSizeType}
+                  colorSizeTypes={colorSizeTypes}
+                  setColorSizeTypes={setColorSizeTypes}
                 />
               </div>
               
@@ -322,7 +338,7 @@ const AddProductPage = () => {
                             key={color.id}
                             id={color.id}
                             color={color}
-                            allSizesForType={allSizesForType}
+                            allSizesForType={variants.filter(v => v.colorId === color.id)}
                             variants={variants}
                             setVariants={setVariants}
                             price={productInfo.price}
@@ -330,6 +346,7 @@ const AddProductPage = () => {
                             handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
                             handleImageRemove={() => handleColorImageRemove(color.id)}
                             initialImage={colorImages[color.id] || null}
+                            colorSizeTypes={colorSizeTypes[color.id] || [sizeType]}
                           />
                         ))}
                       </div>
