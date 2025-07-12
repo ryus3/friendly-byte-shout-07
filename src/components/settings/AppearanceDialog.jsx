@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -98,6 +98,24 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       description: 'دافئ وودود للتطبيقات الاجتماعية' 
     },
     { 
+      id: 'teal', 
+      name: 'تركوازي هادئ', 
+      primary: '173 80% 40%',
+      primaryRgb: '20 184 166',
+      secondary: '173 100% 97%',
+      accent: '173 80% 30%',
+      description: 'هادئ ومتوازن للتركيز' 
+    },
+    { 
+      id: 'indigo', 
+      name: 'نيلي ملكي', 
+      primary: '239 84% 67%',
+      primaryRgb: '99 102 241',
+      secondary: '239 100% 98%',
+      accent: '239 84% 60%',
+      description: 'أنيق وملكي للتطبيقات الراقية' 
+    },
+    { 
       id: 'slate', 
       name: 'رمادي أنيق', 
       primary: '215 25% 27%',
@@ -129,134 +147,63 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
 
   const handleSchemeChange = (scheme) => {
     setCurrentScheme(scheme.id);
-    applyColorScheme(scheme);
-    
-    toast({
-      title: "تم تطبيق النمط",
-      description: `تم تفعيل ${scheme.name} بنجاح`,
-      className: "bg-card border-primary/20"
-    });
+    // لا نطبق فوراً - فقط نحدث حالة العرض
   };
 
   const handleFontSizeChange = (value) => {
     const newSize = value[0];
     setFontSize(newSize);
-    
-    // Apply immediately to root element
-    document.documentElement.style.fontSize = `${newSize}px`;
-    
-    // Save to localStorage
-    localStorage.setItem('fontSize', newSize.toString());
-    
-    toast({
-      title: "تم تحديث حجم الخط",
-      description: `تم تعيين حجم الخط إلى ${newSize}px`
-    });
+    // لا نطبق فوراً - فقط نحدث حالة العرض
   };
 
   const handleAnimationToggle = (enabled) => {
     setAnimationsEnabled(enabled);
-    
-    if (enabled) {
-      document.documentElement.classList.remove('no-animations');
-      document.documentElement.style.setProperty('--animation-duration', '0.3s');
-    } else {
-      document.documentElement.classList.add('no-animations');
-      document.documentElement.style.setProperty('--animation-duration', '0s');
-    }
-    
-    // Save to localStorage
-    localStorage.setItem('animationsEnabled', enabled.toString());
-    
-    toast({
-      title: enabled ? "تم تفعيل التأثيرات" : "تم إيقاف التأثيرات",
-      description: enabled ? "التأثيرات المتحركة مفعلة" : "التأثيرات المتحركة معطلة"
-    });
+    // لا نطبق فوراً - فقط نحدث حالة العرض
   };
 
   const handleHighContrastToggle = (enabled) => {
     setHighContrast(enabled);
-    
-    if (enabled) {
-      document.documentElement.classList.add('high-contrast');
-      // Apply high contrast styles
-      document.documentElement.style.setProperty('--border', '240 3.7% 15.9%');
-      document.documentElement.style.setProperty('--input', '240 3.7% 15.9%');
-    } else {
-      document.documentElement.classList.remove('high-contrast');
-      // Restore normal contrast
-      document.documentElement.style.setProperty('--border', '214.3 31.8% 91.4%');
-      document.documentElement.style.setProperty('--input', '214.3 31.8% 91.4%');
-    }
-    
-    // Save to localStorage
-    localStorage.setItem('highContrast', enabled.toString());
-    
-    toast({
-      title: enabled ? "تم تفعيل التباين العالي" : "تم إيقاف التباين العالي",
-      description: enabled ? "تم تحسين التباين للرؤية الأفضل" : "تم إرجاع التباين للوضع العادي"
-    });
+    // لا نطبق فوراً - فقط نحدث حالة العرض
   };
 
   const handleSoundToggle = (enabled) => {
     setSoundEnabled(enabled);
-    localStorage.setItem('soundEnabled', enabled.toString());
     
     if (enabled) {
-      // Test sound
+      // تشغيل صوت حقيقي للاختبار
       try {
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUE');
-        audio.volume = 0.2;
-        audio.play().catch(() => {});
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
       } catch (error) {
-        console.log('تعذر تشغيل الصوت التجريبي');
+        console.log('تعذر تشغيل الصوت:', error);
       }
     }
     
-    toast({
-      title: enabled ? "تم تفعيل الأصوات" : "تم إيقاف الأصوات",
-      description: enabled ? "الأصوات التفاعلية مفعلة" : "الأصوات التفاعلية معطلة"
-    });
+    // لا نحفظ فوراً - فقط نحدث حالة العرض
   };
 
   const handleLayoutDensityChange = (density) => {
     setLayoutDensity(density);
-    document.documentElement.setAttribute('data-density', density);
-    
-    // Apply density-specific styles
-    const densityStyles = {
-      compact: { '--spacing-unit': '0.75rem', '--component-height': '2rem' },
-      comfortable: { '--spacing-unit': '1rem', '--component-height': '2.5rem' },
-      spacious: { '--spacing-unit': '1.5rem', '--component-height': '3rem' }
-    };
-    
-    Object.entries(densityStyles[density]).forEach(([key, value]) => {
-      document.documentElement.style.setProperty(key, value);
-    });
-    
-    // Save to localStorage
-    localStorage.setItem('layoutDensity', density);
-    
-    toast({
-      title: "تم تحديث كثافة التخطيط",
-      description: `تم تعيين التخطيط إلى ${density === 'compact' ? 'مضغوط' : density === 'comfortable' ? 'مريح' : 'متباعد'}`
-    });
+    // لا نطبق فوراً - فقط نحدث حالة العرض
   };
 
   const handleBorderRadiusChange = (value) => {
     const newRadius = value[0];
     setBorderRadius(newRadius);
-    
-    // Apply to CSS variables
-    document.documentElement.style.setProperty('--radius', `${newRadius}px`);
-    
-    // Save to localStorage
-    localStorage.setItem('borderRadius', newRadius.toString());
-    
-    toast({
-      title: "تم تحديث انحناء الحواف",
-      description: `تم تعيين انحناء الحواف إلى ${newRadius}px`
-    });
+    // لا نطبق فوراً - فقط نحدث حالة العرض
   };
 
   const resetToDefaults = () => {
@@ -339,17 +286,13 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
         
         // Apply imported settings
         if (settings.theme) setTheme(settings.theme);
-        if (settings.fontSize) handleFontSizeChange([settings.fontSize]);
-        if (typeof settings.animationsEnabled === 'boolean') handleAnimationToggle(settings.animationsEnabled);
-        if (typeof settings.highContrast === 'boolean') handleHighContrastToggle(settings.highContrast);
-        if (typeof settings.soundEnabled === 'boolean') handleSoundToggle(settings.soundEnabled);
-        if (settings.layoutDensity) handleLayoutDensityChange(settings.layoutDensity);
-        if (settings.borderRadius) handleBorderRadiusChange([settings.borderRadius]);
-        
-        if (settings.currentScheme && settings.colorSchemeData) {
-          const schemeData = JSON.parse(settings.colorSchemeData);
-          handleSchemeChange(schemeData);
-        }
+        if (settings.fontSize) setFontSize(settings.fontSize);
+        if (typeof settings.animationsEnabled === 'boolean') setAnimationsEnabled(settings.animationsEnabled);
+        if (typeof settings.highContrast === 'boolean') setHighContrast(settings.highContrast);
+        if (typeof settings.soundEnabled === 'boolean') setSoundEnabled(settings.soundEnabled);
+        if (settings.layoutDensity) setLayoutDensity(settings.layoutDensity);
+        if (settings.borderRadius) setBorderRadius(settings.borderRadius);
+        if (settings.currentScheme) setCurrentScheme(settings.currentScheme);
         
         toast({
           title: "تم استيراد الإعدادات",
@@ -364,6 +307,69 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
       }
     };
     reader.readAsText(file);
+  };
+
+  const applyAllSettings = () => {
+    // تطبيق نمط الألوان
+    const selectedScheme = colorSchemes.find(s => s.id === currentScheme);
+    if (selectedScheme) {
+      applyColorScheme(selectedScheme);
+    }
+
+    // تطبيق حجم الخط
+    document.documentElement.style.fontSize = `${fontSize}px`;
+    localStorage.setItem('fontSize', fontSize.toString());
+
+    // تطبيق التأثيرات
+    if (animationsEnabled) {
+      document.documentElement.classList.remove('no-animations');
+      document.documentElement.style.setProperty('--animation-duration', '0.3s');
+    } else {
+      document.documentElement.classList.add('no-animations');
+      document.documentElement.style.setProperty('--animation-duration', '0s');
+    }
+    localStorage.setItem('animationsEnabled', animationsEnabled.toString());
+
+    // تطبيق التباين العالي
+    if (highContrast) {
+      document.documentElement.classList.add('high-contrast');
+      document.documentElement.style.setProperty('--border', '240 3.7% 15.9%');
+      document.documentElement.style.setProperty('--input', '240 3.7% 15.9%');
+    } else {
+      document.documentElement.classList.remove('high-contrast');
+      document.documentElement.style.setProperty('--border', '214.3 31.8% 91.4%');
+      document.documentElement.style.setProperty('--input', '214.3 31.8% 91.4%');
+    }
+    localStorage.setItem('highContrast', highContrast.toString());
+
+    // تطبيق كثافة التخطيط
+    document.documentElement.setAttribute('data-density', layoutDensity);
+    const densityStyles = {
+      compact: { '--spacing-unit': '0.75rem', '--component-height': '2rem' },
+      comfortable: { '--spacing-unit': '1rem', '--component-height': '2.5rem' },
+      spacious: { '--spacing-unit': '1.5rem', '--component-height': '3rem' }
+    };
+    Object.entries(densityStyles[layoutDensity]).forEach(([key, value]) => {
+      document.documentElement.style.setProperty(key, value);
+    });
+    localStorage.setItem('layoutDensity', layoutDensity);
+
+    // تطبيق انحناء الحواف
+    document.documentElement.style.setProperty('--radius', `${borderRadius}px`);
+    localStorage.setItem('borderRadius', borderRadius.toString());
+
+    // حفظ إعداد الصوت
+    localStorage.setItem('soundEnabled', soundEnabled.toString());
+
+    // عرض رسالة نجاح
+    toast({
+      title: "تم حفظ الإعدادات",
+      description: "تم تطبيق جميع إعدادات المظهر بنجاح",
+      className: "bg-green-50 border-green-200 text-green-800"
+    });
+
+    // إغلاق النافذة
+    onOpenChange(false);
   };
 
   // Load settings on component mount
@@ -388,7 +394,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
             إعدادات المظهر والثيم
           </DialogTitle>
           <DialogDescription>
-            قم بتخصيص تجربة استخدامك للنظام وجعلها مناسبة لاحتياجاتك - جميع التغييرات تطبق فوراً
+            قم بتخصيص تجربة استخدامك للنظام وجعلها مناسبة لاحتياجاتك
           </DialogDescription>
         </DialogHeader>
 
@@ -443,7 +449,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
 
             {/* Color Schemes */}
             <div className="space-y-4">
-              <Label className="text-base font-semibold">أنماط الألوان (تطبق فوراً)</Label>
+              <Label className="text-base font-semibold">أنماط الألوان</Label>
               <div className="grid grid-cols-2 gap-3">
                 {colorSchemes.map((scheme) => (
                   <div
@@ -629,20 +635,26 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            إغلاق
-          </Button>
-          <Button onClick={() => {
-            toast({ 
-              title: "تم الحفظ", 
-              description: "جميع الإعدادات محفوظة تلقائياً" 
-            });
-            onOpenChange(false);
-          }}>
-            إغلاق وحفظ
-          </Button>
-        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={exportSettings}>
+              <Download className="w-4 h-4 ml-1" />
+              تصدير
+            </Button>
+            <label>
+              <input type="file" accept=".json" onChange={importSettings} className="hidden" />
+              <Button variant="outline" as="span">
+                <Upload className="w-4 h-4 ml-1" />
+                استيراد
+              </Button>
+            </label>
+            <Button onClick={applyAllSettings} className="bg-primary hover:bg-primary/90">
+              <Check className="w-4 h-4 ml-1" />
+              حفظ وإغلاق
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,105 +1,76 @@
 export const permissionsMap = [
   {
-    category: 'لوحة التحكم',
-    categoryLabel: 'لوحة التحكم',
-    permissions: [
-      { id: 'view_dashboard', label: 'عرض لوحة التحكم' },
-      { id: 'view_dashboard_stats', label: 'عرض الإحصائيات الرئيسية' },
-      { id: 'view_dashboard_top_lists', label: 'عرض قوائم الأفضل' },
-      { id: 'view_dashboard_stock_alerts', label: 'عرض تنبيهات المخزون' },
-      { id: 'view_dashboard_recent_orders', label: 'عرض الطلبات الأخيرة' },
-    ]
-  },
-  {
-    category: 'الطلبات',
-    categoryLabel: 'الطلبات',
-    permissions: [
-      { id: 'view_orders', label: 'عرض الطلبات الشخصية' },
-      { id: 'view_all_orders', label: 'عرض جميع الطلبات (للمدير)' },
-      { id: 'create_order', label: 'إنشاء طلبات' },
-      { id: 'manage_orders', label: 'إدارة الطلبات (تحديث الحالة)' },
-      { id: 'apply_order_discounts', label: 'تطبيق خصومات على الطلبات' },
-      { id: 'print_invoices', label: 'طباعة فواتير الطلبات' },
-    ]
-  },
-  {
-    category: 'المنتجات والمخزون',
-    categoryLabel: 'المنتجات والمخزون',
+    category: 'products',
+    categoryLabel: 'المنتجات والمخزن',
     permissions: [
       { id: 'view_products', label: 'عرض المنتجات' },
-      { id: 'manage_products', label: 'إدارة المنتجات (إضافة/تعديل/حذف)' },
       { id: 'view_inventory', label: 'عرض الجرد والمخزون' },
-      { id: 'edit_stock', label: 'تعديل كميات المخزون يدويًا' },
       { id: 'use_barcode_scanner', label: 'استخدام قارئ الباركود' },
-      { id: 'manage_variants', label: 'إدارة المتغيرات (ألوان، مقاسات)' },
-      { id: 'view_category_all', label: 'عرض جميع التصنيفات' },
-      { id: 'view_category_clothes', label: 'عرض تصنيف الملابس' },
-      { id: 'view_category_electronics', label: 'عرض تصنيف الإلكترونيات' },
-      { id: 'view_category_accessories', label: 'عرض تصنيف الاكسسوارات' },
-      { id: 'view_category_shoes', label: 'عرض تصنيف الأحذية' },
-      { id: 'view_category_bags', label: 'عرض تصنيف الحقائب' },
+      { id: 'manage_products', label: 'إدارة المنتجات (إضافة/تعديل/حذف)' },
+      { id: 'edit_product_quantities', label: 'تعديل كميات المخزون يدوياً' },
+      { id: 'manage_categories', label: 'إدارة التصنيفات والمتغيرات' },
+      { id: 'view_all_classifications', label: 'عرض جميع التصنيفات' },
+      { id: 'view_all_categories', label: 'عرض جميع الفئات' },
+      { id: 'view_all_sizes', label: 'عرض جميع الأحجام' },
+      { id: 'view_all_colors', label: 'عرض جميع الألوان' }
     ]
   },
   {
-    category: 'المشتريات',
-    categoryLabel: 'المشتريات',
+    category: 'orders',
+    categoryLabel: 'الطلبات والمبيعات',
+    permissions: [
+      { id: 'view_orders', label: 'عرض الطلبات' },
+      { id: 'create_orders', label: 'إنشاء طلبات جديدة' },
+      { id: 'edit_orders', label: 'تعديل الطلبات' },
+      { id: 'cancel_orders', label: 'إلغاء الطلبات' },
+      { id: 'view_sales_analytics', label: 'عرض تحليلات المبيعات' },
+      { id: 'process_returns', label: 'معالجة المرتجعات' }
+    ]
+  },
+  {
+    category: 'purchases',
+    categoryLabel: 'المشتريات والموردين',
     permissions: [
       { id: 'view_purchases', label: 'عرض المشتريات' },
-      { id: 'add_purchase', label: 'إضافة فواتير شراء' },
+      { id: 'create_purchases', label: 'إنشاء مشتريات جديدة' },
+      { id: 'edit_purchases', label: 'تعديل المشتريات' },
+      { id: 'view_suppliers', label: 'عرض الموردين' },
+      { id: 'manage_suppliers', label: 'إدارة الموردين' }
     ]
   },
   {
-    category: 'الأرباح والتقارير',
-    categoryLabel: 'الأرباح والتقارير',
+    category: 'accounting',
+    categoryLabel: 'المحاسبة والتقارير',
     permissions: [
-      { id: 'view_profits', label: 'عرض ملخص الأرباح' },
-      { id: 'request_profit_settlement', label: 'طلب محاسبة الأرباح (للموظف)' },
-      { id: 'view_accounting', label: 'عرض المركز المالي والتقارير المحاسبية' },
-      { id: 'manage_employee_profits', label: 'إدارة ومحاسبة أرباح الموظفين' },
+      { id: 'view_financial_reports', label: 'عرض التقارير المالية' },
+      { id: 'view_profit_summary', label: 'عرض ملخص الأرباح' },
+      { id: 'manage_expenses', label: 'إدارة المصروفات' },
+      { id: 'view_pending_dues', label: 'عرض المستحقات المعلقة' },
+      { id: 'settle_dues', label: 'تسوية المستحقات' },
+      { id: 'export_reports', label: 'تصدير التقارير' }
     ]
   },
   {
-    category: 'الإدارة',
-    categoryLabel: 'الإدارة',
+    category: 'employees',
+    categoryLabel: 'إدارة الموظفين',
     permissions: [
-      { id: 'manage_users', label: 'إدارة الموظفين والصلاحيات' },
-      { id: 'manage_profit_rules', label: 'إدارة قواعد أرباح الموظفين' },
+      { id: 'view_employees', label: 'عرض الموظفين' },
+      { id: 'manage_employees', label: 'إدارة الموظفين' },
+      { id: 'manage_employee_profits', label: 'إدارة أرباح الموظفين' },
+      { id: 'view_employee_performance', label: 'عرض أداء الموظفين' },
+      { id: 'update_permissions', label: 'تحديث الصلاحيات' }
     ]
   },
   {
-    category: 'التصنيفات والمتغيرات',
-    categoryLabel: 'التصنيفات والمتغيرات',
+    category: 'system',
+    categoryLabel: 'إعدادات النظام',
     permissions: [
-      { id: 'view_category_mens_clothing', label: 'عرض ملابس رجالية' },
-      { id: 'view_category_mens_clothing_summer', label: 'عرض ملابس رجالية صيفية' },
-      { id: 'view_category_mens_clothing_winter', label: 'عرض ملابس رجالية شتوية' },
-      { id: 'view_category_womens_clothing', label: 'عرض ملابس نسائية' },
-      { id: 'view_category_womens_clothing_summer', label: 'عرض ملابس نسائية صيفية' },
-      { id: 'view_category_womens_clothing_winter', label: 'عرض ملابس نسائية شتوية' },
-      { id: 'view_category_kids_clothing', label: 'عرض ملابس أطفال' },
-      { id: 'view_category_shoes', label: 'عرض الأحذية' },
-      { id: 'view_category_bags', label: 'عرض الحقائب' },
-      { id: 'view_category_accessories', label: 'عرض الاكسسوارات' },
-      { id: 'view_category_electronics', label: 'عرض الإلكترونيات' },
-      { id: 'view_category_general_items', label: 'عرض المواد العامة' },
-    ]
-  },
-  {
-    category: 'الإعدادات والميزات',
-    categoryLabel: 'الإعدادات والميزات',
-    permissions: [
-      { id: 'view_settings', label: 'عرض صفحة الإعدادات' },
-      { id: 'manage_app_settings', label: 'إدارة إعدادات التطبيق العامة' },
-      { id: 'manage_delivery_company', label: 'إدارة ربط شركة التوصيل' },
-      { id: 'manage_delivery_sync', label: 'إدارة المزامنة التلقائية للطلبات' },
-      { id: 'use_ai_assistant', label: 'استخدام المساعد الذكي' },
-      { id: 'use_telegram_bot', label: 'استخدام بوت التليغرام' },
+      { id: 'manage_settings', label: 'إدارة إعدادات النظام' },
+      { id: 'view_notifications', label: 'عرض الإشعارات' },
       { id: 'manage_notifications', label: 'إدارة الإشعارات' },
-      { id: 'manage_theme', label: 'إدارة التيم والألوان' },
-      { id: 'manage_backup', label: 'إدارة النسخ الاحتياطي' },
-      { id: 'view_security_settings', label: 'عرض إعدادات الأمان' },
-      { id: 'manage_display_settings', label: 'إدارة إعدادات العرض' },
-      { id: 'manage_developer_settings', label: 'إدارة إعدادات المطور والألوان' },
+      { id: 'view_system_logs', label: 'عرض سجلات النظام' },
+      { id: 'backup_restore', label: 'النسخ الاحتياطي والاستعادة' },
+      { id: 'ai_features', label: 'استخدام ميزات الذكاء الاصطناعي' }
     ]
   }
 ];

@@ -205,7 +205,8 @@ const NotificationsPage = () => {
                         exit={{ opacity: 0, x: -20 }}
                         className={cn(
                           "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
-                          notification.is_read ? "bg-muted/30 opacity-75" : "bg-secondary/50 border-primary/20"
+                          "bg-card border-border shadow-sm",
+                          notification.is_read ? "opacity-75" : "border-primary/20 shadow-md"
                         )}
                       >
                         <div className="flex items-start justify-between gap-4">

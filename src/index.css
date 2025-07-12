@@ -79,7 +79,7 @@
 
 @layer components {
   .glass-effect {
-    @apply backdrop-blur-lg bg-card/80 dark:bg-card/50 border border-border/60 dark:border-white/10 shadow-lg;
+    @apply backdrop-blur-lg bg-card/90 dark:bg-card/80 border border-border/50 dark:border-border/60 shadow-lg;
   }
 
   .gradient-text {
