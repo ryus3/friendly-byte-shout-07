@@ -138,6 +138,16 @@ const Layout = ({ children }) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { user } = useAuth();
 
+  // استقبال إشارة فتح السايدبار من الشريط السفلي
+  useEffect(() => {
+    const handleToggleSidebar = () => {
+      setSidebarOpen(prev => !prev);
+    };
+    
+    window.addEventListener('toggle-sidebar', handleToggleSidebar);
+    return () => window.removeEventListener('toggle-sidebar', handleToggleSidebar);
+  }, []);
+
   useEffect(() => {
     if (sidebarOpen) {
       setSidebarOpen(false);

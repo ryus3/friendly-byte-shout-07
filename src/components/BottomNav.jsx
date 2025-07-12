@@ -158,7 +158,7 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
                       key={product.id}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
                       onClick={() => {
-                        navigate(`/products?product=${product.id}`);
+                        navigate(`/products?search=${encodeURIComponent(product.name)}`);
                         onOpenChange(false);
                         setSearchQuery('');
                       }}
@@ -231,6 +231,7 @@ const BottomNav = () => {
           {/* القائمة */}
           <NavButton 
             onClick={() => {
+              // إشارة لفتح الـ sidebar في Layout.jsx
               const event = new CustomEvent('toggle-sidebar');
               window.dispatchEvent(event);
             }}
