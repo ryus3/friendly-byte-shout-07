@@ -42,6 +42,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const [defaultPage, setDefaultPage] = useState('/');
   const [orderCreationMode, setOrderCreationMode] = useState('choice');
   const [categoryPermissions, setCategoryPermissions] = useState([]);
+  const [detailedCategoryPermissions, setDetailedCategoryPermissions] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -52,6 +53,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
       setDefaultPage(employee.default_page || '/');
       setOrderCreationMode(employee.order_creation_mode || 'choice');
       setCategoryPermissions(employee.category_permissions || []);
+      setDetailedCategoryPermissions(employee.detailed_category_permissions || {});
     }
   }, [employee]);
 

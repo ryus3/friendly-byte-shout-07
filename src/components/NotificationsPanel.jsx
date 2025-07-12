@@ -137,6 +137,9 @@ const NotificationsPanel = () => {
         <DropdownMenuLabel className="flex justify-between items-center px-2 py-1.5">
           <span className="font-bold">الإشعارات</span>
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
+              <Eye className="w-4 h-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
               <Check className="w-4 h-4" />
             </Button>

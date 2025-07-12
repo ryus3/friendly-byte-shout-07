@@ -24,6 +24,7 @@ import DeveloperSettingsDialog from '@/components/settings/DeveloperSettingsDial
 import DisplaySettingsDialog from '@/components/settings/DisplaySettingsDialog';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import NotificationsSettingsDialog from '@/components/settings/NotificationsSettingsDialog';
+import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark" }) => {
@@ -493,13 +494,21 @@ const SettingsPage = () => {
                     />
                   )}
 
-                  {hasPermission('use_ai_assistant') && (
+                  {hasPermission('manage_developer_settings') ? (
                     <SettingsSectionCard
                       icon={Palette}
                       title="إعدادات المطور"
                       description="تخصيص الألوان والثيمات المتقدمة"
                       iconColor="from-pink-500 to-pink-700"
                       onClick={() => setIsDeveloperOpen(true)}
+                    />
+                  ) : (
+                    <SettingsSectionCard
+                      icon={Palette}
+                      title="إعدادات المطور"
+                      description="غير متاح - تحتاج صلاحية خاصة"
+                      iconColor="from-gray-400 to-gray-600"
+                      disabled={true}
                     />
                   )}
                 </div>
@@ -593,7 +602,7 @@ const SettingsPage = () => {
             </div>
         </div>
       </div>
-      <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
+      <ProfileSecurityDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
       <ManageEmployeesDialog open={isManageEmployeesOpen} onOpenChange={setIsManageEmployeesOpen} />
       <SecuritySettingsDialog open={isSecurityOpen} onOpenChange={setIsSecurityOpen} />
       <DeveloperSettingsDialog open={isDeveloperOpen} onOpenChange={setIsDeveloperOpen} />

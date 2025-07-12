@@ -67,6 +67,24 @@ export const permissionsMap = [
     ]
   },
   {
+    category: 'التصنيفات والمتغيرات',
+    categoryLabel: 'التصنيفات والمتغيرات',
+    permissions: [
+      { id: 'view_category_mens_clothing', label: 'عرض ملابس رجالية' },
+      { id: 'view_category_mens_clothing_summer', label: 'عرض ملابس رجالية صيفية' },
+      { id: 'view_category_mens_clothing_winter', label: 'عرض ملابس رجالية شتوية' },
+      { id: 'view_category_womens_clothing', label: 'عرض ملابس نسائية' },
+      { id: 'view_category_womens_clothing_summer', label: 'عرض ملابس نسائية صيفية' },
+      { id: 'view_category_womens_clothing_winter', label: 'عرض ملابس نسائية شتوية' },
+      { id: 'view_category_kids_clothing', label: 'عرض ملابس أطفال' },
+      { id: 'view_category_shoes', label: 'عرض الأحذية' },
+      { id: 'view_category_bags', label: 'عرض الحقائب' },
+      { id: 'view_category_accessories', label: 'عرض الاكسسوارات' },
+      { id: 'view_category_electronics', label: 'عرض الإلكترونيات' },
+      { id: 'view_category_general_items', label: 'عرض المواد العامة' },
+    ]
+  },
+  {
     category: 'الإعدادات والميزات',
     categoryLabel: 'الإعدادات والميزات',
     permissions: [
@@ -81,6 +99,7 @@ export const permissionsMap = [
       { id: 'manage_backup', label: 'إدارة النسخ الاحتياطي' },
       { id: 'view_security_settings', label: 'عرض إعدادات الأمان' },
       { id: 'manage_display_settings', label: 'إدارة إعدادات العرض' },
+      { id: 'manage_developer_settings', label: 'إدارة إعدادات المطور والألوان' },
     ]
   }
 ];

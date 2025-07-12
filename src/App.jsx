@@ -23,6 +23,7 @@ const InventoryPage = lazy(() => import('@/pages/InventoryPage.jsx'));
 const OrdersPage = lazy(() => import('@/pages/OrdersPage.jsx'));
 const PurchasesPage = lazy(() => import('@/pages/PurchasesPage.jsx'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage.jsx'));
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage.jsx'));
 const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
 const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
 const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
@@ -81,6 +82,7 @@ function AppContent() {
 
           <Route path="/purchases" element={<ProtectedRoute permission="view_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute permission="view_settings">{childrenWithProps(SettingsPage)}</ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
           
           <Route path="/profits-summary" element={<ProtectedRoute permission="view_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
           <Route path="/profit-settlement/:employeeId" element={<ProtectedRoute permission="manage_profit_settlement">{childrenWithProps(ProfitSettlementPage)}</ProtectedRoute>} />
