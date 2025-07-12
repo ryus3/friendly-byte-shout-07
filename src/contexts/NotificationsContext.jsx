@@ -70,6 +70,15 @@ export const NotificationsProvider = ({ children }) => {
 
             if (shouldShow) {
                 if (newNotification.type !== 'welcome') {
+                    // تشغيل صوت الإشعار
+                    try {
+                        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUE');
+                        audio.volume = 0.3;
+                        audio.play().catch(() => {});
+                    } catch (error) {
+                        console.log('تعذر تشغيل صوت الإشعار');
+                    }
+                    
                     toast({
                         title: newNotification.title,
                         description: newNotification.message,
@@ -103,7 +112,37 @@ export const NotificationsProvider = ({ children }) => {
     }, [user, hasPermission]);
 
     const addNotification = useCallback(async (notificationData) => {
-        if (!supabase) return;
+        if (!supabase) {
+            // إذا لم يكن هناك اتصال بقاعدة البيانات، أضف الإشعار محلياً فقط
+            const localNotification = {
+                id: Date.now().toString(),
+                created_at: new Date().toISOString(),
+                is_read: false,
+                user_id: user?.id || null,
+                type: notificationData.type || 'info',
+                title: notificationData.title,
+                message: notificationData.message,
+                link: notificationData.link || '#',
+                data: notificationData.data || null,
+                icon: notificationData.icon || 'Bell',
+                color: notificationData.color || 'blue',
+                auto_delete: notificationData.autoDelete || false
+            };
+            
+            setNotifications(prev => [localNotification, ...prev]);
+            
+            // تشغيل صوت الإشعار للإشعارات المحلية
+            if (notificationData.type !== 'welcome') {
+                try {
+                    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUE');
+                    audio.volume = 0.3;
+                    audio.play().catch(() => {});
+                } catch (error) {
+                    console.log('تعذر تشغيل صوت الإشعار');
+                }
+            }
+            return;
+        }
         
         const targetUserId = notificationData.user_id === 'admin' ? null : notificationData.user_id;
     
@@ -122,7 +161,7 @@ export const NotificationsProvider = ({ children }) => {
         if (error) {
             console.error("Error adding notification:", error);
         }
-    }, []);
+    }, [user]);
 
     const markAsRead = useCallback(async (id) => {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));

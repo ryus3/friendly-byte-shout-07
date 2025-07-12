@@ -3,13 +3,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { toast } from '@/components/ui/use-toast';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Palette, Monitor, Sun, Moon, Smartphone } from 'lucide-react';
+import { Palette, Monitor, Sun, Moon, Smartphone, Layout, Type, Zap, Eye } from 'lucide-react';
 
 const DeveloperSettingsDialog = ({ open, onOpenChange }) => {
   const { theme, setTheme } = useTheme();
   const [currentColorScheme, setCurrentColorScheme] = useState('blue');
+  
+  // إعدادات المظهر والثيم
+  const [layoutPattern, setLayoutPattern] = useState('mixed');
+  const [contentDensity, setContentDensity] = useState('normal');
+  const [hideCurrentStrip, setHideCurrentStrip] = useState(false);
+  const [fontSize, setFontSize] = useState([100]);
+  const [enableAnimations, setEnableAnimations] = useState(true);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+  const [colorCorrection, setColorCorrection] = useState(false);
   const [experimentalTitle, setExperimentalTitle] = useState(false);
 
   const colorSchemes = [
@@ -39,25 +51,80 @@ const DeveloperSettingsDialog = ({ open, onOpenChange }) => {
     });
   };
 
+  const applyDisplaySettings = () => {
+    const root = document.documentElement;
+    
+    // تطبيق حجم الخط
+    root.style.setProperty('--font-scale', `${fontSize[0] / 100}`);
+    
+    // تطبيق كثافة المحتوى
+    const densityClass = contentDensity === 'compact' ? 'compact' : contentDensity === 'spacious' ? 'spacious' : 'normal';
+    document.body.className = document.body.className.replace(/\b(compact|spacious|normal)\b/g, '') + ` ${densityClass}`;
+    
+    // تطبيق التباين العالي
+    if (highContrast) {
+      document.body.classList.add('high-contrast');
+    } else {
+      document.body.classList.remove('high-contrast');
+    }
+    
+    // تطبيق تقليل الحركة
+    if (reduceMotion) {
+      document.body.classList.add('reduce-motion');
+    } else {
+      document.body.classList.remove('reduce-motion');
+    }
+    
+    // تطبيق نمط التخطيط
+    document.body.setAttribute('data-layout', layoutPattern);
+    
+    // إخفاء الشريط العلوي
+    if (hideCurrentStrip) {
+      document.body.classList.add('hide-header');
+    } else {
+      document.body.classList.remove('hide-header');
+    }
+    
+    toast({
+      title: "تم تطبيق إعدادات العرض",
+      description: "تم حفظ جميع إعدادات المظهر والعرض"
+    });
+  };
+
   const resetToDefault = () => {
     const root = document.documentElement;
-    root.style.setProperty('--primary', '221 83% 53%'); // اللون الأزرق الافتراضي
+    root.style.setProperty('--primary', '221 83% 53%');
     root.style.setProperty('--primary-foreground', '0 0% 98%');
+    root.style.setProperty('--font-scale', '1');
+    
+    // إعادة تعيين جميع الإعدادات
     setCurrentColorScheme('blue');
+    setLayoutPattern('mixed');
+    setContentDensity('normal');
+    setHideCurrentStrip(false);
+    setFontSize([100]);
+    setEnableAnimations(true);
+    setReduceMotion(false);
+    setHighContrast(false);
+    setColorCorrection(false);
+    
+    // إزالة جميع الفئات
+    document.body.className = document.body.className.replace(/\b(compact|spacious|normal|high-contrast|reduce-motion|hide-header)\b/g, '');
+    document.body.removeAttribute('data-layout');
     
     toast({
       title: "تم الإعادة للافتراضي",
-      description: "تم إرجاع الألوان للإعدادات الافتراضية"
+      description: "تم إرجاع جميع الإعدادات للحالة الافتراضية"
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Palette className="w-5 h-5" />
-            إعدادات المطور
+            إعدادات المظهر والثيم المتقدمة
           </DialogTitle>
         </DialogHeader>
 
@@ -126,38 +193,200 @@ const DeveloperSettingsDialog = ({ open, onOpenChange }) => {
             </div>
           </div>
 
-          {/* معاينة */}
+          {/* تخطيط الواجهة */}
           <div className="space-y-4 p-4 border rounded-lg">
-            <h3 className="font-semibold">معاينة الإعدادات</h3>
+            <h3 className="font-semibold flex items-center gap-2">
+              <Layout className="w-4 h-4" />
+              تخطيط الواجهة والتخطيط
+            </h3>
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>نمط التخطيط</Label>
+                <Select value={layoutPattern} onValueChange={setLayoutPattern}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mixed">مختلط (افتراضي)</SelectItem>
+                    <SelectItem value="cards">بطاقات حديثة</SelectItem>
+                    <SelectItem value="list">قائمة تفصيلية</SelectItem>
+                    <SelectItem value="grid">شبكة منظمة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>كثافة المحتوى</Label>
+                <Select value={contentDensity} onValueChange={setContentDensity}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="compact">مضغوط - أكثر عناصر</SelectItem>
+                    <SelectItem value="normal">عادي - متوازن</SelectItem>
+                    <SelectItem value="spacious">واسع - مريح للعين</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">عنوان تجريبي</p>
-                <p className="text-sm text-muted-foreground">هذا نص تجريبي لمعاينة الإعدادات المطبقة. يمكنك رؤية كيف ستندو الألوان والمظهر في التطبيق.</p>
+                <p className="font-medium">إخفاء الشريط العلوي</p>
+                <p className="text-sm text-muted-foreground">إخفاء شريط التنقل العلوي لمساحة أكبر</p>
               </div>
               <Switch
-                checked={experimentalTitle}
-                onCheckedChange={setExperimentalTitle}
+                checked={hideCurrentStrip}
+                onCheckedChange={setHideCurrentStrip}
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="default">زر أساسي</Button>
-              <Button variant="secondary">زر ثانوي</Button>
-            </div>
-
-            <div className="p-3 bg-primary/10 rounded-lg">
-              <p className="text-sm">مثال على التطبيق: سيظهر هذا المحتوى بالألوان المختارة</p>
             </div>
           </div>
 
-          {/* إعادة تعيين */}
+          {/* إعدادات الخط والنص */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Type className="w-4 h-4" />
+              إعدادات الخط والنص
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>حجم الخط العام</Label>
+                  <span className="text-sm font-medium text-primary">{fontSize[0]}%</span>
+                </div>
+                <Slider
+                  value={fontSize}
+                  onValueChange={setFontSize}
+                  min={75}
+                  max={150}
+                  step={5}
+                  className="w-full"
+                />
+                <div className="text-center p-3 bg-secondary/30 rounded-lg">
+                  <p style={{ fontSize: `${fontSize[0] / 100}em` }} className="text-sm">
+                    مثال على النص بالحجم المختار - سيتم تطبيقه على كامل التطبيق
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* الحركة والتأثيرات المرئية */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Zap className="w-4 h-4" />
+              الحركة والتأثيرات المرئية
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">تفعيل الانتقالات المتحركة</p>
+                  <p className="text-sm text-muted-foreground">انتقالات سلسة وجميلة بين الصفحات والعناصر</p>
+                </div>
+                <Switch
+                  checked={enableAnimations}
+                  onCheckedChange={setEnableAnimations}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">تقليل الحركة</p>
+                  <p className="text-sm text-muted-foreground">مناسب للأشخاص الحساسين للحركة والوميض</p>
+                </div>
+                <Switch
+                  checked={reduceMotion}
+                  onCheckedChange={setReduceMotion}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* إمكانية الوصول المتقدمة */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <h3 className="font-semibold flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              إمكانية الوصول المتقدمة
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">التباين العالي</p>
+                  <p className="text-sm text-muted-foreground">ألوان أكثر وضوحاً ووضوح للنصوص</p>
+                </div>
+                <Switch
+                  checked={highContrast}
+                  onCheckedChange={setHighContrast}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">تصحيح الألوان</p>
+                  <p className="text-sm text-muted-foreground">تحسين عرض الألوان لضعاف البصر</p>
+                </div>
+                <Switch
+                  checked={colorCorrection}
+                  onCheckedChange={setColorCorrection}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* معاينة شاملة للإعدادات */}
+          <div className="space-y-4 p-4 border rounded-lg bg-gradient-to-r from-secondary/10 to-primary/5">
+            <h3 className="font-semibold">معاينة شاملة للإعدادات</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">ميزة تجريبية</p>
+                    <p className="text-sm text-muted-foreground">اختبار الميزات الجديدة قبل إطلاقها</p>
+                  </div>
+                  <Switch
+                    checked={experimentalTitle}
+                    onCheckedChange={setExperimentalTitle}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="default" size="sm">زر أساسي</Button>
+                  <Button variant="secondary" size="sm">زر ثانوي</Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <p className="text-sm font-medium">مثال على المحتوى</p>
+                  <p className="text-xs text-muted-foreground">سيظهر هذا المحتوى بالألوان والإعدادات المختارة في جميع أنحاء التطبيق</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-xs">حالة نشطة</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                  <span className="text-xs">حالة تحذير</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* أزرار الحفظ والإعدادات */}
           <div className="flex gap-4">
+            <Button onClick={applyDisplaySettings} className="flex-1 gradient-primary">
+              تطبيق إعدادات العرض
+            </Button>
             <Button onClick={resetToDefault} variant="outline" className="flex-1">
               إعادة للافتراضي
             </Button>
-            <Button onClick={() => onOpenChange(false)} className="flex-1">
-              تطبيق الإعدادات
+            <Button onClick={() => onOpenChange(false)} variant="secondary" className="flex-1">
+              إغلاق
             </Button>
           </div>
         </div>

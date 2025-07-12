@@ -111,7 +111,7 @@ const NotificationsPanel = () => {
     }
   };
 
-  const filteredNotifications = notifications.filter(n => n.type !== 'test' && n.type !== 'welcome' && n.title !== 'طلب جديد');
+  const filteredNotifications = notifications.filter(n => n.type !== 'welcome');
   const unreadFilteredCount = filteredNotifications.filter(n => !n.is_read).length;
 
   return (
