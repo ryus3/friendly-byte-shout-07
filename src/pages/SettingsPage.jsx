@@ -207,8 +207,8 @@ const SettingsPage = () => {
           {/* Profile Section */}
           <SectionHeader 
             icon={User} 
-            title="الملف الشخصي والحساب"
-            description="إدارة معلوماتك الشخصية وإعدادات الحساب"
+            title="الحساب والأمان"
+            description="إدارة معلوماتك الشخصية وإعدادات الأمان"
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -349,13 +349,13 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
-          {/* Store Settings */}
+          {/* Store Management - Unified Section */}
           {hasPermission('manage_app_settings') && (
             <>
               <SectionHeader 
                 icon={Store} 
-                title="إعدادات المتجر والإدارة"
-                description="إدارة الإعدادات العامة للمتجر والفريق والأجهزة المتصلة"
+                title="إدارة المتجر"
+                description="إعدادات المتجر والتوصيل والمزامنة والموظفين"
               />
               
               {/* Main Management Row - Professional Layout */}
@@ -554,38 +554,38 @@ const SettingsPage = () => {
             </>
           )}
 
-          {/* Management Section */}
+          {/* Management Tools */}
           <SectionHeader 
             icon={Shield} 
-            title="الإدارة والتحكم"
-            description="إدارة الموظفين والإشعارات والخدمات الذكية"
+            title="الأدوات والخدمات"
+            description="إشعارات وتقارير وأدوات متقدمة"
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
             <ModernCard
-              icon={RefreshCw}
-              title="التحديث التلقائي"
-              description="مزامنة البيانات والإشعارات أولاً بأول"
-              iconColor="from-green-500 to-green-600"
+              icon={Bell}
+              title="مركز الإشعارات"
+              description="إدارة الإشعارات والتنبيهات الفورية"
+              iconColor="from-orange-500 to-orange-600"
+              onClick={() => navigate('/notifications')}
             >
               <div className="space-y-3">
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400">حالة النظام</p>
-                  <p className="text-xs text-green-500 opacity-70">فعال - تحديث مستمر</p>
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">الإشعارات الفورية</p>
+                  <p className="text-xs text-orange-500 opacity-70">متاحة مع ألوان تصنيفية</p>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  النظام يحدث البيانات والإشعارات تلقائياً كل 30 ثانية
+                  اضغط لعرض وإدارة جميع الإشعارات
                 </div>
               </div>
             </ModernCard>
-
+            
             <ModernCard
-              icon={Bell}
-              title="الإشعارات"
-              description="إدارة الإشعارات والتنبيهات"
-              iconColor="from-orange-500 to-orange-600"
-              onClick={() => navigate('/notifications')}
+              icon={FileText}
+              title="التقارير"
+              description="تصدير وإدارة التقارير المالية والإحصائية"
+              iconColor="from-green-500 to-green-600"
+              onClick={() => setIsReportsOpen(true)}
             />
           </div>
 

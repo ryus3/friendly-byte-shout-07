@@ -35,7 +35,7 @@ const NavButton = ({ onClick, icon: Icon, label, className, badgeCount, isActive
         </motion.span>
       )}
     </div>
-    <span className={cn("text-xs font-medium transition-all duration-200", isActive && "font-bold")}>{label}</span>
+    <span className={cn("text-xs font-medium transition-all duration-200", isActive && "font-bold text-xs")}>{label}</span>
   </motion.button>
 );
 

@@ -223,9 +223,13 @@ const Layout = ({ children }) => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => window.location.reload()} 
+                onClick={() => {
+                  // مزامنة البيانات فقط بدون إعادة تحميل الصفحة
+                  window.dispatchEvent(new CustomEvent('refresh-data'));
+                  toast({ title: "تم التحديث", description: "تم تحديث البيانات بنجاح" });
+                }} 
                 className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
-                title="تحديث التطبيق"
+                title="مزامنة البيانات"
               >
                 <RefreshCw className="w-5 h-5" />
               </Button>
