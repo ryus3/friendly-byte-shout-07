@@ -562,14 +562,6 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ModernCard
-              icon={Users}
-              title="إدارة الموظفين"
-              description="إدارة حسابات الموظفين وصلاحياتهم"
-              iconColor="from-purple-500 to-purple-600"
-              onClick={hasPermission('manage_users') ? () => setIsManageEmployeesOpen(true) : undefined}
-              disabled={!hasPermission('manage_users')}
-            />
 
             <ModernCard
               icon={RefreshCw}
