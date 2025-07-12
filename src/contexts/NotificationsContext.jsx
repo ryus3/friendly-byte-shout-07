@@ -79,10 +79,25 @@ export const NotificationsProvider = ({ children }) => {
                         console.log('تعذر تشغيل صوت الإشعار');
                     }
                     
+                    // Enhanced toast with proper variant mapping
+                    const getVariantFromColor = (color) => {
+                        switch (color) {
+                            case 'green': return 'success';
+                            case 'orange': return 'warning';
+                            case 'red': return 'destructive';
+                            case 'blue': return 'info';
+                            case 'purple': return 'premium';
+                            case 'pink': return 'celebration';
+                            default: return 'default';
+                        }
+                    };
+
                     toast({
                         title: newNotification.title,
                         description: newNotification.message,
-                        variant: newNotification.color === 'orange' ? 'destructive' : (newNotification.color === 'green' ? 'success' : 'default'),
+                        variant: getVariantFromColor(newNotification.color),
+                        className: "animate-in slide-in-from-right-full duration-300 shadow-xl border-2",
+                        duration: newNotification.type === 'welcome' ? 8000 : 6000,
                     });
                 }
                 setNotifications(prev => [newNotification, ...prev.filter(n => n.id !== newNotification.id)]);
@@ -129,11 +144,12 @@ export const NotificationsProvider = ({ children }) => {
                 auto_delete: notificationData.autoDelete || false
             };
             
-            // إضافة الإشعار فوراً
+            // إضافة الإشعار فوراً للعرض المحلي
             setNotifications(prev => [localNotification, ...prev]);
             
-            // تشغيل صوت الإشعار فوراً للإشعارات المحلية
+            // عرض الإشعار فوراً مع التأثيرات المحسنة
             if (notificationData.type !== 'welcome') {
+                // تشغيل صوت الإشعار فوراً
                 try {
                     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUE');
                     audio.volume = 0.3;
@@ -141,6 +157,27 @@ export const NotificationsProvider = ({ children }) => {
                 } catch (error) {
                     console.log('تعذر تشغيل صوت الإشعار');
                 }
+                
+                // عرض الإشعار بالتصميم المحسن
+                const getVariantFromColor = (color) => {
+                    switch (color) {
+                        case 'green': return 'success';
+                        case 'orange': return 'warning';
+                        case 'red': return 'destructive';
+                        case 'blue': return 'info';
+                        case 'purple': return 'premium';
+                        case 'pink': return 'celebration';
+                        default: return 'default';
+                    }
+                };
+
+                toast({
+                    title: localNotification.title,
+                    description: localNotification.message,
+                    variant: getVariantFromColor(localNotification.color),
+                    className: "animate-in slide-in-from-right-full duration-300 shadow-xl border-2",
+                    duration: 5000,
+                });
             }
             return;
         }

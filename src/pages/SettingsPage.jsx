@@ -213,30 +213,53 @@ const SettingsPage = () => {
             <ModernCard
               icon={User}
               title="الملف الشخصي والأمان"
-              description="تعديل معلوماتك الشخصية وإعدادات الأمان"
+              description="إدارة معلوماتك الشخصية وإعدادات الأمان المتقدمة"
               iconColor="from-blue-500 to-blue-600"
               onClick={() => setIsEditProfileOpen(true)}
             >
               <div className="space-y-4">
-                <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-lg">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-6 h-6 text-primary" />
+                <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-secondary/30 to-secondary/10 rounded-lg border border-primary/10">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                    <User className="w-7 h-7 text-white" />
                   </div>
                   <div>
-                    <p className="font-semibold">{user.full_name}</p>
+                    <p className="font-bold text-lg">{user.full_name}</p>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
-                    <p className="text-xs text-primary font-medium">{user.role}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded">{user.role}</span>
+                      <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">نشط</span>
+                    </div>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-green-600 dark:text-green-400">حساب محمي</span>
+                  <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <Shield className="w-4 h-4 text-green-500" />
+                    <div>
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">أمان محسن</span>
+                      <p className="text-xs text-green-500 opacity-70">التحقق بخطوتين</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-                    <Key className="w-3 h-3 text-blue-500" />
-                    <span className="text-xs text-blue-600 dark:text-blue-400">كلمة مرور قوية</span>
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <Key className="w-4 h-4 text-blue-500" />
+                    <div>
+                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400">كلمة مرور قوية</span>
+                      <p className="text-xs text-blue-500 opacity-70">محدثة مؤخراً</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <Bell className="w-4 h-4 text-purple-500" />
+                    <div>
+                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400">إشعارات الدخول</span>
+                      <p className="text-xs text-purple-500 opacity-70">مفعلة</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <LogIn className="w-4 h-4 text-orange-500" />
+                    <div>
+                      <span className="text-xs font-medium text-orange-600 dark:text-orange-400">جلسة آمنة</span>
+                      <p className="text-xs text-orange-500 opacity-70">انتهاء تلقائي</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -245,94 +268,79 @@ const SettingsPage = () => {
             <ModernCard
               icon={Palette}
               title="المظهر والثيم"
-              description="تخصيص مظهر التطبيق والألوان والخطوط"
+              description="تخصيص مظهر التطبيق والألوان والخطوط والعرض"
               iconColor="from-purple-500 to-purple-600"
+              onClick={() => navigate('/appearance-settings')}
             >
               <div className="space-y-6">
                 {/* Theme Selection */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">نمط العرض</Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <Button
-                      variant={theme === 'light' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTheme('light')}
-                      className="flex flex-col items-center gap-1 h-auto py-3"
-                    >
-                      <Sun className="w-4 h-4" />
-                      <span className="text-xs">فاتح</span>
-                    </Button>
-                    <Button
-                      variant={theme === 'dark' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTheme('dark')}
-                      className="flex flex-col items-center gap-1 h-auto py-3"
-                    >
-                      <Moon className="w-4 h-4" />
-                      <span className="text-xs">داكن</span>
-                    </Button>
-                    <Button
-                      variant={theme === 'system' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setTheme('system')}
-                      className="flex flex-col items-center gap-1 h-auto py-3"
-                    >
-                      <Monitor className="w-4 h-4" />
-                      <span className="text-xs">تلقائي</span>
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Color Schemes */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">نمط الألوان</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { id: 'blue', name: 'أزرق احترافي', colors: 'from-blue-500 to-blue-600' },
-                      { id: 'green', name: 'أخضر طبيعي', colors: 'from-green-500 to-green-600' },
-                      { id: 'purple', name: 'بنفسجي إبداعي', colors: 'from-purple-500 to-purple-600' },
-                      { id: 'orange', name: 'برتقالي جريء', colors: 'from-orange-500 to-orange-600' }
-                    ].map((scheme) => (
-                      <button
-                        key={scheme.id}
-                        className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/50 transition-colors"
-                        onClick={() => {
-                          // Apply color scheme logic here
-                          toast({ title: "تم تطبيق النمط", description: `تم تفعيل ${scheme.name}` });
-                        }}
-                      >
-                        <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${scheme.colors}`}></div>
-                        <span className="text-xs">{scheme.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Font Size */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">حجم الخط</Label>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs">صغير</span>
-                    <div className="flex-1 h-2 bg-secondary rounded-full relative">
-                      <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-primary rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"></div>
+                  <Label className="text-sm font-medium">نمط العرض الحالي</Label>
+                  <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      {theme === 'light' ? (
+                        <Sun className="w-5 h-5 text-yellow-500" />
+                      ) : theme === 'dark' ? (
+                        <Moon className="w-5 h-5 text-blue-400" />
+                      ) : (
+                        <Monitor className="w-5 h-5 text-gray-500" />
+                      )}
                     </div>
-                    <span className="text-xs">كبير</span>
+                    <div>
+                      <p className="font-medium">
+                        {theme === 'light' ? 'النمط الفاتح' : theme === 'dark' ? 'النمط الداكن' : 'النمط التلقائي'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        اضغط للتخصيص المتقدم
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Advanced Options */}
+                {/* Quick Theme Toggle */}
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('light')}
+                    className="flex flex-col items-center gap-1 h-auto py-2"
+                  >
+                    <Sun className="w-3 h-3" />
+                    <span className="text-xs">فاتح</span>
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('dark')}
+                    className="flex flex-col items-center gap-1 h-auto py-2"
+                  >
+                    <Moon className="w-3 h-3" />
+                    <span className="text-xs">داكن</span>
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('system')}
+                    className="flex flex-col items-center gap-1 h-auto py-2"
+                  >
+                    <Monitor className="w-3 h-3" />
+                    <span className="text-xs">تلقائي</span>
+                  </Button>
+                </div>
+
+                {/* Features Preview */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">التأثيرات المتحركة</span>
-                    <div className="w-10 h-6 bg-secondary rounded-full relative">
-                      <div className="absolute top-1 right-1 w-4 h-4 bg-primary rounded-full transition-transform"></div>
-                    </div>
+                  <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                    <span className="text-xs text-blue-600 dark:text-blue-400">🎨 أنماط ألوان متقدمة</span>
+                    <ChevronRight className="w-3 h-3 text-blue-500" />
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs">التباين العالي</span>
-                    <div className="w-10 h-6 bg-secondary rounded-full relative">
-                      <div className="absolute top-1 left-1 w-4 h-4 bg-secondary-foreground rounded-full"></div>
-                    </div>
+                  <div className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                    <span className="text-xs text-green-600 dark:text-green-400">📝 أحجام خطوط مخصصة</span>
+                    <ChevronRight className="w-3 h-3 text-green-500" />
+                  </div>
+                  <div className="flex items-center justify-between p-2 bg-purple-50 dark:bg-purple-900/20 rounded">
+                    <span className="text-xs text-purple-600 dark:text-purple-400">✨ تأثيرات بصرية متقدمة</span>
+                    <ChevronRight className="w-3 h-3 text-purple-500" />
                   </div>
                 </div>
               </div>
