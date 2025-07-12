@@ -185,13 +185,23 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
           </PopoverContent>
         </Popover>
 
-        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} onClick={() => setViewMode('grid')} className="col-span-1">
-          <LayoutGrid className="w-4 h-4 sm:ml-2" />
-          <span className="hidden sm:inline">شبكة</span>
+        <Button 
+          variant={viewMode === 'grid' ? 'default' : 'outline'} 
+          size="icon"
+          onClick={() => setViewMode('grid')} 
+          className="col-span-1"
+          title="عرض شبكة"
+        >
+          <LayoutGrid className="w-4 h-4" />
         </Button>
-        <Button variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')} className="col-span-1">
-          <List className="w-4 h-4 sm:ml-2" />
-          <span className="hidden sm:inline">قائمة</span>
+        <Button 
+          variant={viewMode === 'list' ? 'default' : 'outline'} 
+          size="icon"
+          onClick={() => setViewMode('list')} 
+          className="col-span-1"
+          title="عرض قائمة"
+        >
+          <List className="w-4 h-4" />
         </Button>
       </div>
     </div>

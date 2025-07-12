@@ -69,6 +69,7 @@ const SearchableSelect = ({
                       setOpen(false);
                       setSearch('');
                     }}
+                    className="cursor-pointer hover:bg-accent"
                   >
                     <Check
                       className={cn(
