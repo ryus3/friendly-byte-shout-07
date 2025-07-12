@@ -15,16 +15,13 @@ const StockAlertsCard = () => {
   const { addNotification } = useNotifications();
   const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
 
-  // مراقبة المخزون المنخفض وإرسال إشعارات تلقائية
   useEffect(() => {
     if (!products || !settings || lowStockProducts.length === 0) return;
 
-    // فحص وإرسال إشعارات للمنتجات المنخفضة الجديدة
     lowStockProducts.forEach(variant => {
       const threshold = variant.lowStockThreshold || settings.lowStockThreshold || 5;
       const isCritical = variant.quantity <= Math.max(1, Math.floor(threshold / 2));
       
-      // إشعار تلقائي للمخزون المنخفض
       if (variant.quantity > 0 && variant.quantity <= threshold) {
         addNotification({
           type: 'low_stock_alert',
@@ -43,10 +40,9 @@ const StockAlertsCard = () => {
             sku: variant.sku
           },
           autoDelete: false,
-          user_id: null // إرسال لجميع المديرين
+          user_id: null
         });
 
-        // توست فوري للحالات الحرجة
         if (isCritical) {
           toast({
             title: "🚨 تنبيه حرج",
@@ -69,35 +65,37 @@ const StockAlertsCard = () => {
     });
   };
   
-  const getStockLevelColor = (stock, minStock) => {
+  const getStockLevel = (stock, minStock) => {
     const percentage = (stock / minStock) * 100;
     if (percentage <= 25) return {
-      className: 'bg-background border-destructive/20 text-destructive hover:bg-destructive/5 dark:bg-card dark:border-destructive/30',
+      bgColor: 'bg-destructive/10',
+      textColor: 'text-destructive', 
+      borderColor: 'border-destructive/30',
       icon: AlertTriangle,
-      pulse: true
+      pulse: true,
+      level: 'حرج'
     };
     if (percentage <= 60) return {
-      className: 'bg-background border-border text-muted-foreground hover:bg-muted/50 dark:bg-card dark:border-border',
+      bgColor: 'bg-muted/50',
+      textColor: 'text-muted-foreground',
+      borderColor: 'border-border', 
       icon: TrendingDown,
-      pulse: false
+      pulse: false,
+      level: 'منخفض'
     };
     return {
-      className: 'bg-background border-border text-muted-foreground hover:bg-muted/30 dark:bg-card dark:border-border',
+      bgColor: 'bg-muted/30',
+      textColor: 'text-muted-foreground',
+      borderColor: 'border-border',
       icon: Package,
-      pulse: false
+      pulse: false,
+      level: 'تحذير'
     };
-  };
-
-  const getUrgencyLevel = (stock, threshold) => {
-    const percentage = (stock / threshold) * 100;
-    if (percentage <= 25) return { level: 'حرج', color: 'text-destructive', bgColor: 'bg-destructive/10' };
-    if (percentage <= 60) return { level: 'منخفض', color: 'text-muted-foreground', bgColor: 'bg-muted/50' };
-    return { level: 'تحذير', color: 'text-muted-foreground', bgColor: 'bg-muted/30' };
   };
 
   return (
-    <Card className="h-full overflow-hidden shadow-lg border-border/50">
-      <CardHeader className="bg-gradient-to-l from-muted/30 to-accent/10 border-b border-border/30">
+    <Card className="h-full border-border/50 shadow-sm">
+      <CardHeader className="bg-muted/30 border-b border-border/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-destructive/10">
@@ -120,18 +118,19 @@ const StockAlertsCard = () => {
       </CardHeader>
       <CardContent className="p-0">
         {lowStockProducts && lowStockProducts.length > 0 ? (
-          <div className="space-y-0 max-h-80 overflow-y-auto">
+          <div className="space-y-0">
             {lowStockProducts.map((variant, index) => {
-              const stockLevel = getStockLevelColor(variant.quantity, variant.lowStockThreshold);
-              const urgency = getUrgencyLevel(variant.quantity, variant.lowStockThreshold);
+              const stockLevel = getStockLevel(variant.quantity, variant.lowStockThreshold);
               const StockIcon = stockLevel.icon;
               
               return (
                 <motion.div
                   key={variant.id} 
                   className={cn(
-                    "p-4 border-b border-border/20 cursor-pointer transition-all hover:shadow-md",
-                    stockLevel.className,
+                    "p-4 border-b border-border/20 cursor-pointer transition-all hover:bg-muted/50",
+                    stockLevel.bgColor,
+                    stockLevel.textColor,
+                    stockLevel.borderColor,
                     stockLevel.pulse && "animate-pulse"
                   )}
                   onClick={() => handleLowStockProductClick(variant)}
@@ -151,19 +150,19 @@ const StockAlertsCard = () => {
                           />
                         </div>
                         <div className="absolute -top-1 -right-1">
-                          <StockIcon className="w-4 h-4 text-current" />
+                          <StockIcon className="w-4 h-4" />
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-sm text-foreground truncate">
+                        <h4 className="font-semibold text-sm truncate">
                           {variant.productName}
                         </h4>
                         <p className="text-xs text-muted-foreground">
                           {variant.size} - {variant.color}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", urgency.bgColor, urgency.color)}>
-                            {urgency.level}
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", stockLevel.bgColor)}>
+                            {stockLevel.level}
                           </span>
                           <span className="text-xs text-muted-foreground">
                             حد أدنى: {variant.lowStockThreshold}
@@ -172,13 +171,13 @@ const StockAlertsCard = () => {
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-current">
+                      <div className="text-2xl font-bold">
                         {variant.quantity}
                       </div>
                       <div className="text-xs text-muted-foreground">قطعة</div>
-                      <div className="w-8 h-1 bg-current/20 rounded-full mt-1">
+                      <div className="w-8 h-1 bg-muted rounded-full mt-1">
                         <div 
-                          className="h-full bg-current rounded-full transition-all duration-500"
+                          className={cn("h-full rounded-full transition-all duration-500", stockLevel.bgColor)}
                           style={{ 
                             width: `${Math.min(100, (variant.quantity / variant.lowStockThreshold) * 100)}%` 
                           }}

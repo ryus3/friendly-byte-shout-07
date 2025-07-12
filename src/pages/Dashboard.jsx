@@ -333,7 +333,7 @@ const Dashboard = () => {
                 )}
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                     {hasPermission('view_dashboard_stock_alerts') && <StockAlertsCard />}
-                    {hasPermission('view_dashboard_recent_orders') && <RecentOrdersCard recentOrders={visibleOrders.slice(0, 5)} />}
+                    {hasPermission('view_dashboard_recent_orders') && <RecentOrdersCard recentOrders={visibleOrders.slice(0, 4)} />}
                 </div>
             </div>
         </>

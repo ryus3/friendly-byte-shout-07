@@ -79,12 +79,13 @@ const RecentOrdersCard = ({ recentOrders }) => {
     return index + 1;
   };
 
-  const getOrderNumberIcon = (number) => {
-    const iconMap = {
-      1: '①', 2: '②', 3: '③', 4: '④', 5: '⑤',
-      6: '⑥', 7: '⑦', 8: '⑧', 9: '⑨', 10: '⑩'
-    };
-    return iconMap[number] || `${number}`;
+  const getOrderIcon = (number) => {
+    const icons = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+    return icons[number - 1] || `${number}`;
+  };
+
+  const getOrderId = (order) => {
+    return String(order.id || 0).padStart(4, '0');
   };
 
   const getOrderProducts = (items) => {
@@ -118,8 +119,8 @@ const RecentOrdersCard = ({ recentOrders }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0">
-          <div className="space-y-0 flex-1 overflow-y-auto">
-            {recentOrders && recentOrders.length > 0 ? recentOrders.map((order, index) => (
+          <div className="space-y-0 flex-1 overflow-y-auto max-h-80">
+            {recentOrders && recentOrders.length > 0 ? recentOrders.slice(0, 4).map((order, index) => (
               <motion.div 
                 key={order.id} 
                 className={cn(
@@ -134,26 +135,33 @@ const RecentOrdersCard = ({ recentOrders }) => {
                 {/* Compact Order Card */}
                 <div className="flex items-center gap-3">
                   {/* Order Number Icon */}
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/30">
-                    <span className="text-primary font-bold text-sm">
-                      {getOrderNumberIcon(getOrderNumber(index))}
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/30">
+                    <span className="text-primary font-bold text-lg">
+                      {getOrderIcon(getOrderNumber(index))}
                     </span>
                   </div>
 
                   {/* Order Info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                    {/* Header Row with Date and Status */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-primary">#{getOrderId(order)}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                      </div>
                       {getStatusBadge(order.status)}
                     </div>
                     
-                    <div className="flex items-center gap-3 text-sm">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-medium text-foreground truncate max-w-[120px]">
+                    {/* Location and Delivery Info */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-sm font-medium text-foreground truncate max-w-[100px]">
                           {order.customerinfo?.province || 'غير محدد'}
                         </span>
                       </div>
+                      
+                      <div className="h-3 w-px bg-border/50" />
                       
                       <div className="flex items-center gap-1">
                         {getDeliveryType(order) === 'شركة توصيل' ? (
@@ -168,17 +176,21 @@ const RecentOrdersCard = ({ recentOrders }) => {
                           </>
                         )}
                       </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-muted-foreground">
+                      
+                      <div className="h-3 w-px bg-border/50" />
+                      
+                      <span className="text-xs text-muted-foreground truncate max-w-[80px]">
                         {order.created_by_name || 'النظام'}
                       </span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-sm text-foreground">
+                    </div>
+
+                    {/* Total Amount */}
+                    <div className="flex items-center justify-end">
+                      <div className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
+                        <span className="font-bold text-sm text-primary">
                           {(order.total || 0).toLocaleString()}
                         </span>
-                        <span className="text-xs text-muted-foreground">د.ع</span>
+                        <span className="text-xs text-primary/70">د.ع</span>
                       </div>
                     </div>
                   </div>
