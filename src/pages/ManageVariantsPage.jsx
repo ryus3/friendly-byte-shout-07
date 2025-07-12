@@ -4,21 +4,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManager from '@/components/manage-variants/CategoriesManager';
 import ColorsManager from '@/components/manage-variants/ColorsManager';
 import SizesManager from '@/components/manage-variants/SizesManager';
+import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { useVariants } from '@/contexts/VariantsContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect, useState } from 'react';
 
 const ManageVariantsPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('departments');
   const { categories, colors, sizes } = useVariants();
+  
+  // Fetch departments data
+  const [departments, setDepartments] = useState([]);
 
   const getTabStats = (type) => {
     switch (type) {
-      case 'departments': return { count: '3', status: 'أقسام' };
+      case 'departments': return { count: departments?.length || 0, status: 'قسم' };
       case 'categories': return { count: categories?.length || 0, status: 'تصنيف' };
       case 'colors': return { count: colors?.length || 0, status: 'لون' };
       case 'sizes': return { count: sizes?.length || 0, status: 'قياس' };
@@ -26,41 +32,22 @@ const ManageVariantsPage = () => {
     }
   };
 
-  // Real department data
-  const departmentSections = [
-    {
-      title: 'قسم الملابس',
-      count: categories?.filter(c => c.type === 'main_category' && c.name.includes('ملابس')).length || 0,
-      description: 'ملابس رجالية ونسائية وأطفال'
-    },
-    {
-      title: 'قسم الأحذية', 
-      count: categories?.filter(c => c.type === 'main_category' && c.name.includes('أحذية')).length || 0,
-      description: 'أحذية متنوعة لجميع الأعمار'
-    },
-    {
-      title: 'قسم المواد العامة',
-      count: categories?.filter(c => c.type === 'main_category' && !c.name.includes('ملابس') && !c.name.includes('أحذية')).length || 0,
-      description: 'مواد وأدوات متنوعة'
-    }
-  ];
-
-  // Departments Manager Component (placeholder for now)
-  const DepartmentsManager = () => (
-    <div className="text-center py-8">
-      <h3 className="text-lg font-semibold mb-2">إدارة الأقسام الرئيسية</h3>
-      <p className="text-muted-foreground mb-4">يمكنك إدارة الأقسام الرئيسية مثل قسم الملابس، الأحذية، والمواد العامة</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {departmentSections.map((dept, index) => (
-          <div key={index} className="p-4 border rounded-lg bg-card">
-            <h4 className="font-semibold">{dept.title}</h4>
-            <p className="text-sm text-muted-foreground mt-1">{dept.description}</p>
-            <p className="text-sm font-medium mt-2">{dept.count} تصنيف</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  // Load departments from database
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const { data } = await supabase
+          .from('departments')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order');
+        setDepartments(data || []);
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const tabConfig = [
     {
@@ -129,14 +116,17 @@ const ManageVariantsPage = () => {
                 </div>
               </div>
 
-              {/* Real Data Stats */}
+              {/* Beautiful Stats Cards with Real Data */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+                        <Package className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-purple-600 dark:text-purple-400">الأقسام الرئيسية</p>
-                        <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">{departmentSections.length}</p>
+                        <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">{departments?.length || 0}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -145,6 +135,9 @@ const ManageVariantsPage = () => {
                 <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
+                        <Tags className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">التصنيفات</p>
                         <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">{categories?.length || 0}</p>
@@ -156,6 +149,9 @@ const ManageVariantsPage = () => {
                 <Card className="bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-pink-200 dark:border-pink-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
+                      <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
+                        <Palette className="h-5 w-5 text-pink-600 dark:text-pink-400" />
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-pink-600 dark:text-pink-400">الألوان</p>
                         <p className="text-2xl font-bold text-pink-800 dark:text-pink-200">{colors?.length || 0}</p>
@@ -167,6 +163,9 @@ const ManageVariantsPage = () => {
                 <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+                        <Ruler className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
                       <div>
                         <p className="text-sm font-medium text-blue-600 dark:text-blue-400">القياسات</p>
                         <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{sizes?.length || 0}</p>
@@ -193,28 +192,28 @@ const ManageVariantsPage = () => {
                         key={tab.value}
                         value={tab.value}
                         className={`
-                          relative p-4 space-y-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 
+                          relative p-6 space-y-3 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 
                           data-[state=active]:shadow-lg rounded-xl transition-all duration-300
                           ${isActive ? 'transform scale-105' : 'hover:scale-102'}
                         `}
                       >
                         <div className="flex flex-col items-center space-y-2">
                           <div className={`
-                            p-2 rounded-lg bg-gradient-to-r ${tab.color} 
+                            p-3 rounded-xl bg-gradient-to-r ${tab.color} 
                             ${isActive ? 'shadow-lg' : 'opacity-70'}
                             transition-all duration-300
                           `}>
-                            <IconComponent className="h-5 w-5 text-white" />
+                            <IconComponent className="h-6 w-6 text-white" />
                           </div>
                           <div className="text-center">
-                            <p className={`font-semibold text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            <p className={`font-semibold text-base ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
                               {tab.label}
                             </p>
                             <Badge 
                               variant={isActive ? "default" : "secondary"} 
                               className="text-xs mt-1"
                             >
-                              {stats.count}
+                              {stats.count} {stats.status}
                             </Badge>
                           </div>
                         </div>
@@ -229,22 +228,22 @@ const ManageVariantsPage = () => {
                 const ComponentToRender = tab.component;
                 return (
                   <TabsContent key={tab.value} value={tab.value} className="mt-0">
-                    <div className="p-6">
-                      <div className="mb-4">
+                    <div className="p-8">
+                      <div className="mb-6">
                         <div className="flex items-center gap-3 mb-2">
                           <div className={`p-2 rounded-lg bg-gradient-to-r ${tab.color}`}>
-                            <tab.icon className="h-4 w-4 text-white" />
+                            <tab.icon className="h-5 w-5 text-white" />
                           </div>
-                          <h2 className="text-xl font-bold text-foreground">
+                          <h2 className="text-2xl font-bold text-foreground">
                             إدارة {tab.label}
                           </h2>
                         </div>
-                        <p className="text-muted-foreground">
+                        <p className="text-muted-foreground text-lg">
                           {tab.description}
                         </p>
                       </div>
                       
-                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6">
                         <ComponentToRender />
                       </div>
                     </div>
