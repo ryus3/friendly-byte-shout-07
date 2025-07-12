@@ -585,7 +585,7 @@ const SettingsPage = () => {
       </div>
       <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
       <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
-      <ManageProductCategoriesDialog open={isCategoriesDialogOpen} onOpenChange={setIsCategoriesDialogOpen} />
+      <ManageEmployeesDialog open={isManageEmployeesOpen} onOpenChange={setIsManageEmployeesOpen} />
     </>
   );
 };
