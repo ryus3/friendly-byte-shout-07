@@ -358,6 +358,65 @@ const SettingsPage = () => {
                 description="إدارة الإعدادات العامة للمتجر والأجهزة المتصلة"
               />
               
+              {/* Main Management Row - Professional Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <ModernCard
+                  icon={Truck}
+                  title="شركة التوصيل"
+                  description="إدارة إعدادات شركات التوصيل والشحن"
+                  iconColor="from-blue-500 to-blue-600"
+                  onClick={() => setIsLoginDialogOpen(true)}
+                >
+                  <div className="space-y-3">
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-sm font-medium text-blue-600 dark:text-blue-400">حالة الاتصال</p>
+                      <p className="text-xs text-blue-500 opacity-70">
+                        {isWaseetLoggedIn ? 'متصل بالوسيط' : 'غير متصل'}
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      اضغط لإدارة إعدادات التوصيل والشحن
+                    </div>
+                  </div>
+                </ModernCard>
+
+                <ModernCard
+                  icon={Bot}
+                  title="بوت التليغرام"
+                  description="إدارة بوت التليغرام والاشعارات التلقائية"
+                  iconColor="from-cyan-500 to-cyan-600"
+                >
+                  <div className="space-y-3">
+                    <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                      <p className="text-sm font-medium text-cyan-600 dark:text-cyan-400">حالة البوت</p>
+                      <p className="text-xs text-cyan-500 opacity-70">جاهز للاستخدام</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleCopyToken} className="w-full">
+                      <Copy className="w-3 h-3 ml-1" />
+                      نسخ رمز الربط
+                    </Button>
+                  </div>
+                </ModernCard>
+
+                <ModernCard
+                  icon={Users}
+                  title="إدارة الموظفين"
+                  description="إدارة الموظفين والصلاحيات والمراجعة"
+                  iconColor="from-purple-500 to-purple-600"
+                  onClick={() => setIsManageEmployeesOpen(true)}
+                >
+                  <div className="space-y-3">
+                    <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                      <p className="text-sm font-medium text-purple-600 dark:text-purple-400">عدد الموظفين</p>
+                      <p className="text-xs text-purple-500 opacity-70">نشط حالياً</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      اضغط لإدارة الموظفين والصلاحيات
+                    </div>
+                  </div>
+                </ModernCard>
+              </div>
+              
               <form onSubmit={handleStoreSettingsSubmit}>
                 <ModernCard
                   icon={Store}
@@ -372,7 +431,7 @@ const SettingsPage = () => {
                   }
                 >
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-4 p-5 border border-border/30 rounded-xl bg-secondary/20">
+                    <div className="space-y-4 p-5 border border-border/30 rounded-xl bg-card">
                       <h4 className="font-semibold flex items-center gap-2 text-primary text-lg">
                         <SettingsIcon className="w-5 h-5" />
                         إعدادات عامة

@@ -14,10 +14,20 @@ export const permissionsMap = [
       { id: 'view_settings_page', label: 'عرض صفحة الإعدادات' },
       { id: 'view_notifications_page', label: 'عرض صفحة الإشعارات' },
       { id: 'view_manage_products_page', label: 'عرض صفحة إدارة المنتجات' },
-      { id: 'view_manage_variants_page', label: 'عرض صفحة إدارة المتغيرات' },
       { id: 'view_add_product_page', label: 'عرض صفحة إضافة منتج' },
       { id: 'view_barcode_inventory_page', label: 'عرض صفحة جرد الباركود' },
       { id: 'view_quick_order_page', label: 'عرض صفحة الطلب السريع' }
+    ]
+  },
+  {
+    category: 'dashboard',
+    categoryLabel: 'لوحة التحكم',
+    permissions: [
+      { id: 'view_statistics', label: 'عرض الإحصائيات' },
+      { id: 'view_charts', label: 'عرض الرسوم البيانية' },
+      { id: 'view_recent_activities', label: 'عرض الأنشطة الحديثة' },
+      { id: 'view_alerts', label: 'عرض التنبيهات' },
+      { id: 'manage_ai_orders', label: 'إدارة طلبات الذكاء الاصطناعي' }
     ]
   },
   {
@@ -29,14 +39,14 @@ export const permissionsMap = [
       { id: 'use_barcode_scanner', label: 'استخدام قارئ الباركود' },
       { id: 'manage_products', label: 'إدارة المنتجات (إضافة/تعديل/حذف)' },
       { id: 'edit_product_quantities', label: 'تعديل كميات المخزون يدوياً' },
+      { id: 'print_labels', label: 'طباعة الملصقات' },
+      { id: 'export_inventory', label: 'تصدير المخزون' },
+      { id: 'import_products', label: 'استيراد المنتجات' },
       { id: 'manage_categories', label: 'إدارة التصنيفات والمتغيرات' },
       { id: 'view_all_classifications', label: 'عرض جميع التصنيفات' },
       { id: 'view_all_categories', label: 'عرض جميع الفئات' },
       { id: 'view_all_sizes', label: 'عرض جميع الأحجام' },
-      { id: 'view_all_colors', label: 'عرض جميع الألوان' },
-      { id: 'print_labels', label: 'طباعة الملصقات' },
-      { id: 'export_inventory', label: 'تصدير المخزون' },
-      { id: 'import_products', label: 'استيراد المنتجات' }
+      { id: 'view_all_colors', label: 'عرض جميع الألوان' }
     ]
   },
   {
@@ -111,17 +121,6 @@ export const permissionsMap = [
       { id: 'profile_settings', label: 'إعدادات الملف الشخصي' }
     ]
   },
-  {
-    category: 'dashboard',
-    categoryLabel: 'لوحة التحكم',
-    permissions: [
-      { id: 'view_statistics', label: 'عرض الإحصائيات' },
-      { id: 'view_charts', label: 'عرض الرسوم البيانية' },
-      { id: 'view_recent_activities', label: 'عرض الأنشطة الحديثة' },
-      { id: 'view_alerts', label: 'عرض التنبيهات' },
-      { id: 'manage_ai_orders', label: 'إدارة طلبات الذكاء الاصطناعي' }
-    ]
-  }
 ];
 
 // Default permissions for each role

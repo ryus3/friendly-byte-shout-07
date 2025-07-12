@@ -13,6 +13,8 @@ import {
   TrendingUp, DollarSign, Package, Printer, Send
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { pdf } from '@react-pdf/renderer';
+import ReportPDF from '@/components/pdf/ReportPDF';
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {
   const [settings, setSettings] = useLocalStorage('reportSettings', {
@@ -28,18 +30,63 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
 
-  const generateReport = (type) => {
+  const generateReport = async (type) => {
     const reportTypes = {
       daily: 'التقرير اليومي',
       weekly: 'التقرير الأسبوعي', 
       monthly: 'التقرير الشهري',
       inventory: 'تقرير المخزون'
     };
-    
-    toast({
-      title: `تم إنشاء ${reportTypes[type]}`,
-      description: "سيتم تنزيل التقرير خلال لحظات"
-    });
+
+    try {
+      // Generate sample data for demonstration
+      const reportData = {
+        sales: [
+          { product: 'منتج تجريبي 1', quantity: 5, total: 150000, profit: 30000 },
+          { product: 'منتج تجريبي 2', quantity: 3, total: 90000, profit: 20000 },
+          { product: 'منتج تجريبي 3', quantity: 8, total: 240000, profit: 50000 }
+        ],
+        orders: [
+          { id: '1001', customer: 'عميل تجريبي 1', status: 'مكتمل', total: 150000 },
+          { id: '1002', customer: 'عميل تجريبي 2', status: 'قيد التنفيذ', total: 90000 }
+        ],
+        inventory: type === 'inventory' ? [
+          { name: 'منتج 1', stock: 25, value: 500000, status: 'متوفر' },
+          { name: 'منتج 2', stock: 5, value: 100000, status: 'قليل' },
+          { name: 'منتج 3', stock: 0, value: 0, status: 'نفذ' }
+        ] : null,
+        summary: {
+          totalSales: 480000,
+          totalProfit: 100000,
+          totalOrders: 16,
+          totalInventoryValue: type === 'inventory' ? 600000 : null
+        }
+      };
+
+      // Generate PDF
+      const blob = await pdf(<ReportPDF reportData={reportData} reportType={type} />).toBlob();
+      
+      // Download PDF
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${reportTypes[type]}-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: `تم إنشاء ${reportTypes[type]}`,
+        description: "تم تحميل التقرير بصيغة PDF بنجاح"
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ في إنشاء التقرير",
+        description: "حدث خطأ أثناء إنشاء التقرير، الرجاء المحاولة مرة أخرى",
+        variant: "destructive"
+      });
+    }
   };
   
   const testEmailSend = () => {
