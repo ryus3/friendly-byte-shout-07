@@ -267,4 +267,3 @@ export const defaultPermissions = {
     'manage_ai_orders'
   ]
 }
-];
