@@ -20,10 +20,13 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
             name="name" 
             value={formData.name} 
             onChange={handleChange} 
-            placeholder="ادخل اسم الزبون أو اتركه فارغاً للاسم الافتراضي"
+            placeholder={formData.defaultCustomerName ? `الاسم الافتراضي: ${formData.defaultCustomerName}` : "ادخل اسم الزبون"}
             required 
             disabled={isSubmittingState} 
           />
+          {formData.defaultCustomerName && !formData.name && (
+            <p className="text-xs text-green-600">سيتم استخدام الاسم الافتراضي: {formData.defaultCustomerName}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">رقم الهاتف الاساسي</Label>

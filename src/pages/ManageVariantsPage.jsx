@@ -6,7 +6,7 @@ import ColorsManager from '@/components/manage-variants/ColorsManager';
 import SizesManager from '@/components/manage-variants/SizesManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Palette, Tags, Ruler, BarChart3, Globe, Sparkles } from 'lucide-react';
+import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 
@@ -24,12 +24,40 @@ const ManageVariantsPage = () => {
     }
   };
 
+  // Department sections for better organization
+  const departmentSections = [
+    {
+      title: 'قسم الملابس',
+      icon: Shirt,
+      description: 'ملابس رجالية ونسائية',
+      subcategories: ['ملابس رجالية', 'ملابس نسائية', 'ملابس أطفال'],
+      variants: ['نوع المنتج', 'القياسات', 'الألوان'],
+      color: 'from-blue-500 to-blue-600'
+    },
+    {
+      title: 'قسم الأحذية',
+      icon: ShoppingBag,
+      description: 'أحذية متنوعة لجميع الأعمار',
+      subcategories: ['أحذية رجالية', 'أحذية نسائية', 'أحذية رياضية'],
+      variants: ['الألوان', 'القياسات', 'النوع'],
+      color: 'from-green-500 to-green-600'
+    },
+    {
+      title: 'قسم المواد العامة',
+      icon: Package,
+      description: 'مواد وأدوات متنوعة',
+      subcategories: ['إلكترونيات', 'أدوات منزلية', 'إكسسوارات'],
+      variants: ['نوع المادة', 'الحجم', 'اللون'],
+      color: 'from-purple-500 to-purple-600'
+    }
+  ];
+
   const tabConfig = [
     {
       value: 'categories',
       label: 'التصنيفات',
       icon: Tags,
-      description: 'إدارة الأقسام الرئيسية وأنواع المنتجات والمواسم',
+      description: 'إدارة الأقسام والتصنيفات والمنتجات',
       color: 'from-emerald-500 to-teal-600',
       component: CategoriesManager
     },
@@ -37,7 +65,7 @@ const ManageVariantsPage = () => {
       value: 'colors',
       label: 'الألوان',
       icon: Palette,
-      description: 'إدارة وتنظيم ألوان المنتجات مع الرموز اللونية',
+      description: 'إدارة وتنظيم ألوان المنتجات',
       color: 'from-pink-500 to-rose-600',
       component: ColorsManager
     },
@@ -45,7 +73,7 @@ const ManageVariantsPage = () => {
       value: 'sizes',
       label: 'القياسات',
       icon: Ruler,
-      description: 'إدارة القياسات الحرفية والرقمية والأحجام الحرة',
+      description: 'إدارة القياسات والأحجام المختلفة',
       color: 'from-blue-500 to-indigo-600',
       component: SizesManager
     }
@@ -64,7 +92,7 @@ const ManageVariantsPage = () => {
           <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border shadow-lg">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-purple-600/10" />
             <div className="relative p-8">
-              <div className="flex items-center gap-6 mb-6">
+                <div className="flex items-center gap-6 mb-6">
                 <Button 
                   variant="outline" 
                   onClick={() => navigate('/manage-products')}
@@ -74,23 +102,52 @@ const ManageVariantsPage = () => {
                   رجوع
                 </Button>
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl">
-                      <Globe className="h-6 w-6 text-white" />
-                    </div>
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      إدارة المتغيرات العالمية
-                    </h1>
-                    <Sparkles className="h-6 w-6 text-yellow-500" />
-                  </div>
+                  <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    إدارة المتغيرات
+                  </h1>
                   <p className="text-lg text-muted-foreground max-w-2xl">
-                    نظام متطور ومتكامل لإدارة جميع متغيرات المنتجات بطريقة احترافية وعالمية
+                    نظام متطور ومتكامل لإدارة جميع متغيرات المنتجات بطريقة احترافية
                   </p>
                 </div>
               </div>
 
+              {/* Department Structure Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                {departmentSections.map((dept, index) => (
+                  <Card key={index} className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg bg-gradient-to-r ${dept.color}`}>
+                          <dept.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-sm font-semibold">{dept.title}</CardTitle>
+                          <CardDescription className="text-xs">{dept.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="space-y-2">
+                        <div className="text-xs text-muted-foreground">التصنيفات:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {dept.subcategories.map((sub, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">{sub}</Badge>
+                          ))}
+                        </div>
+                        <div className="text-xs text-muted-foreground">المتغيرات:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {dept.variants.map((variant, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">{variant}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
               {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
@@ -132,20 +189,6 @@ const ManageVariantsPage = () => {
                     </div>
                   </CardContent>
                 </Card>
-
-                <Card className="bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-200 dark:border-purple-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
-                        <BarChart3 className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400">المتغيرات</p>
-                        <p className="text-lg font-bold text-purple-800 dark:text-purple-200">35+ إجمالي</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           </div>
@@ -165,28 +208,28 @@ const ManageVariantsPage = () => {
                         key={tab.value}
                         value={tab.value}
                         className={`
-                          relative p-6 space-y-3 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 
+                          relative p-4 space-y-2 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 
                           data-[state=active]:shadow-lg rounded-xl transition-all duration-300
                           ${isActive ? 'transform scale-105' : 'hover:scale-102'}
                         `}
                       >
                         <div className="flex flex-col items-center space-y-2">
                           <div className={`
-                            p-3 rounded-xl bg-gradient-to-r ${tab.color} 
+                            p-2 rounded-lg bg-gradient-to-r ${tab.color} 
                             ${isActive ? 'shadow-lg' : 'opacity-70'}
                             transition-all duration-300
                           `}>
-                            <IconComponent className="h-6 w-6 text-white" />
+                            <IconComponent className="h-5 w-5 text-white" />
                           </div>
                           <div className="text-center">
-                            <p className={`font-semibold text-base ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            <p className={`font-semibold text-sm ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}>
                               {tab.label}
                             </p>
                             <Badge 
                               variant={isActive ? "default" : "secondary"} 
                               className="text-xs mt-1"
                             >
-                              {stats.count} {stats.status}
+                              {stats.count}
                             </Badge>
                           </div>
                         </div>
@@ -201,22 +244,22 @@ const ManageVariantsPage = () => {
                 const ComponentToRender = tab.component;
                 return (
                   <TabsContent key={tab.value} value={tab.value} className="mt-0">
-                    <div className="p-8">
-                      <div className="mb-6">
+                    <div className="p-6">
+                      <div className="mb-4">
                         <div className="flex items-center gap-3 mb-2">
                           <div className={`p-2 rounded-lg bg-gradient-to-r ${tab.color}`}>
-                            <tab.icon className="h-5 w-5 text-white" />
+                            <tab.icon className="h-4 w-4 text-white" />
                           </div>
-                          <h2 className="text-2xl font-bold text-foreground">
+                          <h2 className="text-xl font-bold text-foreground">
                             إدارة {tab.label}
                           </h2>
                         </div>
-                        <p className="text-muted-foreground text-lg">
+                        <p className="text-muted-foreground">
                           {tab.description}
                         </p>
                       </div>
                       
-                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-6">
+                      <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-4">
                         <ComponentToRender />
                       </div>
                     </div>

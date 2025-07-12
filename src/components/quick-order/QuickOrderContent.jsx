@@ -27,7 +27,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   const initialFormData = useMemo(() => ({
     name: user?.default_customer_name || '', phone: '', second_phone: '', city_id: '', region_id: '', city: '', region: '', address: '', 
-    notes: '', details: '', quantity: 1, price: 0, size: '', type: 'new', promocode: ''
+    notes: '', details: '', quantity: 1, price: 0, size: '', type: 'new', promocode: '',
+    defaultCustomerName: user?.default_customer_name || ''
   }), [user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
@@ -221,20 +222,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (activePartner === 'alwaseet') {
           if (!isWaseetLoggedIn || !waseetToken) throw new Error("يجب تسجيل الدخول لشركة التوصيل أولاً.");
           
-          const alWaseetPayload = {
-             client_name: formData.name.trim() || `زبون-${Date.now().toString().slice(-6)}`, 
-             client_mobile: formatPhoneNumber(formData.phone), 
-             client_mobile2: formData.second_phone ? formatPhoneNumber(formData.second_phone) : '',
-             city_id: formData.city_id, 
-             region_id: formData.region_id, 
-             location: formData.address,
-             type_name: formData.details, 
-             items_number: formData.quantity,
-             price: formData.price,
-             package_size: formData.size,
-             merchant_notes: formData.notes,
-             replacement: formData.type === 'exchange' ? 1 : 0
-          };
+           const alWaseetPayload = {
+              client_name: formData.name.trim() || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
+              client_mobile: formatPhoneNumber(formData.phone), 
+              client_mobile2: formData.second_phone ? formatPhoneNumber(formData.second_phone) : '',
+              city_id: formData.city_id, 
+              region_id: formData.region_id, 
+              location: formData.address,
+              type_name: formData.details, 
+              items_number: formData.quantity,
+              price: formData.price,
+              package_size: formData.size,
+              merchant_notes: formData.notes,
+              replacement: formData.type === 'exchange' ? 1 : 0
+           };
           const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
           
           if (!alWaseetResponse || !alWaseetResponse.qr_id) {
@@ -248,7 +249,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
       const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
       const customerInfoPayload = {
-        name: formData.name.trim() || `زبون-${Date.now().toString().slice(-6)}`, 
+        name: formData.name.trim() || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
         phone: formData.phone,
         address: `${formData.address}, ${region}, ${city}`,
         city: city, 

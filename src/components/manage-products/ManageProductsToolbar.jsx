@@ -46,18 +46,20 @@ const ManageProductsToolbar = ({
               className="pl-10 w-full"
             />
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-            <Button variant="outline" size="icon" onClick={onBarcodeSearch} className="flex-shrink-0" title="بحث بالباركود">
-              <QrCode className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" size="icon" onClick={() => onViewModeChange('list')} className={cn("flex-shrink-0", viewMode === 'list' && 'bg-accent')} title="عرض قائمة">
-              <List className="w-4 h-4" />
-            </Button>
-            {!isMobile && (
-              <Button variant="outline" size="icon" onClick={() => onViewModeChange('grid')} className={cn("flex-shrink-0", viewMode === 'grid' && 'bg-accent')} title="عرض شبكة">
-                <LayoutGrid className="w-4 h-4" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            <div className="flex gap-1 col-span-1">
+              <Button variant="outline" size="icon" onClick={onBarcodeSearch} className="flex-shrink-0" title="بحث بالباركود">
+                <QrCode className="w-4 h-4" />
               </Button>
-            )}
+              <Button variant="outline" size="icon" onClick={() => onViewModeChange('list')} className={cn("flex-shrink-0", viewMode === 'list' && 'bg-accent')} title="عرض قائمة">
+                <List className="w-4 h-4" />
+              </Button>
+              {!isMobile && (
+                <Button variant="outline" size="icon" onClick={() => onViewModeChange('grid')} className={cn("flex-shrink-0", viewMode === 'grid' && 'bg-accent')} title="عرض شبكة">
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
             <Button variant="outline" size="sm" onClick={onManageCategories} className="w-full col-span-1">
               إدارة المتغيرات
             </Button>
