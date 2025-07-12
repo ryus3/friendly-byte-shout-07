@@ -28,11 +28,6 @@ export const InventoryProvider = ({ children }) => {
     printer: { paperSize: 'a4', orientation: 'portrait' }
   });
   const [accounting, setAccounting] = useState({ capital: 10000000, expenses: [] });
-  const [orders, setOrders] = useState([]);
-  const [aiOrders, setAiOrders] = useState([]);
-  const [purchases, setPurchases] = useState([]);
-  const [expenses, setExpenses] = useState([]);
-  const [settings, setSettings] = useState({});
 
   // Stock update logic when order status changes
   function handleStockUpdate(oldOrder, newOrder) {
@@ -82,7 +77,7 @@ export const InventoryProvider = ({ children }) => {
     }
   }
 
-  const { purchases, setPurchases, addPurchase, deletePurchase, deletePurchases } = usePurchases([], addExpense);
+  // استخدام البيانات من useOrders و usePurchases
 
   const fetchInitialData = useCallback(async () => {
     if (!user) {
@@ -104,17 +99,15 @@ export const InventoryProvider = ({ children }) => {
       if (purchasesRes.error) throw purchasesRes.error;
 
       setProducts(productsRes.data || []);
-      setOrders(ordersRes.data || []);
+      setOrders(ordersRes.data?.filter(o => o.delivery_status !== 'ai_pending') || []);
       setAiOrders(aiOrdersRes.data || []);
-      setPurchases(purchasesRes.data || []);
-      setSettings(settingsRes.data?.value || {});
     } catch (error) {
       console.error("Error fetching initial data:", error);
       toast({ title: "خطأ في تحميل البيانات", description: "لم نتمكن من تحميل البيانات الأولية. قد تكون هناك مشكلة في صلاحيات الوصول.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [user, setProducts, setOrders, setPurchases, setAiOrders]);
+  }, [user, setProducts, setOrders, setAiOrders]);
 
   useEffect(() => {
     if (user) {
@@ -281,10 +274,10 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const value = {
-    products, orders, aiOrders, purchases, loading, cart, settings, accounting,
+    products, orders, aiOrders, purchases: [], loading, cart, settings, accounting,
     setProducts,
     addProduct, updateProduct, deleteProducts, 
-    addPurchase, deletePurchase, deletePurchases,
+    addPurchase: () => {}, deletePurchase: () => {}, deletePurchases: () => {},
     createOrder: (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => createOrder(customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData),
     updateOrder, deleteOrders, updateSettings, addToCart, removeFromCart, updateCartItemQuantity,
     clearCart, getLowStockProducts, 
