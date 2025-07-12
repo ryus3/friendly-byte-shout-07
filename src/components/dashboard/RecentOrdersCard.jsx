@@ -27,32 +27,32 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Clock,
-        className: 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 border-amber-200 shadow-sm'
+        className: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm'
       },
       'processing': { 
         label: 'قيد التسليم', 
         icon: Package,
-        className: 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200 shadow-sm'
+        className: 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-700 border-blue-300/50 shadow-sm backdrop-blur-sm'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        className: 'bg-gradient-to-r from-purple-50 to-violet-50 text-purple-700 border-purple-200 shadow-sm'
+        className: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm'
       },
       'delivered': { 
         label: 'تم التوصيل', 
         icon: Package,
-        className: 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200 shadow-sm'
+        className: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm'
       },
       'returned': { 
         label: 'راجع', 
         icon: Package,
-        className: 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-700 border-orange-200 shadow-sm'
+        className: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: Package,
-        className: 'bg-gradient-to-r from-red-50 to-rose-50 text-red-700 border-red-200 shadow-sm'
+        className: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm'
       }
     };
     const statusInfo = statusMap[status] || { 
@@ -124,8 +124,10 @@ const RecentOrdersCard = ({ recentOrders }) => {
               <motion.div 
                 key={order.id} 
                 className={cn(
-                  "relative p-3 border-b border-border/20 hover:bg-accent/50 transition-all cursor-pointer group",
-                  "hover:shadow-sm hover:border-l-2 hover:border-l-primary"
+                  "relative p-3 border-b border-border/20 cursor-pointer group transition-all duration-300",
+                  "hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5",
+                  "hover:shadow-lg hover:shadow-primary/10 hover:border-l-4 hover:border-l-primary",
+                  "hover:scale-[1.01] hover:-translate-y-0.5"
                 )}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}

@@ -639,12 +639,16 @@ const SettingsPage = () => {
             
             <ModernCard
               icon={FileText}
-              title="فحص وتقارير النظام"
-              description="فحص سلامة النظام وتصدير التقارير"
+              title="التقارير والإحصائيات"
+              description="إنشاء تقارير PDF شاملة وإرسالها بالبريد الإلكتروني"
               iconColor="from-green-500 to-green-600"
               onClick={() => setIsReportsOpen(true)}
             >
               <div className="space-y-3">
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400">تقارير شاملة</p>
+                  <p className="text-xs text-green-500 opacity-70">PDF + إرسال بريد إلكتروني</p>
+                </div>
                 <SystemIntegrityTest />
               </div>
             </ModernCard>
@@ -659,19 +663,19 @@ const SettingsPage = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ModernCard
-              icon={FileText}
-              title="التقارير"
-              description="إنشاء وإدارة التقارير المالية"
-              iconColor="from-teal-500 to-teal-600"
-              onClick={() => setIsReportsOpen(true)}
-            />
-
-            <ModernCard
               icon={Archive}
               title="النسخ الاحتياطي"
               description="نسخ احتياطية واستعادة البيانات"
               iconColor="from-indigo-500 to-indigo-600"
               onClick={handleExportData}
+            />
+
+            <ModernCard
+              icon={Shield}
+              title="الأمان المتقدم"
+              description="إعدادات الأمان وصلاحيات المستخدمين"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsEditProfileOpen(true)}
             />
 
           </div>

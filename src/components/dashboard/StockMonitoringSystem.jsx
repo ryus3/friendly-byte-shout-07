@@ -8,18 +8,27 @@ const StockMonitoringSystem = () => {
   const { products, settings } = useInventory();
   const { addNotification } = useNotifications();
 
-  // فحص المخزون المنخفض وإرسال إشعارات
+  // فحص المخزون المنخفض وإرسال إشعارات (مرة واحدة كل ساعة لكل منتج)
   const checkLowStockAndNotify = useCallback(() => {
     if (!products || !settings) return;
 
     const lowStockThreshold = settings.lowStockThreshold || 5;
     const criticalStockThreshold = Math.max(1, Math.floor(lowStockThreshold / 2));
+    const now = Date.now();
+    const oneHour = 60 * 60 * 1000; // ساعة واحدة بالميلي ثانية
     
     products.forEach(product => {
       if (product.is_visible && product.variants) {
         product.variants.forEach(variant => {
           const currentStock = variant.quantity || 0;
           const productThreshold = product.minStock || lowStockThreshold;
+          const notificationKey = `low_stock_${variant.id}`;
+          const lastNotified = localStorage.getItem(notificationKey);
+          
+          // تجنب إرسال إشعارات متكررة - مرة واحدة كل ساعة
+          if (lastNotified && (now - parseInt(lastNotified)) < oneHour) {
+            return;
+          }
           
           // إشعار المخزون المنخفض
           if (currentStock > 0 && currentStock <= productThreshold) {
@@ -27,10 +36,10 @@ const StockMonitoringSystem = () => {
             
             addNotification({
               type: 'low_stock',
-              title: severity === 'critical' ? 'تنبيه حرج: نفاد المخزون' : 'تنبيه: مخزون منخفض',
+              title: severity === 'critical' ? '🔴 تنبيه حرج: نفاد المخزون قريباً' : '🟡 تنبيه: مخزون منخفض',
               message: `المنتج "${product.name}" (${variant.color} - ${variant.size}) متبقي ${currentStock} قطعة فقط`,
-              icon: 'AlertTriangle',
-              color: severity === 'critical' ? 'red' : 'orange',
+              icon: severity === 'critical' ? 'ShieldAlert' : 'AlertCircle',
+              color: severity === 'critical' ? 'red' : 'amber',
               link: `/inventory?stockFilter=low&highlight=${variant.sku}`,
               data: {
                 productId: product.id,
@@ -46,56 +55,66 @@ const StockMonitoringSystem = () => {
               priority: severity === 'critical' ? 'high' : 'medium'
             });
 
-            // إشعار toast فوري للحالات الحرجة
+            // إشعار toast فوري للحالات الحرجة فقط
             if (severity === 'critical') {
               toast({
-                title: "🚨 تنبيه حرج: نفاد المخزون",
+                title: "🔴 تنبيه حرج: نفاد المخزون",
                 description: `${product.name} (${variant.color} - ${variant.size}) متبقي ${currentStock} قطعة فقط!`,
                 variant: "destructive",
-                duration: 8000,
+                duration: 10000,
                 action: {
                   altText: "عرض المخزون",
                   onClick: () => window.location.href = `/inventory?highlight=${variant.sku}`
                 }
               });
             }
+            
+            // حفظ وقت آخر إشعار
+            localStorage.setItem(notificationKey, now.toString());
           }
 
-          // إشعار نفاد المخزون
+          // إشعار نفاد المخزون (مرة واحدة فقط)
           if (currentStock === 0) {
-            addNotification({
-              type: 'out_of_stock',
-              title: '🔴 نفاد المخزون',
-              message: `المنتج "${product.name}" (${variant.color} - ${variant.size}) نفد من المخزون`,
-              icon: 'Package',
-              color: 'red',
-              link: `/inventory?stockFilter=out&highlight=${variant.sku}`,
-              data: {
-                productId: product.id,
-                variantId: variant.id,
-                productName: product.name,
-                variantDetails: `${variant.color} - ${variant.size}`,
-                sku: variant.sku
-              },
-              autoDelete: false,
-              priority: 'high'
-            });
+            const outOfStockKey = `out_of_stock_${variant.id}`;
+            const lastOutOfStockNotified = localStorage.getItem(outOfStockKey);
+            
+            if (!lastOutOfStockNotified || (now - parseInt(lastOutOfStockNotified)) > oneHour) {
+              addNotification({
+                type: 'out_of_stock',
+                title: '❌ نفاد المخزون',
+                message: `المنتج "${product.name}" (${variant.color} - ${variant.size}) نفد من المخزون`,
+                icon: 'ShieldAlert',
+                color: 'red',
+                link: `/inventory?stockFilter=out&highlight=${variant.sku}`,
+                data: {
+                  productId: product.id,
+                  variantId: variant.id,
+                  productName: product.name,
+                  variantDetails: `${variant.color} - ${variant.size}`,
+                  sku: variant.sku
+                },
+                autoDelete: false,
+                priority: 'high'
+              });
+              
+              localStorage.setItem(outOfStockKey, now.toString());
+            }
           }
         });
       }
     });
   }, [products, settings, addNotification]);
 
-  // مراقبة تغيرات المخزون وإنشاء إشعارات فورية
+  // مراقبة تغيرات المخزون وإنشاء إشعارات ذكية
   useEffect(() => {
     if (products && products.length > 0) {
       // فحص أولي
       checkLowStockAndNotify();
 
-      // إعداد مراقبة دورية للمخزون (كل 5 دقائق)
+      // إعداد مراقبة دورية للمخزون (كل 30 دقيقة للتوفير في الموارد)
       const monitoringInterval = setInterval(() => {
         checkLowStockAndNotify();
-      }, 5 * 60 * 1000);
+      }, 30 * 60 * 1000);
 
       return () => clearInterval(monitoringInterval);
     }

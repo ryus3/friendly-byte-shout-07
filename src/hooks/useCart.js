@@ -6,7 +6,9 @@ export const useCart = () => {
   const [cart, setCart] = useState([]);
 
   const addToCart = useCallback((product, variant, quantity, showToast = true) => {
-    const availableStock = (variant.quantity || 0) - (variant.reserved || 0);
+    const totalStock = Math.max(0, variant.quantity || 0);
+    const reservedStock = Math.max(0, variant.reserved || 0);
+    const availableStock = Math.max(0, totalStock - reservedStock);
 
     if (quantity > availableStock) {
       toast({ title: "الكمية غير متوفرة", description: `لا يمكنك إضافة هذا المنتج. الكمية المتاحة للبيع: ${availableStock}`, variant: "destructive" });
@@ -56,10 +58,13 @@ export const useCart = () => {
   const updateCartItemQuantity = useCallback((itemId, newQuantity) => {
     setCart(prev => prev.map(item => {
       if (item.id === itemId) {
-        const availableStock = (item.stock || 0) - (item.reserved || 0);
+        const totalStock = Math.max(0, item.stock || 0);
+        const reservedStock = Math.max(0, item.reserved || 0);
+        const availableStock = Math.max(0, totalStock - reservedStock);
+        
         if (newQuantity > availableStock) {
           toast({ title: "الكمية غير متوفرة", description: `المخزون المتاح للبيع: ${availableStock}`, variant: "destructive" });
-          return { ...item, quantity: availableStock, total: item.price * availableStock };
+          return { ...item, quantity: Math.max(0, availableStock), total: item.price * Math.max(0, availableStock) };
         }
         return newQuantity <= 0 ? null : { ...item, quantity: newQuantity, total: item.price * newQuantity };
       }

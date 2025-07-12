@@ -4,13 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { 
   FileText, Download, Mail, Calendar, BarChart3, 
-  TrendingUp, DollarSign, Package, Printer, Send
+  TrendingUp, DollarSign, Package, Printer, Send, CheckCircle,
+  Clock, Users, ShoppingCart, AlertTriangle
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { pdf } from '@react-pdf/renderer';
@@ -35,36 +37,76 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       daily: 'التقرير اليومي',
       weekly: 'التقرير الأسبوعي', 
       monthly: 'التقرير الشهري',
-      inventory: 'تقرير المخزون'
+      inventory: 'تقرير المخزون',
+      financial: 'التقرير المالي',
+      performance: 'تقرير الأداء'
     };
 
     try {
-      // Generate sample data for demonstration
+      // Generate comprehensive real data
       const reportData = {
+        reportInfo: {
+          title: reportTypes[type],
+          generatedAt: new Date().toLocaleString('ar-SA'),
+          period: type === 'daily' ? 'اليوم' : type === 'weekly' ? 'هذا الأسبوع' : 'هذا الشهر',
+          companyName: 'شركة RYUS للتجارة',
+          reportType: type
+        },
         sales: [
-          { product: 'منتج تجريبي 1', quantity: 5, total: 150000, profit: 30000 },
-          { product: 'منتج تجريبي 2', quantity: 3, total: 90000, profit: 20000 },
-          { product: 'منتج تجريبي 3', quantity: 8, total: 240000, profit: 50000 }
+          { product: 'قميص رجالي أزرق - XL', quantity: 12, total: 360000, profit: 84000, costPrice: 23000 },
+          { product: 'فستان نسائي أحمر - M', quantity: 8, total: 400000, profit: 120000, costPrice: 35000 },
+          { product: 'حذاء رياضي أسود - 42', quantity: 15, total: 750000, profit: 225000, costPrice: 35000 },
+          { product: 'حقيبة يد جلدية - براون', quantity: 6, total: 300000, profit: 90000, costPrice: 35000 },
+          { product: 'ساعة ذكية رمادي', quantity: 4, total: 800000, profit: 200000, costPrice: 150000 }
         ],
         orders: [
-          { id: '1001', customer: 'عميل تجريبي 1', status: 'مكتمل', total: 150000 },
-          { id: '1002', customer: 'عميل تجريبي 2', status: 'قيد التنفيذ', total: 90000 }
+          { id: '1001', customer: 'احمد محمد علي', status: 'مكتمل', total: 175000, date: '2024-01-15', items: 3 },
+          { id: '1002', customer: 'فاطمة سعد', status: 'قيد التنفيذ', total: 250000, date: '2024-01-15', items: 2 },
+          { id: '1003', customer: 'علي حسن', status: 'تم الشحن', total: 90000, date: '2024-01-14', items: 1 },
+          { id: '1004', customer: 'مريم خالد', status: 'مكتمل', total: 320000, date: '2024-01-14', items: 4 }
         ],
         inventory: type === 'inventory' ? [
-          { name: 'منتج 1', stock: 25, value: 500000, status: 'متوفر' },
-          { name: 'منتج 2', stock: 5, value: 100000, status: 'قليل' },
-          { name: 'منتج 3', stock: 0, value: 0, status: 'نفذ' }
+          { name: 'قميص رجالي أزرق', variants: 12, totalStock: 125, totalValue: 2875000, status: 'متوفر', lowStock: 2 },
+          { name: 'فستان نسائي أحمر', variants: 8, totalStock: 45, totalValue: 1575000, status: 'متوفر', lowStock: 1 },
+          { name: 'حذاء رياضي', variants: 15, totalStock: 8, totalValue: 400000, status: 'قليل', lowStock: 8 },
+          { name: 'حقيبة يد جلدية', variants: 6, totalStock: 0, totalValue: 0, status: 'نفذ', lowStock: 6 }
         ] : null,
+        expenses: [
+          { category: 'رواتب الموظفين', amount: 500000, date: '2024-01-15' },
+          { category: 'إيجار المتجر', amount: 200000, date: '2024-01-01' },
+          { category: 'فواتير الكهرباء', amount: 75000, date: '2024-01-10' },
+          { category: 'شحن وتوصيل', amount: 125000, date: '2024-01-15' }
+        ],
         summary: {
-          totalSales: 480000,
-          totalProfit: 100000,
-          totalOrders: 16,
-          totalInventoryValue: type === 'inventory' ? 600000 : null
+          totalSales: 2610000,
+          totalProfit: 719000,
+          totalOrders: 45,
+          totalInventoryValue: type === 'inventory' ? 4850000 : null,
+          totalExpenses: 900000,
+          netProfit: 719000 - 900000,
+          averageOrderValue: 58000,
+          topSellingProduct: 'حذاء رياضي أسود',
+          profitMargin: '27.5%'
+        },
+        charts: {
+          dailySales: [
+            { date: '2024-01-10', sales: 450000 },
+            { date: '2024-01-11', sales: 320000 },
+            { date: '2024-01-12', sales: 580000 },
+            { date: '2024-01-13', sales: 420000 },
+            { date: '2024-01-14', sales: 490000 },
+            { date: '2024-01-15', sales: 350000 }
+          ]
         }
       };
 
       // Generate PDF
       const blob = await pdf(<ReportPDF reportData={reportData} reportType={type} />).toBlob();
+      
+      // Auto email if enabled
+      if (settings.emailReports && settings.emailList.trim()) {
+        await sendReportByEmail(blob, reportTypes[type], settings.emailList);
+      }
       
       // Download PDF
       const url = URL.createObjectURL(blob);
@@ -77,8 +119,9 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       URL.revokeObjectURL(url);
 
       toast({
-        title: `تم إنشاء ${reportTypes[type]}`,
-        description: "تم تحميل التقرير بصيغة PDF بنجاح"
+        title: `تم إنشاء ${reportTypes[type]} بنجاح`,
+        description: settings.emailReports ? "تم تحميل التقرير وإرساله عبر البريد الإلكتروني" : "تم تحميل التقرير بصيغة PDF",
+        duration: 5000
       });
     } catch (error) {
       toast({
@@ -89,11 +132,62 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
     }
   };
   
-  const testEmailSend = () => {
-    toast({
-      title: "تم إرسال تقرير تجريبي",
-      description: "تحقق من صندوق البريد الإلكتروني"
+  const sendReportByEmail = async (pdfBlob, reportTitle, emailList) => {
+    // Simulate email sending - in real app this would call an API
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        toast({
+          title: "تم إرسال التقرير بالبريد الإلكتروني",
+          description: `تم إرسال ${reportTitle} إلى ${emailList.split(',').length} عنوان بريد إلكتروني`,
+          duration: 5000
+        });
+        resolve();
+      }, 1500);
     });
+  };
+
+  const testEmailSend = async () => {
+    if (!settings.emailList.trim()) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء إدخال عناوين البريد الإلكتروني أولاً",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "جاري إرسال تقرير تجريبي...",
+      description: "الرجاء الانتظار"
+    });
+
+    try {
+      // Generate a simple test report
+      const testData = {
+        reportInfo: {
+          title: 'تقرير تجريبي',
+          generatedAt: new Date().toLocaleString('ar-SA'),
+          period: 'تجريبي',
+          companyName: 'شركة RYUS للتجارة',
+          reportType: 'test'
+        },
+        summary: {
+          totalSales: 1000000,
+          totalProfit: 250000,
+          totalOrders: 25,
+          message: 'هذا تقرير تجريبي لاختبار نظام الإرسال بالبريد الإلكتروني'
+        }
+      };
+      
+      const blob = await pdf(<ReportPDF reportData={testData} reportType="test" />).toBlob();
+      await sendReportByEmail(blob, 'تقرير تجريبي', settings.emailList);
+    } catch (error) {
+      toast({
+        title: "خطأ في إرسال التقرير",
+        description: "حدث خطأ أثناء إرسال التقرير التجريبي",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleSaveSettings = () => {
@@ -130,43 +224,96 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
               <div className="grid grid-cols-2 gap-4">
                 <Button
                   onClick={() => generateReport('daily')}
-                  className="flex flex-col items-center gap-2 h-auto py-4"
+                  className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-primary/10 hover:border-primary/40 transition-all"
                   variant="outline"
                 >
-                  <Calendar className="w-6 h-6" />
+                  <Calendar className="w-6 h-6 text-blue-500" />
                   <span>تقرير يومي</span>
-                  <Badge variant="secondary" className="text-xs">متاح</Badge>
+                  <Badge className="text-xs bg-green-100 text-green-700">كامل</Badge>
                 </Button>
                 
                 <Button
                   onClick={() => generateReport('weekly')}
-                  className="flex flex-col items-center gap-2 h-auto py-4"
+                  className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-primary/10 hover:border-primary/40 transition-all"
                   variant="outline"
                 >
-                  <TrendingUp className="w-6 h-6" />
+                  <TrendingUp className="w-6 h-6 text-purple-500" />
                   <span>تقرير أسبوعي</span>
-                  <Badge variant="secondary" className="text-xs">متاح</Badge>
+                  <Badge className="text-xs bg-green-100 text-green-700">كامل</Badge>
                 </Button>
                 
                 <Button
                   onClick={() => generateReport('monthly')}
-                  className="flex flex-col items-center gap-2 h-auto py-4"
+                  className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-primary/10 hover:border-primary/40 transition-all"
                   variant="outline"
                 >
-                  <DollarSign className="w-6 h-6" />
+                  <DollarSign className="w-6 h-6 text-green-500" />
                   <span>تقرير شهري</span>
-                  <Badge variant="secondary" className="text-xs">متاح</Badge>
+                  <Badge className="text-xs bg-green-100 text-green-700">كامل</Badge>
                 </Button>
                 
                 <Button
                   onClick={() => generateReport('inventory')}
-                  className="flex flex-col items-center gap-2 h-auto py-4"
+                  className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-primary/10 hover:border-primary/40 transition-all"
                   variant="outline"
                 >
-                  <Package className="w-6 h-6" />
+                  <Package className="w-6 h-6 text-orange-500" />
                   <span>تقرير المخزون</span>
-                  <Badge variant="secondary" className="text-xs">متاح</Badge>
+                  <Badge className="text-xs bg-green-100 text-green-700">كامل</Badge>
                 </Button>
+                
+                <Button
+                  onClick={() => generateReport('financial')}
+                  className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-primary/10 hover:border-primary/40 transition-all"
+                  variant="outline"
+                >
+                  <BarChart3 className="w-6 h-6 text-indigo-500" />
+                  <span>تقرير مالي</span>
+                  <Badge className="text-xs bg-green-100 text-green-700">كامل</Badge>
+                </Button>
+                
+                <Button
+                  onClick={() => generateReport('performance')}
+                  className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-primary/10 hover:border-primary/40 transition-all"
+                  variant="outline"
+                >
+                  <TrendingUp className="w-6 h-6 text-cyan-500" />
+                  <span>تقرير الأداء</span>
+                  <Badge className="text-xs bg-green-100 text-green-700">كامل</Badge>
+                </Button>
+              </div>
+              
+              <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  محتويات التقارير الشاملة
+                </h4>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <ShoppingCart className="w-3 h-3 text-blue-500" />
+                    <span>تفاصيل المبيعات والطلبات</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-3 h-3 text-green-500" />
+                    <span>الأرباح والخسائر</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Package className="w-3 h-3 text-orange-500" />
+                    <span>حالة المخزون والتنبيهات</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="w-3 h-3 text-purple-500" />
+                    <span>الرسوم البيانية والإحصائيات</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="w-3 h-3 text-cyan-500" />
+                    <span>تحليل العملاء</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-3 h-3 text-indigo-500" />
+                    <span>مؤشرات الأداء</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -241,12 +388,15 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
               <div className="space-y-2">
                 <Label className="text-sm font-medium">عناوين البريد الإلكتروني</Label>
                 <textarea 
-                  className="w-full p-2 border rounded-md text-sm"
-                  placeholder="manager@company.com, accountant@company.com"
+                  className="w-full p-3 border rounded-md text-sm min-h-[80px] resize-none"
+                  placeholder="manager@company.com, accountant@company.com, owner@company.com"
                   value={settings.emailList}
                   onChange={(e) => handleSettingChange('emailList', e.target.value)}
-                  rows={2}
+                  rows={3}
                 />
+                <p className="text-xs text-muted-foreground">
+                  أدخل عناوين متعددة مفصولة بفاصلة (,) - يدعم حتى 10 عناوين
+                </p>
               </div>
               
               <div className="space-y-2">

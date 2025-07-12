@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Package, TrendingDown, Zap } from 'lucide-react';
+import { AlertTriangle, Package, TrendingDown, Zap, ShieldAlert, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -69,21 +69,24 @@ const StockAlertsCard = () => {
     const percentage = (stock / minStock) * 100;
     if (percentage <= 25) return {
       style: 'critical',
-      icon: AlertTriangle,
+      icon: ShieldAlert,
       pulse: true,
-      level: 'حرج'
+      level: 'حرج',
+      color: 'destructive'
     };
     if (percentage <= 60) return {
       style: 'warning',
-      icon: TrendingDown,
+      icon: AlertCircle,
       pulse: false,
-      level: 'منخفض'
+      level: 'منخفض',
+      color: 'orange'
     };
     return {
       style: 'low',
       icon: Package,
       pulse: false,
-      level: 'تحذير'
+      level: 'تحذير',
+      color: 'primary'
     };
   };
 
@@ -122,11 +125,11 @@ const StockAlertsCard = () => {
                 <motion.div
                   key={variant.id} 
                   className={cn(
-                    "group relative p-3.5 border-b border-border/20 cursor-pointer transition-all duration-200",
-                    "hover:bg-gradient-to-r hover:shadow-sm",
-                    isCritical && "bg-destructive/5 hover:from-destructive/10 hover:to-destructive/5 border-destructive/20",
-                    isWarning && "bg-orange-500/5 hover:from-orange-500/10 hover:to-orange-500/5 border-orange-500/20", 
-                    !isCritical && !isWarning && "bg-muted/30 hover:from-muted/50 hover:to-muted/30",
+                    "group relative p-3.5 border-b border-border/20 cursor-pointer transition-all duration-300",
+                    "hover:bg-gradient-to-r hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.01] hover:-translate-y-0.5",
+                    isCritical && "bg-gradient-to-r from-red-500/8 to-red-600/8 hover:from-red-500/12 hover:to-red-600/12 border-red-300/30",
+                    isWarning && "bg-gradient-to-r from-amber-500/8 to-amber-600/8 hover:from-amber-500/12 hover:to-amber-600/12 border-amber-300/30", 
+                    !isCritical && !isWarning && "bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10",
                     stockLevel.pulse && "animate-pulse"
                   )}
                   onClick={() => handleLowStockProductClick(variant)}
@@ -148,9 +151,9 @@ const StockAlertsCard = () => {
                       <div className="absolute -top-1 -right-1 p-0.5 rounded-full bg-background border border-border shadow-sm">
                         <StockIcon className={cn(
                           "w-3 h-3",
-                          isCritical && "text-destructive",
-                          isWarning && "text-orange-600",
-                          !isCritical && !isWarning && "text-muted-foreground"
+                          isCritical && "text-red-600",
+                          isWarning && "text-amber-600",
+                          !isCritical && !isWarning && "text-primary"
                         )} />
                       </div>
                     </div>
@@ -164,8 +167,8 @@ const StockAlertsCard = () => {
                         <div className="text-right flex-shrink-0">
                           <div className={cn(
                             "text-lg font-bold",
-                            isCritical && "text-destructive",
-                            isWarning && "text-orange-600",
+                            isCritical && "text-red-600",
+                            isWarning && "text-amber-600",
                             !isCritical && !isWarning && "text-foreground"
                           )}>
                             {variant.quantity}
@@ -180,10 +183,10 @@ const StockAlertsCard = () => {
                             {variant.size} • {variant.color}
                           </span>
                           <span className={cn(
-                            "text-xs px-1.5 py-0.5 rounded font-medium",
-                            isCritical && "bg-destructive/10 text-destructive border border-destructive/20",
-                            isWarning && "bg-orange-500/10 text-orange-600 border border-orange-500/20",
-                            !isCritical && !isWarning && "bg-muted text-muted-foreground border border-border"
+                            "text-xs px-1.5 py-0.5 rounded font-medium backdrop-blur-sm",
+                            isCritical && "bg-red-500/10 text-red-700 border border-red-300/50",
+                            isWarning && "bg-amber-500/10 text-amber-700 border border-amber-300/50",
+                            !isCritical && !isWarning && "bg-primary/10 text-primary border border-primary/30"
                           )}>
                             {stockLevel.level}
                           </span>
@@ -196,9 +199,9 @@ const StockAlertsCard = () => {
                             <div 
                               className={cn(
                                 "h-full transition-all duration-500 rounded-full",
-                                isCritical && "bg-destructive",
-                                isWarning && "bg-orange-500",
-                                !isCritical && !isWarning && "bg-primary"
+                                isCritical && "bg-gradient-to-r from-red-500 to-red-600",
+                                isWarning && "bg-gradient-to-r from-amber-500 to-amber-600",
+                                !isCritical && !isWarning && "bg-gradient-to-r from-primary to-primary/80"
                               )}
                               style={{ 
                                 width: `${Math.min(100, Math.max(5, (variant.quantity / variant.lowStockThreshold) * 100))}%` 
