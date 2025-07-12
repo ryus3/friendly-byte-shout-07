@@ -7,32 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2 } from 'lucide-react';
-import { DndContext, closestCenter } from '@dnd-kit/core';
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { ArrowRight, Building2, Globe, Sparkles, Image as ImageIcon, Package } from 'lucide-react';
 import Loader from '@/components/ui/loader';
-import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/lib/customSupabaseClient';
 
-import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
-import NewProductCategorization from '@/components/add-product/NewProductCategorization';
-import ProductVariantSelection from '@/components/add-product/ProductVariantSelection';
-import ColorVariantCard from '@/components/add-product/ColorVariantCard';
-
-const SortableColorCard = React.memo((props) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: props.color.id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes}>
-      <ColorVariantCard {...props} dragHandleProps={listeners} />
-    </div>
-  );
-});
+import EnhancedProductForm from '@/components/add-product/EnhancedProductForm';
 
 const AddProductPage = () => {
   const navigate = useNavigate();
@@ -53,15 +32,41 @@ const AddProductPage = () => {
     season_occasion: ''
   });
   const [selectedColors, setSelectedColors] = useState([]);
-  const [sizeType, setSizeType] = useState('letter');
   const [variants, setVariants] = useState([]);
   const [colorImages, setColorImages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [departments, setDepartments] = useState([]);
+  const [productStats, setProductStats] = useState({ total: 0, active: 0, categories: 0 });
+  
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
-  const allSizesForType = useMemo(() => sizes.filter(s => s.type === sizeType), [sizes, sizeType]);
+  // Get product statistics
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data: products } = await supabase
+          .from('products')
+          .select('id, is_active, category_id')
+          .order('created_at', { ascending: false });
+        
+        const { data: categories } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('type', 'main_category');
+        
+        setProductStats({
+          total: products?.length || 0,
+          active: products?.filter(p => p.is_active)?.length || 0,
+          categories: categories?.length || 0
+        });
+      } catch (error) {
+        console.error('خطأ في جلب الإحصائيات:', error);
+      }
+    };
+    
+    fetchStats();
+  }, []);
 
   // جلب الأقسام
   useEffect(() => {
@@ -80,23 +85,31 @@ const AddProductPage = () => {
     fetchDepartments();
   }, []);
 
+  // Generate variants based on selected colors and available sizes
   useEffect(() => {
     const generateVariants = () => {
-      if (selectedColors.length === 0 || allSizesForType.length === 0) {
+      if (selectedColors.length === 0) {
         setVariants([]);
         return;
       }
   
       const newVariants = [];
       selectedColors.forEach(color => {
-        allSizesForType.forEach(size => {
-          const sku = `${settings?.sku_prefix || 'PROD'}-${color.name.slice(0,3)}-${size.value}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase().replace(/\s+/g, '-');
+        // Get all available sizes (excluding free size)
+        const availableSizes = sizes.filter(s => 
+          s.name !== 'فري سايز' && 
+          s.name !== 'Free Size'
+        );
+        
+        availableSizes.forEach(size => {
+          const sku = `${settings?.sku_prefix || 'PROD'}-${color.name.slice(0,3)}-${size.name}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase().replace(/\s+/g, '-');
           newVariants.push({
             colorId: color.id,
             sizeId: size.id,
             color: color.name,
             color_hex: color.hex_code,
-            size: size.value,
+            size: size.name,
+            sizeType: size.type,
             quantity: 0,
             price: parseFloat(productInfo.price) || 0,
             costPrice: parseFloat(productInfo.costPrice) || 0,
@@ -108,10 +121,11 @@ const AddProductPage = () => {
       });
       setVariants(newVariants);
     };
+    
     if (settings) {
-        generateVariants();
+      generateVariants();
     }
-  }, [selectedColors, allSizesForType, productInfo.price, productInfo.costPrice, settings]);
+  }, [selectedColors, sizes, productInfo.price, productInfo.costPrice, settings]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -158,44 +172,13 @@ const AddProductPage = () => {
     setUploadProgress(0);
   };
   
-  const onDragEnd = useCallback((event) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setSelectedColors((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+  const handleCancel = () => {
+    if (fromPurchases) {
+      navigate(fromPurchases);
+    } else {
+      navigate('/manage-products');
     }
-  }, []);
-
-  const handleColorImageSelect = useCallback((colorId, file) => {
-    setColorImages(prev => ({...prev, [colorId]: file }));
-  }, []);
-
-  const handleColorImageRemove = useCallback((colorId) => {
-    setColorImages(prev => {
-        const newImages = {...prev};
-        delete newImages[colorId];
-        return newImages;
-    });
-  }, []);
-  
-  const handleGeneralImageSelect = useCallback((index, file) => {
-    setGeneralImages(prev => {
-      const newImages = [...prev];
-      newImages[index] = file;
-      return newImages;
-    });
-  }, []);
-
-  const handleGeneralImageRemove = useCallback((index) => {
-    setGeneralImages(prev => {
-      const newImages = [...prev];
-      newImages[index] = null;
-      return newImages;
-    });
-  }, []);
+  };
   
   const loading = inventoryLoading || variantsLoading;
   if (loading && !isSubmitting) return <div className="h-full w-full flex items-center justify-center"><Loader /></div>;
@@ -205,140 +188,90 @@ const AddProductPage = () => {
       <Helmet><title>إضافة منتج جديد - RYUS</title></Helmet>
       
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-        <div className="container mx-auto p-6 space-y-6">
+        <div className="container mx-auto p-6 space-y-8">
           
-          {/* Header قسم محسن */}
-          <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border shadow-lg">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-blue-600/10" />
-            <div className="relative p-6">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                   <Button type="button" variant="outline" onClick={() => navigate(fromPurchases || '/add-product')}>
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                      رجوع
-                   </Button>
-                   <div>
-                     <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                       إضافة منتج جديد
-                     </h1>
-                     {selectedDepartment && (
-                       <div className="flex items-center gap-2 mt-2">
-                         <Building2 className="h-4 w-4 text-muted-foreground" />
-                         <span className="text-sm text-muted-foreground">
-                           القسم المحدد: <span className="font-semibold text-primary">{selectedDepartment.name}</span>
-                         </span>
-                       </div>
-                     )}
-                   </div>
+          {/* World-Class Header */}
+          <div className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 via-blue-500/20 to-purple-500/20 blur-3xl" />
+            <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-white/20 shadow-2xl p-8">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div className="flex items-start gap-6">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => navigate(fromPurchases || '/add-product')}
+                    className="shrink-0"
+                  >
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                    رجوع
+                  </Button>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-gradient-to-r from-emerald-600 to-blue-600 rounded-xl">
+                        <Package className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          إضافة منتج جديد
+                        </h1>
+                        <p className="text-muted-foreground flex items-center gap-2">
+                          <Globe className="h-4 w-4" />
+                          نظام إضافة المنتجات المتطور والعالمي
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {selectedDepartment && (
+                      <div className="flex items-center gap-3 p-3 bg-primary/10 rounded-xl border border-primary/20">
+                        <Building2 className="h-5 w-5 text-primary" />
+                        <span className="text-sm">
+                          القسم المحدد: <span className="font-semibold text-primary">{selectedDepartment.name}</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                   {isUploading && <Progress value={uploadProgress} className="w-32" />}
-                   <Button 
-                     onClick={handleSubmit}
-                     disabled={isSubmitting || isUploading || !settings}
-                     className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
-                   >
-                      {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <PackagePlus className="w-4 h-4 ml-2" />}
-                      {isSubmitting || isUploading ? "جاري الحفظ..." : "حفظ المنتج"}
-                   </Button>
+                
+                {/* Quick Stats */}
+                <div className="grid grid-cols-3 gap-4 w-full lg:w-auto">
+                  <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{productStats.total}</div>
+                    <div className="text-sm text-emerald-600 dark:text-emerald-400">إجمالي المنتجات</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 p-4 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{productStats.active}</div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400">منتجات نشطة</div>
+                  </div>
+                  <div className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 p-4 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{productStats.categories}</div>
+                    <div className="text-sm text-purple-600 dark:text-purple-400">التصنيفات</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* نموذج الإضافة */}
-          <form onSubmit={handleSubmit} className="space-y-6 pb-20">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
-                <ProductPrimaryInfo 
-                  productInfo={productInfo} 
-                  setProductInfo={setProductInfo}
-                  generalImages={generalImages}
-                  onImageSelect={handleGeneralImageSelect}
-                  onImageRemove={handleGeneralImageRemove}
-                />
-                <NewProductCategorization 
-                  selectedCategories={selectedCategories} 
-                  setSelectedCategories={setSelectedCategories} 
-                />
-                <ProductVariantSelection 
-                  selectedColors={selectedColors}
-                  setSelectedColors={setSelectedColors}
-                  sizeType={sizeType}
-                  setSizeType={setSizeType}
-                />
-              </div>
-              
-              {/* معلومات إضافية في الشريط الجانبي */}
-              <div className="space-y-6">
-                {selectedDepartment && (
-                  <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-primary">
-                        <Sparkles className="h-5 w-5" />
-                        القسم المحدد
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg bg-gradient-to-r ${selectedDepartment.color}`}>
-                            <Building2 className="h-4 w-4 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold">{selectedDepartment.name}</p>
-                            <p className="text-sm text-muted-foreground">{selectedDepartment.description}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-                
-                {/* نصائح سريعة */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">نصائح سريعة</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <p>• تأكد من إدخال سعر التكلفة لحساب الأرباح</p>
-                    <p>• اختر ألوان متعددة لزيادة خيارات العملاء</p>
-                    <p>• أضف صور عالية الجودة للمنتج</p>
-                    <p>• اختر التصنيفات المناسبة لتسهيل البحث</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-            
-            {variants.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle>إدارة المتغيرات النهائية</CardTitle></CardHeader>
-                <CardContent>
-                  <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                    <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-4">
-                        {selectedColors.map((color) => (
-                          <SortableColorCard
-                            key={color.id}
-                            id={color.id}
-                            color={color}
-                            allSizesForType={allSizesForType}
-                            variants={variants}
-                            setVariants={setVariants}
-                            price={productInfo.price}
-                            costPrice={productInfo.costPrice}
-                            handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
-                            handleImageRemove={() => handleColorImageRemove(color.id)}
-                            initialImage={colorImages[color.id] || null}
-                          />
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </CardContent>
-              </Card>
-            )}
-          </form>
+          {/* Enhanced Product Form */}
+          <EnhancedProductForm
+            productInfo={productInfo}
+            setProductInfo={setProductInfo}
+            generalImages={generalImages}
+            setGeneralImages={setGeneralImages}
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
+            selectedColors={selectedColors}
+            setSelectedColors={setSelectedColors}
+            variants={variants}
+            setVariants={setVariants}
+            colorImages={colorImages}
+            setColorImages={setColorImages}
+            isSubmitting={isSubmitting}
+            uploadProgress={uploadProgress}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            editMode={false}
+          />
           
         </div>
       </div>

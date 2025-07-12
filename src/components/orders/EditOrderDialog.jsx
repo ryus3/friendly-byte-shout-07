@@ -9,6 +9,9 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Edit, CheckCircle, AlertCircle, User, MapPin, Package } from 'lucide-react';
 
 const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
   const [formData, setFormData] = useState({});
@@ -91,12 +94,69 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="gradient-text">تعديل الطلب #{order.trackingnumber}</DialogTitle>
+      <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-r from-emerald-600 to-blue-600 rounded-lg">
+              <Edit className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                تعديل الطلب #{order.order_number || order.trackingnumber}
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                نظام تعديل الطلبات المتطور مع التحقق الآلي والحفظ الآمن
+              </p>
+            </div>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="flex-1 overflow-y-auto space-y-6 py-4">
+          {/* Order Status Card */}
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                  معلومات الطلب
+                </CardTitle>
+                <Badge variant="secondary">
+                  رقم الطلب: {order.order_number || order.trackingnumber}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">حالة الطلب:</span>
+                  <Badge variant="outline" className="ml-2">{order.status || 'قيد المراجعة'}</Badge>
+                </div>
+                <div>
+                  <span className="font-medium">حالة الدفع:</span>
+                  <Badge variant="outline" className="ml-2">{order.payment_status || 'قيد الانتظار'}</Badge>
+                </div>
+                <div>
+                  <span className="font-medium">المبلغ الإجمالي:</span>
+                  <span className="ml-2 font-bold text-primary">{order.final_amount || order.total} د.ع</span>
+                </div>
+                <div>
+                  <span className="font-medium">تاريخ الطلب:</span>
+                  <span className="ml-2">{new Date(order.created_at).toLocaleDateString('ar-EG')}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Customer Information Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                معلومات العميل
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="client_name">اسم العميل</Label>
               <Input id="client_name" name="client_name" value={formData.client_name || ''} onChange={handleChange} required />
@@ -131,15 +191,37 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="location">العنوان التفصيلي</Label>
-            <Textarea id="location" name="location" value={formData.location || ''} onChange={handleChange} required />
-          </div>
-          <div>
-            <Label htmlFor="type_name">نوع البضاعة</Label>
-            <Input id="type_name" name="type_name" value={formData.type_name || ''} onChange={handleChange} required />
-          </div>
+            </div>
+            </CardContent>
+          </Card>
+          {/* Address Information Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                معلومات العنوان
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="location">العنوان التفصيلي</Label>
+                <Textarea id="location" name="location" value={formData.location || ''} onChange={handleChange} required />
+              </div>
+            </CardContent>
+          </Card>
+          {/* Order Details Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                تفاصيل الطلب
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="type_name">نوع البضاعة</Label>
+                <Input id="type_name" name="type_name" value={formData.type_name || ''} onChange={handleChange} required />
+              </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="items_number">عدد القطع</Label>
@@ -154,31 +236,44 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="merchant_notes">ملاحظات التاجر (اختياري)</Label>
-            <Textarea id="merchant_notes" name="merchant_notes" value={formData.merchant_notes || ''} onChange={handleChange} />
-          </div>
-          <div>
-            <Label>هل الطلب استبدال؟</Label>
-            <Select name="replacement" value={String(formData.replacement || '0')} onValueChange={(value) => handleSelectChange('replacement', value)} required>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">لا</SelectItem>
-                <SelectItem value="1">نعم</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-            <Button type="submit" disabled={isLoading}>
+            </div>
+              
+              <div>
+                <Label htmlFor="merchant_notes">ملاحظات التاجر (اختياري)</Label>
+                <Textarea id="merchant_notes" name="merchant_notes" value={formData.merchant_notes || ''} onChange={handleChange} />
+              </div>
+              
+              <div>
+                <Label>هل الطلب استبدال؟</Label>
+                <Select name="replacement" value={String(formData.replacement || '0')} onValueChange={(value) => handleSelectChange('replacement', value)} required>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">لا</SelectItem>
+                    <SelectItem value="1">نعم</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              إلغاء
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isLoading}
+              className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+            >
               {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              <CheckCircle className="ml-2 h-4 w-4" />
               حفظ التعديلات
             </Button>
-          </DialogFooter>
+          </div>
         </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
