@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { permissionsMap } from '@/lib/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield, Trash2, Loader2, Package } from 'lucide-react';
+import { Shield, Trash2, Loader2, Package, Eye, Shirt, Laptop, Watch, Footprints, ShoppingBag } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +41,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const [permissions, setPermissions] = useState([]);
   const [defaultPage, setDefaultPage] = useState('/');
   const [orderCreationMode, setOrderCreationMode] = useState('choice');
+  const [categoryPermissions, setCategoryPermissions] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -50,6 +51,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
       setPermissions(employee.permissions || []);
       setDefaultPage(employee.default_page || '/');
       setOrderCreationMode(employee.order_creation_mode || 'choice');
+      setCategoryPermissions(employee.category_permissions || []);
     }
   }, [employee]);
 
@@ -61,15 +63,23 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
     );
   };
 
+  const handleCategoryPermissionChange = (category, checked) => {
+    setCategoryPermissions(prev => 
+      checked ? [...prev, category] : prev.filter(c => c !== category)
+    );
+  };
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     const finalPermissions = (role === 'admin' || role === 'deputy') ? ['*'] : permissions;
+    const finalCategoryPermissions = (role === 'admin' || role === 'deputy') ? ['all'] : categoryPermissions;
     await updateUser(employee.id, { 
         status, 
         role, 
         permissions: finalPermissions, 
         default_page: defaultPage,
-        order_creation_mode: orderCreationMode
+        order_creation_mode: orderCreationMode,
+        category_permissions: finalCategoryPermissions
     });
     await refetchAdminData();
     setIsSaving(false);
@@ -170,6 +180,92 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
                 </AccordionItem>
               ))}
             </Accordion>
+          </div>
+
+          {/* صلاحيات التصنيفات */}
+          <div>
+            <Label className="flex items-center gap-2 mb-2"><Eye /> صلاحيات عرض التصنيفات</Label>
+            <div className="p-4 border rounded-lg space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={`cat-all-${employee.id}`}
+                    checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                    onCheckedChange={(checked) => handleCategoryPermissionChange('all', checked)}
+                    disabled={role === 'admin' || role === 'deputy'}
+                  />
+                  <label htmlFor={`cat-all-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Eye className="w-4 h-4" />
+                    عرض جميع التصنيفات
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={`cat-clothes-${employee.id}`}
+                    checked={categoryPermissions.includes('clothes') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                    onCheckedChange={(checked) => handleCategoryPermissionChange('clothes', checked)}
+                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                  />
+                  <label htmlFor={`cat-clothes-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Shirt className="w-4 h-4" />
+                    تصنيف الملابس
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={`cat-electronics-${employee.id}`}
+                    checked={categoryPermissions.includes('electronics') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                    onCheckedChange={(checked) => handleCategoryPermissionChange('electronics', checked)}
+                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                  />
+                  <label htmlFor={`cat-electronics-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Laptop className="w-4 h-4" />
+                    تصنيف الإلكترونيات
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={`cat-accessories-${employee.id}`}
+                    checked={categoryPermissions.includes('accessories') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                    onCheckedChange={(checked) => handleCategoryPermissionChange('accessories', checked)}
+                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                  />
+                  <label htmlFor={`cat-accessories-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Watch className="w-4 h-4" />
+                    تصنيف الاكسسوارات
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={`cat-shoes-${employee.id}`}
+                    checked={categoryPermissions.includes('shoes') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                    onCheckedChange={(checked) => handleCategoryPermissionChange('shoes', checked)}
+                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                  />
+                  <label htmlFor={`cat-shoes-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <Footprints className="w-4 h-4" />
+                    تصنيف الأحذية
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <Checkbox
+                    id={`cat-bags-${employee.id}`}
+                    checked={categoryPermissions.includes('bags') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                    onCheckedChange={(checked) => handleCategoryPermissionChange('bags', checked)}
+                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                  />
+                  <label htmlFor={`cat-bags-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                    <ShoppingBag className="w-4 h-4" />
+                    تصنيف الحقائب
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
           
           <div className="space-y-2">

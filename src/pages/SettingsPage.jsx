@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,27 +12,28 @@ import { toast } from '@/components/ui/use-toast';
 import { 
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
-  Palette, Zap, Archive, Eye, Monitor
+  Palette, Zap, Archive, Eye, Monitor, Sun, Moon, Smartphone, Volume2,
+  Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
-import ThemeSettingsCard from '@/components/settings/ThemeSettingsCard';
+import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
 import { useNavigate } from 'react-router-dom';
 
-const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "text-primary" }) => {
+const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark" }) => {
   const Icon = icon;
   const cardClasses = `
     ${className} 
-    ${onClick && !disabled ? 'cursor-pointer hover:border-primary hover:shadow-md transition-all duration-200' : ''}
+    ${onClick && !disabled ? 'cursor-pointer hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 hover:scale-[1.02]' : ''}
     ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
-    border-2
+    border border-border/40 bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md
   `;
   
   const handleClick = (e) => {
     if (disabled) {
       e.preventDefault();
-      toast({ title: "غير متاح", description: "هذه الميزة غير متاحة حالياً.", variant: "destructive" });
+      toast({ title: "غير متاح", description: "هذه الميزة غير متاحة حالياً أو لا تملك الصلاحيات الكافية.", variant: "destructive" });
     } else if (onClick) {
       onClick(e);
     }
@@ -39,17 +41,17 @@ const SettingsSectionCard = ({ icon, title, description, children, footer, onCli
 
   return (
     <Card className={cardClasses} onClick={handleClick}>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg bg-gradient-to-br ${iconColor}`}>
-            <Icon className="w-6 h-6 text-white" />
+          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${iconColor} shadow-md`}>
+            <Icon className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl">{title}</span>
+          <span className="text-lg font-semibold">{title}</span>
         </CardTitle>
-        {description && <CardDescription className="mt-2 text-sm">{description}</CardDescription>}
+        {description && <CardDescription className="mt-1 text-sm text-muted-foreground">{description}</CardDescription>}
       </CardHeader>
-      {children && <CardContent>{children}</CardContent>}
-      {footer && <CardFooter>{footer}</CardFooter>}
+      {children && <CardContent className="pt-0">{children}</CardContent>}
+      {footer && <CardFooter className="pt-0">{footer}</CardFooter>}
     </Card>
   );
 };
@@ -58,12 +60,13 @@ const SettingsPage = () => {
   const { user, hasPermission, updateUser } = useAuth();
   const { settings, updateSettings } = useInventory();
   const { isLoggedIn: isWaseetLoggedIn, waseetUser, logout: logoutWaseet, setSyncInterval, syncInterval } = useAlWaseet();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState(false);
+  const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
   
   const [storeSettings, setStoreSettings] = useState({
     deliveryFee: 5000,
@@ -104,9 +107,25 @@ const SettingsPage = () => {
   };
   
   const handleCopyToken = () => {
+    const token = `RYUS_${user?.id}_${Date.now()}`;
+    navigator.clipboard.writeText(token);
     toast({
-      title: "🚧 هذه الميزة غير مطبقة بعد",
-      description: "لكن لا تقلق! يمكنك طلبها في الرسالة التالية! 🚀"
+      title: "تم نسخ الرمز",
+      description: "تم نسخ رمز الربط إلى الحافظة. سيكون متاحاً بعد ربط قاعدة البيانات."
+    });
+  };
+
+  const handleExportData = () => {
+    toast({
+      title: "تصدير البيانات",
+      description: "سيتم تصدير البيانات إلى ملف Excel قريباً!"
+    });
+  };
+
+  const handleImportData = () => {
+    toast({
+      title: "استيراد البيانات", 
+      description: "ميزة استيراد البيانات ستكون متاحة قريباً!"
     });
   };
 
@@ -124,114 +143,216 @@ const SettingsPage = () => {
           <p className="text-muted-foreground">قم بإدارة إعدادات حسابك وتفضيلات المتجر.</p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            <div className="lg:col-span-1 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+            {/* قسم الملف الشخصي والثيمات */}
+            <div className="lg:col-span-1 space-y-6">
                 <SettingsSectionCard 
                   icon={User} 
                   title="الملف الشخصي" 
-                  description="تعديل معلوماتك الشخصية، كلمة المرور، والنمط."
+                  description="تعديل معلوماتك الشخصية وإعدادات الحساب"
+                  iconColor="from-blue-500 to-blue-700"
                   onClick={() => setIsEditProfileOpen(true)}
                 >
-                  <CardContent>
-                    <div className="space-y-2">
-                        <p className="font-semibold">{user.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-sm">{user.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                  </div>
+                </SettingsSectionCard>
+
+                {/* كارت الثيمات */}
+                <SettingsSectionCard
+                  icon={Palette}
+                  title="المظهر والثيم"
+                  description="تخصيص مظهر التطبيق والألوان"
+                  iconColor="from-purple-500 to-purple-700"
+                >
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium">نمط العرض</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        variant={theme === 'light' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTheme('light')}
+                        className="flex flex-col items-center gap-1 h-auto py-2"
+                      >
+                        <Sun className="w-4 h-4" />
+                        <span className="text-xs">فاتح</span>
+                      </Button>
+                      <Button
+                        variant={theme === 'dark' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTheme('dark')}
+                        className="flex flex-col items-center gap-1 h-auto py-2"
+                      >
+                        <Moon className="w-4 h-4" />
+                        <span className="text-xs">داكن</span>
+                      </Button>
+                      <Button
+                        variant={theme === 'system' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setTheme('system')}
+                        className="flex flex-col items-center gap-1 h-auto py-2"
+                      >
+                        <Monitor className="w-4 h-4" />
+                        <span className="text-xs">تلقائي</span>
+                      </Button>
                     </div>
-                  </CardContent>
+                  </div>
                 </SettingsSectionCard>
             </div>
             
             {hasPermission('manage_app_settings') ? (
-              <form onSubmit={handleStoreSettingsSubmit} className="lg:col-span-2">
+              <form onSubmit={handleStoreSettingsSubmit} className="lg:col-span-3">
                 <SettingsSectionCard
                   icon={Store}
                   title="إعدادات المتجر والأجهزة"
-                  footer={<Button type="submit" disabled={isStoreLoading}>{isStoreLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}حفظ الإعدادات</Button>}
+                  description="إدارة الإعدادات العامة للمتجر والأجهزة المتصلة"
+                  iconColor="from-green-500 to-green-700"
+                  footer={
+                    <Button type="submit" disabled={isStoreLoading} className="w-full">
+                      {isStoreLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+                      حفظ جميع الإعدادات
+                    </Button>
+                  }
                 >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-                    <div className="space-y-4 p-4 border rounded-lg">
-                      <h4 className="font-semibold flex items-center gap-2"><SettingsIcon className="w-4 h-4" />إعدادات عامة</h4>
-                      <div className="space-y-2">
-                        <Label htmlFor="deliveryFee">أجور التوصيل (د.ع)</Label>
-                        <Input id="deliveryFee" name="deliveryFee" type="number" value={storeSettings.deliveryFee} onChange={handleStoreSettingsChange} min="0" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lowStockThreshold">حد المخزون المنخفض</Label>
-                        <Input id="lowStockThreshold" name="lowStockThreshold" type="number" value={storeSettings.lowStockThreshold} onChange={handleStoreSettingsChange} min="0" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="mediumStockThreshold">حد المخزون المتوسط</Label>
-                        <Input id="mediumStockThreshold" name="mediumStockThreshold" type="number" value={storeSettings.mediumStockThreshold} onChange={handleStoreSettingsChange} min="0" />
-                      </div>
-                    </div>
-                     <div className="space-y-4 p-4 border rounded-lg">
-                        <h4 className="font-semibold flex items-center gap-2"><Printer className="w-4 h-4" />إعدادات الطباعة</h4>
-                         <div className="space-y-2">
-                            <Label>حجم ورق الملصقات</Label>
-                            <Select value={storeSettings.printer.paperSize} onValueChange={(v) => handlePrinterSettingChange('paperSize', v)}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="a4">A4</SelectItem>
-                                    <SelectItem value="label-100x50">ملصق 100x50mm</SelectItem>
-                                    <SelectItem value="label-50x25">ملصق 50x25mm</SelectItem>
-                                </SelectContent>
-                            </Select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="space-y-4 p-4 border rounded-lg bg-card/50">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary">
+                        <SettingsIcon className="w-4 h-4" />
+                        إعدادات عامة
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="deliveryFee" className="text-sm font-medium">أجور التوصيل (د.ع)</Label>
+                          <Input 
+                            id="deliveryFee" 
+                            name="deliveryFee" 
+                            type="number" 
+                            value={storeSettings.deliveryFee} 
+                            onChange={handleStoreSettingsChange} 
+                            min="0"
+                            className="text-center"
+                          />
                         </div>
                         <div className="space-y-2">
-                            <Label>اتجاه الطباعة</Label>
-                            <Select value={storeSettings.printer.orientation} onValueChange={(v) => handlePrinterSettingChange('orientation', v)}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="portrait">عمودي (Portrait)</SelectItem>
-                                    <SelectItem value="landscape">أفقي (Landscape)</SelectItem>
-                                </SelectContent>
-                            </Select>
+                          <Label htmlFor="lowStockThreshold" className="text-sm font-medium">حد المخزون المنخفض</Label>
+                          <Input 
+                            id="lowStockThreshold" 
+                            name="lowStockThreshold" 
+                            type="number" 
+                            value={storeSettings.lowStockThreshold} 
+                            onChange={handleStoreSettingsChange} 
+                            min="0"
+                            className="text-center"
+                          />
                         </div>
-                         {hasPermission('manage_delivery_sync') && (
-                          <div className="space-y-2">
-                            <Label htmlFor="syncInterval">المزامنة التلقائية للطلبات</Label>
-                            <Select value={String(syncInterval)} onValueChange={(v) => setSyncInterval(Number(v))}>
-                              <SelectTrigger><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="300000">كل 5 دقائق</SelectItem>
-                                <SelectItem value="900000">كل 15 دقيقة</SelectItem>
-                                <SelectItem value="1800000">كل 30 دقيقة</SelectItem>
-                                <SelectItem value="3600000">كل ساعة</SelectItem>
-                                <SelectItem value="21600000">كل 6 ساعات</SelectItem>
-                                <SelectItem value="86400000">كل 24 ساعة</SelectItem>
-                                <SelectItem value="0">إيقاف</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                     </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="mediumStockThreshold" className="text-sm font-medium">حد المخزون المتوسط</Label>
+                          <Input 
+                            id="mediumStockThreshold" 
+                            name="mediumStockThreshold" 
+                            type="number" 
+                            value={storeSettings.mediumStockThreshold} 
+                            onChange={handleStoreSettingsChange} 
+                            min="0"
+                            className="text-center"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 p-4 border rounded-lg bg-card/50">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary">
+                        <Printer className="w-4 h-4" />
+                        إعدادات الطباعة
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">حجم ورق الملصقات</Label>
+                          <Select value={storeSettings.printer.paperSize} onValueChange={(v) => handlePrinterSettingChange('paperSize', v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="a4">A4</SelectItem>
+                              <SelectItem value="label-100x50">ملصق 100x50mm</SelectItem>
+                              <SelectItem value="label-50x25">ملصق 50x25mm</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">اتجاه الطباعة</Label>
+                          <Select value={storeSettings.printer.orientation} onValueChange={(v) => handlePrinterSettingChange('orientation', v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="portrait">عمودي (Portrait)</SelectItem>
+                              <SelectItem value="landscape">أفقي (Landscape)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {hasPermission('manage_delivery_sync') && (
+                      <div className="space-y-4 p-4 border rounded-lg bg-card/50">
+                        <h4 className="font-semibold flex items-center gap-2 text-primary">
+                          <RefreshCw className="w-4 h-4" />
+                          المزامنة التلقائية
+                        </h4>
+                        <div className="space-y-2">
+                          <Label htmlFor="syncInterval" className="text-sm font-medium">فترة مزامنة الطلبات</Label>
+                          <Select value={String(syncInterval)} onValueChange={(v) => setSyncInterval(Number(v))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="300000">كل 5 دقائق</SelectItem>
+                              <SelectItem value="900000">كل 15 دقيقة</SelectItem>
+                              <SelectItem value="1800000">كل 30 دقيقة</SelectItem>
+                              <SelectItem value="3600000">كل ساعة</SelectItem>
+                              <SelectItem value="21600000">كل 6 ساعات</SelectItem>
+                              <SelectItem value="86400000">كل 24 ساعة</SelectItem>
+                              <SelectItem value="0">إيقاف</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </SettingsSectionCard>
               </form>
             ) : (
-                 <SettingsSectionCard
+              <div className="lg:col-span-3">
+                <SettingsSectionCard
                   icon={Store}
                   title="إعدادات المتجر والأجهزة"
-                  description="هذه الإعدادات متاحة للمدير فقط."
+                  description="هذه الإعدادات متاحة للمدير فقط. تحتاج صلاحيات إدارية للوصول."
+                  iconColor="from-gray-400 to-gray-600"
                   disabled={true}
                 />
+              </div>
             )}
 
-            <div className="lg:col-span-3 space-y-8">
+            <div className="lg:col-span-4 space-y-8">
               {/* قسم الإدارة والأمان */}
               <div>
-                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                  <Shield className="w-6 h-6 text-blue-600" />
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-md">
+                    <Shield className="w-6 h-6 text-white" />
+                  </div>
                   الإدارة والأمان
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {hasPermission('manage_users') ? (
                     <SettingsSectionCard
                       icon={Users}
                       title="إدارة الموظفين"
-                      description="إدارة حسابات الموظفين، أدوارهم، وصلاحيات الوصول."
+                      description="إدارة حسابات الموظفين وصلاحياتهم وتصنيفات المنتجات"
                       iconColor="from-purple-500 to-purple-700"
-                      onClick={() => navigate('/manage-employees')}
+                      onClick={() => setIsManageEmployeesOpen(true)}
                     />
                   ) : (
                     <SettingsSectionCard
@@ -243,97 +364,187 @@ const SettingsPage = () => {
                     />
                   )}
 
-                  {hasPermission('view_settings') && (
+                  {hasPermission('view_security_settings') ? (
                     <SettingsSectionCard
-                      icon={Shield}
-                      title="الأمان"
-                      description="إعدادات الحماية والخصوصية"
+                      icon={Key}
+                      title="أمان الحساب"
+                      description="كلمات المرور والمصادقة الثنائية"
                       iconColor="from-green-500 to-green-700"
-                      onClick={() => toast({ title: "قريباً", description: "هذه الميزة ستكون متاحة قريباً!" })}
+                      onClick={() => toast({ title: "قريباً", description: "إعدادات الأمان ستكون متاحة قريباً!" })}
+                    />
+                  ) : (
+                    <SettingsSectionCard
+                      icon={Key}
+                      title="أمان الحساب"
+                      description="غير متاح لهذا المستخدم"
+                      iconColor="from-gray-400 to-gray-600"
+                      disabled={true}
                     />
                   )}
 
-                  <SettingsSectionCard
-                    icon={Archive}
-                    title="النسخ الاحتياطي"
-                    description="حفظ واستعادة البيانات"
-                    iconColor="from-blue-500 to-blue-700"
-                    onClick={() => toast({ title: "قريباً", description: "ميزة النسخ الاحتياطي ستكون متاحة قريباً!" })}
-                  />
+                  {hasPermission('manage_backup') && (
+                    <SettingsSectionCard
+                      icon={Archive}
+                      title="النسخ الاحتياطي"
+                      description="حفظ واستعادة بيانات النظام"
+                      iconColor="from-indigo-500 to-indigo-700"
+                      onClick={handleExportData}
+                    />
+                  )}
+
+                  {hasPermission('manage_backup') && (
+                    <SettingsSectionCard
+                      icon={Database}
+                      title="استيراد البيانات"
+                      description="استيراد بيانات من ملفات خارجية"
+                      iconColor="from-teal-500 to-teal-700"
+                      onClick={handleImportData}
+                    />
+                  )}
                 </div>
               </div>
 
               {/* قسم التطبيقات والتكامل */}
               <div>
-                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                  <Zap className="w-6 h-6 text-yellow-600" />
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500 to-yellow-700 shadow-md">
+                    <Zap className="w-6 h-6 text-white" />
+                  </div>
                   التطبيقات والتكامل
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <SettingsSectionCard 
-                    icon={Bot} 
-                    title="بوت التليغرام"
-                    description="ربط النظام مع التليغرام"
-                    iconColor="from-blue-400 to-blue-600"
-                    disabled={!hasPermission('use_ai_assistant')}
-                  >
-                    <p className="text-sm text-muted-foreground mb-3">استخدم هذا الرمز لربط حسابك مع بوت التليغرام.</p>
-                    <div className="flex items-center gap-2">
-                      <Input value={'قيد التطوير...'} readOnly />
-                      <Button variant="outline" size="icon" onClick={handleCopyToken}><Copy className="w-4 h-4" /></Button>
-                    </div>
-                  </SettingsSectionCard>
+                  {hasPermission('use_telegram_bot') ? (
+                    <SettingsSectionCard 
+                      icon={MessageCircle} 
+                      title="بوت التليغرام"
+                      description="ربط النظام مع التليغرام لإدارة الطلبات"
+                      iconColor="from-blue-400 to-blue-600"
+                    >
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">استخدم هذا الرمز لربط حسابك مع بوت التليغرام:</p>
+                        <div className="flex items-center gap-2">
+                          <Input value={`RYUS_${user?.id}_TGBOT`} readOnly className="text-xs" />
+                          <Button variant="outline" size="icon" onClick={handleCopyToken}>
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">سيكون متاحاً بعد ربط قاعدة البيانات</p>
+                      </div>
+                    </SettingsSectionCard>
+                  ) : (
+                    <SettingsSectionCard 
+                      icon={MessageCircle} 
+                      title="بوت التليغرام"
+                      description="هذه الميزة غير متاحة لك"
+                      iconColor="from-gray-400 to-gray-600"
+                      disabled={true}
+                    />
+                  )}
 
-                  <SettingsSectionCard 
-                    icon={Truck} 
-                    title="شركة التوصيل"
-                    description="ربط مع أنظمة التوصيل"
-                    iconColor="from-red-500 to-red-700"
-                    disabled={!hasPermission('manage_delivery_company')}
-                  >
-                    {isWaseetLoggedIn ? (
-                      <div className="space-y-3">
-                        <p className="text-sm text-green-500">متصل بحساب: <span className="font-bold">{waseetUser?.username}</span></p>
-                        <Button variant="destructive" size="sm" onClick={logoutWaseet}><LogOut className="ml-2 w-4 h-4" />تسجيل الخروج</Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">أنت غير متصل بحساب شركة التوصيل.</p>
-                        <Button onClick={() => setIsLoginDialogOpen(true)}><LogIn className="ml-2 w-4 h-4" />تسجيل الدخول</Button>
-                      </div>
-                    )}
-                  </SettingsSectionCard>
+                  {hasPermission('manage_delivery_company') ? (
+                    <SettingsSectionCard 
+                      icon={Truck} 
+                      title="شركة التوصيل"
+                      description="ربط مع أنظمة التوصيل الخارجية"
+                      iconColor="from-red-500 to-red-700"
+                    >
+                      {isWaseetLoggedIn ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <p className="text-sm text-green-600 font-medium">متصل</p>
+                          </div>
+                          <p className="text-sm">الحساب: <span className="font-bold">{waseetUser?.username}</span></p>
+                          <Button variant="destructive" size="sm" onClick={logoutWaseet} className="w-full">
+                            <LogOut className="ml-2 w-4 h-4" />
+                            قطع الاتصال
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                            <p className="text-sm text-red-600 font-medium">غير متصل</p>
+                          </div>
+                          <Button onClick={() => setIsLoginDialogOpen(true)} className="w-full">
+                            <LogIn className="ml-2 w-4 h-4" />
+                            تسجيل الدخول
+                          </Button>
+                        </div>
+                      )}
+                    </SettingsSectionCard>
+                  ) : (
+                    <SettingsSectionCard 
+                      icon={Truck} 
+                      title="شركة التوصيل"
+                      description="هذه الميزة غير متاحة لك"
+                      iconColor="from-gray-400 to-gray-600"
+                      disabled={true}
+                    />
+                  )}
 
                   {hasPermission('use_ai_assistant') && (
                     <SettingsSectionCard
                       icon={Zap}
-                      title="المطور"
-                      description="تخصيص الألوان وتيم الإظهار"
+                      title="الذكاء الاصطناعي"
+                      description="مساعد ذكي لإدارة المتجر"
                       iconColor="from-pink-500 to-pink-700"
-                      onClick={() => toast({ title: "قريباً", description: "أدوات المطور ستكون متاحة قريباً!" })}
+                      onClick={() => toast({ title: "متاح!", description: "يمكنك الوصول للمساعد الذكي من الزر العائم في الصفحات." })}
                     />
                   )}
                 </div>
               </div>
 
-              {/* قسم إدارة المنتجات والصلاحيات */}
-              {hasPermission('manage_users') && (
-                <div>
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <Eye className="w-6 h-6 text-orange-600" />
-                    إدارة صلاحيات المنتجات
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <SettingsSectionCard
-                      icon={Eye}
-                      title="صلاحيات التصنيفات"
-                      description="تحديد التصنيفات المرئية لكل موظف"
-                      iconColor="from-orange-500 to-orange-700"
-                      onClick={() => setIsCategoriesDialogOpen(true)}
-                    />
+              {/* قسم الإشعارات والاتصالات */}
+              <div>
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 shadow-md">
+                    <Bell className="w-6 h-6 text-white" />
                   </div>
+                  الإشعارات والاتصالات
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {hasPermission('manage_notifications') && (
+                    <SettingsSectionCard
+                      icon={Bell}
+                      title="الإشعارات"
+                      description="إدارة إشعارات النظام والتنبيهات"
+                      iconColor="from-orange-500 to-orange-700"
+                      onClick={() => toast({ title: "الإشعارات", description: "تم تفعيل الإشعارات بالفعل في النظام!" })}
+                    />
+                  )}
+
+                  {hasPermission('manage_notifications') && (
+                    <SettingsSectionCard
+                      icon={Smartphone}
+                      title="الإشعارات المحمولة"
+                      description="تنبيهات الهاتف المحمول"
+                      iconColor="from-blue-500 to-blue-700"
+                      onClick={() => toast({ title: "قريباً", description: "إشعارات الهاتف ستكون متاحة قريباً!" })}
+                    />
+                  )}
+
+                  {hasPermission('manage_notifications') && (
+                    <SettingsSectionCard
+                      icon={Mail}
+                      title="البريد الإلكتروني"
+                      description="إعدادات إشعارات البريد"
+                      iconColor="from-green-500 to-green-700"
+                      onClick={() => toast({ title: "قريباً", description: "إشعارات البريد الإلكتروني ستكون متاحة قريباً!" })}
+                    />
+                  )}
+
+                  {hasPermission('manage_notifications') && (
+                    <SettingsSectionCard
+                      icon={Volume2}
+                      title="الأصوات"
+                      description="إعدادات أصوات التنبيهات"
+                      iconColor="from-purple-500 to-purple-700"
+                      onClick={() => toast({ title: "الأصوات", description: "يمكنك التحكم في أصوات التنبيهات من إعدادات المتصفح." })}
+                    />
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* قسم التقارير والإشعارات */}
               <div>
