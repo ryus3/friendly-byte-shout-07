@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast';
 
 export const useCart = () => {
