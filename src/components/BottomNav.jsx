@@ -117,7 +117,9 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate('/products', { 
+        state: { searchTerm: searchQuery.trim() }
+      });
       onOpenChange(false);
       setSearchQuery('');
     } else {

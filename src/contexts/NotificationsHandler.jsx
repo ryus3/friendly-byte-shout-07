@@ -50,14 +50,28 @@ const NotificationsHandler = () => {
             const newQty = payload.new.quantity;
             const lowStockThreshold = settings?.lowStockThreshold || 5;
             
+            // إشعار لنقص المخزون
             if (oldQty > lowStockThreshold && newQty <= lowStockThreshold && newQty > 0) {
                  addNotification({
                     type: 'low_stock',
-                    title: 'انخفاض المخزون',
-                    message: `مخزون المنتج ${payload.new.sku} منخفض (${newQty}).`,
+                    title: 'تنبيه مخزون منخفض ⚠️',
+                    message: `مخزون المنتج ${payload.new.sku} منخفض (${newQty} قطعة فقط).`,
                     icon: 'AlertTriangle',
                     color: 'orange',
-                    link: `/inventory?highlight=${payload.new.sku}`,
+                    link: `/manage-products?highlight=${payload.new.sku}`,
+                    user_id: null, // Admin only
+                });
+            }
+            
+            // إشعار لنفاد المخزون
+            if (oldQty > 0 && newQty === 0) {
+                addNotification({
+                    type: 'out_of_stock',
+                    title: 'نفاد المخزون 🚨',
+                    message: `نفد مخزون المنتج ${payload.new.sku} تماماً!`,
+                    icon: 'AlertTriangle',
+                    color: 'red',
+                    link: `/manage-products?highlight=${payload.new.sku}`,
                     user_id: null, // Admin only
                 });
             }

@@ -9,15 +9,17 @@ import { useInventory } from '@/contexts/InventoryContext';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
-  const { getLowStockProducts } = useInventory();
-  const lowStockProducts = getLowStockProducts(5);
+  const { getLowStockProducts, settings } = useInventory();
+  const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
 
   const handleViewAll = () => {
     navigate('/inventory?stockFilter=low');
   };
   
   const handleLowStockProductClick = (variant) => {
-    navigate(`/inventory?stockFilter=low&highlight=${variant.sku}`);
+    navigate(`/manage-products?highlight=${variant.sku}`, {
+      state: { productId: variant.product_id, variantId: variant.id }
+    });
   };
   
   const getStockLevelColor = (stock, minStock) => {

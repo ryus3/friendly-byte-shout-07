@@ -65,6 +65,27 @@ const ProductsPage = () => {
     if (isMobile) setViewMode('list');
     else setViewMode('grid');
   }, [isMobile]);
+  
+  // دعم البحث من الشريط السفلي
+  useEffect(() => {
+    const location = window.location;
+    const searchParams = new URLSearchParams(location.search);
+    const searchTerm = searchParams.get('search');
+    
+    if (searchTerm) {
+      setFilters(prev => ({ ...prev, searchTerm }));
+    }
+    
+    // دعم البحث عبر state
+    if (location.state?.searchTerm) {
+      setFilters(prev => ({ ...prev, searchTerm: location.state.searchTerm }));
+    }
+    
+    if (location.state?.selectedProduct) {
+      setSelectedProduct(location.state.selectedProduct);
+      setDialogs(prev => ({ ...prev, variant: true }));
+    }
+  }, []);
 
   const filteredProducts = useMemo(() => {
     let tempProducts = products.filter(p => p.is_visible);
