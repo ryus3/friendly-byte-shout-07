@@ -44,25 +44,40 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
     <motion.div variants={cardVariants} initial="rest" whileHover="hover" transition={{ duration: 0.2 }}>
       <Card className={`overflow-hidden bg-card/80 backdrop-blur-sm transition-all duration-300 w-full border-2 ${isSelected ? 'border-primary' : 'border-transparent'}`}>
         <CardContent className="p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-start gap-3">
             {/* Checkbox */}
             <div className="flex-shrink-0" onClick={(e) => { e.stopPropagation(); onSelect(order.id); }}>
               <Checkbox checked={isSelected} className="mt-1 sm:mt-0"/>
             </div>
 
             {/* Customer & Order Info */}
-            <div className="flex-grow grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-x-4 gap-y-2 w-full cursor-pointer" onClick={(e) => {e.stopPropagation(); onViewOrder()}}>
-              <div className="col-span-2 sm:col-span-1">
-                <p className="font-bold text-sm text-foreground truncate">{customerInfo.name || 'زبون غير معروف'}</p>
-                <p className="text-xs text-muted-foreground">{customerInfo.phone || 'لا يوجد رقم هاتف'}</p>
+            <div className="flex-grow space-y-3 w-full cursor-pointer" onClick={(e) => {e.stopPropagation(); onViewOrder()}}>
+              {/* الصف الأول - معلومات الزبون والسعر */}
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="font-bold text-sm text-foreground truncate">{customerInfo.name || 'زبون غير معروف'}</p>
+                  <p className="text-xs text-muted-foreground">{customerInfo.phone || 'لا يوجد رقم هاتف'}</p>
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-primary text-md">{order.total.toLocaleString()} د.ع</p>
+                  <p className="text-xs text-muted-foreground">{getOrderDate()}</p>
+                </div>
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                 <p className="text-xs text-muted-foreground">{order.trackingnumber || 'لا يوجد رقم تتبع'}</p>
-                 <p className="font-mono text-xs">{getOrderDate()}</p>
+              
+              {/* الصف الثاني - رقم التتبع والحالة */}
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">{order.trackingnumber || 'لا يوجد رقم تتبع'}</p>
+                </div>
+                <Badge className={`text-center ${statusVariants[order.status]?.color || 'bg-gray-500/10 text-gray-500'}`}>
+                  {statusVariants[order.status]?.label || 'غير معروف'}
+                </Badge>
               </div>
-              <div className="col-span-2 sm:col-span-1 flex -space-x-2 rtl:space-x-reverse overflow-hidden items-center">
-                 <TooltipProvider>
-                  {order.items.slice(0, 3).map((item, index) => (
+              
+              {/* الصف الثالث - صور المنتجات */}
+              <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden items-center">
+                <TooltipProvider>
+                  {order.items.slice(0, 4).map((item, index) => (
                     <Tooltip key={`${item.productId}-${index}`}>
                       <TooltipTrigger asChild>
                         <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
@@ -73,26 +88,18 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
                       <TooltipContent><p>{item.productName} (x{item.quantity})</p></TooltipContent>
                     </Tooltip>
                   ))}
-                  {order.items.length > 3 && (
+                  {order.items.length > 4 && (
                     <Tooltip>
-                       <TooltipTrigger asChild><Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{order.items.length - 3}</AvatarFallback></Avatar></TooltipTrigger>
-                       <TooltipContent><p>و {order.items.length - 3} منتجات أخرى</p></TooltipContent>
+                       <TooltipTrigger asChild><Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{order.items.length - 4}</AvatarFallback></Avatar></TooltipTrigger>
+                       <TooltipContent><p>و {order.items.length - 4} منتجات أخرى</p></TooltipContent>
                     </Tooltip>
                   )}
                 </TooltipProvider>
               </div>
-              <div className="col-span-2 sm:col-span-1">
-                <p className="font-semibold text-primary text-md">{order.total.toLocaleString()} د.ع</p>
-              </div>
-               <div className="col-span-2 md:col-span-1 flex items-center justify-start md:justify-center">
-                 <Badge className={`w-28 text-center justify-center ${statusVariants[order.status]?.color || 'bg-gray-500/10 text-gray-500'}`}>
-                   {statusVariants[order.status]?.label || 'غير معروف'}
-                 </Badge>
-               </div>
             </div>
 
             {/* Actions */}
-            <div className="flex-shrink-0 flex sm:flex-col md:flex-row items-center gap-1 self-start sm:self-center ml-auto">
+            <div className="flex-shrink-0 flex items-center gap-1 self-start">
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e)=>{e.stopPropagation(); onViewOrder()}}>
                   <Eye className="h-4 w-4" />
               </Button>

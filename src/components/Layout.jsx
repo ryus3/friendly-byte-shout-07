@@ -205,7 +205,7 @@ const Layout = ({ children }) => {
         className="flex-1 flex flex-col lg:mr-72"
         onPan={handlePan}
       >
-        <header className="bg-card/80 backdrop-blur-lg border-b border-border p-4 sticky top-0 z-30">
+        <header className="bg-card/80 backdrop-blur-lg border-b border-border p-3 sm:p-4 sticky top-0 z-30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {location.pathname !== (user?.default_page || '/') && (
@@ -219,7 +219,7 @@ const Layout = ({ children }) => {
               </div>
             </div>
             
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -241,7 +241,7 @@ const Layout = ({ children }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-6">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-24 lg:pb-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={location.key || location.pathname}

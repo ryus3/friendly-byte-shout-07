@@ -35,13 +35,14 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
   }, [filters.searchTerm, products]);
 
   return (
-    <div className="flex flex-col md:flex-row items-center gap-2">
+    <div className="space-y-3">
+      {/* البحث */}
       <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
             role="combobox"
-            className="w-full justify-between text-muted-foreground glass-effect border-border/80 hover:bg-accent"
+            className="w-full justify-between text-muted-foreground glass-effect border-border/80 hover:bg-accent h-12"
           >
             {filters.searchTerm ? 
               <span className="text-foreground">{filters.searchTerm}</span> : 
@@ -88,21 +89,23 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
           </Command>
         </PopoverContent>
       </Popover>
-      <div className="flex items-center gap-2">
+      
+      {/* الأزرار والفلاتر */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         <Button
           variant="outline"
-          size="icon"
           onClick={onBarcodeSearch}
-          className="glass-effect border-border/80 hover:bg-accent"
+          className="glass-effect border-border/80 hover:bg-accent col-span-1"
         >
-          <QrCode className="w-4 h-4" />
+          <QrCode className="w-4 h-4 sm:ml-2" />
+          <span className="hidden sm:inline">مسح</span>
         </Button>
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="glass-effect border-border/80 hover:bg-accent">
-              <SlidersHorizontal className="w-4 h-4 ml-2" />
-              فلترة
+            <Button variant="outline" className="glass-effect border-border/80 hover:bg-accent col-span-1">
+              <SlidersHorizontal className="w-4 h-4 sm:ml-2" />
+              <span className="hidden sm:inline">فلترة</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80">
@@ -114,10 +117,10 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                 </p>
               </div>
               <div className="grid gap-2">
-                <div className="grid grid-cols-3 items-center gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="category">القسم</Label>
                   <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
-                    <SelectTrigger className="col-span-2 h-8">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="الكل" />
                     </SelectTrigger>
                     <SelectContent>
@@ -128,10 +131,10 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 items-center gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="brand">العلامة</Label>
                   <Select value={filters.brand} onValueChange={(value) => handleFilterChange('brand', value)}>
-                    <SelectTrigger className="col-span-2 h-8">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="الكل" />
                     </SelectTrigger>
                     <SelectContent>
@@ -142,10 +145,10 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 items-center gap-4">
+                <div className="space-y-2">
                   <Label htmlFor="color">اللون</Label>
                   <Select value={filters.color} onValueChange={(value) => handleFilterChange('color', value)}>
-                    <SelectTrigger className="col-span-2 h-8">
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="الكل" />
                     </SelectTrigger>
                     <SelectContent>
@@ -156,7 +159,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-1 items-center gap-2">
+                <div className="space-y-2">
                   <Label htmlFor="price">نطاق السعر</Label>
                   <Slider
                     id="price"
@@ -181,11 +184,13 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
           </PopoverContent>
         </Popover>
 
-        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('grid')}>
-          <LayoutGrid className="w-5 h-5" />
+        <Button variant={viewMode === 'grid' ? 'default' : 'outline'} onClick={() => setViewMode('grid')} className="col-span-1">
+          <LayoutGrid className="w-4 h-4 sm:ml-2" />
+          <span className="hidden sm:inline">شبكة</span>
         </Button>
-        <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="icon" onClick={() => setViewMode('list')}>
-          <List className="w-5 h-5" />
+        <Button variant={viewMode === 'list' ? 'default' : 'outline'} onClick={() => setViewMode('list')} className="col-span-1">
+          <List className="w-4 h-4 sm:ml-2" />
+          <span className="hidden sm:inline">قائمة</span>
         </Button>
       </div>
     </div>

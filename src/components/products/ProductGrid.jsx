@@ -7,7 +7,7 @@ import ProductVariantDialog from './ProductVariantDialog';
 const ProductGrid = React.memo(({ products, onProductSelect, onCreateOrder }) => {
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
         <AnimatePresence>
           {products.map((product, index) => (
             <motion.div
@@ -29,9 +29,9 @@ const ProductGrid = React.memo(({ products, onProductSelect, onCreateOrder }) =>
 
       {products.length === 0 && (
         <div className="text-center py-12 col-span-full">
-          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">لا توجد منتجات</h3>
-          <p className="text-gray-500">جرب تغيير معايير البحث أو الفلترة</p>
+          <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-muted-foreground mb-2">لا توجد منتجات</h3>
+          <p className="text-muted-foreground">جرب تغيير معايير البحث أو الفلترة</p>
         </div>
       )}
     </>
