@@ -19,7 +19,7 @@ const NavButton = ({ onClick, icon: Icon, label, className, badgeCount, isActive
     whileTap={{ scale: 0.95 }}
     className={cn(
       "relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-all duration-300 flex-1 h-14 rounded-lg",
-      isActive && "text-primary bg-primary/10",
+      isActive && "text-primary bg-primary/5 shadow-sm",
       className
     )}
   >
@@ -120,6 +120,9 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
       navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
       onOpenChange(false);
       setSearchQuery('');
+    } else {
+      navigate('/products');
+      onOpenChange(false);
     }
   };
 
@@ -226,13 +229,40 @@ const BottomNav = () => {
       >
         <div className="flex justify-around items-center h-16 px-3 relative">
           {/* القائمة */}
-          <MenuSheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-            <NavButton 
-              icon={Menu} 
-              label="القائمة" 
-              isActive={isMenuOpen}
-            />
-          </MenuSheet>
+          <NavButton 
+            onClick={() => {
+              const event = new CustomEvent('toggle-sidebar');
+              window.dispatchEvent(event);
+            }}
+            icon={Menu} 
+            label="القائمة" 
+          />
+          
+          {/* الرئيسية */}
+          <NavButton 
+            onClick={handleHomeClick} 
+            icon={Home} 
+            label="الرئيسية"
+            isActive={location.pathname === (user?.default_page || '/')}
+          />
+
+          {/* المساعد الذكي في الوسط */}
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
+            className={cn(
+              "relative w-16 h-16 -mt-7 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/20",
+              canUseAiChat 
+                ? "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 text-white hover:shadow-blue-500/30 hover:scale-110 hover:rotate-2" 
+                : "bg-gradient-to-br from-gray-400 to-gray-600 text-white/70"
+            )}
+            onClick={handleAiChat}
+          >
+            <Bot className={cn("w-7 h-7 transition-all duration-300", canUseAiChat && "drop-shadow-lg")} />
+            {canUseAiChat && (
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent" />
+            )}
+          </motion.button>
           
           {/* البحث */}
           <SearchSheet open={isSearchOpen} onOpenChange={setIsSearchOpen}>
@@ -242,29 +272,6 @@ const BottomNav = () => {
               isActive={isSearchOpen}
             />
           </SearchSheet>
-
-          {/* المساعد الذكي في الوسط */}
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            whileHover={{ scale: 1.05 }}
-            className={cn(
-              "w-14 h-14 -mt-6 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300",
-              canUseAiChat 
-                ? "bg-gradient-to-tr from-primary via-blue-500 to-purple-500 text-white hover:shadow-primary/30" 
-                : "bg-gradient-to-tr from-gray-400 to-gray-500 text-white"
-            )}
-            onClick={handleAiChat}
-          >
-            <Bot className="w-7 h-7" />
-          </motion.button>
-          
-          {/* الرئيسية */}
-          <NavButton 
-            onClick={handleHomeClick} 
-            icon={Home} 
-            label="الرئيسية"
-            isActive={location.pathname === (user?.default_page || '/')}
-          />
           
           {/* السلة */}
           <NavButton 
