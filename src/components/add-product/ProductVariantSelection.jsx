@@ -12,7 +12,7 @@ const ProductVariantSelection = ({
   sizeType,
   setSizeType,
 }) => {
-  const { addColor, colors, sizes } = useVariants();
+  const { addColor, colors } = useVariants();
   const [colorDialogOpen, setColorDialogOpen] = useState(false);
 
   const handleCreateColor = async (newColorData) => {
@@ -45,17 +45,8 @@ const ProductVariantSelection = ({
         <div className="space-y-4">
           <Label>القياسات</Label>
           <RadioGroup value={sizeType} onValueChange={setSizeType} className="flex gap-4">
-            {[...new Set(sizes.filter(s => s.name !== 'فري سايز' && s.name !== 'Free Size').map(s => s.type))].map(type => (
-              <div key={type} className="flex items-center space-x-2 space-x-reverse">
-                <RadioGroupItem value={type} id={`s-${type}`} />
-                <Label htmlFor={`s-${type}`}>
-                  {type === 'letter' ? 'حرفية (S, M, L...)' : 
-                   type === 'number' ? 'رقمية (38, 40...)' : 
-                   type === 'shoe' ? 'أحذية' : 
-                   type === 'baby' ? 'أطفال' : type}
-                </Label>
-              </div>
-            ))}
+            <div className="flex items-center space-x-2 space-x-reverse"><RadioGroupItem value="letter" id="s-letter" /><Label htmlFor="s-letter">حرفية (S, M, L...)</Label></div>
+            <div className="flex items-center space-x-2 space-x-reverse"><RadioGroupItem value="number" id="s-number" /><Label htmlFor="s-number">رقمية (38, 40...)</Label></div>
           </RadioGroup>
         </div>
       </CardContent>
