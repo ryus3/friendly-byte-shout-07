@@ -118,7 +118,9 @@ export const permissionsMap = [
       { id: 'ai_features', label: 'استخدام ميزات الذكاء الاصطناعي' },
       { id: 'appearance_settings', label: 'إعدادات المظهر' },
       { id: 'security_settings', label: 'إعدادات الأمان' },
-      { id: 'profile_settings', label: 'إعدادات الملف الشخصي' }
+      { id: 'profile_settings', label: 'إعدادات الملف الشخصي' },
+      { id: 'manage_default_customer_name', label: 'إدارة اسم الزبون الافتراضي' },
+      { id: 'set_default_page', label: 'تعيين الصفحة الافتراضية' }
     ]
   },
 ];
@@ -184,8 +186,9 @@ export const defaultPermissions = {
     'use_barcode_scanner',
     'view_statistics',
     'view_charts',
-    'view_recent_activities',
-    'view_alerts'
+     'view_recent_activities',
+     'view_alerts',
+     'manage_default_customer_name'
   ],
   admin: [
     // All permissions - admins have access to everything
@@ -261,8 +264,10 @@ export const defaultPermissions = {
     'profile_settings',
     'view_statistics',
     'view_charts',
-    'view_recent_activities',
-    'view_alerts',
-    'manage_ai_orders'
+     'view_recent_activities',
+     'view_alerts',
+     'manage_ai_orders',
+     'manage_default_customer_name',
+     'set_default_page'
   ]
 }

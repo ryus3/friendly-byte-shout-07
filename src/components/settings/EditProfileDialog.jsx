@@ -121,19 +121,21 @@ const EditProfileDialog = ({ open, onOpenChange }) => {
                 <Input id="email" type="email" value={user?.email || ''} disabled />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="defaultCustomerName">اسم الزبون الافتراضي</Label>
-                <Input 
-                  id="defaultCustomerName" 
-                  name="defaultCustomerName" 
-                  value={profileData.defaultCustomerName} 
-                  onChange={handleProfileChange}
-                  placeholder="اختياري - سيظهر تلقائياً في الطلبات الجديدة"
-                />
-                <p className="text-xs text-muted-foreground">
-                  يمكنك تعديل هذا الاسم لاحقاً في أي طلب جديد
-                </p>
-              </div>
+              {hasPermission('manage_default_customer_name') && (
+                <div className="space-y-2">
+                  <Label htmlFor="defaultCustomerName">اسم الزبون الافتراضي</Label>
+                  <Input 
+                    id="defaultCustomerName" 
+                    name="defaultCustomerName" 
+                    value={profileData.defaultCustomerName} 
+                    onChange={handleProfileChange}
+                    placeholder="اختياري - سيظهر تلقائياً في الطلبات الجديدة"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    يمكنك تعديل هذا الاسم لاحقاً في أي طلب جديد
+                  </p>
+                </div>
+              )}
 
               {hasPermission('set_default_page') && (
                 <div className="space-y-2">
