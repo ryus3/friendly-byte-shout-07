@@ -17,6 +17,7 @@ import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
+import Logo from '@/components/ui/logo.jsx';
 
 const SidebarContent = ({ onClose }) => {
   const { user, logout, hasPermission } = useAuth();
@@ -73,9 +74,7 @@ const SidebarContent = ({ onClose }) => {
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between p-6 border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
+            <Logo className="h-10 w-10" showText={false} />
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
               <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role)}</p>
@@ -214,8 +213,7 @@ const Layout = ({ children }) => {
                 </Button>
               )}
               <div className="cursor-pointer" onClick={handleHomeClick}>
-                <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/2e94508b11f0bf0fa626aea4716f1658.png" />
-                <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" />
+                <Logo className="h-12 w-auto" showText={true} variant="default" />
               </div>
             </div>
             
