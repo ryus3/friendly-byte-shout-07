@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useTheme } from '@/contexts/ThemeContext';
-import Logo from '@/components/ui/logo';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { toast } from '@/components/ui/use-toast.js';
-import { Sun, Moon } from 'lucide-react';
 
 const LoginPage = () => {
   const [view, setView] = useState('login');
@@ -21,16 +17,7 @@ const LoginPage = () => {
     password: '',
     loginIdentifier: ''
   });
-  const { signUp, signInWithUsername, loading, user } = useAuth();
-  const { theme, setTheme } = useTheme();
-  const navigate = useNavigate();
-
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      navigate('/');
-    }
-  }, [user, navigate]);
+  const { signUp, signInWithUsername, loading } = useAuth();
 
   const handleInputChange = (e) => {
     setFormData({
@@ -59,12 +46,6 @@ const LoginPage = () => {
         description: error.message,
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "تم تسجيل الدخول بنجاح",
-        description: "مرحباً بك",
-      });
-      navigate('/');
     }
   };
 
@@ -103,161 +84,243 @@ const LoginPage = () => {
     }
   };
 
-  const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light');
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    // TODO: Implement forgot password
   };
 
   const renderLogin = () => (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
+      className="w-full max-w-md"
     >
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Logo className="h-16 w-auto" showText={true} />
+      <div className="bg-card text-card-foreground rounded-lg shadow-lg p-8">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-primary mb-2">مرحباً بك</h1>
+          <p className="text-muted-foreground">تسجيل الدخول إلى حسابك</p>
+        </div>
+        
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <Label htmlFor="loginIdentifier" className="text-sm font-medium">
+              اسم المستخدم
+            </Label>
+            <Input
+              id="loginIdentifier"
+              name="loginIdentifier"
+              type="text"
+              value={formData.loginIdentifier}
+              onChange={handleInputChange}
+              placeholder="أدخل اسم المستخدم"
+              className="mt-1"
+              required
+            />
           </div>
-          <CardTitle className="text-2xl">تسجيل الدخول</CardTitle>
-          <CardDescription>أدخل اسم المستخدم وكلمة المرور</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="loginIdentifier">اسم المستخدم</Label>
-              <Input
-                id="loginIdentifier"
-                name="loginIdentifier"
-                type="text"
-                value={formData.loginIdentifier}
-                onChange={handleInputChange}
-                placeholder="أدخل اسم المستخدم"
-                required
-                dir="ltr"
-                className="text-left"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">كلمة المرور</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="أدخل كلمة المرور"
-                required
-                dir="ltr"
-                className="text-left"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+          
+          <div>
+            <Label htmlFor="password" className="text-sm font-medium">
+              كلمة المرور
+            </Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="أدخل كلمة المرور"
+              className="mt-1"
+              required
+            />
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading}
+          >
+            {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+          </Button>
+        </form>
+        
+        <div className="mt-6 text-center space-y-2">
+          <Button
+            variant="link"
+            onClick={() => setView('forgot')}
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
+            نسيت كلمة المرور؟
+          </Button>
+          
+          <div className="text-sm text-muted-foreground">
+            ليس لديك حساب؟{' '}
+            <Button
+              variant="link"
+              onClick={() => setView('register')}
+              className="text-primary hover:underline p-0 h-auto"
+            >
+              إنشاء حساب جديد
             </Button>
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                onClick={() => setView('register')}
-                className="text-sm"
-              >
-                لا تملك حساب؟ إنشاء حساب جديد
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 
   const renderRegister = () => (
     <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
+      className="w-full max-w-md"
     >
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Logo className="h-16 w-auto" showText={true} />
+      <div className="bg-card text-card-foreground rounded-lg shadow-lg p-8">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-primary mb-2">إنشاء حساب جديد</h1>
+          <p className="text-muted-foreground">انضم إلينا اليوم</p>
+        </div>
+        
+        <form onSubmit={handleRegister} className="space-y-4">
+          <div>
+            <Label htmlFor="fullName" className="text-sm font-medium">
+              الاسم الكامل
+            </Label>
+            <Input
+              id="fullName"
+              name="fullName"
+              type="text"
+              value={formData.fullName}
+              onChange={handleInputChange}
+              placeholder="أدخل اسمك الكامل"
+              className="mt-1"
+              required
+            />
           </div>
-          <CardTitle className="text-2xl">إنشاء حساب جديد</CardTitle>
-          <CardDescription>أدخل بياناتك لإنشاء حساب</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleRegister} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">الاسم الكامل</Label>
-              <Input
-                id="fullName"
-                name="fullName"
-                type="text"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                placeholder="أدخل اسمك الكامل"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="username">اسم المستخدم</Label>
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                value={formData.username}
-                onChange={handleInputChange}
-                placeholder="أدخل اسم المستخدم"
-                required
-                dir="ltr"
-                className="text-left"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">البريد الإلكتروني</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="أدخل بريدك الإلكتروني"
-                required
-                dir="ltr"
-                className="text-left"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">كلمة المرور</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleInputChange}
-                placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
-                required
-                dir="ltr"
-                className="text-left"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
+          
+          <div>
+            <Label htmlFor="username" className="text-sm font-medium">
+              اسم المستخدم
+            </Label>
+            <Input
+              id="username"
+              name="username"
+              type="text"
+              value={formData.username}
+              onChange={handleInputChange}
+              placeholder="أدخل اسم المستخدم"
+              className="mt-1"
+              required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="email" className="text-sm font-medium">
+              البريد الإلكتروني
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              placeholder="أدخل بريدك الإلكتروني"
+              className="mt-1"
+              required
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="password" className="text-sm font-medium">
+              كلمة المرور
+            </Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              placeholder="أدخل كلمة المرور"
+              className="mt-1"
+              required
+            />
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading}
+          >
+            {loading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب'}
+          </Button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <div className="text-sm text-muted-foreground">
+            لديك حساب بالفعل؟{' '}
+            <Button
+              variant="link"
+              onClick={() => setView('login')}
+              className="text-primary hover:underline p-0 h-auto"
+            >
+              تسجيل الدخول
             </Button>
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="link"
-                onClick={() => setView('login')}
-                className="text-sm"
-              >
-                لديك حساب بالفعل؟ تسجيل الدخول
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  const renderForgotPassword = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="w-full max-w-md"
+    >
+      <div className="bg-card text-card-foreground rounded-lg shadow-lg p-8">
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-bold text-primary mb-2">استعادة كلمة المرور</h1>
+          <p className="text-muted-foreground">أدخل بريدك الإلكتروني</p>
+        </div>
+        
+        <form onSubmit={handleForgotPassword} className="space-y-4">
+          <div>
+            <Label htmlFor="email" className="text-sm font-medium">
+              البريد الإلكتروني
+            </Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              placeholder="أدخل بريدك الإلكتروني"
+              className="mt-1"
+              required
+            />
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading}
+          >
+            {loading ? 'جاري الإرسال...' : 'إرسال رابط الاستعادة'}
+          </Button>
+        </form>
+        
+        <div className="mt-6 text-center">
+          <Button
+            variant="link"
+            onClick={() => setView('login')}
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
+            العودة لتسجيل الدخول
+          </Button>
+        </div>
+      </div>
     </motion.div>
   );
 
@@ -268,17 +331,15 @@ const LoginPage = () => {
         <meta name="description" content="تسجيل الدخول إلى متجر RYUS" />
       </Helmet>
       
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
-        <div className="absolute top-4 left-4">
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
-            <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4 relative">
+        <div className="absolute top-4 right-4">
+          <ThemeSwitcher />
         </div>
         
         <AnimatePresence mode="wait">
-          {view === 'login' ? renderLogin() : renderRegister()}
+          {view === 'login' && renderLogin()}
+          {view === 'register' && renderRegister()}
+          {view === 'forgot' && renderForgotPassword()}
         </AnimatePresence>
       </div>
     </>
