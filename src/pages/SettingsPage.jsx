@@ -160,12 +160,12 @@ const SettingsPage = () => {
     setIsStoreLoading(false);
   };
   
-  const handleCopyToken = () => {
-    const token = `RYUS_${user?.id}_${Date.now()}`;
-    navigator.clipboard.writeText(token);
+  const handleCopyToken = (employeeId) => {
+    const shortCode = `BOT_${user?.id?.slice(-4) || 'USER'}_${employeeId || 'MAIN'}`;
+    navigator.clipboard.writeText(shortCode);
     toast({
-      title: "تم نسخ الرمز",
-      description: "تم نسخ رمز الربط إلى الحافظة. سيكون متاحاً بعد ربط قاعدة البيانات."
+      title: "تم نسخ الرمز المختصر",
+      description: `رمز التليجرام: ${shortCode}`
     });
   };
 
@@ -391,9 +391,9 @@ const SettingsPage = () => {
                       <p className="text-sm font-medium text-cyan-600 dark:text-cyan-400">حالة البوت</p>
                       <p className="text-xs text-cyan-500 opacity-70">جاهز للاستخدام</p>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleCopyToken} className="w-full">
+                    <Button variant="outline" size="sm" onClick={() => handleCopyToken(user?.id)} className="w-full">
                       <Copy className="w-3 h-3 ml-1" />
-                      نسخ رمز الربط
+                      نسخ رمز البوت الشخصي
                     </Button>
                   </div>
                 </ModernCard>
@@ -693,8 +693,8 @@ const SettingsPage = () => {
       )}
       
       <DeliveryPartnerDialog
-        isOpen={isLoginDialogOpen}
-        onClose={() => setIsLoginDialogOpen(false)}
+        open={isLoginDialogOpen}
+        onOpenChange={setIsLoginDialogOpen}
       />
     </>
   );
