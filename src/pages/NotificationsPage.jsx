@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff } from 'lucide-react';
+import { Bell, CheckCircle, Trash2, Filter, Volume2, VolumeX, Search, Eye, EyeOff, Settings, AlertTriangle, Package, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,14 +14,15 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 
 const iconMap = {
-  AlertTriangle: '⚠️',
-  Package: '📦',
-  CheckCircle: '✅',
-  UserPlus: '👤',
-  Bot: '🤖',
-  Bell: '🔔',
+  AlertTriangle: <AlertTriangle className="w-5 h-5 text-amber-500" />,
+  Package: <Package className="w-5 h-5 text-blue-500" />,
+  CheckCircle: <CheckCircle className="w-5 h-5 text-green-500" />,
+  UserPlus: <Users className="w-5 h-5 text-purple-500" />,
+  Bot: <TrendingUp className="w-5 h-5 text-indigo-500" />,
+  Bell: <Bell className="w-5 h-5 text-primary" />,
 };
 
 const NotificationsPage = () => {
@@ -29,6 +30,7 @@ const NotificationsPage = () => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const formatRelativeTime = (dateString) => {
     try {
@@ -93,6 +95,15 @@ const NotificationsPage = () => {
             <Badge variant="secondary" className="px-3 py-1">
               {unreadCount} غير مقروء
             </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsSettingsOpen(true)}
+              className="gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              إعدادات الإشعارات
+            </Button>
             <Button
               variant={soundEnabled ? "default" : "outline"}
               size="sm"
@@ -210,8 +221,8 @@ const NotificationsPage = () => {
                         )}
                       >
                         <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-start gap-3 flex-1">
-                            <div className="text-2xl">{iconMap[notification.icon] || '🔔'}</div>
+                        <div className="flex items-start gap-3 flex-1">
+                            <div className="mt-1">{iconMap[notification.icon] || iconMap.Bell}</div>
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className={cn(
@@ -269,6 +280,11 @@ const NotificationsPage = () => {
           </CardContent>
         </Card>
       </div>
+
+      <NotificationSettingsDialog 
+        open={isSettingsOpen} 
+        onOpenChange={setIsSettingsOpen} 
+      />
     </>
   );
 };

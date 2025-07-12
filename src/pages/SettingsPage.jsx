@@ -615,28 +615,10 @@ const SettingsPage = () => {
           <SectionHeader 
             icon={Shield} 
             title="الأدوات والخدمات"
-            description="إشعارات وتقارير وأدوات متقدمة"
+            description="تقارير وأدوات متقدمة"
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ModernCard
-              icon={Bell}
-              title="مركز الإشعارات"
-              description="إدارة الإشعارات والتنبيهات الفورية"
-              iconColor="from-orange-500 to-orange-600"
-              onClick={() => navigate('/notifications')}
-            >
-              <div className="space-y-3">
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">الإشعارات الفورية</p>
-                  <p className="text-xs text-orange-500 opacity-70">متاحة مع ألوان تصنيفية</p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  اضغط لعرض وإدارة جميع الإشعارات
-                </div>
-              </div>
-            </ModernCard>
-            
             <ModernCard
               icon={FileText}
               title="التقارير والإحصائيات"

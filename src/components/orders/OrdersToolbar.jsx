@@ -33,8 +33,9 @@ const OrdersToolbar = ({ filters, onFiltersChange }) => {
   const statusOptions = [
       { value: 'all', label: 'جميع الحالات' },
       { value: 'pending', label: 'قيد التجهيز' },
-      { value: 'processing', label: 'قيد التسليم' },
+      { value: 'processing', label: 'قيد المعالجة' },
       { value: 'shipped', label: 'تم الشحن' },
+      { value: 'delivery', label: 'قيد التوصيل' },
       { value: 'delivered', label: 'تم التسليم' },
       { value: 'cancelled', label: 'ملغي' },
       { value: 'returned', label: 'راجع' },

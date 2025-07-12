@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useFullPurchases } from '@/hooks/useFullPurchases';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -13,14 +14,26 @@ import AddPurchaseDialog from '@/components/purchases/AddPurchaseDialog';
 import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog';
 
 const PurchasesPage = () => {
-  const { purchases, loading } = useInventory();
+  const { purchases: inventoryPurchases, loading: inventoryLoading } = useInventory();
+  const { purchases: hookPurchases, loading: hookLoading, fetchPurchases } = useFullPurchases();
   const { hasPermission } = useAuth();
+
+  // استخدام البيانات من الهوك إذا كانت متوفرة، وإلا استخدام بيانات الإنفنتوري
+  const purchases = hookPurchases.length > 0 ? hookPurchases : inventoryPurchases;
+  const loading = hookLoading || inventoryLoading;
   const navigate = useNavigate();
   
   const [filters, setFilters] = useState({ searchTerm: '', dateFilter: 'all' });
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  // جلب المشتريات عند تحميل الصفحة
+  React.useEffect(() => {
+    if (hookPurchases.length === 0) {
+      fetchPurchases();
+    }
+  }, [fetchPurchases, hookPurchases.length]);
 
   const filteredPurchases = useMemo(() => {
     if (!purchases) return [];

@@ -30,19 +30,20 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
   };
 
   const statusVariants = {
-    pending: { label: 'قيد التجهيز', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
-    processing: { label: 'قيد التجهيز', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
-    shipped: { label: 'تم الشحن', color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' },
-    delivered: { label: 'تم التوصيل', color: 'bg-green-500/10 text-green-500 border-green-500/20' },
-    returned: { label: 'راجع', color: 'bg-orange-500/10 text-orange-500 border-orange-500/20' },
-    cancelled: { label: 'ملغي', color: 'bg-red-500/10 text-red-500 border-red-500/20' },
+    pending: { label: 'قيد التجهيز', color: 'bg-[hsl(var(--status-pending)_/_0.1)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)_/_0.2)]' },
+    processing: { label: 'قيد المعالجة', color: 'bg-[hsl(var(--status-processing)_/_0.1)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.2)]' },
+    shipped: { label: 'تم الشحن', color: 'bg-[hsl(var(--status-shipped)_/_0.1)] text-[hsl(var(--status-shipped))] border-[hsl(var(--status-shipped)_/_0.2)]' },
+    delivery: { label: 'قيد التوصيل', color: 'bg-[hsl(var(--status-delivery)_/_0.1)] text-[hsl(var(--status-delivery))] border-[hsl(var(--status-delivery)_/_0.2)]' },
+    delivered: { label: 'تم التسليم', color: 'bg-[hsl(var(--status-delivered)_/_0.1)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.2)]' },
+    returned: { label: 'راجعة', color: 'bg-[hsl(var(--status-returned)_/_0.1)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.2)]' },
+    cancelled: { label: 'ملغي', color: 'bg-[hsl(var(--status-cancelled)_/_0.1)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.2)]' },
   };
 
   const customerInfo = order.customerinfo || {};
 
   return (
     <motion.div variants={cardVariants} initial="rest" whileHover="hover" transition={{ duration: 0.2 }}>
-      <Card className={`overflow-hidden bg-card/80 backdrop-blur-sm transition-all duration-300 w-full border-2 ${isSelected ? 'border-primary' : 'border-transparent'}`}>
+      <Card className={`overflow-hidden bg-card/90 backdrop-blur-sm transition-all duration-300 w-full border-2 hover:bg-card/95 hover:shadow-lg ${isSelected ? 'border-primary' : 'border-transparent hover:border-primary/20'}`}>
         <CardContent className="p-3 sm:p-4">
           <div className="flex items-start gap-3">
             {/* Checkbox */}
