@@ -1,8 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { toast } from '@/components/ui/use-toast.js';
-import { supabase } from '@/lib/customSupabaseClient.js'; // Use the custom client
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getFromStorage, saveToStorage, removeFromStorage, localStorageKeys, defaultUser, initializeDefaultData } from '@/lib/localStorage';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -14,348 +13,56 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [allUsers, setAllUsers] = useState([]);
-  const [pendingRegistrations, setPendingRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = useCallback(async (supabaseUser) => {
-    if (!supabase || !supabaseUser) return null;
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*, default_page')
-      .eq('id', supabaseUser.id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching user profile:', error);
-      if (error.code === 'PGRST116') {
-        return { ...supabaseUser, is_new: true, status: 'pending' };
-      }
-      return null;
-    }
-    return { ...supabaseUser, ...profile };
-  }, []);
-
-  const fetchAdminData = useCallback(async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase.from('profiles').select('*');
-    if (error) {
-      console.error('Error fetching all users:', error);
-      return;
-    }
-    const pending = [];
-    data.forEach(u => {
-      if (u.status === 'pending') {
-        pending.push(u);
-      } 
-    });
-    setAllUsers(data); // Store all users including pending ones
-    setPendingRegistrations(pending);
-  }, []);
-
   useEffect(() => {
-    if (user?.role === 'admin' || user?.role === 'deputy' || user?.permissions?.includes('*')) {
-      fetchAdminData();
-    } else if (user) {
-      // Regular users should not see other users' data
-      setAllUsers([user]);
+    // تهيئة البيانات الافتراضية
+    initializeDefaultData();
+    
+    // تحميل المستخدم من التخزين المحلي
+    const savedUser = getFromStorage(localStorageKeys.USER);
+    if (savedUser) {
+      setUser(savedUser);
     }
-  }, [user, fetchAdminData]);
-
-  useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
-    const getSession = async () => {
-      setLoading(true);
-      const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error("Error getting session:", error.message);
-        setLoading(false);
-        return;
-      }
-      
-      if (session) {
-        const profile = await fetchUserProfile(session.user);
-        if (profile?.status === 'active') {
-          setUser(profile);
-        } else {
-          setUser(null);
-        }
-      }
-      setLoading(false);
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        const profile = await fetchUserProfile(session.user);
-        if (profile?.status === 'active') {
-          setUser(profile);
-        } else {
-          setUser(null);
-          if (profile?.status === 'pending') {
-             toast({ title: "حسابك قيد المراجعة", description: "سيقوم المدير بمراجعة طلبك وتفعيله قريباً.", duration: 7000 });
-          }
-        }
-      } else {
-        setUser(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, [fetchUserProfile]);
-
-  const login = async (loginIdentifier, password) => {
-    if (!supabase) {
-      return { success: false, error: 'Supabase not connected.' };
-    }
-
-    setLoading(true);
-    let email = loginIdentifier;
-    const isEmail = loginIdentifier.includes('@');
-
-    try {
-      if (!isEmail) {
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('get-user-by-username', {
-          body: { username: loginIdentifier },
-        });
-        
-        if (functionError) {
-             // Handle specific errors from the edge function
-            if (functionError.context && functionError.context.status === 404) {
-                 throw new Error('اسم المستخدم غير موجود.');
-            }
-            console.error('Edge function invocation error:', functionError.message);
-            throw new Error('حدث خطأ أثناء التحقق من اسم المستخدم.');
-        }
-
-        if (!functionData || !functionData.email) {
-          console.error('Edge function logic error: Email not found in response');
-          throw new Error('اسم المستخدم غير موجود.');
-        }
-        email = functionData.email;
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      });
-
-      if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          throw new Error('كلمة المرور غير صحيحة.');
-        }
-        throw error;
-      }
-
-      const profile = await fetchUserProfile(data.user);
-      if (profile?.status !== 'active') {
-        await supabase.auth.signOut();
-        throw new Error('حسابك غير نشط. يرجى مراجعة المدير.');
-      }
-      
-      setUser(profile);
-      return { success: true };
-
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: error.message || 'حدث خطأ غير متوقع.' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const registerWithEmail = async (fullName, username, email, password) => {
-    if (!supabase) {
-      toast({ title: "وضع العرض", description: "لا يمكن تسجيل حسابات جديدة في الوضع المحلي.", variant: "destructive" });
-      return { success: false, error: "Local mode" };
-    }
-
-    setLoading(true);
-    try {
-      // Check if any user exists at all. If not, this is the first registration.
-      const { count: userCount, error: countError } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
-
-      if (countError) throw countError;
-
-      const isFirstUser = userCount === 0;
-
-      // Check for existing username using the RPC function
-      const { data: usernameExists, error: usernameCheckError } = await supabase
-        .rpc('username_exists', { p_username: username });
-      
-      if (usernameCheckError) {
-        console.error("Error checking username:", usernameCheckError);
-        throw new Error("حدث خطأ أثناء التحقق من اسم المستخدم.");
-      }
-      if (usernameExists) {
-        throw new Error('اسم المستخدم هذا موجود بالفعل.');
-      }
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            username: username,
-          }
-        }
-      });
-
-      if (error) {
-          if (error.message.includes('unique constraint')) {
-              throw new Error('هذا البريد الإلكتروني مسجل بالفعل.');
-          }
-          throw error;
-      }
-
-      if (isFirstUser) {
-        toast({
-          title: "أهلاً بك أيها المدير!",
-          description: `مرحباً ${fullName}، تم إنشاء حساب المدير الخاص بك بنجاح.`,
-          duration: 7000,
-        });
-      } else {
-        toast({
-          title: "تم التسجيل بنجاح",
-          description: `مرحباً ${fullName}، سيقوم المدير بمراجعة طلبك وتفعيله قريباً.`,
-        });
-      }
-
-      return { success: true };
-
-    } catch (error) {
-      console.error('Registration error:', error);
-      toast({
-        title: "خطأ في التسجيل",
-        description: error.message,
-        variant: "destructive",
-      });
-      return { success: false, error: error.message };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const forgotPassword = async (email) => {
-    if (!supabase) {
-      toast({ title: "وضع العرض", description: "هذه الميزة غير متاحة في الوضع المحلي.", variant: "destructive" });
-      return { success: false, error: "Local mode" };
-    }
-    setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
-    });
     setLoading(false);
-    if (error) {
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
-      return { success: false, error };
+  }, []);
+
+  const login = async (credentials) => {
+    try {
+      // بيانات الدخول الافتراضية
+      const validCredentials = [
+        { username: 'admin', password: '123456' },
+        { username: 'مدير', password: '123456' },
+        { email: 'admin@ryus.com', password: '123456' }
+      ];
+
+      const isValid = validCredentials.some(cred => 
+        (cred.username === credentials.username || cred.email === credentials.email) && 
+        cred.password === credentials.password
+      );
+
+      if (!isValid) {
+        throw new Error('اسم المستخدم أو كلمة المرور غير صحيحة');
+      }
+
+      const userData = { ...defaultUser };
+      setUser(userData);
+      saveToStorage(localStorageKeys.USER, userData);
+
+      return { success: true, user: userData };
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    toast({ title: 'تم الإرسال', description: 'تفقد بريدك الإلكتروني للحصول على رابط استعادة كلمة المرور.' });
-    return { success: true };
   };
 
   const logout = async () => {
-    setLoading(true);
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
     setUser(null);
-    setLoading(false);
+    removeFromStorage(localStorageKeys.USER);
   };
-  
+
   const hasPermission = (permission) => {
-    if(!permission) return true;
-    if (user?.role === 'admin' || user?.permissions?.includes('*')) {
-      return true;
-    }
-    return user?.permissions?.includes(permission);
-  };
-
-  const updateUserProfile = async (profileData) => {
-    if (!user) return;
-    setLoading(true);
-    try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .update({ full_name: profileData.full_name, username: profileData.username })
-            .eq('id', user.id)
-            .select()
-            .single();
-
-        if (error) throw error;
-        
-        setUser(prevUser => ({ ...prevUser, ...data }));
-        toast({ title: 'نجاح', description: 'تم تحديث الملف الشخصي بنجاح.' });
-    } catch (error) {
-        console.error("Error updating profile:", error);
-        toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
-    } finally {
-        setLoading(false);
-    }
-  };
-
-  const changePassword = async (newPassword) => {
-      setLoading(true);
-      try {
-          const { error } = await supabase.auth.updateUser({ password: newPassword });
-          if (error) throw error;
-          toast({ title: 'نجاح', description: 'تم تغيير كلمة المرور بنجاح.' });
-          return { success: true };
-      } catch (error) {
-          console.error("Error changing password:", error);
-          toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
-          return { success: false };
-      } finally {
-          setLoading(false);
-      }
-  };
-  
-  const updateUser = async (userId, data) => {
-    if (!supabase) {
-      toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
-      return;
-    }
-    const { error } = await supabase.from('profiles').update(data).eq('id', userId);
-    if (error) {
-      toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
-      return { success: false, error };
-    } else {
-      toast({ title: 'نجاح', description: 'تم تحديث المستخدم بنجاح.' });
-      if (userId === user.id) {
-        const updatedProfile = await fetchUserProfile(user);
-        setUser(updatedProfile);
-      }
-      return { success: true };
-    }
-  };
-
-  const updatePermissionsByRole = async (role, permissions) => {
-    if (!supabase) {
-      toast({ title: "Error", description: "Supabase client not available.", variant: "destructive" });
-      return;
-    }
-    const { error } = await supabase
-      .from('profiles')
-      .update({ permissions })
-      .eq('role', role);
-
-    if (error) {
-      toast({ title: 'خطأ', description: `فشل تحديث الصلاحيات: ${error.message}`, variant: 'destructive' });
-    } else {
-      toast({ title: 'نجاح', description: `تم تحديث صلاحيات كل المستخدمين من دور "${role}" بنجاح.` });
-      await fetchAdminData(); // Refetch all users to update the UI
-    }
+    if (!user) return false;
+    return user.permissions.includes('all') || user.permissions.includes(permission);
   };
 
   const value = {
@@ -364,16 +71,10 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     hasPermission,
-    registerWithEmail,
-    forgotPassword,
-    pendingRegistrations,
-    allUsers,
-    updateUser,
-    updateUserProfile,
-    changePassword,
-    updatePermissionsByRole,
-    refetchAdminData: fetchAdminData,
-    fetchAdminData, // expose this for the handler
+    // دوال فارغة للتوافق مع الكود الموجود
+    register: () => Promise.resolve({ success: false, error: 'التسجيل غير متاح' }),
+    resetPassword: () => Promise.resolve({ success: false, error: 'إعادة تعيين كلمة المرور غير متاحة' }),
+    updateProfile: () => Promise.resolve({ success: false, error: 'تحديث الملف الشخصي غير متاح' })
   };
 
   return (
