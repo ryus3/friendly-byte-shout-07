@@ -1,0 +1,233 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Check, X, Shield, User, UserPlus, Home, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { permissionsMap } from '@/lib/permissions';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useNotifications } from '@/contexts/NotificationsContext';
+
+
+const defaultPages = [
+  { value: '/', label: 'لوحة التحكم' },
+  { value: '/my-orders', label: 'طلباتي' },
+  { value: '/quick-order', label: 'طلب سريع' },
+  { value: '/products', label: 'المنتجات' },
+];
+
+const UserCard = ({ user, onApprove, onReject }) => {
+  const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [role, setRole] = useState('employee');
+  const [defaultPage, setDefaultPage] = useState('/');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handlePermissionChange = (permissionId, checked) => {
+    setSelectedPermissions(prev =>
+      checked
+        ? [...prev, permissionId]
+        : prev.filter(p => p !== permissionId)
+    );
+  };
+  
+  const handleRoleChange = (newRole) => {
+    setRole(newRole);
+    if (newRole === 'admin' || newRole === 'deputy') {
+      setSelectedPermissions(['*']);
+    } else if (role === 'admin' || role === 'deputy') {
+      setSelectedPermissions([]);
+    }
+  }
+
+
+  const handleAction = async (action, userId, data) => {
+    setIsProcessing(true);
+    await action(userId, data);
+    setIsProcessing(false);
+  };
+
+  const handleApproveClick = () => {
+    const finalPermissions = (role === 'admin' || role === 'deputy') ? ['*'] : selectedPermissions;
+    handleAction(onApprove, user.id, { permissions: finalPermissions, role, default_page: defaultPage });
+  };
+
+  const handleRejectClick = () => {
+    handleAction(onReject, user.id);
+  }
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+      className="bg-card/80 dark:bg-zinc-800/50 p-4 rounded-lg border border-border"
+    >
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <div className="bg-primary/10 p-3 rounded-full">
+            <User className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <p className="font-bold text-foreground">{user.full_name}</p>
+            <p className="text-sm text-muted-foreground flex items-center gap-2">
+              <User className="w-4 h-4" />
+              @{user.username}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button size="sm" variant="outline" className="text-red-500 border-red-500 hover:bg-red-500/10 hover:text-red-500" onClick={handleRejectClick} disabled={isProcessing}>
+            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin"/> : <X className="w-4 h-4 mr-2" />}
+            رفض
+          </Button>
+          <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleApproveClick} disabled={isProcessing}>
+            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Check className="w-4 h-4 mr-2" />}
+            موافقة
+          </Button>
+        </div>
+      </div>
+      <div className="mt-4 pt-4 border-t border-border space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-primary" />
+                  الدور
+              </h4>
+              <Select value={role} onValueChange={handleRoleChange}>
+                  <SelectTrigger><SelectValue/></SelectTrigger>
+                  <SelectContent>
+                      <SelectItem value="employee">موظف</SelectItem>
+                      <SelectItem value="deputy">نائب مدير</SelectItem>
+                      <SelectItem value="admin">مدير</SelectItem>
+                      <SelectItem value="warehouse">مخزن</SelectItem>
+                  </SelectContent>
+              </Select>
+          </div>
+          <div>
+            <h4 className="font-semibold mb-2 flex items-center gap-2">
+              <Home className="w-5 h-5 text-primary" />
+              الصفحة الرئيسية للموظف
+            </h4>
+            <Select value={defaultPage} onValueChange={setDefaultPage}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الصفحة الرئيسية" />
+              </SelectTrigger>
+              <SelectContent>
+                {defaultPages.map(page => (
+                  <SelectItem key={page.value} value={page.value}>{page.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div>
+          <h4 className="font-semibold mb-3 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            تحديد الصلاحيات
+          </h4>
+          <Accordion type="multiple" className="w-full" disabled={role === 'admin' || role === 'deputy'}>
+            {permissionsMap.map(category => (
+              <AccordionItem value={category.category} key={category.category}>
+                <AccordionTrigger>{category.categoryLabel}</AccordionTrigger>
+                <AccordionContent>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
+                    {category.permissions.map(permission => (
+                      <div key={permission.id} className="flex items-center space-x-2 space-x-reverse">
+                        <Checkbox
+                          id={`${user.id}-${permission.id}`}
+                          checked={role === 'admin' || role === 'deputy' || selectedPermissions.includes(permission.id)}
+                          onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
+                          disabled={role === 'admin' || role === 'deputy'}
+                        />
+                        <Label htmlFor={`${user.id}-${permission.id}`} className="text-sm cursor-pointer">
+                          {permission.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const PendingRegistrations = ({ onClose }) => {
+  const { pendingRegistrations, updateUser, refetchAdminData } = useAuth();
+  const { deleteNotificationByTypeAndData } = useNotifications();
+  
+  const handleApprove = async (userId, data) => {
+    await updateUser(userId, { ...data, status: 'active' });
+    await deleteNotificationByTypeAndData('new_registration', { id: userId });
+    refetchAdminData();
+  };
+  
+  const handleReject = async (userId) => {
+    await updateUser(userId, { status: 'rejected', permissions: [] });
+    await deleteNotificationByTypeAndData('new_registration', { id: userId });
+    refetchAdminData();
+  };
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 50, opacity: 0 }}
+        className="w-full max-w-4xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <Card className="max-h-[90vh] flex flex-col border-2 border-purple-500/30 shadow-2xl shadow-purple-500/10">
+          <CardHeader className="border-b border-border">
+            <div className="flex justify-between items-center">
+              <div>
+                <CardTitle className="text-2xl gradient-text flex items-center gap-2"><UserPlus /> طلبات التسجيل الجديدة</CardTitle>
+                <CardDescription>قم بمراجعة ومنح الصلاحيات للموظفين الجدد.</CardDescription>
+              </div>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6 flex-1 overflow-y-auto">
+            <AnimatePresence>
+              {pendingRegistrations && pendingRegistrations.length > 0 ? (
+                <div className="space-y-4">
+                  {pendingRegistrations.map(user => (
+                    <UserCard
+                      key={user.id}
+                      user={user}
+                      onApprove={handleApprove}
+                      onReject={handleReject}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16">
+                  <UserPlus className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="font-bold text-xl">لا توجد طلبات تسجيل جديدة</p>
+                  <p className="text-muted-foreground">سيتم عرض الطلبات هنا عند تسجيل الموظفين الجدد.</p>
+                </div>
+              )}
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+export default PendingRegistrations;

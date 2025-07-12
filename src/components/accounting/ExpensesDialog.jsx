@@ -1,0 +1,168 @@
+import React, { useState, useEffect } from 'react';
+    import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+    import { Button } from '@/components/ui/button';
+    import { Input } from '@/components/ui/input';
+    import { Label } from '@/components/ui/label';
+    import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+    import { ScrollArea } from '@/components/ui/scroll-area';
+    import { Trash2, PlusCircle } from 'lucide-react';
+    import { format, parseISO } from 'date-fns';
+    import { ar } from 'date-fns/locale';
+    import { toast } from '@/components/ui/use-toast';
+    import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+    import { DateRangePicker } from '@/components/ui/date-range-picker';
+    
+    const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
+      const [newExpense, setNewExpense] = useState({
+        date: new Date().toISOString().slice(0, 10),
+        category: 'تسويق',
+        description: '',
+        amount: '',
+      });
+      const [filters, setFilters] = useState({
+        category: 'all',
+        dateRange: { from: undefined, to: undefined }
+      });
+    
+      const expenseCategories = ['تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن', 'أخرى'];
+    
+      const filteredExpenses = expenses.filter(expense => {
+        const categoryMatch = filters.category === 'all' || expense.related_data?.category === filters.category;
+        const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
+        return categoryMatch && dateMatch && expense.related_data?.category !== 'شراء بضاعة' && expense.related_data?.category !== 'مستحقات الموظفين';
+      });
+    
+      const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setNewExpense(prev => ({ ...prev, [name]: value }));
+      };
+    
+      const handleSelectChange = (value) => {
+        setNewExpense(prev => ({ ...prev, category: value }));
+      };
+    
+      const handleAddExpense = async () => {
+        if (!newExpense.description || !newExpense.amount || !newExpense.category) {
+          toast({ title: 'خطأ', description: 'الرجاء ملء جميع الحقول.', variant: 'destructive' });
+          return;
+        }
+        await addExpense({
+          ...newExpense,
+          amount: parseFloat(newExpense.amount),
+        });
+        setNewExpense({
+          date: new Date().toISOString().slice(0, 10),
+          category: 'تسويق',
+          description: '',
+          amount: '',
+        });
+      };
+    
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="max-w-4xl w-[95vw] sm:w-full">
+            <DialogHeader>
+              <DialogTitle>إدارة المصاريف العامة</DialogTitle>
+              <DialogDescription>عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4 max-h-[80vh] overflow-y-auto md:overflow-visible">
+              <div className="md:col-span-1 space-y-4 p-4 border rounded-lg">
+                <h3 className="font-semibold flex items-center gap-2"><PlusCircle className="w-5 h-5 text-primary" /> إضافة مصروف جديد</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="exp-date">التاريخ</Label>
+                    <Input id="exp-date" type="date" name="date" value={newExpense.date} onChange={handleInputChange} />
+                  </div>
+                  <div>
+                    <Label htmlFor="exp-category">الفئة</Label>
+                    <Select value={newExpense.category} onValueChange={handleSelectChange}>
+                      <SelectTrigger id="exp-category">
+                        <SelectValue placeholder="اختر فئة" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="exp-desc">الوصف</Label>
+                    <Input id="exp-desc" name="description" value={newExpense.description} onChange={handleInputChange} placeholder="مثال: إعلان فيسبوك" />
+                  </div>
+                  <div>
+                    <Label htmlFor="exp-amount">المبلغ (د.ع)</Label>
+                    <Input id="exp-amount" type="number" name="amount" value={newExpense.amount} onChange={handleInputChange} placeholder="50,000" />
+                  </div>
+                  <Button onClick={handleAddExpense} className="w-full">إضافة المصروف</Button>
+                </div>
+              </div>
+              <div className="md:col-span-2 space-y-4">
+                <h3 className="font-semibold">قائمة المصاريف</h3>
+                <div className="flex flex-col sm:flex-row gap-2 p-2 border rounded-md">
+                    <Select value={filters.category} onValueChange={(v) => setFilters(f => ({...f, category: v}))}>
+                        <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="فلترة حسب الفئة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">كل الفئات</SelectItem>
+                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <DateRangePicker
+                        className="flex-1"
+                        date={filters.dateRange}
+                        onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
+                    />
+                </div>
+                <ScrollArea className="h-96 border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>الوصف</TableHead>
+                        <TableHead>المبلغ</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredExpenses.map(expense => (
+                        <TableRow key={expense.id}>
+                          <TableCell>
+                            <p className="font-medium">{expense.description}</p>
+                            <p className="text-xs text-muted-foreground">{expense.related_data?.category} - {format(parseISO(expense.transaction_date), 'd MMM yyyy', { locale: ar })}</p>
+                          </TableCell>
+                          <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
+                          <TableCell>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذا الإجراء.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => deleteExpense(expense.id)}>حذف</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    };
+    
+    export default ExpensesDialog;

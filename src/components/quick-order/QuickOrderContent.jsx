@@ -1,0 +1,376 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useInventory } from '@/contexts/InventoryContext';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { toast } from '@/components/ui/use-toast';
+import { getCities, getRegionsByCity, createAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
+import { motion } from 'framer-motion';
+import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import { useAuth } from '@/contexts/AuthContext';
+import { iraqiProvinces } from '@/lib/iraq-provinces';
+import DeliveryStatusCard from './DeliveryStatusCard';
+import CustomerInfoForm from './CustomerInfoForm';
+import OrderDetailsForm from './OrderDetailsForm';
+
+export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState }) => {
+  const { createOrder, settings, cart, clearCart, addToCart } = useInventory();
+  const { user } = useAuth();
+  const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken } = useAlWaseet();
+  const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
+  const [productSelectOpen, setProductSelectOpen] = useState(false);
+
+  const initialFormData = {
+    name: user?.default_customer_name || '', phone: '', second_phone: '', city_id: '', region_id: '', city: '', region: '', address: '', 
+    notes: '', details: '', quantity: 1, price: 0, size: '', type: 'new', promocode: ''
+  };
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
+  const [discount, setDiscount] = useState(0);
+  const [cities, setCities] = useState([]);
+  const [regions, setRegions] = useState([]);
+  const [packageSizes, setPackageSizes] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+  const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [dataFetchError, setDataFetchError] = useState(false);
+
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.total, 0), [cart]);
+  const deliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);
+  const total = useMemo(() => subtotal - discount, [subtotal, discount]);
+  const priceWithDelivery = useMemo(() => total + deliveryFee, [total, deliveryFee]);
+  
+  const resetForm = useCallback(() => {
+    setFormData(initialFormData);
+    clearCart();
+    setDiscount(0);
+    setErrors({});
+  }, [clearCart, initialFormData]);
+
+  const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
+
+  useEffect(() => {
+    if (orderCreationMode === 'local_only') {
+      setActivePartner('local');
+    } else if (orderCreationMode === 'partner_only' && activePartner === 'local') {
+      setActivePartner('alwaseet');
+    }
+  }, [orderCreationMode, setActivePartner, activePartner]);
+
+  const isDeliveryPartnerSelected = useMemo(() => activePartner !== null, [activePartner]);
+
+  useEffect(() => {
+    if (orderCreationMode === 'choice' && !isDeliveryPartnerSelected) {
+      setDeliveryPartnerDialogOpen(true);
+    }
+  }, [isDeliveryPartnerSelected, orderCreationMode]);
+
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      if (activePartner === 'alwaseet' && waseetToken) {
+        setLoadingCities(true);
+        setLoadingPackageSizes(true);
+        setInitialDataLoaded(false);
+        setDataFetchError(false);
+        try {
+          const [citiesData, packageSizesData] = await Promise.all([
+            getCities(waseetToken),
+            getPackageSizes(waseetToken)
+          ]);
+          
+          const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
+          const safePackageSizes = Array.isArray(packageSizesData) ? packageSizesData : Object.values(packageSizesData || {});
+
+          setCities(safeCities);
+          setPackageSizes(safePackageSizes);
+
+          const normalSize = safePackageSizes.find(s => s.size && (s.size.toLowerCase().includes('normal') || s.size.includes('عادي')));
+          if (normalSize) {
+             setFormData(prev => ({ ...prev, size: String(normalSize.id) }));
+          } else if (safePackageSizes.length > 0) {
+            setFormData(prev => ({ ...prev, size: String(safePackageSizes[0].id) }));
+          }
+        } catch (error) {
+          setDataFetchError(true);
+          toast({ title: "خطأ", description: "فشل تحميل بيانات شركة التوصيل. قد يكون التوكن غير صالح أو منتهي الصلاحية.", variant: "destructive" }); 
+        } finally { 
+          setLoadingCities(false); 
+          setLoadingPackageSizes(false);
+          setInitialDataLoaded(true);
+        }
+      } else if (activePartner === 'local') {
+        setFormData(prev => ({...prev, size: 'normal' }));
+        setInitialDataLoaded(true);
+        setDataFetchError(false);
+      }
+    };
+    
+    if(isDeliveryPartnerSelected) {
+        if(activePartner === 'alwaseet' && !isWaseetLoggedIn) {
+            setInitialDataLoaded(false);
+        } else {
+            fetchInitialData();
+        }
+    }
+  }, [activePartner, waseetToken, isWaseetLoggedIn, isDeliveryPartnerSelected]);
+
+  useEffect(() => {
+    if (formData.city_id && activePartner === 'alwaseet' && waseetToken) {
+      const fetchRegionsData = async () => {
+        setLoadingRegions(true);
+        setRegions([]);
+        setFormData(prev => ({ ...prev, region_id: '' }));
+        try {
+            const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
+            const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
+            setRegions(safeRegions);
+        } catch (error) { toast({ title: "خطأ", description: "فشل تحميل المناطق.", variant: "destructive" }); }
+        finally { setLoadingRegions(false); }
+      };
+      fetchRegionsData();
+    }
+  }, [formData.city_id, activePartner, waseetToken]);
+  
+  useEffect(() => {
+    const quantityCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const detailsString = cart
+      .map(item => 
+        `${item.productName || ''} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`.trim().replace(/ +/g, ' ')
+      )
+      .join(' + ');
+    
+    setFormData(prev => ({
+      ...prev, 
+      quantity: quantityCount > 0 ? quantityCount : 1,
+      price: priceWithDelivery,
+      details: detailsString,
+    }));
+  }, [cart, priceWithDelivery]);
+
+  const validateField = (name, value) => {
+    let errorMsg = '';
+    if (name === 'phone') {
+        const phoneRegex = /^07[5789]\d{8}$/; // 10 digits total
+        const phoneRegex11 = /^07[5789]\d{9}$/; // 11 digits total
+        if (value && !phoneRegex.test(value) && !phoneRegex11.test(value)) {
+            errorMsg = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام ويبدأ بـ 07.';
+        }
+    }
+    setErrors(prev => ({ ...prev, [name]: errorMsg }));
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    validateField(name, value);
+  };
+
+  const handleSelectChange = (name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const validateForm = () => {
+    const newErrors = {};
+    const phoneRegex = /^07[5789]\d{8}$/; // 10 digits total
+    const phoneRegex11 = /^07[5789]\d{9}$/; // 11 digits total
+    
+    if (!formData.phone || (!phoneRegex.test(formData.phone) && !phoneRegex11.test(formData.phone))) newErrors.phone = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام ويبدأ بـ 07.';
+    if (activePartner === 'local' && !formData.city) newErrors.city = 'الرجاء اختيار المحافظة.';
+    else if (activePartner === 'alwaseet' && !formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
+    if (activePartner === 'local' && !formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
+    else if (activePartner === 'alwaseet' && !formData.region_id) newErrors.region_id = 'الرجاء اختيار المنطقة.';
+    if (cart.length === 0) {
+        toast({ title: "السلة فارغة", description: "الرجاء إضافة منتجات أولاً.", variant: "destructive" });
+        return false;
+    }
+    if (!formData.details) newErrors.details = 'الرجاء إدخال نوع البضاعة.';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+  
+  const formatPhoneNumber = (phone) => {
+    if (phone && phone.startsWith('0')) {
+      return `+964${phone.substring(1)}`;
+    }
+    return phone; // Already in international format or empty
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm() || !isDeliveryPartnerSelected || isSubmittingState) return;
+    setIsSubmitting(true);
+    try {
+      let trackingNumber = null;
+      let orderStatus = 'pending';
+      let qrLink = null;
+      let deliveryPartnerData = null;
+
+      if (activePartner === 'alwaseet') {
+          if (!isWaseetLoggedIn || !waseetToken) throw new Error("يجب تسجيل الدخول لشركة التوصيل أولاً.");
+          
+          const alWaseetPayload = {
+             client_name: formData.name, 
+             client_mobile: formatPhoneNumber(formData.phone), 
+             client_mobile2: formData.second_phone ? formatPhoneNumber(formData.second_phone) : '',
+             city_id: formData.city_id, 
+             region_id: formData.region_id, 
+             location: formData.address,
+             type_name: formData.details, 
+             items_number: formData.quantity,
+             price: formData.price,
+             package_size: formData.size,
+             merchant_notes: formData.notes,
+             replacement: formData.type === 'exchange' ? 1 : 0
+          };
+          const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
+          
+          if (!alWaseetResponse || !alWaseetResponse.qr_id) {
+            throw new Error("لم يتم استلام رقم التتبع من شركة التوصيل.");
+          }
+
+          trackingNumber = alWaseetResponse.qr_id;
+          qrLink = alWaseetResponse.qr_link;
+          deliveryPartnerData = alWaseetResponse;
+      }
+      const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
+      const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
+      const customerInfoPayload = {
+        name: formData.name, phone: formData.phone,
+        address: `${formData.address}, ${region}, ${city}`,
+        city: city, notes: formData.notes,
+      };
+      
+      const result = await createOrder(customerInfoPayload, cart, String(trackingNumber), discount, orderStatus, qrLink, deliveryPartnerData);
+      if (result.success) {
+        toast({ title: "نجاح", description: `تم إنشاء الطلب بنجاح. رقم الفاتورة: ${result.trackingNumber}`, variant: 'success' });
+        resetForm();
+        if(onOrderCreated) onOrderCreated();
+      } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }
+    } catch (error) {
+      toast({ title: "خطأ", description: error.message || "فشل إنشاء الطلب.", variant: "destructive" });
+    } finally { 
+        setIsSubmitting(false);
+    }
+  };
+  
+  const handleConfirmProductSelection = (selectedItems) => {
+    clearCart();
+    selectedItems.forEach(item => {
+        const product = { id: item.productId, name: item.productName, images: [item.image] };
+        const variant = { sku: item.sku, color: item.color, size: item.size, price: item.price, cost_price: item.costPrice, quantity: item.stock, reserved: item.reserved, image: item.image };
+        addToCart(product, variant, item.quantity, false);
+    });
+    setProductSelectOpen(false);
+    toast({ title: "تم تحديث السلة", variant: "success" });
+  };
+  
+  const partnerSpecificFields = () => {
+      if (activePartner === 'local') {
+          return (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="city">المحافظة</Label>
+                <Select name="city" onValueChange={(v) => handleSelectChange('city', v)} value={formData.city} required>
+                   <SelectTrigger className={errors.city ? "border-red-500" : ""}>{formData.city || 'اختر محافظة'}</SelectTrigger>
+                   <SelectContent>{iraqiProvinces.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
+                 </Select>
+                 {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+              </div>
+              <div className="space-y-2">
+                  <Label htmlFor="region">المنطقة او القضاء</Label>
+                  <Input id="region" name="region" value={formData.region} onChange={handleChange} required className={errors.region ? "border-red-500" : ""}/>
+                  {errors.region && <p className="text-sm text-red-500">{errors.region}</p>}
+              </div>
+            </>
+          );
+      }
+      return (
+        <>
+            <div className="space-y-2"><Label>المدينة</Label>
+               <Select name="city_id" onValueChange={(v) => handleSelectChange('city_id', v)} value={formData.city_id} required>
+                   <SelectTrigger disabled={loadingCities || dataFetchError} className={errors.city_id ? "border-red-500" : ""}>{loadingCities ? 'تحميل...' : ((Array.isArray(cities) ? cities.find(c => String(c.id) === formData.city_id)?.name : '') || 'اختر مدينة')}</SelectTrigger>
+                   <SelectContent>{(Array.isArray(cities) ? cities : []).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
+                 </Select>
+                 {errors.city_id && <p className="text-sm text-red-500">{errors.city_id}</p>}
+            </div>
+            <div className="space-y-2"><Label>المنطقة او القضاء</Label>
+               <Select name="region_id" onValueChange={(v) => handleSelectChange('region_id', v)} value={formData.region_id} required disabled={!formData.city_id || loadingRegions || dataFetchError}>
+                   <SelectTrigger disabled={!formData.city_id || loadingRegions || dataFetchError} className={errors.region_id ? "border-red-500" : ""}>{loadingRegions ? 'تحميل...' : ((Array.isArray(regions) ? regions.find(r => String(r.id) === formData.region_id)?.name : '') || 'اختر منطقة')}</SelectTrigger>
+                   <SelectContent>{(Array.isArray(regions) ? regions : []).map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
+                 </Select>
+                 {errors.region_id && <p className="text-sm text-red-500">{errors.region_id}</p>}
+            </div>
+        </>
+      )
+  }
+
+  const PageWrapper = isDialog ? 'form' : 'form';
+  const pageProps = { ref: formRef, onSubmit: handleSubmit };
+  const isSubmitDisabled = isSubmittingState || !isDeliveryPartnerSelected || (activePartner === 'alwaseet' && (!isWaseetLoggedIn || !initialDataLoaded || dataFetchError)) || Object.values(errors).some(e => e) || cart.length === 0;
+
+  return (
+    <>
+      <PageWrapper {...pageProps} className={!isDialog ? "max-w-4xl mx-auto space-y-6" : "space-y-4"}>
+        {!isDialog && (
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+            <h1 className="text-3xl font-bold gradient-text">طلب سريع</h1>
+            <p className="text-muted-foreground mt-1">إنشاء طلب جديد وإرساله لشركة التوصيل مباشرة.</p>
+          </motion.div>
+        )}
+
+        <DeliveryStatusCard
+          mode={orderCreationMode}
+          activePartner={activePartner}
+          isLoggedIn={isWaseetLoggedIn}
+          onManageClick={() => setDeliveryPartnerDialogOpen(true)}
+        />
+
+        <fieldset disabled={isSubmittingState} className="space-y-6">
+          <CustomerInfoForm 
+            formData={formData}
+            handleChange={handleChange}
+            handleSelectChange={handleSelectChange}
+            errors={errors}
+            partnerSpecificFields={partnerSpecificFields}
+            isSubmittingState={isSubmittingState}
+            isDeliveryPartnerSelected={isDeliveryPartnerSelected}
+          />
+          <OrderDetailsForm
+            formData={formData}
+            handleChange={handleChange}
+            handleSelectChange={handleSelectChange}
+            setProductSelectOpen={setProductSelectOpen}
+            isSubmittingState={isSubmittingState}
+            isDeliveryPartnerSelected={isDeliveryPartnerSelected}
+            packageSizes={packageSizes}
+            loadingPackageSizes={loadingPackageSizes}
+            activePartner={activePartner}
+            dataFetchError={dataFetchError}
+          />
+        </fieldset>
+
+        {!isDialog && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitDisabled}>
+                {isSubmittingState && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                تأكيد وإنشاء الطلب
+              </Button>
+          </motion.div>
+        )}
+      </PageWrapper>
+
+      <DeliveryPartnerDialog open={deliveryPartnerDialogOpen} onOpenChange={setDeliveryPartnerDialogOpen} />
+      <ProductSelectionDialog 
+          open={productSelectOpen} 
+          onOpenChange={setProductSelectOpen}
+          onConfirm={handleConfirmProductSelection}
+          initialCart={cart}
+      />
+    </>
+  );
+};

@@ -1,0 +1,178 @@
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useVariants } from '@/contexts/VariantsContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Loader2, Plus, LayoutGrid, List, SlidersHorizontal, Search, ShoppingCart, Check, X, QrCode } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import ProductGrid from '@/components/products/ProductGrid';
+import ProductList from '@/components/products/ProductList';
+import ProductFilters from '@/components/products/ProductFilters';
+import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
+import ProductVariantDialog from '@/components/products/ProductVariantDialog';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+import { toast } from '@/components/ui/use-toast';
+
+const ProductsPage = () => {
+  const { products, loading, addToCart, clearCart } = useInventory();
+  const { categories, brands } = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
+    const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+    return { categories: uniqueCategories, brands: uniqueBrands };
+  }, [products]);
+  const { colors } = useVariants();
+  const { hasPermission } = useAuth();
+  
+  const [viewMode, setViewMode] = useState('grid');
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    category: 'all',
+    brand: 'all',
+    color: 'all',
+    price: [0, 500000],
+  });
+  
+  const [dialogs, setDialogs] = useState({
+    quickOrder: false,
+    productVariant: false,
+    barcodeScanner: false,
+  });
+  const [selectedProduct, setSelectedProduct] = useState(null);
+
+  const isMobile = useMediaQuery("(max-width: 768px)");
+
+  useEffect(() => {
+    if (isMobile) setViewMode('list');
+    else setViewMode('grid');
+  }, [isMobile]);
+
+  const filteredProducts = useMemo(() => {
+    let tempProducts = products.filter(p => p.is_visible);
+
+    if (filters.searchTerm) {
+      const term = filters.searchTerm.toLowerCase();
+      tempProducts = tempProducts.filter(p =>
+        p.name.toLowerCase().includes(term) ||
+        p.sku_base?.toLowerCase().includes(term) ||
+        p.variants.some(v => v.barcode === term)
+      );
+    }
+
+    if (filters.category !== 'all') {
+      tempProducts = tempProducts.filter(p => p.categories?.main_category === filters.category);
+    }
+    if (filters.brand !== 'all') {
+      tempProducts = tempProducts.filter(p => p.brand === filters.brand);
+    }
+    if (filters.color !== 'all') {
+      tempProducts = tempProducts.filter(p => p.variants.some(v => v.color === filters.color));
+    }
+    
+    tempProducts = tempProducts.filter(p => {
+        const price = p.variants[0]?.price || 0;
+        return price >= filters.price[0] && price <= filters.price[1];
+    });
+
+    return tempProducts;
+  }, [products, filters]);
+  
+  const handleCreateOrder = (product, variant, quantity) => {
+    clearCart();
+    addToCart(product, variant, quantity, false);
+    setDialogs(prev => ({ ...prev, productVariant: false, quickOrder: true }));
+    setSelectedProduct(null);
+  };
+
+  const handleProductSelect = (product) => {
+    setSelectedProduct(product);
+    setDialogs(prev => ({ ...prev, productVariant: true }));
+  };
+
+  const handleBarcodeScan = (barcode) => {
+    setFilters(prev => ({ ...prev, searchTerm: barcode }));
+    const foundProduct = products.find(p => p.variants.some(v => v.barcode === barcode));
+    if (foundProduct) {
+      handleProductSelect(foundProduct);
+    } else {
+      toast({ title: "لم يتم العثور على المنتج", description: "لا يوجد منتج بهذا الباركود.", variant: "destructive" });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <Helmet>
+        <title>المنتجات - RYUS</title>
+        <meta name="description" content="تصفح جميع المنتجات المتاحة في المخزون." />
+      </Helmet>
+      <div className="flex flex-col h-full">
+        <header className="flex-shrink-0 p-4 border-b">
+          <ProductFilters
+            filters={filters}
+            setFilters={setFilters}
+            categories={categories}
+            brands={brands}
+            colors={colors}
+            onBarcodeSearch={() => setDialogs(prev => ({ ...prev, barcodeScanner: true }))}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            onProductSelect={handleProductSelect}
+          />
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 md:p-6">
+          {filteredProducts.length > 0 ? (
+            viewMode === 'grid' ? (
+              <ProductGrid products={filteredProducts} onProductSelect={handleProductSelect} onCreateOrder={handleCreateOrder} />
+            ) : (
+              <ProductList products={filteredProducts} onProductSelect={handleProductSelect} />
+            )
+          ) : (
+            <div className="text-center py-16">
+              <h2 className="text-2xl font-bold mb-2">لا توجد منتجات مطابقة</h2>
+              <p className="text-muted-foreground">حاول تغيير فلاتر البحث أو إضافة منتجات جديدة.</p>
+            </div>
+          )}
+        </main>
+      </div>
+      
+      <ProductVariantDialog
+        product={selectedProduct}
+        open={dialogs.productVariant}
+        onClose={() => {
+            setDialogs(prev => ({ ...prev, productVariant: false }));
+            setSelectedProduct(null);
+        }}
+        onCreateOrder={handleCreateOrder}
+      />
+
+      <BarcodeScannerDialog
+        open={dialogs.barcodeScanner}
+        onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
+        onScanSuccess={handleBarcodeScan}
+      />
+
+      {hasPermission('create_order') && (
+        <QuickOrderDialog
+          open={dialogs.quickOrder}
+          onOpenChange={(open) => setDialogs(prev => ({ ...prev, quickOrder: open }))}
+          onOrderCreated={() => {
+            clearCart();
+            setDialogs(prev => ({ ...prev, quickOrder: false }));
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+export default ProductsPage;

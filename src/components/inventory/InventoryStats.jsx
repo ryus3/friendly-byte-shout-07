@@ -1,0 +1,65 @@
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Package, TrendingUp, TrendingDown, AlertTriangle, Archive } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay }}
+    whileHover={onClick ? { scale: 1.05, y: -5, transition: { type: 'spring', stiffness: 300 } } : {}}
+    whileTap={onClick ? { scale: 0.95 } : {}}
+    className={cn(
+      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300",
+      "shadow-lg shadow-black/10 dark:shadow-black/30",
+      "hover:shadow-2xl hover:shadow-primary/10",
+      "dark:hover:shadow-primary/20",
+      onClick && "cursor-pointer group"
+    )}
+    onClick={onClick}
+  >
+     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+     <div className="absolute inset-px rounded-xl" style={{
+        background: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground)/0.03), transparent),
+                     radial-gradient(circle at 90% 80%, hsl(var(--primary)/0.05), transparent)`
+      }}></div>
+
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+        <p className="text-muted-foreground text-sm font-medium">{title}</p>
+        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{value.toLocaleString()}</h3>
+      </div>
+      <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110", colorClass)}>
+        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+      </div>
+    </div>
+  </motion.div>
+);
+
+const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onFilterChange }) => {
+  if (!inventoryItems) {
+    return null; // or a loader/skeleton component
+  }
+  const totalVariants = inventoryItems.reduce((acc, item) => acc + (item.variants?.length || 0), 0);
+  const highStockCount = inventoryItems.flatMap(i => i.variants || []).filter(v => v.stockLevel === 'high').length;
+  const mediumStockCount = inventoryItems.flatMap(i => i.variants || []).filter(v => v.stockLevel === 'medium').length;
+
+  const stats = [
+    { title: 'إجمالي الأصناف', value: totalVariants, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
+    { title: 'مخزون محجوز', value: reservedStockCount, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
+    { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
+    { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-yellow-500 to-orange-400', delay: 0.3, onClick: () => onFilterChange('medium') },
+    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-rose-400', delay: 0.4, onClick: () => onFilterChange('low') },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {stats.map(stat => (
+        <StatCard key={stat.title} {...stat} />
+      ))}
+    </div>
+  );
+};
+
+export default InventoryStats;
