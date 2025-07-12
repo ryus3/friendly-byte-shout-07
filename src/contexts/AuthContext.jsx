@@ -123,24 +123,19 @@ export const AuthProvider = ({ children }) => {
 
     try {
       if (!isEmail) {
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('get-user-by-username', {
-          body: { username: loginIdentifier },
-        });
+        // Use the database function instead of edge function
+        const { data: userData, error: userError } = await supabase
+          .rpc('get_user_by_username', { username_input: loginIdentifier });
         
-        if (functionError) {
-             // Handle specific errors from the edge function
-            if (functionError.context && functionError.context.status === 404) {
-                 throw new Error('اسم المستخدم غير موجود.');
-            }
-            console.error('Edge function invocation error:', functionError.message);
-            throw new Error('حدث خطأ أثناء التحقق من اسم المستخدم.');
+        if (userError) {
+          console.error('Database function error:', userError.message);
+          throw new Error('حدث خطأ أثناء التحقق من اسم المستخدم.');
         }
 
-        if (!functionData || !functionData.email) {
-          console.error('Edge function logic error: Email not found in response');
+        if (!userData || userData.length === 0) {
           throw new Error('اسم المستخدم غير موجود.');
         }
-        email = functionData.email;
+        email = userData[0].email;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -205,6 +200,7 @@ export const AuthProvider = ({ children }) => {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             full_name: fullName,
             username: username,

@@ -17,33 +17,42 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          default_page: string | null
           email: string
           full_name: string
           id: string
           is_active: boolean
+          permissions: Json | null
           role: string
+          status: string
           updated_at: string
           user_id: string
           username: string
         }
         Insert: {
           created_at?: string
+          default_page?: string | null
           email: string
           full_name: string
           id?: string
           is_active?: boolean
+          permissions?: Json | null
           role?: string
+          status?: string
           updated_at?: string
           user_id: string
           username: string
         }
         Update: {
           created_at?: string
+          default_page?: string | null
           email?: string
           full_name?: string
           id?: string
           is_active?: boolean
+          permissions?: Json | null
           role?: string
+          status?: string
           updated_at?: string
           user_id?: string
           username?: string
@@ -61,6 +70,10 @@ export type Database = {
           email: string
           user_id: string
         }[]
+      }
+      username_exists: {
+        Args: { p_username: string }
+        Returns: boolean
       }
     }
     Enums: {
