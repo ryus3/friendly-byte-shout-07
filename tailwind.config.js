@@ -10,21 +10,15 @@ module.exports = {
   theme: {
     container: {
       center: true,
-      padding: "1rem",
+      padding: "2rem",
       screens: {
-        sm: "640px",
-        md: "768px", 
-        lg: "1024px",
-        xl: "1280px",
         "2xl": "1400px",
       },
     },
     extend: {
       fontFamily: {
-        cairo: ['Cairo', 'Amiri', 'system-ui', 'sans-serif'],
-        amiri: ['Amiri', 'Cairo', 'serif'],
-        sans: ['Cairo', 'system-ui', 'sans-serif'],
-        serif: ['Amiri', 'Georgia', 'serif'],
+        cairo: ['Cairo', 'sans-serif'],
+        tajawal: ['Tajawal', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
