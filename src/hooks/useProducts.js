@@ -2,11 +2,9 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
-import { useNotifications } from '@/contexts/NotificationsContext';
 
-export const useProducts = (initialProducts, settings) => {
+export const useProducts = (initialProducts, settings, addNotification) => {
   const [products, setProducts] = useState(initialProducts);
-  const { addNotification } = useNotifications();
 
   const uploadImage = async (file, bucket, path) => {
     if (typeof file === 'string') return file; // It's already a URL
