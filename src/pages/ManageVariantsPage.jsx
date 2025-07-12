@@ -9,50 +9,68 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { useVariants } from '@/contexts/VariantsContext';
 
 const ManageVariantsPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('categories');
+  const [activeTab, setActiveTab] = useState('departments');
+  const { categories, colors, sizes } = useVariants();
 
   const getTabStats = (type) => {
-    // يمكن تحسين هذا لاحقاً لعرض إحصائيات حقيقية
     switch (type) {
-      case 'categories': return { count: '12+', status: 'نشطة' };
-      case 'colors': return { count: '8+', status: 'متاحة' };
-      case 'sizes': return { count: '15+', status: 'منظمة' };
+      case 'departments': return { count: '3', status: 'أقسام' };
+      case 'categories': return { count: categories?.length || 0, status: 'تصنيف' };
+      case 'colors': return { count: colors?.length || 0, status: 'لون' };
+      case 'sizes': return { count: sizes?.length || 0, status: 'قياس' };
       default: return { count: '0', status: 'غير متاح' };
     }
   };
 
-  // Department sections for better organization
+  // Real department data
   const departmentSections = [
     {
       title: 'قسم الملابس',
-      icon: Shirt,
-      description: 'ملابس رجالية ونسائية',
-      subcategories: ['ملابس رجالية', 'ملابس نسائية', 'ملابس أطفال'],
-      variants: ['نوع المنتج', 'القياسات', 'الألوان'],
-      color: 'from-blue-500 to-blue-600'
+      count: categories?.filter(c => c.type === 'main_category' && c.name.includes('ملابس')).length || 0,
+      description: 'ملابس رجالية ونسائية وأطفال'
     },
     {
-      title: 'قسم الأحذية',
-      icon: ShoppingBag,
-      description: 'أحذية متنوعة لجميع الأعمار',
-      subcategories: ['أحذية رجالية', 'أحذية نسائية', 'أحذية رياضية'],
-      variants: ['الألوان', 'القياسات', 'النوع'],
-      color: 'from-green-500 to-green-600'
+      title: 'قسم الأحذية', 
+      count: categories?.filter(c => c.type === 'main_category' && c.name.includes('أحذية')).length || 0,
+      description: 'أحذية متنوعة لجميع الأعمار'
     },
     {
       title: 'قسم المواد العامة',
-      icon: Package,
-      description: 'مواد وأدوات متنوعة',
-      subcategories: ['إلكترونيات', 'أدوات منزلية', 'إكسسوارات'],
-      variants: ['نوع المادة', 'الحجم', 'اللون'],
-      color: 'from-purple-500 to-purple-600'
+      count: categories?.filter(c => c.type === 'main_category' && !c.name.includes('ملابس') && !c.name.includes('أحذية')).length || 0,
+      description: 'مواد وأدوات متنوعة'
     }
   ];
 
+  // Departments Manager Component (placeholder for now)
+  const DepartmentsManager = () => (
+    <div className="text-center py-8">
+      <h3 className="text-lg font-semibold mb-2">إدارة الأقسام الرئيسية</h3>
+      <p className="text-muted-foreground mb-4">يمكنك إدارة الأقسام الرئيسية مثل قسم الملابس، الأحذية، والمواد العامة</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {departmentSections.map((dept, index) => (
+          <div key={index} className="p-4 border rounded-lg bg-card">
+            <h4 className="font-semibold">{dept.title}</h4>
+            <p className="text-sm text-muted-foreground mt-1">{dept.description}</p>
+            <p className="text-sm font-medium mt-2">{dept.count} تصنيف</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   const tabConfig = [
+    {
+      value: 'departments',
+      label: 'الأقسام الرئيسية',
+      icon: Package,
+      description: 'إدارة الأقسام الرئيسية للمتجر',
+      color: 'from-purple-500 to-purple-600',
+      component: DepartmentsManager
+    },
     {
       value: 'categories',
       label: 'التصنيفات',
@@ -111,52 +129,25 @@ const ManageVariantsPage = () => {
                 </div>
               </div>
 
-              {/* Department Structure Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {departmentSections.map((dept, index) => (
-                  <Card key={index} className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-gradient-to-r ${dept.color}`}>
-                          <dept.icon className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold">{dept.title}</CardTitle>
-                          <CardDescription className="text-xs">{dept.description}</CardDescription>
-                        </div>
+              {/* Real Data Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-purple-600 dark:text-purple-400">الأقسام الرئيسية</p>
+                        <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">{departmentSections.length}</p>
                       </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">التصنيفات:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {dept.subcategories.map((sub, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">{sub}</Badge>
-                          ))}
-                        </div>
-                        <div className="text-xs text-muted-foreground">المتغيرات:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {dept.variants.map((variant, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">{variant}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
-                        <Tags className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
                       <div>
                         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">التصنيفات</p>
-                        <p className="text-lg font-bold text-emerald-800 dark:text-emerald-200">12+ نشطة</p>
+                        <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">{categories?.length || 0}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -165,12 +156,9 @@ const ManageVariantsPage = () => {
                 <Card className="bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-pink-200 dark:border-pink-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
-                        <Palette className="h-5 w-5 text-pink-600 dark:text-pink-400" />
-                      </div>
                       <div>
                         <p className="text-sm font-medium text-pink-600 dark:text-pink-400">الألوان</p>
-                        <p className="text-lg font-bold text-pink-800 dark:text-pink-200">8+ متاحة</p>
+                        <p className="text-2xl font-bold text-pink-800 dark:text-pink-200">{colors?.length || 0}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -179,12 +167,9 @@ const ManageVariantsPage = () => {
                 <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                        <Ruler className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      </div>
                       <div>
                         <p className="text-sm font-medium text-blue-600 dark:text-blue-400">القياسات</p>
-                        <p className="text-lg font-bold text-blue-800 dark:text-blue-200">15+ منظمة</p>
+                        <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{sizes?.length || 0}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -197,7 +182,7 @@ const ManageVariantsPage = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border shadow-lg overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
               <div className="border-b bg-slate-50 dark:bg-slate-900/50">
-                <TabsList className="w-full grid grid-cols-3 h-auto p-2 bg-transparent">
+                <TabsList className="w-full grid grid-cols-4 h-auto p-2 bg-transparent">
                   {tabConfig.map((tab) => {
                     const IconComponent = tab.icon;
                     const stats = getTabStats(tab.value);
