@@ -123,19 +123,22 @@ export const AuthProvider = ({ children }) => {
 
     try {
       if (!isEmail) {
-        // Use the database function instead of edge function
-        const { data: userData, error: userError } = await supabase
-          .rpc('get_user_by_username', { username_input: loginIdentifier });
+        // Use the smart auth function
+        const { data: authResult, error: authError } = await supabase
+          .rpc('auth_with_username', { 
+            username_input: loginIdentifier, 
+            password_input: password 
+          });
         
-        if (userError) {
-          console.error('Database function error:', userError.message);
-          throw new Error('حدث خطأ أثناء التحقق من اسم المستخدم.');
+        if (authError || !authResult || authResult.length === 0) {
+          throw new Error('اسم المستخدم غير صحيح أو غير موجود.');
         }
-
-        if (!userData || userData.length === 0) {
-          throw new Error('اسم المستخدم غير موجود.');
+        
+        const result = authResult[0];
+        if (!result.success) {
+          throw new Error(result.error_message || 'خطأ في التحقق من اسم المستخدم.');
         }
-        email = userData[0].email;
+        email = result.user_email;
       }
 
       const { data, error } = await supabase.auth.signInWithPassword({
