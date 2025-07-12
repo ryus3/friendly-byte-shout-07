@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast.js';
 import { 
   Sun, Moon, Monitor, Palette, Type, Zap, Eye, 
   RotateCcw, Check, Settings, Contrast, Volume2, Sparkles,

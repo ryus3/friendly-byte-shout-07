@@ -28,7 +28,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
