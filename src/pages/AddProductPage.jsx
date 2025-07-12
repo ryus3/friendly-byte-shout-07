@@ -5,7 +5,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2 } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
