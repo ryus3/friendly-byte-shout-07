@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
+import { useVariants } from '@/contexts/VariantsContext';
 import { permissionsMap } from '@/lib/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
@@ -37,6 +38,7 @@ const defaultPages = [
 
 const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const { updateUser, refetchAdminData } = useAuth();
+  const { categories, colors, sizes } = useVariants();
   const [status, setStatus] = useState('');
   const [role, setRole] = useState('');
   const [permissions, setPermissions] = useState([]);
@@ -217,55 +219,68 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
               <div className="space-y-3">
                 <h4 className="font-medium text-sm">التصنيفات الرئيسية:</h4>
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'mens_clothing', label: 'ملابس رجالية', icon: Shirt },
-                    { id: 'womens_clothing', label: 'ملابس نسائية', icon: Shirt },
-                    { id: 'electronics', label: 'إلكترونيات', icon: Laptop },
-                    { id: 'accessories', label: 'اكسسوارات', icon: Watch },
-                    { id: 'shoes', label: 'أحذية', icon: Footprints },
-                    { id: 'bags', label: 'حقائب', icon: ShoppingBag }
-                  ].map(category => {
-                    const IconComponent = category.icon;
-                    return (
-                      <div key={category.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
-                        <Checkbox
-                          id={`cat-${category.id}-${employee.id}`}
-                          checked={categoryPermissions.includes(category.id) || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                          onCheckedChange={(checked) => handleCategoryPermissionChange(category.id, checked)}
-                          disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                        />
-                        <label htmlFor={`cat-${category.id}-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                          <IconComponent className="w-4 h-4" />
-                          {category.label}
-                        </label>
-                      </div>
-                    );
-                  })}
+                  {categories.map(category => (
+                    <div key={category.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
+                      <Checkbox
+                        id={`cat-${category.id}-${employee.id}`}
+                        checked={categoryPermissions.includes(category.id) || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                        onCheckedChange={(checked) => handleCategoryPermissionChange(category.id, checked)}
+                        disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                      />
+                      <label htmlFor={`cat-${category.id}-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded border" 
+                          style={{ backgroundColor: category.color_hex || '#666' }}
+                        ></div>
+                        {category.name}
+                      </label>
+                    </div>
+                  ))}
                 </div>
               </div>
               
               <Separator />
               
               <div className="space-y-3">
-                <h4 className="font-medium text-sm">المتغيرات الفرعية:</h4>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    'صيفي', 'شتوي', 'ربيعي', 'خريفي',
-                    'قطني', 'حريري', 'جلدي', 'صوفي',
-                    'صغير', 'متوسط', 'كبير', 'كبير جداً'
-                  ].map(variant => (
-                    <div key={variant} className="flex items-center space-x-2 space-x-reverse p-1">
+                <h4 className="font-medium text-sm">الألوان المتاحة:</h4>
+                <div className="grid grid-cols-4 gap-2">
+                  {colors.map(color => (
+                    <div key={color.id} className="flex items-center space-x-2 space-x-reverse p-1">
                       <Checkbox
-                        id={`variant-${variant}-${employee.id}`}
+                        id={`color-${color.id}-${employee.id}`}
                         checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
                         disabled={true}
                       />
-                      <label className="text-xs text-muted-foreground">{variant}</label>
+                      <label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <div 
+                          className="w-3 h-3 rounded border" 
+                          style={{ backgroundColor: color.hex_value }}
+                        ></div>
+                        {color.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+              
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">الأحجام المتاحة:</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {sizes.map(size => (
+                    <div key={size.id} className="flex items-center space-x-2 space-x-reverse p-1">
+                      <Checkbox
+                        id={`size-${size.id}-${employee.id}`}
+                        checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                        disabled={true}
+                      />
+                      <label className="text-xs text-muted-foreground">{size.name}</label>
                     </div>
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  * المتغيرات الفرعية تتبع صلاحيات التصنيفات الرئيسية
+                  * الألوان والأحجام تتبع صلاحيات التصنيفات الرئيسية
                 </p>
               </div>
             </div>

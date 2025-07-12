@@ -28,11 +28,13 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
+  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -41,11 +43,17 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   
   // Profile States
   const [profileData, setProfileData] = useState({
+    username: user?.username || '',
     full_name: user?.full_name || '',
     email: user?.email || '',
     phone: user?.phone || '',
     address: user?.address || '',
     bio: user?.bio || ''
+  });
+
+  const [originalData, setOriginalData] = useState({
+    username: user?.username || '',
+    email: user?.email || ''
   });
 
   // Security States
@@ -64,12 +72,58 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
 
   const handleProfileSave = async () => {
     try {
-      await updateProfile(profileData);
+      // Check if username or email changed - require admin approval
+      const usernameChanged = profileData.username !== originalData.username;
+      const emailChanged = profileData.email !== originalData.email;
+      
+      if (usernameChanged || emailChanged) {
+        // Send notification to admin for approval
+        addNotification({
+          type: 'profile_change_request',
+          title: 'طلب تغيير بيانات المستخدم',
+          message: `الموظف ${user.full_name} يطلب تغيير ${usernameChanged ? 'اسم المستخدم' : ''}${usernameChanged && emailChanged ? ' و' : ''}${emailChanged ? 'البريد الإلكتروني' : ''}`,
+          user_id: null, // Send to admin
+          icon: 'UserCog',
+          color: 'orange',
+          data: {
+            user_id: user.id,
+            old_username: originalData.username,
+            new_username: profileData.username,
+            old_email: originalData.email,
+            new_email: profileData.email,
+            other_changes: {
+              full_name: profileData.full_name,
+              phone: profileData.phone,
+              address: profileData.address,
+              bio: profileData.bio
+            }
+          }
+        });
+        
+        // Update only non-sensitive data
+        const safeUpdates = {
+          full_name: profileData.full_name,
+          phone: profileData.phone,
+          address: profileData.address,
+          bio: profileData.bio
+        };
+        await updateProfile(safeUpdates);
+        
+        toast({
+          title: "تم إرسال الطلب",
+          description: "تم إرسال طلب تغيير البيانات الحساسة للمدير للموافقة عليه",
+          variant: "default"
+        });
+      } else {
+        // Normal update for non-sensitive data
+        await updateProfile(profileData);
+        toast({
+          title: "تم التحديث بنجاح",
+          description: "تم حفظ معلومات الملف الشخصي"
+        });
+      }
+      
       setIsEditing(false);
-      toast({
-        title: "تم التحديث بنجاح",
-        description: "تم حفظ معلومات الملف الشخصي"
-      });
     } catch (error) {
       toast({
         title: "خطأ في التحديث",
@@ -219,6 +273,27 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
                 <Separator />
 
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="username">اسم المستخدم *</Label>
+                    <div className="relative">
+                      <User className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="username"
+                        value={profileData.username}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, username: e.target.value }))}
+                        disabled={!isEditing}
+                        className="pr-10"
+                        placeholder="أدخل اسم المستخدم الفريد"
+                        required
+                      />
+                    </div>
+                    {isEditing && profileData.username !== originalData.username && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400">
+                        ⚠️ تغيير اسم المستخدم يتطلب موافقة المدير
+                      </p>
+                    )}
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="full_name">الاسم الكامل</Label>
                     <div className="relative">
@@ -246,6 +321,11 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
                         className="pr-10"
                       />
                     </div>
+                    {isEditing && profileData.email !== originalData.email && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400">
+                        ⚠️ تغيير البريد الإلكتروني يتطلب موافقة المدير
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
