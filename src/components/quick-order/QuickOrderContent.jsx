@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SearchableSelect from '@/components/ui/searchable-select';
 import { Loader2 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { motion } from 'framer-motion';
@@ -275,11 +276,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             <>
               <div className="space-y-2">
                 <Label htmlFor="city">المحافظة</Label>
-                <Select name="city" onValueChange={(v) => handleSelectChange('city', v)} value={formData.city} required>
-                   <SelectTrigger className={errors.city ? "border-red-500" : ""}>{formData.city || 'اختر محافظة'}</SelectTrigger>
-                   <SelectContent>{iraqiProvinces.map(p => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}</SelectContent>
-                 </Select>
-                 {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
+                <SearchableSelect
+                  value={formData.city}
+                  onValueChange={(v) => handleSelectChange('city', v)}
+                  options={iraqiProvinces.map(p => ({ value: p.name, label: p.name }))}
+                  placeholder="اختر محافظة"
+                  searchPlaceholder="بحث في المحافظات..."
+                  emptyText="لا توجد محافظة بهذا الاسم"
+                  className={errors.city ? "border-red-500" : ""}
+                />
+                {errors.city && <p className="text-sm text-red-500">{errors.city}</p>}
               </div>
               <div className="space-y-2">
                   <Label htmlFor="region">المنطقة او القضاء</Label>
@@ -291,19 +297,33 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }
       return (
         <>
-            <div className="space-y-2"><Label>المدينة</Label>
-               <Select name="city_id" onValueChange={(v) => handleSelectChange('city_id', v)} value={formData.city_id} required>
-                   <SelectTrigger disabled={loadingCities || dataFetchError} className={errors.city_id ? "border-red-500" : ""}>{loadingCities ? 'تحميل...' : ((Array.isArray(cities) ? cities.find(c => String(c.id) === formData.city_id)?.name : '') || 'اختر مدينة')}</SelectTrigger>
-                   <SelectContent>{(Array.isArray(cities) ? cities : []).map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}</SelectContent>
-                 </Select>
-                 {errors.city_id && <p className="text-sm text-red-500">{errors.city_id}</p>}
+            <div className="space-y-2">
+              <Label>المدينة</Label>
+              <SearchableSelect
+                value={formData.city_id}
+                onValueChange={(v) => handleSelectChange('city_id', v)}
+                options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
+                placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
+                searchPlaceholder="بحث في المدن..."
+                emptyText="لا توجد مدينة بهذا الاسم"
+                className={errors.city_id ? "border-red-500" : ""}
+                disabled={loadingCities || dataFetchError}
+              />
+              {errors.city_id && <p className="text-sm text-red-500">{errors.city_id}</p>}
             </div>
-            <div className="space-y-2"><Label>المنطقة او القضاء</Label>
-               <Select name="region_id" onValueChange={(v) => handleSelectChange('region_id', v)} value={formData.region_id} required disabled={!formData.city_id || loadingRegions || dataFetchError}>
-                   <SelectTrigger disabled={!formData.city_id || loadingRegions || dataFetchError} className={errors.region_id ? "border-red-500" : ""}>{loadingRegions ? 'تحميل...' : ((Array.isArray(regions) ? regions.find(r => String(r.id) === formData.region_id)?.name : '') || 'اختر منطقة')}</SelectTrigger>
-                   <SelectContent>{(Array.isArray(regions) ? regions : []).map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
-                 </Select>
-                 {errors.region_id && <p className="text-sm text-red-500">{errors.region_id}</p>}
+            <div className="space-y-2">
+              <Label>المنطقة او القضاء</Label>
+              <SearchableSelect
+                value={formData.region_id}
+                onValueChange={(v) => handleSelectChange('region_id', v)}
+                options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
+                placeholder={loadingRegions ? 'تحميل...' : 'اختر منطقة'}
+                searchPlaceholder="بحث في المناطق..."
+                emptyText="لا توجد منطقة بهذا الاسم"
+                className={errors.region_id ? "border-red-500" : ""}
+                disabled={!formData.city_id || loadingRegions || dataFetchError}
+              />
+              {errors.region_id && <p className="text-sm text-red-500">{errors.region_id}</p>}
             </div>
         </>
       )

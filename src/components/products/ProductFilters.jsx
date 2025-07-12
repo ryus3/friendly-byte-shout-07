@@ -94,11 +94,12 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         <Button
           variant="outline"
+          size="icon"
           onClick={onBarcodeSearch}
-          className="glass-effect border-border/80 hover:bg-accent col-span-1"
+          className="glass-effect border-border/80 hover:bg-accent"
+          title="بحث بالباركود"
         >
-          <QrCode className="w-4 h-4 sm:ml-2" />
-          <span className="hidden sm:inline">مسح</span>
+          <QrCode className="w-4 h-4" />
         </Button>
         
         <Popover>

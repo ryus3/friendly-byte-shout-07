@@ -47,9 +47,8 @@ const ManageProductsToolbar = ({
             />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-            <Button variant="outline" size="sm" onClick={onBarcodeSearch} className="w-full">
-              <QrCode className="w-4 h-4 ml-2" />
-              بحث بالباركود
+            <Button variant="outline" size="icon" onClick={onBarcodeSearch} className="flex-shrink-0" title="بحث بالباركود">
+              <QrCode className="w-4 h-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={() => onViewModeChange('list')} className={cn("w-full", viewMode === 'list' && 'bg-accent')}>
               <List className="w-4 h-4 ml-2" />
