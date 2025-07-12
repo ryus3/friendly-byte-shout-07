@@ -19,10 +19,27 @@ import { toast } from '@/components/ui/use-toast';
 const ProductsPage = () => {
   const { products, loading, addToCart, clearCart } = useInventory();
   const { categories, brands } = useMemo(() => {
-    const uniqueCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
+    let uniqueCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
+    
+    // تصفية التصنيفات حسب الصلاحيات
+    if (!hasPermission('view_category_all')) {
+      const categoryMap = {
+        'ملابس': 'clothes',
+        'إلكترونيات': 'electronics',
+        'اكسسوارات': 'accessories',
+        'أحذية': 'shoes',
+        'حقائب': 'bags'
+      };
+      
+      uniqueCategories = uniqueCategories.filter(category => {
+        const categoryKey = categoryMap[category] || category.toLowerCase();
+        return hasPermission(`view_category_${categoryKey}`);
+      });
+    }
+    
     const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
     return { categories: uniqueCategories, brands: uniqueBrands };
-  }, [products]);
+  }, [products, hasPermission]);
   const { colors } = useVariants();
   const { hasPermission } = useAuth();
   
@@ -51,6 +68,26 @@ const ProductsPage = () => {
 
   const filteredProducts = useMemo(() => {
     let tempProducts = products.filter(p => p.is_visible);
+
+    // تصفية المنتجات حسب صلاحيات التصنيفات
+    if (!hasPermission('view_category_all')) {
+      tempProducts = tempProducts.filter(p => {
+        const category = p.categories?.main_category?.toLowerCase();
+        if (!category) return false;
+        
+        // التحقق من وجود صلاحية للتصنيف المحدد
+        const categoryMap = {
+          'ملابس': 'clothes',
+          'إلكترونيات': 'electronics',
+          'اكسسوارات': 'accessories',
+          'أحذية': 'shoes',
+          'حقائب': 'bags'
+        };
+        
+        const categoryKey = categoryMap[category] || category;
+        return hasPermission(`view_category_${categoryKey}`);
+      });
+    }
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();

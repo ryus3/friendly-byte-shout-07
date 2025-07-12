@@ -32,6 +32,12 @@ export const permissionsMap = [
       { id: 'edit_stock', label: 'تعديل كميات المخزون يدويًا' },
       { id: 'use_barcode_scanner', label: 'استخدام قارئ الباركود' },
       { id: 'manage_variants', label: 'إدارة المتغيرات (ألوان، مقاسات)' },
+      { id: 'view_category_all', label: 'عرض جميع التصنيفات' },
+      { id: 'view_category_clothes', label: 'عرض تصنيف الملابس' },
+      { id: 'view_category_electronics', label: 'عرض تصنيف الإلكترونيات' },
+      { id: 'view_category_accessories', label: 'عرض تصنيف الاكسسوارات' },
+      { id: 'view_category_shoes', label: 'عرض تصنيف الأحذية' },
+      { id: 'view_category_bags', label: 'عرض تصنيف الحقائب' },
     ]
   },
   {
@@ -69,6 +75,12 @@ export const permissionsMap = [
       { id: 'manage_delivery_company', label: 'إدارة ربط شركة التوصيل' },
       { id: 'manage_delivery_sync', label: 'إدارة المزامنة التلقائية للطلبات' },
       { id: 'use_ai_assistant', label: 'استخدام المساعد الذكي' },
+      { id: 'use_telegram_bot', label: 'استخدام بوت التليغرام' },
+      { id: 'manage_notifications', label: 'إدارة الإشعارات' },
+      { id: 'manage_theme', label: 'إدارة التيم والألوان' },
+      { id: 'manage_backup', label: 'إدارة النسخ الاحتياطي' },
+      { id: 'view_security_settings', label: 'عرض إعدادات الأمان' },
+      { id: 'manage_display_settings', label: 'إدارة إعدادات العرض' },
     ]
   }
 ];

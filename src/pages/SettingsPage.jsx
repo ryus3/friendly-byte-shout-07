@@ -8,18 +8,24 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
-import { User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, Settings as SettingsIcon, Home } from 'lucide-react';
+import { 
+  User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
+  Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
+  Palette, Zap, Archive, Eye, Monitor
+} from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
+import ManageProductCategoriesDialog from '@/components/settings/ManageProductCategoriesDialog';
 import { useNavigate } from 'react-router-dom';
 
-const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false }) => {
+const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "text-primary" }) => {
   const Icon = icon;
   const cardClasses = `
     ${className} 
-    ${onClick && !disabled ? 'cursor-pointer hover:border-primary transition-colors' : ''}
+    ${onClick && !disabled ? 'cursor-pointer hover:border-primary hover:shadow-md transition-all duration-200' : ''}
     ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
+    border-2
   `;
   
   const handleClick = (e) => {
@@ -35,10 +41,12 @@ const SettingsSectionCard = ({ icon, title, description, children, footer, onCli
     <Card className={cardClasses} onClick={handleClick}>
       <CardHeader>
         <CardTitle className="flex items-center gap-3">
-          <Icon className="w-6 h-6 text-primary" />
+          <div className={`p-2 rounded-lg bg-gradient-to-br ${iconColor}`}>
+            <Icon className="w-6 h-6 text-white" />
+          </div>
           <span className="text-xl">{title}</span>
         </CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        {description && <CardDescription className="mt-2 text-sm">{description}</CardDescription>}
       </CardHeader>
       {children && <CardContent>{children}</CardContent>}
       {footer && <CardFooter>{footer}</CardFooter>}
@@ -55,6 +63,7 @@ const SettingsPage = () => {
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isCategoriesDialogOpen, setIsCategoriesDialogOpen] = useState(false);
   
   const [storeSettings, setStoreSettings] = useState({
     deliveryFee: 5000,
@@ -208,57 +217,164 @@ const SettingsPage = () => {
                 />
             )}
 
-            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {hasPermission('manage_users') ? (
-                <SettingsSectionCard
-                  icon={Users}
-                  title="إدارة الموظفين والصلاحيات"
-                  description="إدارة حسابات الموظفين، أدوارهم، وصلاحيات الوصول."
-                  onClick={() => navigate('/manage-employees')}
-                />
-              ) : (
-                 <SettingsSectionCard
-                  icon={Users}
-                  title="إدارة الموظفين والصلاحيات"
-                  description="هذه الميزة متاحة للمدير فقط."
-                  disabled={true}
-                />
-              )}
-              
-              <SettingsSectionCard 
-                icon={Bot} 
-                title="بوت التليغرام"
-                disabled={!hasPermission('use_telegram_bot')}
-              >
-                  <p className="text-sm text-muted-foreground mb-3">استخدم هذا الرمز لربط حسابك مع بوت التليغرام.</p>
-                  <div className="flex items-center gap-2">
-                    <Input value={'قيد التطوير...'} readOnly />
-                    <Button variant="outline" size="icon" onClick={handleCopyToken}><Copy className="w-4 h-4" /></Button>
-                  </div>
-              </SettingsSectionCard>
-
-              <SettingsSectionCard 
-                icon={Truck} 
-                title="شركة التوصيل"
-                disabled={!hasPermission('manage_delivery_company')}
-              >
-                  {isWaseetLoggedIn ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-green-500">متصل بحساب: <span className="font-bold">{waseetUser?.username}</span></p>
-                      <Button variant="destructive" size="sm" onClick={logoutWaseet}><LogOut className="ml-2 w-4 h-4" />تسجيل الخروج</Button>
-                    </div>
+            <div className="lg:col-span-3 space-y-8">
+              {/* قسم الإدارة والأمان */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                  <Shield className="w-6 h-6 text-blue-600" />
+                  الإدارة والأمان
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {hasPermission('manage_users') ? (
+                    <SettingsSectionCard
+                      icon={Users}
+                      title="إدارة الموظفين"
+                      description="إدارة حسابات الموظفين، أدوارهم، وصلاحيات الوصول."
+                      iconColor="from-purple-500 to-purple-700"
+                      onClick={() => navigate('/manage-employees')}
+                    />
                   ) : (
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">أنت غير متصل بحساب شركة التوصيل.</p>
-                      <Button onClick={() => setIsLoginDialogOpen(true)}><LogIn className="ml-2 w-4 h-4" />تسجيل الدخول</Button>
-                    </div>
+                    <SettingsSectionCard
+                      icon={Users}
+                      title="إدارة الموظفين"
+                      description="هذه الميزة متاحة للمدير فقط."
+                      iconColor="from-gray-400 to-gray-600"
+                      disabled={true}
+                    />
                   )}
-              </SettingsSectionCard>
+
+                  {hasPermission('view_settings') && (
+                    <SettingsSectionCard
+                      icon={Shield}
+                      title="الأمان"
+                      description="إعدادات الحماية والخصوصية"
+                      iconColor="from-green-500 to-green-700"
+                      onClick={() => toast({ title: "قريباً", description: "هذه الميزة ستكون متاحة قريباً!" })}
+                    />
+                  )}
+
+                  <SettingsSectionCard
+                    icon={Archive}
+                    title="النسخ الاحتياطي"
+                    description="حفظ واستعادة البيانات"
+                    iconColor="from-blue-500 to-blue-700"
+                    onClick={() => toast({ title: "قريباً", description: "ميزة النسخ الاحتياطي ستكون متاحة قريباً!" })}
+                  />
+                </div>
+              </div>
+
+              {/* قسم التطبيقات والتكامل */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-yellow-600" />
+                  التطبيقات والتكامل
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <SettingsSectionCard 
+                    icon={Bot} 
+                    title="بوت التليغرام"
+                    description="ربط النظام مع التليغرام"
+                    iconColor="from-blue-400 to-blue-600"
+                    disabled={!hasPermission('use_ai_assistant')}
+                  >
+                    <p className="text-sm text-muted-foreground mb-3">استخدم هذا الرمز لربط حسابك مع بوت التليغرام.</p>
+                    <div className="flex items-center gap-2">
+                      <Input value={'قيد التطوير...'} readOnly />
+                      <Button variant="outline" size="icon" onClick={handleCopyToken}><Copy className="w-4 h-4" /></Button>
+                    </div>
+                  </SettingsSectionCard>
+
+                  <SettingsSectionCard 
+                    icon={Truck} 
+                    title="شركة التوصيل"
+                    description="ربط مع أنظمة التوصيل"
+                    iconColor="from-red-500 to-red-700"
+                    disabled={!hasPermission('manage_delivery_company')}
+                  >
+                    {isWaseetLoggedIn ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-green-500">متصل بحساب: <span className="font-bold">{waseetUser?.username}</span></p>
+                        <Button variant="destructive" size="sm" onClick={logoutWaseet}><LogOut className="ml-2 w-4 h-4" />تسجيل الخروج</Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">أنت غير متصل بحساب شركة التوصيل.</p>
+                        <Button onClick={() => setIsLoginDialogOpen(true)}><LogIn className="ml-2 w-4 h-4" />تسجيل الدخول</Button>
+                      </div>
+                    )}
+                  </SettingsSectionCard>
+
+                  {hasPermission('use_ai_assistant') && (
+                    <SettingsSectionCard
+                      icon={Zap}
+                      title="المطور"
+                      description="تخصيص الألوان وتيم الإظهار"
+                      iconColor="from-pink-500 to-pink-700"
+                      onClick={() => toast({ title: "قريباً", description: "أدوات المطور ستكون متاحة قريباً!" })}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* قسم إدارة المنتجات والصلاحيات */}
+              {hasPermission('manage_users') && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <Eye className="w-6 h-6 text-orange-600" />
+                    إدارة صلاحيات المنتجات
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <SettingsSectionCard
+                      icon={Eye}
+                      title="صلاحيات التصنيفات"
+                      description="تحديد التصنيفات المرئية لكل موظف"
+                      iconColor="from-orange-500 to-orange-700"
+                      onClick={() => setIsCategoriesDialogOpen(true)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* قسم التقارير والإشعارات */}
+              <div>
+                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-teal-600" />
+                  التقارير والإشعارات
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {hasPermission('view_accounting') && (
+                    <SettingsSectionCard
+                      icon={FileText}
+                      title="التقارير"
+                      description="إعدادات التقارير المالية"
+                      iconColor="from-teal-500 to-teal-700"
+                      onClick={() => navigate('/accounting')}
+                    />
+                  )}
+
+                  <SettingsSectionCard
+                    icon={Bell}
+                    title="الإشعارات"
+                    description="تنبيهات البريد والرسائل"
+                    iconColor="from-yellow-500 to-yellow-700"
+                    onClick={() => toast({ title: "قريباً", description: "إعدادات الإشعارات ستكون متاحة قريباً!" })}
+                  />
+
+                  <SettingsSectionCard
+                    icon={Monitor}
+                    title="العرض"
+                    description="إعدادات الشاشة والتخطيط"
+                    iconColor="from-indigo-500 to-indigo-700"
+                    onClick={() => toast({ title: "قريباً", description: "إعدادات العرض ستكون متاحة قريباً!" })}
+                  />
+                </div>
+              </div>
             </div>
         </div>
       </div>
       <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
       <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
+      <ManageProductCategoriesDialog open={isCategoriesDialogOpen} onOpenChange={setIsCategoriesDialogOpen} />
     </>
   );
 };
