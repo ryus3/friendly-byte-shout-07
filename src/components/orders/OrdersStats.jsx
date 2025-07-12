@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive } from 'lucide-react';
+import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 
