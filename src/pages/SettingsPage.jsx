@@ -12,28 +12,29 @@ import { toast } from '@/components/ui/use-toast';
 import { 
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
-  Palette, Zap, Archive, Eye, Monitor, Sun, Moon, Smartphone, Volume2,
-  Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail
+  Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
+  Sun, Moon, Monitor, Palette, ChevronRight
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
 import SecuritySettingsDialog from '@/components/settings/SecuritySettingsDialog';
-import DeveloperSettingsDialog from '@/components/settings/DeveloperSettingsDialog';
-import DisplaySettingsDialog from '@/components/settings/DisplaySettingsDialog';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
-import NotificationsSettingsDialog from '@/components/settings/NotificationsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import { useNavigate } from 'react-router-dom';
 
-const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark" }) => {
+const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
   const Icon = icon;
   const cardClasses = `
     ${className} 
-    ${onClick && !disabled ? 'cursor-pointer hover:border-primary hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 hover:scale-[1.02]' : ''}
-    ${disabled ? 'opacity-60 cursor-not-allowed' : ''}
-    border border-border/40 bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md
+    group relative overflow-hidden
+    ${onClick && !disabled ? 'cursor-pointer hover:shadow-xl hover:shadow-primary/25 hover:-translate-y-1' : ''}
+    ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+    bg-card border border-border/50 rounded-xl backdrop-blur-sm
+    transition-all duration-300 ease-out
+    shadow-lg hover:shadow-2xl
+    ${!disabled ? 'hover:border-primary/40' : ''}
   `;
   
   const handleClick = (e) => {
@@ -47,18 +48,61 @@ const SettingsSectionCard = ({ icon, title, description, children, footer, onCli
 
   return (
     <Card className={cardClasses} onClick={handleClick}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-xl bg-gradient-to-br ${iconColor} shadow-md`}>
-            <Icon className="w-5 h-5 text-white" />
+      {/* Background gradient effect */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${iconColor} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+      
+      <CardHeader className="pb-4 relative">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl bg-gradient-to-br ${iconColor} shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
+              <Icon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">
+                {title}
+              </CardTitle>
+              {description && (
+                <CardDescription className="mt-1 text-sm text-muted-foreground">
+                  {description}
+                </CardDescription>
+              )}
+            </div>
           </div>
-          <span className="text-lg font-semibold">{title}</span>
-        </CardTitle>
-        {description && <CardDescription className="mt-1 text-sm text-muted-foreground">{description}</CardDescription>}
+          <div className="flex items-center gap-2">
+            {badge}
+            {onClick && !disabled && (
+              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
+            )}
+          </div>
+        </div>
       </CardHeader>
-      {children && <CardContent className="pt-0">{children}</CardContent>}
-      {footer && <CardFooter className="pt-0">{footer}</CardFooter>}
+      
+      {children && <CardContent className="pt-0 relative">{children}</CardContent>}
+      {footer && <CardFooter className="pt-0 relative">{footer}</CardFooter>}
+      {action && (
+        <div className="absolute top-4 right-4">
+          {action}
+        </div>
+      )}
     </Card>
+  );
+};
+
+const SectionHeader = ({ icon, title, description }) => {
+  const Icon = icon;
+  return (
+    <div className="mb-8">
+      <div className="flex items-center gap-4 mb-2">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+          <Icon className="w-7 h-7 text-white" />
+        </div>
+        <div>
+          <h2 className="text-3xl font-bold text-foreground">{title}</h2>
+          {description && <p className="text-muted-foreground mt-1">{description}</p>}
+        </div>
+      </div>
+      <div className="h-px bg-gradient-to-r from-primary/50 via-primary/20 to-transparent" />
+    </div>
   );
 };
 
@@ -74,10 +118,7 @@ const SettingsPage = () => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
-  const [isDeveloperOpen, setIsDeveloperOpen] = useState(false);
-  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
   const [storeSettings, setStoreSettings] = useState({
     deliveryFee: 5000,
@@ -148,66 +189,116 @@ const SettingsPage = () => {
         <title>الإعدادات - نظام RYUS</title>
         <meta name="description" content="إدارة إعدادات حسابك والمتجر." />
       </Helmet>
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">الإعدادات</h1>
-          <p className="text-muted-foreground">قم بإدارة إعدادات حسابك وتفضيلات المتجر.</p>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-            {/* قسم الملف الشخصي والثيمات */}
-            <div className="lg:col-span-1 space-y-6">
-                <SettingsSectionCard 
-                  icon={User} 
-                  title="الملف الشخصي" 
-                  description="تعديل معلوماتك الشخصية وإعدادات الحساب"
-                  iconColor="from-blue-500 to-blue-700"
-                  onClick={() => setIsEditProfileOpen(true)}
-                >
-                  <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="w-5 h-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">{user.full_name}</p>
-                          <p className="text-xs text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                  </div>
-                </SettingsSectionCard>
+      
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/10">
+        <div className="container mx-auto px-6 py-8 space-y-12">
+          {/* Header */}
+          <div className="text-center space-y-4">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              الإعدادات
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              قم بإدارة إعدادات حسابك وتخصيص تجربة استخدام النظام
+            </p>
+          </div>
 
-                {/* كارت المظهر والثيم */}
-                <SettingsSectionCard
-                  icon={Zap}
-                  title="المظهر والثيم"
-                  description="تخصيص مظهر التطبيق والإعدادات المتقدمة"
-                  iconColor="from-purple-500 to-purple-700"
-                  onClick={() => setIsDeveloperOpen(true)}
-                />
-            </div>
-            
-            {hasPermission('manage_app_settings') ? (
-              <form onSubmit={handleStoreSettingsSubmit} className="lg:col-span-3">
-                <SettingsSectionCard
+          {/* Profile Section */}
+          <SectionHeader 
+            icon={User} 
+            title="الملف الشخصي والحساب"
+            description="إدارة معلوماتك الشخصية وإعدادات الحساب"
+          />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <ModernCard
+              icon={User}
+              title="الملف الشخصي"
+              description="تعديل معلوماتك الشخصية وبيانات الحساب"
+              iconColor="from-blue-500 to-blue-600"
+              onClick={() => setIsEditProfileOpen(true)}
+            >
+              <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-lg">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold">{user.full_name}</p>
+                  <p className="text-sm text-muted-foreground">{user.email}</p>
+                  <p className="text-xs text-primary font-medium">{user.role}</p>
+                </div>
+              </div>
+            </ModernCard>
+
+            <ModernCard
+              icon={Palette}
+              title="المظهر والثيم"
+              description="تخصيص مظهر التطبيق ونمط العرض"
+              iconColor="from-purple-500 to-purple-600"
+            >
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">نمط العرض</Label>
+                <div className="grid grid-cols-3 gap-3">
+                  <Button
+                    variant={theme === 'light' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('light')}
+                    className="flex flex-col items-center gap-1 h-auto py-3"
+                  >
+                    <Sun className="w-4 h-4" />
+                    <span className="text-xs">فاتح</span>
+                  </Button>
+                  <Button
+                    variant={theme === 'dark' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('dark')}
+                    className="flex flex-col items-center gap-1 h-auto py-3"
+                  >
+                    <Moon className="w-4 h-4" />
+                    <span className="text-xs">داكن</span>
+                  </Button>
+                  <Button
+                    variant={theme === 'system' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setTheme('system')}
+                    className="flex flex-col items-center gap-1 h-auto py-3"
+                  >
+                    <Monitor className="w-4 h-4" />
+                    <span className="text-xs">تلقائي</span>
+                  </Button>
+                </div>
+              </div>
+            </ModernCard>
+          </div>
+
+          {/* Store Settings */}
+          {hasPermission('manage_app_settings') && (
+            <>
+              <SectionHeader 
+                icon={Store} 
+                title="إعدادات المتجر"
+                description="إدارة الإعدادات العامة للمتجر والأجهزة المتصلة"
+              />
+              
+              <form onSubmit={handleStoreSettingsSubmit}>
+                <ModernCard
                   icon={Store}
                   title="إعدادات المتجر والأجهزة"
-                  description="إدارة الإعدادات العامة للمتجر والأجهزة المتصلة"
-                  iconColor="from-green-500 to-green-700"
+                  description="تكوين الإعدادات الأساسية للمتجر والطباعة"
+                  iconColor="from-green-500 to-green-600"
                   footer={
-                    <Button type="submit" disabled={isStoreLoading} className="w-full">
+                    <Button type="submit" disabled={isStoreLoading} className="w-full" size="lg">
                       {isStoreLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
                       حفظ جميع الإعدادات
                     </Button>
                   }
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div className="space-y-4 p-4 border rounded-lg bg-card/50">
-                      <h4 className="font-semibold flex items-center gap-2 text-primary">
-                        <SettingsIcon className="w-4 h-4" />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-4 p-5 border border-border/30 rounded-xl bg-secondary/20">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary text-lg">
+                        <SettingsIcon className="w-5 h-5" />
                         إعدادات عامة
                       </h4>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div className="space-y-2">
                           <Label htmlFor="deliveryFee" className="text-sm font-medium">أجور التوصيل (د.ع)</Label>
                           <Input 
@@ -217,7 +308,7 @@ const SettingsPage = () => {
                             value={storeSettings.deliveryFee} 
                             onChange={handleStoreSettingsChange} 
                             min="0"
-                            className="text-center"
+                            className="text-center text-lg font-semibold"
                           />
                         </div>
                         <div className="space-y-2">
@@ -247,12 +338,12 @@ const SettingsPage = () => {
                       </div>
                     </div>
 
-                    <div className="space-y-4 p-4 border rounded-lg bg-card/50">
-                      <h4 className="font-semibold flex items-center gap-2 text-primary">
-                        <Printer className="w-4 h-4" />
+                    <div className="space-y-4 p-5 border border-border/30 rounded-xl bg-secondary/20">
+                      <h4 className="font-semibold flex items-center gap-2 text-primary text-lg">
+                        <Printer className="w-5 h-5" />
                         إعدادات الطباعة
                       </h4>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium">حجم ورق الملصقات</Label>
                           <Select value={storeSettings.printer.paperSize} onValueChange={(v) => handlePrinterSettingChange('paperSize', v)}>
@@ -278,9 +369,9 @@ const SettingsPage = () => {
                     </div>
 
                     {hasPermission('manage_delivery_sync') && (
-                      <div className="space-y-4 p-4 border rounded-lg bg-card/50">
-                        <h4 className="font-semibold flex items-center gap-2 text-primary">
-                          <RefreshCw className="w-4 h-4" />
+                      <div className="space-y-4 p-5 border border-border/30 rounded-xl bg-secondary/20">
+                        <h4 className="font-semibold flex items-center gap-2 text-primary text-lg">
+                          <RefreshCw className="w-5 h-5" />
                           المزامنة التلقائية
                         </h4>
                         <div className="space-y-2">
@@ -301,283 +392,170 @@ const SettingsPage = () => {
                       </div>
                     )}
                   </div>
-                </SettingsSectionCard>
+                </ModernCard>
               </form>
-            ) : (
-              <div className="lg:col-span-3">
-                <SettingsSectionCard
-                  icon={Store}
-                  title="إعدادات المتجر والأجهزة"
-                  description="هذه الإعدادات متاحة للمدير فقط. تحتاج صلاحيات إدارية للوصول."
-                  iconColor="from-gray-400 to-gray-600"
-                  disabled={true}
-                />
-              </div>
-            )}
+            </>
+          )}
 
-            <div className="lg:col-span-4 space-y-8">
-              {/* قسم الإدارة والأمان */}
-              <div>
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-md">
-                    <Shield className="w-6 h-6 text-white" />
-                  </div>
-                  الإدارة والأمان
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {hasPermission('manage_users') ? (
-                    <SettingsSectionCard
-                      icon={Users}
-                      title="إدارة الموظفين"
-                      description="إدارة حسابات الموظفين وصلاحياتهم وتصنيفات المنتجات"
-                      iconColor="from-purple-500 to-purple-700"
-                      onClick={() => setIsManageEmployeesOpen(true)}
-                    />
-                  ) : (
-                    <SettingsSectionCard
-                      icon={Users}
-                      title="إدارة الموظفين"
-                      description="هذه الميزة متاحة للمدير فقط."
-                      iconColor="from-gray-400 to-gray-600"
-                      disabled={true}
-                    />
-                  )}
+          {/* Management Section */}
+          <SectionHeader 
+            icon={Shield} 
+            title="الإدارة والأمان"
+            description="إدارة الموظفين والأمان والتحكم في النظام"
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ModernCard
+              icon={Users}
+              title="إدارة الموظفين"
+              description="إدارة حسابات الموظفين وصلاحياتهم"
+              iconColor="from-purple-500 to-purple-600"
+              onClick={hasPermission('manage_users') ? () => setIsManageEmployeesOpen(true) : undefined}
+              disabled={!hasPermission('manage_users')}
+            />
 
-                  {hasPermission('view_security_settings') ? (
-                    <SettingsSectionCard
-                      icon={Key}
-                      title="أمان الحساب"
-                      description="كلمات المرور والمصادقة الثنائية"
-                      iconColor="from-green-500 to-green-700"
-                      onClick={() => setIsSecurityOpen(true)}
-                    />
-                  ) : (
-                    <SettingsSectionCard
-                      icon={Key}
-                      title="أمان الحساب"
-                      description="غير متاح لهذا المستخدم"
-                      iconColor="from-gray-400 to-gray-600"
-                      disabled={true}
-                    />
-                  )}
+            <ModernCard
+              icon={Key}
+              title="أمان الحساب"
+              description="كلمات المرور والمصادقة الثنائية"
+              iconColor="from-green-500 to-green-600"
+              onClick={hasPermission('view_security_settings') ? () => setIsSecurityOpen(true) : undefined}
+              disabled={!hasPermission('view_security_settings')}
+            />
 
-                  {hasPermission('manage_backup') && (
-                    <SettingsSectionCard
-                      icon={Archive}
-                      title="النسخ الاحتياطي"
-                      description="حفظ واستعادة بيانات النظام"
-                      iconColor="from-indigo-500 to-indigo-700"
-                      onClick={handleExportData}
-                    />
-                  )}
+            <ModernCard
+              icon={Bell}
+              title="الإشعارات"
+              description="إدارة الإشعارات والتنبيهات"
+              iconColor="from-orange-500 to-orange-600"
+              onClick={() => navigate('/notifications')}
+            />
+          </div>
 
-                  {hasPermission('manage_backup') && (
-                    <SettingsSectionCard
-                      icon={Database}
-                      title="استيراد البيانات"
-                      description="استيراد بيانات من ملفات خارجية"
-                      iconColor="from-teal-500 to-teal-700"
-                      onClick={handleImportData}
-                    />
-                  )}
-                </div>
-              </div>
+          {/* Tools Section */}
+          <SectionHeader 
+            icon={SettingsIcon} 
+            title="الأدوات والخدمات"
+            description="أدوات مساعدة وخدمات النظام"
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <ModernCard
+              icon={FileText}
+              title="التقارير"
+              description="إنشاء وإدارة التقارير المالية"
+              iconColor="from-teal-500 to-teal-600"
+              onClick={() => setIsReportsOpen(true)}
+            />
 
-              {/* قسم التطبيقات والتكامل */}
-              <div>
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-yellow-500 to-yellow-700 shadow-md">
-                    <Zap className="w-6 h-6 text-white" />
-                  </div>
-                  التطبيقات والتكامل
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {hasPermission('use_telegram_bot') ? (
-                    <SettingsSectionCard 
-                      icon={MessageCircle} 
-                      title="بوت التليغرام"
-                      description="ربط النظام مع التليغرام لإدارة الطلبات"
-                      iconColor="from-blue-400 to-blue-600"
-                    >
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">استخدم هذا الرمز لربط حسابك مع بوت التليغرام:</p>
-                        <div className="flex items-center gap-2">
-                          <Input value={`RYUS_${user?.id}_TGBOT`} readOnly className="text-xs" />
-                          <Button variant="outline" size="icon" onClick={handleCopyToken}>
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">سيكون متاحاً بعد ربط قاعدة البيانات</p>
+            <ModernCard
+              icon={Archive}
+              title="النسخ الاحتياطي"
+              description="نسخ احتياطية واستعادة البيانات"
+              iconColor="from-indigo-500 to-indigo-600"
+              onClick={handleExportData}
+            />
+
+            <ModernCard
+              icon={Upload}
+              title="استيراد البيانات"
+              description="استيراد البيانات من ملفات خارجية"
+              iconColor="from-blue-500 to-blue-600"
+              onClick={handleImportData}
+            />
+
+            <ModernCard
+              icon={Truck}
+              title="شركة التوصيل"
+              description="ربط مع أنظمة التوصيل الخارجية"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsLoginDialogOpen(true)}
+            />
+          </div>
+
+          {/* Integration Section */}
+          {hasPermission('manage_integrations') && (
+            <>
+              <SectionHeader 
+                icon={Database} 
+                title="التكامل والربط"
+                description="ربط النظام مع الخدمات الخارجية"
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ModernCard
+                  icon={Bot}
+                  title="الواسط للتوصيل"
+                  description={
+                    isWaseetLoggedIn 
+                      ? `متصل كـ ${waseetUser?.name || 'مستخدم'} - الرقم: ${waseetUser?.phone || 'غير محدد'}`
+                      : "ربط مع منصة الواسط لخدمات التوصيل"
+                  }
+                  iconColor="from-emerald-500 to-emerald-600"
+                  onClick={() => setIsLoginDialogOpen(true)}
+                  badge={
+                    isWaseetLoggedIn ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        <span className="text-xs text-green-600 font-medium">متصل</span>
                       </div>
-                    </SettingsSectionCard>
-                  ) : (
-                    <SettingsSectionCard 
-                      icon={MessageCircle} 
-                      title="بوت التليغرام"
-                      description="هذه الميزة غير متاحة لك"
-                      iconColor="from-gray-400 to-gray-600"
-                      disabled={true}
-                    />
+                    ) : null
+                  }
+                >
+                  {isWaseetLoggedIn && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                        <span className="text-sm font-medium text-green-700 dark:text-green-300">حالة الاتصال</span>
+                        <span className="text-xs bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 px-2 py-1 rounded">نشط</span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          logoutWaseet();
+                        }}
+                        className="w-full"
+                      >
+                        قطع الاتصال
+                      </Button>
+                    </div>
                   )}
+                </ModernCard>
 
-                  {hasPermission('manage_delivery_company') ? (
-                    <SettingsSectionCard 
-                      icon={Truck} 
-                      title="شركة التوصيل"
-                      description="ربط مع أنظمة التوصيل الخارجية"
-                      iconColor="from-red-500 to-red-700"
-                    >
-                      {isWaseetLoggedIn ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            <p className="text-sm text-green-600 font-medium">متصل</p>
-                          </div>
-                          <p className="text-sm">الحساب: <span className="font-bold">{waseetUser?.username}</span></p>
-                          <Button variant="destructive" size="sm" onClick={logoutWaseet} className="w-full">
-                            <LogOut className="ml-2 w-4 h-4" />
-                            قطع الاتصال
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                            <p className="text-sm text-red-600 font-medium">غير متصل</p>
-                          </div>
-                          <Button onClick={() => setIsLoginDialogOpen(true)} className="w-full">
-                            <LogIn className="ml-2 w-4 h-4" />
-                            تسجيل الدخول
-                          </Button>
-                        </div>
-                      )}
-                    </SettingsSectionCard>
-                  ) : (
-                    <SettingsSectionCard 
-                      icon={Truck} 
-                      title="شركة التوصيل"
-                      description="هذه الميزة غير متاحة لك"
-                      iconColor="from-gray-400 to-gray-600"
-                      disabled={true}
-                    />
-                  )}
-
-                  {hasPermission('manage_developer_settings') ? (
-                    <SettingsSectionCard
-                      icon={Palette}
-                      title="إعدادات المطور"
-                      description="تخصيص الألوان والثيمات المتقدمة"
-                      iconColor="from-pink-500 to-pink-700"
-                      onClick={() => setIsDeveloperOpen(true)}
-                    />
-                  ) : (
-                    <SettingsSectionCard
-                      icon={Palette}
-                      title="إعدادات المطور"
-                      description="غير متاح - تحتاج صلاحية خاصة"
-                      iconColor="from-gray-400 to-gray-600"
-                      disabled={true}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* قسم الإشعارات والاتصالات */}
-              <div>
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500 to-orange-700 shadow-md">
-                    <Bell className="w-6 h-6 text-white" />
+                <ModernCard
+                  icon={Database}
+                  title="ربط قاعدة البيانات"
+                  description="رمز الربط مع قاعدة البيانات الخارجية"
+                  iconColor="from-slate-500 to-slate-600"
+                  onClick={handleCopyToken}
+                >
+                  <div className="space-y-3">
+                    <div className="p-3 bg-secondary/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-2">رمز الربط الحالي:</p>
+                      <code className="text-xs font-mono bg-background px-2 py-1 rounded border">
+                        RYUS_{user?.id}_****
+                      </code>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full">
+                      <Copy className="w-4 h-4 mr-2" />
+                      نسخ رمز جديد
+                    </Button>
                   </div>
-                  الإشعارات والاتصالات
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {hasPermission('manage_notifications') && (
-                    <SettingsSectionCard
-                      icon={Bell}
-                      title="الإشعارات"
-                      description="إدارة إشعارات النظام والتنبيهات"
-                      iconColor="from-orange-500 to-orange-700"
-                      onClick={() => setIsNotificationsOpen(true)}
-                    />
-                  )}
-
-                  {hasPermission('manage_notifications') && (
-                    <SettingsSectionCard
-                      icon={Smartphone}
-                      title="الإشعارات المحمولة"
-                      description="تنبيهات الهاتف المحمول"
-                      iconColor="from-blue-500 to-blue-700"
-                      onClick={() => toast({ title: "قريباً", description: "إشعارات الهاتف ستكون متاحة قريباً!" })}
-                    />
-                  )}
-
-                  {hasPermission('manage_notifications') && (
-                    <SettingsSectionCard
-                      icon={Mail}
-                      title="البريد الإلكتروني"
-                      description="إعدادات إشعارات البريد"
-                      iconColor="from-green-500 to-green-700"
-                      onClick={() => toast({ title: "قريباً", description: "إشعارات البريد الإلكتروني ستكون متاحة قريباً!" })}
-                    />
-                  )}
-
-                  {hasPermission('manage_notifications') && (
-                    <SettingsSectionCard
-                      icon={Volume2}
-                      title="الأصوات"
-                      description="إعدادات أصوات التنبيهات"
-                      iconColor="from-purple-500 to-purple-700"
-                      onClick={() => toast({ title: "الأصوات", description: "يمكنك التحكم في أصوات التنبيهات من إعدادات المتصفح." })}
-                    />
-                  )}
-                </div>
+                </ModernCard>
               </div>
-
-              {/* قسم التقارير والإشعارات */}
-              <div>
-                <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-teal-600" />
-                  التقارير والإشعارات
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {hasPermission('view_accounting') && (
-                    <SettingsSectionCard
-                      icon={FileText}
-                      title="التقارير"
-                      description="إعدادات التقارير المالية"
-                      iconColor="from-teal-500 to-teal-700"
-                      onClick={() => navigate('/accounting')}
-                    />
-                  )}
-
-                  <SettingsSectionCard
-                    icon={Bell}
-                    title="الإشعارات"
-                    description="تنبيهات البريد والرسائل"
-                    iconColor="from-yellow-500 to-yellow-700"
-                    onClick={() => toast({ title: "قريباً", description: "إعدادات الإشعارات ستكون متاحة قريباً!" })}
-                  />
-
-                  <SettingsSectionCard
-                    icon={Monitor}
-                    title="العرض"
-                    description="إعدادات الشاشة والتخطيط"
-                    iconColor="from-indigo-500 to-indigo-700"
-                    onClick={() => toast({ title: "قريباً", description: "إعدادات العرض ستكون متاحة قريباً!" })}
-                  />
-                </div>
-              </div>
-            </div>
+            </>
+          )}
         </div>
       </div>
-      <ProfileSecurityDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
+
+      {/* Dialogs */}
+      <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
+      <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
       <ManageEmployeesDialog open={isManageEmployeesOpen} onOpenChange={setIsManageEmployeesOpen} />
       <SecuritySettingsDialog open={isSecurityOpen} onOpenChange={setIsSecurityOpen} />
-      <DeveloperSettingsDialog open={isDeveloperOpen} onOpenChange={setIsDeveloperOpen} />
-      <DisplaySettingsDialog open={isDisplayOpen} onOpenChange={setIsDisplayOpen} />
       <ReportsSettingsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
-      <NotificationsSettingsDialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
-      <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
+      <ProfileSecurityDialog open={false} onOpenChange={() => {}} />
     </>
   );
 };
