@@ -19,6 +19,7 @@ import {
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
+import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
