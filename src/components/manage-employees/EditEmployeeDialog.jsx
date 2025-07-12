@@ -184,11 +184,11 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </Accordion>
           </div>
 
-          {/* صلاحيات التصنيفات */}
+          {/* صلاحيات التصنيفات والمتغيرات */}
           <div>
-            <Label className="flex items-center gap-2 mb-2"><Eye /> صلاحيات عرض التصنيفات</Label>
-            <div className="p-4 border rounded-lg space-y-3">
-              <div className="grid grid-cols-2 gap-4">
+            <Label className="flex items-center gap-2 mb-2"><Eye /> صلاحيات التصنيفات والمتغيرات</Label>
+            <div className="p-4 border rounded-lg space-y-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <Checkbox
                     id={`cat-all-${employee.id}`}
@@ -198,74 +198,74 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
                   />
                   <label htmlFor={`cat-all-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
                     <Eye className="w-4 h-4" />
-                    عرض جميع التصنيفات
+                    عرض جميع التصنيفات والمتغيرات
                   </label>
                 </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id={`cat-clothes-${employee.id}`}
-                    checked={categoryPermissions.includes('clothes') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                    onCheckedChange={(checked) => handleCategoryPermissionChange('clothes', checked)}
-                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                  />
-                  <label htmlFor={`cat-clothes-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                    <Shirt className="w-4 h-4" />
-                    تصنيف الملابس
-                  </label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCategoryPermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد الكل
+                </Button>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">التصنيفات الرئيسية:</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'mens_clothing', label: 'ملابس رجالية', icon: Shirt },
+                    { id: 'womens_clothing', label: 'ملابس نسائية', icon: Shirt },
+                    { id: 'electronics', label: 'إلكترونيات', icon: Laptop },
+                    { id: 'accessories', label: 'اكسسوارات', icon: Watch },
+                    { id: 'shoes', label: 'أحذية', icon: Footprints },
+                    { id: 'bags', label: 'حقائب', icon: ShoppingBag }
+                  ].map(category => {
+                    const IconComponent = category.icon;
+                    return (
+                      <div key={category.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
+                        <Checkbox
+                          id={`cat-${category.id}-${employee.id}`}
+                          checked={categoryPermissions.includes(category.id) || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                          onCheckedChange={(checked) => handleCategoryPermissionChange(category.id, checked)}
+                          disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                        />
+                        <label htmlFor={`cat-${category.id}-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                          <IconComponent className="w-4 h-4" />
+                          {category.label}
+                        </label>
+                      </div>
+                    );
+                  })}
                 </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id={`cat-electronics-${employee.id}`}
-                    checked={categoryPermissions.includes('electronics') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                    onCheckedChange={(checked) => handleCategoryPermissionChange('electronics', checked)}
-                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                  />
-                  <label htmlFor={`cat-electronics-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                    <Laptop className="w-4 h-4" />
-                    تصنيف الإلكترونيات
-                  </label>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-3">
+                <h4 className="font-medium text-sm">المتغيرات الفرعية:</h4>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    'صيفي', 'شتوي', 'ربيعي', 'خريفي',
+                    'قطني', 'حريري', 'جلدي', 'صوفي',
+                    'صغير', 'متوسط', 'كبير', 'كبير جداً'
+                  ].map(variant => (
+                    <div key={variant} className="flex items-center space-x-2 space-x-reverse p-1">
+                      <Checkbox
+                        id={`variant-${variant}-${employee.id}`}
+                        checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                        disabled={true}
+                      />
+                      <label className="text-xs text-muted-foreground">{variant}</label>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id={`cat-accessories-${employee.id}`}
-                    checked={categoryPermissions.includes('accessories') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                    onCheckedChange={(checked) => handleCategoryPermissionChange('accessories', checked)}
-                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                  />
-                  <label htmlFor={`cat-accessories-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                    <Watch className="w-4 h-4" />
-                    تصنيف الاكسسوارات
-                  </label>
-                </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id={`cat-shoes-${employee.id}`}
-                    checked={categoryPermissions.includes('shoes') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                    onCheckedChange={(checked) => handleCategoryPermissionChange('shoes', checked)}
-                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                  />
-                  <label htmlFor={`cat-shoes-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                    <Footprints className="w-4 h-4" />
-                    تصنيف الأحذية
-                  </label>
-                </div>
-
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id={`cat-bags-${employee.id}`}
-                    checked={categoryPermissions.includes('bags') || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                    onCheckedChange={(checked) => handleCategoryPermissionChange('bags', checked)}
-                    disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                  />
-                  <label htmlFor={`cat-bags-${employee.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                    <ShoppingBag className="w-4 h-4" />
-                    تصنيف الحقائب
-                  </label>
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  * المتغيرات الفرعية تتبع صلاحيات التصنيفات الرئيسية
+                </p>
               </div>
             </div>
           </div>

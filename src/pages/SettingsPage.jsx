@@ -177,46 +177,14 @@ const SettingsPage = () => {
                   </div>
                 </SettingsSectionCard>
 
-                {/* كارت الثيمات */}
+                {/* كارت المظهر والثيم */}
                 <SettingsSectionCard
-                  icon={Palette}
+                  icon={Zap}
                   title="المظهر والثيم"
-                  description="تخصيص مظهر التطبيق والألوان"
+                  description="تخصيص مظهر التطبيق والإعدادات المتقدمة"
                   iconColor="from-purple-500 to-purple-700"
-                >
-                  <div className="space-y-4">
-                    <Label className="text-sm font-medium">نمط العرض</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        variant={theme === 'light' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setTheme('light')}
-                        className="flex flex-col items-center gap-1 h-auto py-2"
-                      >
-                        <Sun className="w-4 h-4" />
-                        <span className="text-xs">فاتح</span>
-                      </Button>
-                      <Button
-                        variant={theme === 'dark' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setTheme('dark')}
-                        className="flex flex-col items-center gap-1 h-auto py-2"
-                      >
-                        <Moon className="w-4 h-4" />
-                        <span className="text-xs">داكن</span>
-                      </Button>
-                      <Button
-                        variant={theme === 'system' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setTheme('system')}
-                        className="flex flex-col items-center gap-1 h-auto py-2"
-                      >
-                        <Monitor className="w-4 h-4" />
-                        <span className="text-xs">تلقائي</span>
-                      </Button>
-                    </div>
-                  </div>
-                </SettingsSectionCard>
+                  onClick={() => setIsDeveloperOpen(true)}
+                />
             </div>
             
             {hasPermission('manage_app_settings') ? (

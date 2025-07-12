@@ -129,9 +129,10 @@ export const NotificationsProvider = ({ children }) => {
                 auto_delete: notificationData.autoDelete || false
             };
             
+            // إضافة الإشعار فوراً
             setNotifications(prev => [localNotification, ...prev]);
             
-            // تشغيل صوت الإشعار للإشعارات المحلية
+            // تشغيل صوت الإشعار فوراً للإشعارات المحلية
             if (notificationData.type !== 'welcome') {
                 try {
                     const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUEJXfI8N2QQAoUXrTp66hVFApGn+DyvmIQBjeS2vfNcSUE');
@@ -219,6 +220,51 @@ export const NotificationsProvider = ({ children }) => {
         }
     }, [notifications]);
 
+    const sendTestNotification = useCallback(() => {
+        const notificationTypes = [
+            {
+                title: "تنبيه مخزون منخفض",
+                message: "المنتج 'قميص قطني' وصل إلى الحد الأدنى للمخزون",
+                type: "low_stock",
+                icon: "AlertTriangle",
+                color: "orange",
+                auto_delete: false
+            },
+            {
+                title: "تسجيل جديد",
+                message: "طلب انضمام جديد من أحمد محمد",
+                type: "new_registration", 
+                icon: "UserPlus",
+                color: "purple",
+                auto_delete: false
+            },
+            {
+                title: "طلب جديد",
+                message: "طلب جديد #1234 من العميل سارة أحمد",
+                type: "new_order",
+                icon: "CheckCircle",
+                color: "blue",
+                auto_delete: false
+            },
+            {
+                title: "طلب ذكي جديد",
+                message: "تم استلام طلب ذكي جديد من الواسط",
+                type: "new_ai_order",
+                icon: "Bot",
+                color: "green",
+                auto_delete: false
+            }
+        ];
+        
+        const randomNotification = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
+        addNotification(randomNotification);
+        
+        toast({
+            title: "تم إرسال إشعار تجريبي",
+            description: `نوع الإشعار: ${randomNotification.title}`
+        });
+    }, [addNotification]);
+
     const value = {
         notifications,
         unreadCount: notifications.filter(n => !n.is_read).length,
@@ -227,7 +273,8 @@ export const NotificationsProvider = ({ children }) => {
         markAllAsRead,
         clearAll,
         deleteNotification,
-        deleteNotificationByTypeAndData
+        deleteNotificationByTypeAndData,
+        sendTestNotification
     };
 
     return (
