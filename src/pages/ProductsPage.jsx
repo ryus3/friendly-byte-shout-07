@@ -52,6 +52,7 @@ const ProductsPage = () => {
     category: 'all',
     brand: 'all',
     color: 'all',
+    size: 'all',
     price: [0, 500000],
   });
   
@@ -129,6 +130,9 @@ const ProductsPage = () => {
     }
     if (filters.color !== 'all') {
       tempProducts = tempProducts.filter(p => p.variants.some(v => v.color === filters.color));
+    }
+    if (filters.size !== 'all') {
+      tempProducts = tempProducts.filter(p => p.variants.some(v => v.size === filters.size));
     }
     
     tempProducts = tempProducts.filter(p => {

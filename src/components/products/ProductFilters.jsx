@@ -12,6 +12,20 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
   const { products } = useInventory();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // استخراج المتغيرات الحقيقية من المنتجات
+  const realVariantData = useMemo(() => {
+    const realCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
+    const realBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
+    const realColors = [...new Set(products.flatMap(p => 
+      p.variants?.map(v => v.color).filter(Boolean) || []
+    ))];
+    const realSizes = [...new Set(products.flatMap(p => 
+      p.variants?.map(v => v.size).filter(Boolean) || []
+    ))];
+    
+    return { realCategories, realBrands, realColors, realSizes };
+  }, [products]);
+
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
@@ -22,6 +36,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
       category: 'all',
       brand: 'all',
       color: 'all',
+      size: 'all',
       price: [0, 500000],
     });
   };
@@ -30,7 +45,11 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
     if (!filters.searchTerm) return [];
     return products.filter(product => 
       product.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      (product.brand && product.brand.toLowerCase().includes(filters.searchTerm.toLowerCase()))
+      (product.brand && product.brand.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
+      product.variants?.some(v => 
+        v.sku?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        v.barcode?.toLowerCase().includes(filters.searchTerm.toLowerCase())
+      )
     ).slice(0, 10);
   }, [filters.searchTerm, products]);
 
@@ -54,7 +73,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="اكتب اسم منتج أو علامة تجارية..."
+              placeholder="اكتب اسم منتج أو علامة تجارية أو SKU..."
               value={filters.searchTerm}
               onValueChange={(search) => handleFilterChange('searchTerm', search)}
             />
@@ -76,12 +95,12 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     }}
                     className="flex items-center gap-3 cursor-pointer"
                   >
-                    <img src={product.image || "/api/placeholder/40/40"} alt={product.name} className="w-8 h-8 rounded-md object-cover" />
+                    <img src={product.images?.[0] || "/api/placeholder/40/40"} alt={product.name} className="w-8 h-8 rounded-md object-cover" />
                     <div className="flex-1">
                       <p className="font-medium">{product.name}</p>
                       <p className="text-xs text-muted-foreground">{product.brand}</p>
                     </div>
-                    <span className="text-xs text-primary font-semibold">{product.variants[0]?.price.toLocaleString()} د.ع</span>
+                    <span className="text-xs text-primary font-semibold">{product.variants?.[0]?.price.toLocaleString()} د.ع</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -90,8 +109,9 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
         </PopoverContent>
       </Popover>
       
-      {/* الأزرار والفلاتر */}
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+      {/* الأزرار المتجاورة والمتناسقة */}
+      <div className="flex items-center gap-2">
+        {/* باركود */}
         <Button
           variant="outline"
           size="icon"
@@ -102,10 +122,38 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
           <QrCode className="w-4 h-4" />
         </Button>
         
+        {/* قائمة */}
+        <Button 
+          variant={viewMode === 'list' ? 'default' : 'outline'} 
+          size="icon"
+          onClick={() => setViewMode('list')} 
+          title="عرض قائمة"
+          className="glass-effect border-border/80"
+        >
+          <List className="w-4 h-4" />
+        </Button>
+        
+        {/* شبكة */}
+        <Button 
+          variant={viewMode === 'grid' ? 'default' : 'outline'} 
+          size="icon"
+          onClick={() => setViewMode('grid')} 
+          title="عرض شبكة"
+          className="glass-effect border-border/80"
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </Button>
+        
+        {/* فلترة متقدمة */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="glass-effect border-border/80 hover:bg-accent col-span-1">
-              <SlidersHorizontal className="w-4 h-4 sm:ml-2" />
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="glass-effect border-border/80 hover:bg-accent"
+              title="فلترة متقدمة"
+            >
+              <SlidersHorizontal className="w-4 h-4 ml-2" />
               <span className="hidden sm:inline">فلترة</span>
             </Button>
           </PopoverTrigger>
@@ -114,52 +162,75 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
               <div className="space-y-2">
                 <h4 className="font-medium leading-none">الفلاتر المتقدمة</h4>
                 <p className="text-sm text-muted-foreground">
-                  قم بتخصيص البحث عن المنتجات.
+                  فلترة حسب البيانات الحقيقية للمنتجات
                 </p>
               </div>
-              <div className="grid gap-2">
+              <div className="grid gap-3">
+                {/* الأصناف الحقيقية */}
                 <div className="space-y-2">
-                  <Label htmlFor="category">القسم</Label>
+                  <Label htmlFor="category">الصنف</Label>
                   <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="الكل" />
+                      <SelectValue placeholder="كل الأصناف" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      {categories.map(category => (
+                      <SelectItem value="all">كل الأصناف</SelectItem>
+                      {realVariantData.realCategories.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* العلامات التجارية الحقيقية */}
                 <div className="space-y-2">
-                  <Label htmlFor="brand">العلامة</Label>
+                  <Label htmlFor="brand">العلامة التجارية</Label>
                   <Select value={filters.brand} onValueChange={(value) => handleFilterChange('brand', value)}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="الكل" />
+                      <SelectValue placeholder="كل العلامات" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      {brands.map(brand => (
+                      <SelectItem value="all">كل العلامات</SelectItem>
+                      {realVariantData.realBrands.map(brand => (
                         <SelectItem key={brand} value={brand}>{brand}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* الألوان الحقيقية */}
                 <div className="space-y-2">
                   <Label htmlFor="color">اللون</Label>
                   <Select value={filters.color} onValueChange={(value) => handleFilterChange('color', value)}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="الكل" />
+                      <SelectValue placeholder="كل الألوان" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">الكل</SelectItem>
-                      {colors.map(color => (
-                        <SelectItem key={color.id} value={color.name}>{color.name}</SelectItem>
+                      <SelectItem value="all">كل الألوان</SelectItem>
+                      {realVariantData.realColors.map(color => (
+                        <SelectItem key={color} value={color}>{color}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+                
+                {/* الأحجام الحقيقية */}
+                <div className="space-y-2">
+                  <Label htmlFor="size">الحجم</Label>
+                  <Select value={filters.size} onValueChange={(value) => handleFilterChange('size', value)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="كل الأحجام" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الأحجام</SelectItem>
+                      {realVariantData.realSizes.map(size => (
+                        <SelectItem key={size} value={size}>{size}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* نطاق السعر */}
                 <div className="space-y-2">
                   <Label htmlFor="price">نطاق السعر</Label>
                   <Slider
@@ -184,25 +255,6 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
             </div>
           </PopoverContent>
         </Popover>
-
-        <Button 
-          variant={viewMode === 'grid' ? 'default' : 'outline'} 
-          size="icon"
-          onClick={() => setViewMode('grid')} 
-          className="col-span-1"
-          title="عرض شبكة"
-        >
-          <LayoutGrid className="w-4 h-4" />
-        </Button>
-        <Button 
-          variant={viewMode === 'list' ? 'default' : 'outline'} 
-          size="icon"
-          onClick={() => setViewMode('list')} 
-          className="col-span-1"
-          title="عرض قائمة"
-        >
-          <List className="w-4 h-4" />
-        </Button>
       </div>
     </div>
   );
