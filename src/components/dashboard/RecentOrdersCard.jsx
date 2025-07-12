@@ -59,7 +59,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                     <div className="flex items-center gap-2 mb-1">
                       <p className="font-semibold text-foreground truncate">{order.customerinfo?.name || 'زبون غير معروف'}</p>
                       <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-mono">
-                        #{order.tracking_number || order.id?.slice(-4)}
+                        #{order.tracking_number || String(order.id)?.slice(-4)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
