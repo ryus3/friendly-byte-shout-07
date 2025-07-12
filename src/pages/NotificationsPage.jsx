@@ -17,12 +17,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 
 const iconMap = {
-  AlertTriangle: <AlertTriangle className="w-5 h-5 text-amber-500" />,
-  Package: <Package className="w-5 h-5 text-blue-500" />,
-  CheckCircle: <CheckCircle className="w-5 h-5 text-green-500" />,
-  UserPlus: <Users className="w-5 h-5 text-purple-500" />,
-  Bot: <TrendingUp className="w-5 h-5 text-indigo-500" />,
-  Bell: <Bell className="w-5 h-5 text-primary" />,
+  AlertTriangle: <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-600" />,
+  Package: <Package className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,
+  CheckCircle: <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600" />,
+  UserPlus: <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />,
+  Bot: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,
+  Bell: <Bell className="w-4 h-4 md:w-5 md:h-5 text-primary" />,
 };
 
 const NotificationsPage = () => {
@@ -85,73 +85,73 @@ const NotificationsPage = () => {
         <title>إدارة الإشعارات - نظام إدارة المتجر</title>
       </Helmet>
 
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold gradient-text">إدارة الإشعارات</h1>
-            <p className="text-muted-foreground">إدارة وعرض جميع الإشعارات</p>
+            <h1 className="text-2xl md:text-3xl font-bold gradient-text">إدارة الإشعارات</h1>
+            <p className="text-muted-foreground text-sm md:text-base">إدارة وعرض جميع الإشعارات</p>
           </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="px-3 py-1">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4">
+            <Badge variant="secondary" className="px-2 md:px-3 py-1 text-xs md:text-sm">
               {unreadCount} غير مقروء
             </Badge>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsSettingsOpen(true)}
-              className="gap-2"
+              className="gap-1 md:gap-2 text-xs md:text-sm"
             >
-              <Settings className="w-4 h-4" />
-              إعدادات الإشعارات
+              <Settings className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">إعدادات الإشعارات</span>
+              <span className="sm:hidden">إعدادات</span>
             </Button>
             <Button
               variant={soundEnabled ? "default" : "outline"}
               size="sm"
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="gap-2"
+              className="gap-1 md:gap-2 text-xs md:text-sm"
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              الصوت {soundEnabled ? 'مفعل' : 'معطل'}
+              {soundEnabled ? <Volume2 className="w-3 h-3 md:w-4 md:h-4" /> : <VolumeX className="w-3 h-3 md:w-4 md:h-4" />}
+              <span className="hidden sm:inline">الصوت {soundEnabled ? 'مفعل' : 'معطل'}</span>
+              <span className="sm:hidden">{soundEnabled ? '🔊' : '🔇'}</span>
             </Button>
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
           <Card className="glass-effect">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">إجمالي الإشعارات</CardTitle>
+              <CardTitle className="text-sm md:text-lg">إجمالي الإشعارات</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-primary">{notifications.length}</div>
+              <div className="text-xl md:text-2xl font-bold text-primary">{notifications.length}</div>
             </CardContent>
           </Card>
 
           <Card className="glass-effect">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">غير مقروءة</CardTitle>
+              <CardTitle className="text-sm md:text-lg">غير مقروءة</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-500">{unreadCount}</div>
+              <div className="text-xl md:text-2xl font-bold text-amber-600">{unreadCount}</div>
             </CardContent>
           </Card>
 
-          <Card className="glass-effect">
+          <Card className="glass-effect col-span-2 md:col-span-1">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">مقروءة</CardTitle>
+              <CardTitle className="text-sm md:text-lg">مقروءة</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-500">{notifications.length - unreadCount}</div>
+              <div className="text-xl md:text-2xl font-bold text-green-600">{notifications.length - unreadCount}</div>
             </CardContent>
           </Card>
 
-          <Card className="glass-effect">
+          <Card className="glass-effect col-span-2 md:col-span-1">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">اختبار النظام</CardTitle>
+              <CardTitle className="text-sm md:text-lg">الحالة</CardTitle>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleTestNotification} className="w-full gradient-primary">
-                إرسال إشعار تجريبي
-              </Button>
+              <div className="text-xs md:text-sm text-primary font-medium">النظام يعمل بكفاءة</div>
             </CardContent>
           </Card>
         </div>
@@ -166,31 +166,33 @@ const NotificationsPage = () => {
                 </CardTitle>
                 <CardDescription>إدارة وعرض جميع الإشعارات</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0}>
-                  <CheckCircle className="w-4 h-4 ml-1" />
-                  تحديد الكل كمقروء
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={markAllAsRead} disabled={unreadCount === 0} className="text-xs sm:text-sm">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  <span className="hidden sm:inline">تحديد الكل كمقروء</span>
+                  <span className="sm:hidden">قراءة الكل</span>
                 </Button>
-                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0}>
-                  <Trash2 className="w-4 h-4 ml-1" />
-                  حذف الكل
+                <Button variant="destructive" size="sm" onClick={clearAll} disabled={notifications.length === 0} className="text-xs sm:text-sm">
+                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
+                  <span className="hidden sm:inline">حذف الكل</span>
+                  <span className="sm:hidden">حذف</span>
                 </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <div className="relative flex-1">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="البحث في الإشعارات..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10"
+                  className="pr-10 text-sm"
                 />
               </div>
               <Select value={filter} onValueChange={setFilter}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-40 md:w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,7 +205,7 @@ const NotificationsPage = () => {
 
             <Separator />
 
-            <ScrollArea className="h-96">
+            <ScrollArea className="h-[60vh] md:h-96">
               <AnimatePresence>
                 {filteredNotifications.length > 0 ? (
                   <div className="space-y-3">
@@ -222,34 +224,35 @@ const NotificationsPage = () => {
                       >
                         <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3 flex-1">
-                            <div className="mt-1">{iconMap[notification.icon] || iconMap.Bell}</div>
-                            <div className="flex-1">
+                            <div className="mt-1 flex-shrink-0">{iconMap[notification.icon] || iconMap.Bell}</div>
+                            <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className={cn(
-                                  "font-semibold",
+                                  "font-semibold text-sm md:text-base truncate",
                                   !notification.is_read && "text-primary"
                                 )}>
                                   {notification.title}
                                 </h3>
                                 {!notification.is_read && (
-                                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
                                 )}
                               </div>
-                              <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                              <p className="text-xs md:text-sm text-muted-foreground mb-2 line-clamp-2">{notification.message}</p>
                               <p className="text-xs text-muted-foreground/70">
                                 {formatRelativeTime(notification.created_at)}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 flex-shrink-0">
                             {!notification.is_read && (
                               <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => markAsRead(notification.id)}
                                 title="تحديد كمقروء"
+                                className="h-8 w-8 sm:h-10 sm:w-10"
                               >
-                                <Eye className="w-4 h-4" />
+                                <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                               </Button>
                             )}
                             <Button
@@ -257,9 +260,9 @@ const NotificationsPage = () => {
                               size="icon"
                               onClick={() => deleteNotification(notification.id)}
                               title="حذف الإشعار"
-                              className="text-destructive hover:text-destructive"
+                              className="text-destructive hover:text-destructive h-8 w-8 sm:h-10 sm:w-10"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                             </Button>
                           </div>
                         </div>

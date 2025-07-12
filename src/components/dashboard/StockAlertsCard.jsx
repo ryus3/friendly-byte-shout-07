@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Package, TrendingDown, Zap, ShieldAlert, AlertCircle } from 'lucide-react';
+import { Package, TrendingDown, Zap, ShieldAlert, AlertCircle, PackageX } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -96,7 +96,7 @@ const StockAlertsCard = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/15 to-primary/25 shadow-lg">
-              <AlertTriangle className="w-5 h-5 text-primary" />
+              <PackageX className="w-5 h-5 text-primary" />
             </div>
             <div>
               <CardTitle className="text-lg font-semibold text-foreground">تنبيهات المخزون</CardTitle>
@@ -237,7 +237,7 @@ const StockAlertsCard = () => {
               className="w-full text-primary border-primary/30 hover:bg-primary/5 hover:border-primary/50 transition-all text-sm"
               onClick={handleViewAll}
             >
-              <AlertTriangle className="w-3.5 h-3.5 ml-1.5" />
+              <PackageX className="w-3.5 h-3.5 ml-1.5" />
               عرض جميع التنبيهات
             </Button>
           </div>
