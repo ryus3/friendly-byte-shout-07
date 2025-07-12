@@ -14,7 +14,7 @@ export const VariantsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async (table, setter) => {
-    const { data, error } = await supabase.from(table).select('*').order('display_order');
+    const { data, error } = await supabase.from(table).select('*').order('name');
     if (error) {
       console.error(`Error fetching ${table}:`, error);
       toast({ title: `فشل تحميل ${table}`, description: error.message, variant: 'destructive' });
