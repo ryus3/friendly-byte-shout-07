@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { 
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
@@ -22,6 +22,7 @@ import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
 import SecuritySettingsDialog from '@/components/settings/SecuritySettingsDialog';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
+import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import { useNavigate } from 'react-router-dom';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -119,6 +120,7 @@ const SettingsPage = () => {
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   
   const [storeSettings, setStoreSettings] = useState({
     deliveryFee: 5000,
@@ -270,7 +272,7 @@ const SettingsPage = () => {
               title="المظهر والثيم"
               description="تخصيص مظهر التطبيق والألوان والخطوط والعرض"
               iconColor="from-purple-500 to-purple-600"
-              onClick={() => navigate('/appearance-settings')}
+              onClick={() => setIsAppearanceOpen(true)}
             >
               <div className="space-y-6">
                 {/* Theme Selection */}
@@ -610,12 +612,40 @@ const SettingsPage = () => {
       </div>
 
       {/* Dialogs */}
-      <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
-      <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
-      <ManageEmployeesDialog open={isManageEmployeesOpen} onOpenChange={setIsManageEmployeesOpen} />
-      <SecuritySettingsDialog open={isSecurityOpen} onOpenChange={setIsSecurityOpen} />
-      <ReportsSettingsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
-      <ProfileSecurityDialog open={false} onOpenChange={() => {}} />
+      <ProfileSecurityDialog 
+        open={isEditProfileOpen} 
+        onOpenChange={setIsEditProfileOpen} 
+      />
+      
+      <AppearanceDialog 
+        open={isAppearanceOpen} 
+        onOpenChange={setIsAppearanceOpen} 
+      />
+      
+      {hasPermission('manage_users') && (
+        <ManageEmployeesDialog 
+          open={isManageEmployeesOpen} 
+          onOpenChange={setIsManageEmployeesOpen} 
+        />
+      )}
+      
+      {hasPermission('manage_app_settings') && (
+        <>
+          <SecuritySettingsDialog 
+            open={isSecurityOpen} 
+            onOpenChange={setIsSecurityOpen} 
+          />
+          <ReportsSettingsDialog 
+            open={isReportsOpen} 
+            onOpenChange={setIsReportsOpen} 
+          />
+        </>
+      )}
+      
+      <DeliveryPartnerDialog
+        isOpen={isLoginDialogOpen}
+        onClose={() => setIsLoginDialogOpen(false)}
+      />
     </>
   );
 };
