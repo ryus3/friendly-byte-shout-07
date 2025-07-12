@@ -104,10 +104,10 @@ const ProductSizesByColor = ({
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="letter">قياسات حرفية (S, M, L, XL)</SelectItem>
-                  <SelectItem value="number">قياسات رقمية (38, 40, 42, 44)</SelectItem>
-                </SelectContent>
+                         <SelectContent>
+                           <SelectItem value="letter">قياسات حرفية (فري سايز، S, M, L, XL)</SelectItem>
+                           <SelectItem value="number">قياسات رقمية (38, 40, 42, 44)</SelectItem>
+                         </SelectContent>
               </Select>
             </div>
           )}
@@ -156,10 +156,10 @@ const ProductSizesByColor = ({
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="letter">قياسات حرفية (S, M, L, XL)</SelectItem>
-                          <SelectItem value="number">قياسات رقمية (38, 40, 42, 44)</SelectItem>
-                        </SelectContent>
+                         <SelectContent>
+                           <SelectItem value="letter">قياسات حرفية (فري سايز، S, M, L, XL)</SelectItem>
+                           <SelectItem value="number">قياسات رقمية (38, 40, 42, 44)</SelectItem>
+                         </SelectContent>
                       </Select>
                     </div>
 

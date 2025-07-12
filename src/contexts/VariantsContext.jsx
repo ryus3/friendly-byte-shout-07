@@ -34,8 +34,33 @@ export const VariantsProvider = ({ children }) => {
   }, [fetchData]);
 
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    // Initialize default data including free size if not exists
+    const initializeData = async () => {
+      setLoading(true);
+      
+      // Initialize default sizes including free size
+      const defaultSizes = [
+        { name: 'فري سايز', type: 'letter', display_order: 0 },
+        { name: 'S', type: 'letter', display_order: 1 },
+        { name: 'M', type: 'letter', display_order: 2 },
+        { name: 'L', type: 'letter', display_order: 3 },
+        { name: 'XL', type: 'letter', display_order: 4 },
+        { name: 'XXL', type: 'letter', display_order: 5 }
+      ];
+      
+      // Check and add missing sizes
+      for (const size of defaultSizes) {
+        const existing = sizes.find(s => s.name === size.name && s.type === size.type);
+        if (!existing) {
+          await addVariant('sizes', size);
+        }
+      }
+      
+      await refreshData();
+    };
+    
+    initializeData();
+  }, []);
 
   const addVariant = async (table, data) => {
     const { data: result, error } = await supabase.from(table).insert(data).select().single();

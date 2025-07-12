@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { debounce } from '@/utils/performance';
 
 const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
   const [selectedColor, setSelectedColor] = useState(null);
@@ -78,7 +79,14 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
     setQuantity(1);
   };
 
-  const handleAction = (actionType) => {
+  const debouncedQuantityChange = useCallback(
+    debounce((newQuantity) => {
+      setQuantity(Math.max(1, parseInt(newQuantity) || 1));
+    }, 300),
+    []
+  );
+
+  const handleAction = useCallback((actionType) => {
     if (!selectedVariant) {
       toast({ title: "الرجاء اختيار اللون والقياس", variant: "destructive" });
       return;
@@ -99,7 +107,7 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
     }
     
     onClose();
-  };
+  }, [selectedVariant, quantity, addToCart, product, onCreateOrder, onClose]);
 
   if (!product) return null;
   const availableColors = getAvailableColors();
@@ -165,7 +173,7 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
               <h4 className="font-semibold mb-2">3. حدد الكمية:</h4>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.max(1, q - 1))}><Minus className="w-4 h-4" /></Button>
-                <Input type="number" value={quantity} onChange={e => setQuantity(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 text-center" />
+                <Input type="number" value={quantity} onChange={e => debouncedQuantityChange(e.target.value)} className="w-16 text-center" />
                 <Button variant="outline" size="icon" onClick={() => setQuantity(q => Math.min(selectedVariant.quantity, q + 1))}><Plus className="w-4 h-4" /></Button>
                 <p className="text-sm text-muted-foreground mr-auto">المتوفر: {selectedVariant.quantity}</p>
               </div>
