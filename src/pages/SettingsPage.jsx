@@ -19,7 +19,7 @@ import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
-import SecuritySettingsDialog from '@/components/settings/SecuritySettingsDialog';
+
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
@@ -118,7 +118,7 @@ const SettingsPage = () => {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
-  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   
@@ -354,12 +354,12 @@ const SettingsPage = () => {
             <>
               <SectionHeader 
                 icon={Store} 
-                title="إعدادات المتجر"
-                description="إدارة الإعدادات العامة للمتجر والأجهزة المتصلة"
+                title="إعدادات المتجر والإدارة"
+                description="إدارة الإعدادات العامة للمتجر والفريق والأجهزة المتصلة"
               />
               
               {/* Main Management Row - Professional Layout */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
                 <ModernCard
                   icon={Truck}
                   title="شركة التوصيل"
@@ -412,6 +412,25 @@ const SettingsPage = () => {
                     </div>
                     <div className="text-xs text-muted-foreground">
                       اضغط لإدارة الموظفين والصلاحيات
+                    </div>
+                  </div>
+                </ModernCard>
+
+                <ModernCard
+                  icon={Bell}
+                  title="الإشعارات"
+                  description="إدارة إعدادات الإشعارات والتنبيهات"
+                  iconColor="from-orange-500 to-orange-600"
+                  onClick={() => navigate('/notifications')}
+                  className="bg-gradient-to-br from-background to-orange-50/30 dark:to-orange-950/30"
+                >
+                  <div className="space-y-3">
+                    <div className="p-3 bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-800">
+                      <p className="text-sm font-medium text-orange-600 dark:text-orange-400">الحالة</p>
+                      <p className="text-xs text-orange-500 opacity-70">مفعلة</p>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      تخصيص أصوات الإشعارات والتنبيهات
                     </div>
                   </div>
                 </ModernCard>
@@ -613,13 +632,6 @@ const SettingsPage = () => {
               onClick={handleExportData}
             />
 
-            <ModernCard
-              icon={Shield}
-              title="الأمان المتقدم"
-              description="إعدادات الأمان وحماية البيانات"
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsSecurityOpen(true)}
-            />
           </div>
 
           {/* Integration and Data Section */}
@@ -673,10 +685,6 @@ const SettingsPage = () => {
       
       {hasPermission('manage_app_settings') && (
         <>
-          <SecuritySettingsDialog 
-            open={isSecurityOpen} 
-            onOpenChange={setIsSecurityOpen} 
-          />
           <ReportsSettingsDialog 
             open={isReportsOpen} 
             onOpenChange={setIsReportsOpen} 
