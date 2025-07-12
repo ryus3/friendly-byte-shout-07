@@ -119,8 +119,8 @@ const RecentOrdersCard = ({ recentOrders }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0">
-          <div className="space-y-0 flex-1 overflow-y-auto max-h-80">
-            {recentOrders && recentOrders.length > 0 ? recentOrders.slice(0, 4).map((order, index) => (
+          <div className="space-y-0 flex-1">
+            {recentOrders && recentOrders.length > 0 ? recentOrders.slice(0, 3).map((order, index) => (
               <motion.div 
                 key={order.id} 
                 className={cn(
