@@ -17,6 +17,7 @@ import { filterOrdersByPeriod, getTopCustomers, getTopProducts, getTopProvinces 
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard';
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
+import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
@@ -309,6 +310,9 @@ const Dashboard = () => {
                 )}
             </AnimatePresence>
             <div className="space-y-8">
+                {/* نظام المراقبة الخفي للمخزون والإشعارات */}
+                <StockMonitoringSystem />
+                
                 <WelcomeHeader user={user} currentTime={currentTime} />
                 {hasPermission('request_profit_settlement') && !hasPermission('manage_profit_settlement') && (
                     <SettlementRequestCard pendingProfit={dashboardData.pendingProfit} onSettle={() => navigate('/profits-summary')} />
