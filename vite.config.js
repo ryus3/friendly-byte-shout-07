@@ -2,14 +2,6 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
 
-const isDev = process.env.NODE_ENV !== 'production';
-let inlineEditPlugin, editModeDevPlugin;
-
-if (isDev) {
-    inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
-    editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
-}
-
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
@@ -67,7 +59,7 @@ console.error = function(...args) {
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg instanceof Error) {
-            errorString = arg.stack || \\${arg.name}: \${arg.message}\;
+            errorString = arg.stack || \`\${arg.name}: \${arg.message}\`;
             break;
         }
     }
@@ -95,7 +87,7 @@ window.fetch = function(...args) {
                 const responseClone = response.clone();
                 const errorFromRes = await responseClone.text();
                 const requestUrl = response.url;
-                console.error(\Fetch error from \${requestUrl}: \${errorFromRes}\);
+                console.error(\`Fetch error from \${requestUrl}: \${errorFromRes}\`);
             }
 
             return response;
@@ -134,31 +126,42 @@ logger.error = (msg, options) => {
     loggerError(msg, options);
 };
 
-export default defineConfig({
-    customLogger: logger,
-    plugins: [
-        ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
-        react(),
-        addTransformIndexHtml,
-    ],
-    server: {
-        cors: true,
-        port: 8080,
-        headers: { 'Cross-Origin-Embedder-Policy': 'credentialless' },
-        allowedHosts: true,
-    },
-    resolve: {
-        extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
-        alias: { '@': path.resolve(__dirname, './src') },
-    },
-    build: {
-        rollupOptions: {
-            external: [
-                '@babel/parser',
-                '@babel/traverse',
-                '@babel/generator',
-                '@babel/types',
-            ],
-        },
-    },
+export default defineConfig(async ({ mode }) => {
+    const isDev = process.env.NODE_ENV !== 'production';
+    let inlineEditPlugin, editModeDevPlugin;
+
+    if (isDev) {
+        inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
+        editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
+    }
+
+    return {
+        customLogger: logger,
+        plugins: [
+            ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
+            react(),
+            addTransformIndexHtml,
+        ],
+        server: {
+            host: "::",
+            cors: true,
+            port: 8080,
+            headers: { 'Cross-Origin-Embedder-Policy': 'credentialless' },
+            allowedHosts: true,
+        },
+        resolve: {
+            extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
+            alias: { '@': path.resolve(__dirname, './src') },
+        },
+        build: {
+            rollupOptions: {
+                external: [
+                    '@babel/parser',
+                    '@babel/traverse',
+                    '@babel/generator',
+                    '@babel/types',
+                ],
+            },
+        },
+    };
 });
