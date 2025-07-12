@@ -19,7 +19,7 @@ import {
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
-import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
+import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
@@ -119,6 +119,7 @@ const SettingsPage = () => {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
+  const [isCustomerSettingsOpen, setIsCustomerSettingsOpen] = useState(false);
   
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
@@ -445,7 +446,7 @@ const SettingsPage = () => {
                   title="إعدادات الزبائن"
                   description="إدارة الاسم الافتراضي للزبائن في الطلبات"
                   iconColor="from-emerald-500 to-emerald-600"
-                  onClick={() => setIsEditProfileOpen(true)}
+                  onClick={() => setIsCustomerSettingsOpen(true)}
                   disabled={!hasPermission('manage_default_customer_name')}
                   className="lg:col-span-1"
                 >
@@ -731,6 +732,11 @@ const SettingsPage = () => {
           />
         </>
       )}
+      
+      <CustomerSettingsDialog
+        open={isCustomerSettingsOpen}
+        onOpenChange={setIsCustomerSettingsOpen}
+      />
       
       <DeliveryPartnerDialog
         open={isLoginDialogOpen}
