@@ -268,54 +268,6 @@ const SettingsPage = () => {
               </div>
             </ModernCard>
 
-            <ModernCard
-              icon={Users}
-              title="إعدادات الزبائن"
-              description="إدارة الأسماء الافتراضية وإعدادات الطلبات"
-              iconColor="from-green-500 to-green-600"
-              onClick={() => setIsEditProfileOpen(true)}
-              disabled={!hasPermission('manage_default_customer_name')}
-            >
-              <div className="space-y-4">
-                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="p-2 rounded-lg bg-green-500/10">
-                      <User className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-green-700 dark:text-green-300">اسم الزبون الافتراضي</h4>
-                      <p className="text-xs text-green-600 dark:text-green-400">يظهر تلقائياً في الطلبات الجديدة</p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white/50 dark:bg-black/20 p-3 rounded border">
-                    <p className="text-sm font-medium text-foreground">
-                      {user?.default_customer_name || 'لم يتم تعيين اسم افتراضي'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      اضغط لتعديل الاسم الافتراضي للزبائن
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <MessageCircle className="w-4 h-4 text-blue-500" />
-                    <div>
-                      <span className="text-xs font-medium text-blue-600 dark:text-blue-400">قابل للتعديل</span>
-                      <p className="text-xs text-blue-500 opacity-70">في كل طلب</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <RefreshCw className="w-4 h-4 text-purple-500" />
-                    <div>
-                      <span className="text-xs font-medium text-purple-600 dark:text-purple-400">تلقائي</span>
-                      <p className="text-xs text-purple-500 opacity-70">ملء فوري</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </ModernCard>
 
             <ModernCard
               icon={Palette}
@@ -481,6 +433,59 @@ const SettingsPage = () => {
                     </div>
                     <div className="text-xs text-muted-foreground">
                       تخصيص أصوات الإشعارات والتنبيهات
+                    </div>
+                  </div>
+                </ModernCard>
+              </div>
+
+              {/* Second Row - Customer Settings */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <ModernCard
+                  icon={Users}
+                  title="إعدادات الزبائن"
+                  description="إدارة الاسم الافتراضي للزبائن في الطلبات"
+                  iconColor="from-emerald-500 to-emerald-600"
+                  onClick={() => setIsEditProfileOpen(true)}
+                  disabled={!hasPermission('manage_default_customer_name')}
+                  className="lg:col-span-1"
+                >
+                  <div className="space-y-4">
+                    <div className="p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="p-2 rounded-lg bg-emerald-500/10">
+                          <User className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-emerald-700 dark:text-emerald-300">اسم الزبون الافتراضي</h4>
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400">يظهر تلقائياً في الطلبات الجديدة</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white/50 dark:bg-black/20 p-3 rounded border">
+                        <p className="text-sm font-medium text-foreground">
+                          {user?.default_customer_name || 'لم يتم تعيين اسم افتراضي'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          اضغط لتعديل الاسم الافتراضي للزبائن
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                        <MessageCircle className="w-4 h-4 text-blue-500" />
+                        <div>
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">قابل للتعديل</span>
+                          <p className="text-xs text-blue-500 opacity-70">في كل طلب</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <RefreshCw className="w-4 h-4 text-purple-500" />
+                        <div>
+                          <span className="text-xs font-medium text-purple-600 dark:text-purple-400">تلقائي</span>
+                          <p className="text-xs text-purple-500 opacity-70">ملء فوري</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </ModernCard>
