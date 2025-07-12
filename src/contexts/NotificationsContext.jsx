@@ -279,50 +279,8 @@ export const NotificationsProvider = ({ children }) => {
         }
     }, [notifications]);
 
-    const sendTestNotification = useCallback(() => {
-        const notificationTypes = [
-            {
-                title: "تنبيه مخزون منخفض",
-                message: "المنتج 'قميص قطني' وصل إلى الحد الأدنى للمخزون",
-                type: "low_stock",
-                icon: "AlertTriangle",
-                color: "orange",
-                auto_delete: false
-            },
-            {
-                title: "تسجيل جديد",
-                message: "طلب انضمام جديد من أحمد محمد",
-                type: "new_registration", 
-                icon: "UserPlus",
-                color: "purple",
-                auto_delete: false
-            },
-            {
-                title: "طلب جديد",
-                message: "طلب جديد #1234 من العميل سارة أحمد",
-                type: "new_order",
-                icon: "CheckCircle",
-                color: "blue",
-                auto_delete: false
-            },
-            {
-                title: "طلب ذكي جديد",
-                message: "تم استلام طلب ذكي جديد من الواسط",
-                type: "new_ai_order",
-                icon: "Bot",
-                color: "green",
-                auto_delete: false
-            }
-        ];
-        
-        const randomNotification = notificationTypes[Math.floor(Math.random() * notificationTypes.length)];
-        addNotification(randomNotification);
-        
-        toast({
-            title: "تم إرسال إشعار تجريبي",
-            description: `نوع الإشعار: ${randomNotification.title}`
-        });
-    }, [addNotification]);
+    // حذف الإشعار التجريبي - النظام جاهز للإنتاج
+    const sendTestNotification = null;
 
     const value = {
         notifications,

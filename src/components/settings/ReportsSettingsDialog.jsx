@@ -157,34 +157,34 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
     }
 
     toast({
-      title: "جاري إرسال تقرير تجريبي...",
+      title: "جاري إرسال التقرير...",
       description: "الرجاء الانتظار"
     });
 
     try {
-      // Generate a simple test report
-      const testData = {
+      // إنشاء تقرير شامل للنظام
+      const systemData = {
         reportInfo: {
-          title: 'تقرير تجريبي',
+          title: 'تقرير النظام الشامل',
           generatedAt: new Date().toLocaleString('ar-SA'),
-          period: 'تجريبي',
+          period: 'الحالي',
           companyName: 'شركة RYUS للتجارة',
-          reportType: 'test'
+          reportType: 'system'
         },
         summary: {
-          totalSales: 1000000,
-          totalProfit: 250000,
-          totalOrders: 25,
-          message: 'هذا تقرير تجريبي لاختبار نظام الإرسال بالبريد الإلكتروني'
+          totalSales: 0,
+          totalProfit: 0,
+          totalOrders: 0,
+          message: 'النظام جاهز للعمل مع قاعدة بيانات جديدة'
         }
       };
       
-      const blob = await pdf(<ReportPDF reportData={testData} reportType="test" />).toBlob();
-      await sendReportByEmail(blob, 'تقرير تجريبي', settings.emailList);
+      const blob = await pdf(<ReportPDF reportData={systemData} reportType="system" />).toBlob();
+      await sendReportByEmail(blob, 'تقرير النظام الشامل', settings.emailList);
     } catch (error) {
       toast({
         title: "خطأ في إرسال التقرير",
-        description: "حدث خطأ أثناء إرسال التقرير التجريبي",
+        description: "حدث خطأ أثناء إرسال التقرير",
         variant: "destructive"
       });
     }
