@@ -15,13 +15,17 @@ const EditProfileDialog = ({ open, onOpenChange }) => {
   
   const [activeTab, setActiveTab] = useState('profile');
   
-  const [profileData, setProfileData] = useState({ fullName: '', username: '' });
+  const [profileData, setProfileData] = useState({ fullName: '', username: '', defaultCustomerName: '' });
   const [passwordData, setPasswordData] = useState({ newPassword: '', confirmPassword: '' });
   const [defaultPage, setDefaultPage] = useState(user?.defaultPage || '/');
 
   useEffect(() => {
     if (user) {
-      setProfileData({ fullName: user.full_name || '', username: user.username || '' });
+      setProfileData({ 
+        fullName: user.full_name || '', 
+        username: user.username || '',
+        defaultCustomerName: user.default_customer_name || ''
+      });
       setDefaultPage(user.defaultPage || '/');
     }
   }, [user, open]);
@@ -42,6 +46,9 @@ const EditProfileDialog = ({ open, onOpenChange }) => {
     }
     if (profileData.username !== user.username) {
         profileUpdates.username = profileData.username;
+    }
+    if (profileData.defaultCustomerName !== user.default_customer_name) {
+        profileUpdates.default_customer_name = profileData.defaultCustomerName;
     }
 
     const pageUpdate = defaultPage !== user.defaultPage;
@@ -112,6 +119,20 @@ const EditProfileDialog = ({ open, onOpenChange }) => {
               <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني</Label>
                 <Input id="email" type="email" value={user?.email || ''} disabled />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="defaultCustomerName">اسم الزبون الافتراضي</Label>
+                <Input 
+                  id="defaultCustomerName" 
+                  name="defaultCustomerName" 
+                  value={profileData.defaultCustomerName} 
+                  onChange={handleProfileChange}
+                  placeholder="اختياري - سيظهر تلقائياً في الطلبات الجديدة"
+                />
+                <p className="text-xs text-muted-foreground">
+                  يمكنك تعديل هذا الاسم لاحقاً في أي طلب جديد
+                </p>
               </div>
 
               {hasPermission('set_default_page') && (

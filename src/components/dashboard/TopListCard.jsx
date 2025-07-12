@@ -4,13 +4,31 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { motion } from 'framer-motion';
 
-const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon }) => {
+const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, sortByPhone = false }) => {
   const handleViewAll = () => {
     toast({
       title: "🚧 هذه الميزة غير مطبقة بعد",
       description: "لكن لا تقلق! يمكنك طلبها في الرسالة التالية! 🚀"
     });
   };
+
+  // إذا كان التصنيف حسب رقم الهاتف، نقوم بتجميع البيانات حسب رقم الهاتف
+  const processedItems = sortByPhone && items.length > 0 ? 
+    Object.values(
+      items.reduce((acc, item) => {
+        const phone = item.phone || 'غير محدد';
+        if (!acc[phone]) {
+          acc[phone] = {
+            label: phone,
+            value: 0,
+            phone: phone
+          };
+        }
+        acc[phone].value += parseInt(item.value) || 1;
+        return acc;
+      }, {})
+    ).sort((a, b) => b.value - a.value) 
+    : items;
 
   return (
     <Card className="glass-effect h-full border-border/60 flex flex-col">
@@ -22,7 +40,7 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon })
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 pt-0">
         <div className="space-y-4 flex-1">
-          {items.length > 0 ? items.map((item, index) => (
+          {processedItems.length > 0 ? processedItems.map((item, index) => (
             <motion.div 
               key={index} 
               className="flex items-center justify-between"
@@ -38,7 +56,9 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon })
                 )}
                 <div>
                   <p className="font-semibold text-foreground">{item.label}</p>
-                  <p className="text-sm text-muted-foreground">{item.value}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {sortByPhone ? `${item.value} طلب` : item.value}
+                  </p>
                 </div>
               </div>
             </motion.div>

@@ -75,8 +75,16 @@ const RecentOrdersCard = ({ recentOrders }) => {
     return isDeliveryCompany ? 'شركة توصيل' : 'محلي';
   };
 
-  const getOrderId = (order) => {
-    return String(order.id).slice(-3).padStart(3, '0');
+  const getOrderNumber = (index) => {
+    return index + 1;
+  };
+
+  const getOrderNumberIcon = (number) => {
+    const iconMap = {
+      1: '①', 2: '②', 3: '③', 4: '④', 5: '⑤',
+      6: '⑥', 7: '⑦', 8: '⑧', 9: '⑨', 10: '⑩'
+    };
+    return iconMap[number] || `${number}`;
   };
 
   const getOrderProducts = (items) => {
@@ -115,76 +123,64 @@ const RecentOrdersCard = ({ recentOrders }) => {
               <motion.div 
                 key={order.id} 
                 className={cn(
-                  "relative p-4 border-b border-border/30 hover:bg-muted/30 transition-all cursor-pointer group",
-                  "hover:shadow-md hover:border-l-4 hover:border-l-primary/50"
+                  "relative p-3 border-b border-border/20 hover:bg-accent/50 transition-all cursor-pointer group",
+                  "hover:shadow-sm hover:border-l-2 hover:border-l-primary"
                 )}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 onClick={() => handleViewOrder(order)}
               >
-                {/* Header Row */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-primary">#{getOrderId(order)}</span>
-                      <div className="h-4 w-px bg-border/50" />
+                {/* Compact Order Card */}
+                <div className="flex items-center gap-3">
+                  {/* Order Number Icon */}
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/30">
+                    <span className="text-primary font-bold text-sm">
+                      {getOrderNumberIcon(getOrderNumber(index))}
+                    </span>
+                  </div>
+
+                  {/* Order Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                      {getStatusBadge(order.status)}
                     </div>
-                  </div>
-                  {getStatusBadge(order.status)}
-                </div>
+                    
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                        <span className="font-medium text-foreground truncate max-w-[120px]">
+                          {order.customerinfo?.province || 'غير محدد'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1">
+                        {getDeliveryType(order) === 'شركة توصيل' ? (
+                          <>
+                            <Truck className="w-3 h-3 text-blue-500" />
+                            <span className="text-xs text-blue-600">شركة</span>
+                          </>
+                        ) : (
+                          <>
+                            <Home className="w-3 h-3 text-green-500" />
+                            <span className="text-xs text-green-600">محلي</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
 
-                {/* Customer & Location */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium text-foreground">
-                      {order.customerinfo?.address || 'عنوان غير محدد'}
-                    </span>
-                  </div>
-                  <div className="h-3 w-px bg-border/50" />
-                  <span className="text-xs text-muted-foreground">
-                    {order.customerinfo?.province || 'محافظة غير محددة'}
-                  </span>
-                </div>
-
-                {/* Products & Delivery */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Package className="w-4 h-4" />
-                    <span>{getOrderProducts(order.items)}</span>
-                  </div>
-                  <div className="h-3 w-px bg-border/50" />
-                  <div className="flex items-center gap-1.5 text-xs">
-                    {getDeliveryType(order) === 'شركة توصيل' ? (
-                      <>
-                        <Truck className="w-3.5 h-3.5 text-blue-500" />
-                        <span className="text-blue-600 font-medium">شركة توصيل</span>
-                      </>
-                    ) : (
-                      <>
-                        <Home className="w-3.5 h-3.5 text-green-500" />
-                        <span className="text-green-600 font-medium">توصيل محلي</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Total & Created By */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">بواسطة:</span>
-                    <span className="text-sm font-medium text-foreground">
-                      {order.created_by_name || 'موظف النظام'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-gradient-to-r from-primary/10 to-accent/10 px-3 py-1 rounded-full border border-primary/20">
-                    <CreditCard className="w-4 h-4 text-primary" />
-                    <span className="font-bold text-primary">
-                      {(order.total || 0).toLocaleString()}
-                    </span>
-                    <span className="text-xs text-primary/70">د.ع</span>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-muted-foreground">
+                        {order.created_by_name || 'النظام'}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-sm text-foreground">
+                          {(order.total || 0).toLocaleString()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">د.ع</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

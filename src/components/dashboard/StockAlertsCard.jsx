@@ -72,17 +72,17 @@ const StockAlertsCard = () => {
   const getStockLevelColor = (stock, minStock) => {
     const percentage = (stock / minStock) * 100;
     if (percentage <= 25) return {
-      className: 'bg-gradient-to-r from-red-50 to-rose-50 border-red-200 text-red-700 shadow-lg',
+      className: 'bg-background border-destructive/20 text-destructive hover:bg-destructive/5 dark:bg-card dark:border-destructive/30',
       icon: AlertTriangle,
       pulse: true
     };
     if (percentage <= 60) return {
-      className: 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200 text-orange-700 shadow-md',
+      className: 'bg-background border-orange-500/20 text-orange-600 hover:bg-orange-50 dark:bg-card dark:border-orange-500/30 dark:text-orange-400',
       icon: TrendingDown,
       pulse: false
     };
     return {
-      className: 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 text-yellow-700 shadow-sm',
+      className: 'bg-background border-yellow-500/20 text-yellow-600 hover:bg-yellow-50 dark:bg-card dark:border-yellow-500/30 dark:text-yellow-400',
       icon: Package,
       pulse: false
     };
@@ -120,7 +120,7 @@ const StockAlertsCard = () => {
       </CardHeader>
       <CardContent className="p-0">
         {lowStockProducts && lowStockProducts.length > 0 ? (
-          <div className="max-h-80 overflow-y-auto">
+          <div className="space-y-0 max-h-80 overflow-y-auto">
             {lowStockProducts.map((variant, index) => {
               const stockLevel = getStockLevelColor(variant.quantity, variant.lowStockThreshold);
               const urgency = getUrgencyLevel(variant.quantity, variant.lowStockThreshold);
