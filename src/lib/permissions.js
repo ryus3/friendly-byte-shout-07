@@ -26,8 +26,7 @@ export const permissionsMap = [
       { id: 'view_statistics', label: 'عرض الإحصائيات' },
       { id: 'view_charts', label: 'عرض الرسوم البيانية' },
       { id: 'view_recent_activities', label: 'عرض الأنشطة الحديثة' },
-      { id: 'view_alerts', label: 'عرض التنبيهات' },
-      { id: 'manage_ai_orders', label: 'إدارة طلبات الذكاء الاصطناعي' }
+      { id: 'view_alerts', label: 'عرض التنبيهات' }
     ]
   },
   {
@@ -88,8 +87,6 @@ export const permissionsMap = [
       { id: 'view_pending_dues', label: 'عرض المستحقات المعلقة' },
       { id: 'settle_dues', label: 'تسوية المستحقات' },
       { id: 'export_reports', label: 'تصدير التقارير' },
-      { id: 'profit_settlement', label: 'تسوية الأرباح' },
-      { id: 'settlement_invoices', label: 'فواتير التسوية' },
       { id: 'view_profits', label: 'عرض الأرباح' }
     ]
   },
@@ -243,8 +240,6 @@ export const defaultPermissions = {
     'view_pending_dues',
     'settle_dues',
     'export_reports',
-    'profit_settlement',
-    'settlement_invoices',
     'view_profits',
     'view_employees',
     'manage_employees',
@@ -266,7 +261,6 @@ export const defaultPermissions = {
     'view_charts',
      'view_recent_activities',
      'view_alerts',
-     'manage_ai_orders',
      'manage_default_customer_name',
      'set_default_page'
   ]

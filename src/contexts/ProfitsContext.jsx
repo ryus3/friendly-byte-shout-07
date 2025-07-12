@@ -49,8 +49,17 @@ export const ProfitsProvider = ({ children }) => {
       };
 
       const { data, error } = await supabase
-        .from('profits_tracking')
-        .insert([profitRecord])
+        .from('profits')
+        .insert([{
+          order_id: order.id,
+          employee_id: order.created_by || user?.id,
+          total_revenue: order.total_amount || 0,
+          total_cost: order.cost_amount || 0,
+          profit_amount: totalProfit,
+          employee_percentage: 10, // نسبة افتراضية
+          employee_profit: totalProfit * 0.1,
+          status: 'pending'
+        }])
         .select()
         .single();
 
@@ -96,7 +105,7 @@ export const ProfitsProvider = ({ children }) => {
       updateData.status = profitStatus;
 
       const { data, error } = await supabase
-        .from('profits_tracking')
+        .from('profits')
         .update(updateData)
         .eq('order_id', orderId)
         .select()
@@ -140,9 +149,15 @@ export const ProfitsProvider = ({ children }) => {
         requested_at: new Date().toISOString()
       };
 
+      // تسجيل الطلب في الإشعارات مؤقتاً
       const { data, error } = await supabase
-        .from('settlement_requests')
-        .insert([requestData])
+        .from('notifications')
+        .insert([{
+          type: 'settlement_request',
+          title: 'طلب تحاسب',
+          message: `طلب تحاسب بقيمة ${totalProfit} دينار`,
+          data: requestData
+        }])
         .select()
         .single();
 
@@ -150,7 +165,7 @@ export const ProfitsProvider = ({ children }) => {
 
       // تحديث حالة الأرباح إلى طلب تحاسب
       await supabase
-        .from('profits_tracking')
+        .from('profits')
         .update({ status: 'settlement_requested' })
         .in('order_id', orderIds);
 
@@ -185,14 +200,17 @@ export const ProfitsProvider = ({ children }) => {
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
-      // تحديث حالة الطلب
+      // تحديث حالة الطلب في الإشعارات
       const { data: updatedRequest, error: requestError } = await supabase
-        .from('settlement_requests')
+        .from('notifications')
         .update({
-          status: 'approved',
-          approved_by: user?.id,
-          approved_at: new Date().toISOString(),
-          payment_method: paymentMethod
+          data: {
+            ...request,
+            status: 'approved',
+            approved_by: user?.id,
+            approved_at: new Date().toISOString(),
+            payment_method: paymentMethod
+          }
         })
         .eq('id', requestId)
         .select()
@@ -213,9 +231,15 @@ export const ProfitsProvider = ({ children }) => {
         generated_by: user?.id
       };
 
+      // تسجيل التسوية في الإشعارات بدلاً من جدول منفصل
       const { data: invoice, error: invoiceError } = await supabase
-        .from('settlement_invoices')
-        .insert([invoiceData])
+        .from('notifications')
+        .insert([{
+          type: 'settlement_invoice',
+          title: 'فاتورة تسوية',
+          message: `تم إنشاء فاتورة تسوية للموظف`,
+          data: invoiceData
+        }])
         .select()
         .single();
 
@@ -223,11 +247,10 @@ export const ProfitsProvider = ({ children }) => {
 
       // تحديث حالة الأرباح إلى مدفوعة
       await supabase
-        .from('profits_tracking')
+        .from('profits')
         .update({ 
           status: 'settled',
-          settled_at: new Date().toISOString(),
-          settlement_invoice_id: invoice.id
+          settled_at: new Date().toISOString()
         })
         .in('order_id', request.order_ids);
 
@@ -272,12 +295,15 @@ export const ProfitsProvider = ({ children }) => {
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
       const { data, error } = await supabase
-        .from('settlement_requests')
+        .from('notifications')
         .update({
-          status: 'rejected',
-          rejected_by: user?.id,
-          rejected_at: new Date().toISOString(),
-          rejection_reason: reason
+          data: {
+            ...request,
+            status: 'rejected',
+            rejected_by: user?.id,
+            rejected_at: new Date().toISOString(),
+            rejection_reason: reason
+          }
         })
         .eq('id', requestId)
         .select()
@@ -287,8 +313,8 @@ export const ProfitsProvider = ({ children }) => {
 
       // إرجاع حالة الأرباح
       await supabase
-        .from('profits_tracking')
-        .update({ status: 'invoice_received' })
+        .from('profits')
+        .update({ status: 'pending' })
         .in('order_id', request.order_ids);
 
       setSettlementRequests(prev => prev.map(r => 
@@ -320,19 +346,15 @@ export const ProfitsProvider = ({ children }) => {
     try {
       setLoading(true);
 
-      const [profitsRes, requestsRes, invoicesRes] = await Promise.all([
-        supabase.from('profits_tracking').select('*').order('created_at', { ascending: false }),
-        supabase.from('settlement_requests').select('*').order('requested_at', { ascending: false }),
-        supabase.from('settlement_invoices').select('*').order('generated_at', { ascending: false })
+      const [profitsRes] = await Promise.all([
+        supabase.from('profits').select('*').order('created_at', { ascending: false })
       ]);
 
       if (profitsRes.error) throw profitsRes.error;
-      if (requestsRes.error) throw requestsRes.error;
-      if (invoicesRes.error) throw invoicesRes.error;
 
       setProfits(profitsRes.data || []);
-      setSettlementRequests(requestsRes.data || []);
-      setSettlementInvoices(invoicesRes.data || []);
+      setSettlementRequests([]); // مؤقتاً حتى يتم تطوير النظام
+      setSettlementInvoices([]);  // مؤقتاً حتى يتم تطوير النظام
     } catch (error) {
       console.error('Error fetching profits data:', error);
       toast({

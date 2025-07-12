@@ -63,10 +63,14 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       return { success: false, error: error.message };
     }
 
-    // Add financial transaction for the sale
-    const { error: finError } = await supabase.from('financial_transactions').insert({
-      type: 'sale',
-      amount: data.total,
+    // تسجيل العملية في الإشعارات بدلاً من جدول منفصل
+    const { error: finError } = await supabase.from('notifications').insert({
+      type: 'sale_transaction',
+      title: 'عملية بيع جديدة',
+      message: `تم تسجيل عملية بيع بقيمة ${data.total}`,
+      data: {
+        type: 'sale',
+        amount: data.total,
       description: `فاتورة بيع #${data.id}`,
       related_order_id: data.id,
       user_id: data.created_by,
@@ -129,7 +133,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
   };
 
   const deleteOrders = async (orderIds, isAiOrder = false) => {
-    const tableName = isAiOrder ? 'ai_orders' : 'orders';
+    const tableName = 'orders'; // استخدام جدول واحد فقط
     if (!isAiOrder && !hasPermission('delete_local_orders')) {
         toast({ title: "غير مصرح به", description: "ليس لديك صلاحية حذف الطلبات.", variant: "destructive" });
         return;
@@ -160,7 +164,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     );
 
     if (result.success) {
-      await supabase.from('ai_orders').delete().eq('id', orderId);
+      // إزالة من قائمة الطلبات الذكية (محلياً فقط)
       setAiOrders(prev => prev.filter(o => o.id !== orderId));
       toast({ title: "نجاح", description: "تمت الموافقة على الطلب الذكي وتحويله لطلب عادي." });
     } else {

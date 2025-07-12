@@ -115,27 +115,36 @@ export type Database = {
       delivery_partner_tokens: {
         Row: {
           created_at: string
+          expires_at: string | null
           id: string
           is_active: boolean
+          partner_data: Json | null
           partner_name: string
           token: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
+          partner_data?: Json | null
           partner_name: string
           token: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_active?: boolean
+          partner_data?: Json | null
           partner_name?: string
           token?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
