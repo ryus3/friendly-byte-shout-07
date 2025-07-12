@@ -53,30 +53,27 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         isSelected && "ring-2 ring-primary border-primary"
       )}
     >
-      <div className="flex items-start gap-3">
-        <Checkbox checked={isSelected} onCheckedChange={() => onSelect(product.id)} className="mt-1" />
-        <div className="flex-1 flex flex-col sm:flex-row items-start sm:items-center gap-3" onClick={() => onEdit(product)}>
-            <img src={product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-12 h-12 rounded-md object-cover flex-shrink-0" />
-            <div className="flex-1 flex flex-col gap-3 min-w-0">
-              {/* Product Info */}
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 flex-1 truncate">
-                  {product.is_featured && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
-                  <p className="font-semibold text-foreground truncate text-base">{product.name}</p>
-                </div>
-                <div className="flex items-center gap-4 flex-shrink-0 pl-2">
-                  <span className={cn("font-bold text-sm", getStockLevelClass())}>
-                    {totalStock.toLocaleString()} قطعة
-                  </span>
-                  <span className="font-bold text-primary text-sm">
-                    {price.toLocaleString()} د.ع
-                  </span>
-                </div>
-              </div>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Checkbox checked={isSelected} onCheckedChange={() => onSelect(product.id)} />
+          <img src={product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+          <div className="flex-1 min-w-0" onClick={() => onEdit(product)}>
+            <div className="flex items-center gap-2 mb-1">
+              {product.is_featured && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
+              <p className="font-semibold text-foreground truncate">{product.name}</p>
             </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className={cn("font-bold", getStockLevelClass())}>
+                {totalStock.toLocaleString()} قطعة
+              </span>
+              <span className="font-bold text-primary">
+                {price.toLocaleString()} د.ع
+              </span>
+            </div>
+          </div>
         </div>
-        {/* Actions and Switch */}
-        <div className="flex flex-col sm:flex-row items-end sm:items-center justify-between gap-4">
+        
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">مرئي</span>
             <TooltipProvider>
@@ -92,9 +89,7 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
               </Tooltip>
             </TooltipProvider>
           </div>
-          <div className="flex items-center justify-end gap-1">
-            <ManageProductActions product={product} onProductUpdate={onProductUpdate} />
-          </div>
+          <ManageProductActions product={product} onProductUpdate={onProductUpdate} />
         </div>
       </div>
     </motion.div>

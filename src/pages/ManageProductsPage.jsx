@@ -147,12 +147,12 @@ const ManageProductsPage = () => {
         />
 
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <Button variant="outline" onClick={() => navigate('/') } className="w-full sm:w-auto">
                 <ArrowRight className="h-4 w-4 ml-2" />
                 رجوع
             </Button>
-            <h1 className="text-3xl font-bold tracking-tight">إدارة المنتجات</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-center sm:text-right">إدارة المنتجات</h1>
         </div>
 
         <ManageProductsToolbar
@@ -198,7 +198,7 @@ const ManageProductsPage = () => {
               ))}
             </motion.div>
           ) : (
-            <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {filteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductCard
