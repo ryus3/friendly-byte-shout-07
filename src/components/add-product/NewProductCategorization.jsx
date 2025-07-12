@@ -83,7 +83,7 @@ const NewProductCategorization = ({ selectedCategories, setSelectedCategories })
   const { categories } = useVariants();
 
   const categoryTypes = [
-    { id: 'main_category', label: 'القسم الرئيسي' },
+    { id: 'main_category', label: 'التصنيف الرئيسي' },
     { id: 'product_type', label: 'نوع المنتج' },
     { id: 'season_occasion', label: 'الموسم/المناسبة' }
   ];

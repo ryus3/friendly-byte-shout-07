@@ -99,12 +99,12 @@ const CategoriesManager = () => {
   return (
     <Tabs defaultValue="main_category" dir="rtl">
       <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="main_category">القسم الرئيسي</TabsTrigger>
+        <TabsTrigger value="main_category">التصنيف الرئيسي</TabsTrigger>
         <TabsTrigger value="product_type">نوع المنتج</TabsTrigger>
         <TabsTrigger value="season_occasion">الموسم/المناسبة</TabsTrigger>
       </TabsList>
       <TabsContent value="main_category">
-        <CategoryList categoryType="main_category" title="الأقسام الرئيسية" />
+        <CategoryList categoryType="main_category" title="التصنيفات الرئيسية" />
       </TabsContent>
       <TabsContent value="product_type">
         <CategoryList categoryType="product_type" title="أنواع المنتجات" />

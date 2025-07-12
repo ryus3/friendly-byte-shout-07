@@ -168,7 +168,7 @@ const ManageVariantsPage = () => {
                           </div>
                           <div className="pt-2 border-t">
                             <p className="text-xs text-muted-foreground">
-                              تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('ar-SA')}
+                              تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('en-US')}
                             </p>
                           </div>
                         </div>
@@ -184,65 +184,6 @@ const ManageVariantsPage = () => {
                     <p className="text-sm text-muted-foreground">استخدم تبويب "الأقسام الرئيسية" لإضافة أقسام جديدة</p>
                   </div>
                 )}
-              </div>
-
-              {/* إحصائيات سريعة */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-200 dark:border-indigo-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
-                        <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">الأقسام الرئيسية</p>
-                        <p className="text-lg font-bold text-indigo-800 dark:text-indigo-200">{stats.departments.count} {stats.departments.status}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg">
-                        <Tags className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">التصنيفات</p>
-                        <p className="text-lg font-bold text-emerald-800 dark:text-emerald-200">{stats.categories.count} {stats.categories.status}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-r from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-pink-200 dark:border-pink-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-pink-100 dark:bg-pink-900/50 rounded-lg">
-                        <Palette className="h-5 w-5 text-pink-600 dark:text-pink-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-pink-600 dark:text-pink-400">الألوان</p>
-                        <p className="text-lg font-bold text-pink-800 dark:text-pink-200">{stats.colors.count} {stats.colors.status}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
-                        <Ruler className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400">القياسات</p>
-                        <p className="text-lg font-bold text-blue-800 dark:text-blue-200">{stats.sizes.count} {stats.sizes.status}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </div>
           </div>

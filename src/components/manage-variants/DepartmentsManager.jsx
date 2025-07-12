@@ -167,7 +167,7 @@ const DepartmentsManager = () => {
                   
                   <div className="pt-2 border-t">
                     <p className="text-xs text-muted-foreground">
-                      تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('ar-SA')}
+                      تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('en-US')}
                     </p>
                   </div>
                 </div>

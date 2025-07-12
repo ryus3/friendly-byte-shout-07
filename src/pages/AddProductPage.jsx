@@ -5,14 +5,15 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, PackagePlus, ArrowRight } from 'lucide-react';
+import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2 } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Loader from '@/components/ui/loader';
 import { Progress } from "@/components/ui/progress";
+import { supabase } from '@/lib/customSupabaseClient';
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
 import NewProductCategorization from '@/components/add-product/NewProductCategorization';
@@ -37,6 +38,7 @@ const AddProductPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const fromPurchases = location.state?.from;
+  const selectedDepartment = location.state?.selectedDepartment;
 
   const { addProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
@@ -46,7 +48,9 @@ const AddProductPage = () => {
   });
   const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
   const [selectedCategories, setSelectedCategories] = useState({
-    main_category: '', product_type: '', season_occasion: ''
+    main_category: selectedDepartment?.name || '', 
+    product_type: '', 
+    season_occasion: ''
   });
   const [selectedColors, setSelectedColors] = useState([]);
   const [sizeType, setSizeType] = useState('letter');
@@ -54,9 +58,27 @@ const AddProductPage = () => {
   const [colorImages, setColorImages] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [departments, setDepartments] = useState([]);
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
   const allSizesForType = useMemo(() => sizes.filter(s => s.type === sizeType), [sizes, sizeType]);
+
+  // جلب الأقسام
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const { data } = await supabase
+          .from('departments')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order');
+        setDepartments(data || []);
+      } catch (error) {
+        console.error('خطأ في جلب الأقسام:', error);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   useEffect(() => {
     const generateVariants = () => {
@@ -90,7 +112,6 @@ const AddProductPage = () => {
         generateVariants();
     }
   }, [selectedColors, allSizesForType, productInfo.price, productInfo.costPrice, settings]);
-
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -182,72 +203,145 @@ const AddProductPage = () => {
   return (
     <>
       <Helmet><title>إضافة منتج جديد - RYUS</title></Helmet>
-      <form onSubmit={handleSubmit} className="space-y-6 pb-20">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-             <Button type="button" variant="outline" onClick={() => navigate(fromPurchases || -1)}>
-                <ArrowRight className="h-4 w-4 ml-2" />
-                رجوع
-             </Button>
-             <h1 className="text-3xl font-bold tracking-tight">إضافة منتج جديد</h1>
+      
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
+        <div className="container mx-auto p-6 space-y-6">
+          
+          {/* Header قسم محسن */}
+          <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-blue-600/10" />
+            <div className="relative p-6">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                   <Button type="button" variant="outline" onClick={() => navigate(fromPurchases || '/add-product')}>
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                      رجوع
+                   </Button>
+                   <div>
+                     <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                       إضافة منتج جديد
+                     </h1>
+                     {selectedDepartment && (
+                       <div className="flex items-center gap-2 mt-2">
+                         <Building2 className="h-4 w-4 text-muted-foreground" />
+                         <span className="text-sm text-muted-foreground">
+                           القسم المحدد: <span className="font-semibold text-primary">{selectedDepartment.name}</span>
+                         </span>
+                       </div>
+                     )}
+                   </div>
+                </div>
+                <div className="flex items-center gap-4">
+                   {isUploading && <Progress value={uploadProgress} className="w-32" />}
+                   <Button 
+                     onClick={handleSubmit}
+                     disabled={isSubmitting || isUploading || !settings}
+                     className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                   >
+                      {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <PackagePlus className="w-4 h-4 ml-2" />}
+                      {isSubmitting || isUploading ? "جاري الحفظ..." : "حفظ المنتج"}
+                   </Button>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-4">
-             {isUploading && <Progress value={uploadProgress} className="w-32" />}
-             <Button type="submit" disabled={isSubmitting || isUploading || !settings}>
-                {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <PackagePlus className="w-4 h-4 ml-2" />}
-                {isSubmitting || isUploading ? "جاري الحفظ..." : "حفظ المنتج"}
-             </Button>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <ProductPrimaryInfo 
-              productInfo={productInfo} 
-              setProductInfo={setProductInfo}
-              generalImages={generalImages}
-              onImageSelect={handleGeneralImageSelect}
-              onImageRemove={handleGeneralImageRemove}
-            />
-            <NewProductCategorization selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories} />
-            <ProductVariantSelection 
-              selectedColors={selectedColors}
-              setSelectedColors={setSelectedColors}
-              sizeType={sizeType}
-              setSizeType={setSizeType}
-            />
-          </div>
+          {/* نموذج الإضافة */}
+          <form onSubmit={handleSubmit} className="space-y-6 pb-20">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <ProductPrimaryInfo 
+                  productInfo={productInfo} 
+                  setProductInfo={setProductInfo}
+                  generalImages={generalImages}
+                  onImageSelect={handleGeneralImageSelect}
+                  onImageRemove={handleGeneralImageRemove}
+                />
+                <NewProductCategorization 
+                  selectedCategories={selectedCategories} 
+                  setSelectedCategories={setSelectedCategories} 
+                />
+                <ProductVariantSelection 
+                  selectedColors={selectedColors}
+                  setSelectedColors={setSelectedColors}
+                  sizeType={sizeType}
+                  setSizeType={setSizeType}
+                />
+              </div>
+              
+              {/* معلومات إضافية في الشريط الجانبي */}
+              <div className="space-y-6">
+                {selectedDepartment && (
+                  <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-primary">
+                        <Sparkles className="h-5 w-5" />
+                        القسم المحدد
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg bg-gradient-to-r ${selectedDepartment.color}`}>
+                            <Building2 className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <p className="font-semibold">{selectedDepartment.name}</p>
+                            <p className="text-sm text-muted-foreground">{selectedDepartment.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {/* نصائح سريعة */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">نصائح سريعة</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2 text-sm text-muted-foreground">
+                    <p>• تأكد من إدخال سعر التكلفة لحساب الأرباح</p>
+                    <p>• اختر ألوان متعددة لزيادة خيارات العملاء</p>
+                    <p>• أضف صور عالية الجودة للمنتج</p>
+                    <p>• اختر التصنيفات المناسبة لتسهيل البحث</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            
+            {variants.length > 0 && (
+              <Card>
+                <CardHeader><CardTitle>إدارة المتغيرات النهائية</CardTitle></CardHeader>
+                <CardContent>
+                  <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                    <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-4">
+                        {selectedColors.map((color) => (
+                          <SortableColorCard
+                            key={color.id}
+                            id={color.id}
+                            color={color}
+                            allSizesForType={allSizesForType}
+                            variants={variants}
+                            setVariants={setVariants}
+                            price={productInfo.price}
+                            costPrice={productInfo.costPrice}
+                            handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
+                            handleImageRemove={() => handleColorImageRemove(color.id)}
+                            initialImage={colorImages[color.id] || null}
+                          />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </CardContent>
+              </Card>
+            )}
+          </form>
+          
         </div>
-        
-        {variants.length > 0 && (
-          <Card>
-            <CardHeader><CardTitle>إدارة المتغيرات النهائية</CardTitle></CardHeader>
-            <CardContent>
-              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-4">
-                    {selectedColors.map((color) => (
-                      <SortableColorCard
-                        key={color.id}
-                        id={color.id}
-                        color={color}
-                        allSizesForType={allSizesForType}
-                        variants={variants}
-                        setVariants={setVariants}
-                        price={productInfo.price}
-                        costPrice={productInfo.costPrice}
-                        handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
-                        handleImageRemove={() => handleColorImageRemove(color.id)}
-                        initialImage={colorImages[color.id] || null}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-            </CardContent>
-          </Card>
-        )}
-      </form>
+      </div>
     </>
   );
 };
