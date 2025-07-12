@@ -215,7 +215,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           if (!isWaseetLoggedIn || !waseetToken) throw new Error("يجب تسجيل الدخول لشركة التوصيل أولاً.");
           
           const alWaseetPayload = {
-             client_name: formData.name, 
+             client_name: formData.name.trim() || `زبون-${Date.now().toString().slice(-6)}`, 
              client_mobile: formatPhoneNumber(formData.phone), 
              client_mobile2: formData.second_phone ? formatPhoneNumber(formData.second_phone) : '',
              city_id: formData.city_id, 
@@ -241,9 +241,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
       const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
       const customerInfoPayload = {
-        name: formData.name, phone: formData.phone,
+        name: formData.name.trim() || `زبون-${Date.now().toString().slice(-6)}`, 
+        phone: formData.phone,
         address: `${formData.address}, ${region}, ${city}`,
-        city: city, notes: formData.notes,
+        city: city, 
+        notes: formData.notes,
       };
       
       const result = await createOrder(customerInfoPayload, cart, String(trackingNumber), discount, orderStatus, qrLink, deliveryPartnerData);

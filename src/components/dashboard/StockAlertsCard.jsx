@@ -122,22 +122,22 @@ const StockAlertsCard = () => {
               const isWarning = stockLevel.style === 'warning';
               
               return (
-                <motion.div
-                  key={variant.id} 
-                  className={cn(
-                    "group relative p-3.5 border-b border-border/20 cursor-pointer transition-all duration-300",
-                    "hover:bg-gradient-to-r hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.01] hover:-translate-y-0.5",
-                    isCritical && "bg-gradient-to-r from-red-500/8 to-red-600/8 hover:from-red-500/12 hover:to-red-600/12 border-red-300/30",
-                    isWarning && "bg-gradient-to-r from-amber-500/8 to-amber-600/8 hover:from-amber-500/12 hover:to-amber-600/12 border-amber-300/30", 
-                    !isCritical && !isWarning && "bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10",
-                    stockLevel.pulse && "animate-pulse"
-                  )}
-                  onClick={() => handleLowStockProductClick(variant)}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ scale: 1.005 }}
-                >
+                 <motion.div
+                   key={variant.id} 
+                   className={cn(
+                     "group relative p-3.5 border-b border-border/20 cursor-pointer transition-all duration-300",
+                     "hover:bg-gradient-to-r hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.01] hover:-translate-y-0.5",
+                     isCritical && "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 hover:from-red-100 hover:to-red-200 dark:hover:from-red-900/30 dark:hover:to-red-800/30 border-red-200 dark:border-red-800",
+                     isWarning && "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-900/30 dark:hover:to-amber-800/30 border-amber-200 dark:border-amber-800", 
+                     !isCritical && !isWarning && "bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10",
+                     stockLevel.pulse && "animate-pulse"
+                   )}
+                   onClick={() => handleLowStockProductClick(variant)}
+                   initial={{ opacity: 0, x: -10 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   transition={{ delay: index * 0.05 }}
+                   whileHover={{ scale: 1.005 }}
+                 >
                   <div className="flex items-center gap-3">
                     {/* Product Image & Icon */}
                     <div className="relative flex-shrink-0">
@@ -165,15 +165,17 @@ const StockAlertsCard = () => {
                           {variant.productName}
                         </h4>
                         <div className="text-right flex-shrink-0">
-                          <div className={cn(
-                            "text-lg font-bold",
-                            isCritical && "text-red-600",
-                            isWarning && "text-amber-600",
-                            !isCritical && !isWarning && "text-foreground"
-                          )}>
-                            {variant.quantity}
+                          <div className="flex items-center gap-1">
+                            <div className={cn(
+                              "text-lg font-bold min-w-8 text-center px-2 py-1 rounded-full text-white text-xs",
+                              isCritical && "bg-red-500 shadow-lg shadow-red-500/30",
+                              isWarning && "bg-amber-500 shadow-lg shadow-amber-500/30",
+                              !isCritical && !isWarning && "bg-primary shadow-lg shadow-primary/30"
+                            )}>
+                              {variant.quantity}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">قطعة</div>
+                          <div className="text-xs text-muted-foreground mt-1">قطعة</div>
                         </div>
                       </div>
                       
@@ -183,10 +185,10 @@ const StockAlertsCard = () => {
                             {variant.size} • {variant.color}
                           </span>
                           <span className={cn(
-                            "text-xs px-1.5 py-0.5 rounded font-medium backdrop-blur-sm",
-                            isCritical && "bg-red-500/10 text-red-700 border border-red-300/50",
-                            isWarning && "bg-amber-500/10 text-amber-700 border border-amber-300/50",
-                            !isCritical && !isWarning && "bg-primary/10 text-primary border border-primary/30"
+                            "text-xs px-2 py-1 rounded-full font-medium backdrop-blur-sm text-white",
+                            isCritical && "bg-red-500 shadow-md shadow-red-500/40",
+                            isWarning && "bg-amber-500 shadow-md shadow-amber-500/40",
+                            !isCritical && !isWarning && "bg-primary shadow-md shadow-primary/40"
                           )}>
                             {stockLevel.level}
                           </span>

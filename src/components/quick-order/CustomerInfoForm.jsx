@@ -15,7 +15,15 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
       <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-2">
           <Label htmlFor="name">اسم الزبون</Label>
-          <Input id="name" name="name" value={formData.name} onChange={handleChange} required disabled={isSubmittingState} />
+          <Input 
+            id="name" 
+            name="name" 
+            value={formData.name} 
+            onChange={handleChange} 
+            placeholder="ادخل اسم الزبون أو اتركه فارغاً للاسم الافتراضي"
+            required 
+            disabled={isSubmittingState} 
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="phone">رقم الهاتف الاساسي</Label>

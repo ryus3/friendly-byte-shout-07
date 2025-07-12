@@ -54,12 +54,18 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, s
                     <ItemIcon className="w-5 h-5" />
                   </div>
                 )}
-                <div>
-                  <p className="font-semibold text-foreground">{item.label}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {sortByPhone ? `${item.value} طلب` : item.value}
-                  </p>
-                </div>
+                 <div>
+                   <p className="font-semibold text-foreground">{item.label}</p>
+                   <p className="text-sm text-muted-foreground">
+                     {sortByPhone ? (
+                       <>
+                         <span className="font-medium text-primary">{item.phone}</span>
+                         <span className="mx-1">•</span>
+                         <span>{item.value} طلب</span>
+                       </>
+                     ) : item.value}
+                   </p>
+                 </div>
               </div>
             </motion.div>
           )) : (

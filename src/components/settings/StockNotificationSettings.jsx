@@ -1,0 +1,311 @@
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { toast } from '@/components/ui/use-toast';
+import { 
+  PackageX, Volume2, VolumeX, Clock, AlertTriangle, 
+  CheckCircle, BellOff, Settings, RefreshCw 
+} from 'lucide-react';
+
+const StockNotificationSettings = ({ open, onOpenChange }) => {
+  const [settings, setSettings] = useLocalStorage('stockNotificationSettings', {
+    enableLowStockNotifications: true,
+    enableOutOfStockNotifications: true,
+    notificationFrequency: 1, // hours
+    criticalThreshold: 2,
+    enableSounds: true,
+    autoSilenceAfterRead: false,
+    permanentlySilencedProducts: []
+  });
+
+  const handleSettingChange = (key, value) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const silenceProductNotifications = (productSku) => {
+    const silencedProducts = [...settings.permanentlySilencedProducts];
+    if (!silencedProducts.includes(productSku)) {
+      silencedProducts.push(productSku);
+      setSettings(prev => ({ 
+        ...prev, 
+        permanentlySilencedProducts: silencedProducts 
+      }));
+      
+      // حذف الإشعارات الحالية لهذا المنتج
+      const notificationKeys = Object.keys(localStorage).filter(key => 
+        key.includes('low_stock_') && key.includes(productSku)
+      );
+      notificationKeys.forEach(key => localStorage.removeItem(key));
+      
+      toast({
+        title: "تم إسكات التنبيهات",
+        description: `تم إسكات تنبيهات المخزون نهائياً لهذا المنتج`,
+        duration: 3000
+      });
+    }
+  };
+
+  const unsilenceProductNotifications = (productSku) => {
+    const silencedProducts = settings.permanentlySilencedProducts.filter(
+      sku => sku !== productSku
+    );
+    setSettings(prev => ({ 
+      ...prev, 
+      permanentlySilencedProducts: silencedProducts 
+    }));
+    
+    toast({
+      title: "تم إلغاء الإسكات",
+      description: `تم تفعيل تنبيهات المخزون مرة أخرى`,
+      duration: 3000
+    });
+  };
+
+  const clearAllSilencedProducts = () => {
+    setSettings(prev => ({ 
+      ...prev, 
+      permanentlySilencedProducts: [] 
+    }));
+    
+    toast({
+      title: "تم إلغاء جميع الإسكاتات",
+      description: "تم تفعيل تنبيهات المخزون لجميع المنتجات",
+      duration: 3000
+    });
+  };
+
+  const resetNotificationHistory = () => {
+    // حذف تاريخ الإشعارات المرسلة من localStorage
+    const notificationKeys = Object.keys(localStorage).filter(key => 
+      key.includes('low_stock_') || key.includes('out_of_stock_')
+    );
+    notificationKeys.forEach(key => localStorage.removeItem(key));
+    
+    toast({
+      title: "تم إعادة تعيين التاريخ",
+      description: "سيتم إرسال تنبيهات جديدة للمنتجات المنخفضة",
+      duration: 3000
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PackageX className="w-5 h-5 text-primary" />
+            إعدادات تنبيهات المخزون
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* General Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                الإعدادات العامة
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-medium">تفعيل تنبيهات المخزون المنخفض</Label>
+                  <p className="text-xs text-muted-foreground">
+                    إرسال إشعار عندما ينخفض مخزون المنتج
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.enableLowStockNotifications}
+                  onCheckedChange={(checked) => 
+                    handleSettingChange('enableLowStockNotifications', checked)
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-medium">تفعيل تنبيهات نفاد المخزون</Label>
+                  <p className="text-xs text-muted-foreground">
+                    إرسال إشعار عندما ينفد المخزون تماماً (0 قطعة)
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.enableOutOfStockNotifications}
+                  onCheckedChange={(checked) => 
+                    handleSettingChange('enableOutOfStockNotifications', checked)
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-medium">أصوات التنبيهات</Label>
+                  <p className="text-xs text-muted-foreground">
+                    تشغيل أصوات عند ظهور تنبيهات المخزون
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.enableSounds}
+                  onCheckedChange={(checked) => 
+                    handleSettingChange('enableSounds', checked)
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="font-medium">إسكات تلقائي بعد القراءة</Label>
+                  <p className="text-xs text-muted-foreground">
+                    عدم إرسال نفس التنبيه بعد قراءته
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.autoSilenceAfterRead}
+                  onCheckedChange={(checked) => 
+                    handleSettingChange('autoSilenceAfterRead', checked)
+                  }
+                />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="font-medium">فترة إعادة الإرسال (بالساعات)</Label>
+                <p className="text-xs text-muted-foreground">
+                  الفترة الزمنية بين إرسال نفس التنبيه
+                </p>
+                <Input
+                  type="number"
+                  min="1"
+                  max="24"
+                  value={settings.notificationFrequency}
+                  onChange={(e) => 
+                    handleSettingChange('notificationFrequency', parseInt(e.target.value) || 1)
+                  }
+                  className="max-w-32"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-medium">حد التنبيه الحرج</Label>
+                <p className="text-xs text-muted-foreground">
+                  عدد القطع التي تعتبر حرجة (إشعار أحمر)
+                </p>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={settings.criticalThreshold}
+                  onChange={(e) => 
+                    handleSettingChange('criticalThreshold', parseInt(e.target.value) || 2)
+                  }
+                  className="max-w-32"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Silenced Products */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <BellOff className="w-4 h-4" />
+                  المنتجات المسكتة نهائياً
+                </div>
+                <Badge variant="secondary">
+                  {settings.permanentlySilencedProducts.length} منتج
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {settings.permanentlySilencedProducts.length > 0 ? (
+                <div className="space-y-3">
+                  {settings.permanentlySilencedProducts.map((sku, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <BellOff className="w-4 h-4 text-muted-foreground" />
+                        <span className="font-mono text-sm">{sku}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => unsilenceProductNotifications(sku)}
+                        className="text-primary hover:text-primary"
+                      >
+                        إلغاء الإسكات
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearAllSilencedProducts}
+                    className="w-full"
+                  >
+                    إلغاء إسكات جميع المنتجات
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <BellOff className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>لا توجد منتجات مسكتة</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Management Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" />
+                إعادة تعيين
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                onClick={resetNotificationHistory}
+                className="w-full justify-start"
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                إعادة تعيين تاريخ الإشعارات
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                سيؤدي هذا إلى إرسال تنبيهات جديدة للمنتجات المنخفضة حتى لو تم إرسال تنبيه سابقاً
+              </p>
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={() => {
+              toast({
+                title: "تم الحفظ",
+                description: "تم حفظ إعدادات تنبيهات المخزون بنجاح"
+              });
+              onOpenChange(false);
+            }}>
+              <CheckCircle className="w-4 h-4 mr-2" />
+              حفظ الإعدادات
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default StockNotificationSettings;
