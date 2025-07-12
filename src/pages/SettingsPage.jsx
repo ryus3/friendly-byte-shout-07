@@ -14,14 +14,15 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight
+  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
-
+import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
+import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
@@ -121,7 +122,8 @@ const SettingsPage = () => {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
   const [isCustomerSettingsOpen, setIsCustomerSettingsOpen] = useState(false);
-  
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [isStockNotificationOpen, setIsStockNotificationOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   
@@ -611,6 +613,45 @@ const SettingsPage = () => {
             </>
           )}
 
+          {/* Notifications Settings Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <ModernCard
+              icon={Bell}
+              title="إعدادات الإشعارات"
+              description="تخصيص إشعارات النظام والتنبيهات"
+              iconColor="from-orange-500 to-orange-600"
+              onClick={() => setIsNotificationSettingsOpen(true)}
+            >
+              <div className="space-y-3">
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">الإشعارات العامة</p>
+                  <p className="text-xs text-orange-500 opacity-70">مفعلة</p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  إدارة إشعارات الطلبات والمخزون والنظام
+                </div>
+              </div>
+            </ModernCard>
+
+            <ModernCard
+              icon={PackageX}
+              title="تنبيهات المخزون"
+              description="إدارة تنبيهات المخزون المنخفض والنافد"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsStockNotificationOpen(true)}
+            >
+              <div className="space-y-3">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <p className="text-sm font-medium text-red-600 dark:text-red-400">تنبيهات ذكية</p>
+                  <p className="text-xs text-red-500 opacity-70">المخزون المنخفض والنافد</p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  تخصيص عتبات التنبيه وأصوات الإشعارات
+                </div>
+              </div>
+            </ModernCard>
+          </div>
+
           {/* Management Tools */}
           <SectionHeader 
             icon={Shield} 
@@ -728,6 +769,16 @@ const SettingsPage = () => {
       <DeliveryPartnerDialog
         open={isLoginDialogOpen}
         onOpenChange={setIsLoginDialogOpen}
+      />
+      
+      <NotificationSettingsDialog
+        open={isNotificationSettingsOpen}
+        onOpenChange={setIsNotificationSettingsOpen}
+      />
+      
+      <StockNotificationSettings
+        open={isStockNotificationOpen}
+        onOpenChange={setIsStockNotificationOpen}
       />
     </>
   );

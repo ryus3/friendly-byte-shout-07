@@ -50,14 +50,12 @@ const ManageProductsToolbar = ({
             <Button variant="outline" size="icon" onClick={onBarcodeSearch} className="flex-shrink-0" title="بحث بالباركود">
               <QrCode className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onViewModeChange('list')} className={cn("w-full", viewMode === 'list' && 'bg-accent')}>
-              <List className="w-4 h-4 ml-2" />
-              قائمة
+            <Button variant="outline" size="icon" onClick={() => onViewModeChange('list')} className={cn("flex-shrink-0", viewMode === 'list' && 'bg-accent')} title="عرض قائمة">
+              <List className="w-4 h-4" />
             </Button>
             {!isMobile && (
-              <Button variant="outline" size="sm" onClick={() => onViewModeChange('grid')} className={cn("w-full", viewMode === 'grid' && 'bg-accent')}>
-                <LayoutGrid className="w-4 h-4 ml-2" />
-                شبكة
+              <Button variant="outline" size="icon" onClick={() => onViewModeChange('grid')} className={cn("flex-shrink-0", viewMode === 'grid' && 'bg-accent')} title="عرض شبكة">
+                <LayoutGrid className="w-4 h-4" />
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={onManageCategories} className="w-full col-span-1">
