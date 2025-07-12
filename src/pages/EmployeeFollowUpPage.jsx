@@ -152,8 +152,8 @@ const EmployeeFollowUpPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
-                <SelectItem value="pending">قيد الانتظار</SelectItem>
-                <SelectItem value="processing">قيد التجهيز</SelectItem>
+                <SelectItem value="pending">قيد التجهيز</SelectItem>
+                <SelectItem value="processing">قيد التسليم</SelectItem>
                 <SelectItem value="shipped">تم الشحن</SelectItem>
                 <SelectItem value="delivered">تم التسليم</SelectItem>
                 <SelectItem value="returned">راجع</SelectItem>

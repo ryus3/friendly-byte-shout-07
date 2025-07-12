@@ -30,7 +30,7 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
   };
 
   const statusVariants = {
-    pending: { label: 'قيد الانتظار', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
+    pending: { label: 'قيد التجهيز', color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' },
     processing: { label: 'قيد التجهيز', color: 'bg-blue-500/10 text-blue-500 border-blue-500/20' },
     shipped: { label: 'تم الشحن', color: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20' },
     delivered: { label: 'تم التوصيل', color: 'bg-green-500/10 text-green-500 border-green-500/20' },

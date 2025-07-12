@@ -49,7 +49,7 @@ const ManageProductsToolbar = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
             <Button variant="outline" size="sm" onClick={onBarcodeSearch} className="w-full">
               <QrCode className="w-4 h-4 ml-2" />
-              مسح
+              بحث بالباركود
             </Button>
             <Button variant="outline" size="sm" onClick={() => onViewModeChange('list')} className={cn("w-full", viewMode === 'list' && 'bg-accent')}>
               <List className="w-4 h-4 ml-2" />
@@ -62,11 +62,11 @@ const ManageProductsToolbar = ({
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={onManageCategories} className="w-full col-span-1">
-              متغيرات
+              إدارة المتغيرات
             </Button>
             <Button size="sm" onClick={onAddProduct} className="w-full col-span-2 sm:col-span-1">
               <Plus className="w-4 h-4 ml-2" />
-              إضافة
+              إضافة منتج
             </Button>
           </div>
         </div>

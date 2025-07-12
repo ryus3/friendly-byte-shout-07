@@ -10,8 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const getStatusInfo = (status) => {
   switch (status) {
-    case 'pending': return { badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: <Clock className="w-4 h-4" />, text: 'قيد الانتظار' };
-    case 'processing': return { badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: <Clock className="w-4 h-4" />, text: 'قيد الانتظار' };
+    case 'pending': return { badge: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
+    case 'processing': return { badge: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: <Clock className="w-4 h-4" />, text: 'قيد التسليم' };
     case 'shipped': return { badge: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
     case 'delivered': return { badge: 'bg-green-500/20 text-green-400 border-green-500/30', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
     case 'cancelled': return { badge: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
@@ -22,7 +22,7 @@ const getStatusInfo = (status) => {
 };
 
 const statusOptions = [
-  { value: 'pending', label: 'قيد الانتظار' },
+  { value: 'pending', label: 'قيد التجهيز' },
   { value: 'shipped', label: 'تم الشحن' },
   { value: 'delivered', label: 'تم التسليم' },
   { value: 'cancelled', label: 'ملغي' },

@@ -43,7 +43,7 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Archive />
-            الطلبات قيد الانتظار
+            الطلبات قيد التجهيز
           </DialogTitle>
           <DialogDescription>
             قائمة بالطلبات التي حجزت كميات من المخزون وهي بانتظار المعالجة.
@@ -81,7 +81,7 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                       </p>
                     </div>
                     <Badge variant='secondary'>
-                      قيد الانتظار
+                      قيد التجهيز
                     </Badge>
                   </div>
                   <div className="border-t pt-3">
