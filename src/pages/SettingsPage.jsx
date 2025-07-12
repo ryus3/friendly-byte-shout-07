@@ -479,11 +479,39 @@ const SettingsPage = () => {
           {/* Management Section */}
           <SectionHeader 
             icon={Shield} 
-            title="الإدارة والأمان"
-            description="إدارة الموظفين والأمان والتحكم في النظام"
+            title="الإدارة والتحكم"
+            description="إدارة الموظفين والإشعارات والخدمات الذكية"
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <ModernCard
+              icon={Truck}
+              title="شركة التوصيل"
+              description={
+                isWaseetLoggedIn 
+                  ? `متصل كـ ${waseetUser?.name || 'مستخدم'}`
+                  : "ربط مع شركات التوصيل"
+              }
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsLoginDialogOpen(true)}
+              badge={
+                isWaseetLoggedIn ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-green-600 font-medium">متصل</span>
+                  </div>
+                ) : null
+              }
+            />
+
+            <ModernCard
+              icon={MessageCircle}
+              title="بوت التليغرام"
+              description="ربط النظام مع بوت التليغرام للإشعارات"
+              iconColor="from-blue-500 to-blue-600"
+              onClick={handleCopyToken}
+            />
+
             <ModernCard
               icon={Users}
               title="إدارة الموظفين"
@@ -502,14 +530,14 @@ const SettingsPage = () => {
             />
           </div>
 
-          {/* Tools Section */}
+          {/* Tools and Security Section */}
           <SectionHeader 
             icon={SettingsIcon} 
-            title="الأدوات والخدمات"
-            description="أدوات مساعدة وخدمات النظام"
+            title="أدوات النظام والأمان"
+            description="أدوات مساعدة وإعدادات الأمان المتقدمة"
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ModernCard
               icon={FileText}
               title="التقارير"
@@ -527,83 +555,38 @@ const SettingsPage = () => {
             />
 
             <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام"
-              description="ربط النظام مع بوت التليغرام للإشعارات"
-              iconColor="from-blue-500 to-blue-600"
-              onClick={handleCopyToken}
-            >
-              <div className="space-y-3">
-                <div className="p-3 bg-secondary/50 rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-2">رمز ربط البوت:</p>
-                  <code className="text-xs font-mono bg-background px-2 py-1 rounded border">
-                    BOT_{user?.id}_****
-                  </code>
-                </div>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Copy className="w-4 h-4 mr-2" />
-                  نسخ رمز البوت
-                </Button>
-              </div>
-            </ModernCard>
+              icon={Shield}
+              title="الأمان المتقدم"
+              description="إعدادات الأمان وحماية البيانات"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsSecurityOpen(true)}
+            />
           </div>
 
-          {/* Integration Section */}
+          {/* Integration and Data Section */}
           {hasPermission('manage_integrations') && (
             <>
               <SectionHeader 
                 icon={Database} 
-                title="التكامل والربط"
-                description="ربط النظام مع الخدمات الخارجية"
+                title="التكامل وإدارة البيانات"
+                description="استيراد وتصدير البيانات والتكامل مع الأنظمة الخارجية"
               />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ModernCard
-                  icon={Truck}
-                  title="شركة التوصيل"
-                  description={
-                    isWaseetLoggedIn 
-                      ? `متصل كـ ${waseetUser?.name || 'مستخدم'} - الرقم: ${waseetUser?.phone || 'غير محدد'}`
-                      : "ربط مع شركات التوصيل الخارجية"
-                  }
-                  iconColor="from-red-500 to-red-600"
-                  onClick={() => setIsLoginDialogOpen(true)}
-                  badge={
-                    isWaseetLoggedIn ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        <span className="text-xs text-green-600 font-medium">متصل</span>
-                      </div>
-                    ) : null
-                  }
-                >
-                  {isWaseetLoggedIn && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <span className="text-sm font-medium text-green-700 dark:text-green-300">حالة الاتصال</span>
-                        <span className="text-xs bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 px-2 py-1 rounded">نشط</span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          logoutWaseet();
-                        }}
-                        className="w-full"
-                      >
-                        قطع الاتصال
-                      </Button>
-                    </div>
-                  )}
-                </ModernCard>
-
                 <ModernCard
                   icon={Upload}
                   title="استيراد البيانات"
                   description="استيراد البيانات من ملفات خارجية"
                   iconColor="from-indigo-500 to-indigo-600"
                   onClick={handleImportData}
+                />
+
+                <ModernCard
+                  icon={Download}
+                  title="تصدير البيانات"
+                  description="تصدير البيانات إلى ملفات Excel"
+                  iconColor="from-green-500 to-green-600"
+                  onClick={handleExportData}
                 />
               </div>
             </>

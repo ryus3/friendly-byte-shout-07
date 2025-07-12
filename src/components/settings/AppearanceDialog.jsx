@@ -239,31 +239,33 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
 
   const playNotificationSound = (volume = notificationVolume) => {
     try {
+      // iPhone-style professional notification sound
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator1 = audioContext.createOscillator();
-      const oscillator2 = audioContext.createOscillator();
+      const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       
-      // صوت أنيق مثل iPhone
-      oscillator1.connect(gainNode);
-      oscillator2.connect(gainNode);
+      oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      // نغمات متناغمة
-      oscillator1.frequency.setValueAtTime(659.25, audioContext.currentTime); // E5
-      oscillator1.frequency.setValueAtTime(523.25, audioContext.currentTime + 0.15); // C5
+      // Professional notification sound (like iPhone default)
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(1000, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.1);
+      oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.2);
       
-      oscillator2.frequency.setValueAtTime(523.25, audioContext.currentTime + 0.1); // C5
-      oscillator2.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.25); // E5
-      
-      gainNode.gain.setValueAtTime(volume * 0.3, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(volume * 0.4, audioContext.currentTime + 0.01);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
       
-      oscillator1.start(audioContext.currentTime);
-      oscillator1.stop(audioContext.currentTime + 0.2);
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.4);
       
-      oscillator2.start(audioContext.currentTime + 0.1);
-      oscillator2.stop(audioContext.currentTime + 0.35);
+      toast({
+        title: "تم تشغيل الصوت",
+        description: "صوت إشعار احترافي مثل iPhone",
+        variant: "success",
+        duration: 1500
+      });
     } catch (error) {
       console.log('تعذر تشغيل الصوت:', error);
     }
