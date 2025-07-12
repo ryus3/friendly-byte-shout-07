@@ -5,10 +5,11 @@ import Loader from '@/components/ui/loader';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus, Trash2, Pencil } from 'lucide-react';
+import { GripVertical, Plus, Trash2, Pencil, Star, Hash, Type } from 'lucide-react';
 import AddEditSizeDialog from './AddEditSizeDialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 const SortableSizeItem = ({ item, onEdit, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
@@ -17,23 +18,49 @@ const SortableSizeItem = ({ item, onEdit, onDelete }) => {
     transition,
   };
 
+  const getSizeIcon = (type) => {
+    switch (type) {
+      case 'free': return <Star className="w-4 h-4 text-amber-500" />;
+      case 'number': return <Hash className="w-4 h-4 text-blue-500" />;
+      default: return <Type className="w-4 h-4 text-green-500" />;
+    }
+  };
+
+  const getSizeTypeLabel = (type) => {
+    switch (type) {
+      case 'free': return 'حر';
+      case 'number': return 'رقمي';
+      default: return 'حرفي';
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
-      className="flex items-center gap-4 p-2 mb-2 border rounded-md bg-card"
+      className="flex items-center gap-3 p-3 mb-2 border rounded-lg bg-card hover:bg-accent/50 transition-colors"
     >
-      <div {...listeners} className="cursor-grab p-1">
+      <div {...listeners} className="cursor-grab p-1 hover:bg-accent rounded">
         <GripVertical className="w-5 h-5 text-muted-foreground" />
       </div>
-      <span className="font-medium w-16 text-center">{item.value}</span>
-      <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
-        <Pencil className="w-4 h-4" />
-      </Button>
-      <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)}>
-        <Trash2 className="w-4 h-4 text-destructive" />
-      </Button>
+      
+      <div className="flex items-center gap-2 flex-1">
+        {getSizeIcon(item.type)}
+        <span className="font-medium text-lg">{item.name}</span>
+        <Badge variant="outline" className="text-xs">
+          {getSizeTypeLabel(item.type)}
+        </Badge>
+      </div>
+
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="icon" onClick={() => onEdit(item)} className="h-8 w-8">
+          <Pencil className="w-4 h-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => onDelete(item.id)} className="h-8 w-8 text-destructive hover:text-destructive">
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
     </div>
   );
 };
@@ -44,7 +71,7 @@ const SizeList = React.memo(({ sizeType }) => {
   const [editingSize, setEditingSize] = useState(null);
 
   const filteredSizes = useMemo(() =>
-    sizes.filter(s => s.type === sizeType).sort((a, b) => a.order - b.order),
+    sizes.filter(s => s.type === sizeType).sort((a, b) => (a.display_order || 0) - (b.display_order || 0)),
     [sizes, sizeType]
   );
 
@@ -116,16 +143,62 @@ const SizesManager = () => {
           إضافة قياسات جديدة
         </Button>
       </div>
-      <Tabs defaultValue="letter" dir="rtl">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="letter">قياسات حرفية (S, M, L)</TabsTrigger>
-          <TabsTrigger value="number">قياسات رقمية (38, 40, 42)</TabsTrigger>
+      <Tabs defaultValue="free" dir="rtl">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="free" className="flex items-center gap-2">
+            <Star className="w-4 h-4" />
+            مقاس حر
+          </TabsTrigger>
+          <TabsTrigger value="letter" className="flex items-center gap-2">
+            <Type className="w-4 h-4" />
+            قياسات حرفية
+          </TabsTrigger>
+          <TabsTrigger value="number" className="flex items-center gap-2">
+            <Hash className="w-4 h-4" />
+            قياسات رقمية
+          </TabsTrigger>
         </TabsList>
+        <TabsContent value="free">
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Star className="w-5 h-5 text-amber-600" />
+                <h3 className="font-semibold text-amber-800">المقاس الحر (Free Size)</h3>
+              </div>
+              <p className="text-sm text-amber-700">
+                يستخدم للمنتجات التي لا تتطلب مقاس محدد مثل الإكسسوارات والأحزمة والقبعات
+              </p>
+            </div>
+            <SizeList sizeType="free" />
+          </div>
+        </TabsContent>
         <TabsContent value="letter">
-          <SizeList sizeType="letter" />
+          <div className="space-y-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Type className="w-5 h-5 text-green-600" />
+                <h3 className="font-semibold text-green-800">القياسات الحرفية</h3>
+              </div>
+              <p className="text-sm text-green-700">
+                تستخدم للملابس والأحذية: XS, S, M, L, XL, XXL
+              </p>
+            </div>
+            <SizeList sizeType="letter" />
+          </div>
         </TabsContent>
         <TabsContent value="number">
-          <SizeList sizeType="number" />
+          <div className="space-y-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Hash className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-blue-800">القياسات الرقمية</h3>
+              </div>
+              <p className="text-sm text-blue-700">
+                تستخدم للأحذية والملابس بمقاسات رقمية: 36, 38, 40, 42, 44
+              </p>
+            </div>
+            <SizeList sizeType="number" />
+          </div>
         </TabsContent>
       </Tabs>
       <AddEditSizeDialog

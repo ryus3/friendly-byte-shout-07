@@ -112,6 +112,33 @@ export type Database = {
           },
         ]
       }
+      delivery_partner_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          partner_name: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          partner_name: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          partner_name?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           created_at: string
@@ -700,23 +727,56 @@ export type Database = {
           },
         ]
       }
+      settings: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       sizes: {
         Row: {
           created_at: string
+          display_order: number | null
           id: string
           name: string
+          type: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          display_order?: number | null
           id?: string
           name: string
+          type?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          display_order?: number | null
           id?: string
           name?: string
+          type?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Star, Type, Hash } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
@@ -99,14 +99,27 @@ const AddEditSizeDialog = ({ open, onOpenChange, size: initialSize, onSuccessful
             <div className="p-4 border rounded-lg space-y-4">
                 <div>
                     <Label>نوع القياس</Label>
-                    <RadioGroup value={currentType} onValueChange={(value) => setCurrentType(value)} className="flex gap-4 mt-2" disabled={!!initialSize}>
+                    <RadioGroup value={currentType} onValueChange={(value) => setCurrentType(value)} className="grid grid-cols-3 gap-4 mt-2" disabled={!!initialSize}>
+                        <div className="flex items-center space-x-2 space-x-reverse">
+                            <RadioGroupItem value="free" id="r-free" />
+                            <Label htmlFor="r-free" className="flex items-center gap-2">
+                              <Star className="w-4 h-4 text-amber-500" />
+                              مقاس حر
+                            </Label>
+                        </div>
                         <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="letter" id="r-letter" />
-                            <Label htmlFor="r-letter">حرفي (S, M, XL)</Label>
+                            <Label htmlFor="r-letter" className="flex items-center gap-2">
+                              <Type className="w-4 h-4 text-green-500" />
+                              حرفي (S, M, XL)
+                            </Label>
                         </div>
                         <div className="flex items-center space-x-2 space-x-reverse">
                             <RadioGroupItem value="number" id="r-number" />
-                            <Label htmlFor="r-number">رقمي (38, 40, 42)</Label>
+                            <Label htmlFor="r-number" className="flex items-center gap-2">
+                              <Hash className="w-4 h-4 text-blue-500" />
+                              رقمي (38, 40, 42)
+                            </Label>
                         </div>
                     </RadioGroup>
                 </div>
@@ -117,7 +130,7 @@ const AddEditSizeDialog = ({ open, onOpenChange, size: initialSize, onSuccessful
                     id="value"
                     value={initialSize ? (sizes[0]?.value || '') : currentValue}
                     onChange={(e) => initialSize ? setSizes([{...sizes[0], value: e.target.value}]) : setCurrentValue(e.target.value)}
-                    placeholder={currentType === 'letter' ? "مثال: XL" : "مثال: 42"}
+                    placeholder={currentType === 'free' ? "مثال: Free Size" : currentType === 'letter' ? "مثال: XL" : "مثال: 42"}
                   />
                 </div>
               </div>
