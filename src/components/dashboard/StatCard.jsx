@@ -38,7 +38,7 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
   
   let formattedValue;
   if (format === 'currency') {
-      formattedValue = displayValue.toLocaleString();
+      formattedValue = `${displayValue.toLocaleString()} د.ع`;
   } else if (format === 'number') {
       formattedValue = displayValue.toLocaleString();
   } else {
@@ -119,15 +119,8 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
                 transition={{ delay: 0.1 }}
               >
                 <div className="flex-1">
-                  <div className="text-foreground break-words">
-                    {format === 'currency' ? (
-                      <span className="flex items-baseline gap-1">
-                        <span className="text-2xl sm:text-3xl font-bold">{formattedValue}</span>
-                        <span className="text-sm text-muted-foreground">د.ع</span>
-                      </span>
-                    ) : (
-                      <span className="text-2xl sm:text-3xl font-bold">{formattedValue}</span>
-                    )}
+                  <div className="text-2xl sm:text-3xl font-bold text-foreground break-words">
+                    {formattedValue}
                   </div>
                   {currentPeriod && (
                     <p className="text-xs text-muted-foreground mt-1">
