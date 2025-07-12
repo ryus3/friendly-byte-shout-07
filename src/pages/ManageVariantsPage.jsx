@@ -1,58 +1,84 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManager from '@/components/manage-variants/CategoriesManager';
 import ColorsManager from '@/components/manage-variants/ColorsManager';
 import SizesManager from '@/components/manage-variants/SizesManager';
+import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 const ManageVariantsPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('categories');
+  const [activeTab, setActiveTab] = useState('departments');
+  const [stats, setStats] = useState({
+    departments: { count: 0, status: 'تحميل...' },
+    categories: { count: 0, status: 'تحميل...' },
+    colors: { count: 0, status: 'تحميل...' },
+    sizes: { count: 0, status: 'تحميل...' }
+  });
+  const [departments, setDepartments] = useState([]);
 
-  const getTabStats = (type) => {
-    // يمكن تحسين هذا لاحقاً لعرض إحصائيات حقيقية
-    switch (type) {
-      case 'categories': return { count: '12+', status: 'نشطة' };
-      case 'colors': return { count: '8+', status: 'متاحة' };
-      case 'sizes': return { count: '15+', status: 'منظمة' };
-      default: return { count: '0', status: 'غير متاح' };
+  // جلب الإحصائيات الحقيقية
+  const fetchStats = async () => {
+    try {
+      const [deptResult, catResult, colorResult, sizeResult] = await Promise.all([
+        supabase.from('departments').select('*', { count: 'exact' }),
+        supabase.from('categories').select('*', { count: 'exact' }),
+        supabase.from('colors').select('*', { count: 'exact' }),
+        supabase.from('sizes').select('*', { count: 'exact' })
+      ]);
+
+      setStats({
+        departments: { 
+          count: deptResult.count || 0, 
+          status: (deptResult.count || 0) > 0 ? 'نشطة' : 'فارغة' 
+        },
+        categories: { 
+          count: catResult.count || 0, 
+          status: (catResult.count || 0) > 0 ? 'نشطة' : 'فارغة' 
+        },
+        colors: { 
+          count: colorResult.count || 0, 
+          status: (colorResult.count || 0) > 0 ? 'متاحة' : 'فارغة' 
+        },
+        sizes: { 
+          count: sizeResult.count || 0, 
+          status: (sizeResult.count || 0) > 0 ? 'منظمة' : 'فارغة' 
+        }
+      });
+
+      setDepartments(deptResult.data || []);
+    } catch (error) {
+      console.error('خطأ في جلب الإحصائيات:', error);
     }
   };
 
-  // Department sections for better organization
-  const departmentSections = [
-    {
-      title: 'قسم الملابس',
-      icon: Shirt,
-      description: 'ملابس رجالية ونسائية',
-      subcategories: ['ملابس رجالية', 'ملابس نسائية', 'ملابس أطفال'],
-      variants: ['نوع المنتج', 'القياسات', 'الألوان'],
-      color: 'from-blue-500 to-blue-600'
-    },
-    {
-      title: 'قسم الأحذية',
-      icon: ShoppingBag,
-      description: 'أحذية متنوعة لجميع الأعمار',
-      subcategories: ['أحذية رجالية', 'أحذية نسائية', 'أحذية رياضية'],
-      variants: ['الألوان', 'القياسات', 'النوع'],
-      color: 'from-green-500 to-green-600'
-    },
-    {
-      title: 'قسم المواد العامة',
-      icon: Package,
-      description: 'مواد وأدوات متنوعة',
-      subcategories: ['إلكترونيات', 'أدوات منزلية', 'إكسسوارات'],
-      variants: ['نوع المادة', 'الحجم', 'اللون'],
-      color: 'from-purple-500 to-purple-600'
-    }
-  ];
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  // أيقونات الأقسام المتاحة
+  const iconComponents = {
+    'Shirt': Shirt,
+    'ShoppingBag': ShoppingBag,
+    'Package': Package,
+    'Building2': Building2
+  };
 
   const tabConfig = [
+    {
+      value: 'departments',
+      label: 'الأقسام الرئيسية',
+      icon: Building2,
+      description: 'إدارة الأقسام الرئيسية للمنتجات',
+      color: 'from-indigo-500 to-purple-600',
+      component: DepartmentsManager
+    },
     {
       value: 'categories',
       label: 'التصنيفات',
@@ -111,43 +137,71 @@ const ManageVariantsPage = () => {
                 </div>
               </div>
 
-              {/* Department Structure Overview */}
+              {/* الأقسام الرئيسية */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {departmentSections.map((dept, index) => (
-                  <Card key={index} className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg bg-gradient-to-r ${dept.color}`}>
-                          <dept.icon className="h-5 w-5 text-white" />
+                {departments.slice(0, 3).map((dept, index) => {
+                  const IconComponent = iconComponents[dept.icon] || Package;
+                  return (
+                    <Card key={dept.id} className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-3 rounded-lg bg-gradient-to-r ${dept.color} shadow-lg`}>
+                            <IconComponent className="h-6 w-6 text-white" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-sm font-semibold">{dept.name}</CardTitle>
+                            <CardDescription className="text-xs">{dept.description}</CardDescription>
+                          </div>
                         </div>
-                        <div>
-                          <CardTitle className="text-sm font-semibold">{dept.title}</CardTitle>
-                          <CardDescription className="text-xs">{dept.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">حالة القسم:</span>
+                            <Badge variant={dept.is_active ? "default" : "secondary"} className="text-xs">
+                              {dept.is_active ? "نشط" : "غير نشط"}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">ترتيب العرض:</span>
+                            <Badge variant="outline" className="text-xs">{dept.display_order}</Badge>
+                          </div>
+                          <div className="pt-2 border-t">
+                            <p className="text-xs text-muted-foreground">
+                              تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('ar-SA')}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">التصنيفات:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {dept.subcategories.map((sub, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">{sub}</Badge>
-                          ))}
-                        </div>
-                        <div className="text-xs text-muted-foreground">المتغيرات:</div>
-                        <div className="flex flex-wrap gap-1">
-                          {dept.variants.map((variant, idx) => (
-                            <Badge key={idx} variant="outline" className="text-xs">{variant}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+                
+                {departments.length === 0 && (
+                  <div className="col-span-3 text-center py-8">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">لا توجد أقسام رئيسية</p>
+                    <p className="text-sm text-muted-foreground">استخدم تبويب "الأقسام الرئيسية" لإضافة أقسام جديدة</p>
+                  </div>
+                )}
               </div>
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* إحصائيات سريعة */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border-indigo-200 dark:border-indigo-800">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg">
+                        <Building2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">الأقسام الرئيسية</p>
+                        <p className="text-lg font-bold text-indigo-800 dark:text-indigo-200">{stats.departments.count} {stats.departments.status}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800">
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
@@ -156,7 +210,7 @@ const ManageVariantsPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">التصنيفات</p>
-                        <p className="text-lg font-bold text-emerald-800 dark:text-emerald-200">12+ نشطة</p>
+                        <p className="text-lg font-bold text-emerald-800 dark:text-emerald-200">{stats.categories.count} {stats.categories.status}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -170,7 +224,7 @@ const ManageVariantsPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-pink-600 dark:text-pink-400">الألوان</p>
-                        <p className="text-lg font-bold text-pink-800 dark:text-pink-200">8+ متاحة</p>
+                        <p className="text-lg font-bold text-pink-800 dark:text-pink-200">{stats.colors.count} {stats.colors.status}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -184,7 +238,7 @@ const ManageVariantsPage = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-blue-600 dark:text-blue-400">القياسات</p>
-                        <p className="text-lg font-bold text-blue-800 dark:text-blue-200">15+ منظمة</p>
+                        <p className="text-lg font-bold text-blue-800 dark:text-blue-200">{stats.sizes.count} {stats.sizes.status}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -197,10 +251,10 @@ const ManageVariantsPage = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border shadow-lg overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
               <div className="border-b bg-slate-50 dark:bg-slate-900/50">
-                <TabsList className="w-full grid grid-cols-3 h-auto p-2 bg-transparent">
+                <TabsList className="w-full grid grid-cols-4 h-auto p-2 bg-transparent">
                   {tabConfig.map((tab) => {
                     const IconComponent = tab.icon;
-                    const stats = getTabStats(tab.value);
+                    const tabStats = stats[tab.value] || { count: 0, status: 'فارغة' };
                     const isActive = activeTab === tab.value;
                     
                     return (
@@ -229,7 +283,7 @@ const ManageVariantsPage = () => {
                               variant={isActive ? "default" : "secondary"} 
                               className="text-xs mt-1"
                             >
-                              {stats.count}
+                              {tabStats.count}
                             </Badge>
                           </div>
                         </div>
