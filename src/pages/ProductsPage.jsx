@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -17,6 +18,7 @@ import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
+  const location = useLocation();
   const { products, loading, addToCart, clearCart } = useInventory();
   const { categories, brands } = useMemo(() => {
     let uniqueCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
@@ -68,7 +70,6 @@ const ProductsPage = () => {
   
   // دعم البحث من الشريط السفلي
   useEffect(() => {
-    const location = window.location;
     const searchParams = new URLSearchParams(location.search);
     const searchTerm = searchParams.get('search');
     
@@ -76,16 +77,16 @@ const ProductsPage = () => {
       setFilters(prev => ({ ...prev, searchTerm }));
     }
     
-    // دعم البحث عبر state
+    // دعم البحث عبر state من الـ navigation
     if (location.state?.searchTerm) {
       setFilters(prev => ({ ...prev, searchTerm: location.state.searchTerm }));
     }
     
     if (location.state?.selectedProduct) {
       setSelectedProduct(location.state.selectedProduct);
-      setDialogs(prev => ({ ...prev, variant: true }));
+      setDialogs(prev => ({ ...prev, productVariant: true }));
     }
-  }, []);
+  }, [location]);
 
   const filteredProducts = useMemo(() => {
     let tempProducts = products.filter(p => p.is_visible);
