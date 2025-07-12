@@ -28,7 +28,7 @@ const AddEditCategoryDialog = ({ open, onOpenChange, category, categoryType, onS
       return;
     }
     setIsSubmitting(true);
-    const data = { name, type: categoryType };
+    const data = { name, type: categoryType || 'main' };
     let result;
     if (category) {
       result = await updateCategory(category.id, data);

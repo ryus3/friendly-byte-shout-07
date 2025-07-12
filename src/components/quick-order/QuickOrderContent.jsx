@@ -25,10 +25,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
 
-  const initialFormData = {
+  const initialFormData = useMemo(() => ({
     name: user?.default_customer_name || '', phone: '', second_phone: '', city_id: '', region_id: '', city: '', region: '', address: '', 
     notes: '', details: '', quantity: 1, price: 0, size: '', type: 'new', promocode: ''
-  };
+  }), [user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
@@ -52,6 +52,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setDiscount(0);
     setErrors({});
   }, [clearCart, initialFormData]);
+
+  // تحديث الاسم عند تغيير بيانات المستخدم
+  useEffect(() => {
+    if (user?.default_customer_name && formData.name !== user.default_customer_name) {
+      setFormData(prev => ({ ...prev, name: user.default_customer_name }));
+    }
+  }, [user?.default_customer_name, formData.name]);
 
   const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
 
