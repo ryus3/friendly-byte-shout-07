@@ -23,7 +23,7 @@ import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
-import ProfitSystemTest from '@/components/test/ProfitSystemTest';
+import SystemIntegrityTest from '@/components/test/SystemIntegrityTest';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
   const Icon = icon;
@@ -582,13 +582,13 @@ const SettingsPage = () => {
             
             <ModernCard
               icon={FileText}
-              title="التقارير والاختبارات"
-              description="تصدير التقارير واختبار أنظمة النظام"
+              title="فحص وتقارير النظام"
+              description="فحص سلامة النظام وتصدير التقارير"
               iconColor="from-green-500 to-green-600"
               onClick={() => setIsReportsOpen(true)}
             >
               <div className="space-y-3">
-                <ProfitSystemTest />
+                <SystemIntegrityTest />
               </div>
             </ModernCard>
           </div>
