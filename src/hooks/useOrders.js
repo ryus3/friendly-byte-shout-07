@@ -71,12 +71,9 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       data: {
         type: 'sale',
         amount: data.total,
-      description: `فاتورة بيع #${data.id}`,
-      related_order_id: data.id,
-      user_id: data.created_by,
-      related_data: { customer_name: data.customerinfo.name }
+        order_id: data.id
+      }
     });
-
     if (finError) console.error("Error creating financial transaction:", finError);
     
     // Notify admin
