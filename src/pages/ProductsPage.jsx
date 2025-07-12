@@ -20,6 +20,9 @@ import { toast } from '@/components/ui/use-toast';
 const ProductsPage = () => {
   const location = useLocation();
   const { products, loading, addToCart, clearCart } = useInventory();
+  const { hasPermission } = useAuth();
+  const { colors } = useVariants();
+  
   const { categories, brands } = useMemo(() => {
     let uniqueCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
     
@@ -42,8 +45,6 @@ const ProductsPage = () => {
     const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
     return { categories: uniqueCategories, brands: uniqueBrands };
   }, [products, hasPermission]);
-  const { colors } = useVariants();
-  const { hasPermission } = useAuth();
   
   const [viewMode, setViewMode] = useState('grid');
   const [filters, setFilters] = useState({
