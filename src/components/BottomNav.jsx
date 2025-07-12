@@ -158,9 +158,18 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
                       key={product.id}
                       className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
                       onClick={() => {
-                        navigate(`/products?search=${encodeURIComponent(product.name)}`);
-                        onOpenChange(false);
-                        setSearchQuery('');
+                        try {
+                          navigate(`/products?search=${encodeURIComponent(product.name)}`);
+                          onOpenChange(false);
+                          setSearchQuery('');
+                        } catch (error) {
+                          console.error('Navigation error:', error);
+                          toast({
+                            title: "خطأ في التنقل",
+                            description: "حدث خطأ أثناء الانتقال للمنتج",
+                            variant: "destructive"
+                          });
+                        }
                       }}
                     >
                       <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
@@ -245,6 +254,7 @@ const BottomNav = () => {
             icon={Home} 
             label="الرئيسية"
             isActive={location.pathname === (user?.default_page || '/')}
+            className={location.pathname === (user?.default_page || '/') ? "bg-primary/10 border border-primary/20" : ""}
           />
 
           {/* المساعد الذكي في الوسط */}

@@ -561,35 +561,7 @@ const SettingsPage = () => {
             description="إدارة الموظفين والإشعارات والخدمات الذكية"
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <ModernCard
-              icon={Truck}
-              title="شركة التوصيل"
-              description={
-                isWaseetLoggedIn 
-                  ? `متصل كـ ${waseetUser?.name || 'مستخدم'}`
-                  : "ربط مع شركات التوصيل"
-              }
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsLoginDialogOpen(true)}
-              badge={
-                isWaseetLoggedIn ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-xs text-green-600 font-medium">متصل</span>
-                  </div>
-                ) : null
-              }
-            />
-
-            <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام"
-              description="ربط النظام مع بوت التليغرام للإشعارات"
-              iconColor="from-blue-500 to-blue-600"
-              onClick={handleCopyToken}
-            />
-
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ModernCard
               icon={Users}
               title="إدارة الموظفين"
@@ -598,6 +570,23 @@ const SettingsPage = () => {
               onClick={hasPermission('manage_users') ? () => setIsManageEmployeesOpen(true) : undefined}
               disabled={!hasPermission('manage_users')}
             />
+
+            <ModernCard
+              icon={RefreshCw}
+              title="التحديث التلقائي"
+              description="مزامنة البيانات والإشعارات أولاً بأول"
+              iconColor="from-green-500 to-green-600"
+            >
+              <div className="space-y-3">
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400">حالة النظام</p>
+                  <p className="text-xs text-green-500 opacity-70">فعال - تحديث مستمر</p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  النظام يحدث البيانات والإشعارات تلقائياً كل 30 ثانية
+                </div>
+              </div>
+            </ModernCard>
 
             <ModernCard
               icon={Bell}

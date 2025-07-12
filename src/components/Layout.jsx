@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
-  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield
+  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { toast } from '@/components/ui/use-toast.js';
@@ -208,17 +208,11 @@ const Layout = ({ children }) => {
         <header className="bg-card/80 backdrop-blur-lg border-b border-border p-4 sticky top-0 z-30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden"
-              >
-                <Menu className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                <ArrowRight className="w-5 h-5" />
-              </Button>
+              {location.pathname !== (user?.default_page || '/') && (
+                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              )}
               <div className="cursor-pointer" onClick={handleHomeClick}>
                 <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/2e94508b11f0bf0fa626aea4716f1658.png" />
                 <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" />
@@ -226,6 +220,15 @@ const Layout = ({ children }) => {
             </div>
             
             <div className="flex items-center gap-2 sm:gap-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => window.location.reload()} 
+                className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                title="تحديث التطبيق"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </Button>
               <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
                 <Bot className="w-5 h-5" />
               </Button>
