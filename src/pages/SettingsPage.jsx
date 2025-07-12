@@ -19,6 +19,11 @@ import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
+import SecuritySettingsDialog from '@/components/settings/SecuritySettingsDialog';
+import DeveloperSettingsDialog from '@/components/settings/DeveloperSettingsDialog';
+import DisplaySettingsDialog from '@/components/settings/DisplaySettingsDialog';
+import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
+import NotificationsSettingsDialog from '@/components/settings/NotificationsSettingsDialog';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark" }) => {
@@ -67,6 +72,11 @@ const SettingsPage = () => {
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
+  const [isSecurityOpen, setIsSecurityOpen] = useState(false);
+  const [isDeveloperOpen, setIsDeveloperOpen] = useState(false);
+  const [isDisplayOpen, setIsDisplayOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   
   const [storeSettings, setStoreSettings] = useState({
     deliveryFee: 5000,
@@ -370,7 +380,7 @@ const SettingsPage = () => {
                       title="أمان الحساب"
                       description="كلمات المرور والمصادقة الثنائية"
                       iconColor="from-green-500 to-green-700"
-                      onClick={() => toast({ title: "قريباً", description: "إعدادات الأمان ستكون متاحة قريباً!" })}
+                      onClick={() => setIsSecurityOpen(true)}
                     />
                   ) : (
                     <SettingsSectionCard
@@ -485,11 +495,11 @@ const SettingsPage = () => {
 
                   {hasPermission('use_ai_assistant') && (
                     <SettingsSectionCard
-                      icon={Zap}
-                      title="الذكاء الاصطناعي"
-                      description="مساعد ذكي لإدارة المتجر"
+                      icon={Palette}
+                      title="إعدادات المطور"
+                      description="تخصيص الألوان والثيمات المتقدمة"
                       iconColor="from-pink-500 to-pink-700"
-                      onClick={() => toast({ title: "متاح!", description: "يمكنك الوصول للمساعد الذكي من الزر العائم في الصفحات." })}
+                      onClick={() => setIsDeveloperOpen(true)}
                     />
                   )}
                 </div>
@@ -510,7 +520,7 @@ const SettingsPage = () => {
                       title="الإشعارات"
                       description="إدارة إشعارات النظام والتنبيهات"
                       iconColor="from-orange-500 to-orange-700"
-                      onClick={() => toast({ title: "الإشعارات", description: "تم تفعيل الإشعارات بالفعل في النظام!" })}
+                      onClick={() => setIsNotificationsOpen(true)}
                     />
                   )}
 
@@ -583,9 +593,14 @@ const SettingsPage = () => {
             </div>
         </div>
       </div>
-      <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
       <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
       <ManageEmployeesDialog open={isManageEmployeesOpen} onOpenChange={setIsManageEmployeesOpen} />
+      <SecuritySettingsDialog open={isSecurityOpen} onOpenChange={setIsSecurityOpen} />
+      <DeveloperSettingsDialog open={isDeveloperOpen} onOpenChange={setIsDeveloperOpen} />
+      <DisplaySettingsDialog open={isDisplayOpen} onOpenChange={setIsDisplayOpen} />
+      <ReportsSettingsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
+      <NotificationsSettingsDialog open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
+      <DeliveryPartnerDialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen} />
     </>
   );
 };
