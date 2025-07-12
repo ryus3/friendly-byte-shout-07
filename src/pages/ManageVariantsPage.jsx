@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const ManageVariantsPage = () => {
   const navigate = useNavigate();
