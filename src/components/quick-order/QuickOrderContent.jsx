@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import SearchableSelect from '@/components/ui/searchable-select';
+import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
 import { Loader2 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { motion } from 'framer-motion';
@@ -276,7 +276,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             <>
               <div className="space-y-2">
                 <Label htmlFor="city">المحافظة</Label>
-                <SearchableSelect
+                <SearchableSelectFixed
                   value={formData.city}
                   onValueChange={(v) => handleSelectChange('city', v)}
                   options={iraqiProvinces.map(p => ({ value: p.name, label: p.name }))}
@@ -299,7 +299,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         <>
             <div className="space-y-2">
               <Label>المدينة</Label>
-              <SearchableSelect
+              <SearchableSelectFixed
                 value={formData.city_id}
                 onValueChange={(v) => handleSelectChange('city_id', v)}
                 options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
@@ -313,7 +313,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             </div>
             <div className="space-y-2">
               <Label>المنطقة او القضاء</Label>
-              <SearchableSelect
+              <SearchableSelectFixed
                 value={formData.region_id}
                 onValueChange={(v) => handleSelectChange('region_id', v)}
                 options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
