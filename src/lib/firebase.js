@@ -1,34 +1,21 @@
-// ملف Firebase معطل للوضع المحلي
-// تم إزالة الاتصال الخارجي لتجنب الأخطاء
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
-// عملاء وهميين للوضع المحلي
-export const app = null;
-export const auth = {
-  currentUser: null,
-  signInWithEmailAndPassword: () => Promise.reject(new Error('Firebase غير متصل')),
-  signOut: () => Promise.resolve(),
-  onAuthStateChanged: () => () => {}
+const firebaseConfig = {
+  apiKey: "AIzaSyBVzYc9oi6G32loVRcFMXm3Dnv0wBWPwhw",
+  authDomain: "ryus-acb9a.firebaseapp.com",
+  projectId: "ryus-acb9a",
+  storageBucket: "ryus-acb9a.appspot.com",
+  messagingSenderId: "314543780295",
+  appId: "1:314543780295:web:30a49d4cb14e6705ec69e2",
+  measurementId: "G-5N1RK90NTW"
 };
 
-export const db = {
-  collection: () => ({
-    doc: () => ({
-      get: () => Promise.resolve({ exists: false }),
-      set: () => Promise.reject(new Error('Firebase غير متصل')),
-      update: () => Promise.reject(new Error('Firebase غير متصل'))
-    }),
-    add: () => Promise.reject(new Error('Firebase غير متصل')),
-    where: () => ({
-      get: () => Promise.resolve({ empty: true, docs: [] })
-    })
-  })
-};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-export const storage = {
-  ref: () => ({
-    putString: () => Promise.reject(new Error('Firebase غير متصل')),
-    getDownloadURL: () => Promise.reject(new Error('Firebase غير متصل'))
-  })
-};
-
-console.warn('Firebase في الوضع المحلي. لتفعيل الميزات، يرجى إعداد Firebase أو استخدام Supabase.');
+export { app, auth, db, storage };
