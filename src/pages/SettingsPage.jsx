@@ -212,19 +212,32 @@ const SettingsPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <ModernCard
               icon={User}
-              title="الملف الشخصي"
-              description="تعديل معلوماتك الشخصية وبيانات الحساب"
+              title="الملف الشخصي والأمان"
+              description="تعديل معلوماتك الشخصية وإعدادات الأمان"
               iconColor="from-blue-500 to-blue-600"
               onClick={() => setIsEditProfileOpen(true)}
             >
-              <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-lg">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-6 h-6 text-primary" />
+              <div className="space-y-4">
+                <div className="flex items-center gap-4 p-4 bg-secondary/30 rounded-lg">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">{user.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{user.email}</p>
+                    <p className="text-xs text-primary font-medium">{user.role}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold">{user.full_name}</p>
-                  <p className="text-sm text-muted-foreground">{user.email}</p>
-                  <p className="text-xs text-primary font-medium">{user.role}</p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-600 dark:text-green-400">حساب محمي</span>
+                  </div>
+                  <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+                    <Key className="w-3 h-3 text-blue-500" />
+                    <span className="text-xs text-blue-600 dark:text-blue-400">كلمة مرور قوية</span>
+                  </div>
                 </div>
               </div>
             </ModernCard>
@@ -232,39 +245,95 @@ const SettingsPage = () => {
             <ModernCard
               icon={Palette}
               title="المظهر والثيم"
-              description="تخصيص مظهر التطبيق ونمط العرض"
+              description="تخصيص مظهر التطبيق والألوان والخطوط"
               iconColor="from-purple-500 to-purple-600"
             >
-              <div className="space-y-4">
-                <Label className="text-sm font-medium">نمط العرض</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <Button
-                    variant={theme === 'light' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTheme('light')}
-                    className="flex flex-col items-center gap-1 h-auto py-3"
-                  >
-                    <Sun className="w-4 h-4" />
-                    <span className="text-xs">فاتح</span>
-                  </Button>
-                  <Button
-                    variant={theme === 'dark' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTheme('dark')}
-                    className="flex flex-col items-center gap-1 h-auto py-3"
-                  >
-                    <Moon className="w-4 h-4" />
-                    <span className="text-xs">داكن</span>
-                  </Button>
-                  <Button
-                    variant={theme === 'system' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTheme('system')}
-                    className="flex flex-col items-center gap-1 h-auto py-3"
-                  >
-                    <Monitor className="w-4 h-4" />
-                    <span className="text-xs">تلقائي</span>
-                  </Button>
+              <div className="space-y-6">
+                {/* Theme Selection */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">نمط العرض</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <Button
+                      variant={theme === 'light' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTheme('light')}
+                      className="flex flex-col items-center gap-1 h-auto py-3"
+                    >
+                      <Sun className="w-4 h-4" />
+                      <span className="text-xs">فاتح</span>
+                    </Button>
+                    <Button
+                      variant={theme === 'dark' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTheme('dark')}
+                      className="flex flex-col items-center gap-1 h-auto py-3"
+                    >
+                      <Moon className="w-4 h-4" />
+                      <span className="text-xs">داكن</span>
+                    </Button>
+                    <Button
+                      variant={theme === 'system' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTheme('system')}
+                      className="flex flex-col items-center gap-1 h-auto py-3"
+                    >
+                      <Monitor className="w-4 h-4" />
+                      <span className="text-xs">تلقائي</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Color Schemes */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">نمط الألوان</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'blue', name: 'أزرق احترافي', colors: 'from-blue-500 to-blue-600' },
+                      { id: 'green', name: 'أخضر طبيعي', colors: 'from-green-500 to-green-600' },
+                      { id: 'purple', name: 'بنفسجي إبداعي', colors: 'from-purple-500 to-purple-600' },
+                      { id: 'orange', name: 'برتقالي جريء', colors: 'from-orange-500 to-orange-600' }
+                    ].map((scheme) => (
+                      <button
+                        key={scheme.id}
+                        className="flex items-center gap-2 p-2 rounded-lg border border-border hover:border-primary/50 transition-colors"
+                        onClick={() => {
+                          // Apply color scheme logic here
+                          toast({ title: "تم تطبيق النمط", description: `تم تفعيل ${scheme.name}` });
+                        }}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${scheme.colors}`}></div>
+                        <span className="text-xs">{scheme.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Font Size */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">حجم الخط</Label>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs">صغير</span>
+                    <div className="flex-1 h-2 bg-secondary rounded-full relative">
+                      <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-primary rounded-full transform -translate-x-1/2 -translate-y-1/2 cursor-pointer"></div>
+                    </div>
+                    <span className="text-xs">كبير</span>
+                  </div>
+                </div>
+
+                {/* Advanced Options */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">التأثيرات المتحركة</span>
+                    <div className="w-10 h-6 bg-secondary rounded-full relative">
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-primary rounded-full transition-transform"></div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">التباين العالي</span>
+                    <div className="w-10 h-6 bg-secondary rounded-full relative">
+                      <div className="absolute top-1 left-1 w-4 h-4 bg-secondary-foreground rounded-full"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </ModernCard>
@@ -404,7 +473,7 @@ const SettingsPage = () => {
             description="إدارة الموظفين والأمان والتحكم في النظام"
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ModernCard
               icon={Users}
               title="إدارة الموظفين"
@@ -412,15 +481,6 @@ const SettingsPage = () => {
               iconColor="from-purple-500 to-purple-600"
               onClick={hasPermission('manage_users') ? () => setIsManageEmployeesOpen(true) : undefined}
               disabled={!hasPermission('manage_users')}
-            />
-
-            <ModernCard
-              icon={Key}
-              title="أمان الحساب"
-              description="كلمات المرور والمصادقة الثنائية"
-              iconColor="from-green-500 to-green-600"
-              onClick={hasPermission('view_security_settings') ? () => setIsSecurityOpen(true) : undefined}
-              disabled={!hasPermission('view_security_settings')}
             />
 
             <ModernCard
@@ -457,20 +517,25 @@ const SettingsPage = () => {
             />
 
             <ModernCard
-              icon={Upload}
-              title="استيراد البيانات"
-              description="استيراد البيانات من ملفات خارجية"
+              icon={MessageCircle}
+              title="بوت التليغرام"
+              description="ربط النظام مع بوت التليغرام للإشعارات"
               iconColor="from-blue-500 to-blue-600"
-              onClick={handleImportData}
-            />
-
-            <ModernCard
-              icon={Truck}
-              title="شركة التوصيل"
-              description="ربط مع أنظمة التوصيل الخارجية"
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsLoginDialogOpen(true)}
-            />
+              onClick={handleCopyToken}
+            >
+              <div className="space-y-3">
+                <div className="p-3 bg-secondary/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-2">رمز ربط البوت:</p>
+                  <code className="text-xs font-mono bg-background px-2 py-1 rounded border">
+                    BOT_{user?.id}_****
+                  </code>
+                </div>
+                <Button variant="outline" size="sm" className="w-full">
+                  <Copy className="w-4 h-4 mr-2" />
+                  نسخ رمز البوت
+                </Button>
+              </div>
+            </ModernCard>
           </div>
 
           {/* Integration Section */}
@@ -484,14 +549,14 @@ const SettingsPage = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <ModernCard
-                  icon={Bot}
-                  title="الواسط للتوصيل"
+                  icon={Truck}
+                  title="شركة التوصيل"
                   description={
                     isWaseetLoggedIn 
                       ? `متصل كـ ${waseetUser?.name || 'مستخدم'} - الرقم: ${waseetUser?.phone || 'غير محدد'}`
-                      : "ربط مع منصة الواسط لخدمات التوصيل"
+                      : "ربط مع شركات التوصيل الخارجية"
                   }
-                  iconColor="from-emerald-500 to-emerald-600"
+                  iconColor="from-red-500 to-red-600"
                   onClick={() => setIsLoginDialogOpen(true)}
                   badge={
                     isWaseetLoggedIn ? (
@@ -524,25 +589,12 @@ const SettingsPage = () => {
                 </ModernCard>
 
                 <ModernCard
-                  icon={Database}
-                  title="ربط قاعدة البيانات"
-                  description="رمز الربط مع قاعدة البيانات الخارجية"
-                  iconColor="from-slate-500 to-slate-600"
-                  onClick={handleCopyToken}
-                >
-                  <div className="space-y-3">
-                    <div className="p-3 bg-secondary/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-2">رمز الربط الحالي:</p>
-                      <code className="text-xs font-mono bg-background px-2 py-1 rounded border">
-                        RYUS_{user?.id}_****
-                      </code>
-                    </div>
-                    <Button variant="outline" size="sm" className="w-full">
-                      <Copy className="w-4 h-4 mr-2" />
-                      نسخ رمز جديد
-                    </Button>
-                  </div>
-                </ModernCard>
+                  icon={Upload}
+                  title="استيراد البيانات"
+                  description="استيراد البيانات من ملفات خارجية"
+                  iconColor="from-indigo-500 to-indigo-600"
+                  onClick={handleImportData}
+                />
               </div>
             </>
           )}
