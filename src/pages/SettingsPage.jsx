@@ -16,7 +16,7 @@ import {
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
-import ManageProductCategoriesDialog from '@/components/settings/ManageProductCategoriesDialog';
+import ThemeSettingsCard from '@/components/settings/ThemeSettingsCard';
 import { useNavigate } from 'react-router-dom';
 
 const SettingsSectionCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "text-primary" }) => {
