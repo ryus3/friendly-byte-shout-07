@@ -77,12 +77,12 @@ const StockAlertsCard = () => {
       pulse: true
     };
     if (percentage <= 60) return {
-      className: 'bg-background border-orange-500/20 text-orange-600 hover:bg-orange-50 dark:bg-card dark:border-orange-500/30 dark:text-orange-400',
+      className: 'bg-background border-border text-muted-foreground hover:bg-muted/50 dark:bg-card dark:border-border',
       icon: TrendingDown,
       pulse: false
     };
     return {
-      className: 'bg-background border-yellow-500/20 text-yellow-600 hover:bg-yellow-50 dark:bg-card dark:border-yellow-500/30 dark:text-yellow-400',
+      className: 'bg-background border-border text-muted-foreground hover:bg-muted/30 dark:bg-card dark:border-border',
       icon: Package,
       pulse: false
     };
@@ -90,18 +90,18 @@ const StockAlertsCard = () => {
 
   const getUrgencyLevel = (stock, threshold) => {
     const percentage = (stock / threshold) * 100;
-    if (percentage <= 25) return { level: 'حرج', color: 'text-red-600', bgColor: 'bg-red-100' };
-    if (percentage <= 60) return { level: 'منخفض', color: 'text-orange-600', bgColor: 'bg-orange-100' };
-    return { level: 'تحذير', color: 'text-yellow-600', bgColor: 'bg-yellow-100' };
+    if (percentage <= 25) return { level: 'حرج', color: 'text-destructive', bgColor: 'bg-destructive/10' };
+    if (percentage <= 60) return { level: 'منخفض', color: 'text-muted-foreground', bgColor: 'bg-muted/50' };
+    return { level: 'تحذير', color: 'text-muted-foreground', bgColor: 'bg-muted/30' };
   };
 
   return (
     <Card className="h-full overflow-hidden shadow-lg border-border/50">
-      <CardHeader className="bg-gradient-to-l from-orange-50/50 to-red-50/50 border-b border-border/30">
+      <CardHeader className="bg-gradient-to-l from-muted/30 to-accent/10 border-b border-border/30">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/20">
-              <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
             </div>
             <div>
               <CardTitle className="text-xl text-foreground">تنبيهات المخزون</CardTitle>
@@ -109,9 +109,9 @@ const StockAlertsCard = () => {
             </div>
           </div>
           {lowStockProducts && lowStockProducts.length > 0 && (
-            <div className="flex items-center gap-2 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 rounded-full">
-              <Zap className="w-4 h-4 text-orange-600" />
-              <span className="text-sm font-bold text-orange-700 dark:text-orange-300">
+            <div className="flex items-center gap-2 px-3 py-1 bg-destructive/10 rounded-full">
+              <Zap className="w-4 h-4 text-destructive" />
+              <span className="text-sm font-bold text-destructive">
                 {lowStockProducts.length}
               </span>
             </div>
@@ -192,10 +192,10 @@ const StockAlertsCard = () => {
           </div>
         ) : (
           <div className="text-center py-12">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center">
-              <Package className="w-8 h-8 text-green-600 dark:text-green-400" />
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+              <Package className="w-8 h-8 text-primary" />
             </div>
-            <p className="text-green-600 dark:text-green-400 font-semibold">المخزون في حالة ممتازة</p>
+            <p className="text-primary font-semibold">المخزون في حالة ممتازة</p>
             <p className="text-muted-foreground text-sm mt-1">جميع المنتجات متوفرة بكميات كافية</p>
           </div>
         )}
@@ -203,7 +203,7 @@ const StockAlertsCard = () => {
           <div className="p-4 border-t border-border/30 bg-muted/20">
             <Button 
               variant="outline" 
-              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50 hover:border-orange-300 transition-all"
+              className="w-full text-destructive border-destructive/20 hover:bg-destructive/5 hover:border-destructive/40 transition-all"
               onClick={handleViewAll}
             >
               <AlertTriangle className="w-4 h-4 ml-2" />
