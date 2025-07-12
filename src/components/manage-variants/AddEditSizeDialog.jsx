@@ -19,7 +19,7 @@ const AddEditSizeDialog = ({ open, onOpenChange, size: initialSize, onSuccessful
   useEffect(() => {
     if (open) {
       if (initialSize) {
-        setSizes([{ value: initialSize.value, type: initialSize.type }]);
+        setSizes([{ value: initialSize.name, type: initialSize.type }]);
         setCurrentType(initialSize.type);
       } else {
         setSizes([]);
@@ -57,7 +57,7 @@ const AddEditSizeDialog = ({ open, onOpenChange, size: initialSize, onSuccessful
                 setIsSubmitting(false);
                 return;
             }
-            await onSuccessfulSubmit(sizes[0]);
+            await onSuccessfulSubmit({ name: sizes[0].value, type: sizes[0].type });
         } else { // Batch adding
             const finalSizes = [...sizes];
             if (currentValue.trim() !== '') {
@@ -68,14 +68,14 @@ const AddEditSizeDialog = ({ open, onOpenChange, size: initialSize, onSuccessful
                 setIsSubmitting(false);
                 return;
             }
-            await onSuccessfulSubmit(finalSizes);
+            await onSuccessfulSubmit(finalSizes.map(s => ({ name: s.value, type: s.type })));
         }
     } else { // Old logic for direct context calls (can be removed if not used)
         if (initialSize) {
-            const result = await updateSize(initialSize.id, sizes[0]);
+            const result = await updateSize(initialSize.id, { name: sizes[0].value, type: sizes[0].type });
             if (result.success) toast({ title: 'تم التعديل بنجاح' });
         } else {
-            const promises = sizes.map(size => addSize(size));
+            const promises = sizes.map(size => addSize({ name: size.value, type: size.type }));
             const results = await Promise.all(promises);
             if (results.every(r => r.success)) toast({ title: 'تمت إضافة القياسات بنجاح' });
         }
@@ -91,7 +91,7 @@ const AddEditSizeDialog = ({ open, onOpenChange, size: initialSize, onSuccessful
         <DialogHeader>
           <DialogTitle>{initialSize ? 'تعديل القياس' : 'إضافة قياسات جديدة'}</DialogTitle>
           <DialogDescription>
-            {initialSize ? `أنت تقوم بتعديل القياس "${initialSize.value}".` : 'أدخل تفاصيل القياسات الجديدة.'}
+            {initialSize ? `أنت تقوم بتعديل القياس "${initialSize.name}".` : 'أدخل تفاصيل القياسات الجديدة.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>

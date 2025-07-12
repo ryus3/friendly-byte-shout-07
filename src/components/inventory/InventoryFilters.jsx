@@ -95,7 +95,7 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                       <SelectTrigger><SelectValue placeholder="القياس" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع القياسات</SelectItem>
-                        {sizes.map(s => <SelectItem key={s.id} value={s.value}>{s.value}</SelectItem>)}
+                        {sizes.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <div className="grid grid-cols-1 items-center gap-2">

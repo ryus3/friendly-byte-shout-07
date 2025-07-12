@@ -532,6 +532,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          default_customer_name: string | null
           default_page: string | null
           email: string
           full_name: string
@@ -546,6 +547,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_customer_name?: string | null
           default_page?: string | null
           email: string
           full_name: string
@@ -560,6 +562,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_customer_name?: string | null
           default_page?: string | null
           email?: string
           full_name?: string
