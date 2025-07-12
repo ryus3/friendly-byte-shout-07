@@ -97,11 +97,11 @@ const SearchableSelectFixed = ({
       {open && (
         <div 
           ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-border rounded-md shadow-lg max-h-60 overflow-hidden"
+          className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-md shadow-md max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
           style={{ direction: 'rtl' }}
         >
           {/* Search Input */}
-          <div className="p-2 border-b border-border">
+          <div className="p-1 border-b border-border">
             <div className="relative">
               <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -109,14 +109,14 @@ const SearchableSelectFixed = ({
                 placeholder={searchPlaceholder}
                 value={search}
                 onChange={handleSearchChange}
-                className="pr-10 text-right"
+                className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
                 autoComplete="off"
               />
             </div>
           </div>
 
           {/* Options List */}
-          <div className="max-h-48 overflow-y-auto">
+          <div className="p-1 max-h-48 overflow-y-auto">
             {filteredOptions.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 {emptyText}
@@ -131,9 +131,10 @@ const SearchableSelectFixed = ({
                   <div
                     key={optionValue}
                     className={cn(
-                      "relative flex cursor-pointer select-none items-center py-2 px-3 text-sm outline-none transition-colors",
+                      "relative flex cursor-pointer select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none transition-colors",
                       "hover:bg-accent hover:text-accent-foreground",
                       "active:bg-accent active:text-accent-foreground",
+                      "focus:bg-accent focus:text-accent-foreground",
                       "touch-manipulation",
                       isSelected && "bg-accent text-accent-foreground"
                     )}
