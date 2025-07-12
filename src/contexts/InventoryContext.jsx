@@ -28,7 +28,11 @@ export const InventoryProvider = ({ children }) => {
     printer: { paperSize: 'a4', orientation: 'portrait' }
   });
   const [accounting, setAccounting] = useState({ capital: 10000000, expenses: [] });
-  const [settlementInvoices, setSettlementInvoices] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [aiOrders, setAiOrders] = useState([]);
+  const [purchases, setPurchases] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [settings, setSettings] = useState({});
 
   // Stock update logic when order status changes
   function handleStockUpdate(oldOrder, newOrder) {
@@ -56,7 +60,7 @@ export const InventoryProvider = ({ children }) => {
 
   // Using custom hooks
   const { products, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings);
-  const { orders, setOrders, createOrder, updateOrder, deleteOrders } = useOrders([], [], settings, handleStockUpdate, addNotification, hasPermission, user);
+  const { orders, setOrders, aiOrders, setAiOrders, createOrder, updateOrder, deleteOrders, approveAiOrder } = useOrders([], [], settings, handleStockUpdate, addNotification, hasPermission, user);
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   
   async function addExpense(expense) {
@@ -87,11 +91,12 @@ export const InventoryProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const [productsRes, ordersRes, purchasesRes, settingsRes] = await Promise.all([
+      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes] = await Promise.all([
         supabase.from('products').select('*, variants:product_variants(*)').order('created_at', { ascending: false }),
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
         supabase.from('settings').select('*').limit(1).maybeSingle(),
+        supabase.from('orders').select('*').eq('delivery_status', 'ai_pending').order('created_at', { ascending: false })
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -100,6 +105,7 @@ export const InventoryProvider = ({ children }) => {
 
       setProducts(productsRes.data || []);
       setOrders(ordersRes.data || []);
+      setAiOrders(aiOrdersRes.data || []);
       setPurchases(purchasesRes.data || []);
       setSettings(settingsRes.data?.value || {});
     } catch (error) {
@@ -108,7 +114,7 @@ export const InventoryProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, setProducts, setOrders, setPurchases]);
+  }, [user, setProducts, setOrders, setPurchases, setAiOrders]);
 
   useEffect(() => {
     if (user) {
@@ -275,13 +281,14 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const value = {
-    products, orders, purchases, loading, cart, settings, accounting, settlementInvoices,
+    products, orders, aiOrders, purchases, loading, cart, settings, accounting,
     setProducts,
     addProduct, updateProduct, deleteProducts, 
     addPurchase, deletePurchase, deletePurchases,
     createOrder: (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => createOrder(customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData),
     updateOrder, deleteOrders, updateSettings, addToCart, removeFromCart, updateCartItemQuantity,
     clearCart, getLowStockProducts, 
+    approveAiOrder,
     updateVariantStock, calculateProfit, requestProfitSettlement,
     getEmployeeProfitRules, setEmployeeProfitRule, settleEmployeeProfits,
     updateCapital, addExpense, deleteExpense,

@@ -25,7 +25,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 
 const OrdersPage = () => {
-  const { orders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useInventory();
+  const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers, hasPermission } = useAuth();
   const navigate = useNavigate();
@@ -79,8 +79,9 @@ const OrdersPage = () => {
   }, [orders, user.id, hasPermission]);
   
   const userAiOrders = useMemo(() => {
-    return []; // الطلبات الذكية غير متاحة حالياً
-  }, []);
+    if (!Array.isArray(aiOrders)) return [];
+    return aiOrders.filter(order => order.created_by === user.id);
+  }, [aiOrders, user.id]);
 
   const filteredOrders = useMemo(() => {
     let tempOrders;

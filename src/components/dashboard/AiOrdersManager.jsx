@@ -1,10 +1,173 @@
 import React from 'react';
-
-// هذا المكون لم يعد مستخدماً حالياً
-// سيتم تطويره في المستقبل عند إضافة ميزة الطلبات الذكية
+import { motion, AnimatePresence } from 'framer-motion';
+import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { X, Bot, FileDown, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from '@/components/ui/use-toast';
+import AiOrderCard from './AiOrderCard';
+import EditAiOrderDialog from './EditAiOrderDialog';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 const AiOrdersManager = ({ onClose }) => {
-  return null;
+  const { user } = useAuth();
+  const { aiOrders, approveAiOrder, deleteOrders } = useInventory();
+  const { deleteNotificationByTypeAndData } = useNotifications();
+  const [selectedOrders, setSelectedOrders] = React.useState([]);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [editingOrder, setEditingOrder] = React.useState(null);
+
+  const userAiOrders = React.useMemo(() => {
+    if (!Array.isArray(aiOrders)) return [];
+    if (user?.role === 'admin') return aiOrders;
+    return aiOrders.filter(order => order.created_by === user?.id);
+  }, [aiOrders, user]);
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedOrders(userAiOrders.map(order => order.id));
+    } else {
+      setSelectedOrders([]);
+    }
+  };
+
+  const handleSelectOrder = (orderId, checked) => {
+    if (checked) {
+      setSelectedOrders(prev => [...prev, orderId]);
+    } else {
+      setSelectedOrders(prev => prev.filter(id => id !== orderId));
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    setIsProcessing(true);
+    for (const orderId of selectedOrders) {
+      await approveAiOrder(orderId);
+    }
+    setSelectedOrders([]);
+    setIsProcessing(false);
+    toast({ title: "نجاح", description: `تمت الموافقة على ${selectedOrders.length} طلبات ذكية.` });
+  };
+
+  const handleBulkDelete = async () => {
+    setIsProcessing(true);
+    await deleteOrders(selectedOrders, true);
+    setSelectedOrders([]);
+    setIsProcessing(false);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-background rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <Card className="border-0 h-full">
+          <CardHeader className="border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bot className="w-6 h-6 text-primary" />
+                <div>
+                  <CardTitle>إدارة الطلبات الذكية</CardTitle>
+                  <CardDescription>
+                    {userAiOrders.length} طلبات ذكية في انتظار المراجعة
+                  </CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={onClose}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0 flex flex-col h-[calc(90vh-100px)]">
+            {userAiOrders.length > 0 && (
+              <div className="p-4 border-b bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <Checkbox
+                      checked={selectedOrders.length === userAiOrders.length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <span className="text-sm font-medium">
+                      تحديد الكل ({selectedOrders.length}/{userAiOrders.length})
+                    </span>
+                  </div>
+                  
+                  {selectedOrders.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="sm" 
+                        onClick={handleBulkApprove}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
+                        موافقة على المحدد
+                      </Button>
+                      <Button 
+                        variant="destructive" 
+                        size="sm" 
+                        onClick={handleBulkDelete}
+                        disabled={isProcessing}
+                      >
+                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Trash2 className="w-4 h-4 ml-2" />}
+                        حذف المحدد
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {userAiOrders.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center">
+                  <Bot className="w-16 h-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">لا توجد طلبات ذكية</h3>
+                  <p className="text-muted-foreground">
+                    عندما تصل طلبات ذكية جديدة، ستظهر هنا للمراجعة والموافقة.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {userAiOrders.map(order => (
+                    <AiOrderCard
+                      key={order.id}
+                      order={order}
+                      isSelected={selectedOrders.includes(order.id)}
+                      onSelect={(checked) => handleSelectOrder(order.id, checked)}
+                      onEdit={() => setEditingOrder(order)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <AnimatePresence>
+          {editingOrder && (
+            <EditAiOrderDialog 
+              order={editingOrder}
+              open={!!editingOrder}
+              onOpenChange={() => setEditingOrder(null)}
+            />
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 export default AiOrdersManager;

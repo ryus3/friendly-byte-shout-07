@@ -161,8 +161,21 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     );
 
     if (result.success) {
-      // إزالة من قائمة الطلبات الذكية (محلياً فقط)
-      setAiOrders(prev => prev.filter(o => o.id !== orderId));
+      // تحويل الطلب الذكي إلى طلب عادي
+      const aiOrder = aiOrders.find(o => o.id === orderId);
+      if (aiOrder) {
+        const newOrder = {
+          ...aiOrder,
+          delivery_status: 'pending',
+          status: 'pending'
+        };
+        
+        const { error } = await supabase.from('orders').update(newOrder).eq('id', orderId);
+        if (error) throw error;
+        
+        setAiOrders(prev => prev.filter(o => o.id !== orderId));
+        setOrders(prev => [newOrder, ...prev]);
+      }
       toast({ title: "نجاح", description: "تمت الموافقة على الطلب الذكي وتحويله لطلب عادي." });
     } else {
       toast({ title: "خطأ", description: "فشل تحويل الطلب الذكي.", variant: "destructive" });
