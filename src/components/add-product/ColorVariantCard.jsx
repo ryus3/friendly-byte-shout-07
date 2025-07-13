@@ -47,30 +47,30 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
         </div>
         <div className="md:col-span-2 space-y-2">
            <Label className="mb-2 block">الكميات والأسعار والقياسات</Label>
-            {allSizesForType.map(size => {
-              const variant = variants.find(v => v.colorId === color.id && v.sizeId === size.id);
-              if (!variant) return null;
+            {allSizesForType.map(variant => {
+              if (!variant || variant.colorId !== color.id) return null;
+              
               return (
-                <div key={size.id} className="grid grid-cols-12 items-end gap-2 p-2 border rounded-md">
-                    <Label className="text-center col-span-2">{size.value}</Label>
+                <div key={variant.sizeId} className="grid grid-cols-12 items-end gap-2 p-2 border rounded-md">
+                    <Label className="text-center col-span-2">{variant.size}</Label>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">الكمية</Label>
-                      <Input type="number" placeholder="0" defaultValue={variant.quantity || 0} onChange={e => handleVariantChange(color.id, size.id, 'quantity', parseInt(e.target.value) || 0)} required />
+                      <Input type="number" placeholder="0" defaultValue={variant.quantity || 0} onChange={e => handleVariantChange(color.id, variant.sizeId, 'quantity', parseInt(e.target.value) || 0)} required />
                     </div>
                      <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">التكلفة</Label>
-                      <Input type="number" defaultValue={variant.costPrice || costPrice || 0} onChange={e => handleVariantChange(color.id, size.id, 'costPrice', parseFloat(e.target.value) || 0)} />
+                      <Input type="number" defaultValue={variant.costPrice || costPrice || 0} onChange={e => handleVariantChange(color.id, variant.sizeId, 'costPrice', parseFloat(e.target.value) || 0)} />
                     </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">البيع</Label>
-                      <Input type="number" defaultValue={variant.price || price || 0} onChange={e => handleVariantChange(color.id, size.id, 'price', parseFloat(e.target.value) || 0)} />
+                      <Input type="number" defaultValue={variant.price || price || 0} onChange={e => handleVariantChange(color.id, variant.sizeId, 'price', parseFloat(e.target.value) || 0)} />
                     </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">تلميح</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Input type="text" placeholder="..." defaultValue={variant.hint || ''} onChange={e => handleVariantChange(color.id, size.id, 'hint', e.target.value)} />
+                            <Input type="text" placeholder="..." defaultValue={variant.hint || ''} onChange={e => handleVariantChange(color.id, variant.sizeId, 'hint', e.target.value)} />
                           </TooltipTrigger>
                           <TooltipContent><p>تلميح خاص بهذا القياس لهذا المنتج فقط</p></TooltipContent>
                         </Tooltip>
@@ -99,7 +99,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Button variant="ghost" size="icon" className="col-span-1 text-destructive hover:text-destructive" onClick={() => handleRemoveSizeFromColor(size.id)}>
+                    <Button variant="ghost" size="icon" className="col-span-1 text-destructive hover:text-destructive" onClick={() => handleRemoveSizeFromColor(variant.sizeId)}>
                       <Trash2 className="w-4 h-4" />
                     </Button>
                 </div>

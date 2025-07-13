@@ -173,6 +173,7 @@ const NewProductCategorization = ({ selectedCategories, setSelectedCategories })
   const { categories } = useVariants();
 
   const categoryTypes = [
+    { id: 'main_category', label: 'التصنيف الرئيسي' },
     { id: 'product_type', label: 'نوع المنتج' },
     { id: 'season_occasion', label: 'الموسم/المناسبة' }
   ];
@@ -193,14 +194,14 @@ const NewProductCategorization = ({ selectedCategories, setSelectedCategories })
         <div>
           <Label>القسم الرئيسي</Label>
           <CreatableDepartmentSelect
-            value={selectedCategories.main_category}
-            onChange={value => setSelectedCategories(prev => ({ ...prev, main_category: value }))}
+            value={selectedCategories.department}
+            onChange={value => setSelectedCategories(prev => ({ ...prev, department: value }))}
             onDepartmentCreated={handleDepartmentCreated}
           />
         </div>
         
         {/* التصنيفات الفرعية */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {categoryTypes.map(ct => (
             <div key={ct.id}>
               <Label>{ct.label}</Label>

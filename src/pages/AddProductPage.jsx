@@ -48,7 +48,8 @@ const AddProductPage = () => {
   });
   const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
   const [selectedCategories, setSelectedCategories] = useState({
-    main_category: selectedDepartment?.name || '', 
+    department: selectedDepartment?.name || '',
+    main_category: '', 
     product_type: '', 
     season_occasion: ''
   });
