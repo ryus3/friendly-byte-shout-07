@@ -107,26 +107,35 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
 
           finalVariants.push({
             product_id: newProduct.id,
-            color: variant.color,
-            color_hex: variant.color_hex,
-            size: variant.size,
-            sku: variant.sku,
-            barcode: variant.barcode,
-            quantity: variant.quantity,
+            color_id: variant.colorId,
+            size_id: variant.sizeId,
             price: variant.price,
             cost_price: variant.costPrice,
-            image: imageUrl,
-            hint: variant.hint,
-            colorId: variant.colorId,
-            sizeId: variant.sizeId
+            barcode: variant.barcode,
+            images: imageUrl ? [imageUrl] : []
           });
       }
 
       if (finalVariants.length > 0) {
-        const { error: variantsError } = await supabase
+        const { data: insertedVariants, error: variantsError } = await supabase
           .from('product_variants')
-          .insert(finalVariants);
+          .insert(finalVariants)
+          .select();
         if (variantsError) throw variantsError;
+
+        // إنشاء سجلات inventory للمتغيرات الجديدة
+        const inventoryRecords = insertedVariants.map((variant, index) => ({
+          product_id: newProduct.id,
+          variant_id: variant.id,
+          quantity: productData.variants[index].quantity || 0,
+          min_stock: productData.variants[index].minStock || 5,
+          last_updated_by: user?.user_id || user?.id
+        }));
+
+        const { error: inventoryError } = await supabase
+          .from('inventory')
+          .insert(inventoryRecords);
+        if (inventoryError) throw inventoryError;
       }
       
       if(totalImagesToUpload === 0) setUploadProgress(100);
@@ -225,18 +234,12 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             let imageUrl = uploadedColorUrls[v.colorId] || existingColorImageUrls[v.colorId] || v.image || null;
             return {
                 product_id: productId,
-                color: v.color,
-                color_hex: v.color_hex,
-                size: v.size,
-                sku: v.sku,
-                barcode: v.barcode,
-                quantity: v.quantity,
+                color_id: v.colorId,
+                size_id: v.sizeId,
                 price: v.price,
                 cost_price: v.costPrice,
-                image: imageUrl,
-                hint: v.hint,
-                colorId: v.colorId,
-                sizeId: v.sizeId,
+                barcode: v.barcode,
+                images: imageUrl ? [imageUrl] : []
             };
         });
 
@@ -297,34 +300,35 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
   
   const updateVariantStock = useCallback(async (productId, variantIdentifier, newQuantity) => {
     try {
-      const { data: updatedVariant, error } = await supabase
-        .from('product_variants')
+      // تحديث الكمية في جدول inventory بدلاً من product_variants
+      const { data: updatedInventory, error } = await supabase
+        .from('inventory')
         .update({ quantity: newQuantity })
         .eq('product_id', productId)
-        .eq('color', variantIdentifier.color)
-        .eq('size', variantIdentifier.size)
+        .eq('variant_id', variantIdentifier.variantId)
         .select()
         .single();
 
       if (error) throw error;
 
       const product = products.find(p => p.id === productId);
-      if (updatedVariant && newQuantity <= (settings.lowStockThreshold || 5) && updatedVariant.quantity > (settings.lowStockThreshold || 5)) {
+      if (updatedInventory && newQuantity <= (settings.lowStockThreshold || 5)) {
         addNotification({
           type: 'low_stock',
           title: 'انخفاض المخزون',
-          message: `مخزون المنتج ${product.name} (${updatedVariant.color}/${updatedVariant.size}) منخفض.`,
+          message: `مخزون المنتج ${product?.name || 'غير معروف'} منخفض.`,
           icon: 'AlertTriangle',
           color: 'orange',
-          link: `/inventory?stockFilter=low&highlight=${product.name}`
+          link: `/inventory?stockFilter=low&highlight=${product?.name || ''}`
         });
       }
       
+      // تحديث البيانات المحلية (إذا كانت متاحة)
       setProducts(prevProducts => 
         prevProducts.map(p => 
           p.id === productId 
-            ? { ...p, variants: p.variants.map(v => 
-                v.id === updatedVariant.id ? { ...v, quantity: newQuantity } : v
+            ? { ...p, variants: p.variants?.map(v => 
+                v.id === variantIdentifier.variantId ? { ...v, quantity: newQuantity } : v
               )}
             : p
         )
