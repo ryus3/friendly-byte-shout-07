@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManager from '@/components/manage-variants/CategoriesManager';
 import ColorsManagerNew from '@/components/manage-variants/ColorsManagerNew';
-import SizesManager from '@/components/manage-variants/SizesManager';
+import SizesManagerNew from '@/components/manage-variants/SizesManagerNew';
 import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -128,7 +128,7 @@ const ManageVariantsPage = () => {
       icon: Ruler,
       description: 'إدارة القياسات والأحجام المختلفة',
       color: 'from-blue-500 to-indigo-600',
-      component: SizesManager
+      component: SizesManagerNew
     }
   ];
 

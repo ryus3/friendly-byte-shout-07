@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/contexts/SupabaseContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast.js';
+import { supabase } from '@/lib/customSupabaseClient';
 
 export const useProductsDB = () => {
   const [products, setProducts] = useState([]);
@@ -53,17 +54,64 @@ export const useProductsDB = () => {
         uploadedGeneralImages = (await Promise.all(uploadPromises)).filter(Boolean);
       }
 
-      // Create product
+      // Create product - use the first category as main category for compatibility
+      const mainCategoryId = productData.selectedCategories?.length > 0 ? productData.selectedCategories[0].id : null;
+      
       const newProduct = await db.products.create({
         name: productData.name,
         description: productData.description,
-        category_id: productData.categoryId,
+        category_id: mainCategoryId,
         base_price: productData.price || 0,
         cost_price: productData.costPrice || 0,
         barcode: productData.barcode,
         images: uploadedGeneralImages,
-        created_by: user.user_id
+        is_active: true,
+        created_by: user.id || user.user_id
       });
+
+      // Create relationships for multiple categories
+      if (productData.selectedCategories?.length > 0) {
+        const categoryPromises = productData.selectedCategories.map(category =>
+          supabase.from('product_categories').insert({
+            product_id: newProduct.id,
+            category_id: category.id
+          })
+        );
+        await Promise.all(categoryPromises);
+      }
+
+      // Create relationships for product types
+      if (productData.selectedProductTypes?.length > 0) {
+        const productTypePromises = productData.selectedProductTypes.map(productType =>
+          supabase.from('product_product_types').insert({
+            product_id: newProduct.id,
+            product_type_id: productType.id
+          })
+        );
+        await Promise.all(productTypePromises);
+      }
+
+      // Create relationships for seasons/occasions
+      if (productData.selectedSeasonsOccasions?.length > 0) {
+        const seasonOccasionPromises = productData.selectedSeasonsOccasions.map(seasonOccasion =>
+          supabase.from('product_seasons_occasions').insert({
+            product_id: newProduct.id,
+            season_occasion_id: seasonOccasion.id
+          })
+        );
+        await Promise.all(seasonOccasionPromises);
+      }
+
+      // Create relationships for departments
+      if (productData.selectedDepartments?.length > 0) {
+        const departmentPromises = productData.selectedDepartments.map(department =>
+          supabase.from('product_departments').insert({
+            product_id: newProduct.id,
+            department_id: department.id
+          })
+        );
+        await Promise.all(departmentPromises);
+      }
 
       // Create variants if any
       if (productData.variants && productData.variants.length > 0) {

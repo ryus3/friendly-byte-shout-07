@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/lib/customSupabaseClient';
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
-import NewProductCategorization from '@/components/add-product/NewProductCategorization';
+import MultiSelectCategorization from '@/components/add-product/MultiSelectCategorization';
 import ProductVariantSelection from '@/components/add-product/ProductVariantSelection';
 import ColorVariantCard from '@/components/add-product/ColorVariantCard';
 
@@ -47,12 +47,10 @@ const AddProductPage = () => {
     name: '', price: '', costPrice: '', description: '',
   });
   const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
-  const [selectedCategories, setSelectedCategories] = useState({
-    department: selectedDepartment?.name || '',
-    main_category: '', 
-    product_type: '', 
-    season_occasion: ''
-  });
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedProductTypes, setSelectedProductTypes] = useState([]);
+  const [selectedSeasonsOccasions, setSelectedSeasonsOccasions] = useState([]);
+  const [selectedDepartments, setSelectedDepartments] = useState(selectedDepartment ? [selectedDepartment] : []);
   const [selectedColors, setSelectedColors] = useState([]);
   const [sizeType, setSizeType] = useState('letter');
   const [colorSizeTypes, setColorSizeTypes] = useState({});
@@ -146,7 +144,10 @@ const AddProductPage = () => {
       ...productInfo,
       price: parseFloat(productInfo.price),
       costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : null,
-      categories: selectedCategories,
+      selectedCategories,
+      selectedProductTypes,
+      selectedSeasonsOccasions,
+      selectedDepartments,
       variants,
       isVisible: true,
     };
@@ -272,9 +273,15 @@ const AddProductPage = () => {
                   onImageSelect={handleGeneralImageSelect}
                   onImageRemove={handleGeneralImageRemove}
                 />
-                <NewProductCategorization 
-                  selectedCategories={selectedCategories} 
-                  setSelectedCategories={setSelectedCategories} 
+                <MultiSelectCategorization 
+                  selectedCategories={selectedCategories}
+                  setSelectedCategories={setSelectedCategories}
+                  selectedProductTypes={selectedProductTypes}
+                  setSelectedProductTypes={setSelectedProductTypes}
+                  selectedSeasonsOccasions={selectedSeasonsOccasions}
+                  setSelectedSeasonsOccasions={setSelectedSeasonsOccasions}
+                  selectedDepartments={selectedDepartments}
+                  setSelectedDepartments={setSelectedDepartments}
                 />
                 <ProductVariantSelection 
                   selectedColors={selectedColors}
