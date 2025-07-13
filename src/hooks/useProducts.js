@@ -442,6 +442,8 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
         if (product.is_visible) {
             product.variants.forEach(variant => {
                 const lowStockThreshold = product.minStock || settings.lowStockThreshold || 5;
+                // منتج منخفض: أقل من أو يساوي الحد الأدنى وليس صفر
+                // منتج جيد: 11 فما فوق
                 if (variant.quantity > 0 && variant.quantity <= lowStockThreshold) {
                     lowStockVariants.push({
                         ...variant,

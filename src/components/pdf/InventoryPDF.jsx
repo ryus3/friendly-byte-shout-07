@@ -182,13 +182,21 @@ const styles = StyleSheet.create({
 });
 
 const InventoryPDF = React.forwardRef(({ products }, ref) => {
+  if (!products || !Array.isArray(products)) {
+    console.error('InventoryPDF: products prop is missing or invalid');
+    return null;
+  }
+
   const totalProducts = products.length;
   const totalVariants = products.reduce((sum, p) => sum + (p.variants?.length || 0), 0);
   const totalStock = products.reduce((sum, p) => 
     sum + (p.variants?.reduce((varSum, v) => varSum + (v.quantity || 0), 0) || 0), 0
   );
   const lowStockVariants = products.reduce((sum, p) => 
-    sum + (p.variants?.filter(v => v.stockLevel === 'low').length || 0), 0
+    sum + (p.variants?.filter(v => (v.quantity || 0) > 0 && (v.quantity || 0) <= 5).length || 0), 0
+  );
+  const goodStockVariants = products.reduce((sum, p) => 
+    sum + (p.variants?.filter(v => (v.quantity || 0) >= 11).length || 0), 0
   );
 
   return (
@@ -223,6 +231,10 @@ const InventoryPDF = React.forwardRef(({ products }, ref) => {
             <Text style={styles.summaryLabel}>متغيرات منخفضة المخزون:</Text>
             <Text style={styles.summaryValue}>{lowStockVariants}</Text>
           </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>متغيرات بمخزون جيد (11+):</Text>
+            <Text style={styles.summaryValue}>{goodStockVariants}</Text>
+          </View>
         </View>
 
         {products.map(product => (
@@ -247,10 +259,19 @@ const InventoryPDF = React.forwardRef(({ products }, ref) => {
                 <Text style={styles.tableColHeader}>الحالة</Text>
               </View>
               {product.variants?.map(variant => {
+                const quantity = variant.quantity || 0;
                 const getStockStatusStyle = () => {
-                  if (variant.stockLevel === 'low') return styles.stockLow;
-                  if (variant.stockLevel === 'medium') return styles.stockMedium;
-                  return styles.stockHigh;
+                  if (quantity === 0) return styles.stockLow;
+                  if (quantity > 0 && quantity <= 5) return styles.stockLow;
+                  if (quantity >= 6 && quantity <= 10) return styles.stockMedium;
+                  return styles.stockHigh; // 11+
+                };
+
+                const getStockStatusText = () => {
+                  if (quantity === 0) return 'نفذ';
+                  if (quantity > 0 && quantity <= 5) return 'منخفض';
+                  if (quantity >= 6 && quantity <= 10) return 'متوسط';
+                  return 'جيد'; // 11+
                 };
 
                 return (
@@ -260,10 +281,10 @@ const InventoryPDF = React.forwardRef(({ products }, ref) => {
                       <Text>{variant.color || 'لا يوجد'}</Text>
                     </View>
                     <Text style={styles.tableCol}>{variant.size || 'لا يوجد'}</Text>
-                    <Text style={styles.tableCol}>{variant.quantity || 0}</Text>
+                    <Text style={styles.tableCol}>{quantity}</Text>
                     <Text style={styles.tableCol}>{variant.reserved || 0}</Text>
                     <View style={[styles.tableCol, styles.stockStatus, getStockStatusStyle()]}>
-                      <Text>{variant.stockLevel === 'low' ? 'منخفض' : variant.stockLevel === 'medium' ? 'متوسط' : 'جيد'}</Text>
+                      <Text>{getStockStatusText()}</Text>
                     </View>
                   </View>
                 );
