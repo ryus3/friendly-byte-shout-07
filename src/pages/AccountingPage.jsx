@@ -98,7 +98,7 @@ const AccountingPage = () => {
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
-        if (!orders || !purchases || !accounting || !products) return {
+        if (!orders || !purchases || !accounting || !products || !Array.isArray(orders) || !Array.isArray(products)) return {
             totalRevenue: 0, cogs: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0,
             inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, employeePendingDues: 0, employeeSettledDues: 0,
             chartData: [], filteredExpenses: [], deliveredOrders: [], employeePendingDuesDetails: []
@@ -132,24 +132,24 @@ const AccountingPage = () => {
         const totalExpenses = generalExpenses + employeeSettledDues;
         const netProfit = grossProfit - totalExpenses;
     
-        const inventoryValue = products.reduce((sum, p) => {
-            return sum + (p.variants || []).reduce((variantSum, v) => variantSum + (v.quantity * (v.cost_price || 0)), 0);
-        }, 0);
+        const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
+            return sum + (Array.isArray(p.variants) ? p.variants.reduce((variantSum, v) => variantSum + (v.quantity * (v.cost_price || 0)), 0) : 0);
+        }, 0) : 0;
         
-        const myProfit = deliveredOrders.filter(o => o.created_by === currentUser.id).reduce((sum, o) => {
+        const myProfit = deliveredOrders.filter(o => o.created_by === currentUser?.id).reduce((sum, o) => {
             const orderProfit = (o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0);
             return sum + orderProfit;
         }, 0);
 
         const managerProfitFromEmployees = deliveredOrders.filter(o => {
-            const orderUser = allUsers.find(u => u.id === o.created_by);
+            const orderUser = allUsers?.find(u => u.id === o.created_by);
             return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy');
         }).reduce((sum, o) => sum + (calculateManagerProfit(o) || 0), 0);
         
         const totalProfit = myProfit + managerProfitFromEmployees;
     
         const employeePendingDuesDetails = safeOrders
-          .filter(o => o.status === 'delivered' && (o.profitStatus || 'pending') === 'pending' && o.created_by !== currentUser.id);
+          .filter(o => o.status === 'delivered' && (o.profitStatus || 'pending') === 'pending' && o.created_by !== currentUser?.id);
         
         const employeePendingDues = employeePendingDuesDetails.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0) || 0), 0);
     
@@ -179,7 +179,7 @@ const AccountingPage = () => {
         }));
     
         return { totalRevenue, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
-    }, [dateRange, orders, purchases, accounting, products, currentUser.id, allUsers, calculateManagerProfit, calculateProfit]);
+    }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const topRowCards = [
         { key: 'capital', title: "رأس المال", value: accounting.capital, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
