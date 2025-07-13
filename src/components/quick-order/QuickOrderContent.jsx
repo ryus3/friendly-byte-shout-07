@@ -74,8 +74,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
-    if (user?.default_customer_name && !defaultCustomerName) {
+    if (user?.default_customer_name && user?.default_customer_name !== defaultCustomerName) {
       setDefaultCustomerName(user.default_customer_name);
+      setFormData(prev => ({ 
+        ...prev, 
+        name: user.default_customer_name,
+        defaultCustomerName: user.default_customer_name
+      }));
     }
   }, [user?.default_customer_name, defaultCustomerName, setDefaultCustomerName]);
 
@@ -86,16 +91,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [activePartner, defaultDeliveryPartner, setDefaultDeliveryPartner]);
 
-  // تحديث الاسم في النموذج عند تغيير الافتراضي
+  // تحديث الاسم في النموذج عند تغيير الافتراضي  
   useEffect(() => {
-    if (defaultCustomerName && !formData.name) {
+    if (defaultCustomerName && (!formData.name || formData.name !== defaultCustomerName)) {
       setFormData(prev => ({ 
         ...prev, 
         name: defaultCustomerName,
         defaultCustomerName: defaultCustomerName
       }));
     }
-  }, [defaultCustomerName, formData.name]);
+  }, [defaultCustomerName]);
 
   const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
 

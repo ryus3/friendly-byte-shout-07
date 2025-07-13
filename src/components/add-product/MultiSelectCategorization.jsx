@@ -332,7 +332,7 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-background border shadow-lg z-50" align="start">
+      <PopoverContent className="w-full p-0 bg-background/95 backdrop-blur-sm border shadow-lg z-[1000]" align="start">
         <Command>
           <CommandInput 
             placeholder="البحث..." 
@@ -354,12 +354,12 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
                 {addNewText}
               </Button>
             </CommandEmpty>
-            <CommandGroup className="max-h-64 overflow-auto">
+            <CommandGroup className="max-h-64 overflow-auto bg-background">
               {filteredItems.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => onToggle(item)}
-                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent/80 hover:text-accent-foreground transition-colors bg-background"
                 >
                   <div className="flex items-center gap-2 flex-1">
                     <span>{item.name}</span>
@@ -383,7 +383,7 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
                     onAddNew();
                     setOpen(false);
                   }}
-                  className="flex items-center gap-2 cursor-pointer hover:bg-muted border-t px-2 py-1.5 text-sm"
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/80 border-t px-2 py-1.5 text-sm bg-background transition-colors"
                 >
                   <Plus className="h-4 w-4" />
                   <span>{addNewText}</span>
