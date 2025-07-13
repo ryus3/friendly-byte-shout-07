@@ -17,6 +17,7 @@ import { iraqiProvinces } from '@/lib/iraq-provinces';
 import DeliveryStatusCard from './DeliveryStatusCard';
 import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
+import useLocalStorage from '@/hooks/useLocalStorage';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState }) => {
   const { createOrder, settings, cart, clearCart, addToCart } = useInventory();
@@ -24,12 +25,29 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
   const [productSelectOpen, setProductSelectOpen] = useState(false);
+  
+  // Local storage for default customer name and delivery partner
+  const [defaultCustomerName, setDefaultCustomerName] = useLocalStorage('defaultCustomerName', user?.default_customer_name || '');
+  const [defaultDeliveryPartner, setDefaultDeliveryPartner] = useLocalStorage('defaultDeliveryPartner', activePartner || '');
 
   const initialFormData = useMemo(() => ({
-    name: user?.default_customer_name || '', phone: '', second_phone: '', city_id: '', region_id: '', city: '', region: '', address: '', 
-    notes: '', details: '', quantity: 1, price: 0, size: '', type: 'new', promocode: '',
-    defaultCustomerName: user?.default_customer_name || ''
-  }), [user?.default_customer_name]);
+    name: defaultCustomerName || user?.default_customer_name || '', 
+    phone: '', 
+    second_phone: '', 
+    city_id: '', 
+    region_id: '', 
+    city: '', 
+    region: '', 
+    address: '', 
+    notes: '', 
+    details: '', 
+    quantity: 1, 
+    price: 0, 
+    size: '', 
+    type: 'new', 
+    promocode: '',
+    defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
+  }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
@@ -54,12 +72,30 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setErrors({});
   }, [clearCart, initialFormData]);
 
-  // تحديث الاسم عند تغيير بيانات المستخدم
+  // تحديث الاسم الافتراضي عند تغيير بيانات المستخدم
   useEffect(() => {
-    if (user?.default_customer_name && formData.name !== user.default_customer_name) {
-      setFormData(prev => ({ ...prev, name: user.default_customer_name }));
+    if (user?.default_customer_name && !defaultCustomerName) {
+      setDefaultCustomerName(user.default_customer_name);
     }
-  }, [user?.default_customer_name, formData.name]);
+  }, [user?.default_customer_name, defaultCustomerName, setDefaultCustomerName]);
+
+  // تحديث شريك التوصيل الافتراضي
+  useEffect(() => {
+    if (activePartner && activePartner !== defaultDeliveryPartner) {
+      setDefaultDeliveryPartner(activePartner);
+    }
+  }, [activePartner, defaultDeliveryPartner, setDefaultDeliveryPartner]);
+
+  // تحديث الاسم في النموذج عند تغيير الافتراضي
+  useEffect(() => {
+    if (defaultCustomerName && !formData.name) {
+      setFormData(prev => ({ 
+        ...prev, 
+        name: defaultCustomerName,
+        defaultCustomerName: defaultCustomerName
+      }));
+    }
+  }, [defaultCustomerName, formData.name]);
 
   const orderCreationMode = useMemo(() => user?.order_creation_mode || 'choice', [user]);
 
@@ -176,6 +212,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // حفظ اسم الزبون كافتراضي عند تغييره
+    if (name === 'name' && value.trim() && value !== defaultCustomerName) {
+      setDefaultCustomerName(value.trim());
+    }
+    
     validateField(name, value);
   };
 
@@ -222,8 +264,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (activePartner === 'alwaseet') {
           if (!isWaseetLoggedIn || !waseetToken) throw new Error("يجب تسجيل الدخول لشركة التوصيل أولاً.");
           
-           const alWaseetPayload = {
-              client_name: formData.name.trim() || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
+            const alWaseetPayload = {
+              client_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
               client_mobile: formatPhoneNumber(formData.phone), 
               client_mobile2: formData.second_phone ? formatPhoneNumber(formData.second_phone) : '',
               city_id: formData.city_id, 
@@ -249,7 +291,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
       const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
       const customerInfoPayload = {
-        name: formData.name.trim() || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
+        name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`, 
         phone: formData.phone,
         address: `${formData.address}, ${region}, ${city}`,
         city: city, 
