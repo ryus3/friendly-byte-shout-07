@@ -64,10 +64,10 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className={cn("font-bold", getStockLevelClass())}>
-                {totalStock.toLocaleString()} قطعة
+                {(totalStock || 0).toLocaleString()} قطعة
               </span>
               <span className="font-bold text-primary">
-                {price.toLocaleString()} د.ع
+                {(price || 0).toLocaleString()} د.ع
               </span>
             </div>
           </div>

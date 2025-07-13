@@ -7,7 +7,7 @@ import React, { useMemo } from 'react';
     
     const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
       const { settings } = useInventory();
-      const totalStock = useMemo(() => product.variants.reduce((sum, v) => sum + v.quantity, 0), [product.variants]);
+      const totalStock = useMemo(() => product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0, [product.variants]);
     
       const getStockLevelClass = () => {
         if (!settings) return 'bg-gray-500/80 text-white';
@@ -46,7 +46,7 @@ import React, { useMemo } from 'react';
           <div className="absolute bottom-0 left-0 right-0 p-4" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
             <div className="p-2 rounded" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}>
               <h3 className="font-bold text-white text-lg truncate">{product.name}</h3>
-              <p className="text-sm font-semibold text-white">{price.toLocaleString()} د.ع</p>
+              <p className="text-sm font-semibold text-white">{(price || 0).toLocaleString()} د.ع</p>
             </div>
           </div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
