@@ -58,7 +58,7 @@ const ProfitsSummaryPage = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const invoiceId = params.get('invoice');
-    if (invoiceId) {
+    if (invoiceId && settlementInvoices) {
         const invoice = settlementInvoices.find(inv => inv.id === parseInt(invoiceId));
         if (invoice) {
             setSelectedInvoice(invoice);
@@ -70,7 +70,7 @@ const ProfitsSummaryPage = () => {
   }, [location.search, settlementInvoices, navigate, location.pathname]);
 
   const employees = useMemo(() => {
-    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy');
+    return allUsers?.filter(u => u.role === 'employee' || u.role === 'deputy') || [];
   }, [allUsers]);
 
   const profitData = useMemo(() => {
@@ -85,10 +85,10 @@ const ProfitsSummaryPage = () => {
         totalSettledDues: 0
     };
 
-    const deliveredOrders = orders.filter(o => {
+    const deliveredOrders = orders?.filter(o => {
         const orderDate = o.created_at ? parseISO(o.created_at) : null;
         return o.status === 'delivered' && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
-    });
+    }) || [];
 
     const detailedProfits = [];
 
@@ -128,10 +128,10 @@ const ProfitsSummaryPage = () => {
         .filter(p => p.profitStatus === 'settled')
         .reduce((sum, p) => sum + p.profit, 0);
 
-    const totalSettledDues = settlementInvoices.filter(inv => {
+    const totalSettledDues = settlementInvoices?.filter(inv => {
         const invDate = parseISO(inv.settlement_date);
         return isValid(invDate) && invDate >= from && invDate <= to;
-    }).reduce((sum, inv) => sum + inv.total_amount, 0);
+    }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
     
     return { 
         managerProfitFromEmployees, 
@@ -145,14 +145,19 @@ const ProfitsSummaryPage = () => {
   }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit]);
 
   const filteredDetailedProfits = useMemo(() => {
+    // Add null safety check
+    if (!profitData?.detailedProfits) {
+      return [];
+    }
+    
     let filtered = profitData.detailedProfits;
     
     if (!canViewAll) {
-        filtered = filtered.filter(p => p.created_by === user.id);
+        filtered = filtered.filter(p => p.created_by === user?.id);
     } else if (filters.employeeId !== 'all') {
       if (filters.employeeId === 'employees') {
         filtered = filtered.filter(p => {
-            const pUser = allUsers.find(u => u.id === p.created_by);
+            const pUser = allUsers?.find(u => u.id === p.created_by);
             return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
         });
       } else {
@@ -165,7 +170,7 @@ const ProfitsSummaryPage = () => {
     }
 
     return filtered;
-  }, [profitData.detailedProfits, filters, canViewAll, user.id, allUsers]);
+  }, [profitData?.detailedProfits, filters, canViewAll, user?.id, allUsers]);
 
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -182,7 +187,7 @@ const ProfitsSummaryPage = () => {
   const handleViewInvoice = (invoiceId) => {
     if (!invoiceId) return;
 
-    const invoice = settlementInvoices.find(inv => inv.id === invoiceId);
+    const invoice = settlementInvoices?.find(inv => inv.id === invoiceId);
     if (invoice) {
         setSelectedInvoice(invoice);
         setDialogs(d => ({ ...d, invoice: true }));
