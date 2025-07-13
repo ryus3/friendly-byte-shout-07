@@ -1,62 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Package, TrendingDown, Zap, ShieldAlert, AlertCircle, PackageX } from 'lucide-react';
+import { Package, Zap, ShieldAlert, AlertCircle, PackageX, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { toast } from '@/components/ui/use-toast';
+import StockAlertsWindow from './StockAlertsWindow';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
-  const { getLowStockProducts, settings, products } = useInventory();
-  const { addNotification } = useNotifications();
+  const { getLowStockProducts, settings } = useInventory();
+  const [alertsWindowOpen, setAlertsWindowOpen] = useState(false);
   const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
 
-  useEffect(() => {
-    if (!products || !settings || lowStockProducts.length === 0) return;
-
-    lowStockProducts.forEach(variant => {
-      const threshold = variant.lowStockThreshold || settings.lowStockThreshold || 5;
-      const isCritical = variant.quantity <= Math.max(1, Math.floor(threshold / 2));
-      
-      if (variant.quantity > 0 && variant.quantity <= threshold) {
-        addNotification({
-          type: 'low_stock_alert',
-          title: isCritical ? '🚨 تنبيه حرج: نفاد المخزون قريباً' : '⚠️ تنبيه: مخزون منخفض',
-          message: `المنتج "${variant.productName}" (${variant.color} - ${variant.size}) متبقي ${variant.quantity} قطعة فقط`,
-          icon: 'AlertTriangle',
-          color: isCritical ? 'red' : 'orange',
-          link: `/inventory?stockFilter=low&highlight=${variant.sku}`,
-          data: {
-            productId: variant.productId,
-            variantId: variant.id,
-            productName: variant.productName,
-            variantDetails: `${variant.color} - ${variant.size}`,
-            currentStock: variant.quantity,
-            threshold: threshold,
-            sku: variant.sku
-          },
-          autoDelete: false,
-          user_id: null
-        });
-
-        if (isCritical) {
-          toast({
-            title: "🚨 تنبيه حرج",
-            description: `${variant.productName} (${variant.color} - ${variant.size}) متبقي ${variant.quantity} قطعة فقط!`,
-            variant: "destructive",
-            duration: 10000,
-          });
-        }
-      }
-    });
-  }, [lowStockProducts, products, settings, addNotification]);
+  // تم إزالة الإشعارات المزعجة التلقائية
 
   const handleViewAll = () => {
-    navigate('/inventory?stockFilter=low');
+    setAlertsWindowOpen(true);
   };
   
   const handleLowStockProductClick = (variant) => {
@@ -239,12 +200,17 @@ const StockAlertsCard = () => {
               className="w-full text-primary border-primary/30 hover:bg-primary/5 hover:border-primary/50 transition-all text-sm"
               onClick={handleViewAll}
             >
-              <PackageX className="w-3.5 h-3.5 ml-1.5" />
-              عرض جميع التنبيهات
+              <Eye className="w-3.5 h-3.5 ml-1.5" />
+              عرض نافذة التنبيهات
             </Button>
           </div>
         )}
       </CardContent>
+      
+      <StockAlertsWindow 
+        open={alertsWindowOpen}
+        onOpenChange={setAlertsWindowOpen}
+      />
     </Card>
   );
 };

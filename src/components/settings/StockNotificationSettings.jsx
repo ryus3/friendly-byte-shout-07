@@ -15,10 +15,11 @@ import {
 } from 'lucide-react';
 
 const StockNotificationSettings = ({ open, onOpenChange }) => {
-  const [settings, setSettings] = useLocalStorage('stockNotificationSettings', {
+  const [settings, setSettings] = useLocalStorage('inventorySettings', {
     enableLowStockNotifications: true,
     enableOutOfStockNotifications: true,
-    notificationFrequency: 1, // hours
+    lowStockThreshold: 5,
+    averageStockThreshold: 10,
     criticalThreshold: 2,
     enableSounds: true,
     autoSilenceAfterRead: false,
@@ -177,21 +178,40 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
 
               <Separator />
 
-              <div className="space-y-2">
-                <Label className="font-medium">فترة إعادة الإرسال (بالساعات)</Label>
-                <p className="text-xs text-muted-foreground">
-                  الفترة الزمنية بين إرسال نفس التنبيه
-                </p>
-                <Input
-                  type="number"
-                  min="1"
-                  max="24"
-                  value={settings.notificationFrequency}
-                  onChange={(e) => 
-                    handleSettingChange('notificationFrequency', parseInt(e.target.value) || 1)
-                  }
-                  className="max-w-32"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-medium">المخزون المنخفض (فما دون)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    حد التنبيه للمخزون المنخفض
+                  </p>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={settings.lowStockThreshold || 5}
+                    onChange={(e) => 
+                      handleSettingChange('lowStockThreshold', parseInt(e.target.value) || 5)
+                    }
+                    className="max-w-32"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="font-medium">المخزون المتوسط (فما دون)</Label>
+                  <p className="text-xs text-muted-foreground">
+                    حد التنبيه للمخزون المتوسط
+                  </p>
+                  <Input
+                    type="number"
+                    min="5"
+                    max="100"
+                    value={settings.averageStockThreshold || 10}
+                    onChange={(e) => 
+                      handleSettingChange('averageStockThreshold', parseInt(e.target.value) || 10)
+                    }
+                    className="max-w-32"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
