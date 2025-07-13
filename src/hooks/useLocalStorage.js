@@ -27,4 +27,5 @@ function useLocalStorage(key, initialValue) {
   return [storedValue, setValue];
 }
 
+export { useLocalStorage };
 export default useLocalStorage;
