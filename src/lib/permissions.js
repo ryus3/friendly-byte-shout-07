@@ -53,15 +53,18 @@ export const permissionsMap = [
     categoryLabel: 'الطلبات والمبيعات',
     permissions: [
       { id: 'view_orders', label: 'عرض الطلبات' },
-      { id: 'create_orders', label: 'إنشاء طلبات جديدة' },
-      { id: 'edit_orders', label: 'تعديل الطلبات' },
-      { id: 'cancel_orders', label: 'إلغاء الطلبات' },
+      { id: 'create_order', label: 'إنشاء طلبات جديدة' },
+      { id: 'edit_orders', label: 'تعديل الطلبات قيد التجهيز' },
+      { id: 'cancel_orders', label: 'إلغاء/حذف الطلبات قيد التجهيز' },
+      { id: 'view_all_orders', label: 'عرض جميع الطلبات (لكل الموظفين)' },
+      { id: 'change_order_status', label: 'تغيير حالة الطلب يدوياً' },
       { id: 'view_sales_analytics', label: 'عرض تحليلات المبيعات' },
       { id: 'process_returns', label: 'معالجة المرتجعات' },
       { id: 'quick_order', label: 'الطلبات السريعة' },
       { id: 'checkout_orders', label: 'إتمام الطلبات' },
       { id: 'view_order_details', label: 'عرض تفاصيل الطلبات' },
-      { id: 'print_invoices', label: 'طباعة الفواتير' }
+      { id: 'print_invoices', label: 'طباعة الفواتير' },
+      { id: 'manage_delivery_partners', label: 'إدارة شركات التوصيل' }
     ]
   },
   {
@@ -81,11 +84,13 @@ export const permissionsMap = [
     category: 'accounting',
     categoryLabel: 'المحاسبة والتقارير',
     permissions: [
+      { id: 'view_accounting', label: 'عرض صفحة المحاسبة' },
       { id: 'view_financial_reports', label: 'عرض التقارير المالية' },
       { id: 'view_profit_summary', label: 'عرض ملخص الأرباح' },
       { id: 'manage_expenses', label: 'إدارة المصروفات' },
       { id: 'view_pending_dues', label: 'عرض المستحقات المعلقة' },
       { id: 'settle_dues', label: 'تسوية المستحقات' },
+      { id: 'manage_profit_settlement', label: 'إدارة تسوية الأرباح' },
       { id: 'export_reports', label: 'تصدير التقارير' },
       { id: 'view_profits', label: 'عرض الأرباح' }
     ]
@@ -96,6 +101,7 @@ export const permissionsMap = [
     permissions: [
       { id: 'view_employees', label: 'عرض الموظفين' },
       { id: 'manage_employees', label: 'إدارة الموظفين' },
+      { id: 'manage_users', label: 'إدارة المستخدمين والموافقة' },
       { id: 'manage_employee_profits', label: 'إدارة أرباح الموظفين' },
       { id: 'view_employee_performance', label: 'عرض أداء الموظفين' },
       { id: 'update_permissions', label: 'تحديث الصلاحيات' },
@@ -107,6 +113,7 @@ export const permissionsMap = [
     category: 'system',
     categoryLabel: 'إعدادات النظام',
     permissions: [
+      { id: 'view_settings', label: 'عرض صفحة الإعدادات' },
       { id: 'manage_settings', label: 'إدارة إعدادات النظام' },
       { id: 'view_notifications', label: 'عرض الإشعارات' },
       { id: 'manage_notifications', label: 'إدارة الإشعارات' },
@@ -117,7 +124,8 @@ export const permissionsMap = [
       { id: 'security_settings', label: 'إعدادات الأمان' },
       { id: 'profile_settings', label: 'إعدادات الملف الشخصي' },
       { id: 'manage_default_customer_name', label: 'إدارة اسم الزبون الافتراضي' },
-      { id: 'set_default_page', label: 'تعيين الصفحة الافتراضية' }
+      { id: 'set_default_page', label: 'تعيين الصفحة الافتراضية' },
+      { id: 'manage_variants', label: 'إدارة التصنيفات والمتغيرات' }
     ]
   },
 ];

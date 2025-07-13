@@ -250,31 +250,37 @@ export type Database = {
       }
       notifications: {
         Row: {
+          auto_delete: boolean | null
           created_at: string
           data: Json | null
           id: string
           is_read: boolean
           message: string
+          priority: string | null
           title: string
           type: string
           user_id: string | null
         }
         Insert: {
+          auto_delete?: boolean | null
           created_at?: string
           data?: Json | null
           id?: string
           is_read?: boolean
           message: string
+          priority?: string | null
           title: string
           type?: string
           user_id?: string | null
         }
         Update: {
+          auto_delete?: boolean | null
           created_at?: string
           data?: Json | null
           id?: string
           is_read?: boolean
           message?: string
+          priority?: string | null
           title?: string
           type?: string
           user_id?: string | null

@@ -65,10 +65,15 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
                 </div>
               </div>
               
-              {/* الصف الثاني - رقم التتبع والحالة */}
+              {/* الصف الثاني - رقم التتبع والتوصيل والحالة */}
               <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">{order.trackingnumber || 'لا يوجد رقم تتبع'}</p>
+                <div className="flex-1 space-y-1">
+                  <p className="text-xs text-muted-foreground">{order.tracking_number || order.trackingnumber || 'لا يوجد رقم تتبع'}</p>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className={`text-xs ${order.delivery_partner && order.delivery_partner !== 'محلي' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300' : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300'}`}>
+                      {order.delivery_partner && order.delivery_partner !== 'محلي' ? order.delivery_partner : 'توصيل محلي'}
+                    </Badge>
+                  </div>
                 </div>
                 <Badge className={`text-center ${statusVariants[order.status]?.color || 'bg-gray-500/10 text-gray-500'}`}>
                   {statusVariants[order.status]?.label || 'غير معروف'}
@@ -104,21 +109,27 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e)=>{e.stopPropagation(); onViewOrder()}}>
                   <Eye className="h-4 w-4" />
               </Button>
-              {order.shipping_company !== 'محلي' && (
+              
+              {/* زر التتبع لشركات التوصيل */}
+              {order.delivery_partner && order.delivery_partner !== 'محلي' && (
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e)=>{e.stopPropagation(); toast({title: "قيد التطوير", description: "سيتم تفعيل تتبع الشحنة قريباً."})}}>
                       <Truck className="h-4 w-4" />
                   </Button>
               )}
-              {order.shipping_company !== 'محلي' && order.status === 'pending' && hasPermission('manage_orders') && (
+              
+              {/* زر التعديل - للطلبات قيد التجهيز */}
+              {((order.delivery_partner === 'محلي' || !order.delivery_partner) || (order.delivery_partner && order.delivery_partner !== 'محلي')) && order.status === 'pending' && hasPermission('edit_orders') && (
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e)=>{e.stopPropagation(); onEditOrder()}}>
                       <Pencil className="h-4 w-4" />
                   </Button>
               )}
-               {hasPermission('delete_local_orders') && order.shipping_company === 'محلي' && (
+              
+              {/* زر الحذف - للطلبات قيد التجهيز */}
+              {((order.delivery_partner === 'محلي' || !order.delivery_partner) || (order.delivery_partner && order.delivery_partner !== 'محلي')) && order.status === 'pending' && hasPermission('cancel_orders') && (
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e)=>{e.stopPropagation(); onDeleteOrder([order.id])}}>
                       <Trash2 className="h-4 w-4" />
                   </Button>
-               )}
+              )}
             </div>
           </div>
         </CardContent>
