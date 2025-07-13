@@ -20,7 +20,7 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <div className="label-barcode-container">
                 <Barcode value={label.barcode} height={25} width={1.2} fontSize={0} margin={2} />
               </div>
-              <p className="label-price">{label.price.toLocaleString()} د.ع</p>
+              <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
             </div>
           </div>
         ))}
@@ -52,10 +52,10 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                     for (let i = 0; i < quantity; i++) {
                         labels.push({
                             name: product.name,
-                            color: variant.color,
-                            size: variant.size,
-                            price: variant.price,
-                            barcode: variant.barcode || variant.sku
+                            color: variant.color?.name || variant.color || 'غير محدد',
+                            size: variant.size?.name || variant.size || 'غير محدد',
+                            price: variant.price || product.base_price || product.price || 0,
+                            barcode: variant.barcode || variant.sku || `${product.name}-${variant.color}`
                         });
                     }
                 });
@@ -136,7 +136,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                         <div className="label-barcode-container">
                           <Barcode value={label.barcode} height={25} width={1.2} fontSize={0} margin={2} />
                         </div>
-                        <p className="label-price">{label.price.toLocaleString()} د.ع</p>
+                        <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
                       </div>
                     </div>
                     ))}

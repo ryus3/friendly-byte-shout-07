@@ -16,8 +16,8 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
-      const quantity = v.inventory?.[0]?.quantity || v.quantity || 0;
-      return sum + quantity;
+      const quantity = parseInt(v.inventory?.[0]?.quantity) || parseInt(v.quantity) || 0;
+      return sum + (isNaN(quantity) ? 0 : quantity);
     }, 0);
   }, [product.variants]);
   const hasActiveDiscount = useMemo(() => product.discount_price && new Date(product.discount_end_date) > new Date(), [product.discount_price, product.discount_end_date]);

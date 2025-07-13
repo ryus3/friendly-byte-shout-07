@@ -146,7 +146,7 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
 
             <div className="pt-4 border-t">
               <p className="text-2xl font-bold text-primary">
-                {selectedVariant ? (selectedVariant.price * quantity).toLocaleString() : product.price.toLocaleString()} د.ع
+                {selectedVariant ? ((selectedVariant.price || 0) * quantity).toLocaleString() : (product.base_price || product.price || 0).toLocaleString()} د.ع
               </p>
             </div>
           </div>
