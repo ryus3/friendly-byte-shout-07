@@ -325,17 +325,28 @@ export const AuthProvider = ({ children }) => {
       toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from('profiles').update(data).eq('user_id', userId);
-    if (error) {
+    
+    try {
+      const { data: updatedData, error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('user_id', userId)
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // تحديث السياق إذا كان المستخدم الحالي
+      if (userId === user?.user_id) {
+        setUser(prev => ({ ...prev, ...updatedData }));
+      }
+      
+      toast({ title: 'نجاح', description: 'تم تحديث البيانات بنجاح.' });
+      return { success: true, data: updatedData };
+    } catch (error) {
+      console.error('Error updating user profile:', error);
       toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
       return { success: false, error };
-    } else {
-      toast({ title: 'نجاح', description: 'تم تحديث المستخدم بنجاح.' });
-      if (userId === user.id) {
-        const updatedProfile = await fetchUserProfile(user);
-        setUser(updatedProfile);
-      }
-      return { success: true };
     }
   };
 

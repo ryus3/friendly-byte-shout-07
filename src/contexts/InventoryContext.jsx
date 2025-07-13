@@ -54,7 +54,7 @@ export const InventoryProvider = ({ children }) => {
   }
 
   // Using custom hooks
-  const { products, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings);
+  const { products, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings, addNotification, user);
   const { orders, setOrders, aiOrders, setAiOrders, createOrder, updateOrder, deleteOrders, approveAiOrder } = useOrders([], [], settings, handleStockUpdate, addNotification, hasPermission, user);
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   

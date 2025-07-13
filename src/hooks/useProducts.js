@@ -3,7 +3,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 
-export const useProducts = (initialProducts, settings, addNotification) => {
+export const useProducts = (initialProducts, settings, addNotification, user) => {
   const [products, setProducts] = useState(initialProducts);
 
   const uploadImage = async (file, bucket, path) => {
@@ -28,7 +28,8 @@ export const useProducts = (initialProducts, settings, addNotification) => {
           description: productData.description,
           base_price: productData.price,
           cost_price: productData.costPrice,
-          is_active: productData.isVisible
+          is_active: productData.isVisible,
+          created_by: user?.user_id || user?.id
         })
         .select()
         .single();
@@ -144,7 +145,7 @@ export const useProducts = (initialProducts, settings, addNotification) => {
       toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     }
-  }, [settings]);
+  }, [settings, user]);
 
   const updateProduct = useCallback(async (productId, productData, imageFiles, setUploadProgress) => {
     try {
