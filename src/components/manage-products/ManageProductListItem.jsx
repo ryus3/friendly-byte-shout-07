@@ -13,7 +13,13 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const { updateProduct, settings } = useInventory();
   const [isVisible, setIsVisible] = useState(product.is_visible ?? true);
 
-  const totalStock = useMemo(() => product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0, [product.variants]);
+  const totalStock = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return 0;
+    return product.variants.reduce((sum, v) => {
+      const quantity = v.inventory?.[0]?.quantity || v.quantity || 0;
+      return sum + quantity;
+    }, 0);
+  }, [product.variants]);
   const hasActiveDiscount = useMemo(() => product.discount_price && new Date(product.discount_end_date) > new Date(), [product.discount_price, product.discount_end_date]);
 
   const handleVisibilityChange = async (checked) => {
@@ -39,7 +45,7 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   };
 
   const price = useMemo(() => {
-    const p = hasActiveDiscount ? product.discount_price : product.price;
+    const p = hasActiveDiscount ? product.discount_price : (product.base_price || product.price);
     return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
   }, [product, hasActiveDiscount]);
 

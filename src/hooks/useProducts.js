@@ -99,6 +99,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
       }
       
       const finalVariants = [];
+      console.log("productData.variants:", productData.variants);
       for (const variant of productData.variants) {
           let imageUrl = uploadedColorUrls[variant.colorId] || null;
           if (!imageUrl && imageFiles.colorImages[variant.colorId] && typeof imageFiles.colorImages[variant.colorId] === 'string') {
@@ -109,12 +110,14 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             product_id: newProduct.id,
             color_id: variant.colorId,
             size_id: variant.sizeId,
-            price: variant.price,
-            cost_price: variant.costPrice,
+            price: parseFloat(variant.price) || 0,
+            cost_price: parseFloat(variant.costPrice) || 0,
             barcode: variant.barcode,
             images: imageUrl ? [imageUrl] : []
           });
       }
+
+      console.log("finalVariants:", finalVariants);
 
       if (finalVariants.length > 0) {
         const { data: insertedVariants, error: variantsError } = await supabase

@@ -7,7 +7,13 @@ import React, { useMemo } from 'react';
     
     const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
       const { settings } = useInventory();
-      const totalStock = useMemo(() => product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0, [product.variants]);
+      const totalStock = useMemo(() => {
+        if (!product.variants || product.variants.length === 0) return 0;
+        return product.variants.reduce((sum, v) => {
+          const quantity = v.inventory?.[0]?.quantity || v.quantity || 0;
+          return sum + quantity;
+        }, 0);
+      }, [product.variants]);
     
       const getStockLevelClass = () => {
         if (!settings) return 'bg-gray-500/80 text-white';
@@ -18,7 +24,7 @@ import React, { useMemo } from 'react';
     
       const price = useMemo(() => {
         const hasActiveDiscount = product.discountPrice && new Date(product.discountEndDate) > new Date();
-        const p = hasActiveDiscount ? product.discountPrice : product.price;
+        const p = hasActiveDiscount ? product.discountPrice : (product.base_price || product.price);
         return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
       }, [product]);
 

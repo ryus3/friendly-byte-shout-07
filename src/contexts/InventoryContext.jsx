@@ -87,7 +87,15 @@ export const InventoryProvider = ({ children }) => {
     setLoading(true);
     try {
       const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes] = await Promise.all([
-        supabase.from('products').select('*, variants:product_variants(*)').order('created_at', { ascending: false }),
+        supabase.from('products').select(`
+          *, 
+          variants:product_variants(
+            *, 
+            color:colors(name, hex_code), 
+            size:sizes(name, type),
+            inventory(quantity, min_stock, location)
+          )
+        `).order('created_at', { ascending: false }),
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
         supabase.from('settings').select('*').limit(1).maybeSingle(),
