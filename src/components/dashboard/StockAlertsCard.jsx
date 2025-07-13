@@ -31,21 +31,18 @@ const StockAlertsCard = () => {
     if (percentage <= 25) return {
       style: 'critical',
       icon: ShieldAlert,
-      pulse: true,
       level: 'حرج',
       color: 'destructive'
     };
     if (percentage <= 60) return {
       style: 'warning',
       icon: AlertCircle,
-      pulse: false,
       level: 'منخفض',
       color: 'orange'
     };
     return {
       style: 'low',
       icon: Package,
-      pulse: false,
       level: 'تحذير',
       color: 'primary'
     };
@@ -90,8 +87,7 @@ const StockAlertsCard = () => {
                      "hover:bg-gradient-to-r hover:shadow-lg hover:shadow-primary/10 hover:scale-[1.01] hover:-translate-y-0.5",
                      isCritical && "bg-gradient-to-r from-red-50 to-red-100 dark:from-red-950/20 dark:to-red-900/20 hover:from-red-100 hover:to-red-200 dark:hover:from-red-900/30 dark:hover:to-red-800/30 border-red-200 dark:border-red-800",
                      isWarning && "bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/20 hover:from-amber-100 hover:to-amber-200 dark:hover:from-amber-900/30 dark:hover:to-amber-800/30 border-amber-200 dark:border-amber-800", 
-                     !isCritical && !isWarning && "bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10",
-                     stockLevel.pulse && "animate-pulse"
+                      !isCritical && !isWarning && "bg-gradient-to-r from-primary/5 to-accent/5 hover:from-primary/10 hover:to-accent/10"
                    )}
                    onClick={() => handleLowStockProductClick(variant)}
                    initial={{ opacity: 0, x: -10 }}

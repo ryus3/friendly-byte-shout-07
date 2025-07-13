@@ -18,6 +18,8 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   const getStockStatus = () => {
     if (stock === 0) return { text: 'نافذ', color: 'bg-red-500/20 text-red-400' };
     if (available <= 0) return { text: 'محجوز بالكامل', color: 'bg-yellow-500/20 text-yellow-400' };
+    if (variant.stockLevel === 'low') return { text: 'منخفض', color: 'bg-red-500/20 text-red-400' };
+    if (variant.stockLevel === 'medium') return { text: 'متوسط', color: 'bg-yellow-500/20 text-yellow-400' };
     return { text: 'جيد', color: 'bg-green-500/20 text-green-400' };
   };
 

@@ -138,9 +138,9 @@ const ManageVariantsPage = () => {
     },
     {
       value: 'seasonsOccasions',
-      label: 'المواسم والمناسبات',
+      label: 'المواسم',
       icon: Calendar,
-      description: 'إدارة المواسم والمناسبات',
+      description: 'إدارة المواسم',
       color: 'from-purple-500 to-pink-600',
       component: SeasonsOccasionsManager
     },
