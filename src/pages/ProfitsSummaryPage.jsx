@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfits } from '@/contexts/ProfitsContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -36,6 +37,7 @@ import { Button } from '@/components/ui/button';
 const ProfitsSummaryPage = () => {
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
   const { user, allUsers, hasPermission } = useAuth();
+  const { profits, createSettlementRequest } = useProfits();
   const location = useLocation();
   const navigate = useNavigate();
 

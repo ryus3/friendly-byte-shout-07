@@ -109,15 +109,31 @@ const InventoryPage = () => {
   const [productsForExport, setProductsForExport] = useState([]);
 
   useEffect(() => {
+    const productParam = searchParams.get('product');
+    const variantParam = searchParams.get('variant');
     const highlightParam = searchParams.get('highlight');
     const stockFilterParam = searchParams.get('stockFilter');
-    if (highlightParam) {
+    
+    if (productParam || variantParam) {
+      // إذا جاء من تنبيه المخزون، فلتر للمنتج المحدد
+      if (productParam) {
+        const product = products?.find(p => p.id === productParam);
+        if (product) {
+          setFilters(prev => ({
+            ...prev, 
+            searchTerm: product.name,
+            stockFilter: 'low' // فلتر للمخزون المنخفض
+          }));
+        }
+      }
+    } else if (highlightParam) {
       setFilters(prev => ({...prev, searchTerm: highlightParam}));
     }
+    
     if (stockFilterParam) {
       setFilters(prev => ({...prev, stockFilter: stockFilterParam}));
     }
-  }, [searchParams]);
+  }, [searchParams, products]);
 
   const allCategories = useMemo(() => {
     if (!Array.isArray(products)) return [];

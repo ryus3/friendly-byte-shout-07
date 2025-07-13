@@ -49,13 +49,28 @@ const OrdersPage = () => {
     const params = new URLSearchParams(location.search);
     const statusFilter = params.get('status');
     const trackingNumber = params.get('trackingNumber');
+    const highlightOrder = params.get('highlight');
+    
     if (statusFilter) {
       setFilters(prev => ({ ...prev, status: statusFilter, period: 'all' }));
     }
     if (trackingNumber) {
       setFilters(prev => ({ ...prev, searchTerm: trackingNumber, period: 'all', status: 'all' }));
     }
-  }, [location.search]);
+    
+    if (highlightOrder && orders) {
+      // البحث عن الطلب المحدد وتعيينه كمحدد
+      const order = orders.find(o => o.id === highlightOrder);
+      if (order) {
+        setSelectedOrder(order);
+        setDialogs(prev => ({ ...prev, details: true }));
+        // إزالة parameter من URL
+        const newParams = new URLSearchParams(location.search);
+        newParams.delete('highlight');
+        navigate(`${location.pathname}?${newParams.toString()}`, { replace: true });
+      }
+    }
+  }, [location.search, orders, navigate, location.pathname]);
 
   const pageConfig = {
     title: hasPermission('view_all_orders') ? 'متابعة الطلبات' : 'طلباتي',

@@ -16,6 +16,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/components/ui/use-toast';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -48,6 +49,7 @@ const iconColorClasses = {
 
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
+  const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification } = useNotificationsSystem();
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
@@ -56,23 +58,50 @@ const NotificationsPanel = () => {
   const handleNotificationClick = (e, notification) => {
     e.stopPropagation();
     
-    if (notification.auto_delete) {
-      deleteNotification(notification.id);
-    } else if (!notification.is_read) {
-      markAsRead(notification.id);
+    // تحديد الإشعار كمقروء
+    if (!notification.is_read) {
+      if (notification.related_entity_type) {
+        // إشعار من النظام الجديد
+        markSystemAsRead(notification.id);
+      } else {
+        // إشعار من النظام القديم
+        markAsRead(notification.id);
+      }
     }
     
+    // التنقل حسب نوع الإشعار
     if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'new_ai_order') {
       setShowAiOrdersManager(true);
+    } else if (notification.related_entity_type) {
+      // إشعارات النظام الجديد - التنقل حسب نوع الكيان
+      switch (notification.related_entity_type) {
+        case 'order':
+          navigate(`/orders?highlight=${notification.related_entity_id}`);
+          break;
+        case 'settlement_request':
+          navigate(`/employee-follow-up`);
+          break;
+        case 'settlement_invoice':
+          navigate(`/profits-summary?invoice=${notification.related_entity_id}`);
+          break;
+        case 'product':
+          navigate(`/inventory?product=${notification.related_entity_id}`);
+          break;
+        default:
+          toast({
+            title: `إشعار: ${notification.title}`,
+            description: notification.message
+          });
+      }
     } else if (notification.link && notification.link !== '#') {
       navigate(notification.link);
     } else {
-        toast({
-          title: `إشعار: ${notification.title}`,
-          description: notification.message
-        });
+      toast({
+        title: `إشعار: ${notification.title}`,
+        description: notification.message
+      });
     }
     setIsOpen(false);
   };
@@ -111,8 +140,13 @@ const NotificationsPanel = () => {
     }
   };
 
-  const filteredNotifications = notifications.filter(n => n.type !== 'welcome');
-  const unreadFilteredCount = filteredNotifications.filter(n => !n.is_read).length;
+  // دمج الإشعارات من النظامين
+  const allNotifications = [
+    ...notifications.filter(n => n.type !== 'welcome'),
+    ...systemNotifications
+  ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  
+  const unreadFilteredCount = allNotifications.filter(n => !n.is_read && !n.read).length;
 
   return (
     <>
@@ -143,7 +177,7 @@ const NotificationsPanel = () => {
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
               <Check className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={handleClearAll} title="حذف الكل" disabled={filteredNotifications.length === 0}>
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
@@ -151,8 +185,8 @@ const NotificationsPanel = () => {
         <DropdownMenuSeparator />
         <ScrollArea className="h-80">
           <AnimatePresence>
-            {filteredNotifications.length > 0 ? (
-              filteredNotifications.map(notification => {
+            {allNotifications.length > 0 ? (
+              allNotifications.slice(0, 8).map(notification => {
                 const borderColorClass = colorClasses[notification.color] || colorClasses.default;
                 const iconColor = iconColorClasses[notification.color] || iconColorClasses.default;
                 const IconComponent = iconMap[notification.icon] || Bell;
@@ -170,22 +204,22 @@ const NotificationsPanel = () => {
                         "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 my-1 rounded-lg", 
                         "border-r-4",
                         borderColorClass,
-                        notification.is_read ? "bg-background/50 opacity-60" : "bg-secondary/80 hover:bg-secondary",
-                        !notification.is_read && "bg-primary/10",
+                        (notification.is_read || notification.read) ? "bg-background/50 opacity-60" : "bg-secondary/80 hover:bg-secondary",
+                        !(notification.is_read || notification.read) && "bg-primary/10",
                       )}
                       onClick={(e) => handleNotificationClick(e, notification)}
                     >
                       <IconComponent className={cn("w-5 h-5 mt-1 shrink-0", iconColor)} />
                       <div className="flex-1">
-                        <p className={cn("font-semibold text-sm", !notification.is_read && "text-foreground")}>{notification.title}</p>
+                        <p className={cn("font-semibold text-sm", !(notification.is_read || notification.read) && "text-foreground")}>{notification.title}</p>
                         <p className="text-xs text-muted-foreground">{notification.message}</p>
                         <p className="text-[10px] text-muted-foreground/70 mt-1">{formatRelativeTime(notification.created_at)}</p>
                       </div>
-                      {!notification.is_read && (
+                      {!(notification.is_read || notification.read) && (
                         <div className="absolute top-1/2 -translate-y-1/2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                       )}
                     </DropdownMenuItem>
-                     {!notification.is_read && (
+                     {!(notification.is_read || notification.read) && (
                       <div className="absolute top-1/2 -translate-y-1/2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button 
                           variant="ghost" 

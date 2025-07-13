@@ -18,8 +18,12 @@ const StockAlertsCard = () => {
   };
   
   const handleLowStockProductClick = (variant) => {
-    navigate(`/manage-products?highlight=${variant.sku}`, {
-      state: { productId: variant.product_id, variantId: variant.id }
+    navigate(`/inventory?product=${variant.product_id}&variant=${variant.id}`, {
+      state: { 
+        productId: variant.product_id, 
+        variantId: variant.id,
+        highlight: true
+      }
     });
   };
 

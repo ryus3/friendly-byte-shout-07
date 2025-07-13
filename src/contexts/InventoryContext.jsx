@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { toast } from '@/components/ui/use-toast.js';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useProducts } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
@@ -17,6 +18,7 @@ export const useInventory = () => useContext(InventoryContext);
 export const InventoryProvider = ({ children }) => {
   const { user, hasPermission } = useAuth();
   const { addNotification } = useNotifications();
+  const { notifyLowStock } = useNotificationsSystem();
   const [loading, setLoading] = useState(true);
   const [employeeProfitRules, setEmployeeProfitRules] = useState({});
   const [settings, setSettings] = useState({ 
@@ -196,6 +198,27 @@ export const InventoryProvider = ({ children }) => {
       setLoading(false);
     }
   }, [fetchInitialData, user]);
+
+  // فحص المخزون المنخفض والإشعار
+  const checkLowStockNotifications = useCallback(async () => {
+    if (!products || !notifyLowStock) return;
+    
+    const lowStockProducts = getLowStockProducts(settings.lowStockThreshold || 5);
+    
+    lowStockProducts.forEach(async (variant) => {
+      const product = products.find(p => p.variants?.some(v => v.id === variant.id));
+      if (product) {
+        await notifyLowStock(product, variant);
+      }
+    });
+  }, [products, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
+
+  // فحص المخزون كل مرة تتغير فيها المنتجات
+  useEffect(() => {
+    if (products && products.length > 0) {
+      checkLowStockNotifications();
+    }
+  }, [products, checkLowStockNotifications]);
 
   const getEmployeeProfitRules = useCallback((employeeId) => {
     return employeeProfitRules[employeeId] || [];

@@ -7,6 +7,8 @@ import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
+import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
+import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
 
 export const AppProviders = ({ children }) => {
   return (
@@ -14,15 +16,19 @@ export const AppProviders = ({ children }) => {
       <SupabaseProvider>
         <AuthProvider>
           <NotificationsProvider>
+            <NotificationsSystemProvider>
               <InventoryProvider>
-                <VariantsProvider>
-                  <AlWaseetProvider>
-                      <AiChatProvider>
-                        {children}
-                      </AiChatProvider>
-                  </AlWaseetProvider>
-                </VariantsProvider>
+                <ProfitsProvider>
+                  <VariantsProvider>
+                    <AlWaseetProvider>
+                        <AiChatProvider>
+                          {children}
+                        </AiChatProvider>
+                    </AlWaseetProvider>
+                  </VariantsProvider>
+                </ProfitsProvider>
               </InventoryProvider>
+            </NotificationsSystemProvider>
           </NotificationsProvider>
         </AuthProvider>
       </SupabaseProvider>
