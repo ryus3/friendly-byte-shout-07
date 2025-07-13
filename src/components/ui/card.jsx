@@ -8,8 +8,6 @@ const Card = React.forwardRef(({ className, ...props }, ref) => (
       "relative rounded-xl border bg-card text-card-foreground transition-all duration-300",
       "shadow-lg shadow-black/5",
       "dark:shadow-black/20",
-      "shadow-[inset_0_1px_0_0_hsl(var(--card)/0.8),inset_0_-1px_0_0_hsl(var(--border)/0.8)]",
-      "dark:shadow-[inset_0_1px_1px_0_hsl(var(--background)/0.05)]",
       "dark:bg-card/80 dark:backdrop-blur-sm",
       "hover:shadow-xl hover:shadow-primary/10",
       "dark:hover:shadow-2xl dark:hover:shadow-primary/10",

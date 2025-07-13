@@ -20,10 +20,12 @@ const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
     onClick={onClick}
   >
      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-     <div className="absolute inset-px rounded-xl" style={{
-        background: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground)/0.03), transparent),
-                     radial-gradient(circle at 90% 80%, hsl(var(--primary)/0.05), transparent)`
-      }}></div>
+     <div 
+       className="absolute inset-px rounded-xl opacity-60"
+       style={{
+         backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+       }}
+     ></div>
 
     <div className="flex items-start justify-between">
       <div className="flex-1">

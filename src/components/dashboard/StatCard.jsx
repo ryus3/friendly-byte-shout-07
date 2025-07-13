@@ -75,10 +75,12 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
         "dark:hover:shadow-primary/20",
       )}>
          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-         <div className="absolute inset-px rounded-xl" style={{
-            background: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground)/0.03), transparent),
-                         radial-gradient(circle at 90% 80%, hsl(var(--primary)/0.05), transparent)`
-          }}></div>
+         <div 
+           className="absolute inset-px rounded-xl opacity-60"
+           style={{
+             backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+           }}
+         ></div>
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 relative z-10">
           <div className="flex-1 space-y-1">
             <CardTitle className="text-sm font-medium text-muted-foreground leading-tight">
