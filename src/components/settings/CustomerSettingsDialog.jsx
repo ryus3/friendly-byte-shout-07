@@ -32,7 +32,7 @@ const CustomerSettingsDialog = ({ open, onOpenChange }) => {
 
     setIsLoading(true);
     try {
-      await updateUser(user.id, {
+      await updateUser(user.user_id, {
         default_customer_name: defaultCustomerName.trim()
       });
       
