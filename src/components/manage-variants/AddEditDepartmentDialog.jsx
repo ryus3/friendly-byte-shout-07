@@ -6,11 +6,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Package, Shirt, ShoppingBag, Settings } from 'lucide-react';
+import { 
+  Package, Shirt, ShoppingBag, Settings, Footprints, Gem, Baby, 
+  Hammer, Palette, Monitor, Car, Home, Utensils, Gamepad2,
+  Heart, Dumbbell, Book, Music, Camera, Scissors, Wrench,
+  HardHat, Paintbrush, Laptop, Smartphone, Headphones
+} from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 
-const AddEditDepartmentDialog = ({ isOpen, onClose, department }) => {
+const AddEditDepartmentDialog = ({ isOpen, onClose, department, onSuccess }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -22,12 +27,49 @@ const AddEditDepartmentDialog = ({ isOpen, onClose, department }) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // خيارات الأيقونات
+  // خيارات الأيقونات المتنوعة
   const iconOptions = [
-    { value: 'Package', label: 'صندوق', icon: Package },
-    { value: 'Shirt', label: 'قميص', icon: Shirt },
-    { value: 'ShoppingBag', label: 'حقيبة تسوق', icon: ShoppingBag },
-    { value: 'Settings', label: 'إعدادات', icon: Settings }
+    // الملابس والموضة
+    { value: 'Shirt', label: 'ملابس رجالية', icon: Shirt },
+    { value: 'ShoppingBag', label: 'حقائب نسائية', icon: ShoppingBag },
+    { value: 'Baby', label: 'ملابس أطفال', icon: Baby },
+    { value: 'Footprints', label: 'أحذية', icon: Footprints },
+    { value: 'Gem', label: 'إكسسوارات ومجوهرات', icon: Gem },
+    
+    // مواد البناء والإنشاء
+    { value: 'HardHat', label: 'مواد إنشائية', icon: HardHat },
+    { value: 'Hammer', label: 'أدوات البناء', icon: Hammer },
+    { value: 'Wrench', label: 'أدوات عامة', icon: Wrench },
+    { value: 'Paintbrush', label: 'مواد الطلاء', icon: Paintbrush },
+    
+    // الإلكترونيات والأجهزة
+    { value: 'Monitor', label: 'أجهزة إلكترونية', icon: Monitor },
+    { value: 'Laptop', label: 'أجهزة حاسوب', icon: Laptop },
+    { value: 'Smartphone', label: 'هواتف ذكية', icon: Smartphone },
+    { value: 'Headphones', label: 'سماعات وصوتيات', icon: Headphones },
+    { value: 'Camera', label: 'كاميرات ومعدات تصوير', icon: Camera },
+    
+    // الصحة والعناية
+    { value: 'Heart', label: 'منتجات العناية بالبشرة', icon: Heart },
+    { value: 'Scissors', label: 'أدوات تجميل', icon: Scissors },
+    { value: 'Dumbbell', label: 'معدات رياضية', icon: Dumbbell },
+    
+    // المنزل والحديقة
+    { value: 'Home', label: 'أدوات منزلية', icon: Home },
+    { value: 'Utensils', label: 'أدوات مطبخ', icon: Utensils },
+    { value: 'Palette', label: 'ديكور ومفروشات', icon: Palette },
+    
+    // السيارات والنقل
+    { value: 'Car', label: 'قطع غيار السيارات', icon: Car },
+    
+    // الترفيه والهوايات
+    { value: 'Gamepad2', label: 'ألعاب وترفيه', icon: Gamepad2 },
+    { value: 'Book', label: 'كتب ومجلات', icon: Book },
+    { value: 'Music', label: 'آلات موسيقية', icon: Music },
+    
+    // عام
+    { value: 'Package', label: 'مواد عامة', icon: Package },
+    { value: 'Settings', label: 'متنوع', icon: Settings }
   ];
 
   // خيارات الألوان
@@ -39,7 +81,11 @@ const AddEditDepartmentDialog = ({ isOpen, onClose, department }) => {
     { value: 'from-yellow-500 to-yellow-600', label: 'أصفر' },
     { value: 'from-pink-500 to-pink-600', label: 'وردي' },
     { value: 'from-indigo-500 to-indigo-600', label: 'نيلي' },
-    { value: 'from-teal-500 to-teal-600', label: 'تركوازي' }
+    { value: 'from-teal-500 to-teal-600', label: 'تركوازي' },
+    { value: 'from-orange-500 to-orange-600', label: 'برتقالي' },
+    { value: 'from-cyan-500 to-cyan-600', label: 'سماوي' },
+    { value: 'from-gray-500 to-gray-600', label: 'رمادي' },
+    { value: 'from-emerald-500 to-emerald-600', label: 'زمردي' }
   ];
 
   useEffect(() => {
@@ -116,6 +162,7 @@ const AddEditDepartmentDialog = ({ isOpen, onClose, department }) => {
       }
 
       onClose();
+      if (onSuccess) onSuccess();
     } catch (error) {
       toast({
         title: "خطأ",
@@ -131,7 +178,7 @@ const AddEditDepartmentDialog = ({ isOpen, onClose, department }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]" dir="rtl">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle>
             {department ? 'تعديل القسم' : 'إضافة قسم جديد'}
@@ -196,7 +243,7 @@ const AddEditDepartmentDialog = ({ isOpen, onClose, department }) => {
                     </div>
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px]">
                   {iconOptions.map((option) => (
                     <SelectItem key={option.value} value={option.value}>
                       <div className="flex items-center gap-2">

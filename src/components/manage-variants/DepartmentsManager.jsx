@@ -2,7 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Package, Shirt, ShoppingBag, Settings } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { 
+  Plus, Edit, Trash2, Package, Shirt, ShoppingBag, Building2, Footprints, Gem, Baby, 
+  Hammer, Palette, Monitor, Car, Home, Utensils, Gamepad2,
+  Heart, Dumbbell, Book, Music, Camera, Scissors, Wrench,
+  HardHat, Paintbrush, Laptop, Smartphone, Headphones, Settings
+} from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import AddEditDepartmentDialog from './AddEditDepartmentDialog';
@@ -14,11 +20,34 @@ const DepartmentsManager = () => {
   const [editingDepartment, setEditingDepartment] = useState(null);
   const { toast } = useToast();
 
-  // أيقونات الأقسام المتاحة
+  // جميع الأيقونات المتاحة
   const iconOptions = {
+    'Package': Package,
     'Shirt': Shirt,
     'ShoppingBag': ShoppingBag,
-    'Package': Package,
+    'Building2': Building2,
+    'Footprints': Footprints,
+    'Gem': Gem,
+    'Baby': Baby,
+    'Hammer': Hammer,
+    'Palette': Palette,
+    'Monitor': Monitor,
+    'Car': Car,
+    'Home': Home,
+    'Utensils': Utensils,
+    'Gamepad2': Gamepad2,
+    'Heart': Heart,
+    'Dumbbell': Dumbbell,
+    'Book': Book,
+    'Music': Music,
+    'Camera': Camera,
+    'Scissors': Scissors,
+    'Wrench': Wrench,
+    'HardHat': HardHat,
+    'Paintbrush': Paintbrush,
+    'Laptop': Laptop,
+    'Smartphone': Smartphone,
+    'Headphones': Headphones,
     'Settings': Settings
   };
 
@@ -48,8 +77,6 @@ const DepartmentsManager = () => {
   }, []);
 
   const handleDelete = async (id) => {
-    if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
-
     try {
       const { error } = await supabase
         .from('departments')
@@ -86,6 +113,9 @@ const DepartmentsManager = () => {
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingDepartment(null);
+  };
+
+  const handleSuccess = () => {
     fetchDepartments();
   };
 
@@ -139,14 +169,37 @@ const DepartmentsManager = () => {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(dept.id)}
-                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent dir="rtl">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            هل أنت متأكد من حذف قسم "{dept.name}"؟ 
+                            <br />
+                            لا يمكن التراجع عن هذا الإجراء.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(dept.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            حذف
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </div>
               </CardHeader>
@@ -167,7 +220,7 @@ const DepartmentsManager = () => {
                   
                   <div className="pt-2 border-t">
                     <p className="text-xs text-muted-foreground">
-                      تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('en-US')}
+                      تم الإنشاء: {new Date(dept.created_at).toLocaleDateString('ar-SA')}
                     </p>
                   </div>
                 </div>
@@ -190,10 +243,11 @@ const DepartmentsManager = () => {
       )}
 
       {/* Dialog */}
-      <AddEditDepartmentDialog
+      <AddEditDepartmentDialog 
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
         department={editingDepartment}
+        onSuccess={handleSuccess}
       />
     </div>
   );

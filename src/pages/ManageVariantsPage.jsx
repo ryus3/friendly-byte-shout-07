@@ -7,7 +7,12 @@ import SizesManager from '@/components/manage-variants/SizesManager';
 import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag, Building2 } from 'lucide-react';
+import { 
+  ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag, Building2,
+  Footprints, Gem, Baby, Hammer, Monitor, Car, Home, Utensils, Gamepad2,
+  Heart, Dumbbell, Book, Music, Camera, Scissors, Wrench,
+  HardHat, Paintbrush, Laptop, Smartphone, Headphones, Settings
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -67,7 +72,29 @@ const ManageVariantsPage = () => {
     'Shirt': Shirt,
     'ShoppingBag': ShoppingBag,
     'Package': Package,
-    'Building2': Building2
+    'Building2': Building2,
+    'Footprints': Footprints,
+    'Gem': Gem,
+    'Baby': Baby,
+    'Hammer': Hammer,
+    'Monitor': Monitor,
+    'Car': Car,
+    'Home': Home,
+    'Utensils': Utensils,
+    'Gamepad2': Gamepad2,
+    'Heart': Heart,
+    'Dumbbell': Dumbbell,
+    'Book': Book,
+    'Music': Music,
+    'Camera': Camera,
+    'Scissors': Scissors,
+    'Wrench': Wrench,
+    'HardHat': HardHat,
+    'Paintbrush': Paintbrush,
+    'Laptop': Laptop,
+    'Smartphone': Smartphone,
+    'Headphones': Headphones,
+    'Settings': Settings
   };
 
   const tabConfig = [
