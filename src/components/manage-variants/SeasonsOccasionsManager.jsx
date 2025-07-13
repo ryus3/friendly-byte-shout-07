@@ -155,7 +155,7 @@ const SeasonsOccasionsManager = () => {
   const seasons = seasonsOccasions.filter(item => item.type === 'season');
   const occasions = seasonsOccasions.filter(item => item.type === 'occasion');
 
-  const renderItems = (items, title, icon: React.ComponentType, emptyText) => (
+  const renderItems = (items, title, icon, emptyText) => (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
