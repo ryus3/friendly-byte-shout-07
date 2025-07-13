@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManager from '@/components/manage-variants/CategoriesManager';
-import ColorsManager from '@/components/manage-variants/ColorsManager';
+import ColorsManagerNew from '@/components/manage-variants/ColorsManagerNew';
 import SizesManager from '@/components/manage-variants/SizesManager';
 import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -120,7 +120,7 @@ const ManageVariantsPage = () => {
       icon: Palette,
       description: 'إدارة وتنظيم ألوان المنتجات',
       color: 'from-pink-500 to-rose-600',
-      component: ColorsManager
+      component: ColorsManagerNew
     },
     {
       value: 'sizes',
@@ -164,9 +164,12 @@ const ManageVariantsPage = () => {
                 </div>
               </div>
 
-              {/* الأقسام الرئيسية */}
+              {/* الأقسام الرئيسية - مرتبة حسب ترتيب العرض */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                {departments.slice(0, 3).map((dept, index) => {
+                {departments
+                  .sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+                  .slice(0, 3)
+                  .map((dept, index) => {
                   const IconComponent = iconComponents[dept.icon] || Package;
                   return (
                     <Card key={dept.id} className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all duration-300">

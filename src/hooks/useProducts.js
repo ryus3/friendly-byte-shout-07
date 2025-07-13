@@ -26,11 +26,9 @@ export const useProducts = (initialProducts, settings, addNotification) => {
         .insert({
           name: productData.name,
           description: productData.description,
-          price: productData.price,
+          base_price: productData.price,
           cost_price: productData.costPrice,
-          categories: productData.categories,
-          is_visible: productData.isVisible,
-          sku_base: `${settings.sku_prefix}-${productData.name.replace(/\s+/g, '-').toUpperCase()}`
+          is_active: productData.isVisible
         })
         .select()
         .single();
@@ -155,10 +153,9 @@ export const useProducts = (initialProducts, settings, addNotification) => {
             .update({
                 name: productData.name,
                 description: productData.description,
-                price: productData.price,
+                base_price: productData.price,
                 cost_price: productData.costPrice,
-                categories: productData.categories,
-                is_visible: productData.isVisible,
+                is_active: productData.isVisible,
             })
             .eq('id', productId);
             
