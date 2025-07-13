@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -26,12 +25,8 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   const status = getStockStatus();
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0 }}
-      className="grid grid-cols-12 items-center gap-4 p-3 bg-card/50 rounded-lg border border-border/60 hover:bg-accent/50 transition-colors"
+    <div
+      className="grid grid-cols-12 items-center gap-4 p-3 bg-card/50 rounded-lg border border-border/60 hover:bg-accent/50 transition-colors animate-fade-in"
     >
       <div className="col-span-4 md:col-span-3 flex items-center gap-3">
         <img src={variant.image || product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
@@ -62,7 +57,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
           </Button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 });
 

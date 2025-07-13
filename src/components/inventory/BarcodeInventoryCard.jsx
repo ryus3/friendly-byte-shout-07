@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/components/ui/use-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+
 
 const BarcodeInventoryCard = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -167,18 +167,17 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
                         <CardContent className="flex-1 overflow-hidden">
                             <ScrollArea className="h-full pr-4">
                                 <div className="space-y-3">
-                                    <AnimatePresence>
+                                    <div className="space-y-3">
                                         {Object.entries(scannedItems).map(([key, item]) => (
-                                            <motion.div key={key} layout initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                                            <div key={key} className="animate-fade-in">
                                                 <div className="flex items-center gap-3 p-2 bg-secondary/50 rounded-md">
                                                     <img src={item.image} alt={item.productName} className="w-12 h-12 rounded-md object-cover"/>
                                                     <div className="flex-1"><p className="font-semibold text-sm truncate">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantInfo}</p></div>
                                                     <div className="text-lg font-bold text-primary">{item.scannedCount}</div>
                                                 </div>
-                                            </motion.div>
+                                    </div>
                                         ))}
-                                    </AnimatePresence>
-                                    {Object.keys(scannedItems).length === 0 && <p className="text-center text-muted-foreground py-10">بانتظار مسح المنتجات...</p>}
+                                        {Object.keys(scannedItems).length === 0 && <p className="text-center text-muted-foreground py-10">بانتظار مسح المنتجات...</p>}
                                 </div>
                             </ScrollArea>
                         </CardContent>

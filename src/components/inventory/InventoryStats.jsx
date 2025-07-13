@@ -1,23 +1,18 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Package, TrendingUp, TrendingDown, AlertTriangle, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay }}
-    whileHover={onClick ? { scale: 1.05, y: -5, transition: { type: 'spring', stiffness: 300 } } : {}}
-    whileTap={onClick ? { scale: 0.95 } : {}}
+  <div
     className={cn(
-      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300",
+      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale",
       "shadow-lg shadow-black/10 dark:shadow-black/30",
       "hover:shadow-2xl hover:shadow-primary/10",
       "dark:hover:shadow-primary/20",
       onClick && "cursor-pointer group"
     )}
     onClick={onClick}
+    style={{ animationDelay: `${delay * 100}ms` }}
   >
      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
      <div 
@@ -36,7 +31,7 @@ const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
         <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
       </div>
     </div>
-  </motion.div>
+  </div>
 );
 
 const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onFilterChange }) => {
