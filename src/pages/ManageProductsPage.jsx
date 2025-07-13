@@ -120,6 +120,20 @@ const ManageProductsPage = () => {
     setEditingProduct(product);
   }, []);
 
+  const handleQuickPrintLabels = useCallback(() => {
+    if (products.length === 0) {
+      toast({
+        title: "لا توجد منتجات",
+        description: "لا توجد منتجات لطباعة الملصقات.",
+        variant: "default"
+      });
+      return;
+    }
+    // تعيين جميع المنتجات للطباعة
+    setSelectedProductIds(products.map(p => p.id));
+    setIsPrintDialogOpen(true);
+  }, [products]);
+
   return (
     <>
       <Helmet>
@@ -167,6 +181,7 @@ const ManageProductsPage = () => {
           onDeleteSelected={() => setIsDeleteAlertOpen(true)}
           onPrintSelected={() => setIsPrintDialogOpen(true)}
           onBarcodeSearch={() => setIsScannerOpen(true)}
+          onQuickPrintLabels={handleQuickPrintLabels}
           isMobile={isMobile}
         />
 

@@ -16,6 +16,7 @@ const ManageProductsToolbar = ({
   onDeleteSelected,
   onPrintSelected,
   onBarcodeSearch,
+  onQuickPrintLabels,
   isMobile
 }) => {
   return (
@@ -50,6 +51,9 @@ const ManageProductsToolbar = ({
             <div className="flex gap-1 col-span-1">
               <Button variant="outline" size="icon" onClick={onBarcodeSearch} className="flex-shrink-0" title="بحث بالباركود">
                 <QrCode className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={onQuickPrintLabels} className="flex-shrink-0" title="طباعة ملصقات">
+                <Printer className="w-4 h-4" />
               </Button>
               <Button variant="outline" size="icon" onClick={() => onViewModeChange('list')} className={cn("flex-shrink-0", viewMode === 'list' && 'bg-accent')} title="عرض قائمة">
                 <List className="w-4 h-4" />

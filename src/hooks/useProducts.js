@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
+import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
 export const useProducts = (initialProducts, settings, addNotification, user) => {
   const [products, setProducts] = useState(initialProducts);
@@ -106,13 +107,21 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
               imageUrl = imageFiles.colorImages[variant.colorId];
           }
 
+          // توليد باركود فريد لكل متغير باستخدام المكتبة الجديدة
+          const uniqueBarcode = generateUniqueBarcode(
+            productData.name,
+            variant.color || 'DEFAULT',
+            variant.size || 'DEFAULT',
+            newProduct.id
+          );
+
           finalVariants.push({
             product_id: newProduct.id,
             color_id: variant.colorId,
             size_id: variant.sizeId,
             price: parseFloat(variant.price) || 0,
             cost_price: parseFloat(variant.costPrice) || 0,
-            barcode: variant.barcode,
+            barcode: uniqueBarcode,
             images: imageUrl ? [imageUrl] : []
           });
       }

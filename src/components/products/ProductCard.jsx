@@ -15,15 +15,21 @@ const ProductCard = React.memo(({ product, onSelect }) => {
     rootMargin: '200px 0px',
   });
 
-  const totalStock = useMemo(() => product.variants.reduce((sum, v) => sum + v.quantity, 0), [product.variants]);
+  const totalStock = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return 0;
+    return product.variants.reduce((sum, v) => {
+      const quantity = v.inventory?.[0]?.quantity || v.quantity || 0;
+      return sum + quantity;
+    }, 0);
+  }, [product.variants]);
 
   const uniqueColorsWithHex = useMemo(() => {
-    if (!product) return [];
-    const uniqueVariantColors = [...new Set(product.variants.map(item => item.color))];
+    if (!product || !product.variants) return [];
+    const uniqueVariantColors = [...new Set(product.variants.map(item => item.color?.name || item.color))];
     return uniqueVariantColors.map(colorName => {
       const colorInfo = allColors.find(c => c.name === colorName);
       return { name: colorName, hex: colorInfo?.hex_code };
-    }).slice(0, 5);
+    }).filter(c => c.name).slice(0, 5);
   }, [product, allColors]);
 
   const getStockLevelClass = () => {
@@ -59,7 +65,7 @@ const ProductCard = React.memo(({ product, onSelect }) => {
           <div className="p-2 rounded" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}>
             <h3 className="font-bold text-white text-lg truncate group-hover:gradient-text transition-colors">{product.name}</h3>
             <div className="flex justify-between items-center mt-2">
-              <p className="text-sm font-semibold text-white">{product.variants[0]?.price.toLocaleString()} د.ع</p>
+              <p className="text-sm font-semibold text-white">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
               <div className="flex -space-x-2 rtl:space-x-reverse">
                 {uniqueColorsWithHex.map((color, idx) => (
                   <div

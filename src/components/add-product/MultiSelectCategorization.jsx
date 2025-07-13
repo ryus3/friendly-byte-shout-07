@@ -42,7 +42,7 @@ const MultiSelectCategorization = ({
     const fetchData = async () => {
       try {
         const [categoriesRes, productTypesRes, seasonsOccasionsRes, departmentsRes] = await Promise.all([
-          supabase.from('categories').select('*').eq('type', 'main_category').order('name'),
+          supabase.from('categories').select('*').order('name'),
           supabase.from('product_types').select('*').order('name'),
           supabase.from('seasons_occasions').select('*').order('name'),
           supabase.from('departments').select('*').eq('is_active', true).order('display_order')
@@ -128,7 +128,7 @@ const MultiSelectCategorization = ({
 
   const refreshCategories = async () => {
     try {
-      const { data } = await supabase.from('categories').select('*').eq('type', 'main_category').order('name');
+      const { data } = await supabase.from('categories').select('*').order('name');
       setCategories(data || []);
     } catch (error) {
       console.error('خطأ في تحديث التصنيفات:', error);

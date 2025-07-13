@@ -46,16 +46,17 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
     const labels = [];
     if (products) {
         products.forEach(product => {
-            if (product && product.variants) {
+            if (product && product.variants && product.variants.length > 0) {
                 product.variants.forEach(variant => {
-                    const quantity = labelQuantities[variant.sku] || 0;
+                    const sku = variant.barcode || `${product.name}-${variant.color?.name || 'DEF'}-${variant.size?.name || 'DEF'}`;
+                    const quantity = labelQuantities[sku] || 0;
                     for (let i = 0; i < quantity; i++) {
                         labels.push({
                             name: product.name,
                             color: variant.color?.name || variant.color || 'غير محدد',
                             size: variant.size?.name || variant.size || 'غير محدد',
                             price: variant.price || product.base_price || product.price || 0,
-                            barcode: variant.barcode || variant.sku || `${product.name}-${variant.color}`
+                            barcode: variant.barcode || sku
                         });
                     }
                 });
@@ -68,9 +69,13 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
   const setAllQuantitiesToStock = () => {
     const newQuantities = {};
     products.forEach(p => {
-      p.variants.forEach(v => {
-        newQuantities[v.sku] = v.quantity;
-      });
+      if(p.variants && p.variants.length > 0) {
+        p.variants.forEach(v => {
+          const sku = v.barcode || `${p.name}-${v.color?.name || 'DEF'}-${v.size?.name || 'DEF'}`;
+          const stockQuantity = v.inventory?.[0]?.quantity || v.quantity || 1;
+          newQuantities[sku] = stockQuantity;
+        });
+      }
     });
     setLabelQuantities(newQuantities);
   };
@@ -103,21 +108,28 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   <div key={product.id}>
                     <h3 className="font-bold text-lg mb-2">{product.name}</h3>
                     <div className="space-y-2">
-                      {product.variants.map(variant => (
-                        <div key={variant.sku} className="grid grid-cols-3 gap-2 items-center">
-                          <Label className="col-span-1">{variant.color}, {variant.size} <span className="text-muted-foreground">({variant.quantity})</span></Label>
-                          <div className="col-span-2 flex items-center gap-2">
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(variant.sku, (labelQuantities[variant.sku] || 0) - 1)}><Minus className="w-4 h-4" /></Button>
-                            <Input
-                              type="number"
-                              className="w-20 text-center"
-                              value={labelQuantities[variant.sku] || 0}
-                              onChange={(e) => handleQuantityChange(variant.sku, parseInt(e.target.value) || 0)}
-                            />
-                            <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(variant.sku, (labelQuantities[variant.sku] || 0) + 1)}><Plus className="w-4 h-4" /></Button>
+                      {product.variants && product.variants.length > 0 ? product.variants.map(variant => {
+                        const sku = variant.barcode || `${product.name}-${variant.color?.name || 'DEF'}-${variant.size?.name || 'DEF'}`;
+                        const stockQuantity = variant.inventory?.[0]?.quantity || variant.quantity || 0;
+                        return (
+                          <div key={sku} className="grid grid-cols-3 gap-2 items-center">
+                            <Label className="col-span-1">
+                              {variant.color?.name || variant.color || 'غير محدد'}, {variant.size?.name || variant.size || 'غير محدد'} 
+                              <span className="text-muted-foreground">({stockQuantity})</span>
+                            </Label>
+                            <div className="col-span-2 flex items-center gap-2">
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(sku, (labelQuantities[sku] || 0) - 1)}><Minus className="w-4 h-4" /></Button>
+                              <Input
+                                type="number"
+                                className="w-20 text-center"
+                                value={labelQuantities[sku] || 0}
+                                onChange={(e) => handleQuantityChange(sku, parseInt(e.target.value) || 0)}
+                              />
+                              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => handleQuantityChange(sku, (labelQuantities[sku] || 0) + 1)}><Plus className="w-4 h-4" /></Button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      }) : <p className="text-muted-foreground">لا توجد متغيرات لهذا المنتج</p>}
                     </div>
                   </div>
                 ))}
