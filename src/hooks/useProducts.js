@@ -78,8 +78,41 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
         .from('products')
         .update({ images: uploadedImageUrls })
         .eq('id', newProduct.id);
+
+      // 3. Handle categorization relationships
+      if (productData.selectedCategories && productData.selectedCategories.length > 0) {
+        const categoryRelations = productData.selectedCategories.map(categoryId => ({
+          product_id: newProduct.id,
+          category_id: categoryId
+        }));
+        await supabase.from('product_categories').insert(categoryRelations);
+      }
+
+      if (productData.selectedProductTypes && productData.selectedProductTypes.length > 0) {
+        const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
+          product_id: newProduct.id,
+          product_type_id: typeId
+        }));
+        await supabase.from('product_product_types').insert(productTypeRelations);
+      }
+
+      if (productData.selectedSeasonsOccasions && productData.selectedSeasonsOccasions.length > 0) {
+        const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
+          product_id: newProduct.id,
+          season_occasion_id: seasonId
+        }));
+        await supabase.from('product_seasons_occasions').insert(seasonRelations);
+      }
+
+      if (productData.selectedDepartments && productData.selectedDepartments.length > 0) {
+        const departmentRelations = productData.selectedDepartments.map(deptId => ({
+          product_id: newProduct.id,
+          department_id: deptId
+        }));
+        await supabase.from('product_departments').insert(departmentRelations);
+      }
       
-      // 3. Handle variants
+      // 4. Handle variants
       const colorImageUploads = {};
 
       for (const colorId in colorImageFiles) {
@@ -171,6 +204,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
 
   const updateProduct = useCallback(async (productId, productData, imageFiles, setUploadProgress) => {
     try {
+        // 1. Update product basic info
         await supabase
             .from('products')
             .update({
@@ -181,6 +215,50 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
                 is_active: productData.isVisible,
             })
             .eq('id', productId);
+
+        // 2. Update categorization relationships
+        // Delete existing relationships
+        await Promise.all([
+          supabase.from('product_categories').delete().eq('product_id', productId),
+          supabase.from('product_product_types').delete().eq('product_id', productId),
+          supabase.from('product_seasons_occasions').delete().eq('product_id', productId),
+          supabase.from('product_departments').delete().eq('product_id', productId)
+        ]);
+
+        // Insert new relationships
+        if (productData.selectedCategories && productData.selectedCategories.length > 0) {
+          const categoryRelations = productData.selectedCategories.map(categoryId => ({
+            product_id: productId,
+            category_id: categoryId
+          }));
+          await supabase.from('product_categories').insert(categoryRelations);
+        }
+
+        if (productData.selectedProductTypes && productData.selectedProductTypes.length > 0) {
+          const productTypeRelations = productData.selectedProductTypes.map(typeId => ({
+            product_id: productId,
+            product_type_id: typeId
+          }));
+          await supabase.from('product_product_types').insert(productTypeRelations);
+        }
+
+        if (productData.selectedSeasonsOccasions && productData.selectedSeasonsOccasions.length > 0) {
+          const seasonRelations = productData.selectedSeasonsOccasions.map(seasonId => ({
+            product_id: productId,
+            season_occasion_id: seasonId
+          }));
+          await supabase.from('product_seasons_occasions').insert(seasonRelations);
+        }
+
+        if (productData.selectedDepartments && productData.selectedDepartments.length > 0) {
+          const departmentRelations = productData.selectedDepartments.map(deptId => ({
+            product_id: productId,
+            department_id: deptId
+          }));
+          await supabase.from('product_departments').insert(departmentRelations);
+        }
+
+        // 3. Handle images upload
             
         const generalImageFiles = imageFiles.general.filter(img => img && !(typeof img === 'string'));
         const existingImageUrls = imageFiles.general.filter(img => img && typeof img === 'string');
@@ -241,6 +319,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             });
         }
         
+        // 4. Handle variants
         await supabase.from('product_variants').delete().eq('product_id', productId);
         
         const finalVariants = productData.variants.map(v => {

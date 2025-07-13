@@ -74,44 +74,44 @@ const MultiSelectCategorization = ({
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
-      const isSelected = prev.some(c => c.id === category.id);
+      const isSelected = prev.includes(category.id);
       if (isSelected) {
-        return prev.filter(c => c.id !== category.id);
+        return prev.filter(id => id !== category.id);
       } else {
-        return [...prev, category];
+        return [...prev, category.id];
       }
     });
   };
 
   const handleProductTypeToggle = (productType) => {
     setSelectedProductTypes(prev => {
-      const isSelected = prev.some(pt => pt.id === productType.id);
+      const isSelected = prev.includes(productType.id);
       if (isSelected) {
-        return prev.filter(pt => pt.id !== productType.id);
+        return prev.filter(id => id !== productType.id);
       } else {
-        return [...prev, productType];
+        return [...prev, productType.id];
       }
     });
   };
 
   const handleSeasonOccasionToggle = (seasonOccasion) => {
     setSelectedSeasonsOccasions(prev => {
-      const isSelected = prev.some(so => so.id === seasonOccasion.id);
+      const isSelected = prev.includes(seasonOccasion.id);
       if (isSelected) {
-        return prev.filter(so => so.id !== seasonOccasion.id);
+        return prev.filter(id => id !== seasonOccasion.id);
       } else {
-        return [...prev, seasonOccasion];
+        return [...prev, seasonOccasion.id];
       }
     });
   };
 
   const handleDepartmentToggle = (department) => {
     setSelectedDepartments(prev => {
-      const isSelected = prev.some(d => d.id === department.id);
+      const isSelected = prev.includes(department.id);
       if (isSelected) {
-        return prev.filter(d => d.id !== department.id);
+        return prev.filter(id => id !== department.id);
       } else {
-        return [...prev, department];
+        return [...prev, department.id];
       }
     });
   };
@@ -322,16 +322,20 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
             {selectedItems.length === 0 ? (
               <span className="text-muted-foreground">{placeholder}</span>
             ) : (
-              selectedItems.map((item) => (
-                <Badge key={item.id} variant="secondary" className="gap-1">
-                  {item.name}
-                  {showType && item.type && (
-                    <span className="text-xs opacity-70">
-                      ({item.type === 'season' ? 'موسم' : 'مناسبة'})
-                    </span>
-                  )}
-                </Badge>
-              ))
+              selectedItems.map((itemId) => {
+                const item = items.find(i => i.id === itemId);
+                if (!item) return null;
+                return (
+                  <Badge key={item.id} variant="secondary" className="gap-1">
+                    {item.name}
+                    {showType && item.type && (
+                      <span className="text-xs opacity-70">
+                        ({item.type === 'season' ? 'موسم' : 'مناسبة'})
+                      </span>
+                    )}
+                  </Badge>
+                );
+              })
             )}
           </div>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -377,7 +381,7 @@ const MultiSelectDropdown = ({ items, selectedItems, onToggle, placeholder, onAd
                   <Check
                     className={cn(
                       "h-4 w-4",
-                      selectedItems.some(s => s.id === item.id) ? "opacity-100" : "opacity-0"
+                      selectedItems.includes(item.id) ? "opacity-100" : "opacity-0"
                     )}
                   />
                 </div>
