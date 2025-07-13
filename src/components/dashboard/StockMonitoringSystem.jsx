@@ -61,11 +61,7 @@ const StockMonitoringSystem = () => {
                 title: "🔴 تنبيه حرج: نفاد المخزون",
                 description: `${product.name} (${variant.color} - ${variant.size}) متبقي ${currentStock} قطعة فقط!`,
                 variant: "destructive",
-                duration: 10000,
-                action: {
-                  altText: "عرض المخزون",
-                  onClick: () => window.location.href = `/inventory?highlight=${variant.sku}`
-                }
+                duration: 10000
               });
             }
             
