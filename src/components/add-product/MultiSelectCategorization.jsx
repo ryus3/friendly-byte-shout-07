@@ -3,9 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { X, Plus, Tag, Package, Calendar, Building2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { Check, ChevronDown, Tag, Package, Calendar, Building2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 
 const MultiSelectCategorization = ({ 
   selectedCategories = [],
@@ -123,39 +126,112 @@ const MultiSelectCategorization = ({
       </CardHeader>
       <CardContent className="space-y-6">
         
+        {/* الأقسام */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            الأقسام
+          </Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between h-auto min-h-[2.5rem] py-2"
+              >
+                <div className="flex flex-wrap gap-1 max-w-full">
+                  {selectedDepartments.length === 0 ? (
+                    <span className="text-muted-foreground">اختر الأقسام...</span>
+                  ) : (
+                    selectedDepartments.map((department) => (
+                      <Badge key={department.id} variant="secondary" className="gap-1">
+                        {department.name}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="البحث في الأقسام..." />
+                <CommandEmpty>لا توجد أقسام.</CommandEmpty>
+                <CommandGroup className="max-h-64 overflow-auto">
+                  {departments.map((department) => (
+                    <CommandItem
+                      key={department.id}
+                      value={department.name}
+                      onSelect={() => handleDepartmentToggle(department)}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{department.name}</span>
+                      <Check
+                        className={cn(
+                          "h-4 w-4",
+                          selectedDepartments.some(d => d.id === department.id) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+
         {/* التصنيفات الرئيسية */}
         <div className="space-y-3">
           <Label className="text-sm font-medium flex items-center gap-2">
             <Tag className="h-4 w-4" />
             التصنيفات الرئيسية
           </Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {categories.map((category) => (
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
-                key={category.id}
-                variant={selectedCategories.some(c => c.id === category.id) ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCategoryToggle(category)}
-                className="justify-start"
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between h-auto min-h-[2.5rem] py-2"
               >
-                <Plus className="h-3 w-3 mr-1" />
-                {category.name}
+                <div className="flex flex-wrap gap-1 max-w-full">
+                  {selectedCategories.length === 0 ? (
+                    <span className="text-muted-foreground">اختر التصنيفات...</span>
+                  ) : (
+                    selectedCategories.map((category) => (
+                      <Badge key={category.id} variant="secondary" className="gap-1">
+                        {category.name}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
-            ))}
-          </div>
-          {selectedCategories.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {selectedCategories.map((category) => (
-                <Badge key={category.id} variant="secondary" className="gap-1">
-                  {category.name}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => handleCategoryToggle(category)}
-                  />
-                </Badge>
-              ))}
-            </div>
-          )}
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="البحث في التصنيفات..." />
+                <CommandEmpty>لا توجد تصنيفات.</CommandEmpty>
+                <CommandGroup className="max-h-64 overflow-auto">
+                  {categories.map((category) => (
+                    <CommandItem
+                      key={category.id}
+                      value={category.name}
+                      onSelect={() => handleCategoryToggle(category)}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{category.name}</span>
+                      <Check
+                        className={cn(
+                          "h-4 w-4",
+                          selectedCategories.some(c => c.id === category.id) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* أنواع المنتجات */}
@@ -164,33 +240,52 @@ const MultiSelectCategorization = ({
             <Package className="h-4 w-4" />
             أنواع المنتجات
           </Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {productTypes.map((productType) => (
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
-                key={productType.id}
-                variant={selectedProductTypes.some(pt => pt.id === productType.id) ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleProductTypeToggle(productType)}
-                className="justify-start"
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between h-auto min-h-[2.5rem] py-2"
               >
-                <Plus className="h-3 w-3 mr-1" />
-                {productType.name}
+                <div className="flex flex-wrap gap-1 max-w-full">
+                  {selectedProductTypes.length === 0 ? (
+                    <span className="text-muted-foreground">اختر أنواع المنتجات...</span>
+                  ) : (
+                    selectedProductTypes.map((productType) => (
+                      <Badge key={productType.id} variant="secondary" className="gap-1">
+                        {productType.name}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
-            ))}
-          </div>
-          {selectedProductTypes.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {selectedProductTypes.map((productType) => (
-                <Badge key={productType.id} variant="secondary" className="gap-1">
-                  {productType.name}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => handleProductTypeToggle(productType)}
-                  />
-                </Badge>
-              ))}
-            </div>
-          )}
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="البحث في أنواع المنتجات..." />
+                <CommandEmpty>لا توجد أنواع منتجات.</CommandEmpty>
+                <CommandGroup className="max-h-64 overflow-auto">
+                  {productTypes.map((productType) => (
+                    <CommandItem
+                      key={productType.id}
+                      value={productType.name}
+                      onSelect={() => handleProductTypeToggle(productType)}
+                      className="flex items-center justify-between"
+                    >
+                      <span>{productType.name}</span>
+                      <Check
+                        className={cn(
+                          "h-4 w-4",
+                          selectedProductTypes.some(pt => pt.id === productType.id) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* المواسم والمناسبات */}
@@ -199,71 +294,64 @@ const MultiSelectCategorization = ({
             <Calendar className="h-4 w-4" />
             المواسم والمناسبات
           </Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {seasonsOccasions.map((seasonOccasion) => (
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
-                key={seasonOccasion.id}
-                variant={selectedSeasonsOccasions.some(so => so.id === seasonOccasion.id) ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleSeasonOccasionToggle(seasonOccasion)}
-                className="justify-start"
+                variant="outline"
+                role="combobox"
+                className="w-full justify-between h-auto min-h-[2.5rem] py-2"
               >
-                <Plus className="h-3 w-3 mr-1" />
-                {seasonOccasion.name}
-                <Badge variant="outline" className="text-xs ml-1">
-                  {seasonOccasion.type === 'season' ? 'موسم' : 'مناسبة'}
-                </Badge>
+                <div className="flex flex-wrap gap-1 max-w-full">
+                  {selectedSeasonsOccasions.length === 0 ? (
+                    <span className="text-muted-foreground">اختر المواسم والمناسبات...</span>
+                  ) : (
+                    selectedSeasonsOccasions.map((seasonOccasion) => (
+                      <Badge key={seasonOccasion.id} variant="secondary" className="gap-1">
+                        {seasonOccasion.name}
+                        {seasonOccasion.type && (
+                          <span className="text-xs opacity-70">
+                            ({seasonOccasion.type === 'season' ? 'موسم' : 'مناسبة'})
+                          </span>
+                        )}
+                      </Badge>
+                    ))
+                  )}
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
               </Button>
-            ))}
-          </div>
-          {selectedSeasonsOccasions.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {selectedSeasonsOccasions.map((seasonOccasion) => (
-                <Badge key={seasonOccasion.id} variant="secondary" className="gap-1">
-                  {seasonOccasion.name}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => handleSeasonOccasionToggle(seasonOccasion)}
-                  />
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* الأقسام */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            الأقسام
-          </Label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {departments.map((department) => (
-              <Button
-                key={department.id}
-                variant={selectedDepartments.some(d => d.id === department.id) ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleDepartmentToggle(department)}
-                className="justify-start"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                {department.name}
-              </Button>
-            ))}
-          </div>
-          {selectedDepartments.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {selectedDepartments.map((department) => (
-                <Badge key={department.id} variant="secondary" className="gap-1">
-                  {department.name}
-                  <X 
-                    className="h-3 w-3 cursor-pointer" 
-                    onClick={() => handleDepartmentToggle(department)}
-                  />
-                </Badge>
-              ))}
-            </div>
-          )}
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0" align="start">
+              <Command>
+                <CommandInput placeholder="البحث في المواسم والمناسبات..." />
+                <CommandEmpty>لا توجد مواسم أو مناسبات.</CommandEmpty>
+                <CommandGroup className="max-h-64 overflow-auto">
+                  {seasonsOccasions.map((seasonOccasion) => (
+                    <CommandItem
+                      key={seasonOccasion.id}
+                      value={seasonOccasion.name}
+                      onSelect={() => handleSeasonOccasionToggle(seasonOccasion)}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{seasonOccasion.name}</span>
+                        {seasonOccasion.type && (
+                          <Badge variant="outline" className="text-xs">
+                            {seasonOccasion.type === 'season' ? 'موسم' : 'مناسبة'}
+                          </Badge>
+                        )}
+                      </div>
+                      <Check
+                        className={cn(
+                          "h-4 w-4",
+                          selectedSeasonsOccasions.some(so => so.id === seasonOccasion.id) ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
       </CardContent>
