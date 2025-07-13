@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast.js';
+import useLocalStorage from '@/hooks/useLocalStorage';
 import {
   Dialog,
   DialogContent,
@@ -13,12 +14,21 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, User, Save, MessageCircle, RefreshCw, CheckCircle } from 'lucide-react';
+import { Users, User, Save, MessageCircle, RefreshCw, CheckCircle, X, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 const CustomerSettingsDialog = ({ open, onOpenChange }) => {
   const { user, updateUser } = useAuth();
   const [defaultCustomerName, setDefaultCustomerName] = useState(user?.default_customer_name || '');
+  const [savedNames, setSavedNames] = useLocalStorage('savedCustomerNames', []);
   const [isLoading, setIsLoading] = useState(false);
+
+  // تحديث الاسم الافتراضي عند تغيير المستخدم
+  useEffect(() => {
+    if (user?.default_customer_name) {
+      setDefaultCustomerName(user.default_customer_name);
+    }
+  }, [user?.default_customer_name]);
 
   const handleSave = async () => {
     if (!defaultCustomerName.trim()) {
@@ -32,25 +42,44 @@ const CustomerSettingsDialog = ({ open, onOpenChange }) => {
 
     setIsLoading(true);
     try {
-      await updateUser(user.user_id, {
+      const result = await updateUser(user.user_id, {
         default_customer_name: defaultCustomerName.trim()
       });
       
-      toast({
-        title: "تم الحفظ بنجاح",
-        description: "تم تحديث اسم الزبون الافتراضي بنجاح"
-      });
-      
-      onOpenChange(false);
+      if (result.success) {
+        // إضافة الاسم إلى قائمة الأسماء المحفوظة
+        const trimmedName = defaultCustomerName.trim();
+        if (!savedNames.includes(trimmedName)) {
+          setSavedNames(prev => [trimmedName, ...prev.slice(0, 4)]); // احتفظ بآخر 5 أسماء
+        }
+        
+        toast({
+          title: "تم الحفظ بنجاح",
+          description: "تم تحديث اسم الزبون الافتراضي بنجاح"
+        });
+        
+        onOpenChange(false);
+      } else {
+        throw new Error(result.error?.message || 'فشل في الحفظ');
+      }
     } catch (error) {
+      console.error('Error saving default customer name:', error);
       toast({
         title: "خطأ في الحفظ",
-        description: "حدث خطأ أثناء حفظ الإعدادات",
+        description: error.message || "حدث خطأ أثناء حفظ الإعدادات",
         variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelectSavedName = (name) => {
+    setDefaultCustomerName(name);
+  };
+
+  const handleRemoveSavedName = (nameToRemove) => {
+    setSavedNames(prev => prev.filter(name => name !== nameToRemove));
   };
 
   return (
@@ -142,6 +171,38 @@ const CustomerSettingsDialog = ({ open, onOpenChange }) => {
                 <p className="text-xs text-blue-500 opacity-70 mt-1">
                   هذا هو الاسم المستخدم حالياً في الطلبات الجديدة
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* قائمة الأسماء المحفوظة */}
+          {savedNames.length > 0 && (
+            <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
+              <CardHeader>
+                <CardTitle className="text-sm text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4" />
+                  الأسماء المحفوظة
+                </CardTitle>
+                <CardDescription className="text-purple-600 dark:text-purple-400">
+                  اختر من الأسماء المستخدمة سابقاً
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {savedNames.map((name, index) => (
+                    <Badge 
+                      key={index}
+                      variant="outline" 
+                      className="cursor-pointer group border-purple-200 text-purple-700 hover:bg-purple-100 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-800 flex items-center gap-1"
+                    >
+                      <span onClick={() => handleSelectSavedName(name)}>{name}</span>
+                      <X 
+                        className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer hover:text-red-500" 
+                        onClick={() => handleRemoveSavedName(name)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
