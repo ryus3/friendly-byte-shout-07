@@ -29,6 +29,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
           description: productData.description,
           base_price: productData.price,
           cost_price: productData.costPrice,
+          barcode: generateUniqueBarcode(productData.name, 'PRODUCT', 'MAIN', Date.now().toString()),
           is_active: productData.isVisible,
           created_by: user?.user_id || user?.id
         })

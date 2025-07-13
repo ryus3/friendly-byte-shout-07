@@ -88,12 +88,41 @@ export const InventoryProvider = ({ children }) => {
     try {
       const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes] = await Promise.all([
         supabase.from('products').select(`
-          *, 
-          variants:product_variants(
-            *, 
-            color:colors(name, hex_code), 
-            size:sizes(name, type),
-            inventory(quantity, min_stock, location)
+          *,
+          product_variants (
+            id,
+            color_id,
+            size_id,
+            price,
+            cost_price,
+            barcode,
+            images,
+            is_active,
+            colors (id, name, hex_code),
+            sizes (id, name, type)
+          ),
+          inventory (
+            id,
+            variant_id,
+            quantity,
+            min_stock,
+            location
+          ),
+          product_categories (
+            category_id,
+            categories (id, name, type)
+          ),
+          product_departments (
+            department_id,
+            departments (id, name, color, icon)
+          ),
+          product_product_types (
+            product_type_id,
+            product_types (id, name)
+          ),
+          product_seasons_occasions (
+            season_occasion_id,
+            seasons_occasions (id, name, type)
           )
         `).order('created_at', { ascending: false }),
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
@@ -106,7 +135,50 @@ export const InventoryProvider = ({ children }) => {
       if (ordersRes.error) throw ordersRes.error;
       if (purchasesRes.error) throw purchasesRes.error;
 
-      setProducts(productsRes.data || []);
+      // معالجة وتحويل بيانات المنتجات
+      const processedProducts = (productsRes.data || []).map(product => {
+        const productInventory = product.inventory || [];
+        
+        const variants = (product.product_variants || []).map(variant => {
+          const variantInventory = productInventory.find(inv => inv.variant_id === variant.id);
+          return {
+            ...variant,
+            color: variant.colors?.name || 'Unknown',
+            color_hex: variant.colors?.hex_code || '#000000',
+            size: variant.sizes?.name || 'Unknown',
+            quantity: variantInventory?.quantity || 0,
+            min_stock: variantInventory?.min_stock || 0,
+            location: variantInventory?.location || null,
+            inventoryId: variantInventory?.id || null
+          };
+        });
+
+        const totalStock = variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0);
+
+        return {
+          ...product,
+          variants,
+          totalStock,
+          is_visible: true, // إظهار جميع المنتجات
+          price: product.base_price || 0,
+          
+          categories: {
+            main_category: product.product_categories?.[0]?.categories?.name || null,
+            product_type: product.product_product_types?.[0]?.product_types?.name || null,
+            season_occasion: product.product_seasons_occasions?.[0]?.seasons_occasions?.name || null
+          },
+          
+          departments: (product.product_departments || []).map(pd => pd.departments),
+          
+          product_variants: variants,
+          product_categories: product.product_categories,
+          product_departments: product.product_departments,
+          product_product_types: product.product_product_types,
+          product_seasons_occasions: product.product_seasons_occasions
+        };
+      });
+
+      setProducts(processedProducts);
       setOrders(ordersRes.data?.filter(o => o.delivery_status !== 'ai_pending') || []);
       setAiOrders(aiOrdersRes.data || []);
     } catch (error) {

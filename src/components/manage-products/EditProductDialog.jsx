@@ -11,12 +11,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { Progress } from "@/components/ui/progress";
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
-import NewProductCategorization from '@/components/add-product/NewProductCategorization';
+import MultiSelectCategorization from '@/components/add-product/MultiSelectCategorization';
 import ProductVariantSelection from '@/components/add-product/ProductVariantSelection';
 import ColorVariantCard from '@/components/add-product/ColorVariantCard';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
 
 const SortableColorCard = (props) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: props.color.id });
@@ -40,13 +38,15 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
 
   const [productInfo, setProductInfo] = useState({});
   const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
-  const [selectedCategories, setSelectedCategories] = useState({});
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedProductTypes, setSelectedProductTypes] = useState([]);
+  const [selectedSeasonsOccasions, setSelectedSeasonsOccasions] = useState([]);
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
   const [selectedColors, setSelectedColors] = useState([]);
   const [sizeType, setSizeType] = useState('letter');
+  const [colorSizeTypes, setColorSizeTypes] = useState({});
   const [variants, setVariants] = useState([]);
   const [colorImages, setColorImages] = useState({});
-  const [variantPrice, setVariantPrice] = useState(0);
-  const [variantCostPrice, setVariantCostPrice] = useState(0);
 
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
@@ -54,39 +54,44 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
     if (product && open) {
       setProductInfo({
         name: product.name || '',
-        price: product.price || '',
-        costPrice: product.costPrice || '',
-        discountPrice: product.discountPrice || '',
-        discountEndDate: product.discountEndDate || '',
-        isFeatured: product.isFeatured || false,
+        description: product.description || '',
+        price: product.base_price || product.price || '',
+        costPrice: product.cost_price || product.costPrice || '',
       });
 
       const initialGeneralImages = Array(4).fill(null);
-      if (product.images) {
+      if (product.images && Array.isArray(product.images)) {
         product.images.forEach((img, index) => {
           if (index < 4) initialGeneralImages[index] = img;
         });
       }
       setGeneralImages(initialGeneralImages);
 
-      setSelectedCategories(product.categories || { main_category: '', product_type: '', season_occasion: '' });
+      // تحديث التصنيفات والأقسام
+      setSelectedCategories(product.product_categories?.map(pc => pc.category_id) || []);
+      setSelectedProductTypes(product.product_product_types?.map(ppt => ppt.product_type_id) || []);
+      setSelectedSeasonsOccasions(product.product_seasons_occasions?.map(pso => pso.season_occasion_id) || []);
+      setSelectedDepartments(product.product_departments?.map(pd => pd.department_id) || []);
       
-      const uniqueColorIds = [...new Set(product.variants.map(v => v.colorId))];
+      // تحديد الألوان والأقياس
+      const uniqueColorIds = [...new Set((product.product_variants || product.variants || []).map(v => v.color_id))];
       const productColors = uniqueColorIds.map(id => allColors.find(c => c.id === id)).filter(Boolean);
       setSelectedColors(productColors);
 
-      const firstVariant = product.variants[0];
+      const firstVariant = (product.product_variants || product.variants || [])[0];
       if (firstVariant) {
-        const size = sizes.find(s => s.id === firstVariant.sizeId);
+        const size = sizes.find(s => s.id === firstVariant.size_id);
         if (size) setSizeType(size.type);
       }
       
-      setVariants(product.variants || []);
+      setVariants(product.product_variants || product.variants || []);
 
+      // تحديد صور الألوان
       const initialColorImages = {};
-      product.variants.forEach(v => {
-        if (v.image && !initialColorImages[v.colorId]) {
-          initialColorImages[v.colorId] = v.image;
+      const variantsList = product.product_variants || product.variants || [];
+      variantsList.forEach(v => {
+        if (v.images && v.images.length > 0 && !initialColorImages[v.color_id]) {
+          initialColorImages[v.color_id] = v.images[0];
         }
       });
       setColorImages(initialColorImages);
@@ -97,7 +102,10 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
     resetState();
   }, [resetState]);
 
-  const allSizesForType = useMemo(() => sizes.filter(s => s.type === sizeType), [sizes, sizeType]);
+  const allSizesForType = useMemo(() => {
+    const typeToFilter = sizeType || 'letter';
+    return sizes.filter(s => s.type === typeToFilter);
+  }, [sizes, sizeType]);
 
   const handleColorImageSelect = useCallback((colorId, file) => {
     setColorImages(prev => ({...prev, [colorId]: file}));
@@ -132,8 +140,10 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
       ...productInfo,
       price: parseFloat(productInfo.price) || 0,
       costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
-      discountPrice: productInfo.discountPrice ? parseFloat(productInfo.discountPrice) : 0,
-      categories: selectedCategories,
+      selectedCategories,
+      selectedProductTypes,
+      selectedSeasonsOccasions,
+      selectedDepartments,
       variants,
     };
     
@@ -183,15 +193,23 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
             onImageSelect={handleGeneralImageSelect}
             onImageRemove={removeGeneralImage}
           />
-          <NewProductCategorization 
-            selectedCategories={selectedCategories} 
-            setSelectedCategories={setSelectedCategories} 
+          <MultiSelectCategorization 
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
+            selectedProductTypes={selectedProductTypes}
+            setSelectedProductTypes={setSelectedProductTypes}
+            selectedSeasonsOccasions={selectedSeasonsOccasions}
+            setSelectedSeasonsOccasions={setSelectedSeasonsOccasions}
+            selectedDepartments={selectedDepartments}
+            setSelectedDepartments={setSelectedDepartments}
           />
           <ProductVariantSelection 
             selectedColors={selectedColors}
             setSelectedColors={setSelectedColors}
             sizeType={sizeType}
             setSizeType={setSizeType}
+            colorSizeTypes={colorSizeTypes}
+            setColorSizeTypes={setColorSizeTypes}
           />
           {selectedColors.length > 0 && (
             <Card>
@@ -213,11 +231,11 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
                           <SortableColorCard
                             key={color.id}
                             color={color}
-                            allSizesForType={allSizesForType}
+                            allSizesForType={variants.filter(v => v.color_id === color.id)}
                             variants={variants}
                             setVariants={setVariants}
-                            price={variantPrice}
-                            costPrice={variantCostPrice}
+                            price={productInfo.price}
+                            costPrice={productInfo.costPrice}
                             handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
                             handleImageRemove={() => handleColorImageRemove(color.id)}
                             initialImage={preview}

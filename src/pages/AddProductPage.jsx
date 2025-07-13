@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2 } from 'lucide-react';
+import { Loader2, PackagePlus, ArrowRight, Sparkles, Building2, QrCode } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -232,6 +232,14 @@ const AddProductPage = () => {
                    <Button type="button" variant="outline" onClick={() => navigate(fromPurchases || '/add-product')}>
                       <ArrowRight className="h-4 w-4 ml-2" />
                       رجوع
+                   </Button>
+                   <Button type="button" variant="outline" onClick={() => navigate('/manage-variants')}>
+                      <Building2 className="h-4 w-4 ml-2" />
+                      إدارة المتغيرات
+                   </Button>
+                   <Button type="button" variant="outline" onClick={() => navigate('/manage-labels')}>
+                      <QrCode className="h-4 w-4 ml-2" />
+                      طباعة الملصقات
                    </Button>
                    <div>
                      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
