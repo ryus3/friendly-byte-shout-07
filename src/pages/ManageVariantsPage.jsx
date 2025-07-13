@@ -5,13 +5,15 @@ import CategoriesManager from '@/components/manage-variants/CategoriesManager';
 import ColorsManagerNew from '@/components/manage-variants/ColorsManagerNew';
 import SizesManagerNew from '@/components/manage-variants/SizesManagerNew';
 import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
+import ProductTypesManager from '@/components/manage-variants/ProductTypesManager';
+import SeasonsOccasionsManager from '@/components/manage-variants/SeasonsOccasionsManager';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
   ArrowRight, Palette, Tags, Ruler, Package, Shirt, ShoppingBag, Building2,
   Footprints, Gem, Baby, Hammer, Monitor, Car, Home, Utensils, Gamepad2,
   Heart, Dumbbell, Book, Music, Camera, Scissors, Wrench,
-  HardHat, Paintbrush, Laptop, Smartphone, Headphones, Settings
+  HardHat, Paintbrush, Laptop, Smartphone, Headphones, Settings, Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -24,18 +26,22 @@ const ManageVariantsPage = () => {
     departments: { count: 0, status: 'تحميل...' },
     categories: { count: 0, status: 'تحميل...' },
     colors: { count: 0, status: 'تحميل...' },
-    sizes: { count: 0, status: 'تحميل...' }
+    sizes: { count: 0, status: 'تحميل...' },
+    productTypes: { count: 0, status: 'تحميل...' },
+    seasonsOccasions: { count: 0, status: 'تحميل...' }
   });
   const [departments, setDepartments] = useState([]);
 
   // جلب الإحصائيات الحقيقية
   const fetchStats = async () => {
     try {
-      const [deptResult, catResult, colorResult, sizeResult] = await Promise.all([
+      const [deptResult, catResult, colorResult, sizeResult, productTypesResult, seasonsResult] = await Promise.all([
         supabase.from('departments').select('*', { count: 'exact' }),
         supabase.from('categories').select('*', { count: 'exact' }),
         supabase.from('colors').select('*', { count: 'exact' }),
-        supabase.from('sizes').select('*', { count: 'exact' })
+        supabase.from('sizes').select('*', { count: 'exact' }),
+        supabase.from('product_types').select('*', { count: 'exact' }),
+        supabase.from('seasons_occasions').select('*', { count: 'exact' })
       ]);
 
       setStats({
@@ -54,6 +60,14 @@ const ManageVariantsPage = () => {
         sizes: { 
           count: sizeResult.count || 0, 
           status: (sizeResult.count || 0) > 0 ? 'منظمة' : 'فارغة' 
+        },
+        productTypes: { 
+          count: productTypesResult.count || 0, 
+          status: (productTypesResult.count || 0) > 0 ? 'متاحة' : 'فارغة' 
+        },
+        seasonsOccasions: { 
+          count: seasonsResult.count || 0, 
+          status: (seasonsResult.count || 0) > 0 ? 'متاحة' : 'فارغة' 
         }
       });
 
@@ -110,9 +124,25 @@ const ManageVariantsPage = () => {
       value: 'categories',
       label: 'التصنيفات',
       icon: Tags,
-      description: 'إدارة الأقسام والتصنيفات والمنتجات',
+      description: 'إدارة التصنيفات الرئيسية',
       color: 'from-emerald-500 to-teal-600',
       component: CategoriesManager
+    },
+    {
+      value: 'productTypes',
+      label: 'أنواع المنتجات',
+      icon: Package,
+      description: 'إدارة أنواع المنتجات المختلفة',
+      color: 'from-orange-500 to-red-600',
+      component: ProductTypesManager
+    },
+    {
+      value: 'seasonsOccasions',
+      label: 'المواسم والمناسبات',
+      icon: Calendar,
+      description: 'إدارة المواسم والمناسبات',
+      color: 'from-purple-500 to-pink-600',
+      component: SeasonsOccasionsManager
     },
     {
       value: 'colors',
@@ -222,7 +252,7 @@ const ManageVariantsPage = () => {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border shadow-lg overflow-hidden">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" dir="rtl">
               <div className="border-b bg-slate-50 dark:bg-slate-900/50">
-                <TabsList className="w-full grid grid-cols-4 h-auto p-2 bg-transparent">
+                <TabsList className="w-full grid grid-cols-6 h-auto p-2 bg-transparent">
                   {tabConfig.map((tab) => {
                     const IconComponent = tab.icon;
                     const tabStats = stats[tab.value] || { count: 0, status: 'فارغة' };
