@@ -119,19 +119,19 @@ const InventoryPage = () => {
       if (productParam) {
         const product = products?.find(p => p.id === productParam);
         if (product) {
-          setFilters(prev => ({
-            ...prev, 
+          setFilters(currentFilters => ({
+            ...currentFilters, 
             searchTerm: product.name,
             stockFilter: 'low' // فلتر للمخزون المنخفض
           }));
         }
       }
     } else if (highlightParam) {
-      setFilters(prev => ({...prev, searchTerm: highlightParam}));
+      setFilters(currentFilters => ({...currentFilters, searchTerm: highlightParam}));
     }
     
     if (stockFilterParam) {
-      setFilters(prev => ({...prev, stockFilter: stockFilterParam}));
+      setFilters(currentFilters => ({...currentFilters, stockFilter: stockFilterParam}));
     }
   }, [searchParams, products]);
 
@@ -251,7 +251,7 @@ const InventoryPage = () => {
     if (stockLevel === 'reserved') {
       setIsReservedStockDialogOpen(true);
     } else {
-      setFilters(prev => ({ ...prev, stockFilter: stockLevel }));
+      setFilters(currentFilters => ({ ...currentFilters, stockFilter: stockLevel }));
     }
   }, []);
 
@@ -290,14 +290,15 @@ const InventoryPage = () => {
 
   const handleSelectionChange = (productId, isSelected) => {
     setSelectedItemsForExport(prev => {
+      const currentItems = Array.isArray(prev) ? [...prev] : [];
       if (isSelected) {
-        if (!prev.includes(productId)) {
-          return [...prev, productId];
+        if (!currentItems.includes(productId)) {
+          return [...currentItems, productId];
         }
+        return currentItems;
       } else {
-        return prev.filter(id => id !== productId);
+        return currentItems.filter(id => id !== productId);
       }
-      return prev;
     });
   };
 
