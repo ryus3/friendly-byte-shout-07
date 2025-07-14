@@ -165,6 +165,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                                   </svg>
                                 </div>
                               )}
+                            </div>
                             
                             {/* Product Info */}
                             <div>
@@ -196,7 +197,7 @@ const StockAlertsWindow = ({ open, onOpenChange }) => {
                               <div className={cn(
                                 "text-2xl font-bold",
                                 isCritical && "text-red-600",
-                                isWarning && "text-orange-600", 
+                                isWarning && "text-orange-600",
                                 !isCritical && !isWarning && "text-blue-600"
                               )}>
                                 {variant.quantity}
