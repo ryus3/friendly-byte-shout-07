@@ -91,7 +91,6 @@ const InventoryPage = () => {
   const { allUsers, hasPermission } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const [isPDFReady, setIsPDFReady] = useState(false);
 
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -106,7 +105,6 @@ const InventoryPage = () => {
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [isReservedStockDialogOpen, setIsReservedStockDialogOpen] = useState(false);
   const [selectedItemsForExport, setSelectedItemsForExport] = useState([]);
-  const [productsForExport, setProductsForExport] = useState([]);
 
   useEffect(() => {
     const productParam = searchParams.get('product');
@@ -255,29 +253,6 @@ const InventoryPage = () => {
     }
   }, []);
 
-  const prepareAndExport = useCallback(() => {
-    if (selectedItemsForExport.length === 0) {
-        toast({
-            title: "لم يتم تحديد أي شيء",
-            description: "الرجاء تحديد المنتجات التي تريد تصديرها أولاً.",
-            variant: "destructive",
-        });
-        return;
-    }
-    const itemsToExport = inventoryItems.filter(item => selectedItemsForExport.includes(item.id));
-    setProductsForExport(itemsToExport);
-    setIsPDFReady(true);
-  }, [selectedItemsForExport, inventoryItems]);
-
-  useEffect(() => {
-    if (isPDFReady && productsForExport.length > 0) {
-        // PDF is ready for download
-        toast({ 
-            title: "جاهز للتصدير", 
-            description: "اضغط على زر التصدير لتنزيل التقرير",
-        });
-    }
-  }, [isPDFReady, productsForExport]);
 
 
   const handleBarcodeScan = (decodedText) => {
@@ -318,25 +293,20 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
-            {isPDFReady && productsForExport.length > 0 ? (
-              <PDFDownloadLink
-                document={<InventoryPDF products={productsForExport} />}
-                fileName={`تقرير-الجرد-${new Date().toLocaleDateString('ar-EG')}.pdf`}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-              >
-                {({ loading }) => (
-                  <>
-                    <Download className="w-4 h-4 ml-2" />
-                    {loading ? 'جاري التجهيز...' : 'تنزيل PDF'}
-                  </>
-                )}
-              </PDFDownloadLink>
-            ) : (
-              <Button onClick={prepareAndExport} variant="outline">
-                <Download className="w-4 h-4 ml-2" />
-                تحضير التصدير
-              </Button>
-            )}
+            <PDFDownloadLink
+              document={<InventoryPDF products={selectedItemsForExport.length > 0 
+                ? inventoryItems.filter(item => selectedItemsForExport.includes(item.id))
+                : inventoryItems} />}
+              fileName={`تقرير-الجرد-${new Date().toLocaleDateString('ar-EG')}.pdf`}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+            >
+              {({ loading }) => (
+                <>
+                  <Download className="w-4 h-4 ml-2" />
+                  {loading ? 'جاري التجهيز...' : `تصدير PDF ${selectedItemsForExport.length > 0 ? `(${selectedItemsForExport.length})` : '(الكل)'}`}
+                </>
+              )}
+            </PDFDownloadLink>
           </div>
         </div>
         
