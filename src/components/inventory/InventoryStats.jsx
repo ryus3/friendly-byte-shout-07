@@ -39,8 +39,10 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
     return null; // or a loader/skeleton component
   }
   const totalVariants = inventoryItems.reduce((acc, item) => acc + (item.variants?.length || 0), 0);
-  const highStockCount = inventoryItems.flatMap(i => i.variants || []).filter(v => v.stockLevel === 'high').length;
-  const mediumStockCount = inventoryItems.flatMap(i => i.variants || []).filter(v => v.stockLevel === 'medium').length;
+  const allVariants = inventoryItems.flatMap(i => i.variants || []);
+  const highStockCount = allVariants.filter(v => v.stockLevel === 'high').length;
+  const mediumStockCount = allVariants.filter(v => v.stockLevel === 'medium').length;
+  const outOfStockCount = allVariants.filter(v => (v.quantity || 0) === 0).length;
 
   const stats = [
     { title: 'إجمالي الأصناف', value: totalVariants, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
@@ -48,10 +50,11 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
     { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
     { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-yellow-500 to-orange-400', delay: 0.3, onClick: () => onFilterChange('medium') },
     { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-rose-400', delay: 0.4, onClick: () => onFilterChange('low') },
+    { title: 'مخزون نافذ', value: outOfStockCount, icon: Package, colorClass: 'bg-gradient-to-tr from-gray-500 to-gray-600', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {stats.map(stat => (
         <StatCard key={stat.title} {...stat} />
       ))}

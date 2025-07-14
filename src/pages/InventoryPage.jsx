@@ -229,6 +229,8 @@ const InventoryPage = () => {
     if (filters.stockFilter !== 'all') {
       if (filters.stockFilter === 'reserved') {
         items = items.filter(item => item.totalReserved > 0);
+      } else if (filters.stockFilter === 'out-of-stock') {
+        items = items.filter(item => item.variants.some(v => (v.quantity || 0) === 0));
       } else {
         items = items.filter(item => item.variants.some(v => v.stockLevel === filters.stockFilter));
       }
