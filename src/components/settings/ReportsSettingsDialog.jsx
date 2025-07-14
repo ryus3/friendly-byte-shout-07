@@ -15,10 +15,16 @@ import {
   Clock, Users, ShoppingCart, AlertTriangle
 } from 'lucide-react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { pdf } from '@react-pdf/renderer';
+import { PDFDownloadLink, pdf } from '@react-pdf/renderer';
 import ReportPDF from '@/components/pdf/ReportPDF';
+import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
+import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
+import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {
+  const { orders, products, accounting, purchases } = useInventory();
+  const { allUsers } = useAuth();
   const [settings, setSettings] = useLocalStorage('reportSettings', {
     exportFormat: 'pdf',
     includeLogo: true,

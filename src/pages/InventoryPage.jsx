@@ -5,19 +5,19 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
-import InventoryHeader from '@/components/inventory/InventoryHeader';
+import { Button } from '@/components/ui/button';
+import { Download, Package, ChevronDown } from 'lucide-react';
 import InventoryStats from '@/components/inventory/InventoryStats';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
-import { useReactToPrint } from 'react-to-print';
+import { PDFDownloadLink } from '@react-pdf/renderer';
 import InventoryPDF from '@/components/pdf/InventoryPDF';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, ChevronDown } from 'lucide-react';
 import InventoryItem from '@/components/inventory/InventoryItem';
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
@@ -90,8 +90,8 @@ const InventoryPage = () => {
   const { products, orders, loading, settings, updateVariantStock } = useInventory();
   const { allUsers, hasPermission } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const printComponentRef = useRef();
   const isMobile = useMediaQuery("(max-width: 768px)");
+  const [isPDFReady, setIsPDFReady] = useState(false);
 
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -255,13 +255,7 @@ const InventoryPage = () => {
     }
   }, []);
 
-  const handlePrint = useReactToPrint({
-    content: () => printComponentRef.current,
-    documentTitle: 'تقرير-الجرد',
-    onAfterPrint: () => toast({ title: "تمت الطباعة بنجاح" }),
-  });
-  
-  const prepareAndPrint = useCallback(() => {
+  const prepareAndExport = useCallback(() => {
     if (selectedItemsForExport.length === 0) {
         toast({
             title: "لم يتم تحديد أي شيء",
@@ -270,16 +264,20 @@ const InventoryPage = () => {
         });
         return;
     }
-    const itemsToPrint = inventoryItems.filter(item => selectedItemsForExport.includes(item.id));
-    setProductsForExport(itemsToPrint);
+    const itemsToExport = inventoryItems.filter(item => selectedItemsForExport.includes(item.id));
+    setProductsForExport(itemsToExport);
+    setIsPDFReady(true);
   }, [selectedItemsForExport, inventoryItems]);
 
   useEffect(() => {
-    if (productsForExport.length > 0) {
-        handlePrint();
-        setProductsForExport([]); 
+    if (isPDFReady && productsForExport.length > 0) {
+        // PDF is ready for download
+        toast({ 
+            title: "جاهز للتصدير", 
+            description: "اضغط على زر التصدير لتنزيل التقرير",
+        });
     }
-  }, [productsForExport, handlePrint]);
+  }, [isPDFReady, productsForExport]);
 
 
   const handleBarcodeScan = (decodedText) => {
@@ -313,7 +311,34 @@ const InventoryPage = () => {
         <meta name="description" content="عرض وإدارة المخزون بشكل تفصيلي." />
       </Helmet>
       <div className="space-y-6">
-        <InventoryHeader onExport={prepareAndPrint} />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">الجرد المفصل</h1>
+            <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
+          </div>
+          
+          <div className="flex gap-3">
+            {isPDFReady && productsForExport.length > 0 ? (
+              <PDFDownloadLink
+                document={<InventoryPDF products={productsForExport} />}
+                fileName={`تقرير-الجرد-${new Date().toLocaleDateString('ar-EG')}.pdf`}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+              >
+                {({ loading }) => (
+                  <>
+                    <Download className="w-4 h-4 ml-2" />
+                    {loading ? 'جاري التجهيز...' : 'تنزيل PDF'}
+                  </>
+                )}
+              </PDFDownloadLink>
+            ) : (
+              <Button onClick={prepareAndExport} variant="outline">
+                <Download className="w-4 h-4 ml-2" />
+                تحضير التصدير
+              </Button>
+            )}
+          </div>
+        </div>
         
         <InventoryStats 
           totalVariants={inventoryStats.totalVariants}
@@ -367,9 +392,6 @@ const InventoryPage = () => {
         reservedOrders={reservedOrders}
         allUsers={allUsers}
       />
-      <div style={{ display: 'none' }}>
-        <InventoryPDF ref={printComponentRef} products={productsForExport} />
-      </div>
     </>
   );
 };
