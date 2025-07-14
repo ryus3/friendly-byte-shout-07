@@ -182,7 +182,7 @@ const AccountingPage = () => {
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const topRowCards = [
-        { key: 'capital', title: "رأس المال", value: accounting.capital, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
+        { key: 'capital', title: "رأس المال", value: accounting?.capital || 0, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
         { key: 'cash', title: "المبلغ في القاصة", value: financialSummary.cashOnHand, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency" },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
     ];
@@ -292,14 +292,14 @@ const AccountingPage = () => {
             <ExpensesDialog
                 open={dialogs.expenses}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, expenses: open }))}
-                expenses={accounting.expenses}
+                expenses={accounting?.expenses || []}
                 addExpense={addExpense}
                 deleteExpense={deleteExpense}
             />
             <EditCapitalDialog
                 open={dialogs.capital}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, capital: open }))}
-                currentCapital={accounting.capital}
+                currentCapital={accounting?.capital || 0}
                 onSave={updateCapital}
             />
             <SettledDuesDialog
