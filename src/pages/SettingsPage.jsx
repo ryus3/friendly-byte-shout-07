@@ -26,7 +26,7 @@ import StockNotificationSettings from '@/components/settings/StockNotificationSe
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
-import SystemIntegrityTest from '@/components/test/SystemIntegrityTest';
+import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
   const Icon = icon;
@@ -672,7 +672,7 @@ const SettingsPage = () => {
                   <p className="text-sm font-medium text-green-600 dark:text-green-400">تقارير شاملة</p>
                   <p className="text-xs text-green-500 opacity-70">PDF + إرسال بريد إلكتروني</p>
                 </div>
-                <SystemIntegrityTest />
+                <SystemStatusDashboard />
               </div>
             </ModernCard>
           </div>

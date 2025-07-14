@@ -449,7 +449,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
                         ...variant,
                         productName: product.name,
                         productId: product.id,
-                        productImage: product.images?.[0] || '/api/placeholder/150/150',
+                        productImage: product.images?.[0] || null,
                         lowStockThreshold: lowStockThreshold,
                     });
                 }
