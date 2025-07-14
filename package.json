@@ -47,6 +47,8 @@
     "framer-motion": "^11.2.10",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.395.0",
+    "otpauth": "^9.4.0",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-barcode": "^1.5.1",
     "react-day-picker": "^8.10.1",
