@@ -212,9 +212,9 @@ const NotificationsPanel = () => {
           <AnimatePresence>
             {allNotifications.length > 0 ? (
               allNotifications.slice(0, 8).map(notification => {
-                const borderColorClass = colorClasses[notification.color] || colorClasses.default;
-                const iconColor = iconColorClasses[notification.color] || iconColorClasses.default;
-                const IconComponent = iconMap[notification.icon] || Bell;
+                const borderColorClass = colorClasses[notification.data?.color || notification.color] || colorClasses.default;
+                const iconColor = iconColorClasses[notification.data?.color || notification.color] || iconColorClasses.default;
+                const IconComponent = iconMap[notification.data?.icon || notification.icon] || Bell;
                 return (
                   <motion.div
                     key={notification.id}

@@ -211,10 +211,11 @@ export const NotificationsProvider = ({ children }) => {
             type: notificationData.type,
             title: notificationData.title,
             message: notificationData.message,
-            link: notificationData.link,
-            data: notificationData.data,
-            icon: notificationData.icon,
-            color: notificationData.color,
+            data: notificationData.data || {
+                icon: notificationData.icon,
+                color: notificationData.color,
+                link: notificationData.link
+            },
             auto_delete: notificationData.autoDelete || false
         });
 

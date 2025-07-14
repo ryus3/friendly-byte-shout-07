@@ -35,12 +35,15 @@ const EmployeeFollowUpPage = () => {
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
 
   const employees = useMemo(() => {
+    if (!allUsers || !Array.isArray(allUsers)) return [];
     return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'admin');
   }, [allUsers]);
 
   const usersMap = useMemo(() => {
     const map = new Map();
-    allUsers.forEach(u => map.set(u.id, u.full_name));
+    if (allUsers && Array.isArray(allUsers)) {
+      allUsers.forEach(u => map.set(u.id, u.full_name));
+    }
     return map;
   }, [allUsers]);
 
@@ -66,12 +69,16 @@ const EmployeeFollowUpPage = () => {
 
     const totalManagerProfits = profitsData.reduce((sum, order) => sum + order.managerProfit, 0);
     
-    const paidDues = settlementInvoices
-        .filter(inv => {
-            const employee = allUsers.find(u => u.id === inv.employee_id);
-            return employee && (employee.role === 'employee' || employee.role === 'deputy');
-        })
-        .reduce((sum, inv) => sum + inv.total_amount, 0);
+    const paidDues = settlementInvoices && Array.isArray(settlementInvoices)
+        ? settlementInvoices
+            .filter(inv => {
+                const employee = allUsers && Array.isArray(allUsers) 
+                  ? allUsers.find(u => u.id === inv.employee_id)
+                  : null;
+                return employee && (employee.role === 'employee' || employee.role === 'deputy');
+            })
+            .reduce((sum, inv) => sum + inv.total_amount, 0)
+        : 0;
 
     return {
       totalOrders: filteredOrders.length,
