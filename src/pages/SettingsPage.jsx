@@ -119,7 +119,6 @@ const SettingsPage = () => {
   const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
   const [isCustomerSettingsOpen, setIsCustomerSettingsOpen] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
-  const [isStockNotificationOpen, setIsStockNotificationOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   
@@ -640,36 +639,42 @@ const SettingsPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <ModernCard
               icon={Bell}
-              title="إعدادات الإشعارات"
-              description="تخصيص إشعارات النظام والتنبيهات"
+              title="إدارة الإشعارات"
+              description="تخصيص إشعارات النظام والتنبيهات وتنبيهات المخزون"
               iconColor="from-orange-500 to-orange-600"
               onClick={() => setIsNotificationSettingsOpen(true)}
             >
               <div className="space-y-3">
-                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400">الإشعارات العامة</p>
-                  <p className="text-xs text-orange-500 opacity-70">مفعلة</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded border border-orange-200 dark:border-orange-800">
+                    <p className="text-xs font-medium text-orange-600 dark:text-orange-400">إشعارات عامة</p>
+                    <p className="text-xs text-orange-500 opacity-70">مفعلة</p>
+                  </div>
+                  <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                    <p className="text-xs font-medium text-red-600 dark:text-red-400">تنبيهات المخزون</p>
+                    <p className="text-xs text-red-500 opacity-70">ذكية</p>
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  إدارة إشعارات الطلبات والمخزون والنظام
+                  إدارة شاملة لجميع أنواع الإشعارات والتنبيهات
                 </div>
               </div>
             </ModernCard>
 
             <ModernCard
-              icon={PackageX}
-              title="تنبيهات المخزون"
-              description="إدارة تنبيهات المخزون المنخفض والنافد"
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsStockNotificationOpen(true)}
+              icon={Volume2}
+              title="الأصوات والتأثيرات"
+              description="تخصيص أصوات الإشعارات والتأثيرات البصرية"
+              iconColor="from-purple-500 to-purple-600"
+              onClick={() => setIsNotificationSettingsOpen(true)}
             >
               <div className="space-y-3">
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <p className="text-sm font-medium text-red-600 dark:text-red-400">تنبيهات ذكية</p>
-                  <p className="text-xs text-red-500 opacity-70">المخزون المنخفض والنافد</p>
+                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">تأثيرات صوتية</p>
+                  <p className="text-xs text-purple-500 opacity-70">مخصصة ومتنوعة</p>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  تخصيص عتبات التنبيه وأصوات الإشعارات
+                  تحكم كامل في الأصوات والاهتزازات
                 </div>
               </div>
             </ModernCard>
@@ -700,11 +705,11 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
-          {/* Tools and Security Section */}
+          {/* System Tools Section */}
           <SectionHeader 
             icon={SettingsIcon} 
-            title="أدوات النظام والأمان"
-            description="أدوات مساعدة وإعدادات الأمان المتقدمة"
+            title="أدوات النظام والبيانات"
+            description="أدوات النسخ الاحتياطي والتكامل وإدارة البيانات"
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -727,24 +732,6 @@ const SettingsPage = () => {
             </ModernCard>
 
             <ModernCard
-              icon={Shield}
-              title="الأمان المتقدم"
-              description="إعدادات الأمان وصلاحيات المستخدمين"
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsEditProfileOpen(true)}
-            >
-              <div className="space-y-3">
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <p className="text-sm font-medium text-red-600 dark:text-red-400">حماية متقدمة</p>
-                  <p className="text-xs text-red-500 opacity-70">تشفير + تدقيق</p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  تخصيص كلمات المرور والصلاحيات
-                </div>
-              </div>
-            </ModernCard>
-
-            <ModernCard
               icon={Bot}
               title="الذكاء الاصطناعي"
               description="مساعد ذكي وتحليلات متقدمة للبيانات"
@@ -762,6 +749,23 @@ const SettingsPage = () => {
               </div>
             </ModernCard>
 
+            <ModernCard
+              icon={Database}
+              title="إدارة البيانات"
+              description="استيراد وتصدير البيانات والتكامل"
+              iconColor="from-teal-500 to-teal-600"
+              onClick={handleImportData}
+            >
+              <div className="space-y-3">
+                <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
+                  <p className="text-sm font-medium text-teal-600 dark:text-teal-400">تكامل ذكي</p>
+                  <p className="text-xs text-teal-500 opacity-70">استيراد + تصدير</p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  إدارة شاملة لبيانات النظام
+                </div>
+              </div>
+            </ModernCard>
           </div>
 
           {/* Integration and Data Section */}
@@ -835,11 +839,6 @@ const SettingsPage = () => {
       <NotificationSettingsDialog
         open={isNotificationSettingsOpen}
         onOpenChange={setIsNotificationSettingsOpen}
-      />
-      
-      <StockNotificationSettings
-        open={isStockNotificationOpen}
-        onOpenChange={setIsStockNotificationOpen}
       />
     </>
   );
