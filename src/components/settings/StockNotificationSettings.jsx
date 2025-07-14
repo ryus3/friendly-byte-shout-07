@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   PackageX, Volume2, VolumeX, Clock, AlertTriangle, 
   CheckCircle, BellOff, Settings, RefreshCw 
@@ -229,6 +231,32 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
                   }
                   className="max-w-32"
                 />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label className="font-medium">تكرار إشعارات المخزون</Label>
+                <p className="text-xs text-muted-foreground">
+                  كل كم ساعة يتم إرسال نفس التنبيه للمنتج المنخفض
+                </p>
+                <Select 
+                  value={String(settings.notificationFrequencyHours || 24)} 
+                  onValueChange={(value) => handleSettingChange('notificationFrequencyHours', parseInt(value))}
+                >
+                  <SelectTrigger className="max-w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">كل ساعة</SelectItem>
+                    <SelectItem value="6">كل 6 ساعات</SelectItem>
+                    <SelectItem value="12">كل 12 ساعة</SelectItem>
+                    <SelectItem value="24">كل 24 ساعة (يومياً)</SelectItem>
+                    <SelectItem value="72">كل 3 أيام</SelectItem>
+                    <SelectItem value="168">كل أسبوع</SelectItem>
+                    <SelectItem value="0">مرة واحدة فقط</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>

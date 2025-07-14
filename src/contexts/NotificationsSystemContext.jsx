@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const NotificationsSystemContext = createContext();
 
@@ -143,7 +144,45 @@ export const NotificationsSystemProvider = ({ children }) => {
 
   // إشعارات المخزون
   const notifyLowStock = useCallback(async (product, variant) => {
-    if (hasPermission('manage_inventory')) {
+    if (!hasPermission('manage_inventory')) return;
+    
+    try {
+      // التحقق من آخر إشعار تم إرساله لهذا المنتج
+      const { data: existingNotifications, error } = await supabase
+        .from('stock_notification_history')
+        .select('*')
+        .eq('product_id', product.id)
+        .eq('variant_id', variant.id)
+        .order('notification_sent_at', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error('Error checking notification history:', error);
+        return;
+      }
+      
+      // الحصول على إعدادات التكرار
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'stock_notification_frequency')
+        .single();
+      
+      const frequencyHours = settings?.value?.hours || 24;
+      const now = new Date();
+      
+      // التحقق من عدم إرسال إشعار خلال الفترة المحددة
+      if (existingNotifications && existingNotifications.length > 0) {
+        const lastNotification = existingNotifications[0];
+        const lastNotificationTime = new Date(lastNotification.notification_sent_at);
+        const hoursSinceLastNotification = (now - lastNotificationTime) / (1000 * 60 * 60);
+        
+        if (hoursSinceLastNotification < frequencyHours) {
+          return; // لا نرسل إشعار جديد إذا كان الوقت لم يحن بعد
+        }
+      }
+      
+      // إنشاء الإشعار
       await createNotification({
         title: 'تنبيه نقص مخزون',
         message: `المنتج ${product.name} (${variant.color} - ${variant.size}) كمية منخفضة: ${variant.quantity}`,
@@ -153,8 +192,20 @@ export const NotificationsSystemProvider = ({ children }) => {
         related_entity_id: product.id,
         priority: 'high'
       });
+      
+      // تسجيل الإشعار في التاريخ
+      await supabase.from('stock_notification_history').insert({
+        product_id: product.id,
+        variant_id: variant.id,
+        stock_level: variant.quantity,
+        notification_type: 'low_stock',
+        user_id: user?.id
+      });
+      
+    } catch (error) {
+      console.error('Error in notifyLowStock:', error);
     }
-  }, [createNotification, hasPermission]);
+  }, [createNotification, hasPermission, user?.id]);
 
   // قراءة الإشعار
   const markAsRead = useCallback(async (notificationId) => {

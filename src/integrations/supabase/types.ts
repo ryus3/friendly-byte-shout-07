@@ -1033,6 +1033,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_notification_history: {
+        Row: {
+          created_at: string
+          id: string
+          notification_sent_at: string
+          notification_type: string
+          product_id: string
+          stock_level: number
+          user_id: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notification_sent_at?: string
+          notification_type?: string
+          product_id: string
+          stock_level: number
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notification_sent_at?: string
+          notification_type?: string
+          product_id?: string
+          stock_level?: number
+          user_id?: string | null
+          variant_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
