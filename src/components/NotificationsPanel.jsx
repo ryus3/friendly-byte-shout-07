@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
-import { Bell, Package, CheckCircle, AlertTriangle, Trash2, Check, Eye, UserPlus, Bot } from 'lucide-react';
+import { 
+  Bell, Package, CheckCircle, AlertTriangle, Trash2, Check, Eye, UserPlus, Bot,
+  ShoppingCart, TrendingDown, Star, Gift, Clock, CreditCard, Truck, 
+  MessageSquare, Heart, Award, AlertCircle, Info, Zap, Target
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu,
@@ -23,12 +27,33 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const iconMap = {
+  // إشعارات التحذير والمخزون
   AlertTriangle,
+  AlertCircle,
   Package,
+  TrendingDown,
+  
+  // إشعارات الطلبات والمبيعات
+  ShoppingCart,
   CheckCircle,
+  CreditCard,
+  Truck,
+  
+  // إشعارات النظام والمستخدمين
   UserPlus,
   Bot,
   Bell,
+  MessageSquare,
+  
+  // إشعارات خاصة
+  Star,
+  Gift,
+  Heart,
+  Award,
+  Clock,
+  Info,
+  Zap,
+  Target,
 };
 
 const colorClasses = {

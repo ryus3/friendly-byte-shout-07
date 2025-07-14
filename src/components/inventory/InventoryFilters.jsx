@@ -58,6 +58,8 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                 <SelectItem value="medium">مخزون متوسط</SelectItem>
                 <SelectItem value="low">مخزون منخفض</SelectItem>
                 <SelectItem value="reserved">مخزون محجوز</SelectItem>
+                <SelectItem value="out-of-stock">مخزون نافذ</SelectItem>
+                <SelectItem value="archived">منتجات مؤرشفة</SelectItem>
               </SelectContent>
             </Select>
 

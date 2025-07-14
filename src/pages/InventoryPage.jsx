@@ -231,6 +231,11 @@ const InventoryPage = () => {
         items = items.filter(item => item.totalReserved > 0);
       } else if (filters.stockFilter === 'out-of-stock') {
         items = items.filter(item => item.variants.some(v => (v.quantity || 0) === 0));
+      } else if (filters.stockFilter === 'archived') {
+        items = items.filter(item => 
+          item.variants && item.variants.length > 0 && 
+          item.variants.every(v => (v.quantity || 0) === 0)
+        );
       } else {
         items = items.filter(item => item.variants.some(v => v.stockLevel === filters.stockFilter));
       }
@@ -328,6 +333,13 @@ const InventoryPage = () => {
           reservedStockCount={inventoryStats.reservedStockCount}
           onFilterChange={handleFilterChange}
           inventoryItems={inventoryItems}
+          onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
+          onRestoreProduct={() => {
+            toast({
+              title: "استعادة منتج",
+              description: "يمكنك استعادة المنتجات من خلال إضافة مخزون جديد في صفحة إدارة المنتجات"
+            });
+          }}
         />
 
         <InventoryFilters
