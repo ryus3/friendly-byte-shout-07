@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 import { 
   PackageX, Volume2, VolumeX, Clock, AlertTriangle, 
   CheckCircle, BellOff, Settings, RefreshCw 
