@@ -15,10 +15,12 @@ import React, { useState, useMemo } from 'react';
       });
     
       const employees = useMemo(() => {
+        if (!Array.isArray(allUsers)) return [];
         return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy');
       }, [allUsers]);
     
       const filteredInvoices = useMemo(() => {
+        if (!Array.isArray(invoices)) return [];
         return invoices.filter(invoice => {
           const employeeMatch = filters.employeeId === 'all' || invoice.employee_id === filters.employeeId;
           const dateMatch = !filters.dateRange.from || (new Date(invoice.settlement_date) >= filters.dateRange.from && new Date(invoice.settlement_date) <= (filters.dateRange.to || new Date()));
@@ -72,7 +74,7 @@ import React, { useState, useMemo } from 'react';
                   </TableHeader>
                   <TableBody>
                     {filteredInvoices.map(invoice => {
-                      const employee = allUsers.find(u => u.id === invoice.employee_id);
+                      const employee = Array.isArray(allUsers) ? allUsers.find(u => u.id === invoice.employee_id) : null;
                       return (
                         <TableRow key={invoice.id}>
                           <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
