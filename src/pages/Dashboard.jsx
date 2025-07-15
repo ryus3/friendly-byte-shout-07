@@ -418,6 +418,7 @@ const Dashboard = () => {
                         onSuccess={fetchProfitsData}
                     />
                 )}
+            </AnimatePresence>
             <div className="space-y-8">
                 {/* نظام المراقبة الخفي للمخزون والإشعارات */}
                 <StockMonitoringSystem />
