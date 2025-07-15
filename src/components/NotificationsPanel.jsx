@@ -92,60 +92,83 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // ألوان حسب نوع الإشعار - تصميم احترافي كما في الصورة
+  // ألوان الإشعارات حسب الصورة المرفقة - تصميم متناسق
   low_stock: { 
-    bg: 'bg-gradient-to-r from-orange-50 to-red-50 border-l-orange-400', 
-    text: 'text-orange-900', 
-    icon: 'text-orange-600',
-    glow: 'shadow-orange-200/50'
+    bg: 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20', 
+    border: 'border-l-4 border-orange-400 dark:border-orange-500',
+    text: 'text-orange-900 dark:text-orange-100', 
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500'
   },
   stock_warning: { 
-    bg: 'bg-gradient-to-r from-amber-50 to-orange-50 border-l-amber-400', 
-    text: 'text-amber-900', 
-    icon: 'text-amber-600',
-    glow: 'shadow-amber-200/50'
+    bg: 'bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20', 
+    border: 'border-l-4 border-amber-400 dark:border-amber-500',
+    text: 'text-amber-900 dark:text-amber-100', 
+    icon: 'text-amber-600 dark:text-amber-400',
+    dot: 'bg-amber-500'
+  },
+  out_of_stock: { 
+    bg: 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20', 
+    border: 'border-l-4 border-red-400 dark:border-red-500',
+    text: 'text-red-900 dark:text-red-100', 
+    icon: 'text-red-600 dark:text-red-400',
+    dot: 'bg-red-500'
   },
   order_completed: { 
-    bg: 'bg-gradient-to-r from-green-50 to-emerald-50 border-l-green-400', 
-    text: 'text-green-900', 
-    icon: 'text-green-600',
-    glow: 'shadow-green-200/50'
+    bg: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', 
+    border: 'border-l-4 border-green-400 dark:border-green-500',
+    text: 'text-green-900 dark:text-green-100', 
+    icon: 'text-green-600 dark:text-green-400',
+    dot: 'bg-green-500'
   },
   order_shipped: { 
-    bg: 'bg-gradient-to-r from-blue-50 to-sky-50 border-l-blue-400', 
-    text: 'text-blue-900', 
-    icon: 'text-blue-600',
-    glow: 'shadow-blue-200/50'
+    bg: 'bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-900/20 dark:to-sky-900/20', 
+    border: 'border-l-4 border-blue-400 dark:border-blue-500',
+    text: 'text-blue-900 dark:text-blue-100', 
+    icon: 'text-blue-600 dark:text-blue-400',
+    dot: 'bg-blue-500'
   },
   new_order: { 
-    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-blue-500', 
-    text: 'text-blue-900', 
-    icon: 'text-blue-700',
-    glow: 'shadow-blue-200/50'
+    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20', 
+    border: 'border-l-4 border-blue-500 dark:border-blue-400',
+    text: 'text-blue-900 dark:text-blue-100', 
+    icon: 'text-blue-700 dark:text-blue-300',
+    dot: 'bg-blue-500'
+  },
+  ai_order: { 
+    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20', 
+    border: 'border-l-4 border-blue-500 dark:border-blue-400',
+    text: 'text-blue-900 dark:text-blue-100', 
+    icon: 'text-blue-700 dark:text-blue-300',
+    dot: 'bg-blue-500'
   },
   new_registration: { 
-    bg: 'bg-gradient-to-r from-purple-50 to-violet-50 border-l-purple-400', 
-    text: 'text-purple-900', 
-    icon: 'text-purple-600',
-    glow: 'shadow-purple-200/50'
+    bg: 'bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20', 
+    border: 'border-l-4 border-purple-400 dark:border-purple-500',
+    text: 'text-purple-900 dark:text-purple-100', 
+    icon: 'text-purple-600 dark:text-purple-400',
+    dot: 'bg-purple-500'
   },
   profit_settlement: { 
-    bg: 'bg-gradient-to-r from-yellow-50 to-amber-50 border-l-yellow-400', 
-    text: 'text-yellow-900', 
-    icon: 'text-yellow-600',
-    glow: 'shadow-yellow-200/50'
+    bg: 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20', 
+    border: 'border-l-4 border-yellow-400 dark:border-yellow-500',
+    text: 'text-yellow-900 dark:text-yellow-100', 
+    icon: 'text-yellow-600 dark:text-yellow-400',
+    dot: 'bg-yellow-500'
   },
   system: { 
-    bg: 'bg-gradient-to-r from-primary/5 to-primary/10 border-l-primary', 
-    text: 'text-primary', 
-    icon: 'text-primary',
-    glow: 'shadow-primary/20'
+    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50', 
+    border: 'border-l-4 border-slate-400 dark:border-slate-500',
+    text: 'text-slate-900 dark:text-slate-100', 
+    icon: 'text-slate-600 dark:text-slate-400',
+    dot: 'bg-slate-500'
   },
   default: { 
-    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 border-l-slate-400', 
-    text: 'text-slate-900', 
-    icon: 'text-slate-600',
-    glow: 'shadow-slate-200/50'
+    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50', 
+    border: 'border-l-4 border-slate-400 dark:border-slate-500',
+    text: 'text-slate-900 dark:text-slate-100', 
+    icon: 'text-slate-600 dark:text-slate-400',
+    dot: 'bg-slate-500'
   },
 };
 
@@ -299,90 +322,99 @@ const NotificationsPanel = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 md:w-96 bg-gradient-to-br from-background/98 via-card/95 to-primary/5 backdrop-blur-xl border-2 border-primary/30 shadow-2xl rounded-2xl p-2" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center px-2 py-1.5 mb-1">
-          <span className="font-bold text-base bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">الإشعارات</span>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gradient-to-r hover:from-blue-100 hover:to-blue-200 hover:text-blue-600 transition-all duration-300" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
-              <Eye className="w-3.5 h-3.5" />
+      <DropdownMenuContent className="w-80 md:w-96 bg-background/98 backdrop-blur-xl border border-border/50 shadow-xl rounded-xl p-0 overflow-hidden" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-background to-muted/30 border-b border-border/50">
+          <span className="font-bold text-base text-foreground">الإشعارات</span>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs hover:bg-muted/50 transition-colors" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
+              <Eye className="w-4 h-4 ml-1" />
+              عرض الكل
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gradient-to-r hover:from-green-100 hover:to-green-200 hover:text-green-600 transition-all duration-300" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
-              <Check className="w-3.5 h-3.5" />
+            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
+              <Check className="w-4 h-4 ml-1" />
+              قراءة الكل
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-gradient-to-r hover:from-red-100 hover:to-red-200 hover:text-red-600 transition-all duration-300" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
-              <Trash2 className="w-3.5 h-3.5" />
+            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
+              <Trash2 className="w-4 h-4 ml-1" />
+              حذف الكل
             </Button>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="my-1.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-        <ScrollArea className="h-72">
-          <AnimatePresence>
-            {allNotifications.length > 0 ? (
-              allNotifications.slice(0, 8).map(notification => {
-                const notificationType = notification.type || 'default';
-                const colors = typeColorMap[notificationType] || typeColorMap.default;
-                const IconComponent = iconMap[notificationType] || iconMap.default;
-                
-                return (
-                  <motion.div
-                    key={notification.id}
-                    layout
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -15, transition: { duration: 0.15 } }}
-                    className="relative group mb-1.5"
-                  >
-                    <div 
-                      className={cn(
-                        "flex items-center gap-3 p-2.5 cursor-pointer transition-all duration-200 rounded-lg border-r-3 backdrop-blur-sm", 
-                        colors.bg,
-                        colors.glow,
-                        (notification.is_read || notification.read) ? "opacity-60 hover:opacity-90" : "shadow-md hover:shadow-lg transform hover:scale-[1.01] ring-1 ring-primary/25",
-                        "hover:bg-gradient-to-r hover:from-primary/8 hover:to-accent/15"
-                      )}
-                      onClick={(e) => handleNotificationClick(e, notification)}
+        <DropdownMenuSeparator className="mx-0 bg-border/50" />
+        <ScrollArea className="h-80 px-2">
+          <div className="space-y-2 py-2">
+            <AnimatePresence>
+              {allNotifications.length > 0 ? (
+                allNotifications.slice(0, 8).map(notification => {
+                  const notificationType = notification.type || 'default';
+                  const colors = typeColorMap[notificationType] || typeColorMap.default;
+                  const IconComponent = iconMap[notificationType] || iconMap.default;
+                  
+                  return (
+                    <motion.div
+                      key={notification.id}
+                      layout
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
+                      className="relative group"
                     >
-                      <div className="mt-0.5 flex-shrink-0">
-                        <IconComponent />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn("font-medium text-sm leading-tight", colors.text, !(notification.is_read || notification.read) && "font-semibold text-primary")}>{notification.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{notification.message}</p>
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
-                            <Clock className="w-2.5 h-2.5" />
-                            {formatRelativeTime(notification.created_at)}
+                      <div 
+                        className={cn(
+                          "flex items-start gap-3 p-3 cursor-pointer transition-all duration-200 rounded-lg backdrop-blur-sm", 
+                          colors.bg,
+                          colors.border,
+                          (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
+                          "hover:scale-[1.02] hover:shadow-lg"
+                        )}
+                        onClick={(e) => handleNotificationClick(e, notification)}
+                      >
+                        <div className={cn("mt-1 flex-shrink-0", colors.icon)}>
+                          <IconComponent />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
+                              {notification.title}
+                            </h3>
+                            {!(notification.is_read || notification.read) && (
+                              <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground/80 line-clamp-2 mb-1.5">
+                            {notification.message}
                           </p>
-                          {!(notification.is_read || notification.read) && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 animate-pulse shadow-sm"></div>
-                          )}
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              {formatRelativeTime(notification.created_at)}
+                            </p>
+                            {!(notification.is_read || notification.read) && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-6 px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
+                                title="وضع كمقروء"
+                                onClick={(e) => handleMarkAsRead(e, notification.id)}
+                              >
+                                <Eye className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
-                       {!(notification.is_read || notification.read) && (
-                        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 bg-white/90 hover:bg-white shadow-sm"
-                            title="وضع كمقروء"
-                            onClick={(e) => handleMarkAsRead(e, notification.id)}
-                          >
-                            <Eye className="w-3 h-3 text-primary" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )
-              })
-            ) : (
-              <div className="text-center text-muted-foreground py-12 px-4">
-                <Bell className="w-12 h-12 mx-auto mb-3 opacity-50"/>
-                <p className="text-lg font-medium">لا توجد إشعارات جديدة</p>
-                <p className="text-sm mt-1">ستظهر الإشعارات الجديدة هنا</p>
-              </div>
-            )}
-          </AnimatePresence>
+                    </motion.div>
+                  )
+                })
+              ) : (
+                <div className="text-center text-muted-foreground py-12 px-4">
+                  <Bell className="w-12 h-12 mx-auto mb-3 opacity-50"/>
+                  <p className="text-lg font-medium">لا توجد إشعارات جديدة</p>
+                  <p className="text-sm mt-1">ستظهر الإشعارات الجديدة هنا</p>
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
         </ScrollArea>
       </DropdownMenuContent>
     </DropdownMenu>

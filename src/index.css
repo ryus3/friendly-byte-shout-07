@@ -39,6 +39,13 @@
     --status-returned: 0 84% 60%;        /* أحمر للراجعة */
     --status-cancelled: 0 62% 52%;       /* أحمر داكن للملغي */
     
+    /* Notification Colors - Professional Design */
+    --notification-info: 217 91% 60%;    /* أزرق للمعلومات */
+    --notification-success: 142 76% 36%; /* أخضر للنجاح */
+    --notification-warning: 45 93% 47%;  /* أصفر للتحذير */
+    --notification-error: 0 84% 60%;     /* أحمر للخطأ */
+    --notification-stock: 24 95% 53%;    /* برتقالي للمخزون */
+    
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
     --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--muted)));
