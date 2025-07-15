@@ -16,12 +16,11 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 
-// أيقونات احترافية مخصصة
+// أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
   <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
     <rect x="3" y="4" width="18" height="16" rx="2" className="fill-orange-50 stroke-orange-500" strokeWidth="1.5"/>
     <path d="M8 10v4M12 8v6M16 12v2" className="stroke-orange-600" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="19" cy="5" r="2" className="fill-red-500"/>
   </svg>
 );
 

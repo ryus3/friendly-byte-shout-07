@@ -26,13 +26,11 @@ import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-// أيقونات احترافية مخصصة
+// أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
     <rect x="3" y="4" width="18" height="16" rx="2" className="fill-orange-50 stroke-orange-500" strokeWidth="1.5"/>
     <path d="M8 10v4M12 8v6M16 12v2" className="stroke-orange-600" strokeWidth="2" strokeLinecap="round"/>
-    <circle cx="19" cy="5" r="2" className="fill-red-500"/>
-    <path d="M18 4l2 2M20 4l-2 2" className="stroke-white" strokeWidth="1" strokeLinecap="round"/>
   </svg>
 );
 
@@ -47,7 +45,6 @@ const UserRegistrationIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="8" r="3" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
     <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
-    <circle cx="18" cy="6" r="3" className="fill-blue-500"/>
   </svg>
 );
 
@@ -128,22 +125,44 @@ const NotificationsPanel = () => {
       }
     }
     
-    // التنقل حسب نوع الإشعار مع الفلترة المناسبة
+    // التنقل المتقدم مع فلترة دقيقة حسب البيانات
     if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
     } else if (notification.type === 'new_ai_order') {
       setShowAiOrdersManager(true);
     } else if (notification.type === 'low_stock' || notification.type === 'stock_warning') {
-      // التنقل لصفحة المخزون مع فلترة المخزون المنخفض
-      navigate('/inventory?filter=low_stock');
-    } else if (notification.type === 'new_order') {
-      // التنقل لصفحة الطلبات مع فلترة الطلبات الجديدة
-      navigate('/orders?status=pending');
+      // استخراج اسم المنتج من الرسالة للفلترة الدقيقة
+      const productMatch = notification.message.match(/المنتج "([^"]+)"/);
+      const productName = productMatch ? productMatch[1] : '';
+      
+      if (productName) {
+        // التنقل للمخزون مع البحث عن المنتج المحدد
+        navigate(`/inventory?search=${encodeURIComponent(productName)}&filter=low_stock`);
+      } else {
+        navigate('/inventory?filter=low_stock');
+      }
+    } else if (notification.type === 'order_status_update' || notification.type === 'new_order') {
+      // استخراج رقم الطلب من الرسالة
+      const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+      const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+      
+      if (orderNumber) {
+        // التنقل للطلبات مع البحث عن الطلب المحدد
+        navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
+      } else {
+        navigate('/orders?status=pending');
+      }
     } else if (notification.type === 'order_completed') {
-      // التنقل لصفحة الطلبات مع فلترة الطلبات المكتملة
-      navigate('/orders?status=completed');
+      // استخراج رقم الطلب المكتمل
+      const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+      const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+      
+      if (orderNumber) {
+        navigate(`/orders?search=${encodeURIComponent(orderNumber)}&status=completed`);
+      } else {
+        navigate('/orders?status=completed');
+      }
     } else if (notification.type === 'profit_settlement') {
-      // التنقل لصفحة الأرباح
       navigate('/profits-summary');
     } else if (notification.related_entity_type) {
       // إشعارات النظام الجديد
