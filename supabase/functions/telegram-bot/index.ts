@@ -95,18 +95,24 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     let customerName = '';
     let customerPhone = '';
     let customerSecondaryPhone = '';
+    let customerAddress = '';
     let items = [];
     let totalPrice = 0;
     let hasCustomPrice = false;
+    let deliveryType = 'توصيل'; // افتراضي: توصيل
+    let orderNotes = '';
     
-    // الحصول على الاسم الافتراضي للموظف
-    const { data: employeeData } = await supabase
+    // الحصول على معلومات الموظف والإعدادات الافتراضية
+    const employeeData = await supabase.rpc('get_employee_by_telegram_id', { p_telegram_chat_id: chatId });
+    const employee = employeeData.data?.[0];
+    
+    const { data: profileData } = await supabase
       .from('profiles')
       .select('default_customer_name')
-      .eq('user_id', (await supabase.rpc('get_employee_by_telegram_id', { p_telegram_chat_id: chatId })).data?.[0]?.user_id)
+      .eq('user_id', employee?.user_id)
       .single();
     
-    const defaultCustomerName = employeeData?.default_customer_name || 'زبون من التليغرام';
+    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
     
     // الحصول على رسوم التوصيل الافتراضية
     const { data: settingsData } = await supabase
@@ -117,8 +123,22 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     
     const defaultDeliveryFee = settingsData?.value?.fee || 5000;
 
+    let phoneFound = false;
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
+      const lowerLine = line.toLowerCase();
+      
+      // التحقق من نوع التسليم
+      if (lowerLine.includes('محلي') || lowerLine.includes('تسليم محلي') || lowerLine.includes('استلام محلي')) {
+        deliveryType = 'محلي';
+        continue;
+      }
+      
+      if (lowerLine.includes('توصيل') || lowerLine.includes('شحن') || lowerLine.includes('ديليفري')) {
+        deliveryType = 'توصيل';
+        continue;
+      }
       
       // التحقق من الأرقام (10-11 رقم)
       const phoneRegex = /^0?\d{10,11}$/;
@@ -126,6 +146,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         const cleanPhone = line.replace(/[\s-]/g, '');
         if (!customerPhone) {
           customerPhone = cleanPhone;
+          phoneFound = true;
         } else if (!customerSecondaryPhone) {
           customerSecondaryPhone = cleanPhone;
         }
@@ -158,42 +179,90 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         continue;
       }
       
-      // إذا لم يكن رقم أو سعر، فقد يكون اسم زبون أو منتج
-      if (i === 0 && !phoneRegex.test(line) && !priceMatch) {
-        // السطر الأول عادة اسم الزبون إذا لم يكن رقم
-        if (!line.match(/[a-zA-Z]{2,}/)) { // ليس اسم منتج إنجليزي
-          customerName = line;
-          continue;
-        }
+      // التحقق من العنوان (كلمات تدل على المكان)
+      if (lowerLine.includes('بغداد') || lowerLine.includes('بصرة') || lowerLine.includes('أربيل') || 
+          lowerLine.includes('موصل') || lowerLine.includes('كربلاء') || lowerLine.includes('نجف') ||
+          lowerLine.includes('منطقة') || lowerLine.includes('شارع') || lowerLine.includes('حي') ||
+          lowerLine.includes('محافظة') || lowerLine.includes('قضاء') || lowerLine.includes('ناحية')) {
+        customerAddress = line;
+        deliveryType = 'توصيل'; // إذا ذكر عنوان فهو توصيل
+        continue;
       }
       
-      // وإلا فهو منتج
-      if (line && !customerName && i === 0) {
-        customerName = defaultCustomerName;
+      // إذا لم يكن رقم أو سعر أو عنوان، فقد يكون اسم زبون أو منتج
+      if (!phoneFound && i === 0 && !priceMatch && !line.includes('+')) {
+        // السطر الأول اسم الزبون إذا لم نجد رقم بعد
+        customerName = line;
+        continue;
       }
-      items.push(parseProduct(line));
+      
+      // وإلا فهو منتج أو ملاحظة
+      if (line && !line.match(/^\d+/) && !priceMatch) {
+        // قد يكون منتج أو ملاحظة
+        const isProduct = line.match(/[a-zA-Z\u0600-\u06FF]{2,}/); // يحتوي على حروف
+        if (isProduct) {
+          items.push(parseProduct(line));
+        } else {
+          orderNotes += line + ' ';
+        }
+      }
     }
     
     // تعيين القيم الافتراضية
     if (!customerName) customerName = defaultCustomerName;
     
+    // إذا لم يذكر عنوان وكان النوع توصيل، اجعله محلي
+    if (!customerAddress && deliveryType === 'توصيل') {
+      deliveryType = 'محلي';
+    }
+    
     // حساب السعر الافتراضي إذا لم يُحدد
     if (!hasCustomPrice && items.length > 0) {
       let calculatedPrice = 0;
       for (const item of items) {
+        // البحث في قاعدة البيانات عن المنتج
         const { data: productData } = await supabase
           .from('products')
-          .select('base_price, product_variants(price)')
+          .select(`
+            base_price,
+            product_variants (
+              price,
+              colors (name),
+              sizes (name)
+            )
+          `)
           .ilike('name', `%${item.name}%`)
           .limit(1)
           .single();
         
         if (productData) {
-          const price = productData.product_variants?.[0]?.price || productData.base_price || 0;
-          calculatedPrice += price * item.quantity;
+          let productPrice = productData.base_price || 0;
+          
+          // البحث عن التنويع المطابق للون والمقاس
+          if (productData.product_variants && productData.product_variants.length > 0) {
+            const matchingVariant = productData.product_variants.find(variant => {
+              const colorMatch = !item.color || variant.colors?.name?.toLowerCase().includes(item.color.toLowerCase());
+              const sizeMatch = !item.size || variant.sizes?.name?.toLowerCase() === item.size.toLowerCase();
+              return colorMatch && sizeMatch;
+            });
+            
+            if (matchingVariant) {
+              productPrice = matchingVariant.price || productPrice;
+            } else if (productData.product_variants[0].price) {
+              productPrice = productData.product_variants[0].price;
+            }
+          }
+          
+          calculatedPrice += productPrice * item.quantity;
         }
       }
-      totalPrice = calculatedPrice + defaultDeliveryFee;
+      
+      // إضافة رسوم التوصيل إذا كان توصيل
+      if (deliveryType === 'توصيل') {
+        calculatedPrice += defaultDeliveryFee;
+      }
+      
+      totalPrice = calculatedPrice;
     }
 
     // إنشاء الطلب الذكي
@@ -203,11 +272,13 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         processed_at: new Date().toISOString(),
         telegram_user_id: chatId,
         employee_code: employeeCode,
-        parsing_method: 'advanced'
+        delivery_type: deliveryType,
+        parsing_method: 'advanced_v2',
+        items_count: items.length
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
-      p_customer_address: customerSecondaryPhone ? `رقم ثانوي: ${customerSecondaryPhone}` : null,
+      p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
       p_total_amount: totalPrice,
       p_items: items,
       p_telegram_chat_id: chatId,
@@ -218,6 +289,32 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       console.error('Error creating AI order:', error);
       return false;
     }
+
+    // إرسال تأكيد مفصل
+    const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
+    const itemsList = items.slice(0, 3).map(item => 
+      `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`
+    ).join('\n');
+    
+    await sendTelegramMessage(chatId, `
+✅ <b>تم استلام الطلب بنجاح!</b>
+
+🆔 <b>رقم الطلب:</b> <code>${orderId.toString().slice(-8)}</code>
+👤 <b>الزبون:</b> ${customerName}
+📱 <b>الهاتف:</b> ${customerPhone || 'غير محدد'}
+${customerSecondaryPhone ? `📞 <b>هاتف ثانوي:</b> ${customerSecondaryPhone}` : ''}
+${deliveryIcon} <b>نوع التسليم:</b> ${deliveryType}
+${customerAddress ? `📍 <b>العنوان:</b> ${customerAddress}` : ''}
+💰 <b>المبلغ الإجمالي:</b> ${totalPrice.toLocaleString()} د.ع
+
+📦 <b>المنتجات (${items.length}):</b>
+${itemsList}
+${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
+
+⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
+
+<i>شكراً لك ${employee?.full_name}! 🙏</i>
+    `);
 
     return orderId;
   } catch (error) {
@@ -342,25 +439,99 @@ serve(async (req) => {
 
 يمكنك إرسال الطلبات بالتنسيق التالي:
 
-<b>📝 مثال على طلب:</b>
+<b>📝 مثال على طلب توصيل:</b>
 ريوس
 07728020024
-07710666830
+بغداد - الكرادة
 سوت شيك اصفر M + بنطلون أسود L
 50 الف
 
-<b>💡 نصائح:</b>
+<b>🏪 مثال على طلب محلي:</b>
+أحمد
+07712345678
+محلي
+قميص أزرق XL
+25 الف
+
+<b>💡 نصائح مهمة:</b>
 • إذا لم تكتب اسم الزبون سيستخدم الافتراضي
 • إذا لم تكتب السعر سيحسب تلقائياً
 • للمنتجات المتعددة استخدم + بينها
-• المقاسات: S, M, L, XL أو أرقام
-• الألوان: أزرق، أصفر، أحمر، إلخ
+• اكتب "محلي" للاستلام المحلي
+• اذكر العنوان للتوصيل
 
-<b>🚀 صيغ مدعومة:</b>
-• أحمد - 0771234567 - قميص أزرق M - 25 الف
-• 0771234567 + تيشيرت أحمر L + بنطلون أسود M
-• سارة \n 07712345678 \n فستان وردي S \n 40000
+<b>🚀 أوامر أخرى:</b>
+• اكتب "إحصائيات" لمعرفة طلباتك اليومية
+• اكتب "حالة" لمعرفة آخر طلباتك
       `);
+      return new Response('OK', { status: 200 });
+    }
+
+    // إحصائيات الموظف
+    if (text.toLowerCase().includes('إحصائيات') || text.toLowerCase().includes('احصائيات')) {
+      const today = new Date().toISOString().split('T')[0];
+      const { data: todayOrders } = await supabase
+        .from('ai_orders')
+        .select('*')
+        .eq('created_by', employee.employee_code)
+        .gte('created_at', today + 'T00:00:00')
+        .lte('created_at', today + 'T23:59:59');
+
+      const { data: monthOrders } = await supabase
+        .from('ai_orders')
+        .select('*')
+        .eq('created_by', employee.employee_code)
+        .gte('created_at', new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-01');
+
+      const approvedToday = todayOrders?.filter(o => o.status === 'approved').length || 0;
+      const pendingToday = todayOrders?.filter(o => o.status === 'pending').length || 0;
+      const totalValueToday = todayOrders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
+
+      await sendTelegramMessage(chatId, `
+📊 <b>إحصائياتك - ${employee.full_name}</b>
+
+📅 <b>اليوم:</b>
+• الطلبات: ${todayOrders?.length || 0}
+• معتمدة: ${approvedToday}
+• في الانتظار: ${pendingToday}
+• القيمة الإجمالية: ${totalValueToday.toLocaleString()} د.ع
+
+📅 <b>هذا الشهر:</b>
+• إجمالي الطلبات: ${monthOrders?.length || 0}
+
+🎯 <b>أداءك ممتاز! استمر بالعمل الرائع</b> 💪
+      `);
+      return new Response('OK', { status: 200 });
+    }
+
+    // حالة آخر الطلبات
+    if (text.toLowerCase().includes('حالة') || text.toLowerCase().includes('طلبات')) {
+      const { data: recentOrders } = await supabase
+        .from('ai_orders')
+        .select('*')
+        .eq('created_by', employee.employee_code)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (recentOrders && recentOrders.length > 0) {
+        const ordersList = recentOrders.map(order => 
+          `• ${order.customer_name} - ${order.status === 'pending' ? '⏳ انتظار' : order.status === 'approved' ? '✅ معتمد' : '❌ مرفوض'} - ${order.total_amount?.toLocaleString() || 0} د.ع`
+        ).join('\n');
+
+        await sendTelegramMessage(chatId, `
+📋 <b>آخر طلباتك - ${employee.full_name}</b>
+
+${ordersList}
+
+💡 <b>نصيحة:</b> يمكنك متابعة جميع طلباتك من التطبيق في قسم "الطلبات الذكية"
+        `);
+      } else {
+        await sendTelegramMessage(chatId, `
+📋 <b>لا توجد طلبات بعد</b>
+
+ابدأ بإرسال أول طلب لك! 🚀
+        `);
+      }
       return new Response('OK', { status: 200 });
     }
 
@@ -387,14 +558,23 @@ serve(async (req) => {
 <b>✅ التنسيق الصحيح:</b>
 اسم الزبون (اختياري)
 رقم الهاتف (10-11 رقم)
+نوع التسليم (محلي/توصيل + العنوان)
 اسم المنتج + لون + مقاس
 السعر (اختياري)
 
-<b>📝 مثال:</b>
-ريوس
+<b>📝 مثال سريع:</b>
+أحمد
 07728020024
-سوت شيك اصفر M + بنطلون أسود L
-50 الف
+محلي
+قميص أزرق M
+25 الف
+
+<b>أو:</b>
+سارة
+07712345678
+بغداد - الكرادة  
+فستان أحمر L + حقيبة سوداء
+60 الف
       `);
     }
 
