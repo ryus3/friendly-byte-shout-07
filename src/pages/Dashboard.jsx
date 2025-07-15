@@ -26,7 +26,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
