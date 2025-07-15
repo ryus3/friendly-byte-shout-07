@@ -19,8 +19,10 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_address: string | null
+          customer_city: string | null
           customer_name: string
           customer_phone: string | null
+          customer_province: string | null
           id: string
           items: Json
           order_data: Json
@@ -36,8 +38,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_address?: string | null
+          customer_city?: string | null
           customer_name: string
           customer_phone?: string | null
+          customer_province?: string | null
           id?: string
           items?: Json
           order_data: Json
@@ -53,8 +57,10 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_address?: string | null
+          customer_city?: string | null
           customer_name?: string
           customer_phone?: string | null
+          customer_province?: string | null
           id?: string
           items?: Json
           order_data?: Json
