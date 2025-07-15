@@ -12,7 +12,9 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink = null, deliveryPartnerData = null) => {
     let finalTrackingNumber = trackingNumber;
-    if (!finalTrackingNumber) {
+    
+    // إنشاء رقم تتبع إذا لم يكن متوفراً (للطلبات المحلية)
+    if (!finalTrackingNumber || finalTrackingNumber === 'null' || finalTrackingNumber === 'undefined') {
       finalTrackingNumber = generateTrackingNumber();
     }
   

@@ -12,8 +12,8 @@ if (import.meta.env.PROD) {
   disableReactDevTools();
 }
 
-// تفعيل Real-time عند بدء التطبيق
-setupRealtime();
+// تفعيل Real-time عند بدء التطبيق (بدون إعادة تحميل)
+// setupRealtime(); // معطل مؤقتاً لحل مشكلة التحديث المستمر
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

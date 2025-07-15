@@ -295,16 +295,44 @@ export const NotificationsSystemProvider = ({ children }) => {
 
   // قراءة الإشعار
   const markAsRead = useCallback(async (notificationId) => {
-    setNotifications(prev => prev.map(n => 
-      n.id === notificationId ? { ...n, read: true } : n
-    ));
-    setUnreadCount(prev => Math.max(0, prev - 1));
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('id', notificationId);
+      
+      if (error) {
+        console.error('Error marking notification as read:', error);
+        return;
+      }
+      
+      setNotifications(prev => prev.map(n => 
+        n.id === notificationId ? { ...n, read: true } : n
+      ));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Error in markAsRead:', error);
+    }
   }, []);
 
   // قراءة جميع الإشعارات
   const markAllAsRead = useCallback(async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    setUnreadCount(0);
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .neq('is_read', true);
+      
+      if (error) {
+        console.error('Error marking all notifications as read:', error);
+        return;
+      }
+      
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error in markAllAsRead:', error);
+    }
   }, []);
 
   // حذف إشعار
