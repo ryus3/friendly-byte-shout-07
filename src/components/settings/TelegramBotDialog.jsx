@@ -191,6 +191,20 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
 
           {/* معلومات البوت */}
           {botConfigured && (
+            <Card className="bg-green-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <span className="text-green-700">بوت التليغرام جاهز</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-green-700 text-sm">
+                  البوت محفوظ في الخادم ويعمل تلقائياً. الموظفين يحتاجون فقط لإدخال رموزهم الخاصة.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* رموز الموظفين */}
           <Card>
@@ -290,7 +304,6 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
               </div>
             </CardContent>
           </Card>
-          )}
         </div>
 
         <div className="flex justify-end pt-4 border-t">
