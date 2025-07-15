@@ -277,19 +277,30 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     // حساب السعر الافتراضي إذا لم يُحدد
     if (!hasCustomPrice && items.length > 0) {
       let calculatedPrice = 0;
+      
+      // جلب رسوم التوصيل الافتراضية من الإعدادات
+      const { data: deliverySettings } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'delivery_fee')
+        .single();
+      
+      const currentDeliveryFee = deliverySettings?.value || 5000;
+      
       for (const item of items) {
         // البحث في قاعدة البيانات عن المنتج
         const { data: productData } = await supabase
           .from('products')
           .select(`
             base_price,
-            product_variants (
+            product_variants!inner (
               price,
               colors (name),
               sizes (name)
             )
           `)
           .ilike('name', `%${item.name}%`)
+          .eq('is_active', true)
           .limit(1)
           .single();
         
@@ -311,13 +322,15 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
             }
           }
           
+          // تحديث سعر المنتج في القائمة
+          item.price = productPrice;
           calculatedPrice += productPrice * item.quantity;
         }
       }
       
       // إضافة رسوم التوصيل إذا كان توصيل
       if (deliveryType === 'توصيل') {
-        calculatedPrice += defaultDeliveryFee;
+        calculatedPrice += currentDeliveryFee;
       }
       
       totalPrice = calculatedPrice;

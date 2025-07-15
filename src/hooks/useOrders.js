@@ -130,55 +130,52 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
   };
 
   const deleteOrders = async (orderIds, isAiOrder = false) => {
-    const tableName = 'orders'; // استخدام جدول واحد فقط
+    const tableName = isAiOrder ? 'ai_orders' : 'orders';
     if (!isAiOrder && !hasPermission('delete_local_orders')) {
         toast({ title: "غير مصرح به", description: "ليس لديك صلاحية حذف الطلبات.", variant: "destructive" });
         return;
     }
-    const { error } = await supabase.from(tableName).delete().in('id', orderIds);
-    if (error) {
-      toast({ title: "خطأ", description: "فشل حذف الطلبات.", variant: "destructive" });
-    } else {
+    
+    try {
+      const { error } = await supabase.from(tableName).delete().in('id', orderIds);
+      if (error) throw error;
+      
       if (isAiOrder) {
         setAiOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
       } else {
         setOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
       }
       toast({ title: "نجاح", description: `تم حذف ${orderIds.length} طلبات بنجاح.` });
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      toast({ title: "خطأ", description: "فشل حذف الطلبات.", variant: "destructive" });
     }
   };
   
   const approveAiOrder = async (orderId) => {
-     const aiOrder = aiOrders.find(o => o.id === orderId);
-     if (!aiOrder) return;
+    const aiOrder = aiOrders.find(o => o.id === orderId);
+    if (!aiOrder) return;
 
-    const result = await createOrder(
-        aiOrder.customerinfo,
-        aiOrder.items,
-        null, // No tracking number for AI order initially
-        aiOrder.total - aiOrder.items.reduce((sum, item) => sum + item.total, 0), // discount
-        'pending'
-    );
+    try {
+      // تحديث حالة الطلب الذكي إلى "قيد التجهيز"
+      const { error: updateError } = await supabase
+        .from('ai_orders')
+        .update({ 
+          status: 'في التجهيز',
+          processed_at: new Date().toISOString(),
+          processed_by: user?.id 
+        })
+        .eq('id', orderId);
 
-    if (result.success) {
-      // تحويل الطلب الذكي إلى طلب عادي
-      const aiOrder = aiOrders.find(o => o.id === orderId);
-      if (aiOrder) {
-        const newOrder = {
-          ...aiOrder,
-          delivery_status: 'pending',
-          status: 'pending'
-        };
-        
-        const { error } = await supabase.from('orders').update(newOrder).eq('id', orderId);
-        if (error) throw error;
-        
-        setAiOrders(prev => prev.filter(o => o.id !== orderId));
-        setOrders(prev => [newOrder, ...prev]);
-      }
-      toast({ title: "نجاح", description: "تمت الموافقة على الطلب الذكي وتحويله لطلب عادي." });
-    } else {
-      toast({ title: "خطأ", description: "فشل تحويل الطلب الذكي.", variant: "destructive" });
+      if (updateError) throw updateError;
+
+      // إزالة من قائمة الطلبات الذكية وإضافة للطلبات العادية
+      setAiOrders(prev => prev.filter(o => o.id !== orderId));
+      
+      toast({ title: "نجاح", description: "تمت الموافقة على الطلب وتحويله لقيد التجهيز." });
+    } catch (error) {
+      console.error('Error approving AI order:', error);
+      toast({ title: "خطأ", description: "فشل الموافقة على الطلب الذكي.", variant: "destructive" });
     }
   };
 
