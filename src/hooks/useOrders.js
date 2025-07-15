@@ -155,12 +155,9 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         return { success: false, error: 'الطلب غير موجود' };
       }
 
-      // التحقق من الصلاحيات
-      const isLocalOrder = originalOrder.delivery_partner === 'محلي';
-      
-      // فقط المحلي يمكن تعديله في حالة قيد التجهيز
-      if (!isLocalOrder && originalOrder.status !== 'pending') {
-        return { success: false, error: 'لا يمكن تعديل طلبات التوصيل بعد تأكيدها' };
+      // التحقق من الصلاحيات - يمكن التعديل فقط في حالة "قيد التجهيز"
+      if (originalOrder.status !== 'pending') {
+        return { success: false, error: 'يمكن تعديل الطلبات في مرحلة "قيد التجهيز" فقط' };
       }
 
       const { data: updatedOrder, error } = await supabase
@@ -211,12 +208,13 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       await releaseStock(updatedOrder.id);
     }
 
-    // إشعار بتغيير الحالة
+    // أسماء الحالات الموحدة للنظامين
     const statusNames = {
       'pending': 'قيد التجهيز',
-      'processing': 'بحاجة للمعالج', 
-      'ready': 'جاهز للاستلام',
-      'delivered': 'تم التسليم',
+      'shipped': 'تم الشحن', 
+      'needs_processing': 'تحتاج معالجة',
+      'delivered': 'تم التوصيل',
+      'returned': 'راجع',
       'cancelled': 'ملغي'
     };
 
@@ -288,17 +286,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         
         setAiOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
       } else {
-        // حذف الطلبات العادية - فقط المحلية وقيد التجهيز
+        // حذف الطلبات العادية - فقط قيد التجهيز (للنظامين)
         const ordersToDelete = orders.filter(o => 
           orderIds.includes(o.id) && 
-          o.delivery_partner === 'محلي' && 
           o.status === 'pending'
         );
         
         if (ordersToDelete.length === 0) {
           toast({ 
             title: "تنبيه", 
-            description: "يمكن حذف الطلبات المحلية قيد التجهيز فقط",
+            description: "يمكن حذف الطلبات في مرحلة 'قيد التجهيز' فقط",
             variant: "destructive" 
           });
           return;
