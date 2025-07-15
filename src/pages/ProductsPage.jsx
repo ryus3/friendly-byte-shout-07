@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ const ProductsPage = () => {
     return { categories: uniqueCategories, brands: uniqueBrands };
   }, [products, hasPermission]);
   
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useLocalStorage('productsViewMode', 'grid');
   const [filters, setFilters] = useState({
     searchTerm: '',
     category: 'all',
@@ -65,10 +66,7 @@ const ProductsPage = () => {
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  useEffect(() => {
-    if (isMobile) setViewMode('list');
-    else setViewMode('grid');
-  }, [isMobile]);
+  // إزالة الإجبار على تغيير وضع العرض حسب الشاشة - دع المستخدم يختار
   
   // دعم البحث من الشريط السفلي
   useEffect(() => {

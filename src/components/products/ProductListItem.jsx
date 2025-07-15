@@ -40,43 +40,54 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
 
   return (
     <div
-      className="product-list-item p-4"
+      className="product-list-item p-4 cursor-pointer hover:bg-accent/50 transition-colors rounded-lg border border-border/30"
       onClick={onSelect}
     >
-      <div className="flex flex-col gap-3 w-full">
-        <div className="flex justify-between items-start">
-          <div className="flex-1 text-right">
-            <h3 className="font-semibold text-foreground text-lg group-hover:gradient-text transition-colors">{product.name}</h3>
-            <p className="font-bold text-primary text-xl">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
-          </div>
-          <div className="w-auto text-left font-medium text-muted-foreground">
-            <p>المتوفر: <span className="font-bold text-green-500">{(totalStock || 0).toLocaleString()}</span></p>
-            <p>المحجوز: <span className="font-bold text-amber-500">{(reservedStock || 0).toLocaleString()}</span></p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3" title="الألوان والقياسات المتوفرة">
-          <div className="flex items-center gap-2">
-            {availableColorsWithHex.map((color, idx) => (
-              <div
-                key={idx}
-                className="w-6 h-6 rounded-full border-2 border-background/50 shadow-md"
-                style={{ backgroundColor: color.hex || '#ccc' }}
-              />
-            ))}
-          </div>
+      <div className="flex items-center gap-4 w-full">
+        {/* إزالة الصورة لتوفير البيانات وتحسين الأداء */}
+        <div className="flex-1 text-right">
+          <h3 className="font-semibold text-foreground text-lg">{product.name}</h3>
+          <p className="font-bold text-primary text-xl">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
           
-          {availableColorsWithHex.length > 0 && availableSizes.length > 0 && <Separator orientation="vertical" className="h-6" />}
-
-          <div className="flex items-center gap-1.5">
-            {availableSizes.map((size, idx) => (
-              <div
-                key={idx}
-                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-sm bg-primary text-primary-foreground"
-              >
-                {size}
+          {/* معلومات المخزون والألوان في سطر واحد */}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-3">
+              {/* الألوان المتوفرة */}
+              <div className="flex items-center gap-1">
+                {availableColorsWithHex.slice(0, 3).map((color, idx) => (
+                  <div
+                    key={idx}
+                    className="w-4 h-4 rounded-full border border-border"
+                    style={{ backgroundColor: color.hex || '#ccc' }}
+                  />
+                ))}
+                {availableColorsWithHex.length > 3 && (
+                  <span className="text-xs text-muted-foreground">+{availableColorsWithHex.length - 3}</span>
+                )}
               </div>
-            ))}
+              
+              {/* القياسات */}
+              {availableSizes.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {availableSizes.slice(0, 3).map((size, idx) => (
+                    <span key={idx} className="text-xs bg-secondary px-1.5 py-0.5 rounded">
+                      {size}
+                    </span>
+                  ))}
+                  {availableSizes.length > 3 && (
+                    <span className="text-xs text-muted-foreground">+{availableSizes.length - 3}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* معلومات المخزون */}
+            <div className="text-left font-medium text-sm">
+              <span className="text-green-600">متوفر: {(totalStock || 0).toLocaleString()}</span>
+              {reservedStock > 0 && (
+                <span className="text-amber-600 mr-2">محجوز: {reservedStock.toLocaleString()}</span>
+              )}
+            </div>
           </div>
         </div>
       </div>

@@ -92,16 +92,61 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // ألوان حسب نوع الإشعار
-  low_stock: { bg: 'bg-red-50 border-red-200', text: 'text-red-800', icon: 'text-red-600' },
-  stock_warning: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-800', icon: 'text-orange-600' },
-  order_completed: { bg: 'bg-green-50 border-green-200', text: 'text-green-800', icon: 'text-green-600' },
-  order_shipped: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-800', icon: 'text-blue-600' },
-  new_order: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-800', icon: 'text-blue-600' },
-  new_registration: { bg: 'bg-purple-50 border-purple-200', text: 'text-purple-800', icon: 'text-purple-600' },
-  profit_settlement: { bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-800', icon: 'text-yellow-600' },
-  system: { bg: 'bg-primary/5 border-primary/20', text: 'text-primary', icon: 'text-primary' },
-  default: { bg: 'bg-gray-50 border-gray-200', text: 'text-gray-800', icon: 'text-gray-600' },
+  // ألوان حسب نوع الإشعار - تصميم احترافي كما في الصورة
+  low_stock: { 
+    bg: 'bg-gradient-to-r from-orange-50 to-red-50 border-l-orange-400', 
+    text: 'text-orange-900', 
+    icon: 'text-orange-600',
+    glow: 'shadow-orange-200/50'
+  },
+  stock_warning: { 
+    bg: 'bg-gradient-to-r from-amber-50 to-orange-50 border-l-amber-400', 
+    text: 'text-amber-900', 
+    icon: 'text-amber-600',
+    glow: 'shadow-amber-200/50'
+  },
+  order_completed: { 
+    bg: 'bg-gradient-to-r from-green-50 to-emerald-50 border-l-green-400', 
+    text: 'text-green-900', 
+    icon: 'text-green-600',
+    glow: 'shadow-green-200/50'
+  },
+  order_shipped: { 
+    bg: 'bg-gradient-to-r from-blue-50 to-sky-50 border-l-blue-400', 
+    text: 'text-blue-900', 
+    icon: 'text-blue-600',
+    glow: 'shadow-blue-200/50'
+  },
+  new_order: { 
+    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 border-l-blue-500', 
+    text: 'text-blue-900', 
+    icon: 'text-blue-700',
+    glow: 'shadow-blue-200/50'
+  },
+  new_registration: { 
+    bg: 'bg-gradient-to-r from-purple-50 to-violet-50 border-l-purple-400', 
+    text: 'text-purple-900', 
+    icon: 'text-purple-600',
+    glow: 'shadow-purple-200/50'
+  },
+  profit_settlement: { 
+    bg: 'bg-gradient-to-r from-yellow-50 to-amber-50 border-l-yellow-400', 
+    text: 'text-yellow-900', 
+    icon: 'text-yellow-600',
+    glow: 'shadow-yellow-200/50'
+  },
+  system: { 
+    bg: 'bg-gradient-to-r from-primary/5 to-primary/10 border-l-primary', 
+    text: 'text-primary', 
+    icon: 'text-primary',
+    glow: 'shadow-primary/20'
+  },
+  default: { 
+    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 border-l-slate-400', 
+    text: 'text-slate-900', 
+    icon: 'text-slate-600',
+    glow: 'shadow-slate-200/50'
+  },
 };
 
 const NotificationsPanel = () => {
@@ -251,22 +296,22 @@ const NotificationsPanel = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 md:w-96 glass-effect p-2" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center px-2 py-1.5">
-          <span className="font-bold">الإشعارات</span>
+      <DropdownMenuContent className="w-80 md:w-96 bg-gradient-to-br from-background/98 to-card/95 backdrop-blur-xl border-2 border-primary/30 shadow-2xl rounded-2xl p-3" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center px-3 py-2 mb-1">
+          <span className="font-bold text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">الإشعارات</span>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
               <Eye className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-green-100" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
               <Check className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-100" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
               <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="my-2" />
         <ScrollArea className="h-80">
           <AnimatePresence>
             {allNotifications.length > 0 ? (
@@ -282,49 +327,56 @@ const NotificationsPanel = () => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
-                    className="relative group"
+                    className="relative group mb-2"
                   >
                     <div 
                       className={cn(
-                        "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 my-1 rounded-lg border-r-4", 
+                        "flex items-start gap-4 p-4 cursor-pointer transition-all duration-300 rounded-xl border-r-4 backdrop-blur-sm", 
                         colors.bg,
-                        (notification.is_read || notification.read) ? "opacity-70" : "shadow-md hover:shadow-lg",
-                        !(notification.is_read || notification.read) && "ring-1 ring-primary/20",
+                        colors.glow,
+                        (notification.is_read || notification.read) ? "opacity-60 hover:opacity-80" : "shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ring-2 ring-primary/20",
+                        "hover:scale-[1.02] hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/10"
                       )}
                       onClick={(e) => handleNotificationClick(e, notification)}
                     >
-                      <div className="mt-1">
+                      <div className="mt-0.5">
                         <IconComponent />
                       </div>
-                      <div className="flex-1">
-                        <p className={cn("font-semibold text-sm", colors.text, !(notification.is_read || notification.read) && "font-bold")}>{notification.title}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
-                        <p className="text-[10px] text-muted-foreground/70 mt-1">{formatRelativeTime(notification.created_at)}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn("font-semibold text-base leading-tight", colors.text, !(notification.is_read || notification.read) && "font-bold text-primary")}>{notification.title}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1 leading-relaxed">{notification.message}</p>
+                        <div className="flex items-center justify-between mt-3">
+                          <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatRelativeTime(notification.created_at)}
+                          </p>
+                          {!(notification.is_read || notification.read) && (
+                            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary-foreground animate-pulse shadow-sm"></div>
+                          )}
+                        </div>
                       </div>
-                      {!(notification.is_read || notification.read) && (
-                        <div className="absolute top-1/2 -translate-y-1/2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                       {!(notification.is_read || notification.read) && (
+                        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7 bg-white/80 hover:bg-white"
+                            title="وضع كمقروء"
+                            onClick={(e) => handleMarkAsRead(e, notification.id)}
+                          >
+                            <Eye className="w-4 h-4 text-primary" />
+                          </Button>
+                        </div>
                       )}
                     </div>
-                     {!(notification.is_read || notification.read) && (
-                      <div className="absolute top-1/2 -translate-y-1/2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-7 w-7"
-                          title="وضع كمقروء"
-                          onClick={(e) => handleMarkAsRead(e, notification.id)}
-                        >
-                          <Eye className="w-4 h-4 text-primary" />
-                        </Button>
-                      </div>
-                    )}
                   </motion.div>
                 )
               })
             ) : (
-              <div className="text-center text-muted-foreground py-10 px-4">
-                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50"/>
-                <p>لا توجد إشعارات جديدة.</p>
+              <div className="text-center text-muted-foreground py-12 px-4">
+                <Bell className="w-12 h-12 mx-auto mb-3 opacity-50"/>
+                <p className="text-lg font-medium">لا توجد إشعارات جديدة</p>
+                <p className="text-sm mt-1">ستظهر الإشعارات الجديدة هنا</p>
               </div>
             )}
           </AnimatePresence>

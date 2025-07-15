@@ -66,11 +66,11 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
       ]
     },
     {
-      title: "إشعارات المخزون",
+      title: "إشعارات المخزون العامة",
       icon: Package,
+      description: "إعدادات أساسية للإشعارات - للإعدادات المتقدمة استخدم إعدادات المخزون المنخفض",
       settings: [
-        { key: 'stockAlerts', label: 'تنبيهات المخزون', description: 'إشعارات عند انخفاض المخزون' },
-        { key: 'lowStockThreshold', label: 'تحذيرات العتبة', description: 'تنبيه عند الوصول للحد الأدنى' },
+        { key: 'stockAlerts', label: 'تفعيل إشعارات المخزون', description: 'تشغيل/إيقاف جميع إشعارات المخزون (أساسي)' },
         { key: 'outOfStockAlerts', label: 'نفاد المخزون', description: 'إشعار عند نفاد المنتج بالكامل' },
       ]
     },
@@ -158,9 +158,10 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>• <strong>هذه الإعدادات العامة للإشعارات:</strong> تحكم في أنواع الإشعارات الأساسية</p>
+              <p>• <strong>للإعدادات المتقدمة للمخزون:</strong> استخدم "إشعارات المخزون المتقدمة" من الصفحة الرئيسية للإعدادات</p>
               <p>• يتم حفظ هذه الإعدادات محلياً في متصفحك</p>
               <p>• إيقاف الإشعارات العامة سيوقف جميع أنواع الإشعارات</p>
-              <p>• يمكنك تغيير هذه الإعدادات في أي وقت</p>
               <p>• بعض الإشعارات الحرجة قد تظهر حتى لو كانت معطلة</p>
             </CardContent>
           </Card>

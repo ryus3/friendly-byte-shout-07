@@ -174,16 +174,16 @@ const SettingsPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <ModernCard
               icon={Bell}
-              title="الإشعارات والأصوات"
-              description="تخصيص إشعارات النظام والأصوات والتنبيهات"
+              title="الإشعارات العامة والأصوات"
+              description="تخصيص إشعارات النظام العامة والأصوات والتنبيهات الأساسية"
               iconColor="from-orange-500 to-orange-600"
               onClick={() => setIsNotificationSettingsOpen(true)}
             />
 
             <ModernCard
               icon={PackageX}
-              title="إعدادات المخزون المنخفض"
-              description="تحديد حدود المخزون المنخفض والتنبيهات التلقائية"
+              title="إشعارات المخزون المتقدمة"
+              description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
               iconColor="from-red-500 to-red-600"
               onClick={() => setIsStockSettingsOpen(true)}
             />

@@ -225,10 +225,18 @@ export const NotificationsProvider = ({ children }) => {
     }, [user]);
 
     const markAsRead = useCallback(async (id) => {
+        // تحديث الحالة محلياً أولاً
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-        const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
-        if (error) {
-            console.error("Error marking notification as read:", error);
+        
+        try {
+            const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+            if (error) {
+                console.error("Error marking notification as read:", error);
+                // إعادة تعيين الحالة في حالة الفشل
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
+            }
+        } catch (error) {
+            console.error("Error in markAsRead:", error);
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
         }
     }, []);
@@ -259,9 +267,14 @@ export const NotificationsProvider = ({ children }) => {
         const originalNotifications = [...notifications];
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         
-        const { error } = await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
-        if (error) {
-            console.error("Error marking all as read:", error);
+        try {
+            const { error } = await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
+            if (error) {
+                console.error("Error marking all as read:", error);
+                setNotifications(originalNotifications);
+            }
+        } catch (error) {
+            console.error("Error in markAllAsRead:", error);
             setNotifications(originalNotifications);
         }
     }, [notifications]);
