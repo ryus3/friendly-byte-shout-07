@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/customSupabaseClient';
 
-// إعداد Real-time للجداول المطلوبة مع إعادة تحميل الصفحة
+// إعداد Real-time للجداول المطلوبة بدون إعادة تحميل الصفحة
 export const setupRealtime = () => {
   console.log('🚀 تفعيل Real-time للنظام...');
   
@@ -13,11 +13,8 @@ export const setupRealtime = () => {
       table: 'orders'
     }, (payload) => {
       console.log('📦 Order change detected:', payload);
-      // إعادة تحميل الصفحة لضمان التحديث
-      if (payload.eventType === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
-        setTimeout(() => window.location.reload(), 1000);
-      }
+      // إرسال حدث مخصص فقط بدون إعادة تحميل
+      window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
     })
     .subscribe((status) => {
       console.log('Orders channel status:', status);
@@ -32,11 +29,8 @@ export const setupRealtime = () => {
       table: 'ai_orders'
     }, (payload) => {
       console.log('🤖 AI Order change detected:', payload);
-      // إعادة تحميل الصفحة لضمان التحديث
-      if (payload.eventType === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new }));
-        setTimeout(() => window.location.reload(), 1000);
-      }
+      // إرسال حدث مخصص فقط بدون إعادة تحميل
+      window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: payload.new }));
     })
     .subscribe((status) => {
       console.log('AI Orders channel status:', status);
@@ -51,11 +45,8 @@ export const setupRealtime = () => {
       table: 'notifications'
     }, (payload) => {
       console.log('🔔 Notification change detected:', payload);
-      // إعادة تحميل الصفحة لضمان التحديث
-      if (payload.eventType === 'INSERT') {
-        window.dispatchEvent(new CustomEvent('notificationCreated', { detail: payload.new }));
-        setTimeout(() => window.location.reload(), 1000);
-      }
+      // إرسال حدث مخصص فقط بدون إعادة تحميل
+      window.dispatchEvent(new CustomEvent('notificationCreated', { detail: payload.new }));
     })
     .subscribe((status) => {
       console.log('Notifications channel status:', status);

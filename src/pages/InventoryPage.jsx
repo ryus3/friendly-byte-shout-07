@@ -136,8 +136,8 @@ const InventoryPage = () => {
     }
     
     // إذا جاء من تنبيه المخزون مع معرف المنتج
-    if (productParam) {
-      const product = products?.find(p => p.id === productParam);
+    if (productParam && Array.isArray(products)) {
+      const product = products.find(p => p?.id === productParam);
       if (product) {
         setFilters(currentFilters => ({
           ...currentFilters, 
@@ -151,11 +151,13 @@ const InventoryPage = () => {
     if (variantParam) {
       // البحث عن المتغير والمنتج المحدد
       let foundProduct = null;
-      products?.forEach(product => {
-        if (product.variants?.some(v => v.id === variantParam)) {
-          foundProduct = product;
-        }
-      });
+      if (Array.isArray(products)) {
+        products.forEach(product => {
+          if (Array.isArray(product?.variants) && product.variants.some(v => v?.id === variantParam)) {
+            foundProduct = product;
+          }
+        });
+      }
       
       if (foundProduct) {
         setFilters(currentFilters => ({
