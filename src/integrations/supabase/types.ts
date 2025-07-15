@@ -1229,6 +1229,14 @@ export type Database = {
         }
         Returns: string
       }
+      update_reserved_stock: {
+        Args: {
+          p_product_id: string
+          p_quantity_change: number
+          p_sku?: string
+        }
+        Returns: undefined
+      }
       username_exists: {
         Args: { p_username: string }
         Returns: boolean

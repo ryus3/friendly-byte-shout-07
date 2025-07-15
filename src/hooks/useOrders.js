@@ -66,8 +66,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       for (const item of cartItems) {
         const { error: stockError } = await supabase.rpc('update_reserved_stock', {
           p_product_id: item.productId || item.id,
-          p_sku: item.variantId || item.sku,
-          p_quantity_change: item.quantity
+          p_quantity_change: item.quantity,
+          p_sku: item.variantId || item.sku
         });
         
         if (stockError) {
@@ -89,8 +89,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         for (const item of cartItems) {
           await supabase.rpc('update_reserved_stock', {
             p_product_id: item.productId || item.id,
-            p_sku: item.variantId || item.sku,
-            p_quantity_change: -item.quantity
+            p_quantity_change: -item.quantity,
+            p_sku: item.variantId || item.sku
           });
         }
         console.error('Error creating order:', orderError);
@@ -118,8 +118,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         for (const item of cartItems) {
           await supabase.rpc('update_reserved_stock', {
             p_product_id: item.productId || item.id,
-            p_sku: item.variantId || item.sku,
-            p_quantity_change: -item.quantity
+            p_quantity_change: -item.quantity,
+            p_sku: item.variantId || item.sku
           });
         }
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
