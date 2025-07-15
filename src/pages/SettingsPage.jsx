@@ -14,7 +14,7 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2
+  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
