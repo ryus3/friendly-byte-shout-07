@@ -14,7 +14,8 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign
+  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
+  BarChart, TrendingUp
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
@@ -216,60 +217,107 @@ const SettingsPage = () => {
 
           <SectionHeader 
             icon={FileText} 
-            title="التقارير والتوصيل"
-            description="إعدادات التقارير وأسعار التوصيل وبوت التليغرام"
+            title="إدارة التقارير والتكامل"
+            description="تقارير مالية متقدمة، إحصائيات شاملة، وربط مع الأنظمة الخارجية"
           />
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <ModernCard
               icon={FileText}
-              title="إعدادات التقارير"
-              description="تخصيص التقارير المالية والجرد والمبيعات وتصدير PDF"
-              iconColor="from-indigo-500 to-purple-600"
+              title="تقارير المبيعات والأرباح"
+              description="تقارير مفصلة للمبيعات اليومية والشهرية مع تحليل الأرباح"
+              iconColor="from-blue-500 to-blue-600"
               onClick={() => setIsReportsOpen(true)}
             >
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="text-center p-2 bg-indigo-50 rounded border border-indigo-100">
-                  <p className="text-sm font-bold text-indigo-600">{settings?.totalRevenue?.toLocaleString() || '0'}</p>
-                  <p className="text-xs text-indigo-500">المبيعات</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">مبيعات اليوم</span>
+                  <span className="font-bold text-blue-600">{settings?.todayRevenue?.toLocaleString() || '0'} د.ع</span>
                 </div>
-                <div className="text-center p-2 bg-purple-50 rounded border border-purple-100">
-                  <p className="text-sm font-bold text-purple-600">{settings?.totalProducts || '0'}</p>
-                  <p className="text-xs text-purple-500">المنتجات</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">إجمالي الشهر</span>
+                  <span className="font-bold text-green-600">{settings?.monthRevenue?.toLocaleString() || '0'} د.ع</span>
                 </div>
               </div>
             </ModernCard>
 
             <ModernCard
-              icon={DollarSign}
-              title="أسعار التوصيل"
-              description="إدارة أسعار وقواعد التوصيل للطلبات"
-              iconColor="from-green-500 to-emerald-600"
-              onClick={() => setIsDeliverySettingsOpen(true)}
+              icon={BarChart}
+              title="تحليل الجرد والمخزون"
+              description="تقارير شاملة للمخزون والحركة والتنبيهات"
+              iconColor="from-purple-500 to-purple-600"
+              onClick={() => setIsReportsOpen(true)}
             >
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">السعر الحالي:</span>
-                <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">المنتجات الفعالة</span>
+                  <span className="font-bold text-purple-600">{settings?.activeProducts || '0'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">تحت الحد الأدنى</span>
+                  <span className="font-bold text-red-600">{settings?.lowStockItems || '0'}</span>
+                </div>
+              </div>
+            </ModernCard>
+
+            <ModernCard
+              icon={TrendingUp}
+              title="إحصائيات الأداء"
+              description="مؤشرات الأداء الرئيسية وتحليل الاتجاهات"
+              iconColor="from-emerald-500 to-emerald-600"
+              onClick={() => setIsReportsOpen(true)}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">معدل النمو</span>
+                  <span className="font-bold text-emerald-600">+{settings?.growthRate || '0'}%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">متوسط الطلبات</span>
+                  <span className="font-bold text-orange-600">{settings?.avgOrders || '0'}/يوم</span>
+                </div>
               </div>
             </ModernCard>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ModernCard
-              icon={Truck}
-              title="شركات التوصيل"
-              description="ربط شركات التوصيل الخارجية والوضع المحلي"
-              iconColor="from-cyan-500 to-blue-600"
-              onClick={() => setIsLoginDialogOpen(true)}
-            />
+              icon={DollarSign}
+              title="أسعار وإعدادات التوصيل"
+              description="إدارة أسعار التوصيل وشركات الشحن المتكاملة"
+              iconColor="from-green-500 to-emerald-600"
+              onClick={() => setIsDeliverySettingsOpen(true)}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">السعر الأساسي</span>
+                  <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">طلبات اليوم</span>
+                  <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
+                </div>
+              </div>
+            </ModernCard>
 
             <ModernCard
               icon={MessageCircle}
-              title="بوت التليغرام"
-              description="ربط البوت وإدارة رموز الموظفين البسيطة"
+              title="بوت التليغرام الذكي"
+              description="نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام"
               iconColor="from-blue-500 to-indigo-600"
               onClick={() => setIsTelegramOpen(true)}
-            />
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
+                  <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
+                  <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
+                </div>
+              </div>
+            </ModernCard>
           </div>
 
           <SectionHeader 

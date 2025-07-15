@@ -10,7 +10,7 @@ import {
   MessageCircle, Copy, Users, Bot, CheckCircle, AlertCircle, Smartphone 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const TelegramBotDialog = ({ open, onOpenChange }) => {
   const { user, allUsers } = useAuth();
