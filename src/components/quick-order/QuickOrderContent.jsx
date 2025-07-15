@@ -399,10 +399,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   const validateForm = () => {
     const newErrors = {};
-    const phoneRegex = /^07[5789]\d{8}$/; // 10 digits total
-    const phoneRegex11 = /^07[5789]\d{9}$/; // 11 digits total
     
-    if (!formData.phone || (!phoneRegex.test(formData.phone) && !phoneRegex11.test(formData.phone))) newErrors.phone = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام ويبدأ بـ 07.';
+    // Normalize phone number
+    const normalizedPhone = normalizePhoneNumber(formData.phone);
+    if (!normalizedPhone || normalizedPhone.length < 10 || normalizedPhone.length > 11) {
+      newErrors.phone = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام.';
+    }
+    
     if (activePartner === 'local' && !formData.city) newErrors.city = 'الرجاء اختيار المحافظة.';
     else if (activePartner === 'alwaseet' && !formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
     if (activePartner === 'local' && !formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
@@ -417,11 +420,35 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     return Object.keys(newErrors).length === 0;
   };
   
-  const formatPhoneNumber = (phone) => {
-    if (phone && phone.startsWith('0')) {
-      return `+964${phone.substring(1)}`;
+  // Normalize phone number by removing +964, spaces, and extracting digits
+  const normalizePhoneNumber = (phone) => {
+    if (!phone) return '';
+    
+    // Remove spaces, dashes, and other non-digit characters except +
+    const cleaned = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // Remove +964 prefix if exists
+    if (cleaned.startsWith('+964')) {
+      return cleaned.substring(4);
     }
-    return phone; // Already in international format or empty
+    
+    // Remove 964 prefix if exists (without +)
+    if (cleaned.startsWith('964')) {
+      return cleaned.substring(3);
+    }
+    
+    // Extract only digits
+    const digits = cleaned.replace(/\D/g, '');
+    
+    return digits;
+  };
+
+  const formatPhoneNumber = (phone) => {
+    const normalized = normalizePhoneNumber(phone);
+    if (normalized && normalized.length >= 10) {
+      return `+964${normalized}`;
+    }
+    return phone;
   };
 
   const handleSubmit = async (e) => {
@@ -562,7 +589,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         addToCart(product, variant, item.quantity, false);
     });
     setProductSelectOpen(false);
-    toast({ title: "تم تحديث السلة", variant: "success" });
+    toast({ title: "تم تحديث السلة", description: `تم إضافة ${selectedItems.length} منتج.`, variant: "success" });
   };
   
   const partnerSpecificFields = () => {
