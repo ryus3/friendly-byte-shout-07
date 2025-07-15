@@ -520,7 +520,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           trackingNumber = alWaseetResponse.qr_id;
           qrLink = alWaseetResponse.qr_link;
           deliveryPartnerData = alWaseetResponse;
+      } else if (activePartner === 'local') {
+          // إنشاء رقم تتبع للطلب المحلي
+          trackingNumber = `${settings?.sku_prefix || 'RYUS'}-${Date.now().toString().slice(-6)}`;
       }
+      
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
       const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
       const customerInfoPayload = {
@@ -537,7 +541,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         delivery_fee: activePartner === 'local' ? (settings?.deliveryFee || 0) : 0
       };
       
-      const result = await createOrder(customerInfoPayload, cart, String(trackingNumber), discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
+      const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
         toast({ title: "نجاح", description: `تم إنشاء الطلب بنجاح. رقم الفاتورة: ${result.trackingNumber}`, variant: 'success' });
         resetForm();
