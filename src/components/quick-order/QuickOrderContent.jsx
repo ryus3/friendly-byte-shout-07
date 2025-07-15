@@ -115,57 +115,61 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (Array.isArray(aiOrderData.items)) {
         clearCart();
         
-        for (const item of aiOrderData.items) {
-          // إذا كان لدينا product_id و variant_id، استخدمهما مباشرة
-          if (item.product_id && item.variant_id) {
-            // جلب بيانات المنتج من قاعدة البيانات
-            try {
-              const { data: productData } = await supabase
-                .from('products')
-                .select(`
-                  id,
-                  name,
-                  images,
-                  product_variants!inner (
+        const loadAiOrderItems = async () => {
+          for (const item of aiOrderData.items) {
+            // إذا كان لدينا product_id و variant_id، استخدمهما مباشرة
+            if (item.product_id && item.variant_id) {
+              // جلب بيانات المنتج من قاعدة البيانات
+              try {
+                const { data: productData } = await supabase
+                  .from('products')
+                  .select(`
                     id,
-                    price,
-                    cost_price,
-                    colors (name),
-                    sizes (name)
-                  )
-                `)
-                .eq('id', item.product_id)
-                .eq('product_variants.id', item.variant_id)
-                .single();
+                    name,
+                    images,
+                    product_variants!inner (
+                      id,
+                      price,
+                      cost_price,
+                      colors (name),
+                      sizes (name)
+                    )
+                  `)
+                  .eq('id', item.product_id)
+                  .eq('product_variants.id', item.variant_id)
+                  .single();
 
-              if (productData && productData.product_variants[0]) {
-                const variant = productData.product_variants[0];
-                const product = {
-                  id: productData.id,
-                  name: productData.name,
-                  images: productData.images || []
-                };
-                const variantData = {
-                  id: variant.id,
-                  price: variant.price,
-                  cost_price: variant.cost_price,
-                  color: variant.colors?.name || item.color || '',
-                  size: variant.sizes?.name || item.size || '',
-                  barcode: variant.barcode || ''
-                };
-                addToCart(product, variantData, item.quantity || 1, false);
-              } else {
-                // fallback للطريقة القديمة
+                if (productData && productData.product_variants[0]) {
+                  const variant = productData.product_variants[0];
+                  const product = {
+                    id: productData.id,
+                    name: productData.name,
+                    images: productData.images || []
+                  };
+                  const variantData = {
+                    id: variant.id,
+                    price: variant.price,
+                    cost_price: variant.cost_price,
+                    color: variant.colors?.name || item.color || '',
+                    size: variant.sizes?.name || item.size || '',
+                    barcode: variant.barcode || ''
+                  };
+                  addToCart(product, variantData, item.quantity || 1, false);
+                } else {
+                  // fallback للطريقة القديمة
+                  fallbackAddToCart(item);
+                }
+              } catch (error) {
+                console.error('Error fetching product data:', error);
                 fallbackAddToCart(item);
               }
-            } catch (error) {
-              console.error('Error fetching product data:', error);
+            } else {
               fallbackAddToCart(item);
             }
-          } else {
-            fallbackAddToCart(item);
           }
-        }
+        };
+        
+        loadAiOrderItems();
       }
     
       function fallbackAddToCart(item) {
