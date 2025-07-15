@@ -522,7 +522,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         notes: formData.notes,
       };
       
-      const result = await createOrder(customerInfoPayload, cart, String(trackingNumber), discount, orderStatus, qrLink, deliveryPartnerData);
+      // إضافة معلومات شريك التوصيل للطلب
+      const deliveryData = {
+        delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
+        delivery_fee: activePartner === 'local' ? (settings?.deliveryFee || 0) : 0
+      };
+      
+      const result = await createOrder(customerInfoPayload, cart, String(trackingNumber), discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
         toast({ title: "نجاح", description: `تم إنشاء الطلب بنجاح. رقم الفاتورة: ${result.trackingNumber}`, variant: 'success' });
         resetForm();

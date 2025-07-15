@@ -44,7 +44,12 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
   if (!order) return null;
 
   const statusInfo = getStatusInfo(order.status);
-  const customerInfo = order.customerinfo || {};
+  const customerInfo = order.customerinfo || {
+    name: order.customer_name,
+    phone: order.customer_phone,
+    address: order.customer_address,
+    city: order.customer_city
+  };
   
   const getOrderDate = () => {
     const dateString = order.created_at || order.createdAt;
@@ -78,7 +83,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           <div className="space-y-6 pb-6">
             <div className="flex items-center justify-between p-4 bg-secondary rounded-lg border border-border">
               <div>
-                <h3 className="text-lg font-bold text-foreground break-all">#{order.trackingnumber || 'لا يوجد رقم تتبع'}</h3>
+                <h3 className="text-lg font-bold text-foreground break-all">#{order.tracking_number || order.trackingnumber || 'لا يوجد رقم تتبع'}</h3>
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${statusInfo.badge}`}>
@@ -95,12 +100,10 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                             <span>البائع: {sellerName}</span>
                         </div>
                     )}
-                    {order.shipping_company && (
-                        <div className="flex items-center gap-1">
-                            <Building className="w-3 h-3"/>
-                            <span>{order.shipping_company}</span>
-                        </div>
-                    )}
+                     <div className="flex items-center gap-1">
+                         <Building className="w-3 h-3"/>
+                         <span>{order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
+                     </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
@@ -112,25 +115,48 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border">
               <h4 className="font-semibold text-foreground mb-3">المنتجات</h4>
-              <div className="space-y-3">
-                {(order.items || []).map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg">
-                    <div>
-                      <p className="font-medium text-foreground">{item.productName}</p>
-                      <p className="text-sm text-muted-foreground">{item.color} - {item.size} × {item.quantity}</p>
-                    </div>
-                    <div className="text-right"><p className="font-semibold text-primary">{(item.total || 0).toLocaleString()} د.ع</p></div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 pt-4 border-t border-border">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-foreground">المجموع الكلي</span>
-                  <span className="text-xl font-bold text-primary">{(order.total || 0).toLocaleString()} د.ع</span>
-                </div>
-              </div>
+               <div className="space-y-3">
+                 {(order.order_items || order.items || []).map((item, index) => {
+                   const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';
+                   const colorName = item.product_variants?.colors?.name || item.color || '';
+                   const sizeName = item.product_variants?.sizes?.name || item.size || '';
+                   const itemTotal = item.total_price || item.total || (item.unit_price * item.quantity) || 0;
+                   
+                   return (
+                     <div key={index} className="flex items-center justify-between p-3 bg-background rounded-lg">
+                       <div>
+                         <p className="font-medium text-foreground">{productName}</p>
+                         <p className="text-sm text-muted-foreground">{colorName} {sizeName && `- ${sizeName}`} × {item.quantity}</p>
+                       </div>
+                       <div className="text-right"><p className="font-semibold text-primary">{itemTotal.toLocaleString()} د.ع</p></div>
+                     </div>
+                   );
+                 })}
+               </div>
+               <div className="mt-4 pt-4 border-t border-border space-y-2">
+                 <div className="flex justify-between items-center text-sm">
+                   <span className="text-muted-foreground">المجموع الفرعي</span>
+                   <span className="text-foreground">{(order.total_amount || 0).toLocaleString()} د.ع</span>
+                 </div>
+                 {(order.delivery_fee || 0) > 0 && (
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-muted-foreground">رسوم التوصيل</span>
+                     <span className="text-foreground">{(order.delivery_fee || 0).toLocaleString()} د.ع</span>
+                   </div>
+                 )}
+                 {(order.discount || 0) > 0 && (
+                   <div className="flex justify-between items-center text-sm">
+                     <span className="text-muted-foreground">الخصم</span>
+                     <span className="text-destructive">-{(order.discount || 0).toLocaleString()} د.ع</span>
+                   </div>
+                 )}
+                 <div className="flex justify-between items-center pt-2 border-t">
+                   <span className="text-lg font-semibold text-foreground">المجموع الكلي</span>
+                   <span className="text-xl font-bold text-primary">{(order.final_amount || order.total || 0).toLocaleString()} د.ع</span>
+                 </div>
+               </div>
             </div>
-            {canEditStatus && order.shipping_company === 'محلي' && (
+            {canEditStatus && (order.delivery_partner === 'محلي' || !order.delivery_partner) && (
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
                 <Select value={newStatus} onValueChange={setNewStatus}>
@@ -155,7 +181,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
               تعديل الطلب
             </Button>
           )}
-          {canEditStatus && order.shipping_company === 'محلي' && (
+          {canEditStatus && (order.delivery_partner === 'محلي' || !order.delivery_partner) && (
             <Button onClick={handleUpdateStatus} disabled={newStatus === order.status}>
               <Edit className="w-4 h-4 ml-2" />
               تحديث الحالة

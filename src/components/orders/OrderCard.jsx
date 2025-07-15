@@ -74,9 +74,9 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
                 <div className="flex-1 space-y-1">
                   <p className="text-xs text-muted-foreground">{order.tracking_number || order.trackingnumber || 'لا يوجد رقم تتبع'}</p>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={`text-xs ${order.delivery_partner && order.delivery_partner !== 'محلي' ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300' : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300'}`}>
-                      {order.delivery_partner && order.delivery_partner !== 'محلي' ? order.delivery_partner : 'توصيل محلي'}
-                    </Badge>
+                     <Badge variant="outline" className={`text-xs ${order.delivery_partner === 'محلي' || !order.delivery_partner ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300' : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300'}`}>
+                       {order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}
+                     </Badge>
                   </div>
                 </div>
                 <Badge className={`text-center ${statusVariants[order.status]?.color || 'bg-gray-500/10 text-gray-500'}`}>

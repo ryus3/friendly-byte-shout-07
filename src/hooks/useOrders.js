@@ -24,7 +24,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     }
 
     const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
-    const deliveryFee = settings?.deliveryFee || 0;
+    const deliveryFee = deliveryPartnerData?.delivery_fee || 
+                        (deliveryPartnerData?.delivery_partner === 'محلي' ? (settings?.deliveryFee || 0) : 0);
     const total = subtotal - (discount || 0) + deliveryFee;
 
     const newOrder = {
@@ -42,7 +43,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       delivery_status: 'pending',
       payment_status: 'pending',
       tracking_number: finalTrackingNumber,
-      delivery_partner: trackingNumber ? 'Al-Waseet' : 'محلي',
+      delivery_partner: deliveryPartnerData?.delivery_partner || (trackingNumber ? 'Al-Waseet' : 'محلي'),
       notes: customerInfo.notes,
       created_by: user?.user_id || user?.id,
     };
