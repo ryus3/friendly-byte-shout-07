@@ -179,7 +179,7 @@ const InventoryPage = () => {
     if (!Array.isArray(products)) return [];
     const categories = new Set();
     products.forEach(p => {
-      if (p.categories?.main_category) {
+      if (p?.categories?.main_category) {
         categories.add(p.categories.main_category);
       }
     });
@@ -191,20 +191,25 @@ const InventoryPage = () => {
     const { lowStockThreshold = 5, mediumStockThreshold = 10 } = settings;
 
     return products.map(product => {
-        const variantsWithLevels = (product.variants || []).map(variant => {
-          let stockLevel = 'high';
-          const quantity = variant.quantity || 0;
-          if (quantity > 0 && quantity <= lowStockThreshold) stockLevel = 'low';
-          else if (quantity > 0 && quantity <= mediumStockThreshold) stockLevel = 'medium';
-          const stockPercentage = Math.min((quantity / (mediumStockThreshold + 5)) * 100, 100);
-          return { ...variant, stockLevel, stockPercentage };
-        });
+        if (!product) return null;
+        
+        const variantsWithLevels = Array.isArray(product.variants) 
+          ? product.variants.map(variant => {
+              if (!variant) return null;
+              let stockLevel = 'high';
+              const quantity = variant.quantity || 0;
+              if (quantity > 0 && quantity <= lowStockThreshold) stockLevel = 'low';
+              else if (quantity > 0 && quantity <= mediumStockThreshold) stockLevel = 'medium';
+              const stockPercentage = Math.min((quantity / (mediumStockThreshold + 5)) * 100, 100);
+              return { ...variant, stockLevel, stockPercentage };
+            }).filter(v => v !== null)
+          : [];
 
-        const totalStock = variantsWithLevels.reduce((acc, v) => acc + (v.quantity || 0), 0);
-        const totalReserved = variantsWithLevels.reduce((acc, v) => acc + (v.reserved || 0), 0);
+        const totalStock = variantsWithLevels.reduce((acc, v) => acc + (v?.quantity || 0), 0);
+        const totalReserved = variantsWithLevels.reduce((acc, v) => acc + (v?.reserved || 0), 0);
       
-        const hasLowStockVariant = variantsWithLevels.some(v => v.stockLevel === 'low');
-        const hasMediumStockVariant = variantsWithLevels.some(v => v.stockLevel === 'medium');
+        const hasLowStockVariant = variantsWithLevels.some(v => v?.stockLevel === 'low');
+        const hasMediumStockVariant = variantsWithLevels.some(v => v?.stockLevel === 'medium');
 
         let overallStockLevel = 'high';
         if (hasLowStockVariant) overallStockLevel = 'low';
@@ -218,7 +223,7 @@ const InventoryPage = () => {
           stockLevel: overallStockLevel,
           variants: variantsWithLevels,
         };
-    });
+    }).filter(item => item !== null);
   }, [products, settings]);
   
   const reservedOrders = useMemo(() => {
@@ -233,45 +238,46 @@ const InventoryPage = () => {
   }, [orders, allUsers]);
 
   const filteredItems = useMemo(() => {
+    if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
       items = items.filter(p =>
-        p.name.toLowerCase().includes(term) ||
-        (p.sku_base && p.sku_base.toLowerCase().includes(term)) ||
-        (p.variants && p.variants.some(v => v.sku && v.sku.toLowerCase().includes(term)))
+        p?.name?.toLowerCase().includes(term) ||
+        (p?.sku_base && p.sku_base.toLowerCase().includes(term)) ||
+        (Array.isArray(p?.variants) && p.variants.some(v => v?.sku && v.sku.toLowerCase().includes(term)))
       );
     }
 
     if (filters.category !== 'all') {
-      items = items.filter(p => p.categories?.main_category === filters.category);
+      items = items.filter(p => p?.categories?.main_category === filters.category);
     }
     
     if (filters.color !== 'all') {
-      items = items.filter(p => p.variants.some(v => v.color === filters.color));
+      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.color === filters.color));
     }
     
     if (filters.size !== 'all') {
-      items = items.filter(p => p.variants.some(v => v.size === filters.size));
+      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.size === filters.size));
     }
 
     if (filters.price && (filters.price[0] > 0 || filters.price[1] < 500000)) {
-      items = items.filter(p => p.variants.some(v => v.price >= filters.price[0] && v.price <= filters.price[1]));
+      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.price >= filters.price[0] && v?.price <= filters.price[1]));
     }
 
     if (filters.stockFilter !== 'all') {
       if (filters.stockFilter === 'reserved') {
-        items = items.filter(item => item.totalReserved > 0);
+        items = items.filter(item => (item?.totalReserved || 0) > 0);
       } else if (filters.stockFilter === 'out-of-stock') {
-        items = items.filter(item => item.variants.some(v => (v.quantity || 0) === 0));
+        items = items.filter(item => Array.isArray(item?.variants) && item.variants.some(v => (v?.quantity || 0) === 0));
       } else if (filters.stockFilter === 'archived') {
         items = items.filter(item => 
-          item.variants && item.variants.length > 0 && 
-          item.variants.every(v => (v.quantity || 0) === 0)
+          Array.isArray(item?.variants) && item.variants.length > 0 && 
+          item.variants.every(v => (v?.quantity || 0) === 0)
         );
       } else {
-        items = items.filter(item => item.variants.some(v => v.stockLevel === filters.stockFilter));
+        items = items.filter(item => Array.isArray(item?.variants) && item.variants.some(v => v?.stockLevel === filters.stockFilter));
       }
     }
 
@@ -279,12 +285,20 @@ const InventoryPage = () => {
   }, [inventoryItems, filters]);
 
   const inventoryStats = useMemo(() => {
-      const variants = inventoryItems.flatMap(item => item.variants || []);
+      if (!Array.isArray(inventoryItems)) return {
+        lowStockCount: 0,
+        mediumStockCount: 0,
+        highStockCount: 0,
+        reservedStockCount: 0,
+        totalVariants: 0,
+      };
+      
+      const variants = inventoryItems.flatMap(item => Array.isArray(item?.variants) ? item.variants : []);
       return {
-          lowStockCount: variants.filter(v => v.stockLevel === 'low').length,
-          mediumStockCount: variants.filter(v => v.stockLevel === 'medium').length,
-          highStockCount: variants.filter(v => v.stockLevel === 'high').length,
-          reservedStockCount: inventoryItems.reduce((sum, item) => sum + (item.totalReserved || 0), 0),
+          lowStockCount: variants.filter(v => v?.stockLevel === 'low').length,
+          mediumStockCount: variants.filter(v => v?.stockLevel === 'medium').length,
+          highStockCount: variants.filter(v => v?.stockLevel === 'high').length,
+          reservedStockCount: inventoryItems.reduce((sum, item) => sum + (item?.totalReserved || 0), 0),
           totalVariants: variants.length,
       };
   }, [inventoryItems]);
