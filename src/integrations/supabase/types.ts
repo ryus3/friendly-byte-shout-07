@@ -438,6 +438,9 @@ export type Database = {
           notes: string | null
           order_number: string
           payment_status: string
+          receipt_received: boolean | null
+          receipt_received_at: string | null
+          receipt_received_by: string | null
           status: string
           total_amount: number
           tracking_number: string | null
@@ -462,6 +465,9 @@ export type Database = {
           notes?: string | null
           order_number: string
           payment_status?: string
+          receipt_received?: boolean | null
+          receipt_received_at?: string | null
+          receipt_received_by?: string | null
           status?: string
           total_amount?: number
           tracking_number?: string | null
@@ -486,6 +492,9 @@ export type Database = {
           notes?: string | null
           order_number?: string
           payment_status?: string
+          receipt_received?: boolean | null
+          receipt_received_at?: string | null
+          receipt_received_by?: string | null
           status?: string
           total_amount?: number
           tracking_number?: string | null
@@ -512,6 +521,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "customers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_receipt_received_by_fkey"
+            columns: ["receipt_received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }

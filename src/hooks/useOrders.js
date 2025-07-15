@@ -244,33 +244,12 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           throw new Error('فشل في خصم المخزون');
         }
         
-        try {
-          await supabase.rpc('calculate_order_profit', { order_id_input: updatedOrder.id });
-          console.log('Profit calculated successfully');
-          
-          // تحديث حالة الأرباح إلى معلقة للاستلام
-          const { error: profitUpdateError } = await supabase
-            .from('profits')
-            .update({ status: 'pending' })
-            .eq('order_id', updatedOrder.id);
-            
-          if (profitUpdateError) {
-            console.error('Error updating profit status to pending:', profitUpdateError);
-          } else {
-            toast({
-              title: "تم التوصيل",
-              description: "تم تسجيل الطلب كموصل وأصبحت الأرباح معلقة للاستلام.",
-              variant: "success"
-            });
-          }
-        } catch (profitError) {
-          console.error('Error calculating profit:', profitError);
-          toast({
-            title: "تحذير",
-            description: "تم تسجيل التوصيل لكن فشل في حساب الأرباح. يرجى المراجعة يدوياً.",
-            variant: "warning"
-          });
-        }
+        // لا نحسب الأرباح هنا - ستحسب عند استلام الفاتورة
+        toast({
+          title: "تم التوصيل",
+          description: "تم تسجيل الطلب كموصل. يمكن الآن استلام الفاتورة من نافذة الأرباح المعلقة.",
+          variant: "success"
+        });
       }
       
       // 4. إذا تم إلغاء الطلب، نلغي حجز المخزون

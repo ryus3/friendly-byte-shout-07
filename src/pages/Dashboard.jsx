@@ -26,6 +26,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
+import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
@@ -91,6 +92,7 @@ const Dashboard = () => {
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
     const [isPendingProfitsOpen, setIsPendingProfitsOpen] = useState(false);
+    const [isReceiptReceiptOpen, setIsReceiptReceiptOpen] = useState(false);
     const [profitsData, setProfitsData] = useState({ pending: [], settled: [] });
 
     // جلب بيانات الأرباح من قاعدة البيانات
@@ -355,7 +357,7 @@ const Dashboard = () => {
             key: 'netProfit', title: 'صافي الارباح', value: dashboardData.netProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         hasPermission('view_profits') && {
-            key: 'pendingProfit', title: 'الارباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => setIsPendingProfitsOpen(true)
+            key: 'pendingProfit', title: 'الأرباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => setIsReceiptReceiptOpen(true)
         },
         hasPermission('view_orders') && {
             key: 'deliveredSales', title: 'المبيعات المستلمة', value: dashboardData.deliveredSales, icon: CheckCircle, colors: ['purple-500', 'violet-500'], format: 'currency', currentPeriod: periods.deliveredSales, onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), onClick: () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales')
@@ -407,7 +409,15 @@ const Dashboard = () => {
                         orders={orders || []}
                     />
                 )}
-            </AnimatePresence>
+                {isReceiptReceiptOpen && (
+                    <ReceiptReceiptDialog
+                        open={isReceiptReceiptOpen}
+                        onClose={() => setIsReceiptReceiptOpen(false)}
+                        orders={dashboardData.pendingProfitOrders || []}
+                        user={user}
+                        onSuccess={fetchProfitsData}
+                    />
+                )}
             <div className="space-y-8">
                 {/* نظام المراقبة الخفي للمخزون والإشعارات */}
                 <StockMonitoringSystem />
