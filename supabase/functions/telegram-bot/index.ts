@@ -304,28 +304,72 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               sizes (name)
             )
           `)
-          .or(`name.ilike.%${item.name}%,barcode.eq.${item.name}`)
+          .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
           .eq('is_active', true)
-          .limit(1)
-          .single();
+          .limit(10);
+
+        // إذا لم نجد بالبحث الأساسي، جرب بحث أوسع
+        if (!productData.data || productData.data.length === 0) {
+          const keywords = item.name.split(' ').filter(word => word.length > 2);
+          if (keywords.length > 0) {
+            const searchQuery = keywords.map(keyword => `name.ilike.%${keyword}%`).join(',');
+            const { data: fallbackData } = await supabase
+              .from('products')
+              .select(`
+                id,
+                name,
+                base_price,
+                barcode,
+                product_variants!inner (
+                  id,
+                  price,
+                  barcode,
+                  colors (name),
+                  sizes (name)
+                )
+              `)
+              .or(searchQuery)
+              .eq('is_active', true)
+              .limit(5);
+            
+            if (fallbackData && fallbackData.length > 0) {
+              productData.data = fallbackData;
+            }
+          }
+        }
+
+        // اختيار أفضل مطابقة
+        let bestMatch = null;
+        if (productData.data && productData.data.length > 0) {
+          bestMatch = productData.data[0]; // البحث الأول عادة أدق
+          
+          // أو ابحث عن أقرب مطابقة بالاسم
+          for (const product of productData.data) {
+            const similarity = calculateSimilarity(item.name.toLowerCase(), product.name.toLowerCase());
+            if (similarity > 0.6) { // تشابه أكثر من 60%
+              bestMatch = product;
+              break;
+            }
+          }
+        }
         
-        if (productData) {
-          let productPrice = productData.base_price || 0;
+        if (bestMatch) {
+          let productPrice = bestMatch.base_price || 0;
           let selectedVariant = null;
           
           // البحث عن التنويع المطابق للون والمقاس
-          if (productData.product_variants && productData.product_variants.length > 0) {
+          if (bestMatch.product_variants && bestMatch.product_variants.length > 0) {
             
             // البحث بالباركود أولاً (أدق طريقة)
             if (item.barcode) {
-              selectedVariant = productData.product_variants.find(variant => 
+              selectedVariant = bestMatch.product_variants.find(variant => 
                 variant.barcode === item.barcode
               );
             }
             
             // إذا لم نجد بالباركود، ابحث باللون والمقاس
             if (!selectedVariant && (item.color || item.size)) {
-              selectedVariant = productData.product_variants.find(variant => {
+              selectedVariant = bestMatch.product_variants.find(variant => {
                 const colorMatch = !item.color || variant.colors?.name?.toLowerCase().includes(item.color.toLowerCase());
                 const sizeMatch = !item.size || variant.sizes?.name?.toLowerCase() === item.size.toLowerCase();
                 return colorMatch && sizeMatch;
@@ -334,20 +378,20 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
             
             // إذا لم نجد مطابقة دقيقة، خذ أول تنويع متاح
             if (!selectedVariant) {
-              selectedVariant = productData.product_variants[0];
+              selectedVariant = bestMatch.product_variants[0];
             }
             
             if (selectedVariant) {
               productPrice = selectedVariant.price || productPrice;
               // حفظ معرف التنويع للاستخدام لاحقاً
               item.variant_id = selectedVariant.id;
-              item.product_id = productData.id;
+              item.product_id = bestMatch.id;
             }
           }
           
           // تحديث سعر المنتج في القائمة
           item.price = productPrice;
-          item.product_name = productData.name; // حفظ الاسم الصحيح
+          item.product_name = bestMatch.name; // حفظ الاسم الصحيح
           calculatedPrice += productPrice * item.quantity;
           
           console.log(`Product found: ${productData.name}, Price: ${productPrice}, Variant ID: ${item.variant_id}`);
@@ -445,6 +489,45 @@ ${foundItemsCount < totalItemsCount ?
     console.error('Error processing order:', error);
     return false;
   }
+}
+
+// دالة حساب التشابه بين نصين
+function calculateSimilarity(str1: string, str2: string): number {
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+  
+  if (longer.length === 0) return 1.0;
+  
+  const editDistance = levenshteinDistance(longer, shorter);
+  return (longer.length - editDistance) / longer.length;
+}
+
+function levenshteinDistance(str1: string, str2: string): number {
+  const matrix = [];
+  
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  
+  return matrix[str2.length][str1.length];
 }
 
 function parseProduct(productText: string) {

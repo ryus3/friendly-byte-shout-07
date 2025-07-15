@@ -102,7 +102,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         city: parsedCity || 'بغداد', // Default to Baghdad
         region: parsedRegion || '',
         address: aiOrderData.customer_address || '',
-        notes: `طلب من التليغرام - معرف: ${aiOrderData.id}`,
+        notes: '',
         details: Array.isArray(aiOrderData.items) ? 
           aiOrderData.items.map(item => `${item.name} (${item.quantity})`).join(' + ') : '',
         quantity: Array.isArray(aiOrderData.items) ? 
