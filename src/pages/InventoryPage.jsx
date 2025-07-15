@@ -115,29 +115,58 @@ const InventoryPage = () => {
   const [selectedItemsForExport, setSelectedItemsForExport] = useState([]);
 
   useEffect(() => {
+    const searchParam = searchParams.get('search');
+    const filterParam = searchParams.get('filter');
     const productParam = searchParams.get('product');
     const variantParam = searchParams.get('variant');
     const highlightParam = searchParams.get('highlight');
-    const stockFilterParam = searchParams.get('stockFilter');
     
-    if (productParam || variantParam) {
-      // إذا جاء من تنبيه المخزون، فلتر للمنتج المحدد
-      if (productParam) {
-        const product = products?.find(p => p.id === productParam);
-        if (product) {
-          setFilters(currentFilters => ({
-            ...currentFilters, 
-            searchTerm: product.name,
-            stockFilter: 'low' // فلتر للمخزون المنخفض
-          }));
-        }
-      }
-    } else if (highlightParam) {
-      setFilters(currentFilters => ({...currentFilters, searchTerm: highlightParam}));
+    // إذا جاء من إشعار مع معاملات البحث والفلترة
+    if (searchParam || filterParam) {
+      setFilters(currentFilters => ({
+        ...currentFilters,
+        searchTerm: searchParam || currentFilters.searchTerm,
+        stockFilter: filterParam === 'low_stock' ? 'low' : filterParam || currentFilters.stockFilter
+      }));
     }
     
-    if (stockFilterParam) {
-      setFilters(currentFilters => ({...currentFilters, stockFilter: stockFilterParam}));
+    // إذا جاء من تنبيه المخزون مع معرف المنتج
+    if (productParam) {
+      const product = products?.find(p => p.id === productParam);
+      if (product) {
+        setFilters(currentFilters => ({
+          ...currentFilters, 
+          searchTerm: product.name,
+          stockFilter: 'low'
+        }));
+      }
+    }
+    
+    // إذا جاء مع معرف المتغير
+    if (variantParam) {
+      // البحث عن المتغير والمنتج المحدد
+      let foundProduct = null;
+      products?.forEach(product => {
+        if (product.variants?.some(v => v.id === variantParam)) {
+          foundProduct = product;
+        }
+      });
+      
+      if (foundProduct) {
+        setFilters(currentFilters => ({
+          ...currentFilters,
+          searchTerm: foundProduct.name,
+          stockFilter: 'low'
+        }));
+      }
+    }
+    
+    // إذا جاء مع معامل التمييز
+    if (highlightParam) {
+      setFilters(currentFilters => ({
+        ...currentFilters, 
+        searchTerm: highlightParam
+      }));
     }
   }, [searchParams, products]);
 

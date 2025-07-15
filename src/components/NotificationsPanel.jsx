@@ -52,7 +52,6 @@ const OrderIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
     <rect x="3" y="3" width="18" height="18" rx="2" className="fill-blue-50 stroke-blue-500" strokeWidth="1.5"/>
     <circle cx="9" cy="9" r="2" className="fill-blue-200"/>
-    <path d="m21 15-3-3H12l-1 3" className="stroke-blue-600" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
 
