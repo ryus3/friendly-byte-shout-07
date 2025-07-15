@@ -81,7 +81,11 @@ const OrdersPage = () => {
 
   const usersMap = useMemo(() => {
     const map = new Map();
-    allUsers.forEach(u => map.set(u.id, u.full_name));
+    (allUsers || []).forEach(u => {
+      if (u && u.id) {
+        map.set(u.id, u.full_name || u.name || 'مستخدم غير معروف');
+      }
+    });
     return map;
   }, [allUsers]);
 
@@ -90,13 +94,13 @@ const OrdersPage = () => {
     if (hasPermission('view_all_orders')) {
         return orders;
     }
-    return orders.filter(order => order.created_by === user.id);
-  }, [orders, user.id, hasPermission]);
+    return orders.filter(order => order.created_by === (user?.id || user?.user_id));
+  }, [orders, user, hasPermission]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
-    return aiOrders.filter(order => order.created_by === user.id);
-  }, [aiOrders, user.id]);
+    return aiOrders.filter(order => order.created_by === (user?.id || user?.user_id));
+  }, [aiOrders, user]);
 
   const filteredOrders = useMemo(() => {
     let tempOrders;
@@ -113,11 +117,14 @@ const OrdersPage = () => {
     return tempOrders.filter(order => {
       const { searchTerm, status } = filters;
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
-      const customerInfo = order.customerinfo || {};
+      const customerInfo = order.customerinfo || {
+        name: order.customer_name,
+        phone: order.customer_phone
+      };
       const matchesSearch = (
-        (customerInfo.name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
-        (order.trackingnumber || '').toLowerCase().includes(lowerCaseSearchTerm) ||
-        (customerInfo.phone || '').includes(searchTerm)
+        (customerInfo.name || order.customer_name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.trackingnumber || order.tracking_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (customerInfo.phone || order.customer_phone || '').includes(searchTerm)
       );
       
       let matchesStatus = status === 'all' || order.status === status;
