@@ -166,7 +166,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         .update({ 
           status: 'approved',
           processed_at: new Date().toISOString(),
-          processed_by: user?.id 
+          processed_by: user?.user_id || user?.id 
         })
         .eq('id', orderId);
 
@@ -194,7 +194,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         payment_status: 'pending',
         tracking_number: trackingNumber,
         delivery_partner: isLocalDelivery ? 'محلي' : 'الوسيط',
-        created_by: user?.id,
+        created_by: user?.user_id || user?.id,
         notes: `طلب مُحوَّل من الذكاء الاصطناعي - المصدر: ${aiOrder.source}${aiOrder.order_data?.original_text ? '\nالنص الأصلي: ' + aiOrder.order_data.original_text : ''}`
       };
 

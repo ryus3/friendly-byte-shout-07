@@ -7,7 +7,7 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useProducts } from '@/hooks/useProducts.jsx';
 import { useOrders } from '@/hooks/useOrders';
-import { useCart } from '@/hooks/useCart';
+import { useCart } from '@/hooks/useCart.jsx';
 import { usePurchases } from '@/hooks/usePurchases';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -154,11 +154,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   };
                   const variantData = {
                     id: variant.id,
+                    sku: variant.id, // استخدام ID كـ SKU
                     price: variant.price,
                     cost_price: variant.cost_price,
                     color: variant.colors?.name || item.color || '',
                     size: variant.sizes?.name || item.size || '',
-                    barcode: variant.barcode || ''
+                    barcode: variant.barcode || '',
+                    quantity: 100 // افتراضي للمخزون
                   };
                   addToCart(product, variantData, item.quantity || 1, false);
                   console.log('Added product to cart:', product, variantData);
@@ -168,11 +170,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }
               } catch (error) {
                 console.error('Error fetching product data:', error);
-                console.error('Error fetching product data:', error);
                 fallbackAddToCart(item);
               }
-                } else {
-                  console.log('Product data not found, using fallback for:', item);
+            } else {
+              console.log('Product data not found, using fallback for:', item);
               fallbackAddToCart(item);
             }
           }
@@ -188,11 +189,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           images: item.images || []
         };
         const variant = { 
+          sku: item.variant_id || `fallback-${Date.now()}`,
           price: item.price || 0, 
           cost_price: item.cost_price || 0,
           color: item.color || '', 
           size: item.size || '',
-          barcode: item.barcode || ''
+          barcode: item.barcode || '',
+          quantity: 100 // افتراضي للمخزون
         };
         addToCart(product, variant, item.quantity || 1, false);
       }
