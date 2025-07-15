@@ -16,25 +16,35 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       finalTrackingNumber = generateTrackingNumber();
     }
   
+    // Generate order number
+    const { data: orderNumber, error: orderNumberError } = await supabase.rpc('generate_order_number');
+    if (orderNumberError) {
+      console.error('Error generating order number:', orderNumberError);
+      return { success: false, error: 'فشل في إنشاء رقم الطلب' };
+    }
+
     const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
     const deliveryFee = settings?.deliveryFee || 0;
     const total = subtotal - (discount || 0) + deliveryFee;
 
     const newOrder = {
-      customerinfo: customerInfo,
-      items: cartItems,
-      subtotal,
-      deliveryfee: deliveryFee,
+      order_number: orderNumber,
+      customer_name: customerInfo.name,
+      customer_phone: customerInfo.phone,
+      customer_address: customerInfo.address,
+      customer_city: customerInfo.city,
+      customer_province: customerInfo.province,
+      total_amount: subtotal,
       discount: discount || 0,
-      total,
+      delivery_fee: deliveryFee,
+      final_amount: total,
       status: status || 'pending',
-      shipping_company: trackingNumber ? 'Al-Waseet' : 'local',
-      trackingnumber: finalTrackingNumber,
+      delivery_status: 'pending',
+      payment_status: 'pending',
+      tracking_number: finalTrackingNumber,
+      delivery_partner: trackingNumber ? 'Al-Waseet' : 'محلي',
       notes: customerInfo.notes,
-      created_by: user?.id,
-      profitStatus: 'unsettled',
-      qr_link: qrLink,
-      delivery_partner_data: deliveryPartnerData,
+      created_by: user?.user_id || user?.id,
     };
     
     // Reserve stock
