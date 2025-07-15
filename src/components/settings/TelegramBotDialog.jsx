@@ -7,24 +7,41 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { 
-  MessageCircle, Copy, Users, Bot, QrCode, 
-  CheckCircle, AlertCircle, Smartphone 
+  MessageCircle, Copy, Users, Bot, CheckCircle, AlertCircle, Smartphone 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const TelegramBotDialog = ({ open, onOpenChange }) => {
   const { user, allUsers } = useAuth();
   const [botToken, setBotToken] = useState('');
   const [isBotConnected, setIsBotConnected] = useState(false);
+  const [employeeCodes, setEmployeeCodes] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // توليد رمز مختصر لكل موظف
-  const generateEmployeeCode = (employeeId, username) => {
-    const shortId = employeeId.slice(-4);
-    const shortUsername = username.slice(0, 3).toUpperCase();
-    return `${shortUsername}${shortId}`;
+  // جلب رموز الموظفين من قاعدة البيانات
+  const fetchEmployeeCodes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('telegram_employee_codes')
+        .select(`
+          *,
+          profiles!inner(user_id, full_name, role, username)
+        `)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      setEmployeeCodes(data || []);
+    } catch (error) {
+      console.error('Error fetching employee codes:', error);
+    }
   };
 
-  const employees = allUsers?.filter(u => u.role !== 'owner') || [];
+  useEffect(() => {
+    if (open) {
+      fetchEmployeeCodes();
+    }
+  }, [open]);
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -45,13 +62,25 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
       return;
     }
 
-    // محاكاة ربط البوت
-    setIsBotConnected(true);
-    toast({
-      title: "تم الربط!",
-      description: "تم ربط بوت التليغرام بنجاح",
-      variant: "success"
-    });
+    setIsLoading(true);
+    try {
+      // محاكاة ربط البوت
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsBotConnected(true);
+      toast({
+        title: "تم الربط!",
+        description: "تم ربط بوت التليغرام بنجاح",
+        variant: "success"
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل في ربط البوت",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -102,9 +131,9 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                       احصل على الرمز من @BotFather في التليغرام
                     </p>
                   </div>
-                  <Button onClick={connectBot} className="w-full">
+                  <Button onClick={connectBot} disabled={isLoading} className="w-full">
                     <Bot className="w-4 h-4 ml-2" />
-                    ربط البوت
+                    {isLoading ? 'جاري الربط...' : 'ربط البوت'}
                   </Button>
                 </div>
               ) : (
@@ -132,68 +161,57 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                 رموز الموظفين
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                كل موظف له رمز مختصر خاص به لربط حسابه بالبوت
+                كل موظف له رمز بسيط مرتبط بحسابه في قاعدة البيانات
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {/* رمز المالك */}
-                <div className="flex items-center justify-between p-3 border rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">{user?.full_name?.charAt(0) || 'M'}</span>
-                    </div>
-                    <div>
-                      <p className="font-semibold">{user?.full_name || 'المالك'}</p>
-                      <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-300">
-                        مالك
-                      </Badge>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge className="bg-gradient-to-r from-purple-500 to-blue-500 text-white font-mono text-lg px-3 py-1">
-                      {generateEmployeeCode(user?.user_id || '0000', user?.username || 'OWNER')}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyToClipboard(generateEmployeeCode(user?.user_id || '0000', user?.username || 'OWNER'))}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* رموز الموظفين */}
-                {employees.map((employee) => (
-                  <div key={employee.user_id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">{employee.full_name?.charAt(0) || 'E'}</span>
+                {/* عرض جميع رموز الموظفين */}
+                {employeeCodes.map((employeeCode) => {
+                  const profile = employeeCode.profiles;
+                  const isOwner = profile?.role === 'admin';
+                  
+                  return (
+                    <div key={employeeCode.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          isOwner 
+                            ? 'bg-gradient-to-r from-purple-500 to-blue-500' 
+                            : 'bg-gradient-to-r from-green-500 to-teal-500'
+                        }`}>
+                          <span className="text-white font-bold text-sm">
+                            {profile?.full_name?.charAt(0) || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold">{profile?.full_name || 'مستخدم'}</p>
+                          <Badge variant={isOwner ? "outline" : "secondary"} className="text-xs">
+                            {isOwner ? 'مالك' : profile?.role === 'manager' ? 'مدير' : 'موظف'}
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">{employee.full_name}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          {employee.role === 'manager' ? 'مدير' : 'موظف'}
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant="outline" 
+                          className={`font-mono text-sm px-3 py-1 ${
+                            isOwner ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-green-50 text-green-700 border-green-300'
+                          }`}
+                        >
+                          {employeeCode.employee_code}
                         </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(employeeCode.employee_code)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono text-lg px-3 py-1 bg-green-50 text-green-700 border-green-300">
-                        {generateEmployeeCode(employee.user_id, employee.username)}
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => copyToClipboard(generateEmployeeCode(employee.user_id, employee.username))}
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
 
-                {employees.length === 0 && (
+                {employeeCodes.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
                     <p>لا يوجد موظفين مضافين بعد</p>

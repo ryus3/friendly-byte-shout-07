@@ -151,40 +151,6 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
             </CardContent>
           </Card>
 
-          {/* إعدادات المناطق والتوقيتات */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
-                المناطق والتوقيتات
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryTimeEstimate">وقت التوصيل المتوقع</Label>
-                  <Input
-                    id="deliveryTimeEstimate"
-                    value={localSettings.deliveryTimeEstimate}
-                    onChange={(e) => updateLocalSetting('deliveryTimeEstimate', e.target.value)}
-                    placeholder="مثال: 2-3 أيام"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="maxDeliveryDistance">أقصى مسافة توصيل (كم)</Label>
-                  <Input
-                    id="maxDeliveryDistance"
-                    type="number"
-                    value={localSettings.maxDeliveryDistance}
-                    onChange={(e) => updateLocalSetting('maxDeliveryDistance', parseInt(e.target.value) || 0)}
-                    min="1"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* معلومات إضافية */}
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-6">
