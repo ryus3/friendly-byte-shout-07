@@ -49,6 +49,8 @@ const PendingProfitsDialog = ({ open, onClose, pendingProfits = [], orders = [] 
         description: `تم تسجيل استلام ${selectedProfits.length} ربح بنجاح`,
         variant: "success"
       });
+      // إعادة تحميل البيانات لتحديث الأرقام
+      if (onClose) onClose();
     } catch (error) {
       toast({
         title: "خطأ",

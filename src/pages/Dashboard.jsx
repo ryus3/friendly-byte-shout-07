@@ -119,7 +119,7 @@ const Dashboard = () => {
                 navigate(`/my-orders?${query.toString()}`);
                 break;
             case 'pendingSales':
-                query.set('status', 'shipped');
+                query.set('status', 'shipped,needs_processing');
                 navigate(`/my-orders?${query.toString()}`);
                 break;
             case 'netProfit':
@@ -215,7 +215,7 @@ const Dashboard = () => {
         let settledProfits = [];
         
         if (profits && profits.length > 0) {
-            // فلترة الأرباح المعلقة
+            // فلترة الأرباح المعلقة (الطلبات الواصلة ولم نستلم حسابها)
             pendingProfits = profits.filter(p => p.status === 'pending');
             settledProfits = profits.filter(p => p.status === 'settled');
             
@@ -240,8 +240,8 @@ const Dashboard = () => {
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
 
-        // حساب المبيعات المعلقة (الطلبات المشحونة)
-        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
+        // حساب المبيعات المعلقة (الطلبات المشحونة + تحتاج معالجة)
+        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped' || o.status === 'needs_processing');
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
 
