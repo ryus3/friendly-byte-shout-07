@@ -18,6 +18,7 @@ import DeliveryStatusCard from './DeliveryStatusCard';
 import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage';
+import { supabase } from '@/integrations/supabase/client';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart } = useInventory();
@@ -113,21 +114,74 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // إضافة المنتجات للسلة مع التحقق من وجودها في قاعدة البيانات
       if (Array.isArray(aiOrderData.items)) {
         clearCart();
-        aiOrderData.items.forEach(item => {
-          const product = { 
-            id: item.product_id || `ai-${Date.now()}-${Math.random()}`, 
-            name: item.name,
-            images: item.images || []
-          };
-          const variant = { 
-            price: item.price || 0, 
-            cost_price: item.cost_price || 0,
-            color: item.color || '', 
-            size: item.size || '',
-            barcode: item.barcode || ''
-          };
-          addToCart(product, variant, item.quantity || 1, false);
-        });
+        
+        for (const item of aiOrderData.items) {
+          // إذا كان لدينا product_id و variant_id، استخدمهما مباشرة
+          if (item.product_id && item.variant_id) {
+            // جلب بيانات المنتج من قاعدة البيانات
+            try {
+              const { data: productData } = await supabase
+                .from('products')
+                .select(`
+                  id,
+                  name,
+                  images,
+                  product_variants!inner (
+                    id,
+                    price,
+                    cost_price,
+                    colors (name),
+                    sizes (name)
+                  )
+                `)
+                .eq('id', item.product_id)
+                .eq('product_variants.id', item.variant_id)
+                .single();
+
+              if (productData && productData.product_variants[0]) {
+                const variant = productData.product_variants[0];
+                const product = {
+                  id: productData.id,
+                  name: productData.name,
+                  images: productData.images || []
+                };
+                const variantData = {
+                  id: variant.id,
+                  price: variant.price,
+                  cost_price: variant.cost_price,
+                  color: variant.colors?.name || item.color || '',
+                  size: variant.sizes?.name || item.size || '',
+                  barcode: variant.barcode || ''
+                };
+                addToCart(product, variantData, item.quantity || 1, false);
+              } else {
+                // fallback للطريقة القديمة
+                fallbackAddToCart(item);
+              }
+            } catch (error) {
+              console.error('Error fetching product data:', error);
+              fallbackAddToCart(item);
+            }
+          } else {
+            fallbackAddToCart(item);
+          }
+        }
+      }
+    
+      function fallbackAddToCart(item) {
+        const product = { 
+          id: item.product_id || `ai-${Date.now()}-${Math.random()}`, 
+          name: item.name || item.product_name,
+          images: item.images || []
+        };
+        const variant = { 
+          price: item.price || 0, 
+          cost_price: item.cost_price || 0,
+          color: item.color || '', 
+          size: item.size || '',
+          barcode: item.barcode || ''
+        };
+        addToCart(product, variant, item.quantity || 1, false);
       }
     }
   }, [aiOrderData, clearCart, addToCart]);
@@ -523,6 +577,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitDisabled}>
                 {isSubmittingState && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 تأكيد وإنشاء الطلب
+              </Button>
+          </motion.div>
+        )}
+        
+        {isDialog && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitDisabled}>
+                {isSubmittingState && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                حفظ التعديلات وإنشاء الطلب
               </Button>
           </motion.div>
         )}

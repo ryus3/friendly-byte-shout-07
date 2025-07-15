@@ -547,24 +547,44 @@ function parseProduct(productText: string) {
     barcode = barcodeMatch[0];
   }
   
-  // استخراج المقاس
+  // جلب المقاسات المتاحة من قاعدة البيانات
+  const { data: sizesData } = await supabase.from('sizes').select('name').eq('is_active', true) || {};
+  const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
+  
+  // استخراج المقاس مع دعم المقاسات من قاعدة البيانات
   let size = '';
-  const sizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
-  const sizeMatch = text.match(sizeRegex);
+  const basicSizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
+  const sizeMatch = text.match(basicSizeRegex);
+  
   if (sizeMatch) {
     size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+  } else {
+    // البحث في المقاسات من قاعدة البيانات
+    for (const dbSize of dbSizes) {
+      if (text.toLowerCase().includes(dbSize.toLowerCase())) {
+        size = dbSize;
+        break;
+      }
+    }
   }
   
-  // استخراج اللون - قائمة أوسع تشمل الألوان العربية والإنجليزية
-  const colors = [
+  // جلب الألوان والمقاسات من قاعدة البيانات
+  const { data: colorsData } = await supabase.from('colors').select('name').eq('is_active', true) || {};
+  const { data: sizesData } = await supabase.from('sizes').select('name').eq('is_active', true) || {};
+  
+  const dbColors = Array.isArray(colorsData) ? colorsData.map(c => c.name) : [];
+  const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name) : [];
+  
+  // استخراج اللون - قائمة ديناميكية من قاعدة البيانات + ألوان أساسية
+  const basicColors = [
     'أزرق', 'ازرق', 'blue', 'أصفر', 'اصفر', 'yellow', 'أحمر', 'احمر', 'red', 
     'أخضر', 'اخضر', 'green', 'أبيض', 'ابيض', 'white', 'أسود', 'اسود', 'black', 
     'بني', 'brown', 'رمادي', 'gray', 'grey', 'بنفسجي', 'purple', 'وردي', 'pink',
     'برتقالي', 'orange', 'فيروزي', 'turquoise', 'كحلي', 'navy', 'ذهبي', 'gold',
-    'فضي', 'silver', 'بيج', 'beige', 'كريمي', 'cream', 'جوزي', 'موف', 'زيتي',
-    'علبة', 'علبي', 'كافيه', 'قهوائي', 'سكري', 'لبني', 'ثلجي', 'ليموني',
-    'نبيتي', 'زهري', 'سماوي', 'كموني', 'خمري', 'تركوازي', 'نيلي', 'عنابي'
+    'فضي', 'silver', 'بيج', 'beige', 'كريمي', 'cream', 'جوزي', 'موف', 'زيتي'
   ];
+  
+  const colors = [...new Set([...dbColors, ...basicColors])]; // دمج الألوان مع إزالة المكرر
   let color = '';
   let colorIndex = -1;
   
