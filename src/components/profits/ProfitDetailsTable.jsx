@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye } from 'lucide-react';
+import { Eye, DollarSign } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
@@ -16,6 +16,7 @@ const ProfitDetailsTable = ({
   onSelectAll,
   onViewOrder,
   onViewInvoice,
+  onMarkReceived,
 }) => {
   const allPendingSelectable = orders.filter(p => (p.profitStatus || 'pending') === 'pending');
 
@@ -81,7 +82,22 @@ const ProfitDetailsTable = ({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => onViewOrder(order)}><Eye className="w-4 h-4" /></Button>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => onViewOrder(order)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    {isPending && canViewAll && onMarkReceived && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => onMarkReceived(order.id)}
+                        className="text-xs"
+                      >
+                        <DollarSign className="w-3 h-3 ml-1" />
+                        استلام
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );

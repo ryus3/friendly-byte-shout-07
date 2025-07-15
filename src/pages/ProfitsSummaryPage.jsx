@@ -37,7 +37,7 @@ import { Button } from '@/components/ui/button';
 const ProfitsSummaryPage = () => {
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
   const { user, allUsers, hasPermission } = useAuth();
-  const { profits, createSettlementRequest } = useProfits();
+  const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -77,7 +77,7 @@ const ProfitsSummaryPage = () => {
 
   const profitData = useMemo(() => {
     const { from, to } = dateRange;
-    if (!orders || !allUsers || !from || !to) return {
+    if (!orders || !allUsers || !from || !to || !profits) return {
         managerProfitFromEmployees: 0,
         detailedProfits: [],
         totalExpenses: 0,
@@ -87,18 +87,33 @@ const ProfitsSummaryPage = () => {
         totalSettledDues: 0
     };
 
+    // فلترة الطلبات الموصلة في النطاق الزمني المحدد
     const deliveredOrders = orders?.filter(o => {
         const orderDate = o.created_at ? parseISO(o.created_at) : null;
         return o.status === 'delivered' && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
     }) || [];
 
+    // ربط الطلبات بسجلات الأرباح من قاعدة البيانات
     const detailedProfits = [];
 
     deliveredOrders.forEach(order => {
         const orderCreator = allUsers.find(u => u.id === order.created_by);
         if (!orderCreator) return;
 
-        const employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+        // البحث عن سجل الأرباح في قاعدة البيانات
+        const profitRecord = profits.find(p => p.order_id === order.id);
+        
+        let employeeProfitShare, profitStatus;
+        if (profitRecord) {
+            // استخدام البيانات من قاعدة البيانات
+            employeeProfitShare = profitRecord.employee_profit || 0;
+            profitStatus = profitRecord.status;
+        } else {
+            // حساب محلي كبديل (في حالة عدم وجود سجل)
+            employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+            profitStatus = 'pending'; // افتراضياً معلقة
+        }
+        
         const managerProfitShare = calculateManagerProfit(order);
         
         detailedProfits.push({
@@ -106,6 +121,8 @@ const ProfitsSummaryPage = () => {
             profit: employeeProfitShare,
             managerProfitShare,
             employeeName: orderCreator.full_name,
+            profitStatus,
+            profitRecord, // إضافة سجل الأرباح للمرجع
         });
     });
 
@@ -144,7 +161,7 @@ const ProfitsSummaryPage = () => {
         personalSettledProfit,
         totalSettledDues,
     };
-  }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit]);
+  }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
@@ -260,6 +277,10 @@ const ProfitsSummaryPage = () => {
       setSelectedOrders([]);
   };
 
+  const handleMarkReceived = async (orderId) => {
+    await markInvoiceReceived(orderId);
+  };
+
   return (
     <>
       <Helmet>
@@ -352,6 +373,7 @@ const ProfitsSummaryPage = () => {
                 selectedOrders={selectedOrders}
                 onSelectOrder={handleSelectOrder}
                 onViewOrder={handleViewOrder}
+                onMarkReceived={handleMarkReceived}
               />
             ) : (
              <ProfitDetailsTable
@@ -363,6 +385,7 @@ const ProfitsSummaryPage = () => {
                 onSelectAll={handleSelectAll}
                 onViewOrder={handleViewOrder}
                 onViewInvoice={handleViewInvoice}
+                onMarkReceived={handleMarkReceived}
              />
             )}
           </CardContent>

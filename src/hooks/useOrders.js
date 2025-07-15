@@ -247,19 +247,29 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         try {
           await supabase.rpc('calculate_order_profit', { order_id_input: updatedOrder.id });
           console.log('Profit calculated successfully');
+          
+          // تحديث حالة الأرباح إلى معلقة للاستلام
+          const { error: profitUpdateError } = await supabase
+            .from('profits')
+            .update({ status: 'pending' })
+            .eq('order_id', updatedOrder.id);
+            
+          if (profitUpdateError) {
+            console.error('Error updating profit status to pending:', profitUpdateError);
+          } else {
+            toast({
+              title: "تم التوصيل",
+              description: "تم تسجيل الطلب كموصل وأصبحت الأرباح معلقة للاستلام.",
+              variant: "success"
+            });
+          }
         } catch (profitError) {
           console.error('Error calculating profit:', profitError);
-          // لا نرمي خطأ هنا لأن المخزون تم خصمه
-        }
-        
-        // تحديث حالة الأرباح إلى معلقة للاستلام
-        const { error: profitUpdateError } = await supabase
-          .from('profits')
-          .update({ status: 'pending' })
-          .eq('order_id', updatedOrder.id);
-          
-        if (profitUpdateError) {
-          console.error('Error updating profit status to pending:', profitUpdateError);
+          toast({
+            title: "تحذير",
+            description: "تم تسجيل التوصيل لكن فشل في حساب الأرباح. يرجى المراجعة يدوياً.",
+            variant: "warning"
+          });
         }
       }
       

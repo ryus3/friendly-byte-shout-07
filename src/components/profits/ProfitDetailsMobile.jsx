@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Eye } from 'lucide-react';
+import { Eye, DollarSign } from 'lucide-react';
 
 const ProfitDetailsMobile = ({
   orders,
@@ -12,6 +12,7 @@ const ProfitDetailsMobile = ({
   selectedOrders,
   onSelectOrder,
   onViewOrder,
+  onMarkReceived,
 }) => {
   return (
     <div className="space-y-4">
@@ -37,7 +38,7 @@ const ProfitDetailsMobile = ({
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">حالة الربح</p>
                   <Badge variant={isPending ? 'warning' : 'success'}>
-                    {isPending ? 'مدفوع' : 'معلق'}
+                    {isPending ? 'معلق' : 'مدفوع'}
                   </Badge>
                 </div>
               </div>
@@ -53,7 +54,22 @@ const ProfitDetailsMobile = ({
                     <p className="font-bold text-sm text-green-400">{order.managerProfitShare.toLocaleString()} د.ع</p>
                   </div>
                 )}
-                <Button variant="ghost" size="icon" onClick={() => onViewOrder(order)}><Eye className="w-4 h-4" /></Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" onClick={() => onViewOrder(order)}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  {isPending && canViewAll && onMarkReceived && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => onMarkReceived(order.id)}
+                      className="text-xs"
+                    >
+                      <DollarSign className="w-3 h-3 ml-1" />
+                      استلام
+                    </Button>
+                  )}
+                </div>
               </div>
             </Card>
           );

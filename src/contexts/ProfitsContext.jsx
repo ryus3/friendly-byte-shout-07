@@ -288,6 +288,55 @@ export const ProfitsProvider = ({ children }) => {
     }
   }, [settlementRequests, user?.id]);
 
+  // تسجيل استلام الفاتورة للطلبات المحلية
+  const markInvoiceReceived = useCallback(async (orderId, amountReceived = null) => {
+    try {
+      const profitRecord = profits.find(p => p.order_id === orderId);
+      if (!profitRecord) {
+        throw new Error('سجل الربح غير موجود لهذا الطلب');
+      }
+
+      const updateData = {
+        status: 'settled',
+        settled_at: new Date().toISOString()
+      };
+
+      // إذا كان مبلغ مختلف عن المتوقع، نسجله
+      if (amountReceived && amountReceived !== profitRecord.profit_amount) {
+        updateData.actual_amount_received = amountReceived;
+      }
+
+      const { data, error } = await supabase
+        .from('profits')
+        .update(updateData)
+        .eq('order_id', orderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProfits(prev => prev.map(p => 
+        p.order_id === orderId ? { ...p, ...updateData } : p
+      ));
+
+      toast({
+        title: "تم تسجيل استلام الفاتورة",
+        description: `تم تحويل الربح إلى مستلم`,
+        variant: "success"
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Error marking invoice received:', error);
+      toast({
+        title: "خطأ في تسجيل الاستلام",
+        description: error.message,
+        variant: "destructive"
+      });
+      return null;
+    }
+  }, [profits]);
+
   // رفض طلب التحاسب
   const rejectSettlementRequest = useCallback(async (requestId, reason = '') => {
     try {
@@ -381,6 +430,7 @@ export const ProfitsProvider = ({ children }) => {
     createSettlementRequest,
     approveSettlementRequest,
     rejectSettlementRequest,
+    markInvoiceReceived,
     fetchProfitsData
   };
 
