@@ -177,10 +177,15 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
     });
     const employee = employeeData.data?.[0];
     
+    if (!employee) {
+      console.error('No employee found for chat ID:', chatId);
+      return false;
+    }
+    
     const { data: profileData } = await supabase
       .from('profiles')
       .select('default_customer_name')
-      .eq('user_id', employee?.user_id)
+      .eq('user_id', employee.user_id)
       .single();
     
     const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
@@ -305,12 +310,16 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       let calculatedPrice = 0;
       
       for (const item of items) {
+        let productPrice = 0;
+        
+        // البحث عن المنتج والسعر الصحيح
         const { data: productData } = await supabase
           .from('products')
           .select(`
             base_price,
-            product_variants!inner (
+            product_variants (
               price,
+              cost_price,
               colors (name),
               sizes (name)
             )
@@ -321,24 +330,40 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
           .single();
         
         if (productData) {
-          let productPrice = productData.base_price || 0;
+          // استخدام base_price كافتراضي
+          productPrice = productData.base_price || 0;
           
+          // البحث عن متغير مطابق للون والحجم
           if (productData.product_variants && productData.product_variants.length > 0) {
-            const matchingVariant = productData.product_variants.find(variant => {
-              const colorMatch = !item.color || variant.colors?.name?.toLowerCase().includes(item.color.toLowerCase());
-              const sizeMatch = !item.size || variant.sizes?.name?.toLowerCase() === item.size.toLowerCase();
+            const variants = productData.product_variants;
+            
+            // البحث عن تطابق دقيق
+            let matchingVariant = variants.find(variant => {
+              const colorMatch = !item.color || 
+                (variant.colors?.name && 
+                 variant.colors.name.toLowerCase().includes(item.color.toLowerCase()));
+              const sizeMatch = !item.size || 
+                (variant.sizes?.name && 
+                 variant.sizes.name.toLowerCase() === item.size.toLowerCase());
               return colorMatch && sizeMatch;
             });
             
-            if (matchingVariant) {
-              productPrice = matchingVariant.price || productPrice;
-            } else if (productData.product_variants[0].price) {
-              productPrice = productData.product_variants[0].price;
+            // إذا لم نجد تطابق دقيق، استخدم أول متغير متاح
+            if (!matchingVariant && variants.length > 0) {
+              matchingVariant = variants[0];
+            }
+            
+            if (matchingVariant && matchingVariant.price > 0) {
+              productPrice = matchingVariant.price;
             }
           }
           
           item.price = productPrice;
           calculatedPrice += productPrice * item.quantity;
+        } else {
+          // إذا لم نجد المنتج، نضع سعراً افتراضياً
+          item.price = 0;
+          console.log(`Product not found: ${item.name}`);
         }
       }
       
@@ -349,17 +374,22 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       totalPrice = calculatedPrice;
     }
 
-    // Create AI order
+    // Create AI order with proper employee info
     const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
       p_order_data: {
         original_text: text,
         processed_at: new Date().toISOString(),
         telegram_user_id: chatId,
         employee_code: employeeCode,
+        employee_name: employee.full_name,
+        employee_role: employee.role,
         delivery_type: deliveryType,
         city_data: customerCity,
         parsing_method: 'alwaseet_integrated',
-        items_count: items.length
+        items_count: items.length,
+        has_address: !!customerAddress,
+        city_auto_detected: !!customerCity && !cityFound,
+        prices_calculated: !hasCustomPrice
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
@@ -375,12 +405,14 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       return false;
     }
 
-    // Send detailed confirmation
+    // Send detailed confirmation with proper employee attribution
     const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
     const cityText = customerCity ? `📍 المدينة: ${customerCity.name}` : '';
+    const addressText = customerAddress && customerAddress !== 'استلام محلي' ? customerAddress : '';
+    
     const itemsList = items.slice(0, 3).map(item => {
       const itemTotal = (item.price || 0) * (item.quantity || 1);
-      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : 'السعر غير محدد';
+      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : 'سعر غير محدد';
       return `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
     }).join('\n');
     
@@ -390,13 +422,13 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
     await sendTelegramMessage(chatId, `
 ✅ <b>تم استلام الطلب بنجاح!</b>
 
-🆔 <b>رقم الطلب:</b> <code>${orderId.toString().slice(-8)}</code>
+🆔 <b>رقم الطلب:</b> <code>AI-${orderId.toString().slice(-6)}</code>
 👤 <b>الزبون:</b> ${customerName}
 📱 <b>الهاتف:</b> ${customerPhone || 'غير محدد'}
 ${customerSecondaryPhone ? `📞 <b>هاتف ثانوي:</b> ${customerSecondaryPhone}` : ''}
 ${deliveryIcon} <b>نوع التسليم:</b> ${deliveryType}
 ${cityText}
-${customerAddress ? `🏠 <b>العنوان:</b> ${customerAddress}` : ''}
+${addressText ? `🏠 <b>العنوان:</b> ${addressText}` : ''}
 
 📦 <b>المنتجات (${items.length}):</b>
 ${itemsList}
@@ -409,7 +441,10 @@ ${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.t
 
 ⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
 
-<i>شكراً لك ${employee?.full_name}! 🙏</i>
+👨‍💼 <b>بواسطة:</b> ${employee.full_name} (${employee.employee_code})
+🏢 <b>المنصب:</b> ${employee.role === 'admin' ? 'مدير' : employee.role === 'deputy' ? 'نائب مدير' : employee.role === 'warehouse' ? 'مسؤول مخزن' : 'موظف'}
+
+<i>شكراً لك! 🙏</i>
     `);
 
     return orderId;

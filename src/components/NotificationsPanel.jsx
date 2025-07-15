@@ -195,7 +195,7 @@ const NotificationsPanel = () => {
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
     if (notification.type === 'new_registration') {
       setShowPendingRegistrations(true);
-    } else if (notification.type === 'new_ai_order') {
+    } else if (notification.type === 'ai_order') {
       setShowAiOrdersManager(true);
     } else if (notification.type === 'low_stock' || notification.type === 'stock_warning') {
       // استخراج اسم المنتج من الرسالة للفلترة الدقيقة

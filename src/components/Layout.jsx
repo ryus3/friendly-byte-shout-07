@@ -224,10 +224,33 @@ const Layout = ({ children }) => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => {
-                  // مزامنة البيانات فقط بدون إعادة تحميل الصفحة
+                onClick={async () => {
+                  const refreshBtn = document.querySelector('[title="مزامنة البيانات"]');
+                  if (refreshBtn) {
+                    refreshBtn.classList.add('animate-spin');
+                  }
+                  
+                  // مزامنة البيانات من جميع المصادر
                   window.dispatchEvent(new CustomEvent('refresh-data'));
-                  toast({ title: "تم التحديث", description: "تم تحديث البيانات بنجاح" });
+                  window.dispatchEvent(new CustomEvent('refresh-notifications'));
+                  window.dispatchEvent(new CustomEvent('refresh-inventory'));
+                  window.dispatchEvent(new CustomEvent('refresh-orders'));
+                  
+                  // إعادة جلب الإشعارات
+                  if (window.refreshNotifications) {
+                    await window.refreshNotifications();
+                  }
+                  
+                  setTimeout(() => {
+                    if (refreshBtn) {
+                      refreshBtn.classList.remove('animate-spin');
+                    }
+                    toast({ 
+                      title: "تم التحديث", 
+                      description: "تم تحديث جميع البيانات بنجاح",
+                      variant: "success"
+                    });
+                  }, 1000);
                 }} 
                 className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                 title="مزامنة البيانات"

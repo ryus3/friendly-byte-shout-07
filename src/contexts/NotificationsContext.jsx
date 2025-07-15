@@ -43,6 +43,19 @@ export const NotificationsProvider = ({ children }) => {
 
     useEffect(() => {
         fetchNotifications();
+        
+        // إضافة مستمع لأحداث التحديث
+        const handleRefresh = () => {
+            fetchNotifications();
+        };
+        
+        window.addEventListener('refresh-notifications', handleRefresh);
+        window.refreshNotifications = fetchNotifications;
+        
+        return () => {
+            window.removeEventListener('refresh-notifications', handleRefresh);
+            delete window.refreshNotifications;
+        };
     }, [fetchNotifications]);
 
     useEffect(() => {
@@ -121,9 +134,27 @@ export const NotificationsProvider = ({ children }) => {
                 schema: 'public',
                 table: 'notifications',
             }, handleNewNotification)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'notifications',
+            }, (payload) => {
+                // تحديث الإشعار في الحالة المحلية
+                setNotifications(prev => prev.map(n => 
+                    n.id === payload.new.id ? payload.new : n
+                ));
+            })
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'notifications',
+            }, (payload) => {
+                // حذف الإشعار من الحالة المحلية
+                setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+            })
             .subscribe((status, err) => {
                 if (status === 'SUBSCRIBED') {
-                    // console.log('Successfully subscribed to notifications channel!');
+                    console.log('Successfully subscribed to notifications realtime!');
                 }
                 if (err) {
                     console.log('Realtime notification subscription error:', err);
