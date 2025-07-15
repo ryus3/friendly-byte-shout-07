@@ -193,7 +193,7 @@ const OrdersPage = () => {
     }
     const localOrdersToDelete = ordersToDelete.filter(orderId => {
         const order = orders.find(o => o.id === orderId);
-        return order && order.shipping_company === 'محلي';
+        return order && order.delivery_partner === 'محلي';
     });
 
     if (localOrdersToDelete.length < ordersToDelete.length) {

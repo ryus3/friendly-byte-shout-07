@@ -107,6 +107,7 @@ export const InventoryProvider = ({ children }) => {
             id,
             variant_id,
             quantity,
+            reserved_quantity,
             min_stock,
             location
           ),
@@ -183,11 +184,13 @@ export const InventoryProvider = ({ children }) => {
         });
 
         const totalStock = variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0);
+        const totalReserved = variants.reduce((sum, variant) => sum + (variant.reserved || 0), 0);
 
         return {
           ...product,
           variants,
           totalStock,
+          totalReserved,
           is_visible: true, // إظهار جميع المنتجات
           price: product.base_price || 0,
           

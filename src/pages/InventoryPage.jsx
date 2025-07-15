@@ -233,10 +233,39 @@ const InventoryPage = () => {
     const safeUsers = Array.isArray(allUsers) ? allUsers : [];
     return safeOrders
       .filter(o => o.status === 'pending')
-      .map(o => ({
-        ...o,
-        employeeName: safeUsers.find(u => u.id === o.created_by)?.full_name || 'غير معروف'
-      }));
+      .map(o => {
+        // تحويل عناصر الطلب إلى الشكل المطلوب
+        const items = (o.order_items || []).map(item => ({
+          id: item.id,
+          productId: item.product_id,
+          variantId: item.variant_id,
+          productName: item.products?.name || 'منتج غير معروف',
+          quantity: item.quantity,
+          price: item.unit_price,
+          color: item.product_variants?.colors?.name || 'لون غير محدد',
+          size: item.product_variants?.sizes?.name || 'مقاس غير محدد',
+          image: (item.product_variants?.images && item.product_variants.images.length > 0) 
+            ? item.product_variants.images[0] 
+            : (item.products?.images && item.products.images.length > 0)
+            ? item.products.images[0]
+            : '/placeholder.png'
+        }));
+
+        return {
+          ...o,
+          items,
+          employeeName: safeUsers.find(u => u.id === o.created_by)?.full_name || 'غير معروف',
+          // إضافة معلومات العميل بشكل صحيح
+          customerinfo: {
+            name: o.customer_name,
+            phone: o.customer_phone,
+            address: o.customer_address,
+            city: o.customer_city,
+            province: o.customer_province
+          },
+          trackingnumber: o.tracking_number || o.order_number
+        };
+      });
   }, [orders, allUsers]);
 
   const filteredItems = useMemo(() => {
