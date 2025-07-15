@@ -271,34 +271,21 @@ const Dashboard = () => {
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         const deliveredOrders = (orders || []).filter(o => o.status === 'delivered');
         
-        // حساب الأرباح المعلقة من جدول profits في قاعدة البيانات
-        let pendingProfits = profitsData.pending || [];
-        let settledProfits = profitsData.settled || [];
+        // الطلبات المُوصلة التي لم يتم استلام فواتيرها بعد = أرباح معلقة
+        const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         
-        console.log('الأرباح المعلقة الأولية:', pendingProfits);
-        console.log('المستخدم الحالي:', user.id);
-        console.log('صلاحية view_all_orders:', hasPermission('view_all_orders'));
+        // حساب الأرباح المعلقة من الطلبات المُوصلة فقط (بدون فواتير مستلمة)
+        const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
+        const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
+          // حساب ربح كل طلب
+          const orderProfit = (o.items || []).reduce((itemSum, item) => {
+            const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+            return itemSum + profit;
+          }, 0);
+          return sum + orderProfit;
+        }, 0);
         
-        // إذا لم يكن لديه صلاحية رؤية كل الأرباح، فلتر حسب المستخدم
-        if (!hasPermission('view_all_orders')) {
-            pendingProfits = pendingProfits.filter(p => p.employee_id === user.id);
-            settledProfits = settledProfits.filter(p => p.employee_id === user.id);
-        }
-        
-        console.log('الأرباح المعلقة بعد الفلترة:', pendingProfits);
-        
-        // حساب الأرباح المعلقة لفترة معينة
-        const filteredPendingProfits = pendingProfits.filter(p => {
-            const profitDate = parseISO(p.created_at);
-            const dateRange = filterOrdersByPeriod([], periods.pendingProfit, true);
-            return (!dateRange.from || profitDate >= dateRange.from) && 
-                   (!dateRange.to || profitDate <= dateRange.to);
-        });
-        
-        console.log('الأرباح المعلقة بعد فلتر التاريخ:', filteredPendingProfits);
-        
-        const pendingProfit = filteredPendingProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
-        
+        console.log('الطلبات المُوصلة بدون فواتير:', filteredDeliveredOrders.length);
         console.log('مجموع الأرباح المعلقة:', pendingProfit);
         
         // حساب المبيعات المستلمة (من إجمالي سعر المنتجات فقط بدون التوصيل)
@@ -324,7 +311,7 @@ const Dashboard = () => {
             pendingProfit,
             deliveredSales,
             pendingSales,
-            pendingProfitOrders: filteredPendingProfits,
+            pendingProfitOrders: filteredDeliveredOrders,
             deliveredSalesOrders,
             pendingSalesOrders,
             topCustomers: getTopCustomers(visibleOrders),
