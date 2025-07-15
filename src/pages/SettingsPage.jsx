@@ -738,8 +738,6 @@ const SettingsPage = () => {
                   استشارات ذكية وتحليل البيانات
                 </div>
               </div>
-            </ModernCard>
-          </div>
         </div>
       </div>
 
