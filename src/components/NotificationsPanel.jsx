@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Bell, Package, CheckCircle, AlertTriangle, Trash2, Check, Eye, UserPlus, Bot,
   ShoppingCart, TrendingDown, Star, Gift, Clock, CreditCard, Truck, 
-  MessageSquare, Heart, Award, AlertCircle, Info, Zap, Target
+  MessageSquare, Heart, Award, AlertCircle, Info, Zap, Target, MoreHorizontal
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { 
@@ -92,83 +92,83 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // استخدام نظام الألوان من index.css
+  // استخدام نظام الألوان من index.css مع تحسينات للتناسق
   low_stock: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-amber-500',
+    bg: 'bg-amber-50/80 dark:bg-amber-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-amber-500 dark:border-amber-400',
     text: 'text-foreground', 
     icon: 'text-amber-600 dark:text-amber-400',
     dot: 'bg-amber-500'
   },
   stock_warning: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-orange-500',
+    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-orange-500 dark:border-orange-400',
     text: 'text-foreground', 
     icon: 'text-orange-600 dark:text-orange-400',
     dot: 'bg-orange-500'
   },
   out_of_stock: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-destructive',
+    bg: 'bg-red-50/80 dark:bg-red-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-red-500 dark:border-red-400',
     text: 'text-foreground', 
-    icon: 'text-destructive',
-    dot: 'bg-destructive'
+    icon: 'text-red-600 dark:text-red-400',
+    dot: 'bg-red-500'
   },
   order_completed: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-green-500',
+    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-green-500 dark:border-green-400',
     text: 'text-foreground', 
     icon: 'text-green-600 dark:text-green-400',
     dot: 'bg-green-500'
   },
   order_shipped: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-blue-500',
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-blue-500 dark:border-blue-400',
     text: 'text-foreground', 
     icon: 'text-blue-600 dark:text-blue-400',
     dot: 'bg-blue-500'
   },
   new_order: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-primary',
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-primary dark:border-primary',
     text: 'text-foreground', 
     icon: 'text-primary',
     dot: 'bg-primary'
   },
   ai_order: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-primary',
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-primary dark:border-primary',
     text: 'text-foreground', 
     icon: 'text-primary',
     dot: 'bg-primary'
   },
   new_registration: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-purple-500',
+    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-purple-500 dark:border-purple-400',
     text: 'text-foreground', 
     icon: 'text-purple-600 dark:text-purple-400',
     dot: 'bg-purple-500'
   },
   profit_settlement: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-yellow-500',
+    bg: 'bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
     text: 'text-foreground', 
     icon: 'text-yellow-600 dark:text-yellow-400',
     dot: 'bg-yellow-500'
   },
   system: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-muted-foreground',
+    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-slate-500 dark:border-slate-400',
     text: 'text-foreground', 
-    icon: 'text-muted-foreground',
-    dot: 'bg-muted-foreground'
+    icon: 'text-slate-600 dark:text-slate-400',
+    dot: 'bg-slate-500'
   },
   default: { 
-    bg: 'bg-card/90 dark:bg-card/50', 
-    border: 'border-l-4 border-muted-foreground',
+    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-slate-500 dark:border-slate-400',
     text: 'text-foreground', 
-    icon: 'text-muted-foreground',
-    dot: 'bg-muted-foreground'
+    icon: 'text-slate-600 dark:text-slate-400',
+    dot: 'bg-slate-500'
   },
 };
 
@@ -324,19 +324,36 @@ const NotificationsPanel = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80 md:w-96 glass-effect rounded-xl p-0 overflow-hidden" align="end">
         <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-card/50 border-b border-border/50">
-          <span className="font-bold text-base text-foreground">الإشعارات</span>
+          <span className="font-bold text-base gradient-text">الإشعارات</span>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs hover:bg-muted/50 transition-colors" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
-              <Eye className="w-4 h-4 ml-1" />
-              عرض الكل
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors" 
+              onClick={() => navigate('/notifications')} 
+              title="عرض كل الإشعارات"
+            >
+              <MoreHorizontal className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
-              <Check className="w-4 h-4 ml-1" />
-              قراءة الكل
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors" 
+              onClick={handleMarkAllAsRead} 
+              title="تحديد الكل كمقروء" 
+              disabled={unreadFilteredCount === 0}
+            >
+              <Check className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-8 px-3 text-xs text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
-              <Trash2 className="w-4 h-4 ml-1" />
-              حذف الكل
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 p-0 text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" 
+              onClick={handleClearAll} 
+              title="حذف الكل" 
+              disabled={allNotifications.length === 0}
+            >
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </DropdownMenuLabel>
@@ -361,11 +378,11 @@ const NotificationsPanel = () => {
                     >
                       <div 
                         className={cn(
-                          "flex items-start gap-3 p-3 cursor-pointer transition-all duration-200 rounded-lg backdrop-blur-sm", 
+                          "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
                           colors.bg,
                           colors.border,
                           (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
-                          "hover:scale-[1.02] hover:shadow-lg"
+                          "hover:scale-[1.01] hover:shadow-lg hover:bg-gradient-to-l hover:from-white/50 hover:to-transparent dark:hover:from-white/10"
                         )}
                         onClick={(e) => handleNotificationClick(e, notification)}
                       >
