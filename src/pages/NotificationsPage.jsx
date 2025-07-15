@@ -16,13 +16,55 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 
+// أيقونات احترافية مخصصة
+const StockWarningIcon = () => (
+  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="4" width="18" height="16" rx="2" className="fill-orange-50 stroke-orange-500" strokeWidth="1.5"/>
+    <path d="M8 10v4M12 8v6M16 12v2" className="stroke-orange-600" strokeWidth="2" strokeLinecap="round"/>
+    <circle cx="19" cy="5" r="2" className="fill-red-500"/>
+  </svg>
+);
+
+const OrderSuccessIcon = () => (
+  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="9" className="fill-green-50 stroke-green-500" strokeWidth="1.5"/>
+    <path d="M9 12l2 2 4-4" className="stroke-green-600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const UserRegistrationIcon = () => (
+  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="8" r="3" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
+    <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
+  </svg>
+);
+
+const OrderIcon = () => (
+  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="2" className="fill-blue-50 stroke-blue-500" strokeWidth="1.5"/>
+    <circle cx="9" cy="9" r="2" className="fill-blue-200"/>
+  </svg>
+);
+
+const SystemIcon = () => (
+  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" className="fill-primary/10 stroke-primary" strokeWidth="1.5"/>
+  </svg>
+);
+
 const iconMap = {
-  AlertTriangle: <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-600" />,
-  Package: <Package className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />,
-  CheckCircle: <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-green-600" />,
-  UserPlus: <Users className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />,
-  Bot: <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />,
-  Bell: <Bell className="w-4 h-4 md:w-5 md:h-5 text-primary" />,
+  low_stock: <StockWarningIcon />,
+  stock_warning: <StockWarningIcon />,
+  order_completed: <OrderSuccessIcon />,
+  new_order: <OrderIcon />,
+  new_registration: <UserRegistrationIcon />,
+  system: <SystemIcon />,
+  AlertTriangle: <StockWarningIcon />,
+  Package: <StockWarningIcon />,
+  CheckCircle: <OrderSuccessIcon />,
+  UserPlus: <UserRegistrationIcon />,
+  Bot: <SystemIcon />,
+  Bell: <SystemIcon />,
 };
 
 const NotificationsPage = () => {
@@ -224,7 +266,7 @@ const NotificationsPage = () => {
                       >
                         <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3 flex-1">
-                            <div className="mt-1 flex-shrink-0">{iconMap[notification.icon] || iconMap.Bell}</div>
+                            <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <h3 className={cn(
