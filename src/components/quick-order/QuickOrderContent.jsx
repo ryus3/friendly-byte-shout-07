@@ -372,10 +372,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const validateField = (name, value) => {
     let errorMsg = '';
     if (name === 'phone') {
-        const phoneRegex = /^07[5789]\d{8}$/; // 10 digits total
-        const phoneRegex11 = /^07[5789]\d{9}$/; // 11 digits total
-        if (value && !phoneRegex.test(value) && !phoneRegex11.test(value)) {
-            errorMsg = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام ويبدأ بـ 07.';
+        // قبول أي رقم 10-11 رقم بدون قيود على البداية
+        const normalizedPhone = normalizePhoneNumber(value);
+        if (value && (!normalizedPhone || normalizedPhone.length < 10 || normalizedPhone.length > 11)) {
+            errorMsg = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام.';
         }
     }
     setErrors(prev => ({ ...prev, [name]: errorMsg }));
@@ -400,7 +400,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const validateForm = () => {
     const newErrors = {};
     
-    // Normalize phone number
+    // قبول أي رقم 10-11 رقم بدون شرط البداية
     const normalizedPhone = normalizePhoneNumber(formData.phone);
     if (!normalizedPhone || normalizedPhone.length < 10 || normalizedPhone.length > 11) {
       newErrors.phone = 'رقم الهاتف يجب أن يكون 10 أو 11 أرقام.';
@@ -420,24 +420,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     return Object.keys(newErrors).length === 0;
   };
   
-  // Normalize phone number by removing +964, spaces, and extracting digits
+  // تطبيع رقم الهاتف - قبول أي رقم 10-11 رقم
   const normalizePhoneNumber = (phone) => {
     if (!phone) return '';
     
-    // Remove spaces, dashes, and other non-digit characters except +
+    // إزالة المسافات والشرطات والأقواس
     const cleaned = phone.replace(/[\s\-\(\)]/g, '');
     
-    // Remove +964 prefix if exists
+    // إزالة +964 إذا كان موجوداً
     if (cleaned.startsWith('+964')) {
       return cleaned.substring(4);
     }
     
-    // Remove 964 prefix if exists (without +)
+    // إزالة 964 إذا كان موجوداً (بدون +)
     if (cleaned.startsWith('964')) {
       return cleaned.substring(3);
     }
     
-    // Extract only digits
+    // استخراج الأرقام فقط
     const digits = cleaned.replace(/\D/g, '');
     
     return digits;
@@ -652,7 +652,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }
 
   const PageWrapper = isDialog ? 'form' : 'form';
-  const pageProps = { ref: formRef, onSubmit: handleSubmit };
+  const pageProps = { 
+    ref: formRef, 
+    onSubmit: (e) => {
+      console.log('Form submit intercepted');
+      handleSubmit(e);
+    } 
+  };
   const isSubmitDisabled = isSubmittingState || !isDeliveryPartnerSelected || (activePartner === 'alwaseet' && (!isWaseetLoggedIn || !initialDataLoaded || dataFetchError)) || Object.values(errors).some(e => e) || cart.length === 0;
 
   return (

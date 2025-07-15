@@ -24,6 +24,7 @@ export const NotificationsSystemProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .or(`user_id.eq.${user.id},user_id.is.null`) // إشعارات للمستخدم أو عامة
         .order('created_at', { ascending: false })
         .limit(50);
       
@@ -63,12 +64,26 @@ export const NotificationsSystemProvider = ({ children }) => {
     const notificationsChannel = supabase
       .channel('notifications-realtime')
       .on('postgres_changes', {
-        event: '*',
+        event: 'INSERT',
         schema: 'public',
         table: 'notifications'
       }, (payload) => {
-        console.log('Notification change detected:', payload);
-        fetchNotifications(); // إعادة جلب الإشعارات عند حدوث تغيير
+        console.log('New notification detected:', payload);
+        fetchNotifications(); // إعادة جلب فقط عند إضافة إشعار جديد
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+        console.log('Notification updated:', payload);
+        // تحديث محلي للإشعار بدلاً من إعادة جلب الكل
+        if (payload.new.is_read !== payload.old.is_read) {
+          setNotifications(prev => prev.map(n => 
+            n.id === payload.new.id ? { ...n, read: payload.new.is_read } : n
+          ));
+          setUnreadCount(prev => payload.new.is_read ? Math.max(0, prev - 1) : prev + 1);
+        }
       })
       .subscribe();
 
