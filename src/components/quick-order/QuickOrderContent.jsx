@@ -53,14 +53,56 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // ملء البيانات من الطلب الذكي عند وجوده
   useEffect(() => {
     if (aiOrderData) {
+      // Parse city and address intelligently
+      const parseLocationData = (address, city) => {
+        let parsedCity = city || '';
+        let parsedRegion = '';
+        
+        if (address) {
+          // Try to extract city from address if not provided
+          const addressLower = address.toLowerCase();
+          const iraqiCities = ['بغداد', 'البصرة', 'أربيل', 'الموصل', 'كربلاء', 'النجف', 'بابل', 'ذي قار', 'ديالى', 'الأنبار'];
+          
+          if (!parsedCity) {
+            for (const cityName of iraqiCities) {
+              if (addressLower.includes(cityName.toLowerCase())) {
+                parsedCity = cityName;
+                break;
+              }
+            }
+          }
+          
+          // Extract potential region/district from address
+          const regionPatterns = [
+            /منطقة\s+([^،\s]+)/,
+            /حي\s+([^،\s]+)/,
+            /شارع\s+([^،\s]+)/,
+            /محلة\s+([^،\s]+)/,
+            /قضاء\s+([^،\s]+)/
+          ];
+          
+          for (const pattern of regionPatterns) {
+            const match = address.match(pattern);
+            if (match) {
+              parsedRegion = match[1];
+              break;
+            }
+          }
+        }
+        
+        return { parsedCity, parsedRegion };
+      };
+      
+      const { parsedCity, parsedRegion } = parseLocationData(aiOrderData.customer_address, aiOrderData.customer_city);
+      
       setFormData(prev => ({
         ...prev,
         name: aiOrderData.customer_name || '',
         phone: aiOrderData.customer_phone || '',
-        city: aiOrderData.customer_city || '',
-        region: '', // سيتم تحديثه من العنوان
+        city: parsedCity || 'بغداد', // Default to Baghdad
+        region: parsedRegion || '',
         address: aiOrderData.customer_address || '',
-        notes: '',
+        notes: `طلب من التليغرام - معرف: ${aiOrderData.id}`,
         details: Array.isArray(aiOrderData.items) ? 
           aiOrderData.items.map(item => `${item.name} (${item.quantity})`).join(' + ') : '',
         quantity: Array.isArray(aiOrderData.items) ? 
@@ -68,18 +110,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         price: aiOrderData.total_amount || 0
       }));
       
-      // إضافة المنتجات للسلة
+      // إضافة المنتجات للسلة مع التحقق من وجودها في قاعدة البيانات
       if (Array.isArray(aiOrderData.items)) {
         clearCart();
         aiOrderData.items.forEach(item => {
           const product = { 
             id: item.product_id || `ai-${Date.now()}-${Math.random()}`, 
-            name: item.name 
+            name: item.name,
+            images: item.images || []
           };
           const variant = { 
             price: item.price || 0, 
+            cost_price: item.cost_price || 0,
             color: item.color || '', 
-            size: item.size || '' 
+            size: item.size || '',
+            barcode: item.barcode || ''
           };
           addToCart(product, variant, item.quantity || 1, false);
         });

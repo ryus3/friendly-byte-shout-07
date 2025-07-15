@@ -16,7 +16,7 @@ import AiChatDialog from '@/components/ai/AiChatDialog.jsx';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
-import CartDialog from '@/components/orders/CartDialog.jsx';
+import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 
 const SidebarContent = ({ onClose }) => {
   const { user, logout, hasPermission } = useAuth();
@@ -136,8 +136,22 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
   const [dialogs, setDialogs] = useState({ cart: false, quickOrder: false });
+  const [aiOrdersOpen, setAiOrdersOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { user } = useAuth();
+
+  // Listen for AI orders manager events
+  useEffect(() => {
+    const handleOpenAiOrders = (event) => {
+      setAiOrdersOpen(true);
+    };
+    
+    window.addEventListener('openAiOrdersManager', handleOpenAiOrders);
+    
+    return () => {
+      window.removeEventListener('openAiOrdersManager', handleOpenAiOrders);
+    };
+  }, []);
 
   // استقبال إشارة فتح السايدبار من الشريط السفلي
   useEffect(() => {
@@ -295,12 +309,18 @@ const Layout = ({ children }) => {
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, cart: open }))}
         onCheckout={handleOpenQuickOrder}
       />
-      <QuickOrderDialog 
-        open={dialogs.quickOrder} 
-        onOpenChange={(open) => setDialogs(prev => ({ ...prev, quickOrder: open }))}
-      />
-    </div>
-  );
-};
+        <QuickOrderDialog 
+          open={dialogs.quickOrder} 
+          onOpenChange={(open) => setDialogs(prev => ({ ...prev, quickOrder: open }))} 
+        />
+        
+        <AnimatePresence>
+          {aiOrdersOpen && (
+            <AiOrdersManager onClose={() => setAiOrdersOpen(false)} />
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
 export default Layout;
