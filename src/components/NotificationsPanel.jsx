@@ -92,83 +92,83 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // ألوان الإشعارات حسب الصورة المرفقة - تصميم متناسق
+  // استخدام نظام الألوان من index.css
   low_stock: { 
-    bg: 'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20', 
-    border: 'border-l-4 border-orange-400 dark:border-orange-500',
-    text: 'text-orange-900 dark:text-orange-100', 
-    icon: 'text-orange-600 dark:text-orange-400',
-    dot: 'bg-orange-500'
-  },
-  stock_warning: { 
-    bg: 'bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20', 
-    border: 'border-l-4 border-amber-400 dark:border-amber-500',
-    text: 'text-amber-900 dark:text-amber-100', 
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-amber-500',
+    text: 'text-foreground', 
     icon: 'text-amber-600 dark:text-amber-400',
     dot: 'bg-amber-500'
   },
+  stock_warning: { 
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-orange-500',
+    text: 'text-foreground', 
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500'
+  },
   out_of_stock: { 
-    bg: 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20', 
-    border: 'border-l-4 border-red-400 dark:border-red-500',
-    text: 'text-red-900 dark:text-red-100', 
-    icon: 'text-red-600 dark:text-red-400',
-    dot: 'bg-red-500'
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-destructive',
+    text: 'text-foreground', 
+    icon: 'text-destructive',
+    dot: 'bg-destructive'
   },
   order_completed: { 
-    bg: 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20', 
-    border: 'border-l-4 border-green-400 dark:border-green-500',
-    text: 'text-green-900 dark:text-green-100', 
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-green-500',
+    text: 'text-foreground', 
     icon: 'text-green-600 dark:text-green-400',
     dot: 'bg-green-500'
   },
   order_shipped: { 
-    bg: 'bg-gradient-to-r from-blue-50 to-sky-50 dark:from-blue-900/20 dark:to-sky-900/20', 
-    border: 'border-l-4 border-blue-400 dark:border-blue-500',
-    text: 'text-blue-900 dark:text-blue-100', 
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-blue-500',
+    text: 'text-foreground', 
     icon: 'text-blue-600 dark:text-blue-400',
     dot: 'bg-blue-500'
   },
   new_order: { 
-    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20', 
-    border: 'border-l-4 border-blue-500 dark:border-blue-400',
-    text: 'text-blue-900 dark:text-blue-100', 
-    icon: 'text-blue-700 dark:text-blue-300',
-    dot: 'bg-blue-500'
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-primary',
+    text: 'text-foreground', 
+    icon: 'text-primary',
+    dot: 'bg-primary'
   },
   ai_order: { 
-    bg: 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20', 
-    border: 'border-l-4 border-blue-500 dark:border-blue-400',
-    text: 'text-blue-900 dark:text-blue-100', 
-    icon: 'text-blue-700 dark:text-blue-300',
-    dot: 'bg-blue-500'
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-primary',
+    text: 'text-foreground', 
+    icon: 'text-primary',
+    dot: 'bg-primary'
   },
   new_registration: { 
-    bg: 'bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20', 
-    border: 'border-l-4 border-purple-400 dark:border-purple-500',
-    text: 'text-purple-900 dark:text-purple-100', 
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-purple-500',
+    text: 'text-foreground', 
     icon: 'text-purple-600 dark:text-purple-400',
     dot: 'bg-purple-500'
   },
   profit_settlement: { 
-    bg: 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20', 
-    border: 'border-l-4 border-yellow-400 dark:border-yellow-500',
-    text: 'text-yellow-900 dark:text-yellow-100', 
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-yellow-500',
+    text: 'text-foreground', 
     icon: 'text-yellow-600 dark:text-yellow-400',
     dot: 'bg-yellow-500'
   },
   system: { 
-    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50', 
-    border: 'border-l-4 border-slate-400 dark:border-slate-500',
-    text: 'text-slate-900 dark:text-slate-100', 
-    icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500'
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-muted-foreground',
+    text: 'text-foreground', 
+    icon: 'text-muted-foreground',
+    dot: 'bg-muted-foreground'
   },
   default: { 
-    bg: 'bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-800/50 dark:to-gray-800/50', 
-    border: 'border-l-4 border-slate-400 dark:border-slate-500',
-    text: 'text-slate-900 dark:text-slate-100', 
-    icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500'
+    bg: 'bg-card/90 dark:bg-card/50', 
+    border: 'border-l-4 border-muted-foreground',
+    text: 'text-foreground', 
+    icon: 'text-muted-foreground',
+    dot: 'bg-muted-foreground'
   },
 };
 
@@ -322,8 +322,8 @@ const NotificationsPanel = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 md:w-96 bg-background/98 backdrop-blur-xl border border-border/50 shadow-xl rounded-xl p-0 overflow-hidden" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-gradient-to-r from-background to-muted/30 border-b border-border/50">
+      <DropdownMenuContent className="w-80 md:w-96 glass-effect rounded-xl p-0 overflow-hidden" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-card/50 border-b border-border/50">
           <span className="font-bold text-base text-foreground">الإشعارات</span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="h-8 px-3 text-xs hover:bg-muted/50 transition-colors" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
