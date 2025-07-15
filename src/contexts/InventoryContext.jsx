@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useProducts } from '@/hooks/useProducts';
+import { useProducts } from '@/hooks/useProducts.jsx';
 import { useOrders } from '@/hooks/useOrders';
 import { useCart } from '@/hooks/useCart';
 import { usePurchases } from '@/hooks/usePurchases';
