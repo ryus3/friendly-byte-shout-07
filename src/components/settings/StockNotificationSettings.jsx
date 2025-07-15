@@ -60,6 +60,8 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
           key: 'stock_notification_settings',
           value: settingsToSave,
           description: 'إعدادات تنبيهات المخزون المحفوظة'
+        }, {
+          onConflict: 'key'
         });
       
       if (error) {
@@ -97,14 +99,23 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
     }
   };
 
-  const unsilenceProductNotifications = (productSku) => {
+  const unsilenceProductNotifications = async (productSku) => {
     const silencedProducts = settings.permanentlySilencedProducts.filter(
       sku => sku !== productSku
     );
-    setSettings(prev => ({ 
-      ...prev, 
-      permanentlySilencedProducts: silencedProducts 
-    }));
+    const updatedSettings = { 
+      ...settings, 
+      permanentlySilencedProducts: silencedProducts,
+      lastSavedAt: new Date().toISOString()
+    };
+    
+    setSettings(updatedSettings);
+    
+    try {
+      await saveSettingsToDatabase(updatedSettings);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
     
     toast({
       title: "تم إلغاء الإسكات",
@@ -113,11 +124,20 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
     });
   };
 
-  const clearAllSilencedProducts = () => {
-    setSettings(prev => ({ 
-      ...prev, 
-      permanentlySilencedProducts: [] 
-    }));
+  const clearAllSilencedProducts = async () => {
+    const updatedSettings = { 
+      ...settings, 
+      permanentlySilencedProducts: [],
+      lastSavedAt: new Date().toISOString()
+    };
+    
+    setSettings(updatedSettings);
+    
+    try {
+      await saveSettingsToDatabase(updatedSettings);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    }
     
     toast({
       title: "تم إلغاء جميع الإسكاتات",
