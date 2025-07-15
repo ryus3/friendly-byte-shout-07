@@ -221,60 +221,51 @@ const SettingsPage = () => {
             description="تقارير مالية متقدمة، إحصائيات شاملة، وربط مع الأنظمة الخارجية"
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 gap-6 mb-8">
             <ModernCard
               icon={FileText}
-              title="تقارير المبيعات والأرباح"
-              description="تقارير مفصلة للمبيعات اليومية والشهرية مع تحليل الأرباح"
-              iconColor="from-blue-500 to-blue-600"
+              title="إدارة التقارير والإحصائيات"
+              description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
+              iconColor="from-gradient-start to-gradient-end"
               onClick={() => setIsReportsOpen(true)}
             >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">مبيعات اليوم</span>
-                  <span className="font-bold text-blue-600">{settings?.todayRevenue?.toLocaleString() || '0'} د.ع</span>
+              <div className="space-y-4 mt-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                    <div className="text-2xl font-bold text-blue-600">{settings?.todayRevenue?.toLocaleString() || '0'}</div>
+                    <div className="text-xs text-muted-foreground">مبيعات اليوم (د.ع)</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                    <div className="text-2xl font-bold text-green-600">{settings?.monthRevenue?.toLocaleString() || '0'}</div>
+                    <div className="text-xs text-muted-foreground">إجمالي الشهر (د.ع)</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30">
+                    <div className="text-2xl font-bold text-purple-600">{settings?.activeProducts || '0'}</div>
+                    <div className="text-xs text-muted-foreground">المنتجات الفعالة</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
+                    <div className="text-2xl font-bold text-orange-600">{settings?.avgOrders || '0'}</div>
+                    <div className="text-xs text-muted-foreground">متوسط الطلبات/يوم</div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">إجمالي الشهر</span>
-                  <span className="font-bold text-green-600">{settings?.monthRevenue?.toLocaleString() || '0'} د.ع</span>
-                </div>
-              </div>
-            </ModernCard>
-
-            <ModernCard
-              icon={BarChart}
-              title="تحليل الجرد والمخزون"
-              description="تقارير شاملة للمخزون والحركة والتنبيهات"
-              iconColor="from-purple-500 to-purple-600"
-              onClick={() => setIsReportsOpen(true)}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">المنتجات الفعالة</span>
-                  <span className="font-bold text-purple-600">{settings?.activeProducts || '0'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">تحت الحد الأدنى</span>
-                  <span className="font-bold text-red-600">{settings?.lowStockItems || '0'}</span>
-                </div>
-              </div>
-            </ModernCard>
-
-            <ModernCard
-              icon={TrendingUp}
-              title="إحصائيات الأداء"
-              description="مؤشرات الأداء الرئيسية وتحليل الاتجاهات"
-              iconColor="from-emerald-500 to-emerald-600"
-              onClick={() => setIsReportsOpen(true)}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">معدل النمو</span>
-                  <span className="font-bold text-emerald-600">+{settings?.growthRate || '0'}%</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">متوسط الطلبات</span>
-                  <span className="font-bold text-orange-600">{settings?.avgOrders || '0'}/يوم</span>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/50">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Printer className="w-4 h-4 text-blue-500" />
+                    <span>طباعة مباشرة</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Download className="w-4 h-4 text-green-500" />
+                    <span>تصدير PDF</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="w-4 h-4 text-purple-500" />
+                    <span>إرسال بالإيميل</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <RefreshCw className="w-4 h-4 text-orange-500" />
+                    <span>تقارير تلقائية</span>
+                  </div>
                 </div>
               </div>
             </ModernCard>
