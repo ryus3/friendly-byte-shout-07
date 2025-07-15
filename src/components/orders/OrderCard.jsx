@@ -11,7 +11,8 @@ import {
   AlertCircle, 
   CheckCircle, 
   XCircle,
-  RotateCcw
+  RotateCcw,
+  PackageCheck
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -24,7 +25,8 @@ const OrderCard = ({
   isSelected, 
   onUpdateStatus, 
   onDeleteOrder, 
-  onEditOrder 
+  onEditOrder,
+  onReceiveReturn 
 }) => {
   const { hasPermission } = useAuth();
   
@@ -54,12 +56,17 @@ const OrderCard = ({
       'returned': { 
         label: 'راجع', 
         icon: RotateCcw,
-        color: 'bg-gray-50 text-gray-700 border-gray-200'
+        color: 'bg-orange-50 text-orange-700 border-orange-200'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
         color: 'bg-red-50 text-red-700 border-red-200'
+      },
+      'return_received': { 
+        label: 'مستلم الراجع', 
+        icon: PackageCheck,
+        color: 'bg-purple-50 text-purple-700 border-purple-200'
       }
     };
     return configs[status] || configs['pending'];
@@ -260,7 +267,20 @@ const OrderCard = ({
                     <RotateCcw className="h-4 w-4" />
                     <span>راجع</span>
                   </Button>
-                </>
+                  </>
+              )}
+
+              {/* استلام الراجع */}
+              {order.status === 'returned' && hasPermission('manage_inventory') && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => onReceiveReturn?.(order)}
+                  className="flex items-center space-x-1 rtl:space-x-reverse bg-purple-600 hover:bg-purple-700"
+                >
+                  <PackageCheck className="h-4 w-4" />
+                  <span>استلام الراجع</span>
+                </Button>
               )}
             </div>
 

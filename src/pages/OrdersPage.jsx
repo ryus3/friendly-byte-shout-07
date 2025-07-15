@@ -22,6 +22,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 
 
 const OrdersPage = () => {
@@ -40,6 +41,7 @@ const OrdersPage = () => {
     aiManager: false,
     deleteAlert: false,
     archiveAlert: false,
+    returnReceipt: false,
   });
   const [syncing, setSyncing] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -220,6 +222,11 @@ const OrdersPage = () => {
     setFilters(prev => ({...prev, ...newFilters }));
   }, []);
 
+  const handleReceiveReturn = useCallback((order) => {
+    setSelectedOrder(order);
+    setDialogs(d => ({ ...d, returnReceipt: true }));
+  }, []);
+
   const profitsPagePath = '/profits-summary';
 
   return (
@@ -308,6 +315,7 @@ const OrdersPage = () => {
           onViewOrder={handleViewOrder}
           onEditOrder={handleEditOrder}
           onUpdateStatus={handleUpdateOrderStatus}
+          onReceiveReturn={handleReceiveReturn}
           selectedOrders={selectedOrders}
           setSelectedOrders={setSelectedOrders}
           onDeleteOrder={handleDeleteSelected}
@@ -378,6 +386,20 @@ const OrdersPage = () => {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <ReturnReceiptDialog
+          open={dialogs.returnReceipt}
+          onClose={() => setDialogs(d => ({ ...d, returnReceipt: false }))}
+          order={selectedOrder}
+          onSuccess={async () => {
+            await refetchProducts();
+            toast({
+              title: "تم استلام الراجع",
+              description: "تم إرجاع المنتجات إلى المخزون بنجاح",
+              variant: "success"
+            });
+          }}
+        />
 
       </div>
     </>

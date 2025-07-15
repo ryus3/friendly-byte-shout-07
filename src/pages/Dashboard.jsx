@@ -96,6 +96,7 @@ const Dashboard = () => {
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
         try {
+            console.log('جاري جلب بيانات الأرباح...');
             const { data: profitsData, error } = await supabase
                 .from('profits')
                 .select(`
@@ -114,17 +115,22 @@ const Dashboard = () => {
                 .order('created_at', { ascending: false });
 
             if (error) {
-                console.error('Error fetching profits:', error);
+                console.error('خطأ في جلب الأرباح:', error);
                 return { pending: [], settled: [] };
             }
 
+            console.log('بيانات الأرباح المجلبة:', profitsData);
+            
             const pending = profitsData?.filter(p => p.status === 'pending') || [];
             const settled = profitsData?.filter(p => p.status === 'settled') || [];
+
+            console.log('الأرباح المعلقة:', pending);
+            console.log('الأرباح المستلمة:', settled);
 
             setProfitsData({ pending, settled });
             return { pending, settled };
         } catch (error) {
-            console.error('Error in fetchProfitsData:', error);
+            console.error('خطأ في fetchProfitsData:', error);
             return { pending: [], settled: [] };
         }
     }, []);
@@ -250,6 +256,8 @@ const Dashboard = () => {
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !allUsers) return {};
 
+        console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
+
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         const deliveredOrders = (orders || []).filter(o => o.status === 'delivered');
         
@@ -257,11 +265,17 @@ const Dashboard = () => {
         let pendingProfits = profitsData.pending || [];
         let settledProfits = profitsData.settled || [];
         
+        console.log('الأرباح المعلقة الأولية:', pendingProfits);
+        console.log('المستخدم الحالي:', user.id);
+        console.log('صلاحية view_all_orders:', hasPermission('view_all_orders'));
+        
         // إذا لم يكن لديه صلاحية رؤية كل الأرباح، فلتر حسب المستخدم
         if (!hasPermission('view_all_orders')) {
             pendingProfits = pendingProfits.filter(p => p.employee_id === user.id);
             settledProfits = settledProfits.filter(p => p.employee_id === user.id);
         }
+        
+        console.log('الأرباح المعلقة بعد الفلترة:', pendingProfits);
         
         // حساب الأرباح المعلقة لفترة معينة
         const filteredPendingProfits = pendingProfits.filter(p => {
@@ -271,7 +285,11 @@ const Dashboard = () => {
                    (!dateRange.to || profitDate <= dateRange.to);
         });
         
+        console.log('الأرباح المعلقة بعد فلتر التاريخ:', filteredPendingProfits);
+        
         const pendingProfit = filteredPendingProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        
+        console.log('مجموع الأرباح المعلقة:', pendingProfit);
         
         // حساب المبيعات المستلمة (بدون رسوم التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
@@ -282,7 +300,7 @@ const Dashboard = () => {
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
-        return {
+        const result = {
             totalOrdersCount: filteredTotalOrders.length,
             netProfit: financialSummary.netProfit,
             pendingProfit,
@@ -295,6 +313,10 @@ const Dashboard = () => {
             topProvinces: getTopProvinces(visibleOrders),
             topProducts: getTopProducts(visibleOrders),
         };
+        
+        console.log('النتيجة النهائية للدالشبورد:', result);
+        
+        return result;
     }, [visibleOrders, orders, allUsers, periods, user.id, hasPermission, calculateProfit, financialSummary, profitsData]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {

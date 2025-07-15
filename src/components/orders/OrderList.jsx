@@ -12,6 +12,7 @@ const OrderList = ({
   onViewOrder,
   onEditOrder,
   onUpdateStatus,
+  onReceiveReturn,
   selectedOrders = [],
   setSelectedOrders = () => {},
   onDeleteOrder,
@@ -51,6 +52,7 @@ const OrderList = ({
               order={order}
               onViewOrder={() => onViewOrder(order)}
               onEditOrder={() => onEditOrder && onEditOrder(order)}
+              onReceiveReturn={onReceiveReturn}
               isSelected={selectedOrders?.includes(order.id) ?? false}
               onSelect={() => handleSelect(order.id)}
               onUpdateStatus={onUpdateStatus}
