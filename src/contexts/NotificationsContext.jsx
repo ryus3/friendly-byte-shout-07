@@ -19,14 +19,24 @@ export const NotificationsProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user, hasPermission } = useAuth();
   
-    const fetchNotifications = useCallback(async () => {
+    // Cache management for data optimization
+    const [lastFetch, setLastFetch] = useState(0);
+    const CACHE_DURATION = 30000; // 30 seconds cache
+    
+    const fetchNotifications = useCallback(async (force = false) => {
         if (!user || !supabase) return;
+        
+        // Use cache to reduce data usage
+        const now = Date.now();
+        if (!force && (now - lastFetch) < CACHE_DURATION) {
+            return;
+        }
         
         let query = supabase
             .from('notifications')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(30); // Reduced limit to save data
 
         if (!hasPermission('view_all_notifications')) {
             query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,new_registration,low_stock,order_status_update_admin,new_order))`);
@@ -38,8 +48,9 @@ export const NotificationsProvider = ({ children }) => {
             console.error("Error fetching notifications:", error);
         } else {
             setNotifications(data || []);
+            setLastFetch(now);
         }
-    }, [user, hasPermission]);
+    }, [user, hasPermission, lastFetch]);
 
     useEffect(() => {
         fetchNotifications();
