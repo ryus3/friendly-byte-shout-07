@@ -16,6 +16,67 @@ export const NotificationsSystemProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // جلب الإشعارات من قاعدة البيانات
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        return;
+      }
+      
+      const formattedNotifications = data.map(n => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        target_user_id: n.user_id,
+        target_role: n.data?.target_role,
+        related_entity_type: n.data?.related_entity_type,
+        related_entity_id: n.data?.related_entity_id,
+        created_at: n.created_at,
+        read: n.is_read,
+        priority: n.priority || 'normal'
+      }));
+      
+      setNotifications(formattedNotifications);
+      setUnreadCount(formattedNotifications.filter(n => !n.read).length);
+      
+    } catch (error) {
+      console.error('Error in fetchNotifications:', error);
+    }
+  }, [user]);
+
+  // تفعيل Real-time للإشعارات
+  useEffect(() => {
+    if (!user) return;
+    
+    fetchNotifications();
+    
+    const notificationsChannel = supabase
+      .channel('notifications-realtime')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+        console.log('Notification change detected:', payload);
+        fetchNotifications(); // إعادة جلب الإشعارات عند حدوث تغيير
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationsChannel);
+    };
+  }, [user, fetchNotifications]);
+
   // إنشاء إشعار جديد
   const createNotification = useCallback(async (data) => {
     try {
