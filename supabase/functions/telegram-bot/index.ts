@@ -492,6 +492,7 @@ ${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.t
 ${employee?.full_name ? `<i>شكراً لك ${employee.full_name}! 🙏</i>` : ''}
     `);
 
+    console.log('Order creation result:', { orderId, error: null });
     return orderId;
   } catch (error) {
     console.error('Error processing order:', error);
@@ -662,15 +663,19 @@ serve(async (req) => {
     console.log('Received update:', JSON.stringify(update, null, 2));
 
     if (!update.message || !update.message.text) {
+      console.log('No message or text found in update');
       return new Response('OK', { status: 200 });
     }
 
     const chatId = update.message.chat.id;
     const text = update.message.text.trim();
     const userId = update.message.from.id;
+    
+    console.log(`Processing message from chatId: ${chatId}, text: "${text}"`);
 
     // التحقق من حالة المستخدم
     const employee = await getEmployeeByTelegramId(chatId);
+    console.log('Employee found:', employee);
 
     if (!employee) {
       // المستخدم غير مرتبط - التوجيه الذكي
@@ -899,12 +904,19 @@ ${employee.role === 'admin' ?
       
     } else {
       // Process order
+      console.log('Processing order for employee:', employee.employee_code);
       await processOrderText(text, chatId, employee.employee_code);
     }
 
-    return new Response('OK', { status: 200 });
+    return new Response('OK', { status: 200, headers: corsHeaders });
   } catch (error) {
     console.error('Error in webhook:', error);
-    return new Response('Error', { status: 500 });
+    console.error('Error details:', error.message, error.stack);
+    
+    // تأكد من إرجاع رد مناسب حتى لو حدث خطأ
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { 
+      status: 200, // استخدم 200 لأن التليغرام يحتاج ذلك
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 });
