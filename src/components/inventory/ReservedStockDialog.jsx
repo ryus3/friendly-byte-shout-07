@@ -96,18 +96,20 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                   <div className="border-t pt-3">
                     <p className="font-semibold text-base mb-2">المنتجات المحجوزة:</p>
                     <div className="space-y-2">
-                      {order.items.map(item => (
+                      {order.items && Array.isArray(order.items) ? order.items.map(item => (
                         <div key={item.id} className="flex items-center justify-between p-2 bg-secondary/50 rounded-md">
                           <div className="flex items-center gap-3">
-                            <img src={item.image} alt={item.productName} className="w-10 h-10 rounded-md object-cover"/>
+                            <img src={item.image || '/placeholder.png'} alt={item.productName || 'منتج'} className="w-10 h-10 rounded-md object-cover"/>
                             <div>
-                               <p className="font-semibold">{item.productName}</p>
-                               <p className="text-xs text-muted-foreground">{item.color} / {item.size}</p>
+                               <p className="font-semibold">{item.productName || 'منتج غير معروف'}</p>
+                               <p className="text-xs text-muted-foreground">{item.color || 'لون'} / {item.size || 'مقاس'}</p>
                             </div>
                           </div>
-                          <p className="font-bold">{item.quantity}x</p>
+                          <p className="font-bold">{item.quantity || 0}x</p>
                         </div>
-                      ))}
+                      )) : (
+                        <p className="text-muted-foreground text-sm">لا توجد عناصر للطلب</p>
+                      )}
                     </div>
                   </div>
                 </div>
