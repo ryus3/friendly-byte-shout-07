@@ -338,12 +338,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [formData.city_id, activePartner, waseetToken]);
   
+  // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك
   useEffect(() => {
     const safeCart = Array.isArray(cart) ? cart : [];
-    const quantityCount = safeCart.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = safeCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFeeAmount = settings?.deliveryFee || 5000;
-    const totalWithDelivery = subtotal + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+    const quantityCount = safeCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    const subtotal = safeCart.reduce((sum, item) => sum + (item.total || (item.price * item.quantity) || 0), 0);
+    
+    // حساب رسوم التوصيل بناءً على نوع الشريك
+    let deliveryFee = 0;
+    if (activePartner === 'local') {
+      // للتوصيل المحلي، أضف رسوم التوصيل
+      deliveryFee = settings?.deliveryFee || 0;
+    }
+    // للوسيط أو الشركات الأخرى، لا توجد رسوم إضافية
+    
+    const totalWithDelivery = subtotal + deliveryFee;
     
     const detailsString = safeCart
       .map(item => 
@@ -358,7 +367,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       price: totalWithDelivery > 0 ? totalWithDelivery : '',
       details: detailsString,
     }));
-  }, [cart, settings?.deliveryFee, formData.type]);
+  }, [cart, settings?.deliveryFee, activePartner]);
 
   const validateField = (name, value) => {
     let errorMsg = '';
