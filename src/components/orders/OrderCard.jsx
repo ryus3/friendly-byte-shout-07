@@ -87,21 +87,25 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
               {/* الصف الثالث - صور المنتجات */}
               <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden items-center">
                  <TooltipProvider>
-                   {(order.items || []).slice(0, 4).map((item, index) => (
-                     <Tooltip key={`${item.productId || item.product_id}-${index}`}>
-                       <TooltipTrigger asChild>
-                         <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
-                           <AvatarImage src={item.image} alt={item.productName || item.product_name} />
-                           <AvatarFallback>{(item.productName || item.product_name)?.charAt(0) || 'P'}</AvatarFallback>
-                         </Avatar>
-                       </TooltipTrigger>
-                       <TooltipContent><p>{item.productName || item.product_name} (x{item.quantity})</p></TooltipContent>
-                     </Tooltip>
-                   ))}
-                   {(order.items || []).length > 4 && (
+                   {(order.order_items || order.items || []).slice(0, 4).map((item, index) => {
+                     const productName = item.products?.name || item.product_name || item.productName || 'منتج غير معروف';
+                     const productImage = item.products?.images?.[0] || item.product_variants?.images?.[0] || item.image;
+                     return (
+                       <Tooltip key={`${item.product_id || item.productId}-${index}`}>
+                         <TooltipTrigger asChild>
+                           <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
+                             <AvatarImage src={productImage} alt={productName} />
+                             <AvatarFallback>{productName?.charAt(0) || 'P'}</AvatarFallback>
+                           </Avatar>
+                         </TooltipTrigger>
+                         <TooltipContent><p>{productName} (x{item.quantity})</p></TooltipContent>
+                       </Tooltip>
+                     );
+                   })}
+                   {(order.order_items || order.items || []).length > 4 && (
                      <Tooltip>
-                        <TooltipTrigger asChild><Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{(order.items || []).length - 4}</AvatarFallback></Avatar></TooltipTrigger>
-                        <TooltipContent><p>و {(order.items || []).length - 4} منتجات أخرى</p></TooltipContent>
+                        <TooltipTrigger asChild><Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{(order.order_items || order.items || []).length - 4}</AvatarFallback></Avatar></TooltipTrigger>
+                        <TooltipContent><p>و {(order.order_items || order.items || []).length - 4} منتجات أخرى</p></TooltipContent>
                      </Tooltip>
                    )}
                  </TooltipProvider>

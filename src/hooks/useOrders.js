@@ -191,14 +191,15 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       
       const orderData = {
         order_number: orderNumber,
-        customer_name: aiOrder.customer_name,
-        customer_phone: aiOrder.customer_phone,
-        customer_address: aiOrder.customer_address,
+        customer_name: aiOrder.customer_name || 'زبون غير معروف',
+        customer_phone: aiOrder.customer_phone || '',
+        customer_address: aiOrder.customer_address || 'لا يوجد عنوان',
         customer_city: aiOrder.customer_city || 'بغداد',
         customer_province: aiOrder.customer_province || 'بغداد',
-        total_amount: aiOrder.total_amount - deliveryFee, // المبلغ بدون أجرة التوصيل
-        final_amount: aiOrder.total_amount,
+        total_amount: (aiOrder.total_amount || 0) - deliveryFee,
+        final_amount: aiOrder.total_amount || 0,
         delivery_fee: deliveryFee,
+        discount: 0,
         status: 'processing',
         delivery_status: 'pending',
         payment_status: 'pending',
@@ -244,7 +245,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           const { error: stockError } = await supabase
             .from('inventory')
             .update({
-              reserved_quantity: supabase.raw('reserved_quantity + ?', [item.quantity || 1])
+              reserved_quantity: supabase.raw(`reserved_quantity + ${item.quantity || 1}`)
             })
             .eq('product_id', item.product_id)
             .eq('variant_id', item.variant_id || null);

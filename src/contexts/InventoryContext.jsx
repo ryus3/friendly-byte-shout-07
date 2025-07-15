@@ -127,7 +127,30 @@ export const InventoryProvider = ({ children }) => {
             seasons_occasions (id, name, type)
           )
         `).order('created_at', { ascending: false }),
-        supabase.from('orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('orders').select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            variant_id,
+            quantity,
+            unit_price,
+            total_price,
+            products (
+              id,
+              name,
+              images,
+              base_price
+            ),
+            product_variants (
+              id,
+              price,
+              images,
+              colors (name, hex_code),
+              sizes (name)
+            )
+          )
+        `).order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
         supabase.from('settings').select('*'),
         supabase.from('ai_orders').select('*').order('created_at', { ascending: false })
