@@ -194,7 +194,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         const products = line.split('+').map(p => p.trim());
         for (const product of products) {
           if (product) {
-            items.push(parseProduct(product));
+            items.push(await parseProduct(product));
           }
         }
         continue;
@@ -259,7 +259,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         // قد يكون منتج أو ملاحظة
         const isProduct = line.match(/[a-zA-Z\u0600-\u06FF]{2,}/); // يحتوي على حروف
         if (isProduct) {
-          items.push(parseProduct(line));
+          items.push(await parseProduct(line));
         } else {
           orderNotes += line + ' ';
         }
@@ -452,22 +452,34 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     const foundItemsCount = items.filter(item => item.product_name).length;
     const totalItemsCount = items.length;
     
+    // رسالة مختصرة ومفيدة
+    const itemsList = items.slice(0, 3).map(item => {
+      const itemTotal = (item.price || 0) * (item.quantity || 1);
+      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : '❌';
+      const productStatus = item.product_name ? '✅' : '⚠️';
+      return `${productStatus} ${item.product_name || item.name}${item.color ? ` ${item.color}` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
+    }).join('\n');
+    
+    // حساب إحصائيات سريعة
+    const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
+    const foundItemsCount = items.filter(item => item.product_name).length;
+    const totalItemsCount = items.length;
+    
     await sendTelegramMessage(chatId, `
-✅ <b>تم استلام الطلب بنجاح!</b>
+✅ <b>تم استلام الطلب!</b>
 
-🆔 <b>رقم الطلب:</b> <code>${orderId.toString().slice(-8)}</code>
+🆔 <b>رقم:</b> <code>${orderId.toString().slice(-8)}</code>
 👤 <b>الزبون:</b> ${customerName}
 📱 <b>الهاتف:</b> ${customerPhone || 'غير محدد'}
-${customerSecondaryPhone ? `📞 <b>هاتف ثانوي:</b> ${customerSecondaryPhone}` : ''}
-${deliveryIcon} <b>نوع التسليم:</b> ${deliveryType}
-${customerAddress ? `📍 <b>العنوان:</b> ${customerAddress}` : ''}
+${deliveryIcon} <b>التسليم:</b> ${deliveryType}
 
 📦 <b>المنتجات (${totalItemsCount}):</b>
 ${itemsList}
-${items.length > 5 ? `... و ${items.length - 5} منتجات أخرى` : ''}
+${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
 
 📊 <b>حالة المنتجات:</b>
-• تم العثور على: ${foundItemsCount}/${totalItemsCount} منتجات ✅
+• تم العثور على: ${foundItemsCount}/${totalItemsCount} منتجات ${foundItemsCount === totalItemsCount ? '✅' : '⚠️'}
 ${foundItemsCount < totalItemsCount ? `• غير موجود: ${totalItemsCount - foundItemsCount} منتجات ⚠️` : ''}
 
 💰 <b>تفاصيل السعر:</b>
@@ -475,13 +487,9 @@ ${foundItemsCount < totalItemsCount ? `• غير موجود: ${totalItemsCount 
 ${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.toLocaleString()} د.ع` : ''}
 • <b>المجموع المؤقت: ${totalPrice.toLocaleString()} د.ع</b>
 
-${foundItemsCount < totalItemsCount ? 
-  '⚠️ <b>تنبيه:</b> بعض المنتجات غير موجودة وستحتاج مراجعة الأسعار' : 
-  '✅ <b>جميع المنتجات موجودة في النظام</b>'}
-
 ⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
 
-<i>شكراً لك ${employee?.full_name}! 🙏</i>
+${employee?.full_name ? `<i>شكراً لك ${employee.full_name}! 🙏</i>` : ''}
     `);
 
     return orderId;
@@ -530,7 +538,7 @@ function levenshteinDistance(str1: string, str2: string): number {
   return matrix[str2.length][str1.length];
 }
 
-function parseProduct(productText: string) {
+async function parseProduct(productText: string) {
   const text = productText.trim();
   
   // استخراج الكمية

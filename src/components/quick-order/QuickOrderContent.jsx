@@ -18,10 +18,10 @@ import DeliveryStatusCard from './DeliveryStatusCard';
 import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.js';
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
-  const { createOrder, settings, cart, clearCart, addToCart } = useInventory();
+  const { createOrder, settings, cart, clearCart, addToCart, approveAiOrder } = useInventory();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken } = useAlWaseet();
   const [deliveryPartnerDialogOpen, setDeliveryPartnerDialogOpen] = useState(false);
@@ -137,9 +137,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   `)
                   .eq('id', item.product_id)
                   .eq('product_variants.id', item.variant_id)
-                  .single();
+                  .maybeSingle();
 
-                if (productData && productData.product_variants[0]) {
+                if (productData && productData.product_variants && productData.product_variants[0]) {
                   const variant = productData.product_variants[0];
                   const product = {
                     id: productData.id,
@@ -405,7 +405,67 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     e.preventDefault();
     if (!validateForm() || !isDeliveryPartnerSelected || isSubmittingState) return;
     setIsSubmitting(true);
+    
     try {
+      const deliveryFeeAmount = settings?.deliveryFee || 5000;
+      const finalTotal = subtotal - discount + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+      
+      const orderData = {
+        ...formData,
+        items: cart.map(item => ({
+          product_id: item.id,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.price * item.quantity
+        })),
+        total_amount: Math.round(finalTotal),
+        discount,
+        delivery_fee: formData.type === 'توصيل' ? deliveryFeeAmount : 0,
+        final_amount: Math.round(finalTotal),
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_address: formData.address,
+        customer_city: formData.city,
+        customer_province: formData.province,
+        notes: formData.notes,
+        payment_status: 'pending',
+        delivery_status: 'pending',
+        status: 'pending'
+      };
+
+      // إذا كان هذا تعديل على طلب ذكي، قم بالموافقة عليه وإنشاء طلب عادي
+      if (isDialog && aiOrderData) {
+        try {
+          const result = await createOrder(orderData);
+          if (result.success) {
+            // حذف الطلب الذكي بعد الموافقة عليه
+            await approveAiOrder(aiOrderData.id);
+            
+            toast({
+              title: "تم بنجاح!",
+              description: "تم إنشاء الطلب بنجاح من الطلب الذكي",
+              variant: "success",
+            });
+            
+            if (onOrderCreated) {
+              onOrderCreated();
+            }
+          } else {
+            throw new Error(result.message || 'فشل في إنشاء الطلب');
+          }
+        } catch (error) {
+          console.error('Error creating order from AI order:', error);
+          toast({
+            title: "خطأ",
+            description: error.message || "حدث خطأ أثناء إنشاء الطلب",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      // إنشاء طلب عادي - الكود الأصلي
       let trackingNumber = null;
       let orderStatus = 'pending';
       let qrLink = null;
