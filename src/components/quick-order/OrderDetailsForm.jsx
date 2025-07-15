@@ -55,7 +55,7 @@ const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProdu
         </div>
         <div className="space-y-2">
           <Label htmlFor="price">السعر مع التوصيل</Label>
-          <Input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required disabled={isSubmittingState} />
+          <Input type="number" id="price" name="price" value={formData.price} onChange={handleChange} required disabled={isSubmittingState} placeholder="يتم حساب السعر تلقائياً" />
         </div>
         <div className="space-y-2">
           <Label>حجم الطلب</Label>

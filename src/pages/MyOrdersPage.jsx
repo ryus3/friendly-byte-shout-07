@@ -21,7 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const MyOrdersPage = () => {
   const { user, hasPermission } = useAuth();
-  const { orders, loading, updateOrder, deleteOrders, refetchProducts } = useInventory();
+  const { orders, aiOrders, loading, updateOrder, deleteOrders, refetchProducts } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   
   const [filters, setFilters] = useState({
@@ -59,12 +59,14 @@ const MyOrdersPage = () => {
   }, [myOrders, filters]);
 
   const stats = useMemo(() => {
+    const aiOrdersCount = aiOrders ? aiOrders.length : 0;
     return {
       total: myOrders.length,
       active: myOrders.filter(o => !o.isArchived).length,
       archived: myOrders.filter(o => o.isArchived).length,
+      aiOrders: aiOrdersCount,
     };
-  }, [myOrders]);
+  }, [myOrders, aiOrders]);
   
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -189,7 +191,7 @@ const MyOrdersPage = () => {
                     <Archive className="w-4 h-4 ml-1" />
                     المؤرشفة ({stats.archived})
                   </TabsTrigger>
-                  <TabsTrigger value="all">الكل ({stats.total})</TabsTrigger>
+                  <TabsTrigger value="all">الكل ({stats.total + stats.aiOrders})</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>

@@ -208,6 +208,64 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [fetchInitialData, user]);
 
+  // Real-time subscriptions for AI orders and regular orders
+  useEffect(() => {
+    if (!user) return;
+
+    const ordersChannel = supabase
+      .channel('orders-changes')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          setOrders(prev => [payload.new, ...prev]);
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload) => {
+          setOrders(prev => prev.map(order => 
+            order.id === payload.new.id ? payload.new : order
+          ));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'orders' },
+        (payload) => {
+          setOrders(prev => prev.filter(order => order.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    const aiOrdersChannel = supabase
+      .channel('ai-orders-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'ai_orders' },
+        (payload) => {
+          setAiOrders(prev => [payload.new, ...prev]);
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ai_orders' },
+        (payload) => {
+          setAiOrders(prev => prev.map(order => 
+            order.id === payload.new.id ? payload.new : order
+          ));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'ai_orders' },
+        (payload) => {
+          setAiOrders(prev => prev.filter(order => order.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(aiOrdersChannel);
+    };
+  }, [user]);
+
   // فحص المخزون المنخفض والإشعار
   const checkLowStockNotifications = useCallback(async () => {
     if (!products || !notifyLowStock) return;

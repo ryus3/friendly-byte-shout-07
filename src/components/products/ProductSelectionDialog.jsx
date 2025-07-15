@@ -74,8 +74,9 @@ const ProductItem = ({ product, onSelect }) => {
       className="p-3 border rounded-lg"
     >
       <div className="flex items-center gap-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <img-replace src={product.image} alt={product.name} className="w-12 h-12 object-cover rounded-md" />
+        <img src={product.images?.[0] || '/default-product-image.jpg'} alt={product.name} className="w-12 h-12 object-cover rounded-md" />
         <h4 className="font-semibold flex-grow">{product.name}</h4>
+        <p className="text-sm text-muted-foreground">{product.base_price?.toLocaleString()} د.ع</p>
         <Button variant="ghost" size="icon">
           {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </Button>
@@ -119,8 +120,9 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
 
   const filteredProducts = useMemo(() => {
     return products.filter(p => 
-      p.is_visible &&
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+      p.is_active &&
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      p.variants && p.variants.length > 0
     );
   }, [products, searchTerm]);
 
@@ -132,12 +134,12 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
       productName: product.name,
       color: variant.color,
       size: variant.size,
-      price: variant.price,
-      costPrice: variant.cost_price,
+      price: variant.price || product.base_price || 0,
+      costPrice: variant.cost_price || product.cost_price || 0,
       quantity,
-      total: quantity * variant.price,
-      image: variant.image || product.image,
-      sku: variant.sku,
+      total: quantity * (variant.price || product.base_price || 0),
+      image: variant.images?.[0] || product.images?.[0] || '/default-product-image.jpg',
+      sku: variant.barcode || product.barcode,
       stock: variant.quantity,
     };
 
@@ -199,10 +201,10 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
                 {selectedItems.length > 0 ? (
                   selectedItems.map(item => (
                     <div key={item.id} className="flex items-center gap-3 p-2 bg-background rounded-md shadow-sm">
-                      <img-replace src={item.image} alt={item.productName} className="w-12 h-12 object-cover rounded" />
+                      <img src={item.image} alt={item.productName} className="w-12 h-12 object-cover rounded" />
                       <div className="flex-grow">
                         <p className="text-sm font-medium">{item.productName}</p>
-                        <p className="text-xs text-muted-foreground">{item.size}, {item.color} - {item.quantity}x</p>
+                        <p className="text-xs text-muted-foreground">{item.size}, {item.color} - {item.quantity}x - {item.total.toLocaleString()} د.ع</p>
                       </div>
                       <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => handleRemoveItem(item.id)}>
                         <X className="w-4 h-4 text-destructive" />
