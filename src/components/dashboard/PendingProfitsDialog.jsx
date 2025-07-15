@@ -1,187 +1,234 @@
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { DollarSign, Eye, CheckCircle } from 'lucide-react';
-import { format, parseISO, isValid } from 'date-fns';
+import { PackageCheck, DollarSign, Calendar, User, MapPin, Phone } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { useProfits } from '@/contexts/ProfitsContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/use-toast';
 
-const PendingProfitsDialog = ({ open, onClose, pendingProfits = [], orders = [] }) => {
-  const [selectedProfits, setSelectedProfits] = useState([]);
-  const { markInvoiceReceived } = useProfits();
-  const { hasPermission } = useAuth();
-  
-  const canMarkReceived = hasPermission('manage_profit_settlement');
+const PendingProfitsDialog = ({ 
+  open, 
+  onClose, 
+  pendingProfitOrders = [], 
+  onReceiveInvoices 
+}) => {
+  const [selectedOrders, setSelectedOrders] = useState([]);
 
-  const handleSelectProfit = (profitId) => {
-    setSelectedProfits(prev => 
-      prev.includes(profitId) 
-        ? prev.filter(id => id !== profitId)
-        : [...prev, profitId]
+  useEffect(() => {
+    if (!open) {
+      setSelectedOrders([]);
+    }
+  }, [open]);
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrders(prev => 
+      prev.includes(orderId) 
+        ? prev.filter(id => id !== orderId)
+        : [...prev, orderId]
     );
   };
 
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedProfits(pendingProfits.map(p => p.id));
+  const selectAllOrders = () => {
+    if (selectedOrders.length === pendingProfitOrders.length) {
+      setSelectedOrders([]);
     } else {
-      setSelectedProfits([]);
+      setSelectedOrders(pendingProfitOrders.map(o => o.id));
     }
   };
 
-  const handleMarkSelectedReceived = async () => {
-    try {
-      for (const profitId of selectedProfits) {
-        const profit = pendingProfits.find(p => p.id === profitId);
-        if (profit) {
-          await markInvoiceReceived(profit.order_id);
-        }
-      }
-      setSelectedProfits([]);
-      toast({
-        title: "تم الاستلام",
-        description: `تم تسجيل استلام ${selectedProfits.length} ربح بنجاح`,
-        variant: "success"
-      });
-      // إعادة تحميل البيانات لتحديث الأرقام
-      if (onClose) onClose();
-    } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "فشل في تسجيل الاستلام",
-        variant: "destructive"
-      });
+  const handleReceiveInvoices = () => {
+    if (selectedOrders.length > 0) {
+      onReceiveInvoices(selectedOrders);
+      onClose();
     }
   };
 
-  const getOrderDetails = (orderId) => {
-    return orders.find(o => o.id === orderId);
+  const calculateOrderProfit = (order) => {
+    return (order.items || []).reduce((sum, item) => {
+      const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+      return sum + profit;
+    }, 0);
   };
+
+  const totalPendingProfit = pendingProfitOrders.reduce((sum, order) => {
+    return sum + calculateOrderProfit(order);
+  }, 0);
+
+  const selectedOrdersProfit = pendingProfitOrders
+    .filter(order => selectedOrders.includes(order.id))
+    .reduce((sum, order) => sum + calculateOrderProfit(order), 0);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-full">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-yellow-500" />
-            الأرباح المعلقة ({pendingProfits.length})
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-4 border-b">
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <DollarSign className="h-6 w-6 text-orange-500" />
+            الأرباح المعلقة - طلبات محلية
           </DialogTitle>
-          <DialogDescription>
-            عرض تفصيلي للأرباح المعلقة مع إمكانية تسجيل الاستلام
-          </DialogDescription>
+          <div className="text-sm text-muted-foreground mt-2">
+            الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية
+          </div>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          {canMarkReceived && pendingProfits.length > 0 && (
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  checked={selectedProfits.length > 0 && selectedProfits.length === pendingProfits.length}
-                  onCheckedChange={handleSelectAll}
-                />
-                <span className="text-sm font-medium">
-                  تحديد الكل ({selectedProfits.length} محدد)
-                </span>
-              </div>
-              {selectedProfits.length > 0 && (
-                <Button 
-                  size="sm" 
-                  onClick={handleMarkSelectedReceived}
-                  className="flex items-center gap-2"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  تسجيل استلام المحدد
-                </Button>
-              )}
-            </div>
-          )}
 
-          <ScrollArea className="h-[400px]">
-            <div className="space-y-3">
-              {pendingProfits.length > 0 ? (
-                pendingProfits.map(profit => {
-                  const order = getOrderDetails(profit.order_id);
-                  const isSelected = selectedProfits.includes(profit.id);
-                  
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* إحصائيات سريعة */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 flex-shrink-0">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <PackageCheck className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
+                    <p className="text-lg font-semibold">{pendingProfitOrders.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">إجمالي الأرباح المعلقة</p>
+                    <p className="text-lg font-semibold">{totalPendingProfit.toLocaleString()} د.ع</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-orange-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">الأرباح المحددة</p>
+                    <p className="text-lg font-semibold">{selectedOrdersProfit.toLocaleString()} د.ع</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* أزرار التحكم */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-4 flex-shrink-0">
+            <Button 
+              onClick={selectAllOrders}
+              variant="outline"
+              className="flex-1 sm:flex-none"
+            >
+              {selectedOrders.length === pendingProfitOrders.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+            </Button>
+            
+            <Button 
+              onClick={handleReceiveInvoices}
+              disabled={selectedOrders.length === 0}
+              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+            >
+              استلام فواتير ({selectedOrders.length})
+            </Button>
+          </div>
+
+          {/* قائمة الطلبات */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="space-y-3 pr-2">
+              {pendingProfitOrders.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <PackageCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>لا توجد طلبات معلقة لاستلام فواتير</p>
+                </div>
+              ) : (
+                pendingProfitOrders.map((order) => {
+                  const orderProfit = calculateOrderProfit(order);
+                  const isSelected = selectedOrders.includes(order.id);
+
                   return (
                     <Card 
-                      key={profit.id} 
-                      className={`transition-all ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                      key={order.id} 
+                      className={`cursor-pointer transition-all hover:shadow-md ${
+                        isSelected ? 'ring-2 ring-primary bg-primary/5' : ''
+                      }`}
+                      onClick={() => toggleOrderSelection(order.id)}
                     >
                       <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3">
-                            {canMarkReceived && (
-                              <Checkbox
-                                className="mt-1"
-                                checked={isSelected}
-                                onCheckedChange={() => handleSelectProfit(profit.id)}
-                              />
-                            )}
-                            <div className="space-y-1">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            {/* معلومات الطلب الأساسية */}
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                              <Badge variant="outline" className="w-fit">
+                                {order.order_number}
+                              </Badge>
+                              <Badge variant="secondary" className="w-fit">
+                                مُوصل
+                              </Badge>
+                            </div>
+
+                            {/* معلومات العميل */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                               <div className="flex items-center gap-2">
-                                <span className="font-semibold">
-                                  {order?.tracking_number || 'غير محدد'}
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span>{order.customer_name}</span>
+                              </div>
+                              {order.customer_phone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-mono">{order.customer_phone}</span>
+                                </div>
+                              )}
+                              {order.customer_province && (
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                  <span>{order.customer_province}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span>
+                                  {format(parseISO(order.created_at), 'dd MMM yyyy', { locale: ar })}
                                 </span>
-                                <Badge variant="outline">
-                                  {order?.customer_name || 'زبون غير معروف'}
-                                </Badge>
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {profit.created_at && isValid(parseISO(profit.created_at)) ? 
-                                  format(parseISO(profit.created_at), 'd MMM yyyy', { locale: ar }) : 
-                                  'تاريخ غير محدد'
-                                }
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                إجمالي المبيعات: {profit.total_revenue?.toLocaleString() || 0} د.ع
                               </div>
                             </div>
                           </div>
-                          
-                          <div className="text-left">
-                            <div className="text-lg font-bold text-yellow-600">
-                              {(profit.employee_profit || 0).toLocaleString()} د.ع
+
+                          {/* الأرباح والمعلومات المالية */}
+                          <div className="flex flex-col items-end gap-2 min-w-fit">
+                            <div className="text-left">
+                              <p className="text-lg font-bold text-green-600">
+                                {orderProfit.toLocaleString()} د.ع
+                              </p>
+                              <p className="text-xs text-muted-foreground">ربح متوقع</p>
                             </div>
-                            <div className="text-xs text-muted-foreground">
-                              نسبة: {profit.employee_percentage || 0}%
+                            <div className="text-left">
+                              <p className="text-sm font-medium">
+                                {(order.total_amount || 0).toLocaleString()} د.ع
+                              </p>
+                              <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
                             </div>
-                            <Badge variant="warning" className="mt-1">
-                              معلق
-                            </Badge>
                           </div>
                         </div>
                       </CardContent>
                     </Card>
                   );
                 })
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  لا توجد أرباح معلقة حالياً
-                </div>
               )}
             </div>
           </ScrollArea>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            إغلاق
-          </Button>
-          <Button onClick={() => {
-            onClose();
-            // الانتقال إلى صفحة الأرباح
-            window.location.href = '/profits-summary?profitStatus=pending';
-          }}>
-            عرض كل التفاصيل
-          </Button>
-        </DialogFooter>
+        {/* تذييل النافذة */}
+        <div className="flex-shrink-0 pt-4 border-t">
+          <div className="flex justify-between items-center">
+            <Button variant="outline" onClick={onClose}>
+              إغلاق
+            </Button>
+            <div className="text-sm text-muted-foreground">
+              {selectedOrders.length} من {pendingProfitOrders.length} طلب محدد
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

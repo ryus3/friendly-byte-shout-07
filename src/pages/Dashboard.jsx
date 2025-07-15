@@ -28,6 +28,7 @@ import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { supabase } from '@/lib/customSupabaseClient';
+import { toast } from '@/components/ui/use-toast';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -218,7 +219,12 @@ const Dashboard = () => {
             return isValid(itemDate) && itemDate >= from && itemDate <= to;
         };
         
-        const deliveredOrders = (orders || []).filter(o => o.status === 'delivered' && filterByDate(o.updated_at || o.created_at));
+        // الطلبات المُوصلة التي تم استلام فواتيرها فقط لحساب صافي الأرباح الفعلية
+        const deliveredOrders = (orders || []).filter(o => 
+            o.status === 'delivered' && 
+            o.receipt_received === true && 
+            filterByDate(o.updated_at || o.created_at)
+        );
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
         // حساب إجمالي الإيرادات من final_amount (تتضمن رسوم التوصيل)
@@ -357,7 +363,7 @@ const Dashboard = () => {
             key: 'netProfit', title: 'صافي الارباح', value: dashboardData.netProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         hasPermission('view_profits') && {
-            key: 'pendingProfit', title: 'الأرباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => setIsReceiptReceiptOpen(true)
+            key: 'pendingProfit', title: 'الأرباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => setIsPendingProfitsOpen(true)
         },
         hasPermission('view_orders') && {
             key: 'deliveredSales', title: 'المبيعات المستلمة', value: dashboardData.deliveredSales, icon: CheckCircle, colors: ['purple-500', 'violet-500'], format: 'currency', currentPeriod: periods.deliveredSales, onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), onClick: () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales')
@@ -405,8 +411,38 @@ const Dashboard = () => {
                             // إعادة تحميل بيانات الأرباح بعد إغلاق الحوار
                             fetchProfitsData();
                         }}
-                        pendingProfits={dashboardData.pendingProfitOrders || []}
-                        orders={orders || []}
+                        pendingProfitOrders={dashboardData.pendingProfitOrders || []}
+                        onReceiveInvoices={async (orderIds) => {
+                            // استلام فواتير متعددة
+                            try {
+                                const { error } = await supabase
+                                    .from('orders')
+                                    .update({ 
+                                        receipt_received: true,
+                                        receipt_received_at: new Date().toISOString(),
+                                        receipt_received_by: user.id
+                                    })
+                                    .in('id', orderIds);
+                                
+                                if (error) throw error;
+                                
+                                // إعادة تحميل البيانات
+                                await fetchProfitsData();
+                                
+                                toast({
+                                    title: "تم استلام الفواتير",
+                                    description: `تم تسجيل استلام ${orderIds.length} فاتورة بنجاح`,
+                                    variant: "success"
+                                });
+                            } catch (error) {
+                                console.error('خطأ في استلام الفواتير:', error);
+                                toast({
+                                    title: "خطأ",
+                                    description: "فشل في تسجيل استلام الفواتير",
+                                    variant: "destructive"
+                                });
+                            }
+                        }}
                     />
                 )}
                 {isReceiptReceiptOpen && (
