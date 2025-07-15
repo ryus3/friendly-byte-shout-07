@@ -262,15 +262,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         .eq('order_id', orderId);
 
       for (const item of orderItems || []) {
-        // خصم من المخزون الفعلي وإلغاء الحجز
-        await supabase
-          .from('inventory')
-          .update({
-            quantity: supabase.raw('quantity - ?', [item.quantity]),
-            reserved_quantity: supabase.raw('reserved_quantity - ?', [item.quantity])
-          })
-          .eq('product_id', item.product_id)
-          .eq('variant_id', item.variant_id);
+        // خصم من المخزون الفعلي وإلغاء الحجز باستخدام RPC
+        const { error } = await supabase.rpc('finalize_stock_item', {
+          p_product_id: item.product_id,
+          p_variant_id: item.variant_id,
+          p_quantity: item.quantity
+        });
+          
+        if (error) {
+          console.error('Error updating inventory:', error);
+        }
       }
     } catch (error) {
       console.error('Error finalizing stock:', error);
@@ -286,14 +287,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         .eq('order_id', orderId);
 
       for (const item of orderItems || []) {
-        // إلغاء الحجز فقط
-        await supabase
-          .from('inventory')
-          .update({
-            reserved_quantity: supabase.raw('reserved_quantity - ?', [item.quantity])
-          })
-          .eq('product_id', item.product_id)
-          .eq('variant_id', item.variant_id);
+        // إلغاء الحجز فقط باستخدام RPC
+        const { error } = await supabase.rpc('release_stock_item', {
+          p_product_id: item.product_id,
+          p_variant_id: item.variant_id,
+          p_quantity: item.quantity
+        });
+          
+        if (error) {
+          console.error('Error releasing stock:', error);
+        }
       }
     } catch (error) {
       console.error('Error releasing stock:', error);
