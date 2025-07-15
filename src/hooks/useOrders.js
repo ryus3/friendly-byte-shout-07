@@ -11,11 +11,18 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
   };
 
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink = null, deliveryPartnerData = null) => {
+    // تحديد نوع الطلب بناءً على شريك التوصيل
+    const isLocalOrder = !deliveryPartnerData?.delivery_partner || deliveryPartnerData?.delivery_partner === 'محلي';
     let finalTrackingNumber = trackingNumber;
     
-    // إنشاء رقم تتبع إذا لم يكن متوفراً (للطلبات المحلية)
-    if (!finalTrackingNumber || finalTrackingNumber === 'null' || finalTrackingNumber === 'undefined') {
+    // إنشاء رقم تتبع للطلبات المحلية فقط
+    if (isLocalOrder && (!finalTrackingNumber || finalTrackingNumber === 'null' || finalTrackingNumber === 'undefined')) {
       finalTrackingNumber = generateTrackingNumber();
+    }
+    
+    // للطلبات الخارجية، يجب أن يكون رقم التتبع موجود
+    if (!isLocalOrder && (!finalTrackingNumber || finalTrackingNumber === 'null' || finalTrackingNumber === 'undefined')) {
+      return { success: false, error: 'رقم التتبع مطلوب لطلبات شوكات التوصيل' };
     }
   
     // Generate order number
@@ -26,8 +33,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     }
 
     const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
-    const deliveryFee = deliveryPartnerData?.delivery_fee || 
-                        (deliveryPartnerData?.delivery_partner === 'محلي' ? (settings?.deliveryFee || 0) : 0);
+    const deliveryFee = isLocalOrder ? (settings?.deliveryFee || 0) : (deliveryPartnerData?.delivery_fee || 0);
     const total = subtotal - (discount || 0) + deliveryFee;
 
     const newOrder = {
@@ -45,7 +51,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       delivery_status: 'pending',
       payment_status: 'pending',
       tracking_number: finalTrackingNumber,
-      delivery_partner: deliveryPartnerData?.delivery_partner || (trackingNumber ? 'Al-Waseet' : 'محلي'),
+      delivery_partner: isLocalOrder ? 'محلي' : (deliveryPartnerData?.delivery_partner || 'Al-Waseet'),
       notes: customerInfo.notes,
       created_by: user?.user_id || user?.id,
     };

@@ -521,8 +521,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           qrLink = alWaseetResponse.qr_link;
           deliveryPartnerData = alWaseetResponse;
       } else if (activePartner === 'local') {
-          // إنشاء رقم تتبع للطلب المحلي
-          trackingNumber = `${settings?.sku_prefix || 'RYUS'}-${Date.now().toString().slice(-6)}`;
+          // للطلبات المحلية، سيتم إنشاء رقم التتبع في useOrders
+          trackingNumber = null;
       }
       
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
@@ -538,7 +538,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // إضافة معلومات شريك التوصيل للطلب
       const deliveryData = {
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
-        delivery_fee: activePartner === 'local' ? (settings?.deliveryFee || 0) : 0
+        delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0)
       };
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
