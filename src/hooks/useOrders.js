@@ -175,23 +175,27 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       // إنشاء طلب جديد في جدول الطلبات العادية
       const { data: orderNumber } = await supabase.rpc('generate_order_number');
       
+      // تحديد نوع التوصيل من بيانات الطلب الذكي
+      const isLocalDelivery = aiOrder.order_data?.delivery_type !== 'توصيل' || !aiOrder.customer_address;
+      const deliveryFee = isLocalDelivery ? 0 : (settings?.deliveryFee || 5000);
+      
       const orderData = {
         order_number: orderNumber,
         customer_name: aiOrder.customer_name,
         customer_phone: aiOrder.customer_phone,
         customer_address: aiOrder.customer_address,
-        customer_city: aiOrder.customer_address ? 'بغداد' : null, // افتراضي
-        customer_province: aiOrder.customer_address ? 'بغداد' : null, // افتراضي
-        total_amount: aiOrder.total_amount,
+        customer_city: aiOrder.customer_city || 'بغداد',
+        customer_province: aiOrder.customer_province || 'بغداد',
+        total_amount: aiOrder.total_amount - deliveryFee, // المبلغ بدون أجرة التوصيل
         final_amount: aiOrder.total_amount,
-        delivery_fee: aiOrder.customer_address ? (settings?.deliveryFee || 5000) : 0,
+        delivery_fee: deliveryFee,
         status: 'processing',
         delivery_status: 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
-        delivery_partner: aiOrder.customer_address ? 'محلي' : 'استلام محلي',
+        delivery_partner: isLocalDelivery ? 'محلي' : 'الوسيط',
         created_by: user?.id,
-        notes: `طلب مُحوَّل من الذكاء الاصطناعي - المصدر: ${aiOrder.source}`
+        notes: `طلب مُحوَّل من الذكاء الاصطناعي - المصدر: ${aiOrder.source}${aiOrder.order_data?.original_text ? '\nالنص الأصلي: ' + aiOrder.order_data.original_text : ''}`
       };
 
       const { data: newOrder, error: createError } = await supabase
@@ -202,15 +206,21 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       if (createError) throw createError;
 
-      // إنشاء عناصر الطلب
-      const orderItems = aiOrder.items.map(item => ({
-        order_id: newOrder.id,
-        product_id: item.product_id || null,
-        variant_id: item.variant_id || null,
-        quantity: item.quantity || 1,
-        unit_price: item.price || 0,
-        total_price: (item.price || 0) * (item.quantity || 1)
-      }));
+      // إنشاء عناصر الطلب مع التأكد من استخدام المنتج والمتغير الصحيح
+      const orderItems = [];
+      for (const item of aiOrder.items) {
+        // التأكد من أن المنتج والمتغير موجودان
+        if (item.product_id && item.variant_id) {
+          orderItems.push({
+            order_id: newOrder.id,
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            quantity: item.quantity || 1,
+            unit_price: item.price || 0,
+            total_price: (item.price || 0) * (item.quantity || 1)
+          });
+        }
+      }
 
       const { error: itemsError } = await supabase
         .from('order_items')
