@@ -14,8 +14,6 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const TelegramBotDialog = ({ open, onOpenChange }) => {
   const { user, allUsers } = useAuth();
-  const [botToken, setBotToken] = useState('');
-  const [isBotConnected, setIsBotConnected] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -52,36 +50,6 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
     });
   };
 
-  const connectBot = async () => {
-    if (!botToken.trim()) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إدخال رمز البوت",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // محاكاة ربط البوت
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setIsBotConnected(true);
-      toast({
-        title: "تم الربط!",
-        description: "تم ربط بوت التليغرام بنجاح",
-        variant: "success"
-      });
-    } catch (error) {
-      toast({
-        title: "خطأ",
-        description: "فشل في ربط البوت",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -97,59 +65,18 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* حالة البوت */}
-          <Card className={isBotConnected ? "bg-green-50 border-green-200" : "bg-orange-50 border-orange-200"}>
+          {/* معلومات البوت */}
+          <Card className="bg-green-50 border-green-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                {isBotConnected ? (
-                  <>
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="text-green-700">البوت متصل</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-5 h-5 text-orange-500" />
-                    <span className="text-orange-700">البوت غير متصل</span>
-                  </>
-                )}
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span className="text-green-700">بوت التليغرام جاهز</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {!isBotConnected ? (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bot-token">رمز البوت (Bot Token)</Label>
-                    <Input
-                      id="bot-token"
-                      type="password"
-                      value={botToken}
-                      onChange={(e) => setBotToken(e.target.value)}
-                      placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
-                      className="font-mono"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      احصل على الرمز من @BotFather في التليغرام
-                    </p>
-                  </div>
-                  <Button onClick={connectBot} disabled={isLoading} className="w-full">
-                    <Bot className="w-4 h-4 ml-2" />
-                    {isLoading ? 'جاري الربط...' : 'ربط البوت'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-green-700 text-sm">
-                    البوت متصل ويعمل بنجاح. يمكن للموظفين الآن استخدام رموزهم الخاصة.
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsBotConnected(false)}
-                    className="w-full"
-                  >
-                    قطع الاتصال
-                  </Button>
-                </div>
-              )}
+              <p className="text-green-700 text-sm">
+                البوت محفوظ في الخادم ويعمل تلقائياً. الموظفين يحتاجون فقط لإدخال رموزهم الخاصة.
+              </p>
             </CardContent>
           </Card>
 
