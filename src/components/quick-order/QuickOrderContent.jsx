@@ -272,20 +272,22 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     const quantityCount = cart.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFeeAmount = settings?.deliveryFee || 5000;
-    const totalWithDelivery = subtotal + deliveryFeeAmount;
+    const totalWithDelivery = subtotal + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
+    
     const detailsString = cart
       .map(item => 
         `${item.productName || ''} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`.trim().replace(/ +/g, ' ')
       )
+      .filter(detail => detail)
       .join(' + ');
-    
+
     setFormData(prev => ({
       ...prev, 
       quantity: quantityCount > 0 ? quantityCount : 1,
       price: totalWithDelivery > 0 ? totalWithDelivery : '',
       details: detailsString,
     }));
-  }, [cart, settings?.deliveryFee]);
+  }, [cart, settings?.deliveryFee, formData.type]);
 
   const validateField = (name, value) => {
     let errorMsg = '';

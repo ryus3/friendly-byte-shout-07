@@ -88,9 +88,13 @@ const RecentOrdersCard = ({ recentOrders }) => {
     return order.order_number || String(order.id || 0).padStart(4, '0');
   };
 
-  const getOrderProducts = (items) => {
+  const getOrderProducts = (order) => {
+    const items = order.order_items || [];
     if (!items || items.length === 0) return 'لا توجد منتجات';
-    if (items.length === 1) return items[0].name || 'منتج';
+    if (items.length === 1) {
+      const item = items[0];
+      return item.products?.name || item.productName || 'منتج';
+    }
     return `${items.length} منتجات متنوعة`;
   };
 
@@ -159,7 +163,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       <div className="flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-muted-foreground" />
                         <span className="text-sm font-medium text-foreground truncate max-w-[100px]">
-                          {order.customerinfo?.province || 'غير محدد'}
+                          {order.customer_city || order.customer_province || 'غير محدد'}
                         </span>
                       </div>
                       
@@ -181,16 +185,19 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       
                       <div className="h-3 w-px bg-border/50" />
                       
-                      <span className="text-xs text-muted-foreground truncate max-w-[80px]">
-                        {order.created_by_name || 'النظام'}
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <Package className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                          {getOrderProducts(order)}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Total Amount */}
                     <div className="flex items-center justify-end">
                       <div className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
                         <span className="font-bold text-sm text-primary">
-                          {(order.total || 0).toLocaleString()}
+                          {(order.final_amount || order.total_amount || 0).toLocaleString()}
                         </span>
                         <span className="text-xs text-primary/70">د.ع</span>
                       </div>
