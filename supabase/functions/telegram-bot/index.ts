@@ -545,7 +545,7 @@ async function parseProduct(productText: string) {
   }
   
   // جلب المقاسات المتاحة من قاعدة البيانات
-  const { data: sizesData } = await supabase.from('sizes').select('name').eq('is_active', true) || {};
+  const { data: sizesData } = await supabase.from('sizes').select('name') || {};
   const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name.toUpperCase()) : [];
   
   // استخراج المقاس مع دعم المقاسات من قاعدة البيانات
@@ -566,7 +566,7 @@ async function parseProduct(productText: string) {
   }
   
   // جلب الألوان من قاعدة البيانات
-  const { data: colorsData } = await supabase.from('colors').select('name').eq('is_active', true) || {};
+  const { data: colorsData } = await supabase.from('colors').select('name') || {};
   const dbColors = Array.isArray(colorsData) ? colorsData.map(c => c.name) : [];
   
   // استخراج اللون - قائمة ديناميكية من قاعدة البيانات + ألوان أساسية
