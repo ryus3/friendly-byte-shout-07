@@ -635,12 +635,12 @@ const SettingsPage = () => {
             </>
           )}
 
-          {/* Notifications Settings Row */}
+          {/* Notifications and Sounds - Single Card */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             <ModernCard
               icon={Bell}
-              title="إدارة الإشعارات"
-              description="تخصيص إشعارات النظام والتنبيهات وتنبيهات المخزون"
+              title="الإشعارات والأصوات"
+              description="تخصيص إشعارات النظام والأصوات والتنبيهات"
               iconColor="from-orange-500 to-orange-600"
               onClick={() => setIsNotificationSettingsOpen(true)}
             >
@@ -650,35 +650,20 @@ const SettingsPage = () => {
                     <p className="text-xs font-medium text-orange-600 dark:text-orange-400">إشعارات عامة</p>
                     <p className="text-xs text-orange-500 opacity-70">مفعلة</p>
                   </div>
-                  <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-                    <p className="text-xs font-medium text-red-600 dark:text-red-400">تنبيهات المخزون</p>
-                    <p className="text-xs text-red-500 opacity-70">ذكية</p>
+                  <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded border border-purple-200 dark:border-purple-800">
+                    <p className="text-xs font-medium text-purple-600 dark:text-purple-400">أصوات وتأثيرات</p>
+                    <p className="text-xs text-purple-500 opacity-70">مخصصة</p>
                   </div>
                 </div>
+                <div className="p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                  <p className="text-xs font-medium text-red-600 dark:text-red-400">تنبيهات المخزون المنخفض</p>
+                  <p className="text-xs text-red-500 opacity-70">تلقائية وذكية</p>
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  إدارة شاملة لجميع أنواع الإشعارات والتنبيهات
+                  إدارة شاملة للإشعارات والأصوات وتنبيهات المخزون
                 </div>
               </div>
             </ModernCard>
-
-            <ModernCard
-              icon={Volume2}
-              title="الأصوات والتأثيرات"
-              description="تخصيص أصوات الإشعارات والتأثيرات البصرية"
-              iconColor="from-purple-500 to-purple-600"
-              onClick={() => setIsNotificationSettingsOpen(true)}
-            >
-              <div className="space-y-3">
-                <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400">تأثيرات صوتية</p>
-                  <p className="text-xs text-purple-500 opacity-70">مخصصة ومتنوعة</p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  تحكم كامل في الأصوات والاهتزازات
-                </div>
-              </div>
-            </ModernCard>
-          </div>
 
           {/* Management Tools */}
           <SectionHeader 
@@ -705,28 +690,34 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
-          {/* System Tools Section */}
+          {/* System Tools Section - Clean Layout */}
           <SectionHeader 
             icon={SettingsIcon} 
-            title="أدوات النظام والبيانات"
-            description="أدوات النسخ الاحتياطي والتكامل وإدارة البيانات"
+            title="أدوات النظام"
+            description="أدوات النسخ الاحتياطي والذكاء الاصطناعي وإدارة البيانات"
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <ModernCard
               icon={Archive}
-              title="النسخ الاحتياطي"
-              description="نسخ احتياطية واستعادة البيانات"
+              title="النسخ الاحتياطي والاستعادة"
+              description="تصدير واستيراد البيانات مع نسخ احتياطية آمنة"
               iconColor="from-indigo-500 to-indigo-600"
               onClick={handleExportData}
             >
               <div className="space-y-3">
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                  <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400">نسخ تلقائية</p>
-                  <p className="text-xs text-indigo-500 opacity-70">JSON + تشفير</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded border border-indigo-200 dark:border-indigo-800">
+                    <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400">تصدير</p>
+                    <p className="text-xs text-indigo-500 opacity-70">JSON</p>
+                  </div>
+                  <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                    <p className="text-xs font-medium text-green-600 dark:text-green-400">استيراد</p>
+                    <p className="text-xs text-green-500 opacity-70">متعدد</p>
+                  </div>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  تحميل نسخة احتياطية شاملة من بياناتك
+                  إدارة شاملة للبيانات والنسخ الاحتياطية
                 </div>
               </div>
             </ModernCard>
@@ -748,54 +739,7 @@ const SettingsPage = () => {
                 </div>
               </div>
             </ModernCard>
-
-            <ModernCard
-              icon={Database}
-              title="إدارة البيانات"
-              description="استيراد وتصدير البيانات والتكامل"
-              iconColor="from-teal-500 to-teal-600"
-              onClick={handleImportData}
-            >
-              <div className="space-y-3">
-                <div className="p-3 bg-teal-50 dark:bg-teal-900/20 rounded-lg border border-teal-200 dark:border-teal-800">
-                  <p className="text-sm font-medium text-teal-600 dark:text-teal-400">تكامل ذكي</p>
-                  <p className="text-xs text-teal-500 opacity-70">استيراد + تصدير</p>
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  إدارة شاملة لبيانات النظام
-                </div>
-              </div>
-            </ModernCard>
           </div>
-
-          {/* Integration and Data Section */}
-          {hasPermission('manage_integrations') && (
-            <>
-              <SectionHeader 
-                icon={Database} 
-                title="التكامل وإدارة البيانات"
-                description="استيراد وتصدير البيانات والتكامل مع الأنظمة الخارجية"
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ModernCard
-                  icon={Upload}
-                  title="استيراد البيانات"
-                  description="استيراد البيانات من ملفات خارجية"
-                  iconColor="from-indigo-500 to-indigo-600"
-                  onClick={handleImportData}
-                />
-
-                <ModernCard
-                  icon={Download}
-                  title="تصدير البيانات"
-                  description="تصدير البيانات إلى ملفات Excel"
-                  iconColor="from-green-500 to-green-600"
-                  onClick={handleExportData}
-                />
-              </div>
-            </>
-          )}
         </div>
       </div>
 
