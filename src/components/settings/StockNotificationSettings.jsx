@@ -54,19 +54,32 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
 
   const saveSettingsToDatabase = async (settingsToSave) => {
     try {
-      const { error } = await supabase
+      // أولاً حاول التحديث
+      const { data, error: updateError } = await supabase
         .from('settings')
-        .upsert({
-          key: 'stock_notification_settings',
+        .update({ 
           value: settingsToSave,
-          description: 'إعدادات تنبيهات المخزون المحفوظة'
-        }, {
-          onConflict: 'key'
-        });
-      
-      if (error) {
-        console.error('Error saving settings:', error);
-        throw error;
+          description: 'إعدادات تنبيهات المخزون المحفوظة',
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'stock_notification_settings')
+        .select();
+
+      if (updateError) {
+        console.error('Update failed, trying insert:', updateError);
+        // إذا فشل التحديث، حاول الإدراج
+        const { error: insertError } = await supabase
+          .from('settings')
+          .insert({
+            key: 'stock_notification_settings',
+            value: settingsToSave,
+            description: 'إعدادات تنبيهات المخزون المحفوظة'
+          });
+
+        if (insertError) {
+          console.error('Insert also failed:', insertError);
+          throw insertError;
+        }
       }
       
       console.log('Settings saved successfully:', settingsToSave);
