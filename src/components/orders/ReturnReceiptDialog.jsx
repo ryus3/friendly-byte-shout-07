@@ -8,13 +8,14 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderItems, setOrderItems] = useState([]);
 
   const handleProcessReturn = async () => {
     try {
       setIsProcessing(true);
 
       // تحديث المخزون لكل منتج في الطلب
-      for (const item of order.items || []) {
+      for (const item of orderItems) {
         // إضافة الكمية المرجعة إلى المخزون
         const { error: inventoryError } = await supabase
           .rpc('update_reserved_stock', {
@@ -72,6 +73,41 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
     }
   };
 
+  // جلب تفاصيل المنتجات مع الألوان والأحجام
+  useEffect(() => {
+    const fetchOrderItems = async () => {
+      if (!order?.id) return;
+      
+      try {
+        const { data: items, error } = await supabase
+          .from('order_items')
+          .select(`
+            *,
+            products!inner(name),
+            product_variants(
+              id,
+              colors(name, hex_code),
+              sizes(name)
+            )
+          `)
+          .eq('order_id', order.id);
+
+        if (error) {
+          console.error('خطأ في جلب منتجات الطلب:', error);
+          return;
+        }
+
+        setOrderItems(items || []);
+      } catch (error) {
+        console.error('خطأ في جلب تفاصيل المنتجات:', error);
+      }
+    };
+
+    if (open && order?.id) {
+      fetchOrderItems();
+    }
+  }, [open, order?.id]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
@@ -99,10 +135,28 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
             <CardContent className="p-4">
               <h4 className="font-medium mb-3">منتجات الطلب:</h4>
               <div className="space-y-2">
-                {(order?.items || []).map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-muted rounded">
-                    <span>{item.name}</span>
-                    <span className="text-sm text-muted-foreground">الكمية: {item.quantity}</span>
+                {orderItems.map((item, index) => (
+                  <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
+                    <div className="flex-1">
+                      <div className="font-medium">{item.products?.name}</div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {item.product_variants?.colors?.name && (
+                          <span className="inline-flex items-center gap-1">
+                            <span 
+                              className="w-3 h-3 rounded-full border" 
+                              style={{ backgroundColor: item.product_variants.colors.hex_code }}
+                            ></span>
+                            {item.product_variants.colors.name}
+                          </span>
+                        )}
+                        {item.product_variants?.sizes?.name && (
+                          <span className="ml-2">• حجم: {item.product_variants.sizes.name}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-sm font-medium">
+                      الكمية: {item.quantity}
+                    </div>
                   </div>
                 ))}
               </div>
