@@ -439,25 +439,13 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
     // إرسال تأكيد مفصل ومحسن
     const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
-    const itemsList = items.slice(0, 5).map(item => {
-      const itemTotal = (item.price || 0) * (item.quantity || 1);
-      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : '❌ سعر غير محدد';
-      const productStatus = item.product_name ? '✅' : '⚠️';
-      return `${productStatus} ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
-    }).join('\n');
-    
-    // حساب إجمالي المنتجات ورسوم التوصيل منفصلة
-    const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-    const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
-    const foundItemsCount = items.filter(item => item.product_name).length;
-    const totalItemsCount = items.length;
     
     // رسالة مختصرة ومفيدة
     const itemsList = items.slice(0, 3).map(item => {
       const itemTotal = (item.price || 0) * (item.quantity || 1);
       const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : '❌';
       const productStatus = item.product_name ? '✅' : '⚠️';
-      return `${productStatus} ${item.product_name || item.name}${item.color ? ` ${item.color}` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
+      return `${productStatus} ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
     }).join('\n');
     
     // حساب إحصائيات سريعة
@@ -577,12 +565,9 @@ async function parseProduct(productText: string) {
     }
   }
   
-  // جلب الألوان والمقاسات من قاعدة البيانات
+  // جلب الألوان من قاعدة البيانات
   const { data: colorsData } = await supabase.from('colors').select('name').eq('is_active', true) || {};
-  const { data: sizesData } = await supabase.from('sizes').select('name').eq('is_active', true) || {};
-  
   const dbColors = Array.isArray(colorsData) ? colorsData.map(c => c.name) : [];
-  const dbSizes = Array.isArray(sizesData) ? sizesData.map(s => s.name) : [];
   
   // استخراج اللون - قائمة ديناميكية من قاعدة البيانات + ألوان أساسية
   const basicColors = [
@@ -659,6 +644,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🔴 Telegram webhook called!');
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
     const update: TelegramUpdate = await req.json();
     console.log('Received update:', JSON.stringify(update, null, 2));
 
