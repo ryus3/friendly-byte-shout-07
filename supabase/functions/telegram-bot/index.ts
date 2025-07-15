@@ -90,57 +90,110 @@ async function getEmployeeByTelegramId(chatId: number) {
 
 async function processOrderText(text: string, chatId: number, employeeCode: string) {
   try {
-    // نحاول استخراج معلومات الطلب من النص
     const lines = text.split('\n').filter(line => line.trim());
     
     let customerName = '';
     let customerPhone = '';
-    let customerAddress = '';
+    let customerSecondaryPhone = '';
     let items = [];
-    let total = 0;
+    let totalPrice = 0;
+    let hasCustomPrice = false;
     
-    let currentSection = '';
+    // الحصول على الاسم الافتراضي للموظف
+    const { data: employeeData } = await supabase
+      .from('profiles')
+      .select('default_customer_name')
+      .eq('user_id', (await supabase.rpc('get_employee_by_telegram_id', { p_telegram_chat_id: chatId })).data?.[0]?.user_id)
+      .single();
     
-    for (const line of lines) {
-      const lowerLine = line.toLowerCase().trim();
+    const defaultCustomerName = employeeData?.default_customer_name || 'زبون من التليغرام';
+    
+    // الحصول على رسوم التوصيل الافتراضية
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'delivery_fee')
+      .single();
+    
+    const defaultDeliveryFee = settingsData?.value?.fee || 5000;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
       
-      if (lowerLine.includes('اسم') || lowerLine.includes('زبون') || lowerLine.includes('عميل')) {
-        customerName = line.replace(/اسم|الزبون|العميل|:|=/g, '').trim();
-      } else if (lowerLine.includes('هاتف') || lowerLine.includes('رقم') || lowerLine.includes('موبايل')) {
-        customerPhone = line.replace(/هاتف|رقم|الموبايل|:|=/g, '').trim();
-      } else if (lowerLine.includes('عنوان') || lowerLine.includes('منطقة') || lowerLine.includes('محافظة')) {
-        customerAddress = line.replace(/عنوان|منطقة|المحافظة|:|=/g, '').trim();
-      } else if (lowerLine.includes('طلب') || lowerLine.includes('منتج') || lowerLine.includes('سلعة')) {
-        currentSection = 'items';
-      } else if (currentSection === 'items' && line.trim()) {
-        // محاولة استخراج اسم المنتج والكمية
-        const match = line.match(/(.+?)[\s]*[×x*]?[\s]*(\d+)/);
-        if (match) {
-          const productName = match[1].trim();
-          const quantity = parseInt(match[2]);
-          items.push({
-            name: productName,
-            quantity: quantity,
-            price: 0 // سيتم تحديده لاحقاً
-          });
-        } else {
-          items.push({
-            name: line.trim(),
-            quantity: 1,
-            price: 0
-          });
+      // التحقق من الأرقام (10-11 رقم)
+      const phoneRegex = /^0?\d{10,11}$/;
+      if (phoneRegex.test(line.replace(/[\s-]/g, ''))) {
+        const cleanPhone = line.replace(/[\s-]/g, '');
+        if (!customerPhone) {
+          customerPhone = cleanPhone;
+        } else if (!customerSecondaryPhone) {
+          customerSecondaryPhone = cleanPhone;
         }
-      } else if (lowerLine.includes('مجموع') || lowerLine.includes('إجمالي') || lowerLine.includes('total')) {
-        const priceMatch = line.match(/[\d,]+/);
-        if (priceMatch) {
-          total = parseInt(priceMatch[0].replace(/,/g, ''));
+        continue;
+      }
+      
+      // التحقق من السعر
+      const priceRegex = /([\d٠-٩]+)\s*([اﻻ]?لف|الف|ألف|k|K|000)?/;
+      const priceMatch = line.match(priceRegex);
+      if (priceMatch && (line.includes('الف') || line.includes('ألف') || line.includes('k') || line.includes('K') || /^\d+$/.test(line))) {
+        let price = parseInt(priceMatch[1].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()));
+        if (priceMatch[2]) {
+          if (priceMatch[2].includes('ف') || priceMatch[2].includes('k') || priceMatch[2].includes('K')) {
+            price *= 1000;
+          }
+        }
+        totalPrice = price;
+        hasCustomPrice = true;
+        continue;
+      }
+      
+      // التحقق من المنتجات (يدعم + للفصل)
+      if (line.includes('+')) {
+        const products = line.split('+').map(p => p.trim());
+        for (const product of products) {
+          if (product) {
+            items.push(parseProduct(product));
+          }
+        }
+        continue;
+      }
+      
+      // إذا لم يكن رقم أو سعر، فقد يكون اسم زبون أو منتج
+      if (i === 0 && !phoneRegex.test(line) && !priceMatch) {
+        // السطر الأول عادة اسم الزبون إذا لم يكن رقم
+        if (!line.match(/[a-zA-Z]{2,}/)) { // ليس اسم منتج إنجليزي
+          customerName = line;
+          continue;
         }
       }
+      
+      // وإلا فهو منتج
+      if (line && !customerName && i === 0) {
+        customerName = defaultCustomerName;
+      }
+      items.push(parseProduct(line));
     }
-
-    // إذا لم نجد اسم الزبون، نستخدم قيمة افتراضية
-    if (!customerName) {
-      customerName = 'زبون جديد من التليغرام';
+    
+    // تعيين القيم الافتراضية
+    if (!customerName) customerName = defaultCustomerName;
+    
+    // حساب السعر الافتراضي إذا لم يُحدد
+    if (!hasCustomPrice && items.length > 0) {
+      let calculatedPrice = 0;
+      for (const item of items) {
+        const { data: productData } = await supabase
+          .from('products')
+          .select('base_price, product_variants(price)')
+          .ilike('name', `%${item.name}%`)
+          .limit(1)
+          .single();
+        
+        if (productData) {
+          const price = productData.product_variants?.[0]?.price || productData.base_price || 0;
+          calculatedPrice += price * item.quantity;
+        }
+      }
+      totalPrice = calculatedPrice + defaultDeliveryFee;
     }
 
     // إنشاء الطلب الذكي
@@ -148,12 +201,14 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       p_order_data: {
         original_text: text,
         processed_at: new Date().toISOString(),
-        telegram_user_id: chatId
+        telegram_user_id: chatId,
+        employee_code: employeeCode,
+        parsing_method: 'advanced'
       },
       p_customer_name: customerName,
       p_customer_phone: customerPhone || null,
-      p_customer_address: customerAddress || null,
-      p_total_amount: total,
+      p_customer_address: customerSecondaryPhone ? `رقم ثانوي: ${customerSecondaryPhone}` : null,
+      p_total_amount: totalPrice,
       p_items: items,
       p_telegram_chat_id: chatId,
       p_employee_code: employeeCode
@@ -169,6 +224,52 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     console.error('Error processing order:', error);
     return false;
   }
+}
+
+function parseProduct(productText: string) {
+  const text = productText.trim();
+  
+  // استخراج الكمية
+  let quantity = 1;
+  const quantityMatch = text.match(/[×x*]\s*(\d+)|(\d+)\s*[×x*]/);
+  if (quantityMatch) {
+    quantity = parseInt(quantityMatch[1] || quantityMatch[2]);
+  }
+  
+  // استخراج المقاس
+  let size = '';
+  const sizeRegex = /\b(S|M|L|XL|XXL|s|m|l|xl|xxl|\d{2,3})\b/g;
+  const sizeMatch = text.match(sizeRegex);
+  if (sizeMatch) {
+    size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
+  }
+  
+  // استخراج اللون
+  const colors = ['أزرق', 'ازرق', 'blue', 'أصفر', 'اصفر', 'yellow', 'أحمر', 'احمر', 'red', 'أخضر', 'اخضر', 'green', 'أبيض', 'ابيض', 'white', 'أسود', 'اسود', 'black', 'بني', 'brown', 'رمادي', 'gray', 'grey', 'بنفسجي', 'purple', 'وردي', 'pink'];
+  let color = '';
+  
+  for (const c of colors) {
+    if (text.toLowerCase().includes(c.toLowerCase())) {
+      color = c;
+      break;
+    }
+  }
+  
+  // استخراج اسم المنتج (إزالة الكمية والمقاس واللون)
+  let productName = text
+    .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '')
+    .replace(/\b(S|M|L|XL|XXL|s|m|l|xl|xxl|\d{2,3})\b/gi, '')
+    .replace(/\b(أزرق|ازرق|blue|أصفر|اصفر|yellow|أحمر|احمر|red|أخضر|اخضر|green|أبيض|ابيض|white|أسود|اسود|black|بني|brown|رمادي|gray|grey|بنفسجي|purple|وردي|pink)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  return {
+    name: productName || text,
+    quantity: quantity,
+    size: size,
+    color: color,
+    price: 0 // سيتم حسابه لاحقاً
+  };
 }
 
 serve(async (req) => {
@@ -242,17 +343,23 @@ serve(async (req) => {
 يمكنك إرسال الطلبات بالتنسيق التالي:
 
 <b>📝 مثال على طلب:</b>
-اسم الزبون: سارة أحمد
-الهاتف: 07701234567
-العنوان: بصرة - العشار
-الطلب: فستان أحمر × 1
-الطلب: حقيبة سوداء × 2
-المجموع: 45000
+ريوس
+07728020024
+07710666830
+سوت شيك اصفر M + بنطلون أسود L
+50 الف
 
 <b>💡 نصائح:</b>
-• يمكنك إرسال الطلب بأي تنسيق مفهوم
-• البوت سيستخرج المعلومات تلقائياً
-• ستظهر الطلبات في نافذة "الطلبات الذكية" للمراجعة
+• إذا لم تكتب اسم الزبون سيستخدم الافتراضي
+• إذا لم تكتب السعر سيحسب تلقائياً
+• للمنتجات المتعددة استخدم + بينها
+• المقاسات: S, M, L, XL أو أرقام
+• الألوان: أزرق، أصفر، أحمر، إلخ
+
+<b>🚀 صيغ مدعومة:</b>
+• أحمد - 0771234567 - قميص أزرق M - 25 الف
+• 0771234567 + تيشيرت أحمر L + بنطلون أسود M
+• سارة \n 07712345678 \n فستان وردي S \n 40000
       `);
       return new Response('OK', { status: 200 });
     }
@@ -264,8 +371,8 @@ serve(async (req) => {
       await sendTelegramMessage(chatId, `
 ✅ <b>تم استلام الطلب بنجاح!</b>
 
-🆔 رقم الطلب: <code>${orderId}</code>
-👤 تم إرسال الطلب للمراجعة
+🆔 رقم الطلب: <code>${orderId.toString().slice(-8)}</code>
+⏳ <b>تم إرسال الطلب للمراجعة</b>
 
 سيتم إشعارك عند الموافقة على الطلب أو إذا كانت هناك أي ملاحظات.
 
@@ -275,13 +382,19 @@ serve(async (req) => {
       await sendTelegramMessage(chatId, `
 ❌ <b>خطأ في معالجة الطلب</b>
 
-يرجى التحقق من تنسيق الطلب والمحاولة مرة أخرى.
+يرجى التحقق من التنسيق والمحاولة مرة أخرى.
 
-<b>التنسيق المطلوب:</b>
-اسم الزبون: [الاسم]
-الهاتف: [الرقم]
-العنوان: [العنوان]
-الطلب: [اسم المنتج] × [الكمية]
+<b>✅ التنسيق الصحيح:</b>
+اسم الزبون (اختياري)
+رقم الهاتف (10-11 رقم)
+اسم المنتج + لون + مقاس
+السعر (اختياري)
+
+<b>📝 مثال:</b>
+ريوس
+07728020024
+سوت شيك اصفر M + بنطلون أسود L
+50 الف
       `);
     }
 
