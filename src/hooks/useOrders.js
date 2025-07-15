@@ -200,7 +200,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         final_amount: aiOrder.total_amount || 0,
         delivery_fee: deliveryFee,
         discount: 0,
-        status: 'processing',
+        status: 'pending', // قيد التجهيز وليس قيد المعالجة
         delivery_status: 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
@@ -219,17 +219,26 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       // إنشاء عناصر الطلب مع التأكد من استخدام المنتج والمتغير الصحيح
       const orderItems = [];
-      for (const item of aiOrder.items) {
+      for (const item of aiOrder.items || []) {
         // التأكد من أن المنتج والمتغير موجودان
         if (item.product_id && item.variant_id) {
-          orderItems.push({
-            order_id: newOrder.id,
-            product_id: item.product_id,
-            variant_id: item.variant_id,
-            quantity: item.quantity || 1,
-            unit_price: item.price || 0,
-            total_price: (item.price || 0) * (item.quantity || 1)
-          });
+          // التحقق من وجود المنتج في قاعدة البيانات
+          const { data: productExists } = await supabase
+            .from('products')
+            .select('id, name')
+            .eq('id', item.product_id)
+            .single();
+
+          if (productExists) {
+            orderItems.push({
+              order_id: newOrder.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              quantity: item.quantity || 1,
+              unit_price: item.price || 0,
+              total_price: (item.price || 0) * (item.quantity || 1)
+            });
+          }
         }
       }
 
@@ -239,19 +248,36 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       if (itemsError) throw itemsError;
 
-      // حجز المخزون للمنتجات
-      for (const item of aiOrder.items) {
+      // حجز المخزون للمنتجات بالطريقة الصحيحة
+      for (const item of aiOrder.items || []) {
         if (item.product_id) {
-          const { error: stockError } = await supabase
+          // البحث عن المخزون الحالي أولاً
+          const { data: currentInventory } = await supabase
             .from('inventory')
-            .update({
-              reserved_quantity: supabase.raw(`reserved_quantity + ${item.quantity || 1}`)
-            })
+            .select('reserved_quantity, quantity')
             .eq('product_id', item.product_id)
-            .eq('variant_id', item.variant_id || null);
+            .eq('variant_id', item.variant_id || null)
+            .single();
 
-          if (stockError) {
-            console.error('Error reserving stock:', stockError);
+          if (currentInventory) {
+            const newReservedQuantity = (currentInventory.reserved_quantity || 0) + (item.quantity || 1);
+            
+            // التحقق من أن المخزون المتاح كافي
+            if (newReservedQuantity <= currentInventory.quantity) {
+              const { error: stockError } = await supabase
+                .from('inventory')
+                .update({
+                  reserved_quantity: newReservedQuantity
+                })
+                .eq('product_id', item.product_id)
+                .eq('variant_id', item.variant_id || null);
+
+              if (stockError) {
+                console.error('Error reserving stock:', stockError);
+              }
+            } else {
+              console.warn(`المخزون غير كافي للمنتج ${item.product_id}، الكمية المطلوبة: ${item.quantity}, المخزون المتاح: ${currentInventory.quantity - currentInventory.reserved_quantity}`);
+            }
           }
         }
       }
@@ -259,8 +285,37 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       // إزالة من قائمة الطلبات الذكية
       setAiOrders(prev => prev.filter(o => o.id !== orderId));
       
-      // إضافة إلى قائمة الطلبات العادية
-      setOrders(prev => [...prev, { ...newOrder, items: orderItems }]);
+      // إضافة إلى قائمة الطلبات العادية مع تحميل البيانات المحدثة
+      const { data: fullOrderData } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            id,
+            product_id,
+            variant_id,
+            quantity,
+            unit_price,
+            total_price,
+            products (
+              id,
+              name,
+              images,
+              base_price
+            ),
+            product_variants (
+              id,
+              price,
+              images,
+              colors (name, hex_code),
+              sizes (name)
+            )
+          )
+        `)
+        .eq('id', newOrder.id)
+        .single();
+      
+      setOrders(prev => [fullOrderData || { ...newOrder, order_items: orderItems }, ...prev]);
       
       // إنشاء إشعار للموظف
       await supabase.from('notifications').insert({
