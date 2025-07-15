@@ -167,7 +167,7 @@ const Dashboard = () => {
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
         const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const cogs = deliveredOrders.reduce((sum, o) => sum + (o.items || []).reduce((itemSum, item) => itemSum + ((item.costPrice || 0) * item.quantity), 0), 0);
+        const cogs = deliveredOrders.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + ((item.costPrice || 0) * item.quantity), 0)), 0);
         const grossProfit = totalRevenue - cogs;
         const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
@@ -211,7 +211,7 @@ const Dashboard = () => {
           allPendingProfitOrders = allPendingProfitOrders.filter(o => o.created_by === user.id);
         }
         const pendingProfitOrders = filterOrdersByPeriod(allPendingProfitOrders, periods.pendingProfit);
-        const pendingProfit = pendingProfitOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + calculateProfit(i, o.created_by), 0), 0);
+        const pendingProfit = pendingProfitOrders.reduce((sum, o) => sum + ((o.items || []).reduce((s, i) => s + calculateProfit(i, o.created_by), 0)), 0);
         
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => sum + o.total, 0);
