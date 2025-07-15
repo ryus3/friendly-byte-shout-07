@@ -53,6 +53,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // ملء البيانات من الطلب الذكي عند وجوده
   useEffect(() => {
+    console.log('AI Order Data received:', aiOrderData);
     if (aiOrderData) {
       // Parse city and address intelligently
       const parseLocationData = (address, city) => {
@@ -204,7 +205,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
 
-  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.total, 0), [cart]);
+  const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
   const deliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);
   const total = useMemo(() => subtotal - discount, [subtotal, discount]);
   const priceWithDelivery = useMemo(() => total + deliveryFee, [total, deliveryFee]);
@@ -331,12 +332,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }, [formData.city_id, activePartner, waseetToken]);
   
   useEffect(() => {
-    const quantityCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const safeCart = Array.isArray(cart) ? cart : [];
+    const quantityCount = safeCart.reduce((sum, item) => sum + item.quantity, 0);
+    const subtotal = safeCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const deliveryFeeAmount = settings?.deliveryFee || 5000;
     const totalWithDelivery = subtotal + (formData.type === 'توصيل' ? deliveryFeeAmount : 0);
     
-    const detailsString = cart
+    const detailsString = safeCart
       .map(item => 
         `${item.productName || ''} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`.trim().replace(/ +/g, ' ')
       )
@@ -389,7 +391,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     else if (activePartner === 'alwaseet' && !formData.city_id) newErrors.city_id = 'الرجاء اختيار المدينة.';
     if (activePartner === 'local' && !formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
     else if (activePartner === 'alwaseet' && !formData.region_id) newErrors.region_id = 'الرجاء اختيار المنطقة.';
-    if (cart.length === 0) {
+    const safeCartForValidation = Array.isArray(cart) ? cart : [];
+    if (safeCartForValidation.length === 0) {
         toast({ title: "السلة فارغة", description: "الرجاء إضافة منتجات أولاً.", variant: "destructive" });
         return false;
     }
