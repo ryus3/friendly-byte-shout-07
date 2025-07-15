@@ -264,7 +264,7 @@ const NotificationsPage = () => {
                         )}
                       >
                         <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1">
+                          <div className="flex items-start gap-3 flex-1">
                             <div className="mt-1 flex-shrink-0">{iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}</div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
