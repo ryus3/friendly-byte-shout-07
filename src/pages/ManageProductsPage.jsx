@@ -12,7 +12,7 @@ import ManageProductListItem from '@/components/manage-products/ManageProductLis
 import ManageProductCard from '@/components/manage-products/ManageProductCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import PrintLabelsDialog from '@/components/manage-products/PrintLabelsDialog';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';

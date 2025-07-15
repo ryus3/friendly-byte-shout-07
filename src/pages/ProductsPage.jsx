@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { toast } from '@/components/ui/use-toast';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from './AuthContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
