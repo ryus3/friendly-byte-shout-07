@@ -12,7 +12,7 @@ import EditAiOrderDialog from './EditAiOrderDialog';
 import { useNotifications } from '@/contexts/NotificationsContext';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { aiOrders, approveAiOrder, deleteOrders } = useInventory();
   const { deleteNotificationByTypeAndData } = useNotifications();
   const [selectedOrders, setSelectedOrders] = React.useState([]);
@@ -42,6 +42,15 @@ const AiOrdersManager = ({ onClose }) => {
   };
 
   const handleBulkApprove = async () => {
+    if (!hasPermission('approve_orders')) {
+      toast({ 
+        title: "ليس لديك صلاحية", 
+        description: "ليس لديك صلاحية للموافقة على الطلبات", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     for (const orderId of selectedOrders) {
       await approveAiOrder(orderId);

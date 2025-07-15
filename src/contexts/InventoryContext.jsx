@@ -409,7 +409,7 @@ export const InventoryProvider = ({ children }) => {
 
   const value = {
     products, orders, aiOrders, purchases: [], loading, cart, settings, accounting,
-    setProducts,
+    setProducts, setOrders, setAiOrders,
     addProduct, updateProduct, deleteProducts, 
     addPurchase: () => {}, deletePurchase: () => {}, deletePurchases: () => {},
     createOrder: (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => createOrder(customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData),

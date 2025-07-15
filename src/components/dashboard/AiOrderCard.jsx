@@ -29,9 +29,25 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
             });
             return;
         }
+        
         setIsProcessing(true);
-        await approveAiOrder(order.id);
-        setIsProcessing(false);
+        try {
+            await approveAiOrder(order.id);
+            toast({ 
+                title: "نجاح", 
+                description: "تمت الموافقة على الطلب بنجاح", 
+                variant: "success" 
+            });
+        } catch (error) {
+            console.error('Error approving order:', error);
+            toast({ 
+                title: "خطأ", 
+                description: error.message || "فشل في الموافقة على الطلب", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsProcessing(false);
+        }
     }
 
     // تحديد نوع المصدر وأيقونته

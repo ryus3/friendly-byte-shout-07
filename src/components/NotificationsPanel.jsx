@@ -333,7 +333,7 @@ const NotificationsPanel = () => {
               onClick={() => navigate('/notifications')} 
               title="عرض كل الإشعارات"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <Eye className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 

@@ -169,9 +169,21 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       if (updateError) throw updateError;
 
-      // إزالة من قائمة الطلبات الذكية وإضافة للطلبات العادية
+      // إزالة من قائمة الطلبات الذكية
       setAiOrders(prev => prev.filter(o => o.id !== orderId));
       
+      // إنشاء إشعار للموظف
+      await supabase.from('notifications').insert({
+        type: 'order_approved',
+        title: 'تمت الموافقة على الطلب',
+        message: `تمت الموافقة على الطلب الذكي للعميل ${aiOrder.customer_name}`,
+        user_id: aiOrder.created_by,
+        data: {
+          order_id: orderId,
+          customer_name: aiOrder.customer_name
+        }
+      });
+
       toast({ title: "نجاح", description: "تمت الموافقة على الطلب وتحويله لقيد التجهيز." });
     } catch (error) {
       console.error('Error approving AI order:', error);
