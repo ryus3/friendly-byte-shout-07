@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { User, Phone, MapPin, Package, Edit, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
+import { User, Phone, MapPin, Package, Edit, Trash2, ShieldCheck, Loader2, MessageCircle, Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,24 +10,43 @@ import { toast } from '@/components/ui/use-toast';
 
 const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     const { approveAiOrder, deleteOrders } = useInventory();
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     const [isProcessing, setIsProcessing] = React.useState(false);
 
     const handleDelete = async () => {
         setIsProcessing(true);
         await deleteOrders([order.id], true);
         setIsProcessing(false);
+        toast({ title: "تم حذف الطلب الذكي", variant: "success" });
     }
 
     const handleApproveClick = async () => {
-        if (order.createdBy !== user.id) {
-            toast({ title: "غير مصرح", description: "يمكن فقط للموظف الذي أنشأ الطلب الموافقة عليه.", variant: 'destructive' });
+        if (!hasPermission('approve_orders')) {
+            toast({ 
+                title: "ليس لديك صلاحية", 
+                description: "ليس لديك صلاحية للموافقة على الطلبات", 
+                variant: "destructive" 
+            });
             return;
         }
         setIsProcessing(true);
         await approveAiOrder(order.id);
         setIsProcessing(false);
     }
+
+    // تحديد نوع المصدر وأيقونته
+    const getSourceInfo = (source) => {
+        switch (source) {
+            case 'telegram':
+                return { icon: MessageCircle, label: 'تليغرام', color: 'text-blue-500' };
+            case 'whatsapp':
+                return { icon: MessageCircle, label: 'واتساب', color: 'text-green-500' };
+            default:
+                return { icon: Bot, label: 'ذكي', color: 'text-purple-500' };
+        }
+    };
+
+    const sourceInfo = getSourceInfo(order.source);
 
     return (
         <motion.div
@@ -41,39 +60,73 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                         checked={isSelected}
                         onCheckedChange={onSelect}
                     />
-                    <div className="space-y-1">
-                        <h4 className="font-medium">طلب ذكي #{order.id?.slice(-6)}</h4>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Package className="w-4 h-4" />
-                            <span>{order.items?.length || 0} منتجات</span>
+                    <div className="flex items-center gap-2">
+                        <sourceInfo.icon className={`w-5 h-5 ${sourceInfo.color}`} />
+                        <div className="space-y-1">
+                            <h4 className="font-medium">{order.customer_name}</h4>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Package className="w-4 h-4" />
+                                <span>{order.items?.length || 0} منتجات</span>
+                                <Badge variant="outline" size="sm" className="ml-1">
+                                    {sourceInfo.label}
+                                </Badge>
+                            </div>
                         </div>
                     </div>
                 </div>
                 <Badge variant="secondary">
-                    ذكي
+                    {order.total_amount?.toLocaleString() || 0} د.ع
                 </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-muted-foreground" />
-                        <span>{order.customerInfo?.name || 'غير محدد'}</span>
+            <div className="space-y-2 text-sm">
+                {order.customer_phone && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Phone className="w-4 h-4" />
+                        {order.customer_phone}
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <span>{order.customerInfo?.phone || 'غير محدد'}</span>
+                )}
+                
+                {order.customer_address && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-4 h-4" />
+                        {order.customer_address}
                     </div>
-                </div>
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <span>{order.customerInfo?.address || 'غير محدد'}</span>
+                )}
+
+                {order.created_by && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <User className="w-4 h-4" />
+                        <span>بواسطة: {order.created_by}</span>
                     </div>
-                    <div className="text-lg font-medium text-primary">
-                        {order.total?.toLocaleString() || 0} د.ع.
+                )}
+
+                {order.items && order.items.length > 0 && (
+                    <div>
+                        <span className="font-medium">العناصر:</span>
+                        <div className="mt-1 space-y-1">
+                            {order.items.slice(0, 3).map((item, index) => (
+                                <div key={index} className="text-xs text-muted-foreground pl-4">
+                                    • {item.name} {item.quantity && `× ${item.quantity}`}
+                                </div>
+                            ))}
+                            {order.items.length > 3 && (
+                                <div className="text-xs text-muted-foreground pl-4">
+                                    ... و {order.items.length - 3} عناصر أخرى
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
+
+                {order.order_data?.original_text && (
+                    <div className="mt-2 p-2 bg-muted/50 rounded text-xs">
+                        <span className="font-medium">النص الأصلي:</span>
+                        <div className="mt-1 text-muted-foreground max-h-20 overflow-y-auto">
+                            {order.order_data.original_text}
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t">
@@ -101,7 +154,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                 <Button 
                     size="sm"
                     onClick={handleApproveClick}
-                    disabled={isProcessing || order.createdBy !== user.id}
+                    disabled={isProcessing}
                 >
                     {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
                     موافقة

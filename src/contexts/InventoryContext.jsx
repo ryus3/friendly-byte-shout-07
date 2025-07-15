@@ -130,7 +130,7 @@ export const InventoryProvider = ({ children }) => {
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
         supabase.from('settings').select('*').limit(1).maybeSingle(),
-        supabase.from('orders').select('*').eq('delivery_status', 'ai_pending').order('created_at', { ascending: false })
+        supabase.from('ai_orders').select('*').order('created_at', { ascending: false })
       ]);
 
       if (productsRes.error) throw productsRes.error;

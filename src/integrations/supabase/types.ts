@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_orders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_address: string | null
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          items: Json
+          order_data: Json
+          processed_at: string | null
+          processed_by: string | null
+          source: string
+          status: string
+          telegram_chat_id: number | null
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_address?: string | null
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          order_data: Json
+          processed_at?: string | null
+          processed_by?: string | null
+          source?: string
+          status?: string
+          telegram_chat_id?: number | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_address?: string | null
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          order_data?: Json
+          processed_at?: string | null
+          processed_by?: string | null
+          source?: string
+          status?: string
+          telegram_chat_id?: number | null
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -1128,12 +1182,38 @@ export type Database = {
         Args: { user_id_input: string; username_input: string }
         Returns: string
       }
+      get_employee_by_telegram_id: {
+        Args: { p_telegram_chat_id: number }
+        Returns: {
+          user_id: string
+          employee_code: string
+          full_name: string
+          role: string
+        }[]
+      }
       get_user_by_username: {
         Args: { username_input: string }
         Returns: {
           email: string
           user_id: string
         }[]
+      }
+      link_telegram_user: {
+        Args: { p_employee_code: string; p_telegram_chat_id: number }
+        Returns: boolean
+      }
+      process_telegram_order: {
+        Args: {
+          p_order_data: Json
+          p_customer_name: string
+          p_customer_phone?: string
+          p_customer_address?: string
+          p_total_amount?: number
+          p_items?: Json
+          p_telegram_chat_id?: number
+          p_employee_code?: string
+        }
+        Returns: string
       }
       username_exists: {
         Args: { p_username: string }

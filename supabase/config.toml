@@ -1,0 +1,15 @@
+project_id = "tkheostkubborwkwzugl"
+
+[auth]
+enabled = true
+site_url = "https://tkheostkubborwkwzugl.supabase.co"
+additional_redirect_urls = ["https://localhost:3000"]
+
+[db]
+port = 5432
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[storage]
+enabled = true
