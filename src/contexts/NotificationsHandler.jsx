@@ -54,7 +54,7 @@ const NotificationsHandler = () => {
             if (oldQty > lowStockThreshold && newQty <= lowStockThreshold && newQty > 0) {
                  addNotification({
                     type: 'low_stock',
-                    title: 'تنبيه مخزون منخفض ⚠️',
+                    title: 'تنبيه مخزون منخفض',
                     message: `مخزون المنتج ${payload.new.sku} منخفض (${newQty} قطعة فقط).`,
                     icon: 'AlertTriangle',
                     color: 'orange',
@@ -67,7 +67,7 @@ const NotificationsHandler = () => {
             if (oldQty > 0 && newQty === 0) {
                 addNotification({
                     type: 'out_of_stock',
-                    title: 'نفاد المخزون 🚨',
+                    title: 'نفاد المخزون',
                     message: `نفد مخزون المنتج ${payload.new.sku} تماماً!`,
                     icon: 'AlertTriangle',
                     color: 'red',

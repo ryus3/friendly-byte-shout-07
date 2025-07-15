@@ -284,7 +284,7 @@ const NotificationsPanel = () => {
                     exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                     className="relative group"
                   >
-                    <DropdownMenuItem 
+                    <div 
                       className={cn(
                         "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 my-1 rounded-lg border-r-4", 
                         colors.bg,
@@ -304,7 +304,7 @@ const NotificationsPanel = () => {
                       {!(notification.is_read || notification.read) && (
                         <div className="absolute top-1/2 -translate-y-1/2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                       )}
-                    </DropdownMenuItem>
+                    </div>
                      {!(notification.is_read || notification.read) && (
                       <div className="absolute top-1/2 -translate-y-1/2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button 

@@ -36,7 +36,7 @@ const StockMonitoringSystem = () => {
             
             addNotification({
               type: 'low_stock',
-              title: severity === 'critical' ? '🔴 تنبيه حرج: نفاد المخزون قريباً' : '🟡 تنبيه: مخزون منخفض',
+              title: severity === 'critical' ? 'تنبيه حرج: نفاد المخزون قريباً' : 'تنبيه: مخزون منخفض',
               message: `المنتج "${product.name}" (${variant.color} - ${variant.size}) متبقي ${currentStock} قطعة فقط`,
               icon: severity === 'critical' ? 'ShieldAlert' : 'AlertCircle',
               color: severity === 'critical' ? 'red' : 'amber',
@@ -58,7 +58,7 @@ const StockMonitoringSystem = () => {
             // إشعار toast فوري للحالات الحرجة فقط
             if (severity === 'critical') {
               toast({
-                title: "🔴 تنبيه حرج: نفاد المخزون",
+                title: "تنبيه حرج: نفاد المخزون",
                 description: `${product.name} (${variant.color} - ${variant.size}) متبقي ${currentStock} قطعة فقط!`,
                 variant: "destructive",
                 duration: 10000
@@ -77,7 +77,7 @@ const StockMonitoringSystem = () => {
             if (!lastOutOfStockNotified || (now - parseInt(lastOutOfStockNotified)) > oneHour) {
               addNotification({
                 type: 'out_of_stock',
-                title: '❌ نفاد المخزون',
+                title: 'نفاد المخزون',
                 message: `المنتج "${product.name}" (${variant.color} - ${variant.size}) نفد من المخزون`,
                 icon: 'ShieldAlert',
                 color: 'red',
@@ -137,7 +137,7 @@ const StockMonitoringSystem = () => {
   const notifyLowStockResolved = useCallback((productName, variantDetails, currentStock) => {
     addNotification({
       type: 'stock_resolved',
-      title: '✅ تم حل مشكلة المخزون المنخفض',
+      title: 'تم حل مشكلة المخزون المنخفض',
       message: `المنتج ${productName} (${variantDetails}) أصبح متوفراً بكمية ${currentStock} قطعة`,
       icon: 'Package',
       color: 'green',
