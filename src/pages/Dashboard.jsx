@@ -26,6 +26,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -90,6 +91,48 @@ const Dashboard = () => {
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
     const [isPendingProfitsOpen, setIsPendingProfitsOpen] = useState(false);
+    const [profitsData, setProfitsData] = useState({ pending: [], settled: [] });
+
+    // جلب بيانات الأرباح من قاعدة البيانات
+    const fetchProfitsData = useCallback(async () => {
+        try {
+            const { data: profitsData, error } = await supabase
+                .from('profits')
+                .select(`
+                    *,
+                    orders!inner (
+                        id,
+                        order_number,
+                        tracking_number,
+                        customer_name,
+                        status,
+                        created_at,
+                        total_amount,
+                        delivery_fee
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching profits:', error);
+                return { pending: [], settled: [] };
+            }
+
+            const pending = profitsData?.filter(p => p.status === 'pending') || [];
+            const settled = profitsData?.filter(p => p.status === 'settled') || [];
+
+            setProfitsData({ pending, settled });
+            return { pending, settled };
+        } catch (error) {
+            console.error('Error in fetchProfitsData:', error);
+            return { pending: [], settled: [] };
+        }
+    }, []);
+
+    // تحديث بيانات الأرباح عند تحميل الصفحة
+    useEffect(() => {
+        fetchProfitsData();
+    }, [fetchProfitsData]);
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
@@ -210,20 +253,14 @@ const Dashboard = () => {
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         const deliveredOrders = (orders || []).filter(o => o.status === 'delivered');
         
-        // حساب الأرباح المعلقة من جدول profits
-        let pendingProfits = [];
-        let settledProfits = [];
+        // حساب الأرباح المعلقة من جدول profits في قاعدة البيانات
+        let pendingProfits = profitsData.pending || [];
+        let settledProfits = profitsData.settled || [];
         
-        if (profits && profits.length > 0) {
-            // فلترة الأرباح المعلقة (الطلبات الواصلة ولم نستلم حسابها)
-            pendingProfits = profits.filter(p => p.status === 'pending');
-            settledProfits = profits.filter(p => p.status === 'settled');
-            
-            // إذا لم يكن لديه صلاحية رؤية كل الأرباح، فلتر حسب المستخدم
-            if (!hasPermission('view_all_orders')) {
-                pendingProfits = pendingProfits.filter(p => p.employee_id === user.id);
-                settledProfits = settledProfits.filter(p => p.employee_id === user.id);
-            }
+        // إذا لم يكن لديه صلاحية رؤية كل الأرباح، فلتر حسب المستخدم
+        if (!hasPermission('view_all_orders')) {
+            pendingProfits = pendingProfits.filter(p => p.employee_id === user.id);
+            settledProfits = settledProfits.filter(p => p.employee_id === user.id);
         }
         
         // حساب الأرباح المعلقة لفترة معينة
@@ -258,7 +295,7 @@ const Dashboard = () => {
             topProvinces: getTopProvinces(visibleOrders),
             topProducts: getTopProducts(visibleOrders),
         };
-    }, [visibleOrders, orders, allUsers, periods, user.id, hasPermission, calculateProfit, financialSummary, profits]);
+    }, [visibleOrders, orders, allUsers, periods, user.id, hasPermission, calculateProfit, financialSummary, profitsData]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
@@ -334,7 +371,11 @@ const Dashboard = () => {
                 {isPendingProfitsOpen && (
                     <PendingProfitsDialog
                         open={isPendingProfitsOpen}
-                        onClose={() => setIsPendingProfitsOpen(false)}
+                        onClose={() => {
+                            setIsPendingProfitsOpen(false);
+                            // إعادة تحميل بيانات الأرباح بعد إغلاق الحوار
+                            fetchProfitsData();
+                        }}
                         pendingProfits={dashboardData.pendingProfitOrders || []}
                         orders={orders || []}
                     />
