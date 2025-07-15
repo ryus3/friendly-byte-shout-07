@@ -67,7 +67,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         const { error: stockError } = await supabase.rpc('update_reserved_stock', {
           p_product_id: item.productId || item.id,
           p_quantity_change: item.quantity,
-          p_sku: item.variantId || item.sku
+          p_sku: item.variantId // استخدام variantId الذي هو UUID
         });
         
         if (stockError) {
@@ -90,7 +90,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           await supabase.rpc('update_reserved_stock', {
             p_product_id: item.productId || item.id,
             p_quantity_change: -item.quantity,
-            p_sku: item.variantId || item.sku
+            p_sku: item.variantId // استخدام variantId الذي هو UUID
           });
         }
         console.error('Error creating order:', orderError);
@@ -101,7 +101,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       const orderItems = cartItems.map(item => ({
         order_id: createdOrder.id,
         product_id: item.productId || item.id,
-        variant_id: item.variantId || item.sku,
+        variant_id: item.variantId, // استخدام variantId الذي هو UUID
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.quantity * item.price
@@ -119,7 +119,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           await supabase.rpc('update_reserved_stock', {
             p_product_id: item.productId || item.id,
             p_quantity_change: -item.quantity,
-            p_sku: item.variantId || item.sku
+            p_sku: item.variantId // استخدام variantId الذي هو UUID
           });
         }
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };

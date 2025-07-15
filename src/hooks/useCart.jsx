@@ -16,8 +16,9 @@ export const useCart = () => {
     }
 
     const cartItem = {
-      id: `${product.id}-${variant.sku}`,
+      id: `${product.id}-${variant.id || variant.sku}`,
       productId: product.id,
+      variantId: variant.id, // استخدام variant.id كـ UUID
       sku: variant.sku,
       productName: product.name,
       image: variant.image || product.images?.[0] || null,
