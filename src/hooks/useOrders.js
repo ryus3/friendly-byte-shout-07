@@ -65,15 +65,15 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       // حجز المخزون
       for (const item of cartItems) {
         const { error: stockError } = await supabase.rpc('update_reserved_stock', {
-          p_product_id: item.productId || item.id,
+          p_product_id: item.productId,
           p_quantity_change: item.quantity,
-          p_sku: item.variantId // استخدام variantId الذي هو UUID
+          p_sku: item.variantId
         });
         
         if (stockError) {
           console.error('Error reserving stock:', stockError);
           // في حالة فشل حجز المخزون، نرجع خطأ
-          return { success: false, error: `فشل في حجز المخزون للمنتج ${item.name}` };
+          return { success: false, error: `فشل في حجز المخزون للمنتج ${item.productName || 'غير محدد'}` };
         }
       }
 
@@ -88,9 +88,9 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         // إلغاء حجز المخزون في حالة فشل إنشاء الطلب
         for (const item of cartItems) {
           await supabase.rpc('update_reserved_stock', {
-            p_product_id: item.productId || item.id,
+            p_product_id: item.productId,
             p_quantity_change: -item.quantity,
-            p_sku: item.variantId // استخدام variantId الذي هو UUID
+            p_sku: item.variantId
           });
         }
         console.error('Error creating order:', orderError);
@@ -100,8 +100,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       // إنشاء عناصر الطلب
       const orderItems = cartItems.map(item => ({
         order_id: createdOrder.id,
-        product_id: item.productId || item.id,
-        variant_id: item.variantId, // استخدام variantId الذي هو UUID
+        product_id: item.productId,
+        variant_id: item.variantId,
         quantity: item.quantity,
         unit_price: item.price,
         total_price: item.quantity * item.price
@@ -117,9 +117,9 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         await supabase.from('orders').delete().eq('id', createdOrder.id);
         for (const item of cartItems) {
           await supabase.rpc('update_reserved_stock', {
-            p_product_id: item.productId || item.id,
+            p_product_id: item.productId,
             p_quantity_change: -item.quantity,
-            p_sku: item.variantId // استخدام variantId الذي هو UUID
+            p_sku: item.variantId
           });
         }
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
