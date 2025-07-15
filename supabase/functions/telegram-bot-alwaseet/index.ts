@@ -1,101 +1,111 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
-
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+import { serve } from "https://deno.land/std@0.208.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-// Get AlWaseet token from database
-async function getAlWaseetToken(): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('delivery_partner_tokens')
-      .select('token')
-      .eq('partner_name', 'alwaseet')
-      .eq('is_active', true)
-      .single();
-    
-    if (error || !data) {
-      console.log('No active AlWaseet token found');
-      return null;
-    }
-    
-    return data.token;
-  } catch (error) {
-    console.error('Error getting AlWaseet token:', error);
-    return null;
-  }
 }
 
-// Get cities from AlWaseet API
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+// Telegram Bot Token
+const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN')!
+
+interface TelegramMessage {
+  message_id: number
+  from: {
+    id: number
+    first_name: string
+    username?: string
+  }
+  chat: {
+    id: number
+    type: string
+  }
+  text: string
+  date: number
+}
+
+interface TelegramUpdate {
+  update_id: number
+  message?: TelegramMessage
+}
+
+// Send message to Telegram
+async function sendTelegramMessage(chatId: number, text: string) {
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML'
+    })
+  })
+  return response.json()
+}
+
+// Get cities from AlWaseet API (mock data for now)
 async function getCitiesFromAlWaseet(): Promise<any[]> {
-  try {
-    const token = await getAlWaseetToken();
-    if (!token) return [];
-
-    const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
-      body: {
-        endpoint: 'citys',
-        method: 'GET',
-        token: token
-      }
-    });
-
-    if (error || !data || data.errNum !== "S000") {
-      console.error('Error fetching cities from AlWaseet:', error || data);
-      return [];
-    }
-
-    return data.data || [];
-  } catch (error) {
-    console.error('Error in getCitiesFromAlWaseet:', error);
-    return [];
-  }
+  // Mock Iraqi cities - replace with actual AlWaseet API call when available
+  return [
+    { id: 1, name: 'بغداد' },
+    { id: 2, name: 'البصرة' },
+    { id: 3, name: 'أربيل' },
+    { id: 4, name: 'الموصل' },
+    { id: 5, name: 'كربلاء' },
+    { id: 6, name: 'النجف' },
+    { id: 7, name: 'بابل' },
+    { id: 8, name: 'ذي قار' },
+    { id: 9, name: 'ديالى' },
+    { id: 10, name: 'الأنبار' },
+    { id: 11, name: 'صلاح الدين' },
+    { id: 12, name: 'واسط' },
+    { id: 13, name: 'المثنى' },
+    { id: 14, name: 'القادسية' },
+    { id: 15, name: 'كركوك' },
+    { id: 16, name: 'دهوك' },
+    { id: 17, name: 'السليمانية' },
+    { id: 18, name: 'ميسان' }
+  ]
 }
 
-// Get regions by city from AlWaseet API
-async function getRegionsByCity(cityId: string): Promise<any[]> {
-  try {
-    const token = await getAlWaseetToken();
-    if (!token) return [];
-
-    const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
-      body: {
-        endpoint: 'regions',
-        method: 'GET',
-        token: token,
-        queryParams: { city_id: cityId }
-      }
-    });
-
-    if (error || !data || data.errNum !== "S000") {
-      console.error('Error fetching regions from AlWaseet:', error || data);
-      return [];
-    }
-
-    return data.data || [];
-  } catch (error) {
-    console.error('Error in getRegionsByCity:', error);
-    return [];
+// Get regions by city (mock data for now)
+async function getRegionsByCity(cityId: number): Promise<any[]> {
+  // Mock regions - replace with actual AlWaseet API call when available
+  const regions: { [key: number]: any[] } = {
+    1: [ // Baghdad
+      { id: 101, name: 'الكرخ' },
+      { id: 102, name: 'الرصافة' },
+      { id: 103, name: 'الكاظمية' },
+      { id: 104, name: 'الأعظمية' },
+      { id: 105, name: 'الصدر' },
+      { id: 106, name: 'الشعلة' }
+    ],
+    2: [ // Basra
+      { id: 201, name: 'البصرة القديمة' },
+      { id: 202, name: 'الهارثة' },
+      { id: 203, name: 'أبو الخصيب' }
+    ]
   }
+  return regions[cityId] || []
 }
 
-// Find city by name (case-insensitive and fuzzy matching)
+// Find city by name with intelligent matching
 async function findCityByName(cityName: string): Promise<any | null> {
-  const cities = await getCitiesFromAlWaseet();
-  const normalizedName = cityName.toLowerCase().trim();
+  const cities = await getCitiesFromAlWaseet()
+  const normalizedName = cityName.toLowerCase().trim()
   
-  // Direct match
+  // Direct match first
   let foundCity = cities.find(city => 
-    city.name.toLowerCase().includes(normalizedName) || 
+    city.name.toLowerCase() === normalizedName ||
+    city.name.toLowerCase().includes(normalizedName) ||
     normalizedName.includes(city.name.toLowerCase())
-  );
+  )
   
   // If not found, try common variations
   if (!foundCity) {
@@ -118,7 +128,7 @@ async function findCityByName(cityName: string): Promise<any | null> {
       'دهوك': ['دهوك', 'duhok'],
       'السليمانية': ['سليمانية', 'السليمانية', 'sulaymaniyah'],
       'ميسان': ['ميسان', 'العمارة', 'maysan']
-    };
+    }
     
     for (const [realCity, variants] of Object.entries(cityVariants)) {
       if (variants.some(variant => 
@@ -127,442 +137,438 @@ async function findCityByName(cityName: string): Promise<any | null> {
       )) {
         foundCity = cities.find(city => 
           city.name.toLowerCase().includes(realCity.toLowerCase())
-        );
-        if (foundCity) break;
+        )
+        if (foundCity) break
       }
     }
   }
   
-  return foundCity;
+  return foundCity
 }
 
 // Get default Baghdad city
 async function getBaghdadCity(): Promise<any | null> {
-  const cities = await getCitiesFromAlWaseet();
+  const cities = await getCitiesFromAlWaseet()
   return cities.find(city => 
     city.name.toLowerCase().includes('بغداد') || 
     city.name.toLowerCase().includes('baghdad')
-  ) || null;
+  ) || null
 }
 
 // Enhanced order processing with AlWaseet integration
 async function processOrderWithAlWaseet(text: string, chatId: number, employeeCode: string) {
   try {
-    const lines = text.split('\n').filter(line => line.trim());
+    const lines = text.split('\n').filter(line => line.trim())
     
-    let customerName = '';
-    let customerPhone = '';
-    let customerSecondaryPhone = '';
-    let customerAddress = '';
-    let customerCity = null;
-    let customerRegion = null;
-    let items = [];
-    let totalPrice = 0;
-    let hasCustomPrice = false;
-    let deliveryType = 'توصيل';
-    let orderNotes = '';
+    let customerName = ''
+    let customerPhone = ''
+    let customerSecondaryPhone = ''
+    let customerAddress = ''
+    let customerCity = null
+    let customerRegion = null
+    let items = []
+    let totalPrice = 0
+    let hasCustomPrice = false
+    let deliveryType = 'توصيل'
+    let orderNotes = ''
     
     // Get default settings
     const { data: settingsData } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'delivery_fee')
-      .single();
+      .single()
     
-    const defaultDeliveryFee = Number(settingsData?.value) || 5000;
+    const defaultDeliveryFee = Number(settingsData?.value) || 5000
     
     // Get employee info
     const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
       p_telegram_chat_id: chatId 
-    });
-    const employee = employeeData.data?.[0];
+    })
+    const employee = employeeData.data?.[0]
     
     if (!employee) {
-      console.error('No employee found for chat ID:', chatId);
-      return false;
+      console.error('No employee found for chat ID:', chatId)
+      return false
     }
     
     const { data: profileData } = await supabase
       .from('profiles')
       .select('default_customer_name')
       .eq('user_id', employee.user_id)
-      .single();
+      .single()
     
-    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام';
+    const defaultCustomerName = profileData?.default_customer_name || 'زبون من التليغرام'
     
-    let phoneFound = false;
-    let cityFound = false;
+    let phoneFound = false
+    let cityFound = false
     
     // Parse order text
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      const lowerLine = line.toLowerCase();
+      const line = lines[i].trim()
+      const lowerLine = line.toLowerCase()
       
-      // Check delivery type
-      if (lowerLine.includes('محلي') || lowerLine.includes('تسليم محلي') || lowerLine.includes('استلام محلي')) {
-        deliveryType = 'محلي';
-        continue;
+      // Parse customer name
+      if ((lowerLine.includes('اسم') || lowerLine.includes('زبون') || lowerLine.includes('عميل')) && !customerName) {
+        customerName = line.replace(/^(اسم|زبون|عميل)[:\s]*/i, '').trim()
       }
       
-      if (lowerLine.includes('توصيل') || lowerLine.includes('شحن') || lowerLine.includes('ديليفري')) {
-        deliveryType = 'توصيل';
-        continue;
+      // Parse phone numbers
+      const phoneRegex = /(?:07[5789]\d{8,9})/g
+      const phoneMatches = line.match(phoneRegex)
+      if (phoneMatches && !phoneFound) {
+        customerPhone = phoneMatches[0]
+        if (phoneMatches[1]) customerSecondaryPhone = phoneMatches[1]
+        phoneFound = true
       }
       
-      // Check phone numbers
-      const phoneRegex = /^0?\d{10,11}$/;
-      if (phoneRegex.test(line.replace(/[\s-]/g, ''))) {
-        const cleanPhone = line.replace(/[\s-]/g, '');
-        if (!customerPhone) {
-          customerPhone = cleanPhone;
-          phoneFound = true;
-        } else if (!customerSecondaryPhone) {
-          customerSecondaryPhone = cleanPhone;
-        }
-        continue;
+      // Parse address
+      if ((lowerLine.includes('عنوان') || lowerLine.includes('منطقة') || lowerLine.includes('محلة')) && !customerAddress) {
+        customerAddress = line.replace(/^(عنوان|منطقة|محلة)[:\s]*/i, '').trim()
       }
       
-      // Check price
-      const priceRegex = /([\d٠-٩]+)\s*([اﻻ]?لف|الف|ألف|k|K|000)?/;
-      const priceMatch = line.match(priceRegex);
-      if (priceMatch && (line.includes('الف') || line.includes('ألف') || line.includes('k') || line.includes('K') || /^\d+$/.test(line))) {
-        let price = parseInt(priceMatch[1].replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d).toString()));
-        if (priceMatch[2]) {
-          if (priceMatch[2].includes('ف') || priceMatch[2].includes('k') || priceMatch[2].includes('K')) {
-            price *= 1000;
-          }
-        }
-        totalPrice = price;
-        hasCustomPrice = true;
-        continue;
-      }
-      
-      // Check for products with + separator
-      if (line.includes('+')) {
-        const products = line.split('+').map(p => p.trim());
-        for (const product of products) {
-          if (product) {
-            items.push(parseProduct(product));
-          }
-        }
-        continue;
-      }
-      
-      // Check for city/address
-      if (!cityFound) {
-        const foundCity = await findCityByName(line);
-        if (foundCity) {
-          customerCity = foundCity;
-          customerAddress = line;
-          deliveryType = 'توصيل';
-          cityFound = true;
-          continue;
+      // Parse city
+      if ((lowerLine.includes('مدينة') || lowerLine.includes('محافظة')) && !cityFound) {
+        const cityText = line.replace(/^(مدينة|محافظة)[:\s]*/i, '').trim()
+        customerCity = await findCityByName(cityText)
+        if (customerCity) {
+          const regions = await getRegionsByCity(customerCity.id)
+          if (regions.length > 0) customerRegion = regions[0] // Default to first region
+          cityFound = true
         }
       }
       
-      // Check for address keywords
-      if (!cityFound && (lowerLine.includes('منطقة') || lowerLine.includes('شارع') || lowerLine.includes('حي') ||
-          lowerLine.includes('محافظة') || lowerLine.includes('قضاء') || lowerLine.includes('ناحية') ||
-          lowerLine.includes('مجمع') || lowerLine.includes('مدينة') || lowerLine.includes('قرية') ||
-          lowerLine.includes('طريق') || lowerLine.includes('جسر') || lowerLine.includes('ساحة'))) {
-        customerAddress = line;
-        deliveryType = 'توصيل';
-        // Try to find Baghdad as default
-        if (!customerCity) {
-          customerCity = await getBaghdadCity();
-        }
-        cityFound = true;
-        continue;
+      // Parse delivery type
+      if (lowerLine.includes('تبديل') || lowerLine.includes('استبدال')) {
+        deliveryType = 'تبديل'
       }
       
-      // First line might be customer name
-      if (!phoneFound && i === 0 && !priceMatch && !line.includes('+')) {
-        customerName = line;
-        continue;
+      // Parse notes
+      if (lowerLine.includes('ملاحظة') || lowerLine.includes('تعليق')) {
+        orderNotes = line.replace(/^(ملاحظة|تعليق)[:\s]*/i, '').trim()
       }
       
-      // Otherwise, it's a product or note
-      if (line && !line.match(/^\d+/) && !priceMatch) {
-        const isProduct = line.match(/[a-zA-Z\u0600-\u06FF]{2,}/);
-        if (isProduct) {
-          items.push(parseProduct(line));
-        } else {
-          orderNotes += line + ' ';
-        }
-      }
-    }
-    
-    // Set defaults
-    if (!customerName) customerName = defaultCustomerName;
-    
-    // If no address and delivery type is توصيل, make it محلي
-    if (!customerAddress && deliveryType === 'توصيل') {
-      deliveryType = 'محلي';
-    }
-    
-    // If delivery type is توصيل but no city found, default to Baghdad
-    if (deliveryType === 'توصيل' && !customerCity) {
-      customerCity = await getBaghdadCity();
-    }
-    
-    // Calculate price if not custom
-    if (!hasCustomPrice && items.length > 0) {
-      let calculatedPrice = 0;
-      
-      for (const item of items) {
-        let productPrice = 0;
+      // Parse products with enhanced price detection
+      if (!phoneFound || !cityFound || lowerLine.includes('منتج') || lowerLine.includes('product')) {
+        const productRegex = /(.+?)(?:\s*(\d+)\s*قطعة?\s*[\-\×x]\s*(\d+\.?\d*)\s*د\.?ع?)?$/i
+        const match = line.match(productRegex)
         
-        // البحث عن المنتج والسعر الصحيح
-        const { data: productData } = await supabase
-          .from('products')
-          .select(`
-            base_price,
-            product_variants (
-              price,
-              cost_price,
-              colors (name),
-              sizes (name)
-            )
-          `)
-          .ilike('name', `%${item.name}%`)
-          .eq('is_active', true)
-          .limit(1)
-          .single();
-        
-        if (productData) {
-          // استخدام base_price كافتراضي
-          productPrice = productData.base_price || 0;
+        if (match) {
+          const productName = match[1].replace(/^(منتج:?\s*)?/, '').trim()
+          const quantity = match[2] ? parseInt(match[2]) : 1
+          let price = match[3] ? parseFloat(match[3]) : 0
           
-          // البحث عن متغير مطابق للون والحجم
-          if (productData.product_variants && productData.product_variants.length > 0) {
-            const variants = productData.product_variants;
+          if (productName && productName.length > 1) {
+            // Enhanced product search with variants and proper pricing
+            let finalPrice = price
+            let productId = null
             
-            // البحث عن تطابق دقيق
-            let matchingVariant = variants.find(variant => {
-              const colorMatch = !item.color || 
-                (variant.colors?.name && 
-                 variant.colors.name.toLowerCase().includes(item.color.toLowerCase()));
-              const sizeMatch = !item.size || 
-                (variant.sizes?.name && 
-                 variant.sizes.name.toLowerCase() === item.size.toLowerCase());
-              return colorMatch && sizeMatch;
-            });
+            // Search for exact product name first
+            const { data: products } = await supabase
+              .from('products')
+              .select(`
+                id, name, base_price, cost_price,
+                product_variants (
+                  id, price, cost_price, color_id, size_id, is_active,
+                  colors (name),
+                  sizes (name)
+                )
+              `)
+              .or(`name.ilike.%${productName}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
+              .eq('is_active', true)
+              .limit(5)
             
-            // إذا لم نجد تطابق دقيق، استخدم أول متغير متاح
-            if (!matchingVariant && variants.length > 0) {
-              matchingVariant = variants[0];
+            if (products && products.length > 0) {
+              const product = products[0]
+              productId = product.id
+              
+              // Try to find price from variants first
+              if (product.product_variants && product.product_variants.length > 0) {
+                const activeVariants = product.product_variants.filter(v => v.is_active)
+                if (activeVariants.length > 0) {
+                  // Use first active variant price
+                  finalPrice = price || activeVariants[0].price || product.base_price || 0
+                } else {
+                  finalPrice = price || product.base_price || 0
+                }
+              } else {
+                // Use base price if no variants
+                finalPrice = price || product.base_price || 0
+              }
             }
             
-            if (matchingVariant && matchingVariant.price > 0) {
-              productPrice = matchingVariant.price;
+            if (finalPrice === 0 && !price) {
+              // Try one more search with relaxed criteria
+              const { data: fallbackProducts } = await supabase
+                .from('products')
+                .select('id, name, base_price')
+                .textSearch('name', productName.split(' ').join(' | '))
+                .eq('is_active', true)
+                .limit(1)
+              
+              if (fallbackProducts && fallbackProducts.length > 0) {
+                productId = fallbackProducts[0].id
+                finalPrice = fallbackProducts[0].base_price || 0
+              }
             }
+            
+            hasCustomPrice = price > 0
+            totalPrice += finalPrice * quantity
+            
+            items.push({
+              name: productName,
+              quantity,
+              price: finalPrice,
+              product_id: productId
+            })
           }
-          
-          item.price = productPrice;
-          calculatedPrice += productPrice * item.quantity;
-        } else {
-          // إذا لم نجد المنتج، نضع سعراً افتراضياً
-          item.price = 0;
-          console.log(`Product not found: ${item.name}`);
         }
       }
-      
-      if (deliveryType === 'توصيل') {
-        calculatedPrice += defaultDeliveryFee;
-      }
-      
-      totalPrice = calculatedPrice;
     }
+    
+    // Set defaults if not found
+    if (!customerName) customerName = defaultCustomerName
+    if (!customerCity) customerCity = await getBaghdadCity()
+    if (!customerRegion && customerCity) {
+      const regions = await getRegionsByCity(customerCity.id)
+      if (regions.length > 0) customerRegion = regions[0]
+    }
+    
+    // Validate essential fields
+    if (!customerPhone || items.length === 0) {
+      await sendTelegramMessage(chatId, '❌ خطأ في الطلب!\n\nيجب أن يحتوي الطلب على:\n• رقم هاتف صحيح\n• منتج واحد على الأقل\n\nمثال:\nاحمد علي\n07701234567\nبغداد\nشارع الخليج\nقميص أحمر 2 قطعة x 25000 د.ع')
+      return false
+    }
+    
+    // Create order confirmation message with full employee info
+    const employeeInfo = employee ? 
+      `${employee.full_name} (${employee.role}) - ${employee.employee_code}` : 
+      `@${employeeCode}`
+      
+    const orderSummary = `
+🔹 تأكيد الطلب الجديد 🔹
 
-    // Create AI order with proper employee info
-    const { data: orderId, error } = await supabase.rpc('process_telegram_order', {
+👤 العميل: ${customerName}
+📱 الهاتف: ${customerPhone}${customerSecondaryPhone ? `\n📱 الهاتف الثاني: ${customerSecondaryPhone}` : ''}
+🏙️ المدينة: ${customerCity?.name || 'غير محدد'}
+📍 المنطقة: ${customerRegion?.name || 'غير محدد'}
+🏠 العنوان: ${customerAddress}
+
+📦 المنتجات:
+${items.map(item => `• ${item.name} - كمية: ${item.quantity} - سعر: ${item.price.toLocaleString()} د.ع`).join('\n')}
+
+💰 المجموع: ${totalPrice.toLocaleString()} د.ع
+🚚 رسوم التوصيل: ${defaultDeliveryFee.toLocaleString()} د.ع
+💳 المبلغ الإجمالي: ${(totalPrice + defaultDeliveryFee).toLocaleString()} د.ع
+
+📋 المعرف: #TG_${Date.now().toString().slice(-6)}
+👨‍💼 بواسطة: ${employeeInfo}
+
+✅ تم حفظ الطلب بنجاح في النظام
+⏳ في انتظار مراجعة الإدارة للموافقة والإرسال
+    `.trim()
+    
+    // Save order to database
+    const orderId = await supabase.rpc('process_telegram_order', {
       p_order_data: {
-        original_text: text,
-        processed_at: new Date().toISOString(),
-        telegram_user_id: chatId,
-        employee_code: employeeCode,
-        employee_name: employee.full_name,
-        employee_role: employee.role,
+        customer_name: customerName,
+        customer_phone: customerPhone,
+        customer_secondary_phone: customerSecondaryPhone,
+        customer_address: customerAddress,
+        customer_city: customerCity?.name,
+        customer_region: customerRegion?.name,
+        items: items,
+        total_price: totalPrice,
+        delivery_fee: defaultDeliveryFee,
+        final_total: totalPrice + defaultDeliveryFee,
         delivery_type: deliveryType,
-        city_data: customerCity,
-        parsing_method: 'alwaseet_integrated',
-        items_count: items.length,
-        has_address: !!customerAddress,
-        city_auto_detected: !!customerCity && !cityFound,
-        prices_calculated: !hasCustomPrice
+        order_notes: orderNotes,
+        employee_code: employeeCode,
+        employee_info: employeeInfo,
+        telegram_chat_id: chatId,
+        processed_at: new Date().toISOString()
       },
       p_customer_name: customerName,
-      p_customer_phone: customerPhone || null,
-      p_customer_address: customerAddress || (deliveryType === 'محلي' ? 'استلام محلي' : null),
-      p_total_amount: totalPrice,
+      p_customer_phone: customerPhone,
+      p_customer_address: customerAddress,
+      p_customer_city: customerCity?.name,
+      p_customer_province: customerCity?.name, // Using city as province for now
+      p_total_amount: totalPrice + defaultDeliveryFee,
       p_items: items,
       p_telegram_chat_id: chatId,
-      p_employee_code: employeeCode
-    });
-
-    if (error) {
-      console.error('Error creating AI order:', error);
-      return false;
+      p_employee_code: employee?.user_id || employeeCode
+    })
+    
+    if (orderId.error) {
+      console.error('Database error:', orderId.error)
+      await sendTelegramMessage(chatId, '❌ حدث خطأ في حفظ الطلب في النظام. يرجى المحاولة مرة أخرى.')
+      return false
     }
-
-    // Send detailed confirmation with proper employee attribution
-    const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
-    const cityText = customerCity ? `📍 المدينة: ${customerCity.name}` : '';
-    const addressText = customerAddress && customerAddress !== 'استلام محلي' ? customerAddress : '';
     
-    const itemsList = items.slice(0, 3).map(item => {
-      const itemTotal = (item.price || 0) * (item.quantity || 1);
-      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : 'سعر غير محدد';
-      return `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
-    }).join('\n');
+    // Send confirmation
+    await sendTelegramMessage(chatId, orderSummary)
+    return true
     
-    const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
-    const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
-    
-    await sendTelegramMessage(chatId, `
-✅ <b>تم استلام الطلب بنجاح!</b>
-
-🆔 <b>رقم الطلب:</b> <code>AI-${orderId.toString().slice(-6)}</code>
-👤 <b>الزبون:</b> ${customerName}
-📱 <b>الهاتف:</b> ${customerPhone || 'غير محدد'}
-${customerSecondaryPhone ? `📞 <b>هاتف ثانوي:</b> ${customerSecondaryPhone}` : ''}
-${deliveryIcon} <b>نوع التسليم:</b> ${deliveryType}
-${cityText}
-${addressText ? `🏠 <b>العنوان:</b> ${addressText}` : ''}
-
-📦 <b>المنتجات (${items.length}):</b>
-${itemsList}
-${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
-
-💰 <b>تفاصيل السعر:</b>
-• المنتجات: ${itemsTotal.toLocaleString()} د.ع
-${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.toLocaleString()} د.ع` : ''}
-• <b>المجموع الإجمالي: ${totalPrice.toLocaleString()} د.ع</b>
-
-⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
-
-👨‍💼 <b>بواسطة:</b> ${employee.full_name} (${employee.employee_code})
-🏢 <b>المنصب:</b> ${employee.role === 'admin' ? 'مدير' : employee.role === 'deputy' ? 'نائب مدير' : employee.role === 'warehouse' ? 'مسؤول مخزن' : 'موظف'}
-
-<i>شكراً لك! 🙏</i>
-    `);
-
-    return orderId;
   } catch (error) {
-    console.error('Error processing order with AlWaseet:', error);
-    return false;
+    console.error('Error processing order:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الطلب. يرجى المحاولة مرة أخرى.')
+    return false
   }
 }
 
-// Get bot token from database settings
-async function getBotToken(): Promise<string | null> {
-  try {
-    const { data, error } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'telegram_bot_config')
-      .single();
-    
-    if (error || !data) {
-      console.log('No bot config found in settings');
-      return null;
-    }
-    
-    return data.value?.bot_token || null;
-  } catch (error) {
-    console.error('Error getting bot token:', error);
-    return null;
+// Handle employee registration
+async function handleEmployeeRegistration(text: string, chatId: number) {
+  const codeMatch = text.match(/\/start\s+([A-Z0-9]+)/)
+  if (!codeMatch) {
+    await sendTelegramMessage(chatId, '❌ رمز الموظف غير صحيح!\n\nيرجى الحصول على رمز التفعيل من إدارة النظام.')
+    return false
   }
-}
-
-async function sendTelegramMessage(chatId: number, text: string, parseMode = 'HTML') {
-  const botToken = await getBotToken();
-  if (!botToken) {
-    console.error('Bot token not found in database');
-    return;
-  }
-
+  
+  const employeeCode = codeMatch[1]
+  
   try {
-    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: parseMode
+    const result = await supabase.rpc('link_telegram_user', {
+      p_employee_code: employeeCode,
+      p_telegram_chat_id: chatId
+    })
+    
+    if (result.data) {
+      // Get employee info
+      const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
+        p_telegram_chat_id: chatId 
       })
-    });
+      const employee = employeeData.data?.[0]
+      
+      const welcomeMessage = `
+🎉 مرحباً ${employee?.full_name || 'بك'}!
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Telegram API error:', errorData);
+✅ تم ربط حسابك بنجاح
+👤 الاسم: ${employee?.full_name || 'غير محدد'}
+🏷️ الدور: ${employee?.role || 'موظف'}
+🔑 رمز الموظف: ${employeeCode}
+
+📝 يمكنك الآن إرسال طلبات العملاء مباشرة إلى النظام
+
+📋 مثال على طلب:
+احمد علي
+07701234567
+بغداد
+شارع الخليج
+قميص أحمر 2 قطعة x 25000 د.ع
+بنطال أزرق 1 قطعة x 35000 د.ع
+
+🔄 سيتم تحويل كل طلب تكتبه تلقائياً إلى النظام
+      `
+      
+      await sendTelegramMessage(chatId, welcomeMessage)
+      return true
+    } else {
+      await sendTelegramMessage(chatId, '❌ رمز الموظف غير صحيح أو منتهي الصلاحية!\n\nيرجى التواصل مع الإدارة للحصول على رمز جديد.')
+      return false
     }
   } catch (error) {
-    console.error('Error sending message to Telegram:', error);
+    console.error('Error linking employee:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في ربط الحساب. يرجى المحاولة مرة أخرى.')
+    return false
   }
 }
 
-function parseProduct(productText: string) {
-  const text = productText.trim();
+// Main message handler
+async function handleMessage(message: TelegramMessage) {
+  const chatId = message.chat.id
+  const text = message.text?.trim()
   
-  // Extract quantity
-  let quantity = 1;
-  const quantityMatch = text.match(/[×x*]\s*(\d+)|(\d+)\s*[×x*]/);
-  if (quantityMatch) {
-    quantity = parseInt(quantityMatch[1] || quantityMatch[2]);
-  }
+  if (!text) return
   
-  // Extract size
-  let size = '';
-  const sizeRegex = /\b(S|M|L|XL|XXL|s|m|l|xl|xxl|\d{2,3})\b/g;
-  const sizeMatch = text.match(sizeRegex);
-  if (sizeMatch) {
-    size = sizeMatch[sizeMatch.length - 1].toUpperCase();
-  }
-  
-  // Extract color
-  const colors = ['أزرق', 'ازرق', 'blue', 'أصفر', 'اصفر', 'yellow', 'أحمر', 'احمر', 'red', 'أخضر', 'اخضر', 'green', 'أبيض', 'ابيض', 'white', 'أسود', 'اسود', 'black', 'بني', 'brown', 'رمادي', 'gray', 'grey', 'بنفسجي', 'purple', 'وردي', 'pink'];
-  let color = '';
-  
-  for (const c of colors) {
-    if (text.toLowerCase().includes(c.toLowerCase())) {
-      color = c;
-      break;
+  try {
+    // Handle /start command for employee registration
+    if (text.startsWith('/start')) {
+      return await handleEmployeeRegistration(text, chatId)
     }
+    
+    // Check if user is registered
+    const employeeData = await supabase.rpc('get_employee_by_telegram_id', { 
+      p_telegram_chat_id: chatId 
+    })
+    const employee = employeeData.data?.[0]
+    
+    if (!employee) {
+      await sendTelegramMessage(chatId, '❌ غير مسجل!\n\nيرجى الحصول على رمز التفعيل من إدارة النظام واستخدام الأمر:\n/start [رمز_الموظف]')
+      return
+    }
+    
+    // Handle help command
+    if (text === '/help' || text === 'مساعدة') {
+      const helpMessage = `
+📚 دليل استخدام البوت
+
+👋 مرحباً ${employee.full_name}!
+
+📝 لإنشاء طلب جديد، اكتب:
+اسم العميل
+رقم الهاتف (07XXXXXXXX)
+المدينة/المحافظة
+العنوان
+المنتجات (اسم المنتج + الكمية + السعر)
+
+مثال:
+احمد علي
+07701234567
+بغداد
+شارع الخليج
+قميص أحمر 2 قطعة x 25000 د.ع
+بنطال أزرق 1 قطعة x 35000 د.ع
+
+💡 نصائح:
+• يمكن كتابة عدة أرقام هواتف
+• السعر اختياري (سيتم البحث في قاعدة البيانات)
+• يمكن إضافة ملاحظات خاصة
+• استخدم كلمة "تبديل" للطلبات التبديلية
+
+🔄 سيتم معالجة الطلب تلقائياً وإرساله للنظام
+      `
+      
+      await sendTelegramMessage(chatId, helpMessage)
+      return
+    }
+    
+    // Process as order
+    const orderProcessed = await processOrderWithAlWaseet(text, chatId, employee.employee_code)
+    
+    if (!orderProcessed) {
+      await sendTelegramMessage(chatId, '❌ لم يتم التعرف على الطلب!\n\nاستخدم /help للحصول على المساعدة.')
+    }
+    
+  } catch (error) {
+    console.error('Error handling message:', error)
+    await sendTelegramMessage(chatId, '❌ حدث خطأ في معالجة الرسالة. يرجى المحاولة مرة أخرى.')
   }
-  
-  // Extract product name
-  let productName = text
-    .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '')
-    .replace(/\b(S|M|L|XL|XXL|s|m|l|xl|xxl|\d{2,3})\b/gi, '')
-    .replace(/\b(أزرق|ازرق|blue|أصفر|اصفر|yellow|أحمر|احمر|red|أخضر|اخضر|green|أبيض|ابيض|white|أسود|اسود|black|بني|brown|رمادي|gray|grey|بنفسجي|purple|وردي|pink)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  
-  return {
-    name: productName || text,
-    quantity: quantity,
-    size: size,
-    color: color,
-    price: 0 // Will be calculated later
-  };
 }
 
-// This is a placeholder - will be integrated with the main telegram bot
+// Main handler
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
   
-  return new Response(JSON.stringify({ 
-    message: 'AlWaseet Telegram Bot Integration Ready',
-    features: [
-      'Real-time city and region lookup',
-      'Baghdad default city selection',
-      'Price calculation with delivery fees',
-      'Complete order processing'
-    ]
-  }), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
-});
+  try {
+    const body = await req.json()
+    
+    // Handle Telegram webhook
+    if (body.message) {
+      await handleMessage(body.message)
+    }
+    
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+    
+  } catch (error) {
+    console.error('Error:', error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
+  }
+})

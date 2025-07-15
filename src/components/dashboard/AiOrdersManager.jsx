@@ -8,7 +8,7 @@ import { X, Bot, FileDown, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/use-toast';
 import AiOrderCard from './AiOrderCard';
-import EditAiOrderDialog from './EditAiOrderDialog';
+import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useNotifications } from '@/contexts/NotificationsContext';
 
 const AiOrdersManager = ({ onClose }) => {
@@ -18,6 +18,7 @@ const AiOrdersManager = ({ onClose }) => {
   const [selectedOrders, setSelectedOrders] = React.useState([]);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [editingOrder, setEditingOrder] = React.useState(null);
+  const [quickOrderDialogOpen, setQuickOrderDialogOpen] = React.useState(false);
 
   const userAiOrders = React.useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
@@ -156,7 +157,10 @@ const AiOrdersManager = ({ onClose }) => {
                       order={order}
                       isSelected={selectedOrders.includes(order.id)}
                       onSelect={(checked) => handleSelectOrder(order.id, checked)}
-                      onEdit={() => setEditingOrder(order)}
+                      onEdit={() => {
+                        setEditingOrder(order);
+                        setQuickOrderDialogOpen(true);
+                      }}
                     />
                   ))}
                 </div>
@@ -165,15 +169,37 @@ const AiOrdersManager = ({ onClose }) => {
           </CardContent>
         </Card>
 
-        <AnimatePresence>
-          {editingOrder && (
-            <EditAiOrderDialog 
-              order={editingOrder}
-              open={!!editingOrder}
-              onOpenChange={() => setEditingOrder(null)}
-            />
-          )}
-        </AnimatePresence>
+        {/* استخدام QuickOrderContent بدلاً من EditAiOrderDialog */}
+        {quickOrderDialogOpen && editingOrder && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+            <div className="bg-background rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+              <div className="p-4 border-b flex items-center justify-between">
+                <h2 className="text-lg font-semibold">تعديل الطلب الذكي</h2>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => {
+                    setQuickOrderDialogOpen(false);
+                    setEditingOrder(null);
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="p-4 max-h-[calc(90vh-80px)] overflow-y-auto">
+                <QuickOrderContent 
+                  isDialog={true}
+                  aiOrderData={editingOrder}
+                  onOrderCreated={() => {
+                    setQuickOrderDialogOpen(false);
+                    setEditingOrder(null);
+                    toast({ title: "نجاح", description: "تم تحديث الطلب بنجاح" });
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );

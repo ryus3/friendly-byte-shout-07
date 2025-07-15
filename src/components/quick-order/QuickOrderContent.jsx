@@ -19,7 +19,7 @@ import CustomerInfoForm from './CustomerInfoForm';
 import OrderDetailsForm from './OrderDetailsForm';
 import useLocalStorage from '@/hooks/useLocalStorage';
 
-export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState }) => {
+export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   const { createOrder, settings, cart, clearCart, addToCart } = useInventory();
   const { user } = useAuth();
   const { isLoggedIn: isWaseetLoggedIn, token: waseetToken, activePartner, setActivePartner, fetchToken } = useAlWaseet();
@@ -49,6 +49,43 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
   }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
+  
+  // ملء البيانات من الطلب الذكي عند وجوده
+  useEffect(() => {
+    if (aiOrderData) {
+      setFormData(prev => ({
+        ...prev,
+        name: aiOrderData.customer_name || '',
+        phone: aiOrderData.customer_phone || '',
+        city: aiOrderData.customer_city || '',
+        region: '', // سيتم تحديثه من العنوان
+        address: aiOrderData.customer_address || '',
+        notes: '',
+        details: Array.isArray(aiOrderData.items) ? 
+          aiOrderData.items.map(item => `${item.name} (${item.quantity})`).join(' + ') : '',
+        quantity: Array.isArray(aiOrderData.items) ? 
+          aiOrderData.items.reduce((sum, item) => sum + (item.quantity || 1), 0) : 1,
+        price: aiOrderData.total_amount || 0
+      }));
+      
+      // إضافة المنتجات للسلة
+      if (Array.isArray(aiOrderData.items)) {
+        clearCart();
+        aiOrderData.items.forEach(item => {
+          const product = { 
+            id: item.product_id || `ai-${Date.now()}-${Math.random()}`, 
+            name: item.name 
+          };
+          const variant = { 
+            price: item.price || 0, 
+            color: item.color || '', 
+            size: item.size || '' 
+          };
+          addToCart(product, variant, item.quantity || 1, false);
+        });
+      }
+    }
+  }, [aiOrderData, clearCart, addToCart]);
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
   const [cities, setCities] = useState([]);
