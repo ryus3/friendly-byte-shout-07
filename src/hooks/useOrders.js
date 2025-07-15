@@ -157,11 +157,14 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     if (!aiOrder) return;
 
     try {
-      // تحديث حالة الطلب الذكي إلى "قيد التجهيز"
+      // إنشاء رقم تتبع للطلب
+      const trackingNumber = `AI-${Date.now().toString().slice(-8)}`;
+      
+      // تحديث حالة الطلب الذكي إلى "معتمد"
       const { error: updateError } = await supabase
         .from('ai_orders')
         .update({ 
-          status: 'في التجهيز',
+          status: 'approved',
           processed_at: new Date().toISOString(),
           processed_by: user?.id 
         })
@@ -169,25 +172,99 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       if (updateError) throw updateError;
 
+      // إنشاء طلب جديد في جدول الطلبات العادية
+      const { data: orderNumber } = await supabase.rpc('generate_order_number');
+      
+      const orderData = {
+        order_number: orderNumber,
+        customer_name: aiOrder.customer_name,
+        customer_phone: aiOrder.customer_phone,
+        customer_address: aiOrder.customer_address,
+        customer_city: aiOrder.customer_address ? 'بغداد' : null, // افتراضي
+        customer_province: aiOrder.customer_address ? 'بغداد' : null, // افتراضي
+        total_amount: aiOrder.total_amount,
+        final_amount: aiOrder.total_amount,
+        delivery_fee: aiOrder.customer_address ? (settings?.deliveryFee || 5000) : 0,
+        status: 'processing',
+        delivery_status: 'pending',
+        payment_status: 'pending',
+        tracking_number: trackingNumber,
+        delivery_partner: aiOrder.customer_address ? 'محلي' : 'استلام محلي',
+        created_by: user?.id,
+        notes: `طلب مُحوَّل من الذكاء الاصطناعي - المصدر: ${aiOrder.source}`
+      };
+
+      const { data: newOrder, error: createError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
+
+      if (createError) throw createError;
+
+      // إنشاء عناصر الطلب
+      const orderItems = aiOrder.items.map(item => ({
+        order_id: newOrder.id,
+        product_id: item.product_id || null,
+        variant_id: item.variant_id || null,
+        quantity: item.quantity || 1,
+        unit_price: item.price || 0,
+        total_price: (item.price || 0) * (item.quantity || 1)
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // حجز المخزون للمنتجات
+      for (const item of aiOrder.items) {
+        if (item.product_id) {
+          const { error: stockError } = await supabase
+            .from('inventory')
+            .update({
+              reserved_quantity: supabase.raw('reserved_quantity + ?', [item.quantity || 1])
+            })
+            .eq('product_id', item.product_id)
+            .eq('variant_id', item.variant_id || null);
+
+          if (stockError) {
+            console.error('Error reserving stock:', stockError);
+          }
+        }
+      }
+
       // إزالة من قائمة الطلبات الذكية
       setAiOrders(prev => prev.filter(o => o.id !== orderId));
+      
+      // إضافة إلى قائمة الطلبات العادية
+      setOrders(prev => [...prev, { ...newOrder, items: orderItems }]);
       
       // إنشاء إشعار للموظف
       await supabase.from('notifications').insert({
         type: 'order_approved',
         title: 'تمت الموافقة على الطلب',
-        message: `تمت الموافقة على الطلب الذكي للعميل ${aiOrder.customer_name}`,
+        message: `تمت الموافقة على الطلب الذكي وتحويله إلى طلب رقم ${orderNumber}`,
         user_id: aiOrder.created_by,
         data: {
-          order_id: orderId,
-          customer_name: aiOrder.customer_name
+          order_id: newOrder.id,
+          order_number: orderNumber,
+          customer_name: aiOrder.customer_name,
+          ai_order_id: orderId
         }
       });
 
-      toast({ title: "نجاح", description: "تمت الموافقة على الطلب وتحويله لقيد التجهيز." });
+      // تشغيل حساب الأرباح
+      await supabase.rpc('calculate_order_profit', { order_id_input: newOrder.id });
+
+      toast({ title: "نجاح", description: `تمت الموافقة على الطلب وتحويله إلى طلب رقم ${orderNumber}` });
+      
+      onStockUpdate?.();
     } catch (error) {
       console.error('Error approving AI order:', error);
-      toast({ title: "خطأ", description: "فشل الموافقة على الطلب الذكي.", variant: "destructive" });
+      toast({ title: "خطأ", description: error.message || "فشل الموافقة على الطلب الذكي.", variant: "destructive" });
+      throw error;
     }
   };
 

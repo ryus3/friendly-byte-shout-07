@@ -12,6 +12,8 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useProducts } from '@/hooks/useProducts';
 import { Badge } from '@/components/ui/badge';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { iraqiProvinces } from '@/lib/iraq-provinces';
 
 const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
   const { refetchProducts, setAiOrders } = useInventory();
@@ -20,6 +22,8 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
     customer_name: '',
     customer_phone: '',
     customer_address: '',
+    customer_city: '',
+    customer_province: '',
     items: [],
     total_amount: 0
   });
@@ -34,6 +38,8 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
         customer_name: order.customer_name || '',
         customer_phone: order.customer_phone || '',
         customer_address: order.customer_address || '',
+        customer_city: order.customer_city || '',
+        customer_province: order.customer_province || '',
         items: order.items || [],
         total_amount: order.total_amount || 0
       });
@@ -144,6 +150,8 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
           customer_name: formData.customer_name,
           customer_phone: formData.customer_phone,
           customer_address: formData.customer_address,
+          customer_city: formData.customer_city,
+          customer_province: formData.customer_province,
           items: formData.items,
           total_amount: formData.total_amount,
           updated_at: new Date().toISOString()
@@ -219,19 +227,53 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="customer_address" className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              العنوان
-            </Label>
-            <Textarea
-              id="customer_address"
-              value={formData.customer_address}
-              onChange={(e) => handleInputChange('customer_address', e.target.value)}
-              placeholder="أدخل عنوان العميل"
-              rows={3}
-            />
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customer_province" className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  المحافظة
+                </Label>
+                <Select value={formData.customer_province} onValueChange={(value) => handleInputChange('customer_province', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر المحافظة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {iraqiProvinces.map((province) => (
+                      <SelectItem key={province.id} value={province.name}>
+                        {province.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="customer_city" className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  المدينة
+                </Label>
+                <Input
+                  id="customer_city"
+                  value={formData.customer_city}
+                  onChange={(e) => handleInputChange('customer_city', e.target.value)}
+                  placeholder="أدخل المدينة"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customer_address" className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                العنوان التفصيلي
+              </Label>
+              <Textarea
+                id="customer_address"
+                value={formData.customer_address}
+                onChange={(e) => handleInputChange('customer_address', e.target.value)}
+                placeholder="أدخل العنوان التفصيلي"
+                rows={3}
+              />
+            </div>
 
           {/* المنتجات */}
           <div className="space-y-4">

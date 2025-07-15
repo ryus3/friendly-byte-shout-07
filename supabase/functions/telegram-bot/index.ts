@@ -365,12 +365,14 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 
     // إرسال تأكيد مفصل
     const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
-    const itemsList = items.slice(0, 3).map(item => 
-      `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} د.ع`
-    ).join('\n');
+    const itemsList = items.slice(0, 3).map(item => {
+      const itemTotal = (item.price || 0) * (item.quantity || 1);
+      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : 'السعر غير محدد';
+      return `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
+    }).join('\n');
     
     // حساب إجمالي المنتجات ورسوم التوصيل منفصلة
-    const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
     const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
     
     await sendTelegramMessage(chatId, `
