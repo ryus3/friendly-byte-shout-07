@@ -120,6 +120,7 @@ const SettingsPage = () => {
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+  const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
 
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
@@ -173,6 +174,64 @@ const SettingsPage = () => {
               iconColor="from-orange-500 to-orange-600"
               onClick={() => setIsNotificationSettingsOpen(true)}
             />
+
+            <ModernCard
+              icon={PackageX}
+              title="إعدادات المخزون المنخفض"
+              description="تحديد حدود المخزون المنخفض والتنبيهات التلقائية"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsStockSettingsOpen(true)}
+            />
+          </div>
+
+          <SectionHeader 
+            icon={Users} 
+            title="إدارة الموظفين والعملاء"
+            description="إدارة فريق العمل والعملاء وصلاحيات الوصول"
+          />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {hasPermission('manage_employees') && (
+              <ModernCard
+                icon={Users}
+                title="إدارة الموظفين"
+                description="إضافة وتعديل الموظفين وإدارة الصلاحيات"
+                iconColor="from-green-500 to-green-600"
+                onClick={() => setIsManageEmployeesOpen(true)}
+              />
+            )}
+
+            <ModernCard
+              icon={User}
+              title="إعدادات العملاء"
+              description="إدارة بيانات العملاء والفئات والعضويات"
+              iconColor="from-blue-500 to-blue-600"
+              onClick={() => setIsCustomerSettingsOpen(true)}
+            />
+          </div>
+
+          <SectionHeader 
+            icon={FileText} 
+            title="التقارير والتوصيل"
+            description="إعدادات التقارير وشركات التوصيل والتليغرام"
+          />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ModernCard
+              icon={FileText}
+              title="إعدادات التقارير"
+              description="تخصيص التقارير المالية والجرد والمبيعات"
+              iconColor="from-indigo-500 to-indigo-600"
+              onClick={() => setIsReportsOpen(true)}
+            />
+
+            <ModernCard
+              icon={Truck}
+              title="شركات التوصيل"
+              description="إعدادات التليغرام وشركات التوصيل المدمجة"
+              iconColor="from-cyan-500 to-cyan-600"
+              onClick={() => setIsLoginDialogOpen(true)}
+            />
           </div>
 
           <SectionHeader 
@@ -213,6 +272,31 @@ const SettingsPage = () => {
       <NotificationSettingsDialog
         open={isNotificationSettingsOpen}
         onOpenChange={setIsNotificationSettingsOpen}
+      />
+
+      <ManageEmployeesDialog
+        open={isManageEmployeesOpen}
+        onOpenChange={setIsManageEmployeesOpen}
+      />
+
+      <CustomerSettingsDialog
+        open={isCustomerSettingsOpen}
+        onOpenChange={setIsCustomerSettingsOpen}
+      />
+
+      <ReportsSettingsDialog
+        open={isReportsOpen}
+        onOpenChange={setIsReportsOpen}
+      />
+
+      <StockNotificationSettings
+        open={isStockSettingsOpen}
+        onOpenChange={setIsStockSettingsOpen}
+      />
+
+      <DeliveryPartnerDialog
+        open={isLoginDialogOpen}
+        onOpenChange={setIsLoginDialogOpen}
       />
     </>
   );
