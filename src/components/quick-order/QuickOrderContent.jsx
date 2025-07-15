@@ -270,6 +270,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   useEffect(() => {
     const quantityCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFeeAmount = settings?.deliveryFee || 5000;
+    const totalWithDelivery = subtotal + deliveryFeeAmount;
     const detailsString = cart
       .map(item => 
         `${item.productName || ''} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`.trim().replace(/ +/g, ' ')
@@ -279,10 +282,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setFormData(prev => ({
       ...prev, 
       quantity: quantityCount > 0 ? quantityCount : 1,
-      price: priceWithDelivery,
+      price: totalWithDelivery > 0 ? totalWithDelivery : '',
       details: detailsString,
     }));
-  }, [cart, priceWithDelivery]);
+  }, [cart, settings?.deliveryFee]);
 
   const validateField = (name, value) => {
     let errorMsg = '';
