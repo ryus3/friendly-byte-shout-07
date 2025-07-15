@@ -271,7 +271,7 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <ModernCard
               icon={DollarSign}
               title="أسعار وإعدادات التوصيل"
@@ -287,6 +287,27 @@ const SettingsPage = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">طلبات اليوم</span>
                   <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
+                </div>
+              </div>
+            </ModernCard>
+
+            <ModernCard
+              icon={Truck}
+              title="شركات التوصيل"
+              description="إدارة الاتصال مع شركات التوصيل المختلفة"
+              iconColor="from-amber-500 to-orange-600"
+              onClick={() => setIsLoginDialogOpen(true)}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">الشركة النشطة</span>
+                  <span className="font-bold text-amber-600">{isWaseetLoggedIn ? 'الوسيط' : 'محلي'}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">الحالة</span>
+                  <span className={`font-bold ${isWaseetLoggedIn ? 'text-green-600' : 'text-gray-600'}`}>
+                    {isWaseetLoggedIn ? 'متصل' : 'غير متصل'}
+                  </span>
                 </div>
               </div>
             </ModernCard>

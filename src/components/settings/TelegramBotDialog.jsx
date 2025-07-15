@@ -23,15 +23,57 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
       const { data, error } = await supabase
         .from('telegram_employee_codes')
         .select(`
-          *,
-          profiles!inner(user_id, full_name, role, username)
+          id,
+          user_id,
+          employee_code,
+          is_active,
+          telegram_chat_id,
+          linked_at,
+          created_at,
+          updated_at,
+          profiles!telegram_employee_codes_user_id_fkey(user_id, full_name, role, username, is_active)
         `)
+        .eq('profiles.is_active', true)
         .order('created_at', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('خطأ في جلب الرموز:', error);
+        // جربالاستعلام البديل
+        const { data: altData, error: altError } = await supabase
+          .from('telegram_employee_codes')
+          .select('*')
+          .order('created_at', { ascending: true });
+        
+        if (altError) throw altError;
+        
+        // جلب بيانات الملفات الشخصية بشكل منفصل
+        const userIds = altData.map(code => code.user_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, role, username, is_active')
+          .in('user_id', userIds)
+          .eq('is_active', true);
+        
+        if (profilesError) throw profilesError;
+        
+        // دمج البيانات
+        const mergedData = altData.map(code => ({
+          ...code,
+          profiles: profilesData.find(profile => profile.user_id === code.user_id)
+        })).filter(code => code.profiles);
+        
+        setEmployeeCodes(mergedData);
+        return;
+      }
+      
       setEmployeeCodes(data || []);
     } catch (error) {
       console.error('Error fetching employee codes:', error);
+      toast({
+        title: "خطأ في جلب البيانات",
+        description: "تعذر جلب رموز الموظفين",
+        variant: "destructive"
+      });
     }
   };
 
