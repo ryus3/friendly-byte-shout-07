@@ -197,15 +197,39 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
   const handleStatusChange = async (originalOrder, updatedOrder) => {
     const isLocalOrder = originalOrder.delivery_partner === 'محلي';
     
-    // إذا تم تسليم الطلب، نخصم من المخزون الفعلي
+    // 1. pending (قيد التجهيز) - المخزون محجوز
+    // لا حاجة لتغيير شيء هنا، المخزون محجوز من البداية
+    
+    // 2. shipped (تم الشحن) - مبيعات معلقة، المخزون لا يزال محجوز
+    if (updatedOrder.status === 'shipped' && originalOrder.status !== 'shipped') {
+      // تحديث حالة الأرباح إلى معلقة
+      await supabase
+        .from('profits')
+        .update({ status: 'pending_sale' })
+        .eq('order_id', updatedOrder.id);
+    }
+    
+    // 3. delivered (تم التوصيل) - خصم فعلي من المخزون، أرباح معلقة
     if (updatedOrder.status === 'delivered' && originalOrder.status !== 'delivered') {
       await finalizeStock(updatedOrder.id);
       await supabase.rpc('calculate_order_profit', { order_id_input: updatedOrder.id });
+      
+      // تحديث حالة الأرباح إلى معلقة للاستلام
+      await supabase
+        .from('profits')
+        .update({ status: 'pending' })
+        .eq('order_id', updatedOrder.id);
     }
     
-    // إذا تم إلغاء الطلب، نلغي حجز المخزون
+    // 4. إذا تم إلغاء الطلب، نلغي حجز المخزون
     if (updatedOrder.status === 'cancelled' && originalOrder.status !== 'cancelled') {
       await releaseStock(updatedOrder.id);
+      
+      // حذف سجل الأرباح إذا كان موجوداً
+      await supabase
+        .from('profits')
+        .delete()
+        .eq('order_id', updatedOrder.id);
     }
 
     // أسماء الحالات الموحدة للنظامين
