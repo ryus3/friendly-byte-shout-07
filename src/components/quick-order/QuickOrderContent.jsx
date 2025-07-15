@@ -585,7 +585,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     clearCart();
     selectedItems.forEach(item => {
         const product = { id: item.productId, name: item.productName, images: [item.image] };
-        const variant = { sku: item.sku, color: item.color, size: item.size, price: item.price, cost_price: item.costPrice, quantity: item.stock, reserved: item.reserved, image: item.image };
+        const variant = { id: item.variantId, sku: item.sku, color: item.color, size: item.size, price: item.price, cost_price: item.costPrice, quantity: item.stock, reserved: item.reserved, image: item.image };
         addToCart(product, variant, item.quantity, false);
     });
     setProductSelectOpen(false);
