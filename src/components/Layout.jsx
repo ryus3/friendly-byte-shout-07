@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext.jsx';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
-  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell
+  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { toast } from '@/components/ui/use-toast.js';
@@ -34,7 +34,6 @@ const SidebarContent = ({ onClose }) => {
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', permission: 'view_inventory', color: 'text-pink-500' },
     { path: '/purchases', icon: TrendingUp, label: 'المشتريات', permission: 'view_purchases', color: 'text-emerald-500' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', permission: 'view_accounting', color: 'text-indigo-500' },
-    { path: '/notifications', icon: Bell, label: 'الإشعارات', permission: 'view_notifications', color: 'text-red-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
   

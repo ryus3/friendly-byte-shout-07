@@ -14,12 +14,9 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
-  BarChart, TrendingUp
+  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
-import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
-import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
@@ -124,8 +121,6 @@ const SettingsPage = () => {
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
-  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
-  const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
 
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
@@ -217,98 +212,26 @@ const SettingsPage = () => {
 
           <SectionHeader 
             icon={FileText} 
-            title="إدارة التقارير والتكامل"
-            description="تقارير مالية متقدمة، إحصائيات شاملة، وربط مع الأنظمة الخارجية"
+            title="التقارير والتوصيل"
+            description="إعدادات التقارير وشركات التوصيل والتليغرام"
           />
           
-          <div className="grid grid-cols-1 gap-6 mb-8">
-            <ModernCard
-              icon={FileText}
-              title="إدارة التقارير والإحصائيات"
-              description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
-              iconColor="from-gradient-start to-gradient-end"
-              onClick={() => setIsReportsOpen(true)}
-            >
-              <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                    <div className="text-2xl font-bold text-blue-600">{settings?.todayRevenue?.toLocaleString() || '0'}</div>
-                    <div className="text-xs text-muted-foreground">مبيعات اليوم (د.ع)</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
-                    <div className="text-2xl font-bold text-green-600">{settings?.monthRevenue?.toLocaleString() || '0'}</div>
-                    <div className="text-xs text-muted-foreground">إجمالي الشهر (د.ع)</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30">
-                    <div className="text-2xl font-bold text-purple-600">{settings?.activeProducts || '0'}</div>
-                    <div className="text-xs text-muted-foreground">المنتجات الفعالة</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
-                    <div className="text-2xl font-bold text-orange-600">{settings?.avgOrders || '0'}</div>
-                    <div className="text-xs text-muted-foreground">متوسط الطلبات/يوم</div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/50">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Printer className="w-4 h-4 text-blue-500" />
-                    <span>طباعة مباشرة</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Download className="w-4 h-4 text-green-500" />
-                    <span>تصدير PDF</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-purple-500" />
-                    <span>إرسال بالإيميل</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <RefreshCw className="w-4 h-4 text-orange-500" />
-                    <span>تقارير تلقائية</span>
-                  </div>
-                </div>
-              </div>
-            </ModernCard>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ModernCard
-              icon={DollarSign}
-              title="أسعار وإعدادات التوصيل"
-              description="إدارة أسعار التوصيل وشركات الشحن المتكاملة"
-              iconColor="from-green-500 to-emerald-600"
-              onClick={() => setIsDeliverySettingsOpen(true)}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">السعر الأساسي</span>
-                  <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">طلبات اليوم</span>
-                  <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
-                </div>
-              </div>
-            </ModernCard>
+              icon={FileText}
+              title="إعدادات التقارير"
+              description="تخصيص التقارير المالية والجرد والمبيعات"
+              iconColor="from-indigo-500 to-indigo-600"
+              onClick={() => setIsReportsOpen(true)}
+            />
 
             <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام الذكي"
-              description="نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام"
-              iconColor="from-blue-500 to-indigo-600"
-              onClick={() => setIsTelegramOpen(true)}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
-                  <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
-                  <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
-                </div>
-              </div>
-            </ModernCard>
+              icon={Truck}
+              title="شركات التوصيل"
+              description="إعدادات التليغرام وشركات التوصيل المدمجة"
+              iconColor="from-cyan-500 to-cyan-600"
+              onClick={() => setIsLoginDialogOpen(true)}
+            />
           </div>
 
           <SectionHeader 
@@ -374,16 +297,6 @@ const SettingsPage = () => {
       <DeliveryPartnerDialog
         open={isLoginDialogOpen}
         onOpenChange={setIsLoginDialogOpen}
-      />
-
-      <TelegramBotDialog
-        open={isTelegramOpen}
-        onOpenChange={setIsTelegramOpen}
-      />
-
-      <DeliverySettingsDialog
-        open={isDeliverySettingsOpen}
-        onOpenChange={setIsDeliverySettingsOpen}
       />
     </>
   );
