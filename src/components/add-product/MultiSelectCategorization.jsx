@@ -48,10 +48,7 @@ const MultiSelectCategorization = ({
           supabase.from('departments').select('*').eq('is_active', true).order('display_order')
         ]);
 
-        console.log('Categories loaded:', categoriesRes.data);
-        console.log('Product types loaded:', productTypesRes.data);
-        console.log('Seasons/occasions loaded:', seasonsOccasionsRes.data);
-        console.log('Departments loaded:', departmentsRes.data);
+        // Data loaded successfully
 
         setCategories(categoriesRes.data || []);
         setProductTypes(productTypesRes.data || []);

@@ -37,8 +37,25 @@ export const NotificationsSystemProvider = ({ children }) => {
       setNotifications(prev => [notification, ...prev]);
       setUnreadCount(prev => prev + 1);
 
-      // هنا يمكن إضافة حفظ في قاعدة البيانات
-      // await supabase.from('notifications').insert([notification]);
+      // حفظ في قاعدة البيانات
+      const { error: insertError } = await supabase
+        .from('notifications')
+        .insert([{
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+          user_id: notification.target_user_id,
+          data: {
+            target_role: notification.target_role,
+            related_entity_type: notification.related_entity_type,
+            related_entity_id: notification.related_entity_id
+          },
+          priority: notification.priority
+        }]);
+      
+      if (insertError) {
+        console.error('Error saving notification to database:', insertError);
+      }
 
       return notification;
     } catch (error) {
@@ -161,14 +178,22 @@ export const NotificationsSystemProvider = ({ children }) => {
         return;
       }
       
-      // الحصول على إعدادات التكرار
-      const { data: settings } = await supabase
+      // الحصول على إعدادات التكرار من الإعدادات المحفوظة
+      const { data: stockSettings } = await supabase
         .from('settings')
         .select('value')
-        .eq('key', 'stock_notification_frequency')
+        .eq('key', 'stock_notification_settings')
         .single();
       
-      const frequencyHours = settings?.value?.hours || 24;
+      // استخدام الإعدادات المحفوظة أو القيم الافتراضية
+      const userSettings = stockSettings?.value || {};
+      const frequencyHours = userSettings.notificationFrequencyHours || 168; // افتراضي أسبوع
+      
+      // التحقق من تفعيل الإشعارات
+      if (!userSettings.enableLowStockNotifications && !userSettings.enableOutOfStockNotifications) {
+        return; // الإشعارات معطلة
+      }
+      
       const now = new Date();
       
       // التحقق من عدم إرسال إشعار خلال الفترة المحددة
