@@ -58,11 +58,9 @@ const ManageProductsToolbar = ({
               <Button variant="outline" size="icon" onClick={() => onViewModeChange('list')} className={cn("flex-shrink-0", viewMode === 'list' && 'bg-accent')} title="عرض قائمة">
                 <List className="w-4 h-4" />
               </Button>
-              {!isMobile && (
-                <Button variant="outline" size="icon" onClick={() => onViewModeChange('grid')} className={cn("flex-shrink-0", viewMode === 'grid' && 'bg-accent')} title="عرض شبكة">
-                  <LayoutGrid className="w-4 h-4" />
-                </Button>
-              )}
+              <Button variant="outline" size="icon" onClick={() => onViewModeChange('grid')} className={cn("flex-shrink-0", viewMode === 'grid' && 'bg-accent')} title="عرض شبكة">
+                <LayoutGrid className="w-4 h-4" />
+              </Button>
             </div>
             <Button variant="outline" size="sm" onClick={onManageCategories} className="w-full col-span-1">
               إدارة المتغيرات
