@@ -95,7 +95,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
         .eq('key', 'telegram_bot_config')
         .single();
 
-      setBotConfigured(!!settings?.value?.bot_token);
+      setBotConfigured(!!settings?.value?.bot_token && !!settings?.value?.auto_configured);
     } catch (error) {
       console.error('Error checking bot configuration:', error);
       setBotConfigured(false);
@@ -162,28 +162,29 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
           </Card>
 
           {!botConfigured && (
-            <Card className="bg-blue-50 border-blue-200">
+            <Card className="bg-green-50 border-green-200">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-blue-700">
-                  <Bot className="w-5 h-5" />
-                  إعداد مطلوب
+                <CardTitle className="flex items-center gap-2 text-green-700">
+                  <CheckCircle className="w-5 h-5" />
+                  البوت جاهز تلقائياً
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 text-sm text-blue-700">
-                  <p>لتفعيل بوت التليغرام، تحتاج إلى:</p>
-                  <ul className="list-disc list-inside space-y-1 mr-4">
-                    <li>إنشاء بوت جديد عبر @BotFather</li>
-                    <li>الحصول على مفتاح البوت (Bot Token)</li>
-                    <li>إعداد البوت في النظام</li>
-                  </ul>
-                  <Button 
-                    onClick={() => setShowSetup(true)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 mt-3"
-                  >
-                    <Bot className="w-4 h-4 mr-2" />
-                    إعداد البوت الآن
-                  </Button>
+                <div className="space-y-3 text-sm text-green-700">
+                  <p>✅ تم إعداد البوت تلقائياً ويعمل الآن!</p>
+                  <div className="bg-green-100 p-3 rounded-lg">
+                    <p className="font-medium">📱 اسم البوت: @Ryusiq_bot</p>
+                    <p className="text-xs mt-1">البوت نشط ويستقبل الطلبات تلقائياً من الموظفين</p>
+                  </div>
+                  <div className="text-xs">
+                    <p><strong>✨ كل شيء تلقائي:</strong></p>
+                    <ul className="list-disc list-inside space-y-1 mr-4 mt-1">
+                      <li>لا حاجة لإعداد يدوي</li>
+                      <li>الموظفين يحتاجون فقط لرموزهم</li>
+                      <li>التوجيه الذكي داخل البوت</li>
+                      <li>دعم متقدم حسب الصلاحيات</li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
