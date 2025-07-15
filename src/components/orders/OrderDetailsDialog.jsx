@@ -73,7 +73,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     }
   };
 
-  const canEditOrder = (order.status === 'pending' || order.status === 'processing') && order.shipping_company !== 'محلي';
+  const canEditOrder = order.status === 'pending';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -156,7 +156,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                  </div>
                </div>
             </div>
-            {canEditStatus && (order.delivery_partner === 'محلي' || !order.delivery_partner) && (
+          {canEditStatus && (
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
                 <Select value={newStatus} onValueChange={setNewStatus}>
@@ -181,7 +181,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
               تعديل الطلب
             </Button>
           )}
-          {canEditStatus && (order.delivery_partner === 'محلي' || !order.delivery_partner) && (
+          {canEditStatus && (
             <Button onClick={handleUpdateStatus} disabled={newStatus === order.status}>
               <Edit className="w-4 h-4 ml-2" />
               تحديث الحالة

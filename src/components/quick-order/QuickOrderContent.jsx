@@ -653,6 +653,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             loadingPackageSizes={loadingPackageSizes}
             activePartner={activePartner}
             dataFetchError={dataFetchError}
+            settings={settings}
           />
         </fieldset>
 

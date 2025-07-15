@@ -126,14 +126,14 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
               )}
               
               {/* زر التعديل - للطلبات قيد التجهيز */}
-              {((order.delivery_partner === 'محلي' || !order.delivery_partner) || (order.delivery_partner && order.delivery_partner !== 'محلي')) && order.status === 'pending' && hasPermission('edit_orders') && (
+              {order.status === 'pending' && hasPermission('edit_orders') && (
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e)=>{e.stopPropagation(); onEditOrder()}}>
                       <Pencil className="h-4 w-4" />
                   </Button>
               )}
               
               {/* زر الحذف - للطلبات قيد التجهيز */}
-              {((order.delivery_partner === 'محلي' || !order.delivery_partner) || (order.delivery_partner && order.delivery_partner !== 'محلي')) && order.status === 'pending' && hasPermission('cancel_orders') && (
+              {order.status === 'pending' && hasPermission('cancel_orders') && (
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e)=>{e.stopPropagation(); onDeleteOrder([order.id])}}>
                       <Trash2 className="h-4 w-4" />
                   </Button>

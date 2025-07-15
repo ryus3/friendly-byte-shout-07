@@ -8,8 +8,13 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/contexts/InventoryContext';
 
-const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProductSelectOpen, isSubmittingState, isDeliveryPartnerSelected, packageSizes, loadingPackageSizes, activePartner }) => {
+const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProductSelectOpen, isSubmittingState, isDeliveryPartnerSelected, packageSizes, loadingPackageSizes, activePartner, settings }) => {
   const { cart, removeFromCart } = useInventory();
+  
+  // حساب المجاميع
+  const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+  const deliveryFee = activePartner === 'local' ? (settings?.deliveryFee || 0) : 0;
+  const totalAmount = subtotal + deliveryFee;
 
   return (
     <Card>
@@ -44,6 +49,26 @@ const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProdu
             ))}
           </div>
           {cart.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">السلة فارغة</p>}
+          
+          {/* ملخص السعر */}
+          {cart.length > 0 && (
+            <div className="mt-4 p-4 bg-secondary/50 rounded-lg border space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>مجموع المنتجات:</span>
+                <span>{subtotal.toLocaleString()} د.ع</span>
+              </div>
+              {deliveryFee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>رسوم التوصيل:</span>
+                  <span>{deliveryFee.toLocaleString()} د.ع</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-semibold border-t pt-2">
+                <span>المجموع الكلي:</span>
+                <span className="text-primary">{totalAmount.toLocaleString()} د.ع</span>
+              </div>
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="details">نوع البضاعة</Label>
