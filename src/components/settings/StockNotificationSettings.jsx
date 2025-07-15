@@ -30,16 +30,25 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
     lastSavedAt: null
   });
 
-  const handleSettingChange = (key, value) => {
-    setSettings(prev => ({ 
-      ...prev, 
+  const handleSettingChange = async (key, value) => {
+    const updatedSettings = { 
+      ...settings, 
       [key]: value,
       lastSavedAt: new Date().toISOString()
-    }));
+    };
+    
+    setSettings(updatedSettings);
     
     // حفظ فوري في قاعدة البيانات
-    if (key === 'notificationFrequencyHours') {
-      saveSettingsToDatabase({ ...settings, [key]: value, lastSavedAt: new Date().toISOString() });
+    try {
+      await saveSettingsToDatabase(updatedSettings);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast({
+        title: "خطأ في الحفظ",
+        description: "تعذر حفظ الإعدادات تلقائياً",
+        variant: "destructive"
+      });
     }
   };
 
@@ -55,9 +64,13 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
       
       if (error) {
         console.error('Error saving settings:', error);
+        throw error;
       }
+      
+      console.log('Settings saved successfully:', settingsToSave);
     } catch (error) {
       console.error('Error saving settings to database:', error);
+      throw error;
     }
   };
 

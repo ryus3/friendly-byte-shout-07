@@ -142,7 +142,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       .eq('key', 'delivery_fee')
       .single();
     
-    const defaultDeliveryFee = settingsData?.value?.fee || 5000;
+    const defaultDeliveryFee = Number(settingsData?.value) || 5000;
 
     let phoneFound = false;
     
@@ -285,7 +285,7 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         .eq('key', 'delivery_fee')
         .single();
       
-      const currentDeliveryFee = deliverySettings?.value || 5000;
+      const currentDeliveryFee = Number(deliverySettings?.value) || 5000;
       
       for (const item of items) {
         // البحث في قاعدة البيانات عن المنتج
@@ -366,8 +366,12 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     // إرسال تأكيد مفصل
     const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
     const itemsList = items.slice(0, 3).map(item => 
-      `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`
+      `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${(item.price * item.quantity).toLocaleString()} د.ع`
     ).join('\n');
+    
+    // حساب إجمالي المنتجات ورسوم التوصيل منفصلة
+    const itemsTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
     
     await sendTelegramMessage(chatId, `
 ✅ <b>تم استلام الطلب بنجاح!</b>
@@ -378,11 +382,15 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
 ${customerSecondaryPhone ? `📞 <b>هاتف ثانوي:</b> ${customerSecondaryPhone}` : ''}
 ${deliveryIcon} <b>نوع التسليم:</b> ${deliveryType}
 ${customerAddress ? `📍 <b>العنوان:</b> ${customerAddress}` : ''}
-💰 <b>المبلغ الإجمالي:</b> ${totalPrice.toLocaleString()} د.ع
 
 📦 <b>المنتجات (${items.length}):</b>
 ${itemsList}
 ${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
+
+💰 <b>تفاصيل السعر:</b>
+• المنتجات: ${itemsTotal.toLocaleString()} د.ع
+${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.toLocaleString()} د.ع` : ''}
+• <b>المجموع الإجمالي: ${totalPrice.toLocaleString()} د.ع</b>
 
 ⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
 

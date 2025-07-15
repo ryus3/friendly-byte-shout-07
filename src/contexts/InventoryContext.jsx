@@ -129,7 +129,7 @@ export const InventoryProvider = ({ children }) => {
         `).order('created_at', { ascending: false }),
         supabase.from('orders').select('*').order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
-        supabase.from('settings').select('*').limit(1).maybeSingle(),
+        supabase.from('settings').select('*'),
         supabase.from('ai_orders').select('*').order('created_at', { ascending: false })
       ]);
 
@@ -179,6 +179,15 @@ export const InventoryProvider = ({ children }) => {
           product_seasons_occasions: product.product_seasons_occasions
         };
       });
+
+      // تحميل الإعدادات من قاعدة البيانات
+      if (settingsRes.data && settingsRes.data.length > 0) {
+        const dbSettings = {};
+        settingsRes.data.forEach(setting => {
+          dbSettings[setting.key] = setting.value;
+        });
+        setSettings(prev => ({ ...prev, ...dbSettings }));
+      }
 
       setProducts(processedProducts);
       setOrders(ordersRes.data?.filter(o => o.delivery_status !== 'ai_pending') || []);
@@ -260,8 +269,30 @@ export const InventoryProvider = ({ children }) => {
   }, [calculateProfit]);
 
   const updateSettings = async (newSettings) => {
-    setSettings(prev => ({...prev, ...newSettings}));
-    toast({ title: "نجاح", description: "تم تحديث الإعدادات.", variant: 'success' });
+    try {
+      setSettings(prev => ({...prev, ...newSettings}));
+      
+      // حفظ الإعدادات في قاعدة البيانات
+      for (const [key, value] of Object.entries(newSettings)) {
+        const { error } = await supabase
+          .from('settings')
+          .upsert({
+            key: key,
+            value: value,
+            description: `إعداد ${key} محفوظ تلقائياً`
+          });
+        
+        if (error) {
+          console.error(`Error saving setting ${key}:`, error);
+          throw error;
+        }
+      }
+      
+      toast({ title: "نجاح", description: "تم حفظ الإعدادات بنجاح.", variant: 'success' });
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      toast({ title: "خطأ", description: "فشل في حفظ الإعدادات.", variant: 'destructive' });
+    }
   };
 
   const requestProfitSettlement = async (employeeId, amount, orderIds) => {
