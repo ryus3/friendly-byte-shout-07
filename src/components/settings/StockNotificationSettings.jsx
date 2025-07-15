@@ -25,11 +25,40 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
     criticalThreshold: 2,
     enableSounds: true,
     autoSilenceAfterRead: false,
-    permanentlySilencedProducts: []
+    permanentlySilencedProducts: [],
+    notificationFrequencyHours: 24,
+    lastSavedAt: null
   });
 
   const handleSettingChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    setSettings(prev => ({ 
+      ...prev, 
+      [key]: value,
+      lastSavedAt: new Date().toISOString()
+    }));
+    
+    // حفظ فوري في قاعدة البيانات
+    if (key === 'notificationFrequencyHours') {
+      saveSettingsToDatabase({ ...settings, [key]: value, lastSavedAt: new Date().toISOString() });
+    }
+  };
+
+  const saveSettingsToDatabase = async (settingsToSave) => {
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .upsert({
+          key: 'stock_notification_settings',
+          value: settingsToSave,
+          description: 'إعدادات تنبيهات المخزون المحفوظة'
+        });
+      
+      if (error) {
+        console.error('Error saving settings:', error);
+      }
+    } catch (error) {
+      console.error('Error saving settings to database:', error);
+    }
   };
 
   const silenceProductNotifications = (productSku) => {
@@ -339,12 +368,22 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               إلغاء
             </Button>
-            <Button onClick={() => {
-              toast({
-                title: "تم الحفظ",
-                description: "تم حفظ إعدادات تنبيهات المخزون بنجاح"
-              });
-              onOpenChange(false);
+            <Button onClick={async () => {
+              try {
+                await saveSettingsToDatabase(settings);
+                toast({
+                  title: "تم الحفظ بنجاح",
+                  description: "تم حفظ إعدادات تنبيهات المخزون في قاعدة البيانات",
+                  variant: "success"
+                });
+                onOpenChange(false);
+              } catch (error) {
+                toast({
+                  title: "خطأ في الحفظ",
+                  description: "تعذر حفظ الإعدادات، يرجى المحاولة مرة أخرى",
+                  variant: "destructive"
+                });
+              }
             }}>
               <CheckCircle className="w-4 h-4 mr-2" />
               حفظ الإعدادات
