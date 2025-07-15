@@ -127,85 +127,33 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
 
         <div className="space-y-6">
           {/* Bot Status */}
-          <Card className={`${botConfigured ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+          <Card className="bg-green-50 border-green-200">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between text-lg">
-                <div className="flex items-center gap-2">
-                  {botConfigured ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-500" />
-                  )}
-                  <span className={botConfigured ? 'text-green-700' : 'text-red-700'}>
-                    {botConfigured ? 'البوت مُعدّ ويعمل' : 'البوت غير مُعدّ'}
-                  </span>
-                </div>
-                <Button
-                  variant={botConfigured ? "outline" : "default"}
-                  size="sm"
-                  onClick={() => setShowSetup(true)}
-                  className={botConfigured ? "" : "bg-blue-600 hover:bg-blue-700"}
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  {botConfigured ? 'إعادة الإعداد' : 'إعداد البوت'}
-                </Button>
+              <CardTitle className="flex items-center gap-2 text-green-700">
+                <CheckCircle className="w-5 h-5" />
+                البوت جاهز تلقائياً
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className={`text-sm ${botConfigured ? 'text-green-700' : 'text-red-700'}`}>
-                {botConfigured 
-                  ? 'البوت جاهز لاستقبال الطلبات من الموظفين عبر التليغرام'
-                  : 'يجب إعداد البوت أولاً قبل أن يتمكن الموظفون من استخدامه'
-                }
-              </p>
+              <div className="space-y-3 text-sm text-green-700">
+                <p>✅ تم إعداد البوت تلقائياً ويعمل الآن!</p>
+                <div className="bg-green-100 p-3 rounded-lg">
+                  <p className="font-medium">📱 اسم البوت: @Ryusiq_bot</p>
+                  <p className="text-xs mt-1">البوت نشط ويستقبل الطلبات تلقائياً من الموظفين</p>
+                </div>
+                <div className="text-xs">
+                  <p><strong>✨ كل شيء تلقائي:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 mr-4 mt-1">
+                    <li>لا حاجة لإعداد يدوي</li>
+                    <li>الموظفين يحتاجون فقط لرموزهم</li>
+                    <li>التوجيه الذكي داخل البوت</li>
+                    <li>دعم متقدم حسب الصلاحيات</li>
+                  </ul>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
-          {!botConfigured && (
-            <Card className="bg-green-50 border-green-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-green-700">
-                  <CheckCircle className="w-5 h-5" />
-                  البوت جاهز تلقائياً
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 text-sm text-green-700">
-                  <p>✅ تم إعداد البوت تلقائياً ويعمل الآن!</p>
-                  <div className="bg-green-100 p-3 rounded-lg">
-                    <p className="font-medium">📱 اسم البوت: @Ryusiq_bot</p>
-                    <p className="text-xs mt-1">البوت نشط ويستقبل الطلبات تلقائياً من الموظفين</p>
-                  </div>
-                  <div className="text-xs">
-                    <p><strong>✨ كل شيء تلقائي:</strong></p>
-                    <ul className="list-disc list-inside space-y-1 mr-4 mt-1">
-                      <li>لا حاجة لإعداد يدوي</li>
-                      <li>الموظفين يحتاجون فقط لرموزهم</li>
-                      <li>التوجيه الذكي داخل البوت</li>
-                      <li>دعم متقدم حسب الصلاحيات</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* معلومات البوت */}
-          {botConfigured && (
-            <Card className="bg-green-50 border-green-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-green-700">بوت التليغرام جاهز</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-green-700 text-sm">
-                  البوت محفوظ في الخادم ويعمل تلقائياً. الموظفين يحتاجون فقط لإدخال رموزهم الخاصة.
-                </p>
-              </CardContent>
-            </Card>
-          )}
 
           {/* رموز الموظفين */}
           <Card>

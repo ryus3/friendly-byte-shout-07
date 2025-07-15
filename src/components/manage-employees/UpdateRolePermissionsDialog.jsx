@@ -76,7 +76,7 @@ const UpdateRolePermissionsDialog = ({ open, onOpenChange }) => {
           
           <div>
             <Label className="flex items-center gap-2 mb-2"><Shield /> الصلاحيات الجديدة</Label>
-            <Accordion type="multiple" className="w-full" defaultValue={permissionsMap.map(p => p.category)}>
+            <Accordion type="multiple" className="w-full"  defaultValue={["pages"]}>
               {permissionsMap.map(category => {
                 const categoryPermissionIds = category.permissions.map(p => p.id);
                 const allSelected = categoryPermissionIds.every(p => permissions.includes(p));
