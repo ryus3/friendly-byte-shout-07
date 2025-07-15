@@ -29,14 +29,23 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
         }
 
         // تحديث الكمية الفعلية في المخزون
-        await supabase
+        const { data: currentInventory } = await supabase
           .from('inventory')
-          .update({
-            quantity: supabase.sql`quantity + ${item.quantity}`,
-            updated_at: new Date().toISOString()
-          })
+          .select('quantity')
           .eq('product_id', item.product_id)
-          .eq('variant_id', item.variant_id || null);
+          .eq('variant_id', item.variant_id || null)
+          .single();
+
+        if (currentInventory) {
+          await supabase
+            .from('inventory')
+            .update({
+              quantity: currentInventory.quantity + item.quantity,
+              updated_at: new Date().toISOString()
+            })
+            .eq('product_id', item.product_id)
+            .eq('variant_id', item.variant_id || null);
+        }
       }
 
       // تحديث حالة الطلب إلى "مستلم الراجع"
@@ -110,7 +119,7 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="w-5 h-5 text-green-500" />
@@ -136,26 +145,28 @@ const ReturnReceiptDialog = ({ open, onClose, order, onSuccess }) => {
               <h4 className="font-medium mb-3">منتجات الطلب:</h4>
               <div className="space-y-2">
                 {orderItems.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.products?.name}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
+                  <div key={index} className="bg-muted rounded-lg p-3 space-y-2">
+                    <div className="font-medium text-base">{item.products?.name}</div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         {item.product_variants?.colors?.name && (
                           <span className="inline-flex items-center gap-1">
                             <span 
-                              className="w-3 h-3 rounded-full border" 
+                              className="w-4 h-4 rounded-full border border-border" 
                               style={{ backgroundColor: item.product_variants.colors.hex_code }}
                             ></span>
                             {item.product_variants.colors.name}
                           </span>
                         )}
                         {item.product_variants?.sizes?.name && (
-                          <span className="ml-2">• حجم: {item.product_variants.sizes.name}</span>
+                          <span className="bg-background px-2 py-1 rounded text-xs">
+                            {item.product_variants.sizes.name}
+                          </span>
                         )}
                       </div>
-                    </div>
-                    <div className="text-sm font-medium">
-                      الكمية: {item.quantity}
+                      <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                        {item.quantity} قطعة
+                      </div>
                     </div>
                   </div>
                 ))}
