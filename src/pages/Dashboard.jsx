@@ -291,14 +291,24 @@ const Dashboard = () => {
         
         console.log('مجموع الأرباح المعلقة:', pendingProfit);
         
-        // حساب المبيعات المستلمة (بدون رسوم التوصيل)
+        // حساب المبيعات المستلمة (من أسعار المنتجات الفعلية)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
-        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
+        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
+          const itemsTotal = (o.items || []).reduce((itemSum, item) => 
+            itemSum + (item.unit_price * item.quantity), 0
+          );
+          return sum + itemsTotal;
+        }, 0);
 
-        // حساب المبيعات المعلقة (الطلبات المشحونة فقط)
+        // حساب المبيعات المعلقة (من أسعار المنتجات الفعلية)
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
-        const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        const pendingSales = pendingSalesOrders.reduce((sum, o) => {
+          const itemsTotal = (o.items || []).reduce((itemSum, item) => 
+            itemSum + (item.unit_price * item.quantity), 0
+          );
+          return sum + itemsTotal;
+        }, 0);
 
         const result = {
             totalOrdersCount: filteredTotalOrders.length,
