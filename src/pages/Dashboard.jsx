@@ -219,8 +219,17 @@ const Dashboard = () => {
         const deliveredOrders = (orders || []).filter(o => o.status === 'delivered' && filterByDate(o.updated_at || o.created_at));
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const cogs = deliveredOrders.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + ((item.costPrice || 0) * item.quantity), 0)), 0);
+        // حساب إجمالي الإيرادات من final_amount (تتضمن رسوم التوصيل)
+        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        
+        // حساب تكلفة البضاعة المباعة من العناصر الفعلية
+        const cogs = deliveredOrders.reduce((sum, o) => {
+          const orderCogs = (o.items || []).reduce((itemSum, item) => {
+            const costPrice = item.costPrice || item.cost_price || 0;
+            return itemSum + (costPrice * item.quantity);
+          }, 0);
+          return sum + orderCogs;
+        }, 0);
         const grossProfit = totalRevenue - cogs;
         const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
@@ -231,7 +240,8 @@ const Dashboard = () => {
         deliveredOrders.forEach(o => {
           const day = format(parseISO(o.updated_at || o.created_at), 'dd');
           if (!salesByDay[day]) salesByDay[day] = 0;
-          salesByDay[day] += o.total;
+          // استخدام final_amount للمبيعات اليومية
+          salesByDay[day] += o.final_amount || o.total_amount || 0;
         });
         
         const expensesByDay = {};
@@ -294,8 +304,8 @@ const Dashboard = () => {
         // حساب المبيعات المستلمة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          // المبيعات = إجمالي الطلب - رسوم التوصيل
-          const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
+          // المبيعات = إجمالي الطلب - رسوم التوصيل (فقط أسعار المنتجات)
+          const productsSalesOnly = (o.total_amount || 0);
           return sum + productsSalesOnly;
         }, 0);
 
@@ -303,8 +313,8 @@ const Dashboard = () => {
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => {
-          // المبيعات = إجمالي الطلب - رسوم التوصيل
-          const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
+          // المبيعات = إجمالي الطلب - رسوم التوصيل (فقط أسعار المنتجات)
+          const productsSalesOnly = (o.total_amount || 0);
           return sum + productsSalesOnly;
         }, 0);
 

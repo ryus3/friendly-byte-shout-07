@@ -146,6 +146,7 @@ export const InventoryProvider = ({ children }) => {
             product_variants (
               id,
               price,
+              cost_price,
               images,
               colors (name, hex_code),
               sizes (name)
@@ -219,8 +220,37 @@ export const InventoryProvider = ({ children }) => {
         setSettings(prev => ({ ...prev, ...dbSettings }));
       }
 
+      // معالجة وتحويل بيانات الطلبات
+      const processedOrders = (ordersRes.data || []).map(order => {
+        // تحويل order_items إلى items بالتنسيق المطلوب
+        const items = (order.order_items || []).map(item => ({
+          id: item.id,
+          productId: item.product_id,
+          variantId: item.variant_id,
+          productName: item.products?.name || 'منتج غير محدد',
+          product_name: item.products?.name || 'منتج غير محدد',
+          name: item.products?.name || 'منتج غير محدد',
+          quantity: item.quantity,
+          price: item.unit_price,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          costPrice: item.product_variants?.cost_price || 0,
+          cost_price: item.product_variants?.cost_price || 0,
+          color: item.product_variants?.colors?.name || null,
+          size: item.product_variants?.sizes?.name || null,
+          image: item.product_variants?.images?.[0] || item.products?.images?.[0] || null
+        }));
+
+        return {
+          ...order,
+          items,
+          total: order.final_amount || order.total_amount, // لضمان التوافق مع الكود القديم
+          order_items: order.order_items // الاحتفاظ بالبيانات الأصلية
+        };
+      });
+
       setProducts(processedProducts);
-      setOrders(ordersRes.data?.filter(o => o.delivery_status !== 'ai_pending') || []);
+      setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
       setAiOrders(aiOrdersRes.data || []);
     } catch (error) {
       console.error("Error fetching initial data:", error);
