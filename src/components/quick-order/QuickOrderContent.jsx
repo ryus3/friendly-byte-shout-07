@@ -101,15 +101,19 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         ...prev,
         name: aiOrderData.customer_name || '',
         phone: aiOrderData.customer_phone || '',
-        city: parsedCity || 'بغداد', // Default to Baghdad
+        city: parsedCity || 'بغداد',
         region: parsedRegion || '',
         address: aiOrderData.customer_address || '',
-        notes: '',
+        notes: aiOrderData.order_data?.delivery_type ? `نوع التوصيل: ${aiOrderData.order_data.delivery_type}` : '',
         details: Array.isArray(aiOrderData.items) ? 
-          aiOrderData.items.map(item => `${item.name} (${item.quantity})`).join(' + ') : '',
+          aiOrderData.items.map(item => {
+            const colorSize = [item.color, item.size].filter(Boolean).join(' ');
+            return `${item.product_name || item.name}${colorSize ? ` (${colorSize})` : ''} × ${item.quantity}`;
+          }).join(' + ') : '',
         quantity: Array.isArray(aiOrderData.items) ? 
           aiOrderData.items.reduce((sum, item) => sum + (item.quantity || 1), 0) : 1,
-        price: aiOrderData.total_amount || 0
+        price: aiOrderData.total_amount || 0,
+        deliveryPartner: aiOrderData.order_data?.delivery_type === 'توصيل' ? 'الوسيط' : 'محلي'
       }));
       
       // إضافة المنتجات للسلة مع التحقق من وجودها في قاعدة البيانات
