@@ -58,7 +58,19 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
 
   const selectedVariant = useMemo(() => {
     if (!product || !selectedColor || !selectedSize) return null;
-    return product.variants.find(v => v.color === selectedColor.name && v.size === selectedSize);
+    const variant = product.variants.find(v => v.color === selectedColor.name && v.size === selectedSize);
+    if (variant) {
+      // التأكد من وجود جميع البيانات المطلوبة
+      return {
+        ...variant,
+        id: variant.id, // التأكد من وجود ID
+        sku: variant.sku || variant.barcode, // استخدام sku أو barcode
+        quantity: variant.quantity || 0,
+        reserved: variant.reserved || 0,
+        cost_price: variant.cost_price || 0
+      };
+    }
+    return null;
   }, [product, selectedColor, selectedSize]);
 
   const getStockLevelClass = (stock) => {

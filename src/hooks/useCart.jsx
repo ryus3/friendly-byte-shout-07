@@ -26,9 +26,9 @@ export const useCart = () => {
       size: variant.size,
       quantity,
       price: variant.price || product.price,
-      costPrice: variant.cost_price,
+      costPrice: variant.cost_price || product.cost_price,
       stock: variant.quantity,
-      reserved: variant.reserved,
+      reserved: variant.reserved || 0,
       total: (variant.price || product.price) * quantity
     };
     

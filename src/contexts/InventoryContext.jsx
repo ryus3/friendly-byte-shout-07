@@ -168,13 +168,17 @@ export const InventoryProvider = ({ children }) => {
           const variantInventory = productInventory.find(inv => inv.variant_id === variant.id);
           return {
             ...variant,
+            id: variant.id, // التأكد من وجود ID
+            sku: variant.barcode || `${product.id}-${variant.id}`, // إنشاء SKU إذا لم يكن موجود
             color: variant.colors?.name || 'Unknown',
             color_hex: variant.colors?.hex_code || '#000000',
             size: variant.sizes?.name || 'Unknown',
             quantity: variantInventory?.quantity || 0,
+            reserved: variantInventory?.reserved_quantity || 0,
             min_stock: variantInventory?.min_stock || 0,
             location: variantInventory?.location || null,
-            inventoryId: variantInventory?.id || null
+            inventoryId: variantInventory?.id || null,
+            image: variant.images?.[0] || product.images?.[0] || null
           };
         });
 
