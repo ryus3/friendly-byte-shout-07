@@ -40,14 +40,14 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
     return (
         <>
             <Dialog open={open} onOpenChange={onClose}>
-                <DialogContent className="max-w-4xl w-[95vw] sm:w-full">
-                    <DialogHeader>
-                        <DialogTitle>{title}</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="max-w-lg mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="flex-shrink-0">
+                        <DialogTitle className="text-lg">{title}</DialogTitle>
+                        <DialogDescription className="text-sm">
                             ملخص سريع للطلبات للفترة المحددة ({periodLabel}).
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="h-[60vh] flex flex-col">
+                    <div className="flex-1 overflow-y-auto min-h-0 py-2">
                         <OrderList
                             orders={orders}
                             isLoading={false}
@@ -55,9 +55,9 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
                             isCompact={true}
                         />
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={onClose}>إغلاق</Button>
-                        <Button onClick={onDetailsClick}>
+                    <DialogFooter className="flex-shrink-0 mt-4 flex-col sm:flex-row gap-2">
+                        <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">إغلاق</Button>
+                        <Button onClick={onDetailsClick} className="w-full sm:w-auto">
                             <ArrowRight className="ml-2 h-4 w-4" />
                             عرض كل التفاصيل
                         </Button>
@@ -291,21 +291,21 @@ const Dashboard = () => {
         
         console.log('مجموع الأرباح المعلقة:', pendingProfit);
         
-        // حساب المبيعات المستلمة (من إجمالي الطلب بدون رسوم التوصيل)
+        // حساب المبيعات المستلمة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          // استخدام total_amount أو final_amount بدون delivery_fee
-          const orderTotal = (o.total_amount || o.final_amount || 0) - (o.delivery_fee || 0);
-          return sum + orderTotal;
+          // المبيعات = إجمالي الطلب - رسوم التوصيل
+          const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
+          return sum + productsSalesOnly;
         }, 0);
 
-        // حساب المبيعات المعلقة (من إجمالي الطلب بدون رسوم التوصيل)
+        // حساب المبيعات المعلقة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => {
-          // استخدام total_amount أو final_amount بدون delivery_fee
-          const orderTotal = (o.total_amount || o.final_amount || 0) - (o.delivery_fee || 0);
-          return sum + orderTotal;
+          // المبيعات = إجمالي الطلب - رسوم التوصيل
+          const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
+          return sum + productsSalesOnly;
         }, 0);
 
         const result = {
