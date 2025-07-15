@@ -5,6 +5,7 @@ import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useProfits } from '@/contexts/ProfitsContext';
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
+import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -73,6 +75,7 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 const Dashboard = () => {
     const { user, pendingRegistrations, hasPermission, allUsers } = useAuth();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
+    const { profits } = useProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -86,6 +89,7 @@ const Dashboard = () => {
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
+    const [isPendingProfitsOpen, setIsPendingProfitsOpen] = useState(false);
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
@@ -206,21 +210,40 @@ const Dashboard = () => {
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         const deliveredOrders = (orders || []).filter(o => o.status === 'delivered');
         
-        let allPendingProfitOrders = deliveredOrders.filter(o => (o.profitStatus || 'pending') === 'pending');
-        if (!hasPermission('view_all_orders')) {
-          allPendingProfitOrders = allPendingProfitOrders.filter(o => o.created_by === user.id);
-        }
-        const pendingProfitOrders = filterOrdersByPeriod(allPendingProfitOrders, periods.pendingProfit);
-        const pendingProfit = pendingProfitOrders.reduce((sum, o) => sum + ((o.items || []).reduce((s, i) => s + calculateProfit(i, o.created_by), 0)), 0);
+        // حساب الأرباح المعلقة من جدول profits
+        let pendingProfits = [];
+        let settledProfits = [];
         
+        if (profits && profits.length > 0) {
+            // فلترة الأرباح المعلقة
+            pendingProfits = profits.filter(p => p.status === 'pending');
+            settledProfits = profits.filter(p => p.status === 'settled');
+            
+            // إذا لم يكن لديه صلاحية رؤية كل الأرباح، فلتر حسب المستخدم
+            if (!hasPermission('view_all_orders')) {
+                pendingProfits = pendingProfits.filter(p => p.employee_id === user.id);
+                settledProfits = settledProfits.filter(p => p.employee_id === user.id);
+            }
+        }
+        
+        // حساب الأرباح المعلقة لفترة معينة
+        const filteredPendingProfits = pendingProfits.filter(p => {
+            const profitDate = parseISO(p.created_at);
+            const dateRange = filterOrdersByPeriod([], periods.pendingProfit, true);
+            return (!dateRange.from || profitDate >= dateRange.from) && 
+                   (!dateRange.to || profitDate <= dateRange.to);
+        });
+        
+        const pendingProfit = filteredPendingProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        
+        // حساب المبيعات المستلمة (بدون رسوم التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
-        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => sum + o.total, 0);
+        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
 
-        const pendingSalesOrders = filterOrdersByPeriod(
-          visibleOrders.filter(o => ['pending', 'processing', 'shipped'].includes(o.status)),
-          periods.pendingSales
-        );
-        const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + o.total, 0);
+        // حساب المبيعات المعلقة (الطلبات المشحونة)
+        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
+        const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
+        const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
 
         return {
             totalOrdersCount: filteredTotalOrders.length,
@@ -228,14 +251,14 @@ const Dashboard = () => {
             pendingProfit,
             deliveredSales,
             pendingSales,
-            pendingProfitOrders,
+            pendingProfitOrders: filteredPendingProfits,
             deliveredSalesOrders,
             pendingSalesOrders,
             topCustomers: getTopCustomers(visibleOrders),
             topProvinces: getTopProvinces(visibleOrders),
             topProducts: getTopProducts(visibleOrders),
         };
-    }, [visibleOrders, orders, allUsers, periods, user.id, hasPermission, calculateProfit, financialSummary]);
+    }, [visibleOrders, orders, allUsers, periods, user.id, hasPermission, calculateProfit, financialSummary, profits]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
@@ -268,7 +291,7 @@ const Dashboard = () => {
             key: 'netProfit', title: 'صافي الارباح', value: dashboardData.netProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         hasPermission('view_profits') && {
-            key: 'pendingProfit', title: 'الارباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => openSummaryDialog('pendingProfit', dashboardData.pendingProfitOrders, 'pendingProfit')
+            key: 'pendingProfit', title: 'الارباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => setIsPendingProfitsOpen(true)
         },
         hasPermission('view_orders') && {
             key: 'deliveredSales', title: 'المبيعات المستلمة', value: dashboardData.deliveredSales, icon: CheckCircle, colors: ['purple-500', 'violet-500'], format: 'currency', currentPeriod: periods.deliveredSales, onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), onClick: () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales')
@@ -306,6 +329,14 @@ const Dashboard = () => {
                         summary={financialSummary}
                         datePeriod={periods.netProfit}
                         onDatePeriodChange={(p) => handlePeriodChange('netProfit', p)}
+                    />
+                )}
+                {isPendingProfitsOpen && (
+                    <PendingProfitsDialog
+                        open={isPendingProfitsOpen}
+                        onClose={() => setIsPendingProfitsOpen(false)}
+                        pendingProfits={dashboardData.pendingProfitOrders || []}
+                        orders={orders || []}
                     />
                 )}
             </AnimatePresence>
