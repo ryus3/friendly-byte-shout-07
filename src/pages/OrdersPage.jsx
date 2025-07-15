@@ -174,7 +174,7 @@ const OrdersPage = () => {
   }, []);
 
   const handleUpdateOrderStatus = useCallback(async (orderId, newStatus) => {
-    await updateOrder(orderId, newStatus);
+    await updateOrder(orderId, { status: newStatus });
   }, [updateOrder]);
   
   const handleArchiveSelected = async () => {

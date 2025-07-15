@@ -155,9 +155,10 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         return { success: false, error: 'الطلب غير موجود' };
       }
 
-      // التحقق من الصلاحيات - يمكن التعديل فقط في حالة "قيد التجهيز"
-      if (originalOrder.status !== 'pending') {
-        return { success: false, error: 'يمكن تعديل الطلبات في مرحلة "قيد التجهيز" فقط' };
+      // التحقق من الصلاحيات - يمكن التعديل فقط في الحالات المسموحة
+      const allowedEditStates = ['pending', 'shipped', 'needs_processing'];
+      if (!allowedEditStates.includes(originalOrder.status)) {
+        return { success: false, error: 'لا يمكن تعديل هذا الطلب في حالته الحالية' };
       }
 
       const { data: updatedOrder, error } = await supabase
@@ -195,43 +196,99 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
   // معالجة تغيير الحالة
   const handleStatusChange = async (originalOrder, updatedOrder) => {
-    const isLocalOrder = originalOrder.delivery_partner === 'محلي';
-    
-    // 1. pending (قيد التجهيز) - المخزون محجوز
-    // لا حاجة لتغيير شيء هنا، المخزون محجوز من البداية
-    
-    // 2. shipped (تم الشحن) - مبيعات معلقة، المخزون لا يزال محجوز
-    if (updatedOrder.status === 'shipped' && originalOrder.status !== 'shipped') {
-      // تحديث حالة الأرباح إلى معلقة
-      await supabase
-        .from('profits')
-        .update({ status: 'pending_sale' })
-        .eq('order_id', updatedOrder.id);
-    }
-    
-    // 3. delivered (تم التوصيل) - خصم فعلي من المخزون، أرباح معلقة
-    if (updatedOrder.status === 'delivered' && originalOrder.status !== 'delivered') {
-      await finalizeStock(updatedOrder.id);
-      await supabase.rpc('calculate_order_profit', { order_id_input: updatedOrder.id });
+    try {
+      console.log('Handling status change:', originalOrder.status, '->', updatedOrder.status);
       
-      // تحديث حالة الأرباح إلى معلقة للاستلام
-      await supabase
-        .from('profits')
-        .update({ status: 'pending' })
-        .eq('order_id', updatedOrder.id);
+      // 1. pending (قيد التجهيز) - المخزون محجوز
+      // لا حاجة لتغيير شيء هنا، المخزون محجوز من البداية
+      
+      // 2. shipped (تم الشحن) - مبيعات معلقة، تحتاج معالجة
+      if (updatedOrder.status === 'shipped' && originalOrder.status !== 'shipped') {
+        console.log('Processing shipped status...');
+        
+        // تغيير الحالة إلى "تحتاج معالجة" لجعل المستخدم يعرف أن هناك خطوة أخرى
+        await supabase
+          .from('orders')
+          .update({ status: 'needs_processing' })
+          .eq('id', updatedOrder.id);
+          
+        // تحديث الطلب في الحالة المحلية
+        updatedOrder.status = 'needs_processing';
+        
+        // تحديث حالة الأرباح إلى معلقة
+        const { error: profitError } = await supabase
+          .from('profits')
+          .update({ status: 'pending_sale' })
+          .eq('order_id', updatedOrder.id);
+          
+        if (profitError) {
+          console.error('Error updating profit status:', profitError);
+        }
+        
+        toast({
+          title: "تم الشحن",
+          description: "تم تغيير حالة الطلب إلى 'تحتاج معالجة'. يمكنك الآن تحديثها إلى 'تم التوصيل'.",
+          variant: "success"
+        });
+      }
+      
+      // 3. delivered (تم التوصيل) - خصم فعلي من المخزون، أرباح معلقة
+      if (updatedOrder.status === 'delivered' && originalOrder.status !== 'delivered') {
+        console.log('Processing delivered status...');
+        
+        try {
+          await finalizeStock(updatedOrder.id);
+          console.log('Stock finalized successfully');
+        } catch (stockError) {
+          console.error('Error finalizing stock:', stockError);
+          throw new Error('فشل في خصم المخزون');
+        }
+        
+        try {
+          await supabase.rpc('calculate_order_profit', { order_id_input: updatedOrder.id });
+          console.log('Profit calculated successfully');
+        } catch (profitError) {
+          console.error('Error calculating profit:', profitError);
+          // لا نرمي خطأ هنا لأن المخزون تم خصمه
+        }
+        
+        // تحديث حالة الأرباح إلى معلقة للاستلام
+        const { error: profitUpdateError } = await supabase
+          .from('profits')
+          .update({ status: 'pending' })
+          .eq('order_id', updatedOrder.id);
+          
+        if (profitUpdateError) {
+          console.error('Error updating profit status to pending:', profitUpdateError);
+        }
+      }
+      
+      // 4. إذا تم إلغاء الطلب، نلغي حجز المخزون
+      if (updatedOrder.status === 'cancelled' && originalOrder.status !== 'cancelled') {
+        console.log('Processing cancelled status...');
+        
+        try {
+          await releaseStock(updatedOrder.id);
+          console.log('Stock released successfully');
+        } catch (stockError) {
+          console.error('Error releasing stock:', stockError);
+        }
+        
+        // حذف سجل الأرباح إذا كان موجوداً
+        const { error: deleteProfitError } = await supabase
+          .from('profits')
+          .delete()
+          .eq('order_id', updatedOrder.id);
+          
+        if (deleteProfitError) {
+          console.error('Error deleting profit record:', deleteProfitError);
+        }
+      }
+    } catch (error) {
+      console.error('Error in handleStatusChange:', error);
+      throw error;
     }
     
-    // 4. إذا تم إلغاء الطلب، نلغي حجز المخزون
-    if (updatedOrder.status === 'cancelled' && originalOrder.status !== 'cancelled') {
-      await releaseStock(updatedOrder.id);
-      
-      // حذف سجل الأرباح إذا كان موجوداً
-      await supabase
-        .from('profits')
-        .delete()
-        .eq('order_id', updatedOrder.id);
-    }
-
     // أسماء الحالات الموحدة للنظامين
     const statusNames = {
       'pending': 'قيد التجهيز',

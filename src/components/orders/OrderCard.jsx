@@ -78,7 +78,7 @@ const OrderCard = ({
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
-      onUpdateStatus(order.id, { status: newStatus });
+      onUpdateStatus(order.id, newStatus);
     }
   };
 

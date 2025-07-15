@@ -124,6 +124,10 @@ const EmployeeFollowUpPage = () => {
     setSelectedOrders([]);
   };
 
+  const handleUpdateStatus = async (orderId, newStatus) => {
+    await updateOrder(orderId, { status: newStatus });
+  };
+
   if (loading) {
     return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
   }
@@ -214,7 +218,7 @@ const EmployeeFollowUpPage = () => {
                 orders={filteredOrders} 
                 isLoading={loading} 
                 onViewOrder={handleViewOrder}
-                onUpdateStatus={updateOrder}
+                onUpdateStatus={handleUpdateStatus}
                 selectedOrders={selectedOrders}
                 setSelectedOrders={setSelectedOrders}
                 onDeleteOrder={(orderIds) => deleteOrders(orderIds)}
