@@ -1,11 +1,29 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
+import { extractRegionFromAddress } from '@/lib/iraq-regions';
 
 const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected }) => {
+  
+  // تحديد المدينة تلقائياً بناءً على العنوان/المنطقة
+  useEffect(() => {
+    if (formData.address && formData.address.length > 3) {
+      const regionData = extractRegionFromAddress(formData.address);
+      if (regionData && regionData.city) {
+        // البحث عن المدينة في قائمة المحافظات العراقية
+        const foundProvince = iraqiProvinces.find(province => province.name === regionData.city);
+        if (foundProvince && (!formData.city || formData.city !== foundProvince.name)) {
+          // تحديث المدينة في النموذج
+          handleSelectChange('city', foundProvince.name);
+          console.log(`تم تحديد المدينة تلقائياً: ${foundProvince.name} بناءً على المنطقة: ${regionData.region}`);
+        }
+      }
+    }
+  }, [formData.address, handleSelectChange]);
+
   return (
     <Card>
       <CardHeader>
