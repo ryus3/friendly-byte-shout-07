@@ -555,31 +555,60 @@ function parseProduct(productText: string) {
     size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
   }
   
-  // استخراج اللون - قائمة أوسع
+  // استخراج اللون - قائمة أوسع تشمل الألوان العربية والإنجليزية
   const colors = [
     'أزرق', 'ازرق', 'blue', 'أصفر', 'اصفر', 'yellow', 'أحمر', 'احمر', 'red', 
     'أخضر', 'اخضر', 'green', 'أبيض', 'ابيض', 'white', 'أسود', 'اسود', 'black', 
     'بني', 'brown', 'رمادي', 'gray', 'grey', 'بنفسجي', 'purple', 'وردي', 'pink',
     'برتقالي', 'orange', 'فيروزي', 'turquoise', 'كحلي', 'navy', 'ذهبي', 'gold',
-    'فضي', 'silver', 'بيج', 'beige', 'كريمي', 'cream'
+    'فضي', 'silver', 'بيج', 'beige', 'كريمي', 'cream', 'جوزي', 'موف', 'زيتي',
+    'علبة', 'علبي', 'كافيه', 'قهوائي', 'سكري', 'لبني', 'ثلجي', 'ليموني',
+    'نبيتي', 'زهري', 'سماوي', 'كموني', 'خمري', 'تركوازي', 'نيلي', 'عنابي'
   ];
   let color = '';
+  let colorIndex = -1;
   
+  // البحث عن اللون في النص وتحديد موقعه
   for (const c of colors) {
-    if (text.toLowerCase().includes(c.toLowerCase())) {
+    const index = text.toLowerCase().indexOf(c.toLowerCase());
+    if (index !== -1) {
       color = c;
+      colorIndex = index;
       break;
     }
   }
   
-  // استخراج اسم المنتج (إزالة الكمية والمقاس واللون والباركود)
-  let productName = text
-    .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '') // إزالة الكمية
-    .replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '') // إزالة المقاس
-    .replace(/\b\d{8,}\b/g, '') // إزالة الباركود
-    .replace(new RegExp(`\\b(${colors.join('|')})\\b`, 'gi'), '') // إزالة اللون
-    .replace(/\s+/g, ' ') // تنظيف المسافات المتعددة
-    .trim();
+  // استخراج اسم المنتج بذكاء
+  let productName = text;
+  
+  // إزالة الكمية أولاً
+  productName = productName.replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '').trim();
+  
+  // إزالة الباركود
+  productName = productName.replace(/\b\d{8,}\b/g, '').trim();
+  
+  // إزالة المقاس
+  productName = productName.replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '').trim();
+  
+  // إزالة اللون إذا وُجد
+  if (color && colorIndex !== -1) {
+    // استخدام موقع اللون لتحديد ما قبله (اسم المنتج)
+    const beforeColor = text.substring(0, colorIndex).trim();
+    const afterColor = text.substring(colorIndex + color.length).trim();
+    
+    // اسم المنتج عادة يكون قبل اللون
+    if (beforeColor) {
+      productName = beforeColor
+        .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '') // إزالة الكمية
+        .replace(/\b\d{8,}\b/g, '') // إزالة الباركود
+        .replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '') // إزالة المقاس
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+  
+  // تنظيف نهائي لاسم المنتج
+  productName = productName.replace(/\s+/g, ' ').trim();
   
   return {
     name: productName || text,
