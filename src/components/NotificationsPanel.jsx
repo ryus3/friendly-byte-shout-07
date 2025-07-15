@@ -296,23 +296,23 @@ const NotificationsPanel = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 md:w-96 bg-gradient-to-br from-background/98 to-card/95 backdrop-blur-xl border-2 border-primary/30 shadow-2xl rounded-2xl p-3" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center px-3 py-2 mb-1">
-          <span className="font-bold text-lg bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">الإشعارات</span>
+      <DropdownMenuContent className="w-80 md:w-96 bg-gradient-to-br from-background/98 via-card/95 to-primary/5 backdrop-blur-xl border-2 border-primary/30 shadow-2xl rounded-2xl p-2" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center px-2 py-1.5 mb-1">
+          <span className="font-bold text-base bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">الإشعارات</span>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
-              <Eye className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gradient-to-r hover:from-blue-100 hover:to-blue-200 hover:text-blue-600 transition-all duration-300" onClick={() => navigate('/notifications')} title="عرض كل الإشعارات">
+              <Eye className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-green-100" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
-              <Check className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gradient-to-r hover:from-green-100 hover:to-green-200 hover:text-green-600 transition-all duration-300" onClick={handleMarkAllAsRead} title="تحديد الكل كمقروء" disabled={unreadFilteredCount === 0}>
+              <Check className="w-3.5 h-3.5" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-red-100" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
-              <Trash2 className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-gradient-to-r hover:from-red-100 hover:to-red-200 hover:text-red-600 transition-all duration-300" onClick={handleClearAll} title="حذف الكل" disabled={allNotifications.length === 0}>
+              <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="my-2" />
-        <ScrollArea className="h-80">
+        <DropdownMenuSeparator className="my-1.5 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+        <ScrollArea className="h-72">
           <AnimatePresence>
             {allNotifications.length > 0 ? (
               allNotifications.slice(0, 8).map(notification => {
@@ -324,47 +324,47 @@ const NotificationsPanel = () => {
                   <motion.div
                     key={notification.id}
                     layout
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
-                    className="relative group mb-2"
+                    exit={{ opacity: 0, x: -15, transition: { duration: 0.15 } }}
+                    className="relative group mb-1.5"
                   >
                     <div 
                       className={cn(
-                        "flex items-start gap-4 p-4 cursor-pointer transition-all duration-300 rounded-xl border-r-4 backdrop-blur-sm", 
+                        "flex items-center gap-3 p-2.5 cursor-pointer transition-all duration-200 rounded-lg border-r-3 backdrop-blur-sm", 
                         colors.bg,
                         colors.glow,
-                        (notification.is_read || notification.read) ? "opacity-60 hover:opacity-80" : "shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 ring-2 ring-primary/20",
-                        "hover:scale-[1.02] hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/10"
+                        (notification.is_read || notification.read) ? "opacity-60 hover:opacity-90" : "shadow-md hover:shadow-lg transform hover:scale-[1.01] ring-1 ring-primary/25",
+                        "hover:bg-gradient-to-r hover:from-primary/8 hover:to-accent/15"
                       )}
                       onClick={(e) => handleNotificationClick(e, notification)}
                     >
-                      <div className="mt-0.5">
+                      <div className="mt-0.5 flex-shrink-0">
                         <IconComponent />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className={cn("font-semibold text-base leading-tight", colors.text, !(notification.is_read || notification.read) && "font-bold text-primary")}>{notification.title}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-1 leading-relaxed">{notification.message}</p>
-                        <div className="flex items-center justify-between mt-3">
-                          <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
+                        <p className={cn("font-medium text-sm leading-tight", colors.text, !(notification.is_read || notification.read) && "font-semibold text-primary")}>{notification.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{notification.message}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" />
                             {formatRelativeTime(notification.created_at)}
                           </p>
                           {!(notification.is_read || notification.read) && (
-                            <div className="w-2 h-2 rounded-full bg-gradient-to-r from-primary to-primary-foreground animate-pulse shadow-sm"></div>
+                            <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-pink-500 to-purple-500 animate-pulse shadow-sm"></div>
                           )}
                         </div>
                       </div>
                        {!(notification.is_read || notification.read) && (
-                        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-7 w-7 bg-white/80 hover:bg-white"
+                            className="h-6 w-6 bg-white/90 hover:bg-white shadow-sm"
                             title="وضع كمقروء"
                             onClick={(e) => handleMarkAsRead(e, notification.id)}
                           >
-                            <Eye className="w-4 h-4 text-primary" />
+                            <Eye className="w-3 h-3 text-primary" />
                           </Button>
                         </div>
                       )}
