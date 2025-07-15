@@ -39,7 +39,11 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
     cancelled: { label: 'ملغي', color: 'bg-[hsl(var(--status-cancelled)_/_0.1)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.2)]' },
   };
 
-  const customerInfo = order.customerinfo || {};
+  const customerInfo = order.customerinfo || {
+    name: order.customer_name,
+    phone: order.customer_phone,
+    address: order.customer_address
+  };
 
   return (
     <motion.div variants={cardVariants} initial="rest" whileHover="hover" transition={{ duration: 0.2 }}>
@@ -60,7 +64,7 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
                   <p className="text-xs text-muted-foreground">{customerInfo.phone || 'لا يوجد رقم هاتف'}</p>
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-primary text-md">{order.total.toLocaleString()} د.ع</p>
+                  <p className="font-semibold text-primary text-md">{(order.final_amount || order.total || 0).toLocaleString()} د.ع</p>
                   <p className="text-xs text-muted-foreground">{getOrderDate()}</p>
                 </div>
               </div>
@@ -82,25 +86,25 @@ const OrderCard = ({ order, onViewOrder, onSelect, isSelected, onUpdateStatus, o
               
               {/* الصف الثالث - صور المنتجات */}
               <div className="flex -space-x-2 rtl:space-x-reverse overflow-hidden items-center">
-                <TooltipProvider>
-                  {order.items.slice(0, 4).map((item, index) => (
-                    <Tooltip key={`${item.productId}-${index}`}>
-                      <TooltipTrigger asChild>
-                        <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
-                          <AvatarImage src={item.image} alt={item.productName} />
-                          <AvatarFallback>{item.productName?.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent><p>{item.productName} (x{item.quantity})</p></TooltipContent>
-                    </Tooltip>
-                  ))}
-                  {order.items.length > 4 && (
-                    <Tooltip>
-                       <TooltipTrigger asChild><Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{order.items.length - 4}</AvatarFallback></Avatar></TooltipTrigger>
-                       <TooltipContent><p>و {order.items.length - 4} منتجات أخرى</p></TooltipContent>
-                    </Tooltip>
-                  )}
-                </TooltipProvider>
+                 <TooltipProvider>
+                   {(order.items || []).slice(0, 4).map((item, index) => (
+                     <Tooltip key={`${item.productId || item.product_id}-${index}`}>
+                       <TooltipTrigger asChild>
+                         <Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background">
+                           <AvatarImage src={item.image} alt={item.productName || item.product_name} />
+                           <AvatarFallback>{(item.productName || item.product_name)?.charAt(0) || 'P'}</AvatarFallback>
+                         </Avatar>
+                       </TooltipTrigger>
+                       <TooltipContent><p>{item.productName || item.product_name} (x{item.quantity})</p></TooltipContent>
+                     </Tooltip>
+                   ))}
+                   {(order.items || []).length > 4 && (
+                     <Tooltip>
+                        <TooltipTrigger asChild><Avatar className="inline-block h-8 w-8 rounded-full ring-2 ring-background"><AvatarFallback>+{(order.items || []).length - 4}</AvatarFallback></Avatar></TooltipTrigger>
+                        <TooltipContent><p>و {(order.items || []).length - 4} منتجات أخرى</p></TooltipContent>
+                     </Tooltip>
+                   )}
+                 </TooltipProvider>
               </div>
             </div>
 
