@@ -1066,6 +1066,39 @@ export type Database = {
         }
         Relationships: []
       }
+      telegram_employee_codes: {
+        Row: {
+          created_at: string
+          employee_code: string
+          id: string
+          is_active: boolean
+          linked_at: string | null
+          telegram_chat_id: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_code: string
+          id?: string
+          is_active?: boolean
+          linked_at?: string | null
+          telegram_chat_id?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_code?: string
+          id?: string
+          is_active?: boolean
+          linked_at?: string | null
+          telegram_chat_id?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1089,6 +1122,10 @@ export type Database = {
       }
       generate_purchase_number: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_telegram_code: {
+        Args: { user_id_input: string; username_input: string }
         Returns: string
       }
       get_user_by_username: {
