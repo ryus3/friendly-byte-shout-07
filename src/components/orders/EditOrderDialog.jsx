@@ -18,17 +18,18 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
   const initializeForm = useCallback(() => {
     if (order) {
       const deliveryData = order.delivery_partner_data || {};
+      const customerInfo = order.customerinfo || {};
       const initialData = {
-        qr_id: order.trackingnumber,
-        client_name: deliveryData.client_name || order.customerinfo.name,
-        client_mobile: deliveryData.client_mobile || order.customerinfo.phone,
+        qr_id: order.trackingnumber || order.tracking_number,
+        client_name: deliveryData.client_name || customerInfo.name || order.customer_name,
+        client_mobile: deliveryData.client_mobile || customerInfo.phone || order.customer_phone,
         client_mobile2: deliveryData.client_mobile2 || '',
         city_id: deliveryData.city_id || '',
         region_id: deliveryData.region_id || '',
-        location: deliveryData.location || order.customerinfo.address,
-        type_name: deliveryData.type_name || (order.items || []).map(i => `${i.productName} (${i.quantity})`).join(' + '),
+        location: deliveryData.location || customerInfo.address || order.customer_address,
+        type_name: deliveryData.type_name || (order.items || []).map(i => `${i.productName || i.product_name} (${i.quantity})`).join(' + '),
         items_number: deliveryData.items_number || (order.items || []).reduce((acc, i) => acc + i.quantity, 0),
-        price: deliveryData.price || order.total,
+        price: deliveryData.price || order.total || order.total_amount,
         package_size: deliveryData.package_size || '',
         merchant_notes: deliveryData.merchant_notes || order.notes || '',
         replacement: deliveryData.replacement || 0,
