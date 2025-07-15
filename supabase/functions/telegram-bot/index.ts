@@ -288,43 +288,73 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       const currentDeliveryFee = Number(deliverySettings?.value) || 5000;
       
       for (const item of items) {
-        // البحث في قاعدة البيانات عن المنتج
+        // البحث في قاعدة البيانات عن المنتج باستخدام الاسم أو الباركود
         const { data: productData } = await supabase
           .from('products')
           .select(`
+            id,
+            name,
             base_price,
+            barcode,
             product_variants!inner (
+              id,
               price,
+              barcode,
               colors (name),
               sizes (name)
             )
           `)
-          .ilike('name', `%${item.name}%`)
+          .or(`name.ilike.%${item.name}%,barcode.eq.${item.name}`)
           .eq('is_active', true)
           .limit(1)
           .single();
         
         if (productData) {
           let productPrice = productData.base_price || 0;
+          let selectedVariant = null;
           
           // البحث عن التنويع المطابق للون والمقاس
           if (productData.product_variants && productData.product_variants.length > 0) {
-            const matchingVariant = productData.product_variants.find(variant => {
-              const colorMatch = !item.color || variant.colors?.name?.toLowerCase().includes(item.color.toLowerCase());
-              const sizeMatch = !item.size || variant.sizes?.name?.toLowerCase() === item.size.toLowerCase();
-              return colorMatch && sizeMatch;
-            });
             
-            if (matchingVariant) {
-              productPrice = matchingVariant.price || productPrice;
-            } else if (productData.product_variants[0].price) {
-              productPrice = productData.product_variants[0].price;
+            // البحث بالباركود أولاً (أدق طريقة)
+            if (item.barcode) {
+              selectedVariant = productData.product_variants.find(variant => 
+                variant.barcode === item.barcode
+              );
+            }
+            
+            // إذا لم نجد بالباركود، ابحث باللون والمقاس
+            if (!selectedVariant && (item.color || item.size)) {
+              selectedVariant = productData.product_variants.find(variant => {
+                const colorMatch = !item.color || variant.colors?.name?.toLowerCase().includes(item.color.toLowerCase());
+                const sizeMatch = !item.size || variant.sizes?.name?.toLowerCase() === item.size.toLowerCase();
+                return colorMatch && sizeMatch;
+              });
+            }
+            
+            // إذا لم نجد مطابقة دقيقة، خذ أول تنويع متاح
+            if (!selectedVariant) {
+              selectedVariant = productData.product_variants[0];
+            }
+            
+            if (selectedVariant) {
+              productPrice = selectedVariant.price || productPrice;
+              // حفظ معرف التنويع للاستخدام لاحقاً
+              item.variant_id = selectedVariant.id;
+              item.product_id = productData.id;
             }
           }
           
           // تحديث سعر المنتج في القائمة
           item.price = productPrice;
+          item.product_name = productData.name; // حفظ الاسم الصحيح
           calculatedPrice += productPrice * item.quantity;
+          
+          console.log(`Product found: ${productData.name}, Price: ${productPrice}, Variant ID: ${item.variant_id}`);
+        } else {
+          console.log(`Product not found for: ${item.name}`);
+          // إذا لم نجد المنتج، اتركه بسعر 0 أو سعر افتراضي
+          item.price = 0;
         }
       }
       
@@ -363,17 +393,20 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       return false;
     }
 
-    // إرسال تأكيد مفصل
+    // إرسال تأكيد مفصل ومحسن
     const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
-    const itemsList = items.slice(0, 3).map(item => {
+    const itemsList = items.slice(0, 5).map(item => {
       const itemTotal = (item.price || 0) * (item.quantity || 1);
-      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : 'السعر غير محدد';
-      return `• ${item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
+      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : '❌ سعر غير محدد';
+      const productStatus = item.product_name ? '✅' : '⚠️';
+      return `${productStatus} ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
     }).join('\n');
     
     // حساب إجمالي المنتجات ورسوم التوصيل منفصلة
     const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
     const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
+    const foundItemsCount = items.filter(item => item.product_name).length;
+    const totalItemsCount = items.length;
     
     await sendTelegramMessage(chatId, `
 ✅ <b>تم استلام الطلب بنجاح!</b>
@@ -385,14 +418,22 @@ ${customerSecondaryPhone ? `📞 <b>هاتف ثانوي:</b> ${customerSecondary
 ${deliveryIcon} <b>نوع التسليم:</b> ${deliveryType}
 ${customerAddress ? `📍 <b>العنوان:</b> ${customerAddress}` : ''}
 
-📦 <b>المنتجات (${items.length}):</b>
+📦 <b>المنتجات (${totalItemsCount}):</b>
 ${itemsList}
-${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
+${items.length > 5 ? `... و ${items.length - 5} منتجات أخرى` : ''}
+
+📊 <b>حالة المنتجات:</b>
+• تم العثور على: ${foundItemsCount}/${totalItemsCount} منتجات ✅
+${foundItemsCount < totalItemsCount ? `• غير موجود: ${totalItemsCount - foundItemsCount} منتجات ⚠️` : ''}
 
 💰 <b>تفاصيل السعر:</b>
-• المنتجات: ${itemsTotal.toLocaleString()} د.ع
+• المنتجات الموجودة: ${itemsTotal.toLocaleString()} د.ع
 ${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.toLocaleString()} د.ع` : ''}
-• <b>المجموع الإجمالي: ${totalPrice.toLocaleString()} د.ع</b>
+• <b>المجموع المؤقت: ${totalPrice.toLocaleString()} د.ع</b>
+
+${foundItemsCount < totalItemsCount ? 
+  '⚠️ <b>تنبيه:</b> بعض المنتجات غير موجودة وستحتاج مراجعة الأسعار' : 
+  '✅ <b>جميع المنتجات موجودة في النظام</b>'}
 
 ⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
 
@@ -416,16 +457,29 @@ function parseProduct(productText: string) {
     quantity = parseInt(quantityMatch[1] || quantityMatch[2]);
   }
   
+  // استخراج الباركود (أرقام طويلة)
+  let barcode = '';
+  const barcodeMatch = text.match(/\b\d{8,}\b/); // باركود عادة 8 أرقام أو أكثر
+  if (barcodeMatch) {
+    barcode = barcodeMatch[0];
+  }
+  
   // استخراج المقاس
   let size = '';
-  const sizeRegex = /\b(S|M|L|XL|XXL|s|m|l|xl|xxl|\d{2,3})\b/g;
+  const sizeRegex = /\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/g;
   const sizeMatch = text.match(sizeRegex);
   if (sizeMatch) {
     size = sizeMatch[sizeMatch.length - 1].toUpperCase(); // آخر مقاس مذكور
   }
   
-  // استخراج اللون
-  const colors = ['أزرق', 'ازرق', 'blue', 'أصفر', 'اصفر', 'yellow', 'أحمر', 'احمر', 'red', 'أخضر', 'اخضر', 'green', 'أبيض', 'ابيض', 'white', 'أسود', 'اسود', 'black', 'بني', 'brown', 'رمادي', 'gray', 'grey', 'بنفسجي', 'purple', 'وردي', 'pink'];
+  // استخراج اللون - قائمة أوسع
+  const colors = [
+    'أزرق', 'ازرق', 'blue', 'أصفر', 'اصفر', 'yellow', 'أحمر', 'احمر', 'red', 
+    'أخضر', 'اخضر', 'green', 'أبيض', 'ابيض', 'white', 'أسود', 'اسود', 'black', 
+    'بني', 'brown', 'رمادي', 'gray', 'grey', 'بنفسجي', 'purple', 'وردي', 'pink',
+    'برتقالي', 'orange', 'فيروزي', 'turquoise', 'كحلي', 'navy', 'ذهبي', 'gold',
+    'فضي', 'silver', 'بيج', 'beige', 'كريمي', 'cream'
+  ];
   let color = '';
   
   for (const c of colors) {
@@ -435,12 +489,13 @@ function parseProduct(productText: string) {
     }
   }
   
-  // استخراج اسم المنتج (إزالة الكمية والمقاس واللون)
+  // استخراج اسم المنتج (إزالة الكمية والمقاس واللون والباركود)
   let productName = text
-    .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '')
-    .replace(/\b(S|M|L|XL|XXL|s|m|l|xl|xxl|\d{2,3})\b/gi, '')
-    .replace(/\b(أزرق|ازرق|blue|أصفر|اصفر|yellow|أحمر|احمر|red|أخضر|اخضر|green|أبيض|ابيض|white|أسود|اسود|black|بني|brown|رمادي|gray|grey|بنفسجي|purple|وردي|pink)\b/gi, '')
-    .replace(/\s+/g, ' ')
+    .replace(/[×x*]\s*\d+|\d+\s*[×x*]/g, '') // إزالة الكمية
+    .replace(/\b(S|M|L|XL|XXL|XXXL|s|m|l|xl|xxl|xxxl|\d{2,3})\b/gi, '') // إزالة المقاس
+    .replace(/\b\d{8,}\b/g, '') // إزالة الباركود
+    .replace(new RegExp(`\\b(${colors.join('|')})\\b`, 'gi'), '') // إزالة اللون
+    .replace(/\s+/g, ' ') // تنظيف المسافات المتعددة
     .trim();
   
   return {
@@ -448,7 +503,11 @@ function parseProduct(productText: string) {
     quantity: quantity,
     size: size,
     color: color,
-    price: 0 // سيتم حسابه لاحقاً
+    barcode: barcode,
+    price: 0, // سيتم حسابه لاحقاً
+    product_id: null,
+    variant_id: null,
+    product_name: '' // سيتم ملؤه من قاعدة البيانات
   };
 }
 
