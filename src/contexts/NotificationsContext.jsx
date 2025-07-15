@@ -230,6 +230,8 @@ export const NotificationsProvider = ({ children }) => {
             return;
         }
         
+        console.log("Marking notification as read:", id);
+        
         try {
             // تحديث قاعدة البيانات أولاً
             const { error } = await supabase
@@ -241,6 +243,8 @@ export const NotificationsProvider = ({ children }) => {
                 console.error("Error marking notification as read:", error);
                 return;
             }
+            
+            console.log("Successfully marked notification as read:", id);
             
             // تحديث الحالة المحلية فقط عند النجاح
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
@@ -256,6 +260,8 @@ export const NotificationsProvider = ({ children }) => {
             return;
         }
         
+        console.log("Deleting notification:", id);
+        
         try {
             // حذف من قاعدة البيانات أولاً
             const { error } = await supabase
@@ -267,6 +273,8 @@ export const NotificationsProvider = ({ children }) => {
                 console.error("Error deleting notification:", error);
                 return;
             }
+            
+            console.log("Successfully deleted notification:", id);
             
             // حذف من الحالة المحلية فقط عند النجاح
             setNotifications(prev => prev.filter(n => n.id !== id));
