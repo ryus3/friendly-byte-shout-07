@@ -7,15 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
 import { 
-  MessageCircle, Copy, Users, Bot, CheckCircle, AlertCircle, Smartphone 
+  MessageCircle, Copy, Users, Bot, CheckCircle, AlertCircle, Smartphone, Settings 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import TelegramBotSetup from './TelegramBotSetup';
 
 const TelegramBotDialog = ({ open, onOpenChange }) => {
   const { user, allUsers } = useAuth();
   const [employeeCodes, setEmployeeCodes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showSetup, setShowSetup] = useState(false);
+  const [botConfigured, setBotConfigured] = useState(false);
 
   // جلب رموز الموظفين من قاعدة البيانات
   const fetchEmployeeCodes = async () => {
@@ -80,8 +83,24 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
   useEffect(() => {
     if (open) {
       fetchEmployeeCodes();
+      checkBotConfiguration();
     }
   }, [open]);
+
+  const checkBotConfiguration = async () => {
+    try {
+      const { data: settings } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'telegram_bot_config')
+        .single();
+
+      setBotConfigured(!!settings?.value?.bot_token);
+    } catch (error) {
+      console.error('Error checking bot configuration:', error);
+      setBotConfigured(false);
+    }
+  };
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -107,20 +126,71 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* معلومات البوت */}
-          <Card className="bg-green-50 border-green-200">
+          {/* Bot Status */}
+          <Card className={`${botConfigured ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <span className="text-green-700">بوت التليغرام جاهز</span>
+              <CardTitle className="flex items-center justify-between text-lg">
+                <div className="flex items-center gap-2">
+                  {botConfigured ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                  )}
+                  <span className={botConfigured ? 'text-green-700' : 'text-red-700'}>
+                    {botConfigured ? 'البوت مُعدّ ويعمل' : 'البوت غير مُعدّ'}
+                  </span>
+                </div>
+                <Button
+                  variant={botConfigured ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => setShowSetup(true)}
+                  className={botConfigured ? "" : "bg-blue-600 hover:bg-blue-700"}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  {botConfigured ? 'إعادة الإعداد' : 'إعداد البوت'}
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-green-700 text-sm">
-                البوت محفوظ في الخادم ويعمل تلقائياً. الموظفين يحتاجون فقط لإدخال رموزهم الخاصة.
+              <p className={`text-sm ${botConfigured ? 'text-green-700' : 'text-red-700'}`}>
+                {botConfigured 
+                  ? 'البوت جاهز لاستقبال الطلبات من الموظفين عبر التليغرام'
+                  : 'يجب إعداد البوت أولاً قبل أن يتمكن الموظفون من استخدامه'
+                }
               </p>
             </CardContent>
           </Card>
+
+          {!botConfigured && (
+            <Card className="bg-blue-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-blue-700">
+                  <Bot className="w-5 h-5" />
+                  إعداد مطلوب
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm text-blue-700">
+                  <p>لتفعيل بوت التليغرام، تحتاج إلى:</p>
+                  <ul className="list-disc list-inside space-y-1 mr-4">
+                    <li>إنشاء بوت جديد عبر @BotFather</li>
+                    <li>الحصول على مفتاح البوت (Bot Token)</li>
+                    <li>إعداد البوت في النظام</li>
+                  </ul>
+                  <Button 
+                    onClick={() => setShowSetup(true)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 mt-3"
+                  >
+                    <Bot className="w-4 h-4 mr-2" />
+                    إعداد البوت الآن
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* معلومات البوت */}
+          {botConfigured && (
 
           {/* رموز الموظفين */}
           <Card>
@@ -220,6 +290,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
         <div className="flex justify-end pt-4 border-t">
@@ -227,6 +298,16 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
             إغلاق
           </Button>
         </div>
+
+        <TelegramBotSetup 
+          open={showSetup} 
+          onOpenChange={(open) => {
+            setShowSetup(open);
+            if (!open) {
+              checkBotConfiguration();
+            }
+          }} 
+        />
       </DialogContent>
     </Dialog>
   );
