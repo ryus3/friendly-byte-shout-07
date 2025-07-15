@@ -6,352 +6,347 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
   const [orders, setOrders] = useState(initialOrders);
   const [aiOrders, setAiOrders] = useState(initialAiOrders);
 
-  const generateTrackingNumber = () => {
-    return `${settings.sku_prefix || 'RYUS'}-${Date.now().toString().slice(-6)}`;
+  // إنشاء رقم تتبع للطلبات المحلية
+  const generateLocalTrackingNumber = () => {
+    return `${settings?.sku_prefix || 'RYUS'}-${Date.now().toString().slice(-6)}`;
   };
 
+  // إنشاء طلب جديد
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink = null, deliveryPartnerData = null) => {
-    // تحديد نوع الطلب بناءً على شريك التوصيل
-    const isLocalOrder = !deliveryPartnerData?.delivery_partner || deliveryPartnerData?.delivery_partner === 'محلي';
-    let finalTrackingNumber = trackingNumber;
-    
-    // إنشاء رقم تتبع للطلبات المحلية فقط
-    if (isLocalOrder && (!finalTrackingNumber || finalTrackingNumber === 'null' || finalTrackingNumber === 'undefined')) {
-      finalTrackingNumber = generateTrackingNumber();
-    }
-    
-    // للطلبات الخارجية، يجب أن يكون رقم التتبع موجود
-    if (!isLocalOrder && (!finalTrackingNumber || finalTrackingNumber === 'null' || finalTrackingNumber === 'undefined')) {
-      return { success: false, error: 'رقم التتبع مطلوب لطلبات شوكات التوصيل' };
-    }
-  
-    // Generate order number
-    const { data: orderNumber, error: orderNumberError } = await supabase.rpc('generate_order_number');
-    if (orderNumberError) {
-      console.error('Error generating order number:', orderNumberError);
-      return { success: false, error: 'فشل في إنشاء رقم الطلب' };
-    }
-
-    const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
-    const deliveryFee = isLocalOrder ? (settings?.deliveryFee || 0) : (deliveryPartnerData?.delivery_fee || 0);
-    const total = subtotal - (discount || 0) + deliveryFee;
-
-    const newOrder = {
-      order_number: orderNumber,
-      customer_name: customerInfo.name,
-      customer_phone: customerInfo.phone,
-      customer_address: customerInfo.address,
-      customer_city: customerInfo.city,
-      customer_province: customerInfo.province,
-      total_amount: subtotal,
-      discount: discount || 0,
-      delivery_fee: deliveryFee,
-      final_amount: total,
-      status: status || 'pending',
-      delivery_status: 'pending',
-      payment_status: 'pending',
-      tracking_number: finalTrackingNumber,
-      delivery_partner: isLocalOrder ? 'محلي' : (deliveryPartnerData?.delivery_partner || 'Al-Waseet'),
-      notes: customerInfo.notes,
-      created_by: user?.user_id || user?.id,
-    };
-    
-    // Reserve stock
-    const stockReservations = cartItems.map(item =>
-        supabase.rpc('update_reserved_stock', {
-            p_product_id: item.productId,
-            p_sku: item.sku,
-            p_quantity_change: item.quantity
-        })
-    );
-    await Promise.all(stockReservations);
-
-    const { data, error } = await supabase.from('orders').insert(newOrder).select().single();
-
-    if (error) {
-      // Revert stock reservation on failure
-      const stockReversions = cartItems.map(item =>
-        supabase.rpc('update_reserved_stock', {
-            p_product_id: item.productId,
-            p_sku: item.sku,
-            p_quantity_change: -item.quantity
-        })
-      );
-      await Promise.all(stockReversions);
-      console.error('Error creating order:', error);
-      return { success: false, error: error.message };
-    }
-
-    // تسجيل العملية في الإشعارات بدلاً من جدول منفصل
-    const { error: finError } = await supabase.from('notifications').insert({
-      type: 'sale_transaction',
-      title: 'عملية بيع جديدة',
-      message: `تم تسجيل عملية بيع بقيمة ${data.total}`,
-      data: {
-        type: 'sale',
-        amount: data.total,
-        order_id: data.id
-      }
-    });
-    if (finError) console.error("Error creating financial transaction:", finError);
-    
-    // Notify admin
-    addNotification({
-      type: 'new_order',
-      title: 'طلب جديد',
-      message: `تم إنشاء طلب جديد برقم ${data.trackingnumber} بواسطة ${user?.full_name || 'موظف'}.`,
-      user_id: null, // Send to all admins
-      link: `/my-orders?trackingNumber=${data.trackingnumber}`,
-      color: 'blue',
-      icon: 'ShoppingCart'
-    });
-
-    setOrders(prev => [data, ...prev]);
-    return { success: true, trackingNumber: finalTrackingNumber };
-  }, [settings, addNotification, user]);
-
-  const updateOrder = async (orderId, updates) => {
-    const originalOrder = orders.find(o => o.id === orderId);
-    if (!originalOrder) return;
-
-    const { data, error } = await supabase
-      .from('orders')
-      .update(updates)
-      .eq('id', orderId)
-      .select()
-      .single();
-
-    if (error) {
-      toast({ title: "خطأ", description: "فشل تحديث الطلب.", variant: "destructive" });
-      console.error('Error updating order:', error);
-      return { success: false, error };
-    }
-    
-    // Check if status is part of the updates
-    if (updates.status && updates.status !== originalOrder.status) {
-        onStockUpdate(originalOrder, data);
-        // Notify employee of status change
-        addNotification({
-          type: 'order_status_update',
-          title: `تحديث حالة طلبك`,
-          message: `تم تغيير حالة طلبك رقم ${data.trackingnumber} إلى "${updates.status}".`,
-          user_id: data.created_by,
-          link: `/my-orders?trackingNumber=${data.trackingnumber}`,
-          color: 'blue',
-          icon: 'ShoppingCart'
-        });
-    }
-
-    setOrders(prevOrders => prevOrders.map(o => (o.id === orderId ? data : o)));
-
-    toast({ title: "نجاح", description: `تم تحديث الطلب بنجاح.` });
-    return { success: true, data };
-  };
-
-  const deleteOrders = async (orderIds, isAiOrder = false) => {
-    const tableName = isAiOrder ? 'ai_orders' : 'orders';
-    if (!isAiOrder && !hasPermission('delete_local_orders')) {
-        toast({ title: "غير مصرح به", description: "ليس لديك صلاحية حذف الطلبات.", variant: "destructive" });
-        return;
-    }
-    
     try {
-      const { error } = await supabase.from(tableName).delete().in('id', orderIds);
-      if (error) throw error;
+      // تحديد نوع الطلب
+      const isLocalOrder = !deliveryPartnerData?.delivery_partner || deliveryPartnerData?.delivery_partner === 'محلي';
       
-      if (isAiOrder) {
-        setAiOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
+      // رقم التتبع
+      let finalTrackingNumber = trackingNumber;
+      if (isLocalOrder) {
+        // للطلبات المحلية: إنشاء رقم RYUS دائماً
+        finalTrackingNumber = generateLocalTrackingNumber();
       } else {
-        setOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
+        // للطلبات الخارجية: يجب أن يأتي رقم التتبع من الشركة
+        if (!finalTrackingNumber) {
+          return { success: false, error: 'رقم التتبع مطلوب لطلبات شركات التوصيل' };
+        }
       }
-      toast({ title: "نجاح", description: `تم حذف ${orderIds.length} طلبات بنجاح.` });
-    } catch (error) {
-      console.error('Error deleting orders:', error);
-      toast({ title: "خطأ", description: "فشل حذف الطلبات.", variant: "destructive" });
-    }
-  };
-  
-  const approveAiOrder = async (orderId) => {
-    const aiOrder = aiOrders.find(o => o.id === orderId);
-    if (!aiOrder) return;
 
-    try {
-      // إنشاء رقم تتبع للطلب
-      const trackingNumber = `AI-${Date.now().toString().slice(-8)}`;
-      
-      // تحديث حالة الطلب الذكي إلى "معتمد"
-      const { error: updateError } = await supabase
-        .from('ai_orders')
-        .update({ 
-          status: 'approved',
-          processed_at: new Date().toISOString(),
-          processed_by: user?.user_id || user?.id 
-        })
-        .eq('id', orderId);
+      // إنشاء رقم الطلب
+      const { data: orderNumber, error: orderNumberError } = await supabase.rpc('generate_order_number');
+      if (orderNumberError) {
+        console.error('Error generating order number:', orderNumberError);
+        return { success: false, error: 'فشل في إنشاء رقم الطلب' };
+      }
 
-      if (updateError) throw updateError;
+      // حساب المبالغ
+      const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
+      const deliveryFee = isLocalOrder ? (settings?.deliveryFee || 0) : (deliveryPartnerData?.delivery_fee || 0);
+      const total = subtotal - (discount || 0) + deliveryFee;
 
-      // إنشاء طلب جديد في جدول الطلبات العادية
-      const { data: orderNumber } = await supabase.rpc('generate_order_number');
-      
-      // تحديد نوع التوصيل من بيانات الطلب الذكي
-      const isLocalDelivery = aiOrder.order_data?.delivery_type !== 'توصيل' || !aiOrder.customer_address;
-      const deliveryFee = isLocalDelivery ? 0 : (settings?.deliveryFee || 5000);
-      
-      const orderData = {
+      // بيانات الطلب
+      const newOrder = {
         order_number: orderNumber,
-        customer_name: aiOrder.customer_name || 'زبون غير معروف',
-        customer_phone: aiOrder.customer_phone || '',
-        customer_address: aiOrder.customer_address || 'لا يوجد عنوان',
-        customer_city: aiOrder.customer_city || 'بغداد',
-        customer_province: aiOrder.customer_province || 'بغداد',
-        total_amount: (aiOrder.total_amount || 0) - deliveryFee,
-        final_amount: aiOrder.total_amount || 0,
+        customer_name: customerInfo.name,
+        customer_phone: customerInfo.phone,
+        customer_address: customerInfo.address,
+        customer_city: customerInfo.city,
+        customer_province: customerInfo.province,
+        total_amount: subtotal,
+        discount: discount || 0,
         delivery_fee: deliveryFee,
-        discount: 0,
-        status: 'pending', // قيد التجهيز وليس قيد المعالجة
+        final_amount: total,
+        status: 'pending', // دائماً قيد التجهيز في البداية
         delivery_status: 'pending',
         payment_status: 'pending',
-        tracking_number: trackingNumber,
-        delivery_partner: isLocalDelivery ? 'محلي' : 'الوسيط',
+        tracking_number: finalTrackingNumber,
+        delivery_partner: isLocalOrder ? 'محلي' : deliveryPartnerData.delivery_partner,
+        notes: customerInfo.notes,
         created_by: user?.user_id || user?.id,
-        notes: `طلب مُحوَّل من الذكاء الاصطناعي - المصدر: ${aiOrder.source}${aiOrder.order_data?.original_text ? '\nالنص الأصلي: ' + aiOrder.order_data.original_text : ''}`
       };
 
-      const { data: newOrder, error: createError } = await supabase
+      // حجز المخزون
+      for (const item of cartItems) {
+        const { error: stockError } = await supabase.rpc('update_reserved_stock', {
+          p_product_id: item.productId || item.id,
+          p_sku: item.variantId || item.sku,
+          p_quantity_change: item.quantity
+        });
+        
+        if (stockError) {
+          console.error('Error reserving stock:', stockError);
+          // في حالة فشل حجز المخزون، نرجع خطأ
+          return { success: false, error: `فشل في حجز المخزون للمنتج ${item.name}` };
+        }
+      }
+
+      // إنشاء الطلب
+      const { data: createdOrder, error: orderError } = await supabase
         .from('orders')
-        .insert(orderData)
+        .insert(newOrder)
         .select()
         .single();
 
-      if (createError) throw createError;
-
-      // إنشاء عناصر الطلب مع التأكد من استخدام المنتج والمتغير الصحيح
-      const orderItems = [];
-      for (const item of aiOrder.items || []) {
-        // التأكد من أن المنتج والمتغير موجودان
-        if (item.product_id && item.variant_id) {
-          // التحقق من وجود المنتج في قاعدة البيانات
-          const { data: productExists } = await supabase
-            .from('products')
-            .select('id, name')
-            .eq('id', item.product_id)
-            .single();
-
-          if (productExists) {
-            orderItems.push({
-              order_id: newOrder.id,
-              product_id: item.product_id,
-              variant_id: item.variant_id,
-              quantity: item.quantity || 1,
-              unit_price: item.price || 0,
-              total_price: (item.price || 0) * (item.quantity || 1)
-            });
-          }
+      if (orderError) {
+        // إلغاء حجز المخزون في حالة فشل إنشاء الطلب
+        for (const item of cartItems) {
+          await supabase.rpc('update_reserved_stock', {
+            p_product_id: item.productId || item.id,
+            p_sku: item.variantId || item.sku,
+            p_quantity_change: -item.quantity
+          });
         }
+        console.error('Error creating order:', orderError);
+        return { success: false, error: orderError.message };
       }
+
+      // إنشاء عناصر الطلب
+      const orderItems = cartItems.map(item => ({
+        order_id: createdOrder.id,
+        product_id: item.productId || item.id,
+        variant_id: item.variantId || item.sku,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.quantity * item.price
+      }));
 
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
-
-      // حجز المخزون للمنتجات بالطريقة الصحيحة
-      for (const item of aiOrder.items || []) {
-        if (item.product_id) {
-          // البحث عن المخزون الحالي أولاً
-          const { data: currentInventory } = await supabase
-            .from('inventory')
-            .select('reserved_quantity, quantity')
-            .eq('product_id', item.product_id)
-            .eq('variant_id', item.variant_id || null)
-            .single();
-
-          if (currentInventory) {
-            const newReservedQuantity = (currentInventory.reserved_quantity || 0) + (item.quantity || 1);
-            
-            // التحقق من أن المخزون المتاح كافي
-            if (newReservedQuantity <= currentInventory.quantity) {
-              const { error: stockError } = await supabase
-                .from('inventory')
-                .update({
-                  reserved_quantity: newReservedQuantity
-                })
-                .eq('product_id', item.product_id)
-                .eq('variant_id', item.variant_id || null);
-
-              if (stockError) {
-                console.error('Error reserving stock:', stockError);
-              }
-            } else {
-              console.warn(`المخزون غير كافي للمنتج ${item.product_id}، الكمية المطلوبة: ${item.quantity}, المخزون المتاح: ${currentInventory.quantity - currentInventory.reserved_quantity}`);
-            }
-          }
+      if (itemsError) {
+        console.error('Error creating order items:', itemsError);
+        // نحذف الطلب ونلغي حجز المخزون
+        await supabase.from('orders').delete().eq('id', createdOrder.id);
+        for (const item of cartItems) {
+          await supabase.rpc('update_reserved_stock', {
+            p_product_id: item.productId || item.id,
+            p_sku: item.variantId || item.sku,
+            p_quantity_change: -item.quantity
+          });
         }
+        return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
       }
 
-      // إزالة من قائمة الطلبات الذكية
-      setAiOrders(prev => prev.filter(o => o.id !== orderId));
-      
-      // إضافة إلى قائمة الطلبات العادية مع تحميل البيانات المحدثة
-      const { data: fullOrderData } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            product_id,
-            variant_id,
-            quantity,
-            unit_price,
-            total_price,
-            products (
-              id,
-              name,
-              images,
-              base_price
-            ),
-            product_variants (
-              id,
-              price,
-              images,
-              colors (name, hex_code),
-              sizes (name)
-            )
-          )
-        `)
-        .eq('id', newOrder.id)
-        .single();
-      
-      setOrders(prev => [fullOrderData || { ...newOrder, order_items: orderItems }, ...prev]);
-      
-      // إنشاء إشعار للموظف
-      await supabase.from('notifications').insert({
-        type: 'order_approved',
-        title: 'تمت الموافقة على الطلب',
-        message: `تمت الموافقة على الطلب الذكي وتحويله إلى طلب رقم ${orderNumber}`,
-        user_id: aiOrder.created_by,
-        data: {
-          order_id: newOrder.id,
-          order_number: orderNumber,
-          customer_name: aiOrder.customer_name,
-          ai_order_id: orderId
-        }
+      // إشعار بالطلب الجديد
+      addNotification({
+        type: 'new_order',
+        title: `طلب ${isLocalOrder ? 'محلي' : 'توصيل'} جديد`,
+        message: `تم إنشاء طلب جديد برقم ${finalTrackingNumber} بواسطة ${user?.full_name || 'موظف'}`,
+        user_id: null, // للجميع
+        link: `/my-orders?trackingNumber=${finalTrackingNumber}`,
+        color: isLocalOrder ? 'green' : 'blue',
+        icon: 'ShoppingCart'
       });
 
-      // تشغيل حساب الأرباح
-      await supabase.rpc('calculate_order_profit', { order_id_input: newOrder.id });
-
-      toast({ title: "نجاح", description: `تمت الموافقة على الطلب وتحويله إلى طلب رقم ${orderNumber}` });
+      // إضافة للقائمة
+      setOrders(prev => [createdOrder, ...prev]);
       
-      onStockUpdate?.();
+      return { success: true, trackingNumber: finalTrackingNumber, orderId: createdOrder.id };
+
     } catch (error) {
-      console.error('Error approving AI order:', error);
-      toast({ title: "خطأ", description: error.message || "فشل الموافقة على الطلب الذكي.", variant: "destructive" });
-      throw error;
+      console.error('Error in createOrder:', error);
+      return { success: false, error: error.message || 'حدث خطأ في إنشاء الطلب' };
+    }
+  }, [settings, addNotification, user]);
+
+  // تحديث حالة الطلب
+  const updateOrder = async (orderId, updates) => {
+    try {
+      const originalOrder = orders.find(o => o.id === orderId);
+      if (!originalOrder) {
+        return { success: false, error: 'الطلب غير موجود' };
+      }
+
+      // التحقق من الصلاحيات
+      const isLocalOrder = originalOrder.delivery_partner === 'محلي';
+      
+      // فقط المحلي يمكن تعديله في حالة قيد التجهيز
+      if (!isLocalOrder && originalOrder.status !== 'pending') {
+        return { success: false, error: 'لا يمكن تعديل طلبات التوصيل بعد تأكيدها' };
+      }
+
+      const { data: updatedOrder, error } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', orderId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating order:', error);
+        return { success: false, error: error.message };
+      }
+
+      // معالجة تغيير الحالة
+      if (updates.status && updates.status !== originalOrder.status) {
+        await handleStatusChange(originalOrder, updatedOrder);
+      }
+
+      setOrders(prev => prev.map(o => o.id === orderId ? updatedOrder : o));
+      
+      toast({ 
+        title: "تم التحديث", 
+        description: "تم تحديث الطلب بنجاح",
+        variant: "success" 
+      });
+
+      return { success: true, data: updatedOrder };
+
+    } catch (error) {
+      console.error('Error in updateOrder:', error);
+      return { success: false, error: error.message };
     }
   };
 
-  return { orders, setOrders, aiOrders, setAiOrders, createOrder, updateOrder, deleteOrders, approveAiOrder };
+  // معالجة تغيير الحالة
+  const handleStatusChange = async (originalOrder, updatedOrder) => {
+    const isLocalOrder = originalOrder.delivery_partner === 'محلي';
+    
+    // إذا تم تسليم الطلب، نخصم من المخزون الفعلي
+    if (updatedOrder.status === 'delivered' && originalOrder.status !== 'delivered') {
+      await finalizeStock(updatedOrder.id);
+      await supabase.rpc('calculate_order_profit', { order_id_input: updatedOrder.id });
+    }
+    
+    // إذا تم إلغاء الطلب، نلغي حجز المخزون
+    if (updatedOrder.status === 'cancelled' && originalOrder.status !== 'cancelled') {
+      await releaseStock(updatedOrder.id);
+    }
+
+    // إشعار بتغيير الحالة
+    const statusNames = {
+      'pending': 'قيد التجهيز',
+      'processing': 'بحاجة للمعالج', 
+      'ready': 'جاهز للاستلام',
+      'delivered': 'تم التسليم',
+      'cancelled': 'ملغي'
+    };
+
+    addNotification({
+      type: 'order_status_update',
+      title: 'تحديث حالة الطلب',
+      message: `تم تغيير حالة طلبك رقم ${updatedOrder.tracking_number} إلى "${statusNames[updatedOrder.status]}"`,
+      user_id: updatedOrder.created_by,
+      link: `/my-orders?trackingNumber=${updatedOrder.tracking_number}`,
+      color: updatedOrder.status === 'delivered' ? 'green' : 'blue',
+      icon: 'Package'
+    });
+  };
+
+  // إنهاء المخزون (خصم فعلي عند التسليم)
+  const finalizeStock = async (orderId) => {
+    try {
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select('product_id, variant_id, quantity')
+        .eq('order_id', orderId);
+
+      for (const item of orderItems || []) {
+        // خصم من المخزون الفعلي وإلغاء الحجز
+        await supabase
+          .from('inventory')
+          .update({
+            quantity: supabase.raw('quantity - ?', [item.quantity]),
+            reserved_quantity: supabase.raw('reserved_quantity - ?', [item.quantity])
+          })
+          .eq('product_id', item.product_id)
+          .eq('variant_id', item.variant_id);
+      }
+    } catch (error) {
+      console.error('Error finalizing stock:', error);
+    }
+  };
+
+  // إلغاء حجز المخزون (عند الإلغاء)
+  const releaseStock = async (orderId) => {
+    try {
+      const { data: orderItems } = await supabase
+        .from('order_items')
+        .select('product_id, variant_id, quantity')
+        .eq('order_id', orderId);
+
+      for (const item of orderItems || []) {
+        // إلغاء الحجز فقط
+        await supabase
+          .from('inventory')
+          .update({
+            reserved_quantity: supabase.raw('reserved_quantity - ?', [item.quantity])
+          })
+          .eq('product_id', item.product_id)
+          .eq('variant_id', item.variant_id);
+      }
+    } catch (error) {
+      console.error('Error releasing stock:', error);
+    }
+  };
+
+  // حذف الطلبات
+  const deleteOrders = async (orderIds, isAiOrder = false) => {
+    try {
+      if (isAiOrder) {
+        // حذف طلبات الذكاء الاصطناعي
+        const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
+        if (error) throw error;
+        
+        setAiOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
+      } else {
+        // حذف الطلبات العادية - فقط المحلية وقيد التجهيز
+        const ordersToDelete = orders.filter(o => 
+          orderIds.includes(o.id) && 
+          o.delivery_partner === 'محلي' && 
+          o.status === 'pending'
+        );
+        
+        if (ordersToDelete.length === 0) {
+          toast({ 
+            title: "تنبيه", 
+            description: "يمكن حذف الطلبات المحلية قيد التجهيز فقط",
+            variant: "destructive" 
+          });
+          return;
+        }
+
+        const deleteIds = ordersToDelete.map(o => o.id);
+        
+        // إلغاء حجز المخزون أولاً
+        for (const order of ordersToDelete) {
+          await releaseStock(order.id);
+        }
+        
+        // حذف الطلبات
+        const { error } = await supabase.from('orders').delete().in('id', deleteIds);
+        if (error) throw error;
+        
+        setOrders(prev => prev.filter(o => !deleteIds.includes(o.id)));
+        
+        toast({ 
+          title: "تم الحذف", 
+          description: `تم حذف ${deleteIds.length} طلب بنجاح`,
+          variant: "success" 
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting orders:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "فشل في حذف الطلبات",
+        variant: "destructive" 
+      });
+    }
+  };
+
+  // الموافقة على طلب ذكي (سيتم تطويره لاحقاً)
+  const approveAiOrder = async (orderId) => {
+    // TODO: تطوير نظام الطلبات الذكية
+    console.log('Approve AI order:', orderId);
+  };
+
+  return { 
+    orders, 
+    setOrders, 
+    aiOrders, 
+    setAiOrders, 
+    createOrder, 
+    updateOrder, 
+    deleteOrders, 
+    approveAiOrder 
+  };
 };

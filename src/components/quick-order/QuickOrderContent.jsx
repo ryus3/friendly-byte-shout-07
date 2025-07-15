@@ -521,7 +521,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           qrLink = alWaseetResponse.qr_link;
           deliveryPartnerData = alWaseetResponse;
       } else if (activePartner === 'local') {
-          // للطلبات المحلية، سيتم إنشاء رقم التتبع في useOrders
+          // الطلبات المحلية - سيتم إنشاء رقم التتبع تلقائياً في useOrders
           trackingNumber = null;
       }
       
@@ -535,7 +535,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         notes: formData.notes,
       };
       
-      // إضافة معلومات شريك التوصيل للطلب
+      // معلومات شريك التوصيل
       const deliveryData = {
         delivery_partner: activePartner === 'local' ? 'محلي' : 'Al-Waseet',
         delivery_fee: activePartner === 'local' ? 0 : (deliveryPartnerData?.delivery_fee || 0)
