@@ -118,8 +118,8 @@ const Dashboard = () => {
                 query.set('status', 'delivered');
                 navigate(`/my-orders?${query.toString()}`);
                 break;
-            case 'pendingSales':
-                query.set('status', 'shipped,needs_processing');
+        case 'pendingSales':
+                query.set('status', 'shipped');
                 navigate(`/my-orders?${query.toString()}`);
                 break;
             case 'netProfit':
@@ -240,10 +240,10 @@ const Dashboard = () => {
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
 
-        // حساب المبيعات المعلقة (الطلبات المشحونة + تحتاج معالجة)
-        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped' || o.status === 'needs_processing');
+        // حساب المبيعات المعلقة (الطلبات المشحونة فقط)
+        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
-        const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + (o.total_amount - (o.delivery_fee || 0)), 0);
+        const pendingSales = pendingSalesOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
 
         return {
             totalOrdersCount: filteredTotalOrders.length,
