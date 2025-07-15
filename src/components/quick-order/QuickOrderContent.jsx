@@ -140,6 +140,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   .maybeSingle();
 
                 if (productData && productData.product_variants && productData.product_variants[0]) {
+                  console.log('Found product data for AI order:', productData);
                   const variant = productData.product_variants[0];
                   const product = {
                     id: productData.id,
@@ -155,15 +156,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                     barcode: variant.barcode || ''
                   };
                   addToCart(product, variantData, item.quantity || 1, false);
+                  console.log('Added product to cart:', product, variantData);
                 } else {
                   // fallback للطريقة القديمة
                   fallbackAddToCart(item);
                 }
               } catch (error) {
                 console.error('Error fetching product data:', error);
+                console.error('Error fetching product data:', error);
                 fallbackAddToCart(item);
               }
-            } else {
+                } else {
+                  console.log('Product data not found, using fallback for:', item);
               fallbackAddToCart(item);
             }
           }
@@ -404,7 +408,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm() || !isDeliveryPartnerSelected || isSubmittingState) return;
-    setIsSubmitting(true);
+    if (setIsSubmitting) setIsSubmitting(true);
     
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
@@ -517,7 +521,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     } catch (error) {
       toast({ title: "خطأ", description: error.message || "فشل إنشاء الطلب.", variant: "destructive" });
     } finally { 
-        setIsSubmitting(false);
+        if (setIsSubmitting) setIsSubmitting(false);
     }
   };
   
