@@ -77,7 +77,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
           </AccordionTrigger>
           <AccordionContent>
             <div className="space-y-2 p-3 border-t">
-              {product.variants && product.variants.map(variant => (
+              {(product.variants || []).map(variant => (
                 <InventoryItem
                   key={variant.id}
                   variant={variant}
@@ -85,6 +85,11 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                   onEditStock={canEdit ? () => onEditStock(product, variant) : null}
                 />
               ))}
+              {(!product.variants || product.variants.length === 0) && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p>لا توجد متغيرات لهذا المنتج</p>
+                </div>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
