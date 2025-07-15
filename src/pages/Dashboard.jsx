@@ -253,7 +253,7 @@ const Dashboard = () => {
 
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 
-            key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: userAiOrders.length, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
+            key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: userAiOrders?.length || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
         },
         hasPermission('manage_users') && { 
             key: 'pendingRegs', title: 'طلبات التسجيل الجديدة', value: pendingRegistrationsCount, icon: UserPlus, colors: ['indigo-500', 'violet-500'], onClick: () => setDialogs(d => ({ ...d, pendingRegs: true }))

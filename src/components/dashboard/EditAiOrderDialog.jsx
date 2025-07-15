@@ -5,13 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { X, Save, User, Phone, MapPin, Package, Plus, Trash2 } from 'lucide-react';
+import { X, Save, User, Phone, MapPin, Package, Plus, Trash2, Search } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useProducts } from '@/hooks/useProducts';
+import { Badge } from '@/components/ui/badge';
+import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
   const { refetchProducts, setAiOrders } = useInventory();
+  const { products } = useProducts();
   const [formData, setFormData] = useState({
     customer_name: '',
     customer_phone: '',
@@ -20,6 +24,9 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
     total_amount: 0
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [showProductSelector, setShowProductSelector] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [productSelectionOpen, setProductSelectionOpen] = useState(false);
 
   useEffect(() => {
     if (order) {
@@ -54,6 +61,41 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
       ...prev,
       items: [...prev.items, { name: '', quantity: 1, price: 0 }]
     }));
+  };
+
+  const addProductFromDatabase = (product) => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { 
+        name: product.name, 
+        quantity: 1, 
+        price: product.base_price || 0,
+        product_id: product.id,
+        product: product
+      }]
+    }));
+    setShowProductSelector(false);
+    setSearchTerm('');
+  };
+
+  const handleProductSelectionConfirm = (selectedItems) => {
+    selectedItems.forEach(item => {
+      setFormData(prev => ({
+        ...prev,
+        items: [...prev.items, {
+          name: item.productName,
+          quantity: item.quantity,
+          price: item.price,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          color: item.color,
+          size: item.size,
+          product: item
+        }]
+      }));
+    });
+    setProductSelectionOpen(false);
+    calculateTotal();
   };
 
   const removeItem = (index) => {
@@ -195,11 +237,67 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">المنتجات</h3>
-              <Button onClick={addItem} size="sm" variant="outline">
-                <Plus className="w-4 h-4 ml-2" />
-                إضافة منتج
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setProductSelectionOpen(true)} size="sm" variant="outline">
+                  <Search className="w-4 h-4 ml-2" />
+                  إختر من المنتجات
+                </Button>
+                <Button onClick={addItem} size="sm" variant="outline">
+                  <Plus className="w-4 h-4 ml-2" />
+                  إضافة منتج يدوي
+                </Button>
+              </div>
             </div>
+
+            {/* قائمة المنتجات للإختيار */}
+            {showProductSelector && (
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium">اختر منتج</h4>
+                  <Button variant="ghost" size="sm" onClick={() => setShowProductSelector(false)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="بحث عن منتج..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {products
+                    ?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .slice(0, 10)
+                    .map(product => (
+                      <div 
+                        key={product.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                        onClick={() => addProductFromDatabase(product)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center">
+                            {product.images?.[0] ? (
+                              <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover rounded-md" />
+                            ) : (
+                              <Package className="w-5 h-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div>
+                            <h5 className="font-medium">{product.name}</h5>
+                            <p className="text-sm text-muted-foreground">{product.base_price} د.ع</p>
+                          </div>
+                        </div>
+                        <Button size="sm" variant="ghost">
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               {formData.items.map((item, index) => (
@@ -212,11 +310,18 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
                 >
                   <div className="md:col-span-2">
                     <Label>اسم المنتج</Label>
-                    <Input
-                      value={item.name || ''}
-                      onChange={(e) => handleItemChange(index, 'name', e.target.value)}
-                      placeholder="اسم المنتج"
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={item.name || ''}
+                        onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                        placeholder="اسم المنتج"
+                      />
+                      {item.product_id && (
+                        <Badge variant="secondary" className="text-xs">
+                          من المخزن
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label>الكمية</Label>
@@ -269,6 +374,13 @@ const EditAiOrderDialog = ({ order, open, onOpenChange }) => {
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      <ProductSelectionDialog
+        open={productSelectionOpen}
+        onOpenChange={setProductSelectionOpen}
+        onConfirm={handleProductSelectionConfirm}
+        initialCart={[]}
+      />
     </Dialog>
   );
 };

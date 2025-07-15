@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, QrCode } from 'lucide-react';
+import { Plus, QrCode, List, LayoutGrid } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const ProductHeader = ({ 
   title = "المنتجات", 
@@ -9,7 +10,9 @@ const ProductHeader = ({
   showAddButton,
   onBarcodeSearch,
   showBarcodeButton,
-  barcodeIconOnly
+  barcodeIconOnly,
+  viewMode,
+  onViewModeChange
 }) => (
   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
@@ -18,6 +21,26 @@ const ProductHeader = ({
     </div>
     
     <div className="flex items-center gap-3">
+      {onViewModeChange && (
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => onViewModeChange('list')}
+            className={cn("glass-effect border-border/80 hover:bg-accent", viewMode === 'list' && 'bg-accent')}
+          >
+            <List className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => onViewModeChange('grid')}
+            className={cn("glass-effect border-border/80 hover:bg-accent", viewMode === 'grid' && 'bg-accent')}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
       {showBarcodeButton && (
         <Button
           onClick={onBarcodeSearch}
