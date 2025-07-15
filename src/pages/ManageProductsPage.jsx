@@ -24,7 +24,7 @@ const ManageProductsPage = () => {
   const { hasPermission } = useAuth();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', isMobile ? 'grid' : 'list');
+  const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'grid');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -45,13 +45,7 @@ const ManageProductsPage = () => {
     productsLength: products.length
   });
 
-  useEffect(() => {
-    console.log('isMobile changed:', isMobile);
-    if (isMobile && viewMode === 'list') {
-      console.log('Forcing grid mode for mobile');
-      setViewMode('grid');
-    }
-  }, [isMobile, viewMode, setViewMode]);
+  // إزالة الإجبار على وضع الشبكة في الهاتف - دع المستخدم يختار
 
   
   const selectedProducts = useMemo(() => 
@@ -185,10 +179,7 @@ const ManageProductsPage = () => {
           onAddProduct={() => navigate('/products/add')}
           onManageCategories={handleManageVariants}
           viewMode={viewMode}
-          onViewModeChange={(mode) => {
-            console.log('View mode changing to:', mode);
-            setViewMode(mode);
-          }}
+          onViewModeChange={setViewMode}
           selectedCount={selectedProductIds.length}
           onClearSelection={() => setSelectedProductIds([])}
           onDeleteSelected={() => setIsDeleteAlertOpen(true)}
@@ -213,10 +204,7 @@ const ManageProductsPage = () => {
         <AnimatePresence>
           {viewMode === 'list' ? (
             <motion.div layout className="space-y-3">
-              <div className="text-sm text-blue-600 p-2 bg-blue-50 rounded">
-                عرض القائمة - {filteredProducts.length} منتج
-              </div>
-              {filteredProducts.map((product) => (
+              {filteredProducts && filteredProducts.length > 0 && filteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                   <ManageProductListItem 
                     product={product} 
@@ -230,10 +218,7 @@ const ManageProductsPage = () => {
             </motion.div>
           ) : (
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              <div className="col-span-full text-sm text-green-600 p-2 bg-green-50 rounded">
-                عرض الشبكة - {filteredProducts.length} منتج
-              </div>
-              {filteredProducts.map((product) => (
+              {filteredProducts && filteredProducts.length > 0 && filteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductCard
                     product={product}
