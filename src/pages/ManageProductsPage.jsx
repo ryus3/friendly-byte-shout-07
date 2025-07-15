@@ -32,17 +32,27 @@ const ManageProductsPage = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  useEffect(() => {
-    if (isMobile) {
-      setViewMode('grid');
-    }
-  }, [isMobile, setViewMode]);
-
   const filteredProducts = useMemo(() => {
     return products.filter(p => 
       p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [products, searchTerm]);
+  
+  console.log('ManageProductsPage Debug:', {
+    isMobile,
+    viewMode,
+    filteredProductsLength: filteredProducts.length,
+    productsLength: products.length
+  });
+
+  useEffect(() => {
+    console.log('isMobile changed:', isMobile);
+    if (isMobile && viewMode === 'list') {
+      console.log('Forcing grid mode for mobile');
+      setViewMode('grid');
+    }
+  }, [isMobile, viewMode, setViewMode]);
+
   
   const selectedProducts = useMemo(() => 
     products.filter(p => selectedProductIds.includes(p.id)),
@@ -175,7 +185,10 @@ const ManageProductsPage = () => {
           onAddProduct={() => navigate('/products/add')}
           onManageCategories={handleManageVariants}
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewModeChange={(mode) => {
+            console.log('View mode changing to:', mode);
+            setViewMode(mode);
+          }}
           selectedCount={selectedProductIds.length}
           onClearSelection={() => setSelectedProductIds([])}
           onDeleteSelected={() => setIsDeleteAlertOpen(true)}
@@ -200,6 +213,9 @@ const ManageProductsPage = () => {
         <AnimatePresence>
           {viewMode === 'list' ? (
             <motion.div layout className="space-y-3">
+              <div className="text-sm text-blue-600 p-2 bg-blue-50 rounded">
+                عرض القائمة - {filteredProducts.length} منتج
+              </div>
               {filteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                   <ManageProductListItem 
@@ -214,6 +230,9 @@ const ManageProductsPage = () => {
             </motion.div>
           ) : (
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <div className="col-span-full text-sm text-green-600 p-2 bg-green-50 rounded">
+                عرض الشبكة - {filteredProducts.length} منتج
+              </div>
               {filteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductCard
