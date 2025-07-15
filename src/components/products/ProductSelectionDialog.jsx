@@ -139,8 +139,9 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
       quantity,
       total: quantity * (variant.price || product.base_price || 0),
       image: variant.images?.[0] || product.images?.[0] || '/default-product-image.jpg',
-      sku: variant.barcode || product.barcode,
+      sku: variant.barcode || product.barcode || `${product.id}-${variant.id}`,
       stock: variant.quantity,
+      reserved: variant.reserved || 0
     };
 
     setSelectedItems(prev => {

@@ -1184,6 +1184,10 @@ export type Database = {
         Args: { order_id_input: string }
         Returns: undefined
       }
+      finalize_stock_item: {
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
+        Returns: undefined
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1228,6 +1232,10 @@ export type Database = {
           p_employee_code?: string
         }
         Returns: string
+      }
+      release_stock_item: {
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
+        Returns: undefined
       }
       update_reserved_stock: {
         Args: {
