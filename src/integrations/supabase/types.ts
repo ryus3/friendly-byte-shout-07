@@ -1200,6 +1200,10 @@ export type Database = {
         Args: { user_id_input: string; username_input: string }
         Returns: string
       }
+      get_available_stock: {
+        Args: { p_product_id: string; p_variant_id?: string }
+        Returns: number
+      }
       get_employee_by_telegram_id: {
         Args: { p_telegram_chat_id: number }
         Returns: {
