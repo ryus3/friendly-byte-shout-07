@@ -16,6 +16,7 @@ import AiChatDialog from '@/components/ai/AiChatDialog.jsx';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
+import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 
 const SidebarContent = ({ onClose }) => {
