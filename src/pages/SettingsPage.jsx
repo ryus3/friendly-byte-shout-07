@@ -17,6 +17,8 @@ import {
   Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
+import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
+import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
@@ -121,6 +123,8 @@ const SettingsPage = () => {
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
+  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
+  const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
 
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
@@ -213,25 +217,90 @@ const SettingsPage = () => {
           <SectionHeader 
             icon={FileText} 
             title="التقارير والتوصيل"
-            description="إعدادات التقارير وشركات التوصيل والتليغرام"
+            description="إعدادات التقارير وأسعار التوصيل وبوت التليغرام"
           />
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ModernCard
-              icon={FileText}
-              title="إعدادات التقارير"
-              description="تخصيص التقارير المالية والجرد والمبيعات"
-              iconColor="from-indigo-500 to-indigo-600"
-              onClick={() => setIsReportsOpen(true)}
-            />
+          <div className="space-y-6">
+            {/* التقارير - عرض مباشر */}
+            <Card className="group relative overflow-hidden bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 hover:shadow-xl transition-all duration-300">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-10 transition-opacity duration-300" />
+              <CardHeader className="pb-4 relative">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-xl font-bold text-indigo-700">
+                        التقارير والإحصائيات
+                      </CardTitle>
+                      <CardDescription className="mt-1 text-sm text-indigo-600">
+                        إنشاء وتصدير تقارير PDF شاملة من البيانات الحقيقية
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 relative">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                  <div className="text-center p-3 bg-white/60 rounded-lg border border-indigo-100">
+                    <p className="text-lg font-bold text-indigo-600">{settings?.totalRevenue?.toLocaleString() || '0'}</p>
+                    <p className="text-xs text-indigo-500">إجمالي المبيعات</p>
+                  </div>
+                  <div className="text-center p-3 bg-white/60 rounded-lg border border-indigo-100">
+                    <p className="text-lg font-bold text-purple-600">{settings?.totalProducts || '0'}</p>
+                    <p className="text-xs text-purple-500">المنتجات</p>
+                  </div>
+                  <div className="text-center p-3 bg-white/60 rounded-lg border border-indigo-100">
+                    <p className="text-lg font-bold text-blue-600">{settings?.totalOrders || '0'}</p>
+                    <p className="text-xs text-blue-500">الطلبات</p>
+                  </div>
+                  <div className="text-center p-3 bg-white/60 rounded-lg border border-indigo-100">
+                    <p className="text-lg font-bold text-green-600">{settings?.totalStock || '0'}</p>
+                    <p className="text-xs text-green-500">المخزون</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => setIsReportsOpen(true)}
+                  className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                >
+                  <Download className="w-4 h-4 ml-2" />
+                  إنشاء وتصدير التقارير
+                </Button>
+              </CardContent>
+            </Card>
 
-            <ModernCard
-              icon={Truck}
-              title="شركات التوصيل"
-              description="إعدادات التليغرام وشركات التوصيل المدمجة"
-              iconColor="from-cyan-500 to-cyan-600"
-              onClick={() => setIsLoginDialogOpen(true)}
-            />
+            {/* التوصيل والتليغرام */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <ModernCard
+                icon={DollarSign}
+                title="أسعار التوصيل"
+                description="إدارة أسعار وقواعد التوصيل للطلبات"
+                iconColor="from-green-500 to-emerald-600"
+                onClick={() => setIsDeliverySettingsOpen(true)}
+              >
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">السعر الحالي:</span>
+                  <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
+                </div>
+              </ModernCard>
+
+              <ModernCard
+                icon={Truck}
+                title="شركات التوصيل"
+                description="ربط شركات التوصيل الخارجية والوضع المحلي"
+                iconColor="from-cyan-500 to-blue-600"
+                onClick={() => setIsLoginDialogOpen(true)}
+              />
+
+              <ModernCard
+                icon={MessageCircle}
+                title="بوت التليغرام"
+                description="ربط البوت وإدارة رموز الموظفين"
+                iconColor="from-blue-500 to-indigo-600"
+                onClick={() => setIsTelegramOpen(true)}
+              />
+            </div>
           </div>
 
           <SectionHeader 
@@ -297,6 +366,16 @@ const SettingsPage = () => {
       <DeliveryPartnerDialog
         open={isLoginDialogOpen}
         onOpenChange={setIsLoginDialogOpen}
+      />
+
+      <TelegramBotDialog
+        open={isTelegramOpen}
+        onOpenChange={setIsTelegramOpen}
+      />
+
+      <DeliverySettingsDialog
+        open={isDeliverySettingsOpen}
+        onOpenChange={setIsDeliverySettingsOpen}
       />
     </>
   );
