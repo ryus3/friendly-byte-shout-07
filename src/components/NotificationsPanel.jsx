@@ -237,18 +237,21 @@ const NotificationsPanel = () => {
 
   const handleMarkAsRead = (e, id) => {
     e.stopPropagation();
+    console.log('Marking as read:', id);
     markAsRead(id);
     toast({ title: "تم تحديد الإشعار كمقروء" });
   };
 
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
+    console.log('Marking all as read');
     markAllAsRead();
     toast({ title: "تم تحديد الكل كمقروء" });
   };
 
   const handleClearAll = (e) => {
     e.stopPropagation();
+    console.log('Clearing all notifications');
     clearAll();
     toast({ title: "تم حذف جميع الإشعارات" });
   };

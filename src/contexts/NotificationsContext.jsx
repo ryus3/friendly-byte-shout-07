@@ -225,25 +225,55 @@ export const NotificationsProvider = ({ children }) => {
     }, [user]);
 
     const markAsRead = useCallback(async (id) => {
-        // تحديث الحالة محلياً أولاً
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        if (!supabase || !id) {
+            console.error("Supabase client not available or invalid ID");
+            return;
+        }
         
         try {
-            const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+            // تحديث قاعدة البيانات أولاً
+            const { error } = await supabase
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('id', id);
+            
             if (error) {
                 console.error("Error marking notification as read:", error);
-                // إعادة تعيين الحالة في حالة الفشل
-                setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
+                return;
             }
+            
+            // تحديث الحالة المحلية فقط عند النجاح
+            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+            
         } catch (error) {
             console.error("Error in markAsRead:", error);
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: false } : n));
         }
     }, []);
 
     const deleteNotification = useCallback(async (id) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-        await supabase.from('notifications').delete().eq('id', id);
+        if (!supabase || !id) {
+            console.error("Supabase client not available or invalid ID");
+            return;
+        }
+        
+        try {
+            // حذف من قاعدة البيانات أولاً
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .eq('id', id);
+            
+            if (error) {
+                console.error("Error deleting notification:", error);
+                return;
+            }
+            
+            // حذف من الحالة المحلية فقط عند النجاح
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            
+        } catch (error) {
+            console.error("Error in deleteNotification:", error);
+        }
     }, []);
 
     const deleteNotificationByTypeAndData = useCallback(async (type, data) => {
@@ -261,35 +291,60 @@ export const NotificationsProvider = ({ children }) => {
     }, []);
 
     const markAllAsRead = useCallback(async () => {
+        if (!supabase) {
+            console.error("Supabase client not available");
+            return;
+        }
+        
         const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
         if (unreadIds.length === 0) return;
         
-        const originalNotifications = [...notifications];
-        setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-        
         try {
-            const { error } = await supabase.from('notifications').update({ is_read: true }).in('id', unreadIds);
+            // تحديث قاعدة البيانات أولاً
+            const { error } = await supabase
+                .from('notifications')
+                .update({ is_read: true })
+                .in('id', unreadIds);
+            
             if (error) {
                 console.error("Error marking all as read:", error);
-                setNotifications(originalNotifications);
+                return;
             }
+            
+            // تحديث الحالة المحلية فقط عند النجاح
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            
         } catch (error) {
             console.error("Error in markAllAsRead:", error);
-            setNotifications(originalNotifications);
         }
     }, [notifications]);
 
     const clearAll = useCallback(async () => {
+        if (!supabase) {
+            console.error("Supabase client not available");
+            return;
+        }
+        
         const idsToDelete = notifications.map(n => n.id);
         if (idsToDelete.length === 0) return;
     
-        const originalNotifications = [...notifications];
-        setNotifications([]);
-    
-        const { error } = await supabase.from('notifications').delete().in('id', idsToDelete);
-        if (error) {
-            console.error("Error clearing notifications:", error);
-            setNotifications(originalNotifications);
+        try {
+            // حذف من قاعدة البيانات أولاً
+            const { error } = await supabase
+                .from('notifications')
+                .delete()
+                .in('id', idsToDelete);
+            
+            if (error) {
+                console.error("Error clearing notifications:", error);
+                return;
+            }
+            
+            // مسح الحالة المحلية فقط عند النجاح
+            setNotifications([]);
+            
+        } catch (error) {
+            console.error("Error in clearAll:", error);
         }
     }, [notifications]);
 
