@@ -90,39 +90,69 @@ const EmployeePermissionsForm = ({ employee, onUpdate }) => {
   };
 
   const handleCategoryPermissionChange = (category, checked) => {
-    setCategoryPermissions(prev => 
-      checked ? [...prev, category] : prev.filter(c => c !== category)
-    );
+    if (category === 'all') {
+      setCategoryPermissions(checked ? ['all'] : []);
+    } else {
+      setCategoryPermissions(prev => {
+        const filtered = prev.filter(c => c !== 'all' && c !== category);
+        return checked ? [...filtered, category] : filtered;
+      });
+    }
   };
 
   const handleColorPermissionChange = (color, checked) => {
-    setColorPermissions(prev => 
-      checked ? [...prev, color] : prev.filter(c => c !== color)
-    );
+    if (color === 'all') {
+      setColorPermissions(checked ? ['all'] : []);
+    } else {
+      setColorPermissions(prev => {
+        const filtered = prev.filter(c => c !== 'all' && c !== color);
+        return checked ? [...filtered, color] : filtered;
+      });
+    }
   };
 
   const handleSizePermissionChange = (size, checked) => {
-    setSizePermissions(prev => 
-      checked ? [...prev, size] : prev.filter(c => c !== size)
-    );
+    if (size === 'all') {
+      setSizePermissions(checked ? ['all'] : []);
+    } else {
+      setSizePermissions(prev => {
+        const filtered = prev.filter(c => c !== 'all' && c !== size);
+        return checked ? [...filtered, size] : filtered;
+      });
+    }
   };
 
   const handleDepartmentPermissionChange = (department, checked) => {
-    setDepartmentPermissions(prev => 
-      checked ? [...prev, department] : prev.filter(c => c !== department)
-    );
+    if (department === 'all') {
+      setDepartmentPermissions(checked ? ['all'] : []);
+    } else {
+      setDepartmentPermissions(prev => {
+        const filtered = prev.filter(c => c !== 'all' && c !== department);
+        return checked ? [...filtered, department] : filtered;
+      });
+    }
   };
 
   const handleProductTypePermissionChange = (productType, checked) => {
-    setProductTypePermissions(prev => 
-      checked ? [...prev, productType] : prev.filter(c => c !== productType)
-    );
+    if (productType === 'all') {
+      setProductTypePermissions(checked ? ['all'] : []);
+    } else {
+      setProductTypePermissions(prev => {
+        const filtered = prev.filter(c => c !== 'all' && c !== productType);
+        return checked ? [...filtered, productType] : filtered;
+      });
+    }
   };
 
   const handleSeasonOccasionPermissionChange = (seasonOccasion, checked) => {
-    setSeasonOccasionPermissions(prev => 
-      checked ? [...prev, seasonOccasion] : prev.filter(c => c !== seasonOccasion)
-    );
+    if (seasonOccasion === 'all') {
+      setSeasonOccasionPermissions(checked ? ['all'] : []);
+    } else {
+      setSeasonOccasionPermissions(prev => {
+        const filtered = prev.filter(c => c !== 'all' && c !== seasonOccasion);
+        return checked ? [...filtered, seasonOccasion] : filtered;
+      });
+    }
   };
   
   const handleRoleChange = (newRole) => {
@@ -151,12 +181,12 @@ const EmployeePermissionsForm = ({ employee, onUpdate }) => {
     permissions: (role === 'admin' || role === 'deputy') ? ['*'] : selectedPermissions,
     default_page: defaultPage,
     order_creation_mode: orderCreationMode,
-    category_permissions: JSON.stringify((role === 'admin' || role === 'deputy') ? ['all'] : categoryPermissions),
-    color_permissions: JSON.stringify((role === 'admin' || role === 'deputy') ? ['all'] : colorPermissions),
-    size_permissions: JSON.stringify((role === 'admin' || role === 'deputy') ? ['all'] : sizePermissions),
-    department_permissions: JSON.stringify((role === 'admin' || role === 'deputy') ? ['all'] : departmentPermissions),
-    product_type_permissions: JSON.stringify((role === 'admin' || role === 'deputy') ? ['all'] : productTypePermissions),
-    season_occasion_permissions: JSON.stringify((role === 'admin' || role === 'deputy') ? ['all'] : seasonOccasionPermissions)
+    category_permissions: (role === 'admin' || role === 'deputy') ? ['all'] : categoryPermissions,
+    color_permissions: (role === 'admin' || role === 'deputy') ? ['all'] : colorPermissions,
+    size_permissions: (role === 'admin' || role === 'deputy') ? ['all'] : sizePermissions,
+    department_permissions: (role === 'admin' || role === 'deputy') ? ['all'] : departmentPermissions,
+    product_type_permissions: (role === 'admin' || role === 'deputy') ? ['all'] : productTypePermissions,
+    season_occasion_permissions: (role === 'admin' || role === 'deputy') ? ['all'] : seasonOccasionPermissions
   });
 
   // Expose current data to parent
