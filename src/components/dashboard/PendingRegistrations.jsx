@@ -30,7 +30,11 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
         role: 'employee'
       };
       
-      console.log('Direct approval for user:', user.user_id, 'with data:', approvalData);
+      console.log('=== DIRECT APPROVAL START ===');
+      console.log('Target user:', user);
+      console.log('User ID being approved:', user.user_id);
+      console.log('Approval data being sent:', approvalData);
+      
       await onApprove(user.user_id, approvalData);
     } catch (error) {
       console.error('Direct approval error:', error);

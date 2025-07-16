@@ -361,12 +361,19 @@ export const AuthProvider = ({ children }) => {
     }
     
     try {
+      console.log('=== START updateUser ===');
       console.log('Updating user:', userId, 'with data:', data);
+      console.log('Current user ID in context:', user?.user_id);
+      console.log('Current user role:', user?.role);
       
-      const { error } = await supabase
+      const { data: result, error } = await supabase
         .from('profiles')
         .update(data)
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select();
+        
+      console.log('Supabase update result:', result);
+      console.log('Supabase update error:', error);
         
       if (error) {
         console.error('Update error:', error);
@@ -374,11 +381,17 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error };
       }
       
-      console.log('User updated successfully');
+      if (!result || result.length === 0) {
+        console.error('No rows updated - user not found or no permissions');
+        toast({ title: 'خطأ', description: 'لم يتم العثور على المستخدم أو لا توجد صلاحيات للتحديث', variant: 'destructive' });
+        return { success: false, error: 'No rows updated' };
+      }
+      
+      console.log('User updated successfully, result:', result);
       toast({ title: 'نجاح', description: 'تم تحديث المستخدم بنجاح.' });
       
       // تحديث البيانات المحلية
-      if (userId === user?.id) {
+      if (userId === user?.user_id) {
         const updatedProfile = await fetchUserProfile(user);
         setUser(updatedProfile);
       }
