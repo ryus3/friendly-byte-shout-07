@@ -223,7 +223,51 @@ const AdvancedAccountingSystem = () => {
     };
   }, [financialAnalysis, accounting]);
 
-  // مؤشرات الأداء الرئيسية - نسخة من لوحة التحكم مع إضافات المركز المالي
+  // استيراد حساب صافي الأرباح مباشرة من لوحة التحكم
+  const dashboardNetProfit = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth(), 1); // آخر شهر كما في لوحة التحكم
+    const to = new Date();
+    
+    if (!orders || !accounting || !products) return 0;
+    
+    const filterByDate = (itemDateStr) => {
+      if (!from || !to || !itemDateStr) return true;
+      const itemDate = new Date(itemDateStr);
+      return itemDate >= from && itemDate <= to;
+    };
+    
+    // نفس حساب لوحة التحكم تماماً - الطلبات المُوصلة التي تم استلام فواتيرها فقط
+    const deliveredOrders = (orders || []).filter(o => 
+      o.status === 'delivered' && 
+      o.receipt_received === true && 
+      filterByDate(o.updated_at || o.created_at)
+    );
+    const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
+    
+    // حساب إجمالي الإيرادات والرسوم
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+    const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+    const salesWithoutDelivery = totalRevenue - deliveryFees;
+    
+    // حساب تكلفة البضاعة المباعة من العناصر الفعلية
+    const cogs = deliveredOrders.reduce((sum, o) => {
+      const orderCogs = (o.items || []).reduce((itemSum, item) => {
+        const costPrice = item.costPrice || item.cost_price || 0;
+        return itemSum + (costPrice * item.quantity);
+      }, 0);
+      return sum + orderCogs;
+    }, 0);
+    const grossProfit = salesWithoutDelivery - cogs;
+    const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
+    const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = generalExpenses + employeeSettledDues;
+    const netProfit = grossProfit - totalExpenses;
+    
+    return netProfit;
+  }, [orders, accounting, products]);
+
+  // مؤشرات الأداء الرئيسية - استخدام صافي الأرباح من لوحة التحكم
   const kpiCards = [
     {
       title: 'إجمالي الإيرادات',
@@ -234,11 +278,11 @@ const AdvancedAccountingSystem = () => {
       change: '+12.5%'
     },
     {
-      title: 'صافي الارباح', // نفس اسم لوحة التحكم
-      value: financialAnalysis.netProfit || 0,
+      title: 'صافي الارباح', // نفس اسم ونفس حساب لوحة التحكم
+      value: dashboardNetProfit,
       format: 'currency',
       icon: TrendingUp,
-      colors: financialAnalysis.netProfit >= 0 ? ['green-500', 'emerald-500'] : ['red-500', 'orange-500'],
+      colors: dashboardNetProfit >= 0 ? ['green-500', 'emerald-500'] : ['red-500', 'orange-500'],
       change: `${financialAnalysis.netProfitMargin?.toFixed(1) || 0}%`
     },
     {
