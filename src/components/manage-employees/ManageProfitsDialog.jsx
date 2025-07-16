@@ -160,14 +160,14 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-3 sm:pb-4">
+          <DialogTitle className="text-lg sm:text-xl">قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             إدارة قواعد الأرباح الخاصة بالموظف - نسب مئوية أو مبالغ ثابتة حسب المنتج أو التصنيف مع حساب دقيق للمستحقات.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4 max-h-[70vh] overflow-y-auto pr-2 space-y-4">
+        <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-3 sm:space-y-4">
             <Card>
                 <CardContent className="p-4 flex flex-col sm:flex-row gap-4 items-center">
                     <Label className="whitespace-nowrap">نسخ القواعد من:</Label>
@@ -184,15 +184,15 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                 </CardContent>
             </Card>
 
-          <Tabs defaultValue="product" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="product">حسب المنتج</TabsTrigger>
-              <TabsTrigger value="category">حسب التصنيف</TabsTrigger>
-              <TabsTrigger value="general">القواعد العامة</TabsTrigger>
+          <Tabs defaultValue="product" className="w-full flex flex-col flex-1 min-h-0">
+            <TabsList className="grid w-full grid-cols-3 mb-3 sm:mb-4 flex-shrink-0">
+              <TabsTrigger value="product" className="text-xs sm:text-sm px-2 sm:px-4">حسب المنتج</TabsTrigger>
+              <TabsTrigger value="category" className="text-xs sm:text-sm px-2 sm:px-4">حسب التصنيف</TabsTrigger>
+              <TabsTrigger value="general" className="text-xs sm:text-sm px-2 sm:px-4">القواعد العامة</TabsTrigger>
             </TabsList>
-            <TabsContent value="product">
-              <Card>
-                <CardContent className="p-4 space-y-4">
+            <TabsContent value="product" className="flex-1 overflow-y-auto min-h-0 mt-0">
+              <Card className="h-full">
+                <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-4 h-full overflow-y-auto">
                   <div className="p-4 border rounded-lg bg-secondary/50 space-y-3">
                       <h4 className="font-semibold">تحديد ربح لعدة منتجات</h4>
                       <MultiProductSelector selectedProducts={selectedProducts} setSelectedProducts={setSelectedProducts} />
@@ -324,9 +324,9 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
             </TabsContent>
           </Tabs>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-          <Button onClick={handleSave}>حفظ التغييرات</Button>
+        <DialogFooter className="flex-shrink-0 pt-3 sm:pt-4 gap-2 sm:gap-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="text-sm sm:text-base px-3 sm:px-4">إلغاء</Button>
+          <Button onClick={handleSave} className="text-sm sm:text-base px-3 sm:px-4">حفظ التغييرات</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

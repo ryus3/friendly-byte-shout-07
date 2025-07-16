@@ -57,37 +57,40 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <DollarSign className="h-6 w-6 text-green-600" />
+        <DialogContent className="max-w-[95vw] w-full sm:max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0 pb-4">
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               إدارة قواعد الأرباح للموظفين
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-sm sm:text-base">
               نظام شامل لإدارة قواعد الأرباح وحساب المستحقات للموظفين بناءً على المنتجات والتصنيفات
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden min-h-0">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="overview" className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  نظرة عامة
+              <TabsList className="grid w-full grid-cols-3 mb-4 flex-shrink-0">
+                <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">نظرة عامة</span>
+                  <span className="sm:hidden">عامة</span>
                 </TabsTrigger>
-                <TabsTrigger value="employees" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  إدارة الموظفين
+                <TabsTrigger value="employees" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">إدارة الموظفين</span>
+                  <span className="sm:hidden">موظفين</span>
                 </TabsTrigger>
-                <TabsTrigger value="calculator" className="flex items-center gap-2">
-                  <Calculator className="h-4 w-4" />
-                  حاسبة الأرباح
+                <TabsTrigger value="calculator" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                  <Calculator className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">حاسبة الأرباح</span>
+                  <span className="sm:hidden">حاسبة</span>
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex-1 overflow-y-auto mt-4">
-                <TabsContent value="overview" className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+                <TabsContent value="overview" className="space-y-4 sm:space-y-6 mt-0 h-full">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                     <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30">
                       <CardContent className="p-4 text-center">
                         <div className="text-2xl font-bold text-blue-600">{totalEmployees}</div>
@@ -166,8 +169,8 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                   </Card>
                 </TabsContent>
 
-                <TabsContent value="employees" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <TabsContent value="employees" className="space-y-4 mt-0 h-full">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                     {employeeStats.map((emp) => (
                       <Card key={emp.id} className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-4">
@@ -210,13 +213,13 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="calculator" className="space-y-4">
+                <TabsContent value="calculator" className="space-y-4 mt-0 h-full">
                   <Card>
-                    <CardHeader>
-                      <CardTitle>حاسبة الأرباح المباشرة</CardTitle>
+                    <CardHeader className="pb-3 sm:pb-4">
+                      <CardTitle className="text-lg sm:text-xl">حاسبة الأرباح المباشرة</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <CardContent className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         <div>
                           <Label>اختر موظف</Label>
                           <Select>
