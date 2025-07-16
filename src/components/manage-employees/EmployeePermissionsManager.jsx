@@ -434,14 +434,14 @@ const EmployeePermissionsManager = ({ open, onOpenChange }) => {
   if (selectedEmployee) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] overflow-y-auto z-50">
           <DialogHeader className="pb-4">
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               <Settings className="h-5 w-5" />
               إدارة صلاحيات: {selectedEmployee.full_name}
             </DialogTitle>
-            <DialogDescription>
-              تحديد الصلاحيات والوصول للموظف
+            <DialogDescription className="text-sm text-muted-foreground">
+              تحكم تفصيلي في صلاحيات الموظف ومتغيرات المنتجات
             </DialogDescription>
           </DialogHeader>
           <EmployeePermissionsEditor employee={selectedEmployee} />
