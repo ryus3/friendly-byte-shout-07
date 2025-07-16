@@ -33,6 +33,8 @@ import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
 import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
+import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -142,6 +144,7 @@ const SettingsPage = () => {
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
+  const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -220,7 +223,7 @@ const SettingsPage = () => {
                 title="قواعد الأرباح للموظفين"
                 description="إدارة قواعد الأرباح وحساب المستحقات للموظفين حسب المنتجات والتصنيفات"
                 iconColor="from-green-500 to-green-600"
-                onClick={() => setIsManageEmployeesOpen(true)}
+                onClick={() => setIsProfitsManagerOpen(true)}
               />
             )}
 
@@ -486,6 +489,11 @@ const SettingsPage = () => {
       <UnifiedRoleManager 
         open={isRoleManagerOpen} 
         onOpenChange={setIsRoleManagerOpen} 
+      />
+
+      <EmployeeProfitsManager 
+        open={isProfitsManagerOpen} 
+        onOpenChange={setIsProfitsManagerOpen} 
       />
     </>
   );
