@@ -37,6 +37,22 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
             <Label htmlFor="costPrice">سعر التكلفة (اختياري)</Label>
             <Input id="costPrice" name="costPrice" type="number" value={productInfo.costPrice} onChange={handleInputChange} />
           </div>
+          <div>
+            <Label htmlFor="employeeProfitPercentage">نسبة ربح الموظف (د.ع)</Label>
+            <Input 
+              id="employeeProfitPercentage" 
+              name="employeeProfitPercentage" 
+              type="number" 
+              min="0"
+              step="0.01"
+              placeholder="مثال: 5000"
+              value={productInfo.employeeProfitPercentage} 
+              onChange={handleInputChange} 
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              مبلغ ثابت يحصل عليه الموظف عند بيع هذا المنتج - يمكن تعديله من قواعد الأرباح
+            </p>
+          </div>
         </div>
         <div>
           <Label htmlFor="description">وصف المنتج (اختياري)</Label>
@@ -54,27 +70,8 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
                 />
               </div>
             ))}
-                </div>
-                
-                {/* نسبة ربح الموظف */}
-                <div className="space-y-2">
-                  <Label htmlFor="employeeProfitPercentage">نسبة ربح الموظف (%)</Label>
-                  <Input
-                    id="employeeProfitPercentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    placeholder="نسبة ربح الموظف من هذا المنتج (اختياري)"
-                    value={productInfo.employeeProfitPercentage}
-                    onChange={(e) => setProductInfo({...productInfo, employeeProfitPercentage: e.target.value})}
-                    className="text-right"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    يمكن تعديل هذه النسبة لاحقاً من قواعد الأرباح للموظفين في الإعدادات
-                  </p>
-                </div>
-              </div>
+                 </div>
+               </div>
             </CardContent>
           </Card>
         );
