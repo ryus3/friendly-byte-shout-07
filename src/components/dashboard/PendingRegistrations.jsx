@@ -15,13 +15,39 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
 
   const handleDirectApprove = async () => {
     try {
-      // صلاحيات أساسية للموظف الجديد
+      // صلاحيات أساسية محسنة للموظف الجديد
       const defaultPermissions = [
-        'view_products', 
-        'create_orders', 
-        'view_own_orders', 
-        'view_inventory', 
-        'view_own_profits'
+        // صفحات التطبيق الأساسية
+        'view_dashboard',
+        'view_products_page', 
+        'view_orders_page',
+        'view_inventory_page',
+        'view_quick_order_page',
+        
+        // المنتجات والمخزن
+        'view_products',
+        'view_inventory',
+        'use_barcode_scanner',
+        
+        // الطلبات والمبيعات
+        'view_orders',
+        'view_own_orders',
+        'create_orders',
+        'quick_order',
+        'checkout_orders',
+        'view_order_details',
+        'print_invoices',
+        'print_receipts',
+        
+        // لوحة التحكم
+        'view_statistics',
+        'view_recent_activities',
+        
+        // الأرباح الخاصة
+        'view_own_profits',
+        
+        // إعدادات شخصية
+        'profile_settings'
       ];
       
       const approvalData = {
@@ -150,10 +176,39 @@ const PendingRegistrations = ({ onClose }) => {
       console.log('User ID:', userId);
       console.log('Approval data:', data);
       
-      // إضافة الصلاحيات الأساسية إذا لم تكن موجودة
+      // إضافة الصلاحيات الأساسية المحسنة إذا لم تكن موجودة
       const defaultPermissions = [
-        'view_products', 'create_orders', 'view_own_orders', 
-        'view_inventory', 'view_own_profits'
+        // صفحات التطبيق الأساسية
+        'view_dashboard',
+        'view_products_page', 
+        'view_orders_page',
+        'view_inventory_page',
+        'view_quick_order_page',
+        
+        // المنتجات والمخزن
+        'view_products',
+        'view_inventory',
+        'use_barcode_scanner',
+        
+        // الطلبات والمبيعات
+        'view_orders',
+        'view_own_orders',
+        'create_orders',
+        'quick_order',
+        'checkout_orders',
+        'view_order_details',
+        'print_invoices',
+        'print_receipts',
+        
+        // لوحة التحكم
+        'view_statistics',
+        'view_recent_activities',
+        
+        // الأرباح الخاصة
+        'view_own_profits',
+        
+        // إعدادات شخصية
+        'profile_settings'
       ];
       
       const finalData = {
