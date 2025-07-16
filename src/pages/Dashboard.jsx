@@ -82,7 +82,6 @@ const Dashboard = () => {
     const { profits } = useProfits();
     const { 
         filterDataByUser, 
-        filterProfitsByUser, 
         canViewAllData, 
         hasPermission,
         isAdmin,
@@ -209,10 +208,26 @@ const Dashboard = () => {
 
     const visibleOrders = useMemo(() => {
         if (!orders) return [];
-        return filterDataByUser(orders, 'created_by');
-    }, [orders, filterDataByUser]);
+        
+        // فلترة الطلبات بناءً على صلاحيات المستخدم
+        return canViewAllData 
+            ? orders 
+            : orders.filter(order => {
+                const createdBy = order.created_by;
+                return createdBy === user?.id || createdBy === user?.user_id;
+            });
+    }, [orders, canViewAllData, user?.id, user?.user_id]);
     
-    const userAiOrders = useMemo(() => filterDataByUser(aiOrders || [], 'created_by'), [aiOrders, filterDataByUser]);
+    const userAiOrders = useMemo(() => {
+        if (!aiOrders) return [];
+        
+        return canViewAllData 
+            ? aiOrders 
+            : aiOrders.filter(order => {
+                const createdBy = order.created_by;
+                return createdBy === user?.id || createdBy === user?.user_id;
+            });
+    }, [aiOrders, canViewAllData, user?.id, user?.user_id]);
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
