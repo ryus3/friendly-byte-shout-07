@@ -150,15 +150,21 @@ const AccountingPage = () => {
             return sum + (Array.isArray(p.variants) ? p.variants.reduce((variantSum, v) => variantSum + (v.quantity * (v.price || v.base_price || 0)), 0) : 0);
         }, 0) : 0;
         
-        const myProfit = deliveredOrders.filter(o => o.created_by === currentUser?.id).reduce((sum, o) => {
+        // حساب مبيعات وأرباح المدير
+        const managerOrders = deliveredOrders.filter(o => o.created_by === currentUser?.id);
+        const managerSales = managerOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        const myProfit = managerOrders.reduce((sum, o) => {
             const orderProfit = (o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0);
             return sum + orderProfit;
         }, 0);
 
-        const managerProfitFromEmployees = deliveredOrders.filter(o => {
+        // حساب مبيعات وأرباح الموظفين
+        const employeeOrders = deliveredOrders.filter(o => {
             const orderUser = allUsers?.find(u => u.id === o.created_by);
             return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy');
-        }).reduce((sum, o) => sum + (calculateManagerProfit(o) || 0), 0);
+        });
+        const employeeSales = employeeOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        const managerProfitFromEmployees = employeeOrders.reduce((sum, o) => sum + (calculateManagerProfit(o) || 0), 0);
         
         const totalProfit = myProfit + managerProfitFromEmployees;
     
@@ -193,7 +199,7 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const topRowCards = [

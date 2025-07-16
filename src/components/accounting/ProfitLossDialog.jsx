@@ -53,21 +53,12 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
     };
 
     const salesDetails = useMemo(() => {
-        if (!summary || !summary.deliveredOrders) return { managerSales: 0, employeeSales: 0 };
-        
-        const managerSales = summary.deliveredOrders
-            .filter(o => o.created_by === user.id)
-            .reduce((sum, o) => sum + o.total, 0);
-
-        const employeeSales = summary.deliveredOrders
-            .filter(o => {
-                const orderUser = allUsers.find(u => u.id === o.created_by);
-                return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy');
-            })
-            .reduce((sum, o) => sum + o.total, 0);
-            
-        return { managerSales, employeeSales };
-    }, [summary, user.id, allUsers]);
+        // استخدام البيانات المحسوبة مسبقاً من AccountingPage
+        return {
+            managerSales: summary?.managerSales || 0,
+            employeeSales: summary?.employeeSales || 0
+        };
+    }, [summary]);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
