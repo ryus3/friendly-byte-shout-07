@@ -117,14 +117,27 @@ const AccountingPage = () => {
             }
         };
         
-        const deliveredOrders = safeOrders.filter(o => o.status === 'delivered' && filterByDate(o.updated_at || o.created_at));
+        // الطلبات المُوصلة التي تم استلام فواتيرها فقط لحساب صافي الأرباح الفعلية
+        const deliveredOrders = safeOrders.filter(o => 
+            o.status === 'delivered' && 
+            o.receipt_received === true && 
+            filterByDate(o.updated_at || o.created_at)
+        );
         const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
         
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        // حساب إجمالي الإيرادات مع رسوم التوصيل
+        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+        const salesWithoutDelivery = totalRevenue - deliveryFees;
+        // حساب تكلفة البضاعة المباعة من العناصر الفعلية
         const cogs = deliveredOrders.reduce((sum, o) => {
-            return sum + (o.items || []).reduce((itemSum, item) => itemSum + ((item.costPrice || 0) * item.quantity), 0);
+            const orderCogs = (o.items || []).reduce((itemSum, item) => {
+                const costPrice = item.costPrice || item.cost_price || 0;
+                return itemSum + (costPrice * item.quantity);
+            }, 0);
+            return sum + orderCogs;
         }, 0);
-        const grossProfit = totalRevenue - cogs;
+        const grossProfit = salesWithoutDelivery - cogs;
         
         const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + (e.amount || 0), 0);
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -158,9 +171,10 @@ const AccountingPage = () => {
     
         const salesByDay = {};
         deliveredOrders.forEach(o => {
-          const day = format(parseISO(o.updated_at || o.created_at), 'dd');
-          if (!salesByDay[day]) salesByDay[day] = 0;
-          salesByDay[day] += o.total;
+            const day = format(parseISO(o.updated_at || o.created_at), 'dd');
+            if (!salesByDay[day]) salesByDay[day] = 0;
+            // استخدام final_amount للمبيعات اليومية
+            salesByDay[day] += o.final_amount || o.total_amount || 0;
         });
         
         const expensesByDay = {};
@@ -179,7 +193,7 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const topRowCards = [
@@ -277,7 +291,9 @@ const AccountingPage = () => {
                                 <CardDescription>ملخص مالي للفترة المحددة</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <StatRow label="إجمالي المبيعات" value={financialSummary.totalRevenue} colorClass="text-green-500" />
+                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={financialSummary.totalRevenue} colorClass="text-green-500" />
+                                <StatRow label="رسوم التوصيل" value={financialSummary.deliveryFees} colorClass="text-blue-400" />
+                                <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery} colorClass="text-green-600" />
                                 <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs} colorClass="text-orange-500" isNegative/>
                                 <StatRow label="مجمل الربح" value={financialSummary.grossProfit} colorClass="text-blue-500 font-bold" />
                                 <StatRow label="إجمالي المصاريف" value={financialSummary.totalExpenses} colorClass="text-red-500" isNegative/>
