@@ -255,6 +255,50 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_delivery_accounts: {
+        Row: {
+          account_code: string
+          account_name: string | null
+          created_at: string
+          delivery_partner: string
+          id: string
+          is_active: boolean
+          partner_data: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_code: string
+          account_name?: string | null
+          created_at?: string
+          delivery_partner: string
+          id?: string
+          is_active?: boolean
+          partner_data?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_code?: string
+          account_name?: string | null
+          created_at?: string
+          delivery_partner?: string
+          id?: string
+          is_active?: boolean
+          partner_data?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_delivery_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       employee_profit_rules: {
         Row: {
           created_at: string
@@ -290,6 +334,163 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      employee_telegram_codes: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          linked_at: string | null
+          telegram_chat_id: number | null
+          telegram_code: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          linked_at?: string | null
+          telegram_chat_id?: number | null
+          telegram_code: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          linked_at?: string | null
+          telegram_chat_id?: number | null
+          telegram_code?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_telegram_codes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          attachments: string[] | null
+          category: string
+          created_at: string
+          created_by: string
+          description: string
+          expense_type: string
+          id: string
+          metadata: Json | null
+          receipt_number: string | null
+          status: string
+          vendor_name: string | null
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          attachments?: string[] | null
+          category: string
+          created_at?: string
+          created_by: string
+          description: string
+          expense_type: string
+          id?: string
+          metadata?: Json | null
+          receipt_number?: string | null
+          status?: string
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          attachments?: string[] | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          expense_type?: string
+          id?: string
+          metadata?: Json | null
+          receipt_number?: string | null
+          status?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          currency: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          reference_id: string | null
+          reference_type: string
+          status: string
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by: string
+          currency?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          reference_type: string
+          status?: string
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          reference_id?: string | null
+          reference_type?: string
+          status?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       inventory: {
         Row: {
@@ -620,6 +821,36 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      permissions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
       }
       product_categories: {
         Row: {
@@ -1150,6 +1381,75 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          granted_at: string
+          id: string
+          permission_id: string
+          role_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          permission_id: string
+          role_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          permission_id?: string
+          role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "role_permissions_permission_id_fkey"
+            columns: ["permission_id"]
+            isOneToOne: false
+            referencedRelation: "permissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          hierarchy_level: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          hierarchy_level?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          hierarchy_level?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seasons_occasions: {
         Row: {
           created_at: string
@@ -1203,6 +1503,85 @@ export type Database = {
           value?: Json
         }
         Relationships: []
+      }
+      settlement_requests: {
+        Row: {
+          approved_amount: number | null
+          created_at: string
+          employee_id: string
+          id: string
+          notes: string | null
+          order_ids: string[] | null
+          paid_at: string | null
+          paid_by: string | null
+          request_details: Json
+          request_type: string
+          requested_amount: number
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          total_amount: number
+        }
+        Insert: {
+          approved_amount?: number | null
+          created_at?: string
+          employee_id: string
+          id?: string
+          notes?: string | null
+          order_ids?: string[] | null
+          paid_at?: string | null
+          paid_by?: string | null
+          request_details?: Json
+          request_type?: string
+          requested_amount: number
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          total_amount: number
+        }
+        Update: {
+          approved_amount?: number | null
+          created_at?: string
+          employee_id?: string
+          id?: string
+          notes?: string | null
+          order_ids?: string[] | null
+          paid_at?: string | null
+          paid_by?: string | null
+          request_details?: Json
+          request_type?: string
+          requested_amount?: number
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "settlement_requests_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "settlement_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       sizes: {
         Row: {
@@ -1296,6 +1675,93 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_product_permissions: {
+        Row: {
+          allowed_items: Json
+          created_at: string
+          has_full_access: boolean
+          id: string
+          permission_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed_items?: Json
+          created_at?: string
+          has_full_access?: boolean
+          id?: string
+          permission_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed_items?: Json
+          created_at?: string
+          has_full_access?: boolean
+          id?: string
+          permission_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_product_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          is_active: boolean
+          role_id: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          is_active?: boolean
+          role_id: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          is_active?: boolean
+          role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {
