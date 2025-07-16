@@ -117,7 +117,7 @@ const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   
-  // استخدام نظام الصلاحيات المحكم
+  // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
   const {
     isAdmin,
     isEmployee,
@@ -140,6 +140,7 @@ const SettingsPage = () => {
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
 
+  // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
