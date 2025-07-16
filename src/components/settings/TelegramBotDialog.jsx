@@ -12,9 +12,11 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import TelegramBotSetup from './TelegramBotSetup';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const TelegramBotDialog = ({ open, onOpenChange }) => {
-  const { user, allUsers } = useAuth();
+  const { user } = useAuth();
+  const { getUserSpecificTelegramCode, canViewAllData } = usePermissionBasedData();
   const [employeeCodes, setEmployeeCodes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
@@ -65,11 +67,11 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
           profiles: profilesData.find(profile => profile.user_id === code.user_id)
         })).filter(code => code.profiles);
         
-        setEmployeeCodes(mergedData);
+        setEmployeeCodes(getUserSpecificTelegramCode(mergedData));
         return;
       }
       
-      setEmployeeCodes(data || []);
+      setEmployeeCodes(getUserSpecificTelegramCode(data || []));
     } catch (error) {
       console.error('Error fetching employee codes:', error);
       toast({
@@ -163,7 +165,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                 رموز الموظفين
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                كل موظف له رمز بسيط مرتبط بحسابه في قاعدة البيانات
+                {canViewAllData ? 'كل موظف له رمز بسيط مرتبط بحسابه' : 'رمزك الشخصي للاتصال بالبوت'}
               </p>
             </CardHeader>
             <CardContent>
@@ -216,8 +218,17 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                 {employeeCodes.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>لا يوجد موظفين مضافين بعد</p>
-                    <p className="text-sm">أضف موظفين من إدارة الموظفين</p>
+                    {canViewAllData ? (
+                      <>
+                        <p>لا يوجد موظفين مضافين بعد</p>
+                        <p className="text-sm">أضف موظفين من إدارة الموظفين</p>
+                      </>
+                    ) : (
+                      <>
+                        <p>لم يتم إنشاء رمز تليجرام بعد</p>
+                        <p className="text-sm">يرجى مراجعة المدير لإنشاء رمزك</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

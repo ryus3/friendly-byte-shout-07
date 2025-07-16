@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -76,9 +77,10 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 }
 
 const Dashboard = () => {
-    const { user, pendingRegistrations, hasPermission, allUsers } = useAuth();
+    const { user, pendingRegistrations } = useAuth();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits } = useProfits();
+    const { filterDataByUser, filterProfitsByUser, canViewAllData, hasPermission } = usePermissionBasedData();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -192,12 +194,10 @@ const Dashboard = () => {
     }, []);
 
     const visibleOrders = useMemo(() => {
-        if (!orders) return [];
-        if (hasPermission('view_all_orders')) return orders;
-        return orders.filter(o => o.created_by === user.id);
-    }, [orders, user, hasPermission]);
+        return filterDataByUser(orders || [], 'created_by');
+    }, [orders, filterDataByUser]);
     
-    const userAiOrders = useMemo(() => (aiOrders || []).filter(o => o.created_by === user.id), [aiOrders, user.id]);
+    const userAiOrders = useMemo(() => filterDataByUser(aiOrders || [], 'created_by'), [aiOrders, filterDataByUser]);
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
@@ -274,7 +274,7 @@ const Dashboard = () => {
     }, [periods.netProfit, orders, accounting, products]);
 
     const dashboardData = useMemo(() => {
-        if (!visibleOrders || !allUsers) return {};
+        if (!visibleOrders) return {};
 
         console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
 
@@ -294,9 +294,8 @@ const Dashboard = () => {
             return itemSum + profit;
           }, 0);
           
-          // ربح المدير من الطلب (إذا كان الطلب للموظف)
-          const orderCreator = allUsers?.find(u => u.id === o.created_by);
-          const managerProfit = orderCreator && (orderCreator.role === 'employee' || orderCreator.role === 'deputy') 
+          // ربح المدير من الطلب (فقط إذا كان المستخدم الحالي مدير ويعرض طلبات الموظفين)
+          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id
             ? calculateManagerProfit(o) : 0;
           
           return sum + employeeProfit + managerProfit;
@@ -339,7 +338,7 @@ const Dashboard = () => {
         console.log('النتيجة النهائية للدالشبورد:', result);
         
         return result;
-    }, [visibleOrders, orders, allUsers, periods, user.id, hasPermission, calculateProfit, financialSummary, profitsData]);
+    }, [visibleOrders, orders, periods, user?.id, user?.user_id, canViewAllData, calculateProfit, financialSummary, profitsData]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
@@ -357,9 +356,9 @@ const Dashboard = () => {
 
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 
-            key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: (hasPermission('view_all_orders') ? aiOrders?.length : userAiOrders?.length) || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
+            key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: (canViewAllData ? aiOrders?.length : userAiOrders?.length) || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
         },
-        hasPermission('manage_users') && { 
+        hasPermission('manage_users') && canViewAllData && { 
             key: 'pendingRegs', title: 'طلبات التسجيل الجديدة', value: pendingRegistrationsCount, icon: UserPlus, colors: ['indigo-500', 'violet-500'], onClick: () => setDialogs(d => ({ ...d, pendingRegs: true }))
         },
         hasPermission('view_all_orders') && { 

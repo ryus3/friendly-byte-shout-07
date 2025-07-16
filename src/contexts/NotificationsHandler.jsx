@@ -2,13 +2,15 @@ import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const NotificationsHandler = () => {
-  const { user, hasPermission, fetchAdminData } = useAuth();
+  const { user, fetchAdminData } = useAuth();
   const { addNotification } = useNotifications();
+  const { canViewAllData } = usePermissionBasedData();
 
   useEffect(() => {
-    if (!supabase || !user || !hasPermission('*')) {
+    if (!supabase || !user || !canViewAllData) {
       return;
     }
     
@@ -43,7 +45,7 @@ const NotificationsHandler = () => {
       supabase.removeChannel(profilesChannel);
     };
     
-  }, [supabase, user, hasPermission, fetchAdminData, addNotification]);
+  }, [supabase, user, canViewAllData, fetchAdminData, addNotification]);
 
   return null;
 };

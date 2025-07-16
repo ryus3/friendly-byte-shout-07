@@ -16,7 +16,8 @@ export const permissionsMap = [
       { id: 'view_manage_products_page', label: 'عرض صفحة إدارة المنتجات' },
       { id: 'view_add_product_page', label: 'عرض صفحة إضافة منتج' },
       { id: 'view_barcode_inventory_page', label: 'عرض صفحة جرد الباركود' },
-      { id: 'view_quick_order_page', label: 'عرض صفحة الطلب السريع' }
+      { id: 'view_quick_order_page', label: 'عرض صفحة الطلب السريع' },
+      { id: 'view_detailed_inventory_page', label: 'عرض صفحة الجرد التفصيلي' }
     ]
   },
   {
@@ -180,7 +181,6 @@ export const defaultPermissions = {
     'view_products_page', 
     'view_orders_page',
     'view_inventory_page',
-    'view_quick_order_page',
     
     // المنتجات والمخزن
     'view_products',
@@ -260,6 +260,7 @@ export const defaultPermissions = {
     'view_manage_products_page',
     'view_quick_order_page',
     'view_barcode_inventory_page',
+    'view_detailed_inventory_page',
     
     // المنتجات والمخزن
     'view_products',
@@ -343,6 +344,7 @@ export const defaultPermissions = {
     'view_add_product_page',
     'view_barcode_inventory_page',
     'view_quick_order_page',
+    'view_detailed_inventory_page',
     
     // لوحة التحكم - كامل
     'view_statistics',
