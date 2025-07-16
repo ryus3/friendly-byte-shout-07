@@ -105,11 +105,14 @@ const Dashboard = () => {
     const [isPendingProfitsOpen, setIsPendingProfitsOpen] = useState(false);
     const [isReceiptReceiptOpen, setIsReceiptReceiptOpen] = useState(false);
     const [profitsData, setProfitsData] = useState({ pending: [], settled: [] });
+    const [profitsLoading, setProfitsLoading] = useState(false);
 
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
+        if (profitsLoading) return; // منع الاستدعاءات المتعددة
+        
+        setProfitsLoading(true);
         try {
-            console.log('جاري جلب بيانات الأرباح...');
             const { data: profitsData, error } = await supabase
                 .from('profits')
                 .select(`
@@ -129,29 +132,32 @@ const Dashboard = () => {
 
             if (error) {
                 console.error('خطأ في جلب الأرباح:', error);
-                return { pending: [], settled: [] };
+                return;
             }
-
-            console.log('بيانات الأرباح المجلبة:', profitsData);
             
             const pending = profitsData?.filter(p => p.status === 'pending') || [];
             const settled = profitsData?.filter(p => p.status === 'settled') || [];
 
-            console.log('الأرباح المعلقة:', pending);
-            console.log('الأرباح المستلمة:', settled);
-
             setProfitsData({ pending, settled });
-            return { pending, settled };
         } catch (error) {
             console.error('خطأ في fetchProfitsData:', error);
-            return { pending: [], settled: [] };
+        } finally {
+            setProfitsLoading(false);
         }
-    }, []);
+    }, []); // إزالة profitsLoading من dependency array
 
-    // تحديث بيانات الأرباح عند تحميل الصفحة
+    // تحديث بيانات الأرباح عند تحميل الصفحة مرة واحدة فقط
     useEffect(() => {
-        fetchProfitsData();
-    }, []);
+        let mounted = true;
+        
+        if (mounted && !profitsLoading) {
+            fetchProfitsData();
+        }
+        
+        return () => {
+            mounted = false;
+        };
+    }, []); // dependency array فارغ لمنع الـ infinite loop
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
