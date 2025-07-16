@@ -75,93 +75,159 @@ const ProfitsSummaryPage = () => {
     return allUsers?.filter(u => u.role === 'employee' || u.role === 'deputy') || [];
   }, [allUsers]);
 
-  const profitData = useMemo(() => {
-    const { from, to } = dateRange;
-    if (!orders || !allUsers || !from || !to || !profits) return {
-        managerProfitFromEmployees: 0,
-        detailedProfits: [],
-        totalExpenses: 0,
-        totalPersonalProfit: 0,
-        personalPendingProfit: 0,
-        personalSettledProfit: 0,
-        totalSettledDues: 0
-    };
+    const profitData = useMemo(() => {
+        const { from, to } = dateRange;
+        if (!orders || !allUsers || !from || !to || !profits) return {
+            managerProfitFromEmployees: 0,
+            detailedProfits: [],
+            totalExpenses: 0,
+            totalPersonalProfit: 0,
+            personalPendingProfit: 0,
+            personalSettledProfit: 0,
+            totalSettledDues: 0,
+            netProfit: 0,
+            totalRevenue: 0,
+            deliveryFees: 0,
+            cogs: 0,
+            generalExpenses: 0,
+            employeeSettledDues: 0
+        };
 
-    // فلترة الطلبات الموصلة في النطاق الزمني المحدد
-    const deliveredOrders = orders?.filter(o => {
-        const orderDate = o.created_at ? parseISO(o.created_at) : null;
-        return o.status === 'delivered' && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
-    }) || [];
+        // فلترة الطلبات الموصلة التي تم استلام فواتيرها في النطاق الزمني المحدد
+        const deliveredOrders = orders?.filter(o => {
+            const orderDate = o.created_at ? parseISO(o.created_at) : null;
+            return o.status === 'delivered' && o.receipt_received === true && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+        }) || [];
 
-    // ربط الطلبات بسجلات الأرباح من قاعدة البيانات
-    const detailedProfits = [];
+        // الطلبات الموصلة بدون فواتير مستلمة (معلقة)
+        const pendingDeliveredOrders = orders?.filter(o => {
+            const orderDate = o.created_at ? parseISO(o.created_at) : null;
+            return o.status === 'delivered' && !o.receipt_received && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+        }) || [];
 
-    deliveredOrders.forEach(order => {
-        const orderCreator = allUsers.find(u => u.id === order.created_by);
-        if (!orderCreator) return;
+        // ربط الطلبات بسجلات الأرباح من قاعدة البيانات
+        const detailedProfits = [];
 
-        // البحث عن سجل الأرباح في قاعدة البيانات
-        const profitRecord = profits.find(p => p.order_id === order.id);
-        
-        let employeeProfitShare, profitStatus;
-        if (profitRecord) {
-            // استخدام البيانات من قاعدة البيانات
-            employeeProfitShare = profitRecord.employee_profit || 0;
-            profitStatus = profitRecord.status;
-        } else {
-            // حساب محلي كبديل (في حالة عدم وجود سجل)
-            employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
-            profitStatus = 'pending'; // افتراضياً معلقة
-        }
-        
-        const managerProfitShare = calculateManagerProfit(order);
-        
-        detailedProfits.push({
-            ...order,
-            profit: employeeProfitShare,
-            managerProfitShare,
-            employeeName: orderCreator.full_name,
-            profitStatus,
-            profitRecord, // إضافة سجل الأرباح للمرجع
+        // معالجة الطلبات المستلمة
+        deliveredOrders.forEach(order => {
+            const orderCreator = allUsers.find(u => u.id === order.created_by);
+            if (!orderCreator) return;
+
+            // البحث عن سجل الأرباح في قاعدة البيانات
+            const profitRecord = profits.find(p => p.order_id === order.id);
+            
+            let employeeProfitShare, profitStatus;
+            if (profitRecord) {
+                employeeProfitShare = profitRecord.employee_profit || 0;
+                profitStatus = profitRecord.status;
+            } else {
+                employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+                profitStatus = 'settled'; // مستلمة لأن الفاتورة مستلمة
+            }
+            
+            const managerProfitShare = calculateManagerProfit(order);
+            
+            detailedProfits.push({
+                ...order,
+                profit: employeeProfitShare,
+                managerProfitShare,
+                employeeName: orderCreator.full_name,
+                profitStatus,
+                profitRecord,
+            });
         });
-    });
 
-    const managerProfitFromEmployees = detailedProfits.filter(p => {
-        const pUser = allUsers.find(u => u.id === p.created_by);
-        return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
-    }).reduce((sum, p) => sum + p.managerProfitShare, 0);
-    
-    const totalExpenses = canViewAll ? (accounting.expenses || []).filter(e => {
-        const expenseDate = e.transaction_date ? parseISO(e.transaction_date) : null;
-        return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to && e.related_data?.category !== 'شراء بضاعة' && e.related_data?.category !== 'مستحقات الموظفين';
-    }).reduce((sum, e) => sum + e.amount, 0) : 0;
-    
-    const personalProfits = detailedProfits.filter(p => p.created_by === user.id);
-    const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
-  
-    const personalPendingProfit = personalProfits
-        .filter(p => (p.profitStatus || 'pending') === 'pending')
-        .reduce((sum, p) => sum + p.profit, 0);
+        // معالجة الطلبات المعلقة (موصلة بدون فواتير)
+        pendingDeliveredOrders.forEach(order => {
+            const orderCreator = allUsers.find(u => u.id === order.created_by);
+            if (!orderCreator) return;
 
-    const personalSettledProfit = personalProfits
-        .filter(p => p.profitStatus === 'settled')
-        .reduce((sum, p) => sum + p.profit, 0);
+            const employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+            const managerProfitShare = calculateManagerProfit(order);
+            
+            detailedProfits.push({
+                ...order,
+                profit: employeeProfitShare,
+                managerProfitShare,
+                employeeName: orderCreator.full_name,
+                profitStatus: 'pending',
+                profitRecord: null,
+            });
+        });
 
-    const totalSettledDues = settlementInvoices?.filter(inv => {
-        const invDate = parseISO(inv.settlement_date);
-        return isValid(invDate) && invDate >= from && invDate <= to;
-    }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
-    
-    return { 
-        managerProfitFromEmployees, 
-        detailedProfits, 
-        totalExpenses,
-        totalPersonalProfit,
-        personalPendingProfit,
-        personalSettledProfit,
-        totalSettledDues,
-    };
-  }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
+        // حساب الأرباح من الموظفين للمدير
+        const managerProfitFromEmployees = detailedProfits.filter(p => {
+            const pUser = allUsers.find(u => u.id === p.created_by);
+            return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
+        }).reduce((sum, p) => sum + p.managerProfitShare, 0);
+        
+        // حساب النفقات العامة
+        const expensesInPeriod = canViewAll ? (accounting.expenses || []).filter(e => {
+            const expenseDate = e.transaction_date ? parseISO(e.transaction_date) : null;
+            return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to;
+        }) : [];
+
+        const generalExpenses = expensesInPeriod.filter(e => 
+            e.related_data?.category !== 'شراء بضاعة' && e.related_data?.category !== 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + e.amount, 0);
+
+        const employeeSettledDues = expensesInPeriod.filter(e => 
+            e.related_data?.category === 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + e.amount, 0);
+
+        const totalExpenses = generalExpenses + employeeSettledDues;
+
+        // حساب الإيرادات والتكاليف لصافي الربح (نفس حساب لوحة التحكم)
+        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+        const salesWithoutDelivery = totalRevenue - deliveryFees;
+        
+        const cogs = deliveredOrders.reduce((sum, o) => {
+            const orderCogs = (o.items || []).reduce((itemSum, item) => {
+                const costPrice = item.costPrice || item.cost_price || 0;
+                return itemSum + (costPrice * item.quantity);
+            }, 0);
+            return sum + orderCogs;
+        }, 0);
+
+        const grossProfit = salesWithoutDelivery - cogs;
+        const netProfit = grossProfit - totalExpenses;
+
+        // حساب أرباح المدير الشخصية
+        const personalProfits = detailedProfits.filter(p => p.created_by === user.id);
+        const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
+      
+        const personalPendingProfit = personalProfits
+            .filter(p => (p.profitStatus || 'pending') === 'pending')
+            .reduce((sum, p) => sum + p.profit, 0);
+
+        const personalSettledProfit = personalProfits
+            .filter(p => p.profitStatus === 'settled')
+            .reduce((sum, p) => sum + p.profit, 0);
+
+        const totalSettledDues = settlementInvoices?.filter(inv => {
+            const invDate = parseISO(inv.settlement_date);
+            return isValid(invDate) && invDate >= from && invDate <= to;
+        }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
+        
+        return { 
+            managerProfitFromEmployees, 
+            detailedProfits, 
+            totalExpenses,
+            totalPersonalProfit,
+            personalPendingProfit,
+            personalSettledProfit,
+            totalSettledDues,
+            netProfit,
+            totalRevenue,
+            deliveryFees,
+            salesWithoutDelivery,
+            cogs,
+            grossProfit,
+            generalExpenses,
+            employeeSettledDues
+        };
+    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check

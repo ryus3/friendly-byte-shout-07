@@ -92,8 +92,9 @@ const AdvancedAccountingSystem = () => {
     // إجمالي النفقات
     const totalExpenses = operatingExpenses + employeeExpenses + purchaseExpenses;
 
-    // صافي الربح
-    const netProfit = grossProfit - operatingExpenses - employeeExpenses;
+    // صافي الربح (مثل لوحة التحكم تماماً)
+    const salesWithoutDelivery = totalRevenue - deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+    const netProfit = salesWithoutDelivery - cogs - operatingExpenses - employeeExpenses;
     const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
     // معدل العائد على رأس المال

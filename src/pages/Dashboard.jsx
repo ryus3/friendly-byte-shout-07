@@ -284,15 +284,22 @@ const Dashboard = () => {
         // الطلبات المُوصلة التي لم يتم استلام فواتيرها بعد = أرباح معلقة
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         
-        // حساب الأرباح المعلقة من الطلبات المُوصلة فقط (بدون فواتير مستلمة)
+        // حساب الأرباح المعلقة من جميع الطلبات المُوصلة (بدون فواتير مستلمة)
+        // يشمل أرباح المدير + أرباح الموظفين
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
-          // حساب ربح كل طلب
-          const orderProfit = (o.items || []).reduce((itemSum, item) => {
+          // ربح الموظف من الطلب
+          const employeeProfit = (o.items || []).reduce((itemSum, item) => {
             const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
             return itemSum + profit;
           }, 0);
-          return sum + orderProfit;
+          
+          // ربح المدير من الطلب (إذا كان الطلب للموظف)
+          const orderCreator = allUsers?.find(u => u.id === o.created_by);
+          const managerProfit = orderCreator && (orderCreator.role === 'employee' || orderCreator.role === 'deputy') 
+            ? calculateManagerProfit(o) : 0;
+          
+          return sum + employeeProfit + managerProfit;
         }, 0);
         
         console.log('الطلبات المُوصلة بدون فواتير:', filteredDeliveredOrders.length);
