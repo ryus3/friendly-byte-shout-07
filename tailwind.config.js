@@ -54,6 +54,14 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Order Status Colors - Professional Design
+        'status-pending': "hsl(var(--status-pending))",
+        'status-processing': "hsl(var(--status-processing))",
+        'status-shipped': "hsl(var(--status-shipped))",
+        'status-delivery': "hsl(var(--status-delivery))",
+        'status-delivered': "hsl(var(--status-delivered))",
+        'status-returned': "hsl(var(--status-returned))",
+        'status-cancelled': "hsl(var(--status-cancelled))",
       },
       borderRadius: {
         lg: "var(--radius)",

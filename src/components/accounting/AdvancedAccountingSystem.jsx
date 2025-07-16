@@ -278,13 +278,13 @@ const AdvancedAccountingSystem = () => {
       change: '+12.5%'
     },
     {
-      title: 'صافي الارباح', // تم توحيد الحساب مع لوحة التحكم ✓
+      title: 'صافي الارباح',
       value: dashboardNetProfit,
       format: 'currency',
       icon: TrendingUp,
       colors: dashboardNetProfit >= 0 ? ['green-500', 'emerald-500'] : ['red-500', 'orange-500'],
-      change: `متحد مع لوحة التحكم`,
-      key: 'unified-net-profit-v2'
+      change: `بنفس حساب لوحة التحكم`,
+      key: 'dashboard-net-profit-unified'
     },
     {
       title: 'أرباحي',
