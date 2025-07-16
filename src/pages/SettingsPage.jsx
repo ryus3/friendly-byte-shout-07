@@ -213,12 +213,12 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* إدارة الموظفين - للمدراء فقط */}
+            {/* قواعد الأرباح للموظفين - للمدراء فقط */}
             {canManageEmployees && (
               <ModernCard
-                icon={Users}
-                title="إدارة الموظفين"
-                description="إضافة وتعديل الموظفين وإدارة الصلاحيات والمتغيرات"
+                icon={DollarSign}
+                title="قواعد الأرباح للموظفين"
+                description="إدارة قواعد الأرباح وحساب المستحقات للموظفين حسب المنتجات والتصنيفات"
                 iconColor="from-green-500 to-green-600"
                 onClick={() => setIsManageEmployeesOpen(true)}
               />

@@ -54,11 +54,30 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
                 />
               </div>
             ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default ProductPrimaryInfo;
+                </div>
+                
+                {/* نسبة ربح الموظف */}
+                <div className="space-y-2">
+                  <Label htmlFor="employeeProfitPercentage">نسبة ربح الموظف (%)</Label>
+                  <Input
+                    id="employeeProfitPercentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="نسبة ربح الموظف من هذا المنتج (اختياري)"
+                    value={productInfo.employeeProfitPercentage}
+                    onChange={(e) => setProductInfo({...productInfo, employeeProfitPercentage: e.target.value})}
+                    className="text-right"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    يمكن تعديل هذه النسبة لاحقاً من قواعد الأرباح للموظفين في الإعدادات
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      };
+      
+      export default ProductPrimaryInfo;
