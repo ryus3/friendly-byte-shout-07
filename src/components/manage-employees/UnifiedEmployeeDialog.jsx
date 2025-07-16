@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
+import { Badge } from '@/components/ui/badge';
 import { Shield, Package, User, Settings, Eye } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import UnifiedRoleManager from './UnifiedRoleManager';
@@ -101,54 +102,56 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
           <div className="flex-1 overflow-y-auto mt-4">
             <TabsContent value="basic" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="status">حالة الحساب</Label>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">نشط</SelectItem>
-                      <SelectItem value="pending">قيد المراجعة</SelectItem>
-                      <SelectItem value="suspended">معلق</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-4 rounded-xl border border-border/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="status" className="text-sm font-medium">حالة الحساب</Label>
+                    <Select value={status} onValueChange={setStatus}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">✅ نشط</SelectItem>
+                        <SelectItem value="pending">⏳ قيد المراجعة</SelectItem>
+                        <SelectItem value="suspended">❌ معلق</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="defaultPage">الصفحة الافتراضية</Label>
-                  <Select value={defaultPage} onValueChange={setDefaultPage}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {defaultPages.map(page => (
-                        <SelectItem key={page.value} value={page.value}>
-                          {page.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="defaultPage" className="text-sm font-medium">الصفحة الافتراضية</Label>
+                    <Select value={defaultPage} onValueChange={setDefaultPage}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {defaultPages.map(page => (
+                          <SelectItem key={page.value} value={page.value}>
+                            {page.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="orderMode">نمط إنشاء الطلبات</Label>
-                  <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="both">كلاهما (عادي + سريع)</SelectItem>
-                      <SelectItem value="normal">طلبات عادية فقط</SelectItem>
-                      <SelectItem value="quick">طلبات سريعة فقط</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="orderMode" className="text-sm font-medium">نمط إنشاء الطلبات</Label>
+                    <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">كلاهما (عادي + سريع)</SelectItem>
+                        <SelectItem value="normal">طلبات عادية فقط</SelectItem>
+                        <SelectItem value="quick">طلبات سريعة فقط</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleBasicSave} disabled={saving}>
+                <Button onClick={handleBasicSave} disabled={saving} className="px-8">
                   {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات الأساسية'}
                 </Button>
               </div>
@@ -171,34 +174,41 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </TabsContent>
 
             <TabsContent value="view" className="space-y-4">
-              <div className="bg-muted p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">معلومات الموظف</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">الاسم:</span> {employee.full_name}
+              <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-6 rounded-xl border border-border/50">
+                <h3 className="font-semibold mb-4 flex items-center">
+                  <Eye className="ml-2 h-5 w-5 text-primary" />
+                  معلومات الموظف
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">الاسم:</span> 
+                    <span>{employee.full_name}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">البريد:</span> {employee.email}
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">البريد:</span> 
+                    <span className="truncate">{employee.email}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">اسم المستخدم:</span> {employee.username}
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">اسم المستخدم:</span> 
+                    <span>{employee.username}</span>
                   </div>
-                  <div>
-                    <span className="font-medium">الحالة:</span> {
-                      status === 'active' ? 'نشط' :
-                      status === 'pending' ? 'قيد المراجعة' :
-                      'معلق'
-                    }
+                  <div className="flex items-center space-x-2 space-x-reverse">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">الحالة:</span> 
+                    <Badge variant={status === 'active' ? 'default' : 'secondary'}>
+                      {status === 'active' ? 'نشط' : status === 'pending' ? 'قيد المراجعة' : 'معلق'}
+                    </Badge>
                   </div>
-                  <div>
-                    <span className="font-medium">تاريخ الإنشاء:</span> {
-                      new Date(employee.created_at).toLocaleDateString('ar-EG')
-                    }
-                  </div>
-                  <div>
-                    <span className="font-medium">آخر تحديث:</span> {
-                      new Date(employee.updated_at).toLocaleDateString('ar-EG')
-                    }
+                  <div className="flex items-center space-x-2 space-x-reverse md:col-span-2">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">تاريخ الإنشاء:</span> 
+                    <span>{new Date(employee.created_at).toLocaleDateString('ar-EG')}</span>
+                    <span className="mx-2">|</span>
+                    <span className="font-medium">آخر تحديث:</span> 
+                    <span>{new Date(employee.updated_at).toLocaleDateString('ar-EG')}</span>
                   </div>
                 </div>
               </div>

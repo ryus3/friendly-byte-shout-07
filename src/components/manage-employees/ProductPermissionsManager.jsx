@@ -5,13 +5,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Package, Palette, Ruler, Building, Tag, Calendar } from 'lucide-react';
+import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle } from 'lucide-react';
 
 const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(true);
@@ -208,46 +209,68 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       </div>
 
       <Tabs defaultValue="category" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-6">
           {permissionTabs.map(tab => (
             <TabsTrigger
               key={tab.key}
               value={tab.key}
-              className="text-xs"
+              className="text-xs flex items-center space-x-1 space-x-reverse"
             >
-              <tab.icon className="h-4 w-4 mr-1" />
-              {tab.label}
+              <tab.icon className="h-3 w-3" />
+              <span className="hidden sm:inline">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
         {permissionTabs.map(tab => (
-          <TabsContent key={tab.key} value={tab.key}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center text-base">
-                  <tab.icon className="ml-2 h-5 w-5" />
-                  صلاحيات {tab.label}
+          <TabsContent key={tab.key} value={tab.key} className="space-y-4">
+            <Card className="border-2">
+              <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
+                <CardTitle className="flex items-center justify-between text-base">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ml-3">
+                      <tab.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <span>صلاحيات {tab.label}</span>
+                      <p className="text-xs text-muted-foreground font-normal mt-1">
+                        تحديد {tab.label} التي يمكن للموظف رؤيتها
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant={permissions[tab.key].has_full_access ? "default" : "secondary"}>
+                    {permissions[tab.key].has_full_access ? "وصول كامل" : "وصول محدود"}
+                  </Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {/* الوصول الكامل */}
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <Checkbox
-                    id={`${tab.key}-full-access`}
-                    checked={permissions[tab.key].has_full_access}
-                    onCheckedChange={(checked) => 
-                      updatePermission(tab.key, 'has_full_access', checked)
-                    }
-                  />
-                  <label
-                    htmlFor={`${tab.key}-full-access`}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    وصول كامل لجميع {tab.label}
-                  </label>
-                  {permissions[tab.key].has_full_access && (
-                    <Badge variant="default">وصول كامل</Badge>
+                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                  <div className="flex items-center space-x-3 space-x-reverse">
+                    <Checkbox
+                      id={`${tab.key}-full-access`}
+                      checked={permissions[tab.key].has_full_access}
+                      onCheckedChange={(checked) => 
+                        updatePermission(tab.key, 'has_full_access', checked)
+                      }
+                    />
+                    <label
+                      htmlFor={`${tab.key}-full-access`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      وصول كامل لجميع {tab.label}
+                    </label>
+                  </div>
+                  {permissions[tab.key].has_full_access ? (
+                    <Badge variant="default" className="bg-green-600">
+                      <CheckCircle className="h-3 w-3 ml-1" />
+                      مفعل
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">
+                      <XCircle className="h-3 w-3 ml-1" />
+                      محدود
+                    </Badge>
                   )}
                 </div>
 

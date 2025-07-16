@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Dialog, 
   DialogContent, 
@@ -18,7 +19,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Shield, UserPlus, Eye, Settings } from 'lucide-react';
+import { Shield, UserPlus, Eye, Settings, Trash2 } from 'lucide-react';
 
 const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate }) => {
   const [userRoles, setUserRoles] = useState([]);
@@ -229,39 +230,50 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate }) => {
         </CardHeader>
         <CardContent>
           {userRoles.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              لا توجد أدوار مُعيَّنة للمستخدم
-            </p>
+            <div className="text-center py-8">
+              <Shield className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">لا توجد أدوار مُعيَّنة للمستخدم</p>
+              <p className="text-sm text-muted-foreground mt-1">قم بإضافة دور أولاً لتمكين الموظف من استخدام النظام</p>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {userRoles.map((userRole) => (
-                <div
-                  key={userRole.id}
-                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                >
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <Badge variant="default">
-                      {userRole.roles.display_name}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      مستوى {userRole.roles.hierarchy_level}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2 space-x-reverse">
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(userRole.assigned_at).toLocaleDateString('ar-EG')}
-                    </span>
+            <div className="space-y-3">
+              <AnimatePresence>
+                {userRoles.map((userRole, index) => (
+                  <motion.div
+                    key={userRole.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex items-center justify-between p-4 bg-gradient-to-r from-muted/30 to-muted/50 rounded-xl border border-border/50 hover:border-border transition-all duration-200"
+                  >
+                    <div className="flex items-center space-x-3 space-x-reverse">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Shield className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <Badge variant="default" className="mb-1">
+                          {userRole.roles.display_name}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">
+                          مستوى الصلاحية: {userRole.roles.hierarchy_level} • 
+                          تاريخ الإضافة: {new Date(userRole.assigned_at).toLocaleDateString('ar-EG')}
+                        </p>
+                      </div>
+                    </div>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => handleRemoveRole(userRole.id)}
                       disabled={saving}
+                      className="hover:scale-105 transition-transform"
                     >
+                      <Trash2 className="h-4 w-4 ml-1" />
                       حذف
                     </Button>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </CardContent>
@@ -276,8 +288,8 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate }) => {
               إضافة دور جديد
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex space-x-2 space-x-reverse">
+          <CardContent className="space-y-4">
+            <div className="flex space-x-3 space-x-reverse">
               <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="اختر دور..." />
@@ -285,9 +297,9 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate }) => {
                 <SelectContent>
                   {availableRolesToAdd.map((role) => (
                     <SelectItem key={role.id} value={role.id}>
-                      <div className="flex items-center space-x-2 space-x-reverse">
-                        <span>{role.display_name}</span>
-                        <Badge variant="outline" className="text-xs">
+                      <div className="flex items-center space-x-2 space-x-reverse w-full">
+                        <span className="flex-1">{role.display_name}</span>
+                        <Badge variant="outline" className="text-xs mr-auto">
                           مستوى {role.hierarchy_level}
                         </Badge>
                       </div>
@@ -298,7 +310,9 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate }) => {
               <Button 
                 onClick={handleAddRole} 
                 disabled={!selectedRoleId || saving}
+                className="px-6"
               >
+                <UserPlus className="h-4 w-4 ml-1" />
                 إضافة
               </Button>
             </div>
@@ -307,34 +321,34 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate }) => {
       )}
 
       {/* شرح الأدوار */}
-      <Card>
+      <Card className="border-2 border-dashed border-muted-foreground/25">
         <CardHeader>
-          <CardTitle className="flex items-center text-base">
+          <CardTitle className="flex items-center text-base text-muted-foreground">
             <Eye className="ml-2 h-5 w-5" />
-            شرح الأدوار
+            دليل الأدوار والصلاحيات
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="font-medium">مدير عام:</span>
-              <span className="text-muted-foreground">جميع الصلاحيات</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-green-50 dark:bg-green-950/20">
+              <Badge variant="default" className="bg-green-600">مدير عام</Badge>
+              <span className="text-muted-foreground text-xs">جميع الصلاحيات</span>
             </div>
-            <div className="flex justify-between">
-              <span className="font-medium">مدير قسم:</span>
-              <span className="text-muted-foreground">إدارة قسم محدد</span>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+              <Badge variant="default" className="bg-blue-600">مدير قسم</Badge>
+              <span className="text-muted-foreground text-xs">إدارة قسم محدد</span>
             </div>
-            <div className="flex justify-between">
-              <span className="font-medium">موظف مبيعات:</span>
-              <span className="text-muted-foreground">إنشاء طلبات ومتابعة أرباح</span>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/20">
+              <Badge variant="default" className="bg-purple-600">موظف مبيعات</Badge>
+              <span className="text-muted-foreground text-xs">طلبات + أرباح</span>
             </div>
-            <div className="flex justify-between">
-              <span className="font-medium">موظف مخزن:</span>
-              <span className="text-muted-foreground">إدارة المخزون والجرد</span>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+              <Badge variant="default" className="bg-orange-600">موظف مخزن</Badge>
+              <span className="text-muted-foreground text-xs">مخزون + جرد</span>
             </div>
-            <div className="flex justify-between">
-              <span className="font-medium">كاشير:</span>
-              <span className="text-muted-foreground">استقبال المدفوعات والطلبات السريعة</span>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-teal-50 dark:bg-teal-950/20 md:col-span-2">
+              <Badge variant="default" className="bg-teal-600">كاشير</Badge>
+              <span className="text-muted-foreground text-xs">طلبات سريعة + مدفوعات</span>
             </div>
           </div>
         </CardContent>
