@@ -21,6 +21,8 @@ export const InventoryProvider = ({ children }) => {
   const { notifyLowStock } = useNotificationsSystem();
   const [loading, setLoading] = useState(true);
   const [employeeProfitRules, setEmployeeProfitRules] = useState({});
+  const [categories, setCategories] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [settings, setSettings] = useState({ 
     deliveryFee: 5000, 
     lowStockThreshold: 5, 
@@ -88,7 +90,7 @@ export const InventoryProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes, profitRulesRes] = await Promise.all([
+      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes, profitRulesRes, categoriesRes, departmentsRes] = await Promise.all([
         supabase.from('products').select(`
           *,
           product_variants (
@@ -156,7 +158,9 @@ export const InventoryProvider = ({ children }) => {
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
         supabase.from('settings').select('*'),
         supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
-        supabase.from('employee_profit_rules').select('*')
+        supabase.from('employee_profit_rules').select('*'),
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('departments').select('*').order('name')
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -264,6 +268,14 @@ export const InventoryProvider = ({ children }) => {
           rulesByEmployee[rule.employee_id].push(rule);
         });
         setEmployeeProfitRules(rulesByEmployee);
+      }
+
+      // تحميل التصنيفات والأقسام
+      if (categoriesRes.data) {
+        setCategories(categoriesRes.data);
+      }
+      if (departmentsRes.data) {
+        setDepartments(departmentsRes.data);
       }
     } catch (error) {
       console.error("Error fetching initial data:", error);
@@ -582,6 +594,7 @@ export const InventoryProvider = ({ children }) => {
 
   const value = {
     products, orders, aiOrders, purchases: [], loading, cart, settings, accounting,
+    categories, departments, // إضافة التصنيفات والأقسام
     setProducts, setOrders, setAiOrders,
     addProduct, updateProduct, deleteProducts, 
     addPurchase: () => {}, deletePurchase: () => {}, deletePurchases: () => {},

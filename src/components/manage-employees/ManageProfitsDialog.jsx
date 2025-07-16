@@ -88,13 +88,11 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
 };
 
 const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
-  const { products, setEmployeeProfitRule, getEmployeeProfitRules } = useInventory();
+  const { products, categories, departments, setEmployeeProfitRule, getEmployeeProfitRules } = useInventory();
   const { allUsers } = useAuth();
   const [rules, setRules] = useState([]);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [multiProductProfit, setMultiProductProfit] = useState('');
-  const [categories, setCategories] = useState([]);
-  const [departments, setDepartments] = useState([]);
   
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
@@ -102,31 +100,10 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
     return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'manager');
   }, [allUsers]);
 
-  // جلب التصنيفات والأقسام من قاعدة البيانات
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        console.log('Fetching categories and departments...');
-        const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*');
-        const { data: departmentsData, error: departmentsError } = await supabase.from('departments').select('*');
-        
-        if (categoriesError) throw categoriesError;
-        if (departmentsError) throw departmentsError;
-        
-        console.log('Categories fetched:', categoriesData?.length || 0);
-        console.log('Departments fetched:', departmentsData?.length || 0);
-        
-        setCategories(categoriesData || []);
-        setDepartments(departmentsData || []);
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-      }
-    };
-    
-    if (open) {
-      fetchCategories();
-    }
-  }, [open]);
+  // البيانات أصبحت متوفرة من InventoryContext
+  console.log('Categories from context:', categories?.length || 0);
+  console.log('Departments from context:', departments?.length || 0);
+  console.log('Products from context:', products?.length || 0);
 
   useEffect(() => {
     if (employee) {
