@@ -920,6 +920,7 @@ export type Database = {
           created_at: string
           default_customer_name: string | null
           default_page: string | null
+          delivery_partner_access: boolean | null
           department_permissions: Json | null
           email: string
           full_name: string
@@ -942,6 +943,7 @@ export type Database = {
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
+          delivery_partner_access?: boolean | null
           department_permissions?: Json | null
           email: string
           full_name: string
@@ -964,6 +966,7 @@ export type Database = {
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
+          delivery_partner_access?: boolean | null
           department_permissions?: Json | null
           email?: string
           full_name?: string
@@ -1322,6 +1325,20 @@ export type Database = {
       calculate_order_profit: {
         Args: { order_id_input: string }
         Returns: undefined
+      }
+      check_user_variant_permission: {
+        Args: {
+          p_user_id: string
+          p_permission_type: string
+          p_item_id: string
+        }
+        Returns: boolean
+      }
+      filter_products_by_permissions: {
+        Args: { p_user_id: string }
+        Returns: {
+          product_id: string
+        }[]
       }
       finalize_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export const usePermissionBasedData = () => {
   const { user, hasPermission } = useAuth();
 
+  // فحص الأدوار
   const isAdmin = useMemo(() => {
     return user?.role === 'admin';
   }, [user?.role]);
@@ -16,9 +17,14 @@ export const usePermissionBasedData = () => {
     return user?.role === 'deputy';
   }, [user?.role]);
 
+  const isWarehouse = useMemo(() => {
+    return user?.role === 'warehouse';
+  }, [user?.role]);
+
+  // صلاحيات شاملة
   const canViewAllData = useMemo(() => {
-    return isAdmin || hasPermission('view_all_orders') || hasPermission('*');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || isDeputy || hasPermission('view_all_orders') || hasPermission('*');
+  }, [isAdmin, isDeputy, hasPermission]);
 
   const canManageSettings = useMemo(() => {
     return isAdmin || hasPermission('manage_settings');
@@ -28,11 +34,33 @@ export const usePermissionBasedData = () => {
     return isAdmin || hasPermission('manage_employees');
   }, [isAdmin, hasPermission]);
 
+  // صلاحيات شركات التوصيل
+  const canAccessDeliveryPartners = useMemo(() => {
+    return user?.delivery_partner_access === true;
+  }, [user?.delivery_partner_access]);
+
+  // صلاحيات الإدارة العامة
+  const canManageProducts = useMemo(() => {
+    return isAdmin || hasPermission('manage_products');
+  }, [isAdmin, hasPermission]);
+
+  const canManageAccounting = useMemo(() => {
+    return isAdmin || hasPermission('view_accounting');
+  }, [isAdmin, hasPermission]);
+
+  const canManagePurchases = useMemo(() => {
+    return isAdmin || hasPermission('view_purchases');
+  }, [isAdmin, hasPermission]);
+
+  // فلترة البيانات حسب المستخدم
   const filterDataByUser = useMemo(() => {
     return (data, userIdField = 'created_by') => {
       if (!data) return [];
       if (canViewAllData) return data;
-      return data.filter(item => item[userIdField] === user?.id || item[userIdField] === user?.user_id);
+      return data.filter(item => {
+        const itemUserId = item[userIdField];
+        return itemUserId === user?.id || itemUserId === user?.user_id;
+      });
     };
   }, [canViewAllData, user?.id, user?.user_id]);
 
@@ -40,7 +68,10 @@ export const usePermissionBasedData = () => {
     return (profits) => {
       if (!profits) return [];
       if (canViewAllData) return profits;
-      return profits.filter(profit => profit.employee_id === user?.id || profit.employee_id === user?.user_id);
+      return profits.filter(profit => {
+        const employeeId = profit.employee_id;
+        return employeeId === user?.id || employeeId === user?.user_id;
+      });
     };
   }, [canViewAllData, user?.id, user?.user_id]);
 
@@ -48,7 +79,11 @@ export const usePermissionBasedData = () => {
     return (employeeCodes) => {
       if (!employeeCodes) return [];
       if (canViewAllData) return employeeCodes;
-      return employeeCodes.filter(code => code.user_id === user?.id || code.user_id === user?.user_id);
+      // الموظف يرى رمزه الشخصي فقط
+      return employeeCodes.filter(code => {
+        const codeUserId = code.user_id;
+        return codeUserId === user?.id || codeUserId === user?.user_id;
+      });
     };
   }, [canViewAllData, user?.id, user?.user_id]);
 
@@ -62,23 +97,25 @@ export const usePermissionBasedData = () => {
   const getNotificationsForUser = useMemo(() => {
     return (notifications) => {
       if (!notifications) return [];
-      if (canViewAllData) return notifications; // المدير يرى كل الإشعارات
       
-      // الموظف يرى فقط إشعاراته الشخصية أو الإشعارات العامة للموظفين
       return notifications.filter(notification => {
         // الإشعارات الشخصية للمستخدم
-        if (notification.user_id === user?.user_id || notification.user_id === user?.id) {
+        const notificationUserId = notification.user_id;
+        if (notificationUserId === user?.user_id || notificationUserId === user?.id) {
           return true;
         }
-        // الإشعارات العامة (null) فقط للمدراء والنواب
-        if (notification.user_id === null && (isAdmin || isDeputy)) {
-          return true;
+        
+        // الإشعارات العامة (null) - المدير والنائب يرون الإشعارات العامة
+        if (notificationUserId === null) {
+          return isAdmin || isDeputy;
         }
+        
         return false;
       });
     };
-  }, [canViewAllData, user?.id, user?.user_id, isAdmin, isDeputy]);
+  }, [user?.id, user?.user_id, isAdmin, isDeputy]);
 
+  // فلترة التصنيفات والمتغيرات حسب الصلاحيات
   const filterCategoriesByPermission = useMemo(() => {
     return (categories) => {
       if (!categories) return [];
@@ -89,7 +126,8 @@ export const usePermissionBasedData = () => {
         if (categoryPermissions.includes('all')) return categories;
         return categories.filter(cat => categoryPermissions.includes(cat.id));
       } catch (e) {
-        return categories; // fallback إذا فشل التحليل
+        console.warn('خطأ في تحليل صلاحيات التصنيفات:', e);
+        return []; // أكثر أماناً للموظفين
       }
     };
   }, [isAdmin, user?.category_permissions]);
@@ -104,7 +142,8 @@ export const usePermissionBasedData = () => {
         if (sizePermissions.includes('all')) return sizes;
         return sizes.filter(size => sizePermissions.includes(size.id));
       } catch (e) {
-        return sizes;
+        console.warn('خطأ في تحليل صلاحيات الأحجام:', e);
+        return [];
       }
     };
   }, [isAdmin, user?.size_permissions]);
@@ -119,7 +158,8 @@ export const usePermissionBasedData = () => {
         if (colorPermissions.includes('all')) return colors;
         return colors.filter(color => colorPermissions.includes(color.id));
       } catch (e) {
-        return colors;
+        console.warn('خطأ في تحليل صلاحيات الألوان:', e);
+        return [];
       }
     };
   }, [isAdmin, user?.color_permissions]);
@@ -134,28 +174,104 @@ export const usePermissionBasedData = () => {
         if (departmentPermissions.includes('all')) return departments;
         return departments.filter(dept => departmentPermissions.includes(dept.id));
       } catch (e) {
-        return departments;
+        console.warn('خطأ في تحليل صلاحيات الأقسام:', e);
+        return [];
       }
     };
   }, [isAdmin, user?.department_permissions]);
 
+  // فلترة أنواع المنتجات والمواسم
+  const filterProductTypesByPermission = useMemo(() => {
+    return (productTypes) => {
+      if (!productTypes) return [];
+      if (isAdmin) return productTypes;
+      
+      try {
+        const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
+        if (productTypePermissions.includes('all')) return productTypes;
+        return productTypes.filter(type => productTypePermissions.includes(type.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات أنواع المنتجات:', e);
+        return [];
+      }
+    };
+  }, [isAdmin, user?.product_type_permissions]);
+
+  const filterSeasonsOccasionsByPermission = useMemo(() => {
+    return (seasonsOccasions) => {
+      if (!seasonsOccasions) return [];
+      if (isAdmin) return seasonsOccasions;
+      
+      try {
+        const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
+        if (seasonOccasionPermissions.includes('all')) return seasonsOccasions;
+        return seasonsOccasions.filter(item => seasonOccasionPermissions.includes(item.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات المواسم والمناسبات:', e);
+        return [];
+      }
+    };
+  }, [isAdmin, user?.season_occasion_permissions]);
+
+  // فلترة المنتجات المدمجة حسب كل الصلاحيات
+  const filterProductsByPermissions = useMemo(() => {
+    return (products) => {
+      if (!products) return [];
+      if (isAdmin) return products;
+      
+      // فلترة المنتجات حسب التصنيفات والأقسام والأنواع والمواسم المسموحة
+      return products.filter(product => {
+        // فحص التصنيفات
+        if (product.categories && product.categories.length > 0) {
+          const allowedCategories = filterCategoriesByPermission(product.categories);
+          if (allowedCategories.length === 0) return false;
+        }
+        
+        // فحص الأقسام
+        if (product.departments && product.departments.length > 0) {
+          const allowedDepartments = filterDepartmentsByPermission(product.departments);
+          if (allowedDepartments.length === 0) return false;
+        }
+        
+        return true;
+      });
+    };
+  }, [isAdmin, filterCategoriesByPermission, filterDepartmentsByPermission]);
+
   return {
+    // بيانات المستخدم والأدوار
     user,
     isAdmin,
     isEmployee,
     isDeputy,
+    isWarehouse,
+    
+    // صلاحيات عامة
     canViewAllData,
     canManageSettings,
     canManageEmployees,
     canAccessPage,
+    canAccessDeliveryPartners,
+    canManageProducts,
+    canManageAccounting,
+    canManagePurchases,
+    
+    // فلترة البيانات
     filterDataByUser,
     filterProfitsByUser,
     getUserSpecificTelegramCode,
     getNotificationsForUser,
+    
+    // فلترة التصنيفات والمتغيرات
     filterCategoriesByPermission,
     filterSizesByPermission,
     filterColorsByPermission,
     filterDepartmentsByPermission,
+    filterProductTypesByPermission,
+    filterSeasonsOccasionsByPermission,
+    filterProductsByPermissions,
+    
+    // وظائف الصلاحيات
     hasPermission
   };
 };

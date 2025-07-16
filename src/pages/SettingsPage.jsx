@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -116,6 +117,17 @@ const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   
+  // استخدام نظام الصلاحيات المحكم
+  const {
+    isAdmin,
+    isEmployee,
+    canManageEmployees,
+    canManageSettings,
+    canAccessDeliveryPartners,
+    canManageAccounting,
+    canManagePurchases
+  } = usePermissionBasedData();
+  
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
@@ -197,7 +209,8 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {hasPermission('manage_employees') && (
+            {/* إدارة الموظفين - للمدراء فقط */}
+            {canManageEmployees && (
               <ModernCard
                 icon={Users}
                 title="إدارة الموظفين"
@@ -207,6 +220,7 @@ const SettingsPage = () => {
               />
             )}
 
+            {/* إعدادات العملاء - للجميع */}
             <ModernCard
               icon={User}
               title="إعدادات العملاء"
@@ -273,7 +287,8 @@ const SettingsPage = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {hasPermission('delivery_partner_access') && (
+            {/* إعدادات التوصيل - حسب صلاحية delivery_partner_access */}
+            {canAccessDeliveryPartners && (
               <ModernCard
                 icon={DollarSign}
                 title="أسعار وإعدادات التوصيل"
@@ -294,7 +309,8 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {hasPermission('delivery_partner_access') && (
+            {/* شركات التوصيل - إجباري للجميع حسب صلاحية delivery_partner_access */}
+            {canAccessDeliveryPartners && (
               <ModernCard
                 icon={Truck}
                 title="شركات التوصيل"
@@ -317,48 +333,72 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
+            {/* بوت التليغرام - إجباري للجميع مع رمز شخصي */}
             <ModernCard
               icon={MessageCircle}
               title="بوت التليغرام الذكي"
-              description="نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام"
+              description={isAdmin 
+                ? "نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام" 
+                : "رمزك الشخصي للاتصال مع بوت التليغرام"
+              }
               iconColor="from-blue-500 to-indigo-600"
               onClick={() => setIsTelegramOpen(true)}
             >
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
-                  <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
-                  <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
-                </div>
+                {isAdmin ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
+                      <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
+                      <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">رمزك الشخصي</span>
+                      <span className="font-bold text-blue-600">عرض الرمز</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">حالة الاتصال</span>
+                      <span className="font-bold text-green-600">متاح</span>
+                    </div>
+                  </>
+                )}
               </div>
             </ModernCard>
           </div>
 
-          <SectionHeader 
-            icon={SettingsIcon} 
-            title="أدوات النظام"
-            description="أدوات النسخ الاحتياطي والذكاء الاصطناعي وإدارة البيانات"
-          />
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ModernCard
-              icon={Archive}
-              title="النسخ الاحتياطي والاستعادة"
-              description="تصدير واستيراد البيانات مع نسخ احتياطية آمنة"
-              iconColor="from-indigo-500 to-indigo-600"
-            />
+          {/* أدوات النظام - للمدراء فقط */}
+          {isAdmin && (
+            <>
+              <SectionHeader 
+                icon={SettingsIcon} 
+                title="أدوات النظام"
+                description="أدوات النسخ الاحتياطي والذكاء الاصطناعي وإدارة البيانات"
+              />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <ModernCard
+                  icon={Archive}
+                  title="النسخ الاحتياطي والاستعادة"
+                  description="تصدير واستيراد البيانات مع نسخ احتياطية آمنة"
+                  iconColor="from-indigo-500 to-indigo-600"
+                />
 
-            <ModernCard
-              icon={Bot}
-              title="الذكاء الاصطناعي"
-              description="مساعد ذكي وتحليلات متقدمة للبيانات"
-              iconColor="from-purple-500 to-purple-600"
-              onClick={() => navigate('/ai-chat')}
-            />
-          </div>
+                <ModernCard
+                  icon={Bot}
+                  title="الذكاء الاصطناعي"
+                  description="مساعد ذكي وتحليلات متقدمة للبيانات"
+                  iconColor="from-purple-500 to-purple-600"
+                  onClick={() => navigate('/ai-chat')}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -377,10 +417,13 @@ const SettingsPage = () => {
         onOpenChange={setIsNotificationSettingsOpen}
       />
 
-      <ManageEmployeesDialog
-        open={isManageEmployeesOpen}
-        onOpenChange={setIsManageEmployeesOpen}
-      />
+      {/* الحوارات - فلترة حسب الصلاحيات */}
+      {canManageEmployees && (
+        <ManageEmployeesDialog
+          open={isManageEmployeesOpen}
+          onOpenChange={setIsManageEmployeesOpen}
+        />
+      )}
 
       <CustomerSettingsDialog
         open={isCustomerSettingsOpen}
@@ -397,29 +440,32 @@ const SettingsPage = () => {
         onOpenChange={setIsStockSettingsOpen}
       />
 
-      <DeliveryPartnerDialog
-        open={isLoginDialogOpen}
-        onOpenChange={setIsLoginDialogOpen}
-      />
+      {canAccessDeliveryPartners && (
+        <DeliveryPartnerDialog
+          open={isLoginDialogOpen}
+          onOpenChange={setIsLoginDialogOpen}
+        />
+      )}
 
-      {hasPermission('view_all_orders') && (
+      {/* حوار التليغرام - مختلف حسب الدور */}
+      {isAdmin ? (
         <TelegramBotDialog 
           open={isTelegramOpen} 
           onOpenChange={setIsTelegramOpen} 
         />
-      )}
-      
-      {!hasPermission('view_all_orders') && (
+      ) : (
         <RestrictedTelegramSettings 
           open={isTelegramOpen} 
           onOpenChange={setIsTelegramOpen}
         />
       )}
 
-      <DeliverySettingsDialog
-        open={isDeliverySettingsOpen}
-        onOpenChange={setIsDeliverySettingsOpen}
-      />
+      {canAccessDeliveryPartners && (
+        <DeliverySettingsDialog
+          open={isDeliverySettingsOpen}
+          onOpenChange={setIsDeliverySettingsOpen}
+        />
+      )}
     </>
   );
 };

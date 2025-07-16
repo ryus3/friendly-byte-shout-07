@@ -80,7 +80,15 @@ const Dashboard = () => {
     const { user, pendingRegistrations } = useAuth();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits } = useProfits();
-    const { filterDataByUser, filterProfitsByUser, canViewAllData, hasPermission } = usePermissionBasedData();
+    const { 
+        filterDataByUser, 
+        filterProfitsByUser, 
+        canViewAllData, 
+        hasPermission,
+        isAdmin,
+        isEmployee,
+        canManageEmployees 
+    } = usePermissionBasedData();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
