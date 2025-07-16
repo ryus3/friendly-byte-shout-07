@@ -11,6 +11,9 @@ export const VariantsProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [productTypes, setProductTypes] = useState([]);
+  const [seasonsOccasions, setSeasonsOccasions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async (table, setter) => {
@@ -30,6 +33,9 @@ export const VariantsProvider = ({ children }) => {
       fetchData('categories', setCategories),
       fetchData('colors', setColors),
       fetchData('sizes', setSizes),
+      fetchData('departments', setDepartments),
+      fetchData('product_types', setProductTypes),
+      fetchData('seasons_occasions', setSeasonsOccasions),
     ]);
     setLoading(false);
   }, [fetchData]);
@@ -84,6 +90,9 @@ export const VariantsProvider = ({ children }) => {
     categories,
     colors,
     sizes,
+    departments,
+    productTypes,
+    seasonsOccasions,
     loading,
     refreshData,
     addCategory: (data) => addVariant('categories', data),
@@ -100,6 +109,21 @@ export const VariantsProvider = ({ children }) => {
     updateSize: (id, data) => updateVariant('sizes', id, data),
     deleteSize: (id) => deleteVariant('sizes', id),
     updateSizeOrder: (items) => updateVariantOrder('sizes', items),
+
+    addDepartment: (data) => addVariant('departments', data),
+    updateDepartment: (id, data) => updateVariant('departments', id, data),
+    deleteDepartment: (id) => deleteVariant('departments', id),
+    updateDepartmentOrder: (items) => updateVariantOrder('departments', items),
+
+    addProductType: (data) => addVariant('product_types', data),
+    updateProductType: (id, data) => updateVariant('product_types', id, data),
+    deleteProductType: (id) => deleteVariant('product_types', id),
+    updateProductTypeOrder: (items) => updateVariantOrder('product_types', items),
+
+    addSeasonOccasion: (data) => addVariant('seasons_occasions', data),
+    updateSeasonOccasion: (id, data) => updateVariant('seasons_occasions', id, data),
+    deleteSeasonOccasion: (id) => deleteVariant('seasons_occasions', id),
+    updateSeasonOccasionOrder: (items) => updateVariantOrder('seasons_occasions', items),
   };
 
   return <VariantsContext.Provider value={value}>{children}</VariantsContext.Provider>;
