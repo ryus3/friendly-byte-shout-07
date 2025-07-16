@@ -29,7 +29,7 @@ import { ar } from 'date-fns/locale';
 
 const AdvancedAccountingSystem = () => {
   const { accounting, orders, products, settings, settlementInvoices } = useInventory();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -58,20 +58,31 @@ const AdvancedAccountingSystem = () => {
       return expenseDate >= fromDate;
     });
 
-    // حساب الإيرادات
-    const deliveredOrders = filteredOrders.filter(o => o.status === 'delivered');
-    const totalRevenue = deliveredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
-    const totalOrdersValue = filteredOrders.reduce((sum, order) => sum + (order.total || 0), 0);
+    // حساب الإيرادات (نفس طريقة لوحة التحكم - الطلبات المُوصلة التي تم استلام فواتيرها فقط)
+    const deliveredOrdersWithReceipts = filteredOrders.filter(o => 
+      o.status === 'delivered' && o.receipt_received === true
+    );
+    
+    const totalRevenue = deliveredOrdersWithReceipts.reduce((sum, order) => 
+      sum + (order.final_amount || order.total_amount || 0), 0
+    );
+    
+    const deliveryFees = deliveredOrdersWithReceipts.reduce((sum, order) => 
+      sum + (order.delivery_fee || 0), 0
+    );
+    
+    const salesWithoutDelivery = totalRevenue - deliveryFees;
 
-    // حساب تكلفة البضاعة المباعة (COGS)
-    const cogs = deliveredOrders.reduce((sum, order) => {
+    // حساب تكلفة البضاعة المباعة (COGS) - نفس طريقة لوحة التحكم
+    const cogs = deliveredOrdersWithReceipts.reduce((sum, order) => {
       return sum + (order.items || []).reduce((itemSum, item) => {
-        return itemSum + ((item.cost_price || 0) * item.quantity);
+        const costPrice = item.costPrice || item.cost_price || 0;
+        return itemSum + (costPrice * item.quantity);
       }, 0);
     }, 0);
 
     // الربح الإجمالي
-    const grossProfit = totalRevenue - cogs;
+    const grossProfit = salesWithoutDelivery - cogs;
     const grossProfitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
 
     // النفقات التشغيلية
@@ -92,10 +103,18 @@ const AdvancedAccountingSystem = () => {
     // إجمالي النفقات
     const totalExpenses = operatingExpenses + employeeExpenses + purchaseExpenses;
 
-    // صافي الربح (مثل لوحة التحكم تماماً)
-    const salesWithoutDelivery = totalRevenue - deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-    const netProfit = salesWithoutDelivery - cogs - operatingExpenses - employeeExpenses;
+    // صافي الربح (نفس حساب لوحة التحكم تماماً)
+    const netProfit = grossProfit - operatingExpenses - employeeExpenses;
     const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
+    
+    // حساب أرباح المستخدم الحالي من طلباته المستلمة فقط
+    const userDeliveredOrders = deliveredOrdersWithReceipts.filter(o => o.created_by === user?.id);
+    const userPersonalProfit = userDeliveredOrders.reduce((sum, order) => {
+      return sum + (order.items || []).reduce((itemSum, item) => {
+        const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+        return itemSum + profit;
+      }, 0);
+    }, 0);
 
     // معدل العائد على رأس المال
     const roi = accounting.capital > 0 ? (netProfit / accounting.capital) * 100 : 0;
@@ -110,22 +129,23 @@ const AdvancedAccountingSystem = () => {
     // أداء المبيعات
     const salesMetrics = {
       totalOrders: filteredOrders.length,
-      deliveredOrders: deliveredOrders.length,
-      conversionRate: filteredOrders.length > 0 ? (deliveredOrders.length / filteredOrders.length) * 100 : 0,
-      averageOrderValue: deliveredOrders.length > 0 ? totalRevenue / deliveredOrders.length : 0
+      deliveredOrders: deliveredOrdersWithReceipts.length,
+      conversionRate: filteredOrders.length > 0 ? (deliveredOrdersWithReceipts.length / filteredOrders.length) * 100 : 0,
+      averageOrderValue: deliveredOrdersWithReceipts.length > 0 ? totalRevenue / deliveredOrdersWithReceipts.length : 0
     };
 
     // تحليل الفترات
     const dailyData = {};
-    deliveredOrders.forEach(order => {
+    deliveredOrdersWithReceipts.forEach(order => {
       const day = format(new Date(order.updated_at || order.created_at), 'yyyy-MM-dd');
       if (!dailyData[day]) {
         dailyData[day] = { revenue: 0, orders: 0, profit: 0 };
       }
-      dailyData[day].revenue += order.total || 0;
+      dailyData[day].revenue += order.final_amount || order.total_amount || 0;
       dailyData[day].orders += 1;
       dailyData[day].profit += (order.items || []).reduce((sum, item) => {
-        return sum + ((item.price - item.cost_price) * item.quantity);
+        const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+        return sum + profit;
       }, 0);
     });
 
@@ -138,6 +158,8 @@ const AdvancedAccountingSystem = () => {
 
     return {
       totalRevenue,
+      deliveryFees,
+      salesWithoutDelivery,
       cogs,
       grossProfit,
       grossProfitMargin,
@@ -152,7 +174,8 @@ const AdvancedAccountingSystem = () => {
       salesMetrics,
       chartData,
       filteredOrders,
-      deliveredOrders
+      deliveredOrdersWithReceipts,
+      userPersonalProfit
     };
   }, [orders, accounting, products, selectedPeriod]);
 
@@ -202,20 +225,20 @@ const AdvancedAccountingSystem = () => {
       change: `${financialAnalysis.netProfitMargin?.toFixed(1) || 0}%`
     },
     {
+      title: 'أرباحي',
+      value: financialAnalysis.userPersonalProfit || 0,
+      format: 'currency',
+      icon: Wallet,
+      color: 'teal',
+      change: 'طلبات مستلمة'
+    },
+    {
       title: 'هامش الربح الإجمالي',
       value: financialAnalysis.grossProfitMargin || 0,
       format: 'percentage',
       icon: PieChart,
       color: 'purple',
       change: 'هامش صحي'
-    },
-    {
-      title: 'معدل العائد على رأس المال',
-      value: financialAnalysis.roi || 0,
-      format: 'percentage',
-      icon: Target,
-      color: 'orange',
-      change: financialAnalysis.roi > 10 ? 'ممتاز' : 'جيد'
     }
   ];
 
@@ -236,7 +259,8 @@ const AdvancedAccountingSystem = () => {
       green: 'from-green-500 to-green-600',
       red: 'from-red-500 to-red-600',
       purple: 'from-purple-500 to-purple-600',
-      orange: 'from-orange-500 to-orange-600'
+      orange: 'from-orange-500 to-orange-600',
+      teal: 'from-teal-500 to-teal-600'
     };
     return colors[color] || colors.blue;
   };
