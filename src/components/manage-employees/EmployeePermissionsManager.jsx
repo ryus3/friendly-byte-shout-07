@@ -434,7 +434,7 @@ const EmployeePermissionsManager = ({ open, onOpenChange }) => {
   if (selectedEmployee) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] overflow-y-auto z-50">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[85vh] overflow-y-auto z-[100]">
           <DialogHeader className="pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Settings className="h-5 w-5" />
