@@ -248,33 +248,19 @@ const UserCard = ({ user, onApprove, onReject }) => {
             صلاحيات التصنيفات والمتغيرات
           </h4>
           <div className="p-4 border rounded-lg space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 space-x-reverse">
-                <Checkbox
-                  id={`cat-all-${user.id}`}
-                  checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                  onCheckedChange={(checked) => handleCategoryPermissionChange('all', checked)}
-                  disabled={role === 'admin' || role === 'deputy'}
-                />
-                <Label htmlFor={`cat-all-${user.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
-                  <Eye className="w-4 h-4" />
-                  عرض جميع التصنيفات والمتغيرات
-                </Label>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCategoryPermissions(['all'])}
-                disabled={role === 'admin' || role === 'deputy'}
-              >
-                تحديد الكل
-              </Button>
-            </div>
-            
-            <Separator />
             
             <div className="space-y-3">
-              <h5 className="font-medium text-sm">التصنيفات الرئيسية:</h5>
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-sm">التصنيفات الرئيسية:</h5>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCategoryPermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد كل التصنيفات
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {categories.map(category => (
                   <div key={category.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
