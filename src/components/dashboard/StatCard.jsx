@@ -73,7 +73,6 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
         "shadow-lg shadow-black/10 dark:shadow-black/30",
         "hover:shadow-2xl hover:shadow-primary/10",
         "dark:hover:shadow-primary/20",
-        "mobile-card"
       )}>
          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
          <div 
@@ -82,28 +81,28 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
              backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
            }}
          ></div>
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 sm:pb-2 relative z-10 mobile-spacing-sm">
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 relative z-10">
           <div className="flex-1 space-y-1">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground leading-tight mobile-text-sm">
+            <CardTitle className="text-sm font-medium text-muted-foreground leading-tight">
                 {title}
             </CardTitle>
           </div>
           <div className="flex gap-1 ml-2">
             {onEdit && (
-              <Button variant="ghost" size="icon" className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground hover:bg-muted/50" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
-                <Edit className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+              <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground hover:bg-muted/50" onClick={(e) => { e.stopPropagation(); onEdit(); }}>
+                <Edit className="w-3 h-3" />
               </Button>
             )}
             {onPeriodChange && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground hover:bg-muted/50" onClick={(e) => e.stopPropagation()}>
-                    <MoreHorizontal className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                  <Button variant="ghost" size="icon" className="w-6 h-6 text-muted-foreground hover:bg-muted/50" onClick={(e) => e.stopPropagation()}>
+                    <MoreHorizontal className="w-3 h-3" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="mobile-dropdown">
+                <DropdownMenuContent align="end">
                   {Object.entries(availablePeriods).map(([key, label]) => (
-                    <DropdownMenuItem key={key} onSelect={() => onPeriodChange(key)} className="mobile-text-sm">
+                    <DropdownMenuItem key={key} onSelect={() => onPeriodChange(key)}>
                       {label}
                     </DropdownMenuItem>
                   ))}
@@ -112,9 +111,9 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
             )}
           </div>
         </CardHeader>
-        <CardContent className="flex-grow flex flex-col justify-between relative z-10 mobile-spacing-sm">
+        <CardContent className="flex-grow flex flex-col justify-between relative z-10">
             {children ? (
-              <ScrollArea className="flex-1 h-16 sm:h-24">
+              <ScrollArea className="flex-grow h-24">
                 {children}
               </ScrollArea>
             ) : (
@@ -125,14 +124,14 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
                 transition={{ delay: 0.1 }}
               >
                 <div className="flex-1">
-                  <div className="flex items-baseline gap-1 sm:gap-2 text-lg sm:text-2xl md:text-3xl font-bold text-foreground break-words mobile-text-lg">
+                  <div className="flex items-baseline gap-2 text-2xl sm:text-3xl font-bold text-foreground break-words">
                     <span>{formattedValue}</span>
                     {currencyUnit && (
-                      <span className="text-xs sm:text-sm text-muted-foreground font-normal mobile-text-xs">{currencyUnit}</span>
+                      <span className="text-sm text-muted-foreground font-normal">{currencyUnit}</span>
                     )}
                   </div>
                   {currentPeriod && (
-                    <p className="text-xs text-muted-foreground mt-1 mobile-text-xs">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {availablePeriods[currentPeriod]}
                     </p>
                   )}
@@ -140,7 +139,7 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
                 {Icon && colors && (
                 <motion.div 
                   className={cn(
-                      "w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 shrink-0 rounded-lg flex items-center justify-center text-white transition-all duration-300",
+                      "w-10 h-10 sm:w-12 sm:h-12 shrink-0 rounded-lg flex items-center justify-center text-white transition-all duration-300",
                       "bg-gradient-to-br",
                       gradientMap[colors[0]],
                       gradientMap[colors[1]],
@@ -148,7 +147,7 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
                   )}
                   transition={{ type: 'spring', stiffness: 400, damping: 10 }}
                 >
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
                 </motion.div>
               )}
               </motion.div>
