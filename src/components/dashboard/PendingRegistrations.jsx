@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { User, UserCheck, UserX, Settings, X } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-
+import UnifiedEmployeePermissionsDialog from '../manage-employees/UnifiedEmployeePermissionsDialog';
 
 const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
   const { toast } = useToast();
@@ -155,13 +155,16 @@ const PendingRegistrations = ({ onClose }) => {
   const { pendingRegistrations, updateUser, refetchAdminData } = useAuth();
   const { addNotification } = useNotifications();
   const { toast } = useToast();
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [showUnifiedDialog, setShowUnifiedDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   console.log('PendingRegistrations rendered with:', pendingRegistrations);
 
   const handleDetailedReview = (user) => {
-    console.log('Opening employee permissions manager for:', user);
-    // يمكن توجيه المستخدم لصفحة الإعدادات مباشرة
+    console.log('Opening detailed review for:', user);
+    setSelectedEmployee(user);
+    setShowUnifiedDialog(true);
   };
 
   const handleApprove = async (userId, data) => {
@@ -234,6 +237,8 @@ const PendingRegistrations = ({ onClose }) => {
         await refetchAdminData();
         
         // إغلاق النوافذ
+        setShowUnifiedDialog(false);
+        setSelectedEmployee(null);
         
         console.log('=== APPROVAL PROCESS SUCCESS ===');
       } else {
@@ -280,6 +285,8 @@ const PendingRegistrations = ({ onClose }) => {
         await refetchAdminData();
         
         // إغلاق النوافذ
+        setShowUnifiedDialog(false);
+        setSelectedEmployee(null);
         
         console.log('=== REJECTION PROCESS SUCCESS ===');
       } else {
@@ -380,6 +387,14 @@ const PendingRegistrations = ({ onClose }) => {
         </Card>
       </motion.div>
       
+      {selectedEmployee && (
+        <UnifiedEmployeePermissionsDialog
+          employee={selectedEmployee}
+          open={showUnifiedDialog}
+          onOpenChange={setShowUnifiedDialog}
+          onSave={handleApprove}
+        />
+      )}
     </motion.div>
   );
 };

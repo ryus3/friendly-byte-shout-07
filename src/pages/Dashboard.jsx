@@ -375,7 +375,7 @@ const Dashboard = () => {
 
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
-        if (!profitsData || !user?.id) {
+        if (!profitsData || !filterProfitsByUser) {
             return {
                 personalPendingProfit: 0,
                 personalSettledProfit: 0,
@@ -384,10 +384,7 @@ const Dashboard = () => {
         }
         
         const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
-        // تصفية البيانات محلياً بدلاً من استخدام filterProfitsByUser لتجنب infinite loop
-        const userProfits = allProfits.filter(profit => 
-            profit.employee_id === user.id || profit.employee_id === user.user_id
-        );
+        const userProfits = filterProfitsByUser(allProfits);
         const personalPending = userProfits.filter(p => p.status === 'pending');
         const personalSettled = userProfits.filter(p => p.status === 'settled');
         
@@ -396,7 +393,7 @@ const Dashboard = () => {
             personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
             totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
-    }, [profitsData, user?.id, user?.user_id]);
+    }, [profitsData, filterProfitsByUser]);
 
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 

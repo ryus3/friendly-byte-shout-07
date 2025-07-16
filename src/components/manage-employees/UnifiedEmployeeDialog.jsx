@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Package, User, Settings, Eye } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import UnifiedRoleManager from './UnifiedRoleManager';
+import ProductPermissionsManager from './ProductPermissionsManager';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
@@ -156,15 +158,19 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </TabsContent>
 
             <TabsContent value="roles" className="h-full">
-              <div className="text-center p-8 text-muted-foreground">
-                <p>إدارة الأدوار متاحة في قسم "إدارة صلاحيات الموظفين" في الإعدادات</p>
-              </div>
+              <UnifiedRoleManager 
+                user={employee} 
+                onUpdate={handleUpdate}
+                onClose={() => {}}
+              />
             </TabsContent>
 
             <TabsContent value="products" className="h-full">
-              <div className="text-center p-8 text-muted-foreground">
-                <p>إدارة صلاحيات المنتجات متاحة في قسم "إدارة صلاحيات الموظفين" في الإعدادات</p>
-              </div>
+              <ProductPermissionsManager 
+                user={employee} 
+                onUpdate={handleUpdate}
+                onClose={() => {}}
+              />
             </TabsContent>
 
             <TabsContent value="view" className="space-y-4">

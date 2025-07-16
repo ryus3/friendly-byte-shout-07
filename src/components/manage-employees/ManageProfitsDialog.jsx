@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -505,11 +505,10 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                          <div className="text-muted-foreground">عامة</div>
                        </div>
                     </div>
-                   </div>
-                 </CardContent>
-               </Card>
-             </TabsContent>
-            </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
         

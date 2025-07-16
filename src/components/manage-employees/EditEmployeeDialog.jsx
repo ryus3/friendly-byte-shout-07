@@ -10,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Shield, Trash2, Loader2, Package, Palette } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
+import EmployeeVariantPermissions from './EmployeeVariantPermissions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -201,9 +201,10 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </TabsContent>
             
             <TabsContent value="variants" className="space-y-4">
-              <div className="text-center p-8 text-muted-foreground">
-                <p>إدارة صلاحيات المنتجات متاحة في قسم "إدارة صلاحيات الموظفين" في الإعدادات</p>
-              </div>
+              <EmployeeVariantPermissions 
+                employee={employee} 
+                onSave={() => console.log('Variant permissions saved')}
+              />
             </TabsContent>
           </Tabs>
           
