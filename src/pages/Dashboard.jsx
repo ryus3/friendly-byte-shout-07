@@ -283,7 +283,19 @@ const Dashboard = () => {
     }, [periods.netProfit, orders, accounting, products]);
 
     const dashboardData = useMemo(() => {
-        if (!visibleOrders) return {};
+        if (!visibleOrders || !user) return {
+            totalOrdersCount: 0,
+            netProfit: 0,
+            pendingProfit: 0,
+            deliveredSales: 0,
+            pendingSales: 0,
+            pendingProfitOrders: [],
+            deliveredSalesOrders: [],
+            pendingSalesOrders: [],
+            topCustomers: [],
+            topProvinces: [],
+            topProducts: []
+        };
 
         console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
 
@@ -305,7 +317,7 @@ const Dashboard = () => {
           }, 0);
           
           // ربح المدير من الطلب (فقط إذا كان المستخدم الحالي مدير ويعرض طلبات الموظفين)
-          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id
+          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
             ? calculateManagerProfit(o) : 0;
           
           return sum + employeeProfit + managerProfit;
@@ -333,7 +345,7 @@ const Dashboard = () => {
 
         const result = {
             totalOrdersCount: filteredTotalOrders.length,
-            netProfit: financialSummary.netProfit,
+            netProfit: financialSummary?.netProfit || 0,
             pendingProfit,
             deliveredSales,
             pendingSales,
@@ -348,7 +360,7 @@ const Dashboard = () => {
         console.log('النتيجة النهائية للدالشبورد:', result);
         
         return result;
-    }, [visibleOrders, orders, periods, user?.id, user?.user_id, canViewAllData, calculateProfit, financialSummary, profitsData]);
+    }, [visibleOrders, periods, user, canViewAllData, calculateManagerProfit, financialSummary]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
