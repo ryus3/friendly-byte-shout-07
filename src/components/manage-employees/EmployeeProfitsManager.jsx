@@ -22,8 +22,9 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const employees = useMemo(() => {
-    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'manager')
-      .filter(u => u.fullName && u.fullName.trim() !== ''); // فلترة الموظفين الذين لديهم أسماء صحيحة
+    if (!Array.isArray(allUsers)) return [];
+    return allUsers.filter(u => (u.role === 'employee' || u.role === 'deputy' || u.role === 'manager') && u.is_active)
+      .filter(u => u.full_name && u.full_name.trim() !== ''); // فلترة الموظفين الذين لديهم أسماء صحيحة
   }, [allUsers]);
 
   const employeeStats = useMemo(() => {
@@ -127,13 +128,13 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                         {employeeStats.map((emp) => (
                           <div key={emp.id} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
-                                {emp.fullName ? emp.fullName.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
-                              </div>
-                              <div>
-                                <div className="font-semibold">{emp.fullName || emp.username || 'موظف غير محدد'}</div>
-                                <div className="text-sm text-muted-foreground">{emp.role}</div>
-                              </div>
+                               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
+                                 {emp.full_name ? emp.full_name.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
+                               </div>
+                               <div>
+                                 <div className="font-semibold">{emp.full_name || emp.username || 'موظف غير محدد'}</div>
+                                 <div className="text-sm text-muted-foreground">{emp.role}</div>
+                               </div>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="text-center">
@@ -171,13 +172,13 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                       <Card key={emp.id} className="hover:shadow-lg transition-shadow">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
-                              {emp.fullName ? emp.fullName.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-semibold">{emp.fullName || emp.username || 'موظف غير محدد'}</div>
-                              <div className="text-sm text-muted-foreground">{emp.role}</div>
-                            </div>
+                             <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
+                               {emp.full_name ? emp.full_name.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
+                             </div>
+                             <div className="flex-1">
+                               <div className="font-semibold">{emp.full_name || emp.username || 'موظف غير محدد'}</div>
+                               <div className="text-sm text-muted-foreground">{emp.role}</div>
+                             </div>
                           </div>
                           
                           <div className="space-y-2 mb-4">
@@ -223,11 +224,11 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                               <SelectValue placeholder="اختر موظف..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {employees.map(emp => (
-                                <SelectItem key={emp.id} value={emp.id}>
-                                  {emp.fullName || emp.username || 'موظف غير محدد'}
-                                </SelectItem>
-                              ))}
+                               {employees.map(emp => (
+                                 <SelectItem key={emp.id} value={emp.id}>
+                                   {emp.full_name || emp.username || 'موظف غير محدد'}
+                                 </SelectItem>
+                               ))}
                             </SelectContent>
                           </Select>
                         </div>

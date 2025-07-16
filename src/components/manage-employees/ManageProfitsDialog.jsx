@@ -81,6 +81,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
   const [multiProductProfit, setMultiProductProfit] = useState('');
   
   const employees = useMemo(() => {
+    if (!Array.isArray(allUsers)) return [];
     return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy');
   }, [allUsers]);
 
@@ -161,7 +162,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>قواعد الأرباح: {employee.fullName}</DialogTitle>
+          <DialogTitle>قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
           <DialogDescription>
             إدارة قواعد الأرباح الخاصة بالموظف - نسب مئوية أو مبالغ ثابتة حسب المنتج أو التصنيف مع حساب دقيق للمستحقات.
           </DialogDescription>
@@ -175,9 +176,9 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                             <SelectValue placeholder="اختر موظفاً لنسخ قواعده..." />
                         </SelectTrigger>
                         <SelectContent>
-                            {employees.filter(e => e.id !== employee.id).map(emp => (
-                                <SelectItem key={emp.id} value={emp.id}>{emp.fullName}</SelectItem>
-                            ))}
+                            {employees.filter(e => e.user_id !== employee.user_id).map(emp => (
+                                 <SelectItem key={emp.user_id} value={emp.user_id}>{emp.full_name || emp.username}</SelectItem>
+                             ))}
                         </SelectContent>
                     </Select>
                 </CardContent>
