@@ -26,7 +26,7 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
             ? prev.filter(id => id !== productId)
             : [...prev, productId]
         );
-    }
+    };
 
     const selectedProductNames = products
         .filter(p => selectedProducts.includes(p.id))
@@ -51,7 +51,7 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px]">
+            <PopoverContent className="w-[400px] p-0 max-h-[300px] z-50">
                 <Command>
                     <CommandInput placeholder="ابحث عن منتج..." />
                     <CommandList>
@@ -62,11 +62,11 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                                     key={product.id}
                                     value={product.name}
                                     onSelect={() => handleSelect(product.id)}
-                                    className="flex items-center gap-2 cursor-pointer"
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-accent"
                                 >
                                     <Checkbox
                                         checked={selectedProducts.includes(product.id)}
-                                        onChange={() => handleSelect(product.id)}
+                                        readOnly
                                     />
                                     <span className="flex-1">{product.name}</span>
                                     {selectedProducts.includes(product.id) && (
@@ -80,7 +80,7 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
             </PopoverContent>
         </Popover>
     );
-}
+};
 
 const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
   const { products, setEmployeeProfitRule, getEmployeeProfitRules } = useInventory();
@@ -184,11 +184,11 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] w-full sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0 pb-3 sm:pb-4">
-          <DialogTitle className="text-lg sm:text-xl">قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
-          <DialogDescription className="text-sm sm:text-base">
-            إدارة قواعد الأرباح الخاصة بالموظف - نسب مئوية أو مبالغ ثابتة حسب المنتج أو التصنيف مع حساب دقيق للمستحقات.
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl lg:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col z-50">
+        <DialogHeader className="flex-shrink-0 pb-3">
+          <DialogTitle className="text-lg">قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
+          <DialogDescription className="text-sm">
+            إدارة قواعد الأرباح الخاصة بالموظف - نسب مئوية أو مبالغ ثابتة حسب المنتج أو التصنيف
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 overflow-y-auto min-h-0 pr-2 space-y-3 sm:space-y-4">

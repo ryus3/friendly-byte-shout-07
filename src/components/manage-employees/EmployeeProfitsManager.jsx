@@ -58,14 +58,14 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[90vw] w-full sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0 pb-4">
-            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+        <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col z-40">
+          <DialogHeader className="flex-shrink-0 pb-3">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <DollarSign className="h-5 w-5 text-green-600" />
               إدارة قواعد الأرباح للموظفين
             </DialogTitle>
-            <DialogDescription className="text-sm sm:text-base">
-              نظام شامل لإدارة قواعد الأرباح وحساب المستحقات للموظفين بناءً على المنتجات والتصنيفات
+            <DialogDescription className="text-sm">
+              نظام شامل لإدارة قواعد الأرباح وحساب المستحقات للموظفين
             </DialogDescription>
           </DialogHeader>
 
