@@ -283,19 +283,7 @@ const Dashboard = () => {
     }, [periods.netProfit, orders, accounting, products]);
 
     const dashboardData = useMemo(() => {
-        if (!visibleOrders || !calculateProfit || !filterProfitsByUser) return {
-            totalOrdersCount: 0,
-            netProfit: 0,
-            pendingProfit: 0,
-            deliveredSales: 0,
-            pendingSales: 0,
-            pendingProfitOrders: [],
-            deliveredSalesOrders: [],
-            pendingSalesOrders: [],
-            topCustomers: [],
-            topProvinces: [],
-            topProducts: [],
-        };
+        if (!visibleOrders) return {};
 
         console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
 
@@ -317,7 +305,7 @@ const Dashboard = () => {
           }, 0);
           
           // ربح المدير من الطلب (فقط إذا كان المستخدم الحالي مدير ويعرض طلبات الموظفين)
-          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
+          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id
             ? calculateManagerProfit(o) : 0;
           
           return sum + employeeProfit + managerProfit;
@@ -345,7 +333,7 @@ const Dashboard = () => {
 
         const result = {
             totalOrdersCount: filteredTotalOrders.length,
-            netProfit: financialSummary?.netProfit || 0,
+            netProfit: financialSummary.netProfit,
             pendingProfit,
             deliveredSales,
             pendingSales,
@@ -360,7 +348,7 @@ const Dashboard = () => {
         console.log('النتيجة النهائية للدالشبورد:', result);
         
         return result;
-    }, [visibleOrders, orders, periods, user?.id, user?.user_id, canViewAllData, calculateProfit, calculateManagerProfit, financialSummary, profitsData, filterProfitsByUser]);
+    }, [visibleOrders, orders, periods, user?.id, user?.user_id, canViewAllData, calculateProfit, financialSummary, profitsData]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
@@ -378,12 +366,6 @@ const Dashboard = () => {
 
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
-        if (!profitsData || !filterProfitsByUser) return {
-            personalPendingProfit: 0,
-            personalSettledProfit: 0,
-            totalPersonalProfit: 0
-        };
-        
         const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         const userProfits = filterProfitsByUser(allProfits);
         const personalPending = userProfits.filter(p => p.status === 'pending');
@@ -394,7 +376,7 @@ const Dashboard = () => {
             personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
             totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
-    }, [profitsData, filterProfitsByUser]);
+    }, [profitsData.pending, profitsData.settled, filterProfitsByUser]);
 
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 
