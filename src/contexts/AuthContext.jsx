@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*, default_page')
-      .eq('user_id', supabaseUser.id)
+      .eq('id', supabaseUser.id)
       .single();
 
     if (error) {
@@ -354,48 +354,17 @@ export const AuthProvider = ({ children }) => {
       toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
       return;
     }
-    
-    try {
-      console.log('Updating user:', userId, 'with data:', data);
-      
-      const { data: updatedData, error } = await supabase
-        .from('profiles')
-        .update(data)
-        .eq('user_id', userId)
-        .select();
-        
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-      
-      console.log('Update result:', updatedData);
-      
-      if (updatedData && updatedData.length > 0) {
-        // تحديث السياق إذا كان المستخدم الحالي
-        if (userId === user?.user_id) {
-          setUser(prev => ({ ...prev, ...updatedData[0] }));
-        }
-        
-        // إعادة تحميل بيانات المدير لتحديث القوائم
-        await fetchAdminData();
-        
-        toast({ title: 'نجاح', description: 'تم تحديث البيانات بنجاح.' });
-        return { success: true, data: updatedData[0] };
-      } else {
-        // المستخدم غير موجود، ولكن هذا لا يعني فشل - قد يكون تم تحديثه بالفعل
-        console.log('No rows returned but no error - user may already be updated');
-        
-        // إعادة تحميل البيانات للتأكد
-        await fetchAdminData();
-        
-        toast({ title: 'نجاح', description: 'تم معالجة الطلب بنجاح.' });
-        return { success: true, data: null };
-      }
-    } catch (error) {
-      console.error('Error updating user profile:', error);
+    const { error } = await supabase.from('profiles').update(data).eq('id', userId);
+    if (error) {
       toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
       return { success: false, error };
+    } else {
+      toast({ title: 'نجاح', description: 'تم تحديث المستخدم بنجاح.' });
+      if (userId === user.id) {
+        const updatedProfile = await fetchUserProfile(user);
+        setUser(updatedProfile);
+      }
+      return { success: true };
     }
   };
 
