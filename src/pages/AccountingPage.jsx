@@ -122,8 +122,10 @@ const AccountingPage = () => {
             o.status === 'delivered' && 
             o.receipt_received === true && 
             filterByDate(o.updated_at || o.created_at)
-        );
-        const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
+         );
+         console.log('جميع الطلبات المُوصلة مع استلام الفواتير:', deliveredOrders);
+         console.log('ID المدير الحالي:', currentUser?.id);
+         const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
         
         // حساب إجمالي الإيرادات مع رسوم التوصيل
         const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);

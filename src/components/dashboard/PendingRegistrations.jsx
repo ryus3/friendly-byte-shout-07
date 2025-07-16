@@ -129,10 +129,15 @@ const UserCard = ({ user, onApprove, onReject }) => {
             <Shield className="w-5 h-5 text-primary" />
             تحديد الصلاحيات
           </h4>
-          <Accordion type="multiple" className="w-full" disabled={role === 'admin' || role === 'deputy'}>
+          <Accordion type="multiple" className="w-full">
             {permissionsMap.map(category => (
               <AccordionItem value={category.category} key={category.category}>
-                <AccordionTrigger>{category.categoryLabel}</AccordionTrigger>
+                <AccordionTrigger disabled={role === 'admin' || role === 'deputy'}>
+                  {category.categoryLabel}
+                  {(role === 'admin' || role === 'deputy') && (
+                    <span className="text-xs text-muted-foreground ml-2">(جميع الصلاحيات)</span>
+                  )}
+                </AccordionTrigger>
                 <AccordionContent>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
                     {category.permissions.map(permission => (
