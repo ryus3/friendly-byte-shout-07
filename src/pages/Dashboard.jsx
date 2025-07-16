@@ -285,8 +285,6 @@ const Dashboard = () => {
     const dashboardData = useMemo(() => {
         if (!visibleOrders) return {};
 
-        console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
-
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         // استخدام الطلبات المفلترة بدلاً من كل الطلبات
         const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
@@ -310,9 +308,6 @@ const Dashboard = () => {
           
           return sum + employeeProfit + managerProfit;
         }, 0);
-        
-        console.log('الطلبات المُوصلة بدون فواتير:', filteredDeliveredOrders.length);
-        console.log('مجموع الأرباح المعلقة:', pendingProfit);
         
         // حساب المبيعات المستلمة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
@@ -345,10 +340,8 @@ const Dashboard = () => {
             topProducts: getTopProducts(visibleOrders),
         };
         
-        console.log('النتيجة النهائية للدالشبورد:', result);
-        
         return result;
-    }, [visibleOrders, orders, periods, user?.id, user?.user_id, canViewAllData, calculateProfit, financialSummary, profitsData]);
+    }, [visibleOrders, periods, user?.id, user?.user_id, canViewAllData, calculateManagerProfit, financialSummary.netProfit]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
