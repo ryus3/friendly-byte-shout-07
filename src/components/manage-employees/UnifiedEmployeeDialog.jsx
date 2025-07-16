@@ -1,0 +1,223 @@
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { Shield, Package, User, Settings, Eye } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import UnifiedRoleManager from './UnifiedRoleManager';
+import ProductPermissionsManager from './ProductPermissionsManager';
+import { supabase } from '@/lib/customSupabaseClient';
+
+const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
+  const { refetchAdminData } = useAuth();
+  const [status, setStatus] = useState(employee?.status || 'pending');
+  const [defaultPage, setDefaultPage] = useState(employee?.default_page || '/');
+  const [orderCreationMode, setOrderCreationMode] = useState(employee?.order_creation_mode || 'both');
+  const [activeTab, setActiveTab] = useState('basic');
+  const [saving, setSaving] = useState(false);
+
+  const defaultPages = [
+    { value: '/', label: 'لوحة التحكم' },
+    { value: '/quick-order', label: 'طلب سريع' },
+    { value: '/products', label: 'عرض المنتجات' },
+    { value: '/manage-products', label: 'إدارة المنتجات' },
+    { value: '/inventory', label: 'الجرد' },
+    { value: '/my-orders', label: 'طلباتي' },
+    { value: '/purchases', label: 'المشتريات' },
+    { value: '/settings', label: 'الإعدادات' },
+  ];
+
+  const handleBasicSave = async () => {
+    try {
+      setSaving(true);
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          status,
+          default_page: defaultPage,
+          order_creation_mode: orderCreationMode,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', employee.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'نجح',
+        description: 'تم تحديث الإعدادات الأساسية بنجاح',
+      });
+
+      await refetchAdminData();
+    } catch (error) {
+      console.error('خطأ في تحديث الإعدادات:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في تحديث الإعدادات',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdate = async () => {
+    await refetchAdminData();
+  };
+
+  if (!employee) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-xl">
+            إدارة الموظف: {employee.full_name}
+          </DialogTitle>
+        </DialogHeader>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="basic" className="flex items-center space-x-2 space-x-reverse">
+              <User className="h-4 w-4" />
+              <span>الإعدادات الأساسية</span>
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="flex items-center space-x-2 space-x-reverse">
+              <Shield className="h-4 w-4" />
+              <span>الأدوار والصلاحيات</span>
+            </TabsTrigger>
+            <TabsTrigger value="products" className="flex items-center space-x-2 space-x-reverse">
+              <Package className="h-4 w-4" />
+              <span>صلاحيات المنتجات</span>
+            </TabsTrigger>
+            <TabsTrigger value="view" className="flex items-center space-x-2 space-x-reverse">
+              <Eye className="h-4 w-4" />
+              <span>معاينة النظام</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex-1 overflow-y-auto mt-4">
+            <TabsContent value="basic" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="status">حالة الحساب</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">نشط</SelectItem>
+                      <SelectItem value="pending">قيد المراجعة</SelectItem>
+                      <SelectItem value="suspended">معلق</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="defaultPage">الصفحة الافتراضية</Label>
+                  <Select value={defaultPage} onValueChange={setDefaultPage}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {defaultPages.map(page => (
+                        <SelectItem key={page.value} value={page.value}>
+                          {page.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="orderMode">نمط إنشاء الطلبات</Label>
+                  <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">كلاهما (عادي + سريع)</SelectItem>
+                      <SelectItem value="normal">طلبات عادية فقط</SelectItem>
+                      <SelectItem value="quick">طلبات سريعة فقط</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleBasicSave} disabled={saving}>
+                  {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات الأساسية'}
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="roles" className="h-full">
+              <UnifiedRoleManager 
+                user={employee} 
+                onUpdate={handleUpdate}
+                onClose={() => {}}
+              />
+            </TabsContent>
+
+            <TabsContent value="products" className="h-full">
+              <ProductPermissionsManager 
+                user={employee} 
+                onUpdate={handleUpdate}
+                onClose={() => {}}
+              />
+            </TabsContent>
+
+            <TabsContent value="view" className="space-y-4">
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">معلومات الموظف</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">الاسم:</span> {employee.full_name}
+                  </div>
+                  <div>
+                    <span className="font-medium">البريد:</span> {employee.email}
+                  </div>
+                  <div>
+                    <span className="font-medium">اسم المستخدم:</span> {employee.username}
+                  </div>
+                  <div>
+                    <span className="font-medium">الحالة:</span> {
+                      status === 'active' ? 'نشط' :
+                      status === 'pending' ? 'قيد المراجعة' :
+                      'معلق'
+                    }
+                  </div>
+                  <div>
+                    <span className="font-medium">تاريخ الإنشاء:</span> {
+                      new Date(employee.created_at).toLocaleDateString('ar-EG')
+                    }
+                  </div>
+                  <div>
+                    <span className="font-medium">آخر تحديث:</span> {
+                      new Date(employee.updated_at).toLocaleDateString('ar-EG')
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-semibold">نصائح للنظام الجديد:</h3>
+                <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
+                  <li>يمكن للموظف الواحد أن يحمل عدة أدوار</li>
+                  <li>صلاحيات المنتجات المتقدمة تتحكم في أي منتجات يستطيع الموظف رؤيتها</li>
+                  <li>الأدوار تحدد الصفحات والوظائف المتاحة</li>
+                  <li>يُنصح بعدم حذف الحسابات القديمة - فقط قم بتعيين الأدوار الجديدة</li>
+                </ul>
+              </div>
+            </TabsContent>
+          </div>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default UnifiedEmployeeDialog;

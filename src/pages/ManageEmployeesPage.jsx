@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, UserPlus, ArrowRight, Shield } from 'lucide-react';
 import EmployeeList from '@/components/manage-employees/EmployeeList';
-import EditEmployeeDialog from '@/components/manage-employees/EditEmployeeDialog';
+import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import { toast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
@@ -120,7 +120,7 @@ const ManageEmployeesPage = () => {
         />
 
         {editingEmployee && (
-          <EditEmployeeDialog
+          <UnifiedEmployeeDialog
               employee={editingEmployee}
               open={isEditModalOpen}
               onOpenChange={setIsEditModalOpen}
