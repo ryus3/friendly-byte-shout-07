@@ -21,10 +21,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const ManageProductsPage = () => {
   const { products, deleteProducts, loading, refetchProducts } = useInventory();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'grid');
+  const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'list');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -33,10 +33,80 @@ const ManageProductsPage = () => {
   const [editingProduct, setEditingProduct] = useState(null);
 
   const filteredProducts = useMemo(() => {
-    return products.filter(p => 
+    let tempProducts = products.filter(p => 
       p.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [products, searchTerm]);
+    
+    // تطبيق صلاحيات المنتجات للموظفين
+    if (user && user.role !== 'admin' && user.role !== 'deputy' && !user?.permissions?.includes('*')) {
+      tempProducts = tempProducts.filter(product => {
+        // التحقق من صلاحيات التصنيفات الرئيسية
+        if (product.categories?.main_category) {
+          try {
+            const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+            if (!categoryPermissions.includes('all') && !categoryPermissions.includes(product.categories.main_category)) {
+              return false;
+            }
+          } catch (e) {
+            console.error('Error parsing category permissions:', e);
+          }
+        }
+
+        // التحقق من صلاحيات التصنيفات عبر product_categories
+        if (product.product_categories && product.product_categories.length > 0) {
+          try {
+            const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+            if (!categoryPermissions.includes('all')) {
+              const hasAllowedCategory = product.product_categories.some(pc => 
+                categoryPermissions.includes(pc.category_id)
+              );
+              if (!hasAllowedCategory) return false;
+            }
+          } catch (e) {
+            console.error('Error parsing category permissions:', e);
+          }
+        }
+
+        // التحقق من صلاحيات الأقسام
+        if (product.product_departments && product.product_departments.length > 0) {
+          try {
+            const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
+            if (!departmentPermissions.includes('all')) {
+              const hasAllowedDepartment = product.product_departments.some(pd => 
+                departmentPermissions.includes(pd.department_id)
+              );
+              if (!hasAllowedDepartment) return false;
+            }
+          } catch (e) {
+            console.error('Error parsing department permissions:', e);
+          }
+        }
+
+        // التحقق من صلاحيات الألوان والأحجام
+        if (product.variants && product.variants.length > 0) {
+          try {
+            const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+            const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
+            
+            if (!colorPermissions.includes('all') || !sizePermissions.includes('all')) {
+              const hasAllowedVariant = product.variants.some(variant => {
+                const colorOk = colorPermissions.includes('all') || !variant.color_id || colorPermissions.includes(variant.color_id);
+                const sizeOk = sizePermissions.includes('all') || !variant.size_id || sizePermissions.includes(variant.size_id);
+                return colorOk && sizeOk;
+              });
+              if (!hasAllowedVariant) return false;
+            }
+          } catch (e) {
+            console.error('Error parsing color/size permissions:', e);
+          }
+        }
+
+        return true;
+      });
+    }
+    
+    return tempProducts;
+  }, [products, searchTerm, user]);
   
   console.log('ManageProductsPage Debug:', {
     isMobile,

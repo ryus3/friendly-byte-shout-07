@@ -52,7 +52,7 @@ const ProductsPage = () => {
     return { categories: uniqueCategories, brands: uniqueBrands };
   }, [products, hasPermission]);
   
-  const [viewMode, setViewMode] = useLocalStorage('productsViewMode', 'grid');
+  const [viewMode, setViewMode] = useLocalStorage('productsViewMode', 'list');
   const [filters, setFilters] = useState({
     searchTerm: '',
     category: 'all',

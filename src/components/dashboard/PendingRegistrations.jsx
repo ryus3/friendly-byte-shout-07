@@ -1,16 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
-import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Check, X, Shield, User, UserPlus, Home, Loader2, Package, Eye } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { permissionsMap } from '@/lib/permissions';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Separator } from '@/components/ui/separator';
+import { Check, X, User, UserPlus } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast';
 
@@ -514,69 +507,12 @@ const UserCard = ({ user, onApprove, onReject }) => {
   );
 };
 
+import UnifiedEmployeePermissionsDialog from '@/components/manage-employees/UnifiedEmployeePermissionsDialog';
+
 const PendingRegistrations = ({ onClose }) => {
-  const { pendingRegistrations, updateUser, refetchAdminData } = useAuth();
+  const { pendingRegistrations, refetchAdminData } = useAuth();
   const { deleteNotificationByTypeAndData } = useNotifications();
-  
-  const handleApprove = async (userId, data) => {
-    console.log('Approving user:', userId, 'with data:', data);
-    
-    try {
-      // البيانات جاهزة مع JSON.stringify من UserCard
-      const result = await updateUser(userId, {
-        status: 'active',
-        role: data.role,
-        permissions: data.permissions, // Already stringified
-        default_page: data.default_page,
-        order_creation_mode: data.order_creation_mode,
-        category_permissions: data.category_permissions, // Already stringified
-        color_permissions: data.color_permissions, // Already stringified
-        size_permissions: data.size_permissions, // Already stringified
-        department_permissions: data.department_permissions, // Already stringified
-        product_type_permissions: data.product_type_permissions, // Already stringified
-        season_occasion_permissions: data.season_occasion_permissions // Already stringified
-      });
-      
-      console.log('User approved successfully:', result);
-      
-      await deleteNotificationByTypeAndData('new_registration', { id: userId });
-      await refetchAdminData();
-      
-      toast({
-        title: "تمت الموافقة",
-        description: "تم تفعيل حساب الموظف بنجاح",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error approving user:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء الموافقة على الحساب",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleReject = async (userId) => {
-    try {
-      await updateUser(userId, { status: 'rejected', permissions: JSON.stringify([]) });
-      await deleteNotificationByTypeAndData('new_registration', { id: userId });
-      await refetchAdminData();
-      
-      toast({
-        title: "تم الرفض",
-        description: "تم رفض طلب التسجيل",
-        variant: "default"
-      });
-    } catch (error) {
-      console.error('Error rejecting user:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء رفض الطلب",
-        variant: "destructive"
-      });
-    }
-  };
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   
   return (
     <motion.div
@@ -610,12 +546,40 @@ const PendingRegistrations = ({ onClose }) => {
               {pendingRegistrations && pendingRegistrations.length > 0 ? (
                 <div className="space-y-4">
                   {pendingRegistrations.map(user => (
-                    <UserCard
+                    <motion.div
                       key={user.id}
-                      user={user}
-                      onApprove={handleApprove}
-                      onReject={handleReject}
-                    />
+                      layout
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                      className="bg-card/80 dark:bg-zinc-800/50 p-4 rounded-lg border border-border"
+                    >
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="bg-primary/10 p-3 rounded-full">
+                            <User className="w-6 h-6 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-foreground">{user.full_name}</p>
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                              <User className="w-4 h-4" />
+                              @{user.username}
+                            </p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <Button 
+                            size="sm" 
+                            className="bg-primary hover:bg-primary/90" 
+                            onClick={() => setSelectedEmployee(user)}
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            مراجعة ومنح الصلاحيات
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
@@ -629,6 +593,23 @@ const PendingRegistrations = ({ onClose }) => {
           </CardContent>
         </Card>
       </motion.div>
+      
+      <UnifiedEmployeePermissionsDialog
+        employee={selectedEmployee}
+        open={!!selectedEmployee}
+        onOpenChange={(open) => !open && setSelectedEmployee(null)}
+        mode="approve"
+        onApprove={async () => {
+          await deleteNotificationByTypeAndData('new_registration', { id: selectedEmployee.user_id });
+          await refetchAdminData();
+          setSelectedEmployee(null);
+        }}
+        onReject={async () => {
+          await deleteNotificationByTypeAndData('new_registration', { id: selectedEmployee.user_id });
+          await refetchAdminData();
+          setSelectedEmployee(null);
+        }}
+      />
     </motion.div>
   );
 };
