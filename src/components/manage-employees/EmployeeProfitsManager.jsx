@@ -29,10 +29,11 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
 
   const employeeStats = useMemo(() => {
     return employees.map(emp => {
-      const rules = getEmployeeProfitRules(emp.id);
-      const productRules = rules.filter(r => r.ruleType === 'product').length;
-      const categoryRules = rules.filter(r => r.ruleType === 'category').length;
-      const generalRules = rules.filter(r => r.ruleType === 'general').length;
+      const employeeId = emp.user_id || emp.id;
+      const rules = getEmployeeProfitRules(employeeId);
+      const productRules = rules.filter(r => r.rule_type === 'product').length;
+      const categoryRules = rules.filter(r => r.rule_type === 'category').length;
+      const generalRules = rules.filter(r => r.rule_type === 'general').length;
       
       return {
         ...emp,
@@ -57,7 +58,7 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-full sm:max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-[90vw] w-full sm:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />

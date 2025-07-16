@@ -40,32 +40,41 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between"
+                    className="w-full justify-between min-h-[40px] h-auto"
                 >
-                    <span className="truncate">{selectedProducts.length > 0 ? `${selectedProducts.length} منتج محدد` : "اختر المنتجات..."}</span>
+                    <span className="truncate text-right flex-1">
+                        {selectedProducts.length > 0 
+                            ? `${selectedProducts.length} منتج محدد${selectedProducts.length <= 3 ? ': ' + selectedProductNames : ''}` 
+                            : "اختر المنتجات..."
+                        }
+                    </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-[300px]">
                 <Command>
                     <CommandInput placeholder="ابحث عن منتج..." />
                     <CommandList>
-                    <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
-                    <CommandGroup>
-                        {products.map((product) => (
-                            <CommandItem
-                                key={product.id}
-                                onSelect={() => handleSelect(product.id)}
-                            >
-                                <Checkbox
-                                    className="mr-2"
-                                    checked={selectedProducts.includes(product.id)}
-                                    onCheckedChange={() => handleSelect(product.id)}
-                                />
-                                {product.name}
-                            </CommandItem>
-                        ))}
-                    </CommandGroup>
+                        <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
+                        <CommandGroup>
+                            {products.map((product) => (
+                                <CommandItem
+                                    key={product.id}
+                                    value={product.name}
+                                    onSelect={() => handleSelect(product.id)}
+                                    className="flex items-center gap-2 cursor-pointer"
+                                >
+                                    <Checkbox
+                                        checked={selectedProducts.includes(product.id)}
+                                        onChange={() => handleSelect(product.id)}
+                                    />
+                                    <span className="flex-1">{product.name}</span>
+                                    {selectedProducts.includes(product.id) && (
+                                        <Check className="h-4 w-4 text-primary" />
+                                    )}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
                     </CommandList>
                 </Command>
             </PopoverContent>
@@ -87,16 +96,22 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   useEffect(() => {
     if (employee) {
-      setRules(getEmployeeProfitRules(employee.id));
+      const employeeId = employee.user_id || employee.id;
+      setRules(getEmployeeProfitRules(employeeId));
     }
   }, [employee, getEmployeeProfitRules, open]);
 
   if (!employee) return null;
 
   const handleRuleChange = (ruleType, targetId, profitAmount) => {
-    const existingRuleIndex = rules.findIndex(r => r.ruleType === ruleType && r.targetId === targetId);
+    const existingRuleIndex = rules.findIndex(r => r.rule_type === ruleType && r.target_id === targetId);
     let newRules = [...rules];
-    const newRule = { ruleType, targetId, profitAmount: parseFloat(profitAmount) || 0, employeeId: employee.id };
+    const newRule = { 
+      rule_type: ruleType, 
+      target_id: targetId, 
+      profit_amount: parseFloat(profitAmount) || 0, 
+      employee_id: employee.user_id || employee.id 
+    };
 
     if (existingRuleIndex > -1) {
       newRules[existingRuleIndex] = newRule;
@@ -107,21 +122,21 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
   };
   
   const handleRemoveRule = (ruleType, targetId) => {
-    setRules(rules.filter(r => !(r.ruleType === ruleType && r.targetId === targetId)));
+    setRules(rules.filter(r => !(r.rule_type === ruleType && r.target_id === targetId)));
   };
 
   const handleSave = () => {
-    setEmployeeProfitRule(employee.id, rules);
+    setEmployeeProfitRule(employee.user_id || employee.id, rules);
     toast({
       title: "تم حفظ قواعد الأرباح",
-      description: `تم تحديث قواعد الأرباح للموظف ${employee.fullName}.`,
-      variant: 'success'
+      description: `تم تحديث قواعد الأرباح للموظف ${employee.full_name || employee.username}.`,
+      variant: 'default'
     });
     onOpenChange(false);
   };
   
   const getRuleValue = (ruleType, targetId) => {
-    return rules.find(r => r.ruleType === ruleType && r.targetId === targetId)?.profitAmount || '';
+    return rules.find(r => r.rule_type === ruleType && r.target_id === targetId)?.profit_amount || '';
   };
   
   const productCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
@@ -129,11 +144,15 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
   const handleCopyRules = (fromEmployeeId) => {
     if (!fromEmployeeId) return;
     const rulesToCopy = getEmployeeProfitRules(fromEmployeeId);
-    setRules(rulesToCopy);
+    const copiedRules = rulesToCopy.map(rule => ({
+      ...rule,
+      employee_id: employee.user_id || employee.id
+    }));
+    setRules(copiedRules);
     toast({
       title: "تم نسخ القواعد",
       description: `تم نسخ قواعد الأرباح من الموظف المحدد.`,
-      variant: 'success'
+      variant: 'default'
     });
   };
 
@@ -145,22 +164,27 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
     let newRules = [...rules];
     const profit = parseFloat(multiProductProfit);
     selectedProducts.forEach(productId => {
-        const existingRuleIndex = newRules.findIndex(r => r.ruleType === 'product' && r.targetId === productId);
+        const existingRuleIndex = newRules.findIndex(r => r.rule_type === 'product' && r.target_id === productId);
         if (existingRuleIndex > -1) {
-            newRules[existingRuleIndex].profitAmount = profit;
+            newRules[existingRuleIndex].profit_amount = profit;
         } else {
-            newRules.push({ ruleType: 'product', targetId: productId, profitAmount: profit, employeeId: employee.id });
+            newRules.push({ 
+              rule_type: 'product', 
+              target_id: productId, 
+              profit_amount: profit, 
+              employee_id: employee.user_id || employee.id 
+            });
         }
     });
     setRules(newRules);
     setSelectedProducts([]);
     setMultiProductProfit('');
-    toast({ title: "تم التطبيق", description: "تم تطبيق الربح على المنتجات المحددة.", variant: 'success' });
+    toast({ title: "تم التطبيق", description: "تم تطبيق الربح على المنتجات المحددة.", variant: 'default' });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[90vw] w-full sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0 pb-3 sm:pb-4">
           <DialogTitle className="text-lg sm:text-xl">قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
           <DialogDescription className="text-sm sm:text-base">
@@ -305,18 +329,18 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                   <div className="space-y-3 p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/30">
                     <h4 className="font-semibold text-purple-700 dark:text-purple-300">معلومات إضافية</h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                      <div className="text-center">
-                        <div className="font-bold text-lg text-purple-600">{rules.filter(r => r.ruleType === 'product').length}</div>
-                        <div className="text-muted-foreground">قواعد المنتجات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-lg text-blue-600">{rules.filter(r => r.ruleType === 'category').length}</div>
-                        <div className="text-muted-foreground">قواعد التصنيفات</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="font-bold text-lg text-green-600">{rules.filter(r => r.ruleType === 'general').length}</div>
-                        <div className="text-muted-foreground">القواعد العامة</div>
-                      </div>
+                       <div className="text-center">
+                         <div className="font-bold text-lg text-purple-600">{rules.filter(r => r.rule_type === 'product').length}</div>
+                         <div className="text-muted-foreground">قواعد المنتجات</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="font-bold text-lg text-blue-600">{rules.filter(r => r.rule_type === 'category').length}</div>
+                         <div className="text-muted-foreground">قواعد التصنيفات</div>
+                       </div>
+                       <div className="text-center">
+                         <div className="font-bold text-lg text-green-600">{rules.filter(r => r.rule_type === 'general').length}</div>
+                         <div className="text-muted-foreground">القواعد العامة</div>
+                       </div>
                     </div>
                   </div>
                 </CardContent>
