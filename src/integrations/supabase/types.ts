@@ -255,6 +255,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_profit_rules: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          is_active: boolean
+          profit_amount: number
+          profit_percentage: number | null
+          rule_type: string
+          target_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_active?: boolean
+          profit_amount?: number
+          profit_percentage?: number | null
+          rule_type: string
+          target_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_active?: boolean
+          profit_amount?: number
+          profit_percentage?: number | null
+          rule_type?: string
+          target_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           created_at: string
@@ -1195,6 +1231,18 @@ export type Database = {
           user_email: string
           error_message: string
         }[]
+      }
+      calculate_employee_profit: {
+        Args: {
+          p_employee_id: string
+          p_product_id: string
+          p_quantity: number
+          p_selling_price: number
+          p_cost_price: number
+          p_category_id?: string
+          p_department_id?: string
+        }
+        Returns: number
       }
       calculate_order_profit: {
         Args: { order_id_input: string }

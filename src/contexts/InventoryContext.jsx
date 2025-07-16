@@ -88,7 +88,7 @@ export const InventoryProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes] = await Promise.all([
+      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes, profitRulesRes] = await Promise.all([
         supabase.from('products').select(`
           *,
           product_variants (
@@ -155,7 +155,8 @@ export const InventoryProvider = ({ children }) => {
         `).order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false }),
         supabase.from('settings').select('*'),
-        supabase.from('ai_orders').select('*').order('created_at', { ascending: false })
+        supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
+        supabase.from('employee_profit_rules').select('*')
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -252,6 +253,18 @@ export const InventoryProvider = ({ children }) => {
       setProducts(processedProducts);
       setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
       setAiOrders(aiOrdersRes.data || []);
+
+      // تحميل قواعد الأرباح
+      if (profitRulesRes.data && profitRulesRes.data.length > 0) {
+        const rulesByEmployee = {};
+        profitRulesRes.data.forEach(rule => {
+          if (!rulesByEmployee[rule.employee_id]) {
+            rulesByEmployee[rule.employee_id] = [];
+          }
+          rulesByEmployee[rule.employee_id].push(rule);
+        });
+        setEmployeeProfitRules(rulesByEmployee);
+      }
     } catch (error) {
       console.error("Error fetching initial data:", error);
       toast({ title: "خطأ في تحميل البيانات", description: "لم نتمكن من تحميل البيانات الأولية. قد تكون هناك مشكلة في صلاحيات الوصول.", variant: "destructive" });
@@ -352,8 +365,50 @@ export const InventoryProvider = ({ children }) => {
   }, [employeeProfitRules]);
 
   const setEmployeeProfitRule = async (employeeId, rules) => {
-    // هذه الميزة غير متاحة حالياً - سيتم تطويرها لاحقاً
-    toast({ title: "تنبيه", description: "ميزة قواعد أرباح الموظفين ستكون متاحة قريباً.", variant: "default" });
+    try {
+      // حذف القواعد القديمة للموظف
+      const { error: deleteError } = await supabase
+        .from('employee_profit_rules')
+        .delete()
+        .eq('employee_id', employeeId);
+
+      if (deleteError) throw deleteError;
+
+      // إضافة القواعد الجديدة
+      if (rules && rules.length > 0) {
+        const { error: insertError } = await supabase
+          .from('employee_profit_rules')
+          .insert(rules.map(rule => ({
+            employee_id: employeeId,
+            rule_type: rule.rule_type,
+            target_id: rule.target_id,
+            profit_amount: rule.profit_amount || 0,
+            profit_percentage: rule.profit_percentage || null,
+            is_active: rule.is_active !== false
+          })));
+
+        if (insertError) throw insertError;
+      }
+
+      // تحديث البيانات المحلية
+      setEmployeeProfitRules(prev => ({
+        ...prev,
+        [employeeId]: rules
+      }));
+
+      toast({ 
+        title: "تم حفظ قواعد الأرباح", 
+        description: "تم تحديث قواعد الأرباح بنجاح.", 
+        variant: "default" 
+      });
+    } catch (error) {
+      console.error('خطأ في حفظ قواعد الأرباح:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "فشل في حفظ قواعد الأرباح. حاول مرة أخرى.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   const calculateProfit = useCallback((item, employeeId) => {

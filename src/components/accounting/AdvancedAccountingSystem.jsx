@@ -371,12 +371,15 @@ const AdvancedAccountingSystem = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {kpiCards.map((stat, index) => (
           <motion.div 
-            key={`${stat.title}-${index}-updated`} 
+            key={stat.key || `${stat.title}-${index}`} 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ delay: index * 0.05 }}
           >
-            <StatCard {...stat} />
+            <StatCard 
+              {...stat}
+              onClick={stat.onClick}
+            />
           </motion.div>
         ))}
       </div>
