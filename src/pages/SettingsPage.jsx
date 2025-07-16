@@ -32,7 +32,7 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
-import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+
 import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
 import EmployeePermissionsManager from '@/components/manage-employees/EmployeePermissionsManager';
@@ -144,7 +144,7 @@ const SettingsPage = () => {
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
-  const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
+  
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
   const [isPermissionsManagerOpen, setIsPermissionsManagerOpen] = useState(false);
 
@@ -229,27 +229,28 @@ const SettingsPage = () => {
               />
             )}
 
-            {/* إدارة الأدوار والصلاحيات - للمدراء فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Shield}
-                title="إدارة الأدوار والصلاحيات"
-                description="تعيين أدوار الموظفين وإدارة صلاحيات المنتجات"
-                iconColor="from-indigo-500 to-indigo-600"
-                onClick={() => setIsRoleManagerOpen(true)}
-                badge={<Badge variant="secondary">جديد</Badge>}
-              />
-            )}
 
-            {/* إدارة صلاحيات الموظفين الشاملة - للمدراء فقط */}
+            {/* إدارة الموظفين الشاملة - للمدراء فقط */}
             {isAdmin && (
               <ModernCard
                 icon={Users}
-                title="إدارة صلاحيات الموظفين"
-                description="نظام شامل لإدارة صلاحيات المنتجات والأقسام والمواسم للموظفين"
+                title="إدارة الموظفين"
+                description="نظام شامل لإدارة الموظفين، أدوارهم، وصلاحيات المنتجات"
                 iconColor="from-emerald-500 to-emerald-600"
+                onClick={() => navigate('/manage-employees')}
+                badge={<Badge variant="default">النظام المتكامل</Badge>}
+              />
+            )}
+
+            {/* إدارة صلاحيات المنتجات المتقدمة - للمدراء فقط */}
+            {isAdmin && (
+              <ModernCard
+                icon={Shield}
+                title="صلاحيات المنتجات المتقدمة"
+                description="إدارة تفصيلية لصلاحيات المنتجات والأقسام والمواسم للموظفين"
+                iconColor="from-purple-500 to-purple-600"
                 onClick={() => setIsPermissionsManagerOpen(true)}
-                badge={<Badge variant="destructive">نظام جديد</Badge>}
+                badge={<Badge variant="outline">متقدم</Badge>}
               />
             )}
 
@@ -500,10 +501,6 @@ const SettingsPage = () => {
         />
       )}
 
-      <UnifiedRoleManager 
-        open={isRoleManagerOpen} 
-        onOpenChange={setIsRoleManagerOpen} 
-      />
 
       <EmployeeProfitsManager 
         open={isProfitsManagerOpen} 
