@@ -104,7 +104,7 @@ export const useColors = () => useSupabaseData('colors');
 export const useSizes = () => useSupabaseData('sizes');
 export const useProducts = () => useSupabaseData('products');
 export const useCustomers = () => useSupabaseData('customers');
-export const useOrders = () => useSupabaseData('orders');
+export const useSupabaseOrders = () => useSupabaseData('orders');
 export const usePurchases = () => useSupabaseData('purchases');
 
 // Hook for inventory with special operations
