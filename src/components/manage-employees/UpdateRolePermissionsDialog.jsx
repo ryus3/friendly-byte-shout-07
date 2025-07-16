@@ -51,14 +51,14 @@ const UpdateRolePermissionsDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="w-[95vw] max-w-4xl h-[90vh] max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>تحديث صلاحيات جماعي</DialogTitle>
           <DialogDescription>
             تطبيق نفس الصلاحيات على جميع المستخدمين الذين لديهم الدور المحدد. هذا الإجراء لا رجعة فيه.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4 max-h-[70vh] overflow-y-auto pr-2">
+        <div className="space-y-6 py-4 flex-1 overflow-y-auto pr-2">
           <div className="space-y-2">
             <Label>الدور المستهدف</Label>
             <Select value={role} onValueChange={setRole}>

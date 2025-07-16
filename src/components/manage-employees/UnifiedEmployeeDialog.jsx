@@ -73,7 +73,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[95vw] max-w-6xl h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-xl">
             إدارة الموظف: {employee.full_name}
@@ -81,26 +81,30 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic" className="flex items-center space-x-2 space-x-reverse">
-              <User className="h-4 w-4" />
-              <span>الإعدادات الأساسية</span>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger value="basic" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">الإعدادات الأساسية</span>
+              <span className="sm:hidden">أساسية</span>
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center space-x-2 space-x-reverse">
-              <Shield className="h-4 w-4" />
-              <span>الأدوار والصلاحيات</span>
+            <TabsTrigger value="roles" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">الأدوار والصلاحيات</span>
+              <span className="sm:hidden">أدوار</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center space-x-2 space-x-reverse">
-              <Package className="h-4 w-4" />
-              <span>صلاحيات المنتجات</span>
+            <TabsTrigger value="products" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">صلاحيات المنتجات</span>
+              <span className="sm:hidden">منتجات</span>
             </TabsTrigger>
-            <TabsTrigger value="view" className="flex items-center space-x-2 space-x-reverse">
-              <Eye className="h-4 w-4" />
-              <span>معاينة النظام</span>
+            <TabsTrigger value="view" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">معاينة النظام</span>
+              <span className="sm:hidden">معاينة</span>
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto mt-4">
+          <div className="flex-1 overflow-y-auto mt-2 sm:mt-4">
             <TabsContent value="basic" className="space-y-6">
               <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-4 rounded-xl border border-border/50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
