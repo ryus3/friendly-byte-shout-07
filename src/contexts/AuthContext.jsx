@@ -357,19 +357,40 @@ export const AuthProvider = ({ children }) => {
   const updateUser = async (userId, data) => {
     if (!supabase) {
       toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
-      return;
+      return { success: false, error: "Local mode" };
     }
-    const { error } = await supabase.from('profiles').update(data).eq('user_id', userId);
-    if (error) {
-      toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
-      return { success: false, error };
-    } else {
+    
+    try {
+      console.log('Updating user:', userId, 'with data:', data);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('user_id', userId);
+        
+      if (error) {
+        console.error('Update error:', error);
+        toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
+        return { success: false, error };
+      }
+      
+      console.log('User updated successfully');
       toast({ title: 'نجاح', description: 'تم تحديث المستخدم بنجاح.' });
-      if (userId === user.id) {
+      
+      // تحديث البيانات المحلية
+      if (userId === user?.id) {
         const updatedProfile = await fetchUserProfile(user);
         setUser(updatedProfile);
       }
+      
+      // تحديث قائمة جميع المستخدمين
+      await fetchAdminData();
+      
       return { success: true };
+    } catch (error) {
+      console.error('updateUser catch error:', error);
+      toast({ title: 'خطأ', description: `خطأ غير متوقع: ${error.message}`, variant: 'destructive' });
+      return { success: false, error };
     }
   };
 
