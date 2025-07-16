@@ -509,6 +509,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                 </CardContent>
               </Card>
             </TabsContent>
+            </div>
           </Tabs>
         </div>
         
