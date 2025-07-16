@@ -510,12 +510,12 @@ const UnifiedEmployeePermissionsDialog = ({
                 <div className="grid grid-cols-2 gap-3">
                   {categories.map(category => (
                     <div key={category.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
-                      <Checkbox
-                        id={`cat-${category.id}-${employee.id}`}
-                        checked={categoryPermissions.includes(category.id) || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                        onCheckedChange={(checked) => handleCategoryPermissionChange(category.id, checked)}
-                        disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
-                      />
+                       <Checkbox
+                         id={`cat-${category.id}-${employee.id}`}
+                         checked={categoryPermissions.includes(category.id) || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                         onCheckedChange={(checked) => handleCategoryPermissionChange(category.id, checked)}
+                         disabled={role === 'admin' || role === 'deputy'}
+                       />
                       <Label htmlFor={`cat-${category.id}-${employee.id}`} className="text-sm font-medium cursor-pointer">
                         {category.name}
                       </Label>
@@ -542,12 +542,12 @@ const UnifiedEmployeePermissionsDialog = ({
                 <div className="grid grid-cols-4 gap-2">
                   {colors.map(color => (
                     <div key={color.id} className="flex items-center space-x-2 space-x-reverse p-1">
-                      <Checkbox
-                        id={`color-${color.id}-${employee.id}`}
-                        checked={colorPermissions.includes(color.id) || colorPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                        onCheckedChange={(checked) => handleColorPermissionChange(color.id, checked)}
-                        disabled={role === 'admin' || role === 'deputy' || colorPermissions.includes('all')}
-                      />
+                       <Checkbox
+                         id={`color-${color.id}-${employee.id}`}
+                         checked={colorPermissions.includes(color.id) || colorPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                         onCheckedChange={(checked) => handleColorPermissionChange(color.id, checked)}
+                         disabled={role === 'admin' || role === 'deputy'}
+                       />
                       <Label htmlFor={`color-${color.id}-${employee.id}`} className="text-xs cursor-pointer flex items-center gap-1">
                         <div 
                           className="w-3 h-3 rounded border" 
@@ -578,12 +578,12 @@ const UnifiedEmployeePermissionsDialog = ({
                 <div className="grid grid-cols-3 gap-2">
                   {sizes.map(size => (
                     <div key={size.id} className="flex items-center space-x-2 space-x-reverse p-1">
-                      <Checkbox
-                        id={`size-${size.id}-${employee.id}`}
-                        checked={sizePermissions.includes(size.id) || sizePermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                        onCheckedChange={(checked) => handleSizePermissionChange(size.id, checked)}
-                        disabled={role === 'admin' || role === 'deputy' || sizePermissions.includes('all')}
-                      />
+                       <Checkbox
+                         id={`size-${size.id}-${employee.id}`}
+                         checked={sizePermissions.includes(size.id) || sizePermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                         onCheckedChange={(checked) => handleSizePermissionChange(size.id, checked)}
+                         disabled={role === 'admin' || role === 'deputy'}
+                       />
                       <Label htmlFor={`size-${size.id}-${employee.id}`} className="text-xs cursor-pointer">{size.name}</Label>
                     </div>
                   ))}
@@ -608,12 +608,12 @@ const UnifiedEmployeePermissionsDialog = ({
                 <div className="grid grid-cols-2 gap-2">
                   {departments.map(department => (
                     <div key={department.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
-                      <Checkbox
-                        id={`dept-${department.id}-${employee.id}`}
-                        checked={departmentPermissions.includes(department.id) || departmentPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                        onCheckedChange={(checked) => handleDepartmentPermissionChange(department.id, checked)}
-                        disabled={role === 'admin' || role === 'deputy' || departmentPermissions.includes('all')}
-                      />
+                       <Checkbox
+                         id={`dept-${department.id}-${employee.id}`}
+                         checked={departmentPermissions.includes(department.id) || departmentPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                         onCheckedChange={(checked) => handleDepartmentPermissionChange(department.id, checked)}
+                         disabled={role === 'admin' || role === 'deputy'}
+                       />
                       <Label htmlFor={`dept-${department.id}-${employee.id}`} className="text-sm cursor-pointer">
                         {department.name}
                       </Label>
@@ -640,12 +640,12 @@ const UnifiedEmployeePermissionsDialog = ({
                 <div className="grid grid-cols-2 gap-2">
                   {productTypes.map(productType => (
                     <div key={productType.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
-                      <Checkbox
-                        id={`pt-${productType.id}-${employee.id}`}
-                        checked={productTypePermissions.includes(productType.id) || productTypePermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                        onCheckedChange={(checked) => handleProductTypePermissionChange(productType.id, checked)}
-                        disabled={role === 'admin' || role === 'deputy' || productTypePermissions.includes('all')}
-                      />
+                       <Checkbox
+                         id={`pt-${productType.id}-${employee.id}`}
+                         checked={productTypePermissions.includes(productType.id) || productTypePermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                         onCheckedChange={(checked) => handleProductTypePermissionChange(productType.id, checked)}
+                         disabled={role === 'admin' || role === 'deputy'}
+                       />
                       <Label htmlFor={`pt-${productType.id}-${employee.id}`} className="text-sm cursor-pointer">
                         {productType.name}
                       </Label>
@@ -672,12 +672,12 @@ const UnifiedEmployeePermissionsDialog = ({
                 <div className="grid grid-cols-2 gap-2">
                   {seasonsOccasions.map(seasonOccasion => (
                     <div key={seasonOccasion.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
-                      <Checkbox
-                        id={`so-${seasonOccasion.id}-${employee.id}`}
-                        checked={seasonOccasionPermissions.includes(seasonOccasion.id) || seasonOccasionPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                        onCheckedChange={(checked) => handleSeasonOccasionPermissionChange(seasonOccasion.id, checked)}
-                        disabled={role === 'admin' || role === 'deputy' || seasonOccasionPermissions.includes('all')}
-                      />
+                       <Checkbox
+                         id={`so-${seasonOccasion.id}-${employee.id}`}
+                         checked={seasonOccasionPermissions.includes(seasonOccasion.id) || seasonOccasionPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                         onCheckedChange={(checked) => handleSeasonOccasionPermissionChange(seasonOccasion.id, checked)}
+                         disabled={role === 'admin' || role === 'deputy'}
+                       />
                       <Label htmlFor={`so-${seasonOccasion.id}-${employee.id}`} className="text-sm cursor-pointer">
                         {seasonOccasion.name}
                       </Label>

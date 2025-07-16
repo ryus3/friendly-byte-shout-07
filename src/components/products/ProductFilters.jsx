@@ -5,26 +5,75 @@ import { Search, QrCode, SlidersHorizontal, LayoutGrid, List, X } from 'lucide-r
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useVariants } from '@/contexts/VariantsContext';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
 const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBarcodeSearch, viewMode, setViewMode, onProductSelect }) => {
   const { products } = useInventory();
+  const { user } = useAuth();
+  const { categories: allCategories, colors: allColors, sizes: allSizes, departments: allDepartments, productTypes: allProductTypes, seasonsOccasions: allSeasonsOccasions } = useVariants();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // استخراج المتغيرات الحقيقية من المنتجات
-  const realVariantData = useMemo(() => {
-    const realCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
-    const realBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
-    const realColors = [...new Set(products.flatMap(p => 
-      p.variants?.map(v => v.color).filter(Boolean) || []
-    ))];
-    const realSizes = [...new Set(products.flatMap(p => 
-      p.variants?.map(v => v.size).filter(Boolean) || []
-    ))];
-    
-    return { realCategories, realBrands, realColors, realSizes };
-  }, [products]);
+  // استخراج المتغيرات المسموحة للمستخدم
+  const allowedData = useMemo(() => {
+    // للمدير - عرض كل شيء
+    if (!user || user.role === 'admin' || user.role === 'deputy' || user?.permissions?.includes('*')) {
+      return {
+        allowedCategories: [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))],
+        allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
+        allowedColors: [...new Set(products.flatMap(p => p.variants?.map(v => v.color).filter(Boolean) || []))],
+        allowedSizes: [...new Set(products.flatMap(p => p.variants?.map(v => v.size).filter(Boolean) || []))],
+        allowedDepartments: allDepartments.map(d => d.name),
+        allowedProductTypes: allProductTypes.map(pt => pt.name),
+        allowedSeasonsOccasions: allSeasonsOccasions.map(so => so.name)
+      };
+    }
+
+    // للموظفين - فقط ما هو مسموح
+    try {
+      const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+      const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+      const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
+      const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
+      const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
+      const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
+
+      return {
+        allowedCategories: categoryPermissions.includes('all') 
+          ? allCategories.map(c => c.name)
+          : allCategories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
+        allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
+        allowedColors: colorPermissions.includes('all')
+          ? allColors.map(c => c.name)
+          : allColors.filter(c => colorPermissions.includes(c.id)).map(c => c.name),
+        allowedSizes: sizePermissions.includes('all')
+          ? allSizes.map(s => s.name)
+          : allSizes.filter(s => sizePermissions.includes(s.id)).map(s => s.name),
+        allowedDepartments: departmentPermissions.includes('all')
+          ? allDepartments.map(d => d.name)
+          : allDepartments.filter(d => departmentPermissions.includes(d.id)).map(d => d.name),
+        allowedProductTypes: productTypePermissions.includes('all')
+          ? allProductTypes.map(pt => pt.name)
+          : allProductTypes.filter(pt => productTypePermissions.includes(pt.id)).map(pt => pt.name),
+        allowedSeasonsOccasions: seasonOccasionPermissions.includes('all')
+          ? allSeasonsOccasions.map(so => so.name)
+          : allSeasonsOccasions.filter(so => seasonOccasionPermissions.includes(so.id)).map(so => so.name)
+      };
+    } catch (e) {
+      console.error('Error parsing permissions:', e);
+      return {
+        allowedCategories: [],
+        allowedBrands: [],
+        allowedColors: [],
+        allowedSizes: [],
+        allowedDepartments: [],
+        allowedProductTypes: [],
+        allowedSeasonsOccasions: []
+      };
+    }
+  }, [products, user, allCategories, allColors, allSizes, allDepartments, allProductTypes, allSeasonsOccasions]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -175,7 +224,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">كل الأصناف</SelectItem>
-                      {realVariantData.realCategories.map(category => (
+                      {allowedData.allowedCategories.map(category => (
                         <SelectItem key={category} value={category}>{category}</SelectItem>
                       ))}
                     </SelectContent>
@@ -191,7 +240,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">كل العلامات</SelectItem>
-                      {realVariantData.realBrands.map(brand => (
+                      {allowedData.allowedBrands.map(brand => (
                         <SelectItem key={brand} value={brand}>{brand}</SelectItem>
                       ))}
                     </SelectContent>
@@ -207,7 +256,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">كل الألوان</SelectItem>
-                      {realVariantData.realColors.map(color => (
+                      {allowedData.allowedColors.map(color => (
                         <SelectItem key={color} value={color}>{color}</SelectItem>
                       ))}
                     </SelectContent>
@@ -223,7 +272,7 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">كل الأحجام</SelectItem>
-                      {realVariantData.realSizes.map(size => (
+                      {allowedData.allowedSizes.map(size => (
                         <SelectItem key={size} value={size}>{size}</SelectItem>
                       ))}
                     </SelectContent>

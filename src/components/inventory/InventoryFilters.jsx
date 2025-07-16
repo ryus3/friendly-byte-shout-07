@@ -1,15 +1,53 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, QrCode, SlidersHorizontal, X } from 'lucide-react';
 import { useVariants } from '@/contexts/VariantsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
 const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) => {
-  const { colors, sizes } = useVariants();
+  const { colors, sizes, categories: allCategories } = useVariants();
+  const { user } = useAuth();
+
+  // الحصول على الفئات والألوان والأحجام المسموحة للمستخدم
+  const allowedData = useMemo(() => {
+    if (!user || user.role === 'admin' || user.role === 'deputy' || user?.permissions?.includes('*')) {
+      return {
+        allowedCategories: categories,
+        allowedColors: colors,
+        allowedSizes: sizes
+      };
+    }
+
+    try {
+      const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+      const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+      const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
+
+      return {
+        allowedCategories: categoryPermissions.includes('all') 
+          ? categories
+          : allCategories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
+        allowedColors: colorPermissions.includes('all')
+          ? colors
+          : colors.filter(c => colorPermissions.includes(c.id)),
+        allowedSizes: sizePermissions.includes('all')
+          ? sizes
+          : sizes.filter(s => sizePermissions.includes(s.id))
+      };
+    } catch (e) {
+      console.error('Error parsing permissions:', e);
+      return {
+        allowedCategories: [],
+        allowedColors: [],
+        allowedSizes: []
+      };
+    }
+  }, [categories, colors, sizes, user, allCategories]);
   
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -83,21 +121,21 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                       <SelectTrigger><SelectValue placeholder="الفئة" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الفئات</SelectItem>
-                        {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {allowedData.allowedCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={filters.color} onValueChange={(value) => handleFilterChange('color', value)}>
                       <SelectTrigger><SelectValue placeholder="اللون" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الألوان</SelectItem>
-                        {colors.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                        {allowedData.allowedColors.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={filters.size} onValueChange={(value) => handleFilterChange('size', value)}>
                       <SelectTrigger><SelectValue placeholder="القياس" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع القياسات</SelectItem>
-                        {sizes.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                        {allowedData.allowedSizes.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <div className="grid grid-cols-1 items-center gap-2">
