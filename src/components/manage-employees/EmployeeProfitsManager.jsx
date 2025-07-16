@@ -22,7 +22,8 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   const employees = useMemo(() => {
-    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'manager');
+    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'manager')
+      .filter(u => u.fullName && u.fullName.trim() !== ''); // فلترة الموظفين الذين لديهم أسماء صحيحة
   }, [allUsers]);
 
   const employeeStats = useMemo(() => {
@@ -127,10 +128,10 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                           <div key={emp.id} className="flex items-center justify-between p-3 border rounded-lg">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
-                                {emp.fullName.charAt(0)}
+                                {emp.fullName ? emp.fullName.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
                               </div>
                               <div>
-                                <div className="font-semibold">{emp.fullName}</div>
+                                <div className="font-semibold">{emp.fullName || emp.username || 'موظف غير محدد'}</div>
                                 <div className="text-sm text-muted-foreground">{emp.role}</div>
                               </div>
                             </div>
@@ -171,10 +172,10 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3 mb-3">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
-                              {emp.fullName.charAt(0)}
+                              {emp.fullName ? emp.fullName.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
                             </div>
                             <div className="flex-1">
-                              <div className="font-semibold">{emp.fullName}</div>
+                              <div className="font-semibold">{emp.fullName || emp.username || 'موظف غير محدد'}</div>
                               <div className="text-sm text-muted-foreground">{emp.role}</div>
                             </div>
                           </div>
@@ -223,7 +224,9 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                             </SelectTrigger>
                             <SelectContent>
                               {employees.map(emp => (
-                                <SelectItem key={emp.id} value={emp.id}>{emp.fullName}</SelectItem>
+                                <SelectItem key={emp.id} value={emp.id}>
+                                  {emp.fullName || emp.username || 'موظف غير محدد'}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
