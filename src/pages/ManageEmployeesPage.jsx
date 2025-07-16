@@ -70,11 +70,10 @@ const ManageEmployeesPage = () => {
               <p className="text-muted-foreground mt-1">عرض وتعديل صلاحيات وحسابات الموظفين</p>
             </div>
           </div>
-            <Button onClick={handleAddNew}>
-              <UserPlus className="w-4 h-4 ml-2" />
-              إضافة موظف جديد
-            </Button>
-          </div>
+          <Button onClick={handleAddNew}>
+            <UserPlus className="w-4 h-4 ml-2" />
+            إضافة موظف جديد
+          </Button>
         </div>
 
         <div className="bg-card rounded-xl p-4 border border-border grid grid-cols-1 md:grid-cols-3 gap-4">
