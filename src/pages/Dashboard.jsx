@@ -350,7 +350,7 @@ const Dashboard = () => {
 
         return {
             totalOrdersCount: filteredTotalOrders.length,
-            netProfit: financialSummary?.netProfit || 0,
+            netProfit: 0, // سيتم حسابها من financialSummary بشكل منفصل
             pendingProfit,
             deliveredSales,
             pendingSales,
@@ -369,9 +369,8 @@ const Dashboard = () => {
         periods.pendingSales, 
         user?.id, 
         user?.user_id, 
-        canViewAllData, 
-        financialSummary?.netProfit,
-        calculateManagerProfit
+        canViewAllData
+        // إزالة financialSummary?.netProfit و calculateManagerProfit من dependencies لتجنب infinite loop
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
@@ -432,7 +431,7 @@ const Dashboard = () => {
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
         hasPermission('view_profits') && {
-            key: 'netProfit', title: 'صافي الارباح', value: dashboardData.netProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
+            key: 'netProfit', title: 'صافي الارباح', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         hasPermission('view_profits') && {
             key: 'pendingProfit', 
