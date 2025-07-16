@@ -35,7 +35,7 @@ import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard'
 
 import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
-import EmployeePermissionsManager from '@/components/manage-employees/EmployeePermissionsManager';
+import EmployeeManagementDialog from '@/components/manage-employees/EmployeeManagementDialog';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -146,7 +146,7 @@ const SettingsPage = () => {
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
-  const [isPermissionsManagerOpen, setIsPermissionsManagerOpen] = useState(false);
+  const [isEmployeeManagementOpen, setIsEmployeeManagementOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -230,29 +230,18 @@ const SettingsPage = () => {
             )}
 
 
-            {/* إدارة الموظفين الشاملة - للمدراء فقط */}
+            {/* إدارة الموظفين - للمدراء فقط */}
             {isAdmin && (
               <ModernCard
                 icon={Users}
                 title="إدارة الموظفين"
-                description="نظام شامل لإدارة الموظفين، أدوارهم، وصلاحيات المنتجات"
-                iconColor="from-emerald-500 to-emerald-600"
-                onClick={() => navigate('/manage-employees')}
+                description="نظام متكامل لإدارة الموظفين والأدوار والصلاحيات وصلاحيات المنتجات"
+                iconColor="from-green-500 to-green-600"
+                onClick={() => setIsEmployeeManagementOpen(true)}
                 badge={<Badge variant="default">النظام المتكامل</Badge>}
               />
             )}
 
-            {/* صلاحيات المنتجات المتقدمة - للمدراء فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Shield}
-                title="صلاحيات المنتجات المتقدمة"
-                description="نظام مفصل ومتخصص لإدارة صلاحيات المنتجات بشكل دقيق ومتقدم"
-                iconColor="from-purple-500 to-purple-600"
-                onClick={() => setIsPermissionsManagerOpen(true)}
-                badge={<Badge variant="outline">متخصص</Badge>}
-              />
-            )}
 
             {/* إعدادات العملاء - للجميع */}
             <ModernCard
@@ -507,9 +496,9 @@ const SettingsPage = () => {
         onOpenChange={setIsProfitsManagerOpen} 
       />
 
-      <EmployeePermissionsManager 
-        open={isPermissionsManagerOpen} 
-        onOpenChange={setIsPermissionsManagerOpen} 
+      <EmployeeManagementDialog 
+        open={isEmployeeManagementOpen} 
+        onOpenChange={setIsEmployeeManagementOpen} 
       />
     </>
   );
