@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
     const { data: profile, error } = await supabase
       .from('profiles')
       .select('*, default_page')
-      .eq('id', supabaseUser.id)
+      .eq('user_id', supabaseUser.id)
       .single();
 
     if (error) {
@@ -354,7 +354,7 @@ export const AuthProvider = ({ children }) => {
       toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.from('profiles').update(data).eq('id', userId);
+    const { error } = await supabase.from('profiles').update(data).eq('user_id', userId);
     if (error) {
       toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
       return { success: false, error };
@@ -375,7 +375,7 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await supabase
             .from('profiles')
             .update({ full_name: profileData.full_name, username: profileData.username })
-            .eq('id', user.id)
+            .eq('user_id', user.id)
             .select()
             .single();
 
