@@ -518,7 +518,19 @@ const PendingRegistrations = ({ onClose }) => {
   const { deleteNotificationByTypeAndData } = useNotifications();
   
   const handleApprove = async (userId, data) => {
-    await updateUser(userId, { ...data, status: 'active' });
+    const updatedData = {
+      ...data,
+      status: 'active',
+      category_permissions: JSON.stringify(data.category_permissions || []),
+      color_permissions: JSON.stringify(data.color_permissions || []),
+      size_permissions: JSON.stringify(data.size_permissions || []),
+      department_permissions: JSON.stringify(data.department_permissions || []),
+      product_type_permissions: JSON.stringify(data.product_type_permissions || []),
+      season_occasion_permissions: JSON.stringify(data.season_occasion_permissions || []),
+      permissions: JSON.stringify(data.permissions || [])
+    };
+    
+    await updateUser(userId, updatedData);
     await deleteNotificationByTypeAndData('new_registration', { id: userId });
     refetchAdminData();
   };

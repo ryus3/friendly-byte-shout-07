@@ -25,25 +25,30 @@ const ProductsPage = () => {
   const { colors } = useVariants();
   
   const { categories, brands } = useMemo(() => {
-    let uniqueCategories = [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))];
+    // استخراج التصنيفات والعلامات التجارية المسموحة فقط
+    const allowedProducts = products.filter(product => {
+      // التحقق من صلاحيات التصنيفات
+      if (product.product_categories && product.product_categories.length > 0) {
+        const hasAllowedCategory = product.product_categories.some(pc => 
+          hasPermission('view_category_all') || hasPermission(`view_category_${pc.category_id}`)
+        );
+        if (!hasAllowedCategory) return false;
+      }
+
+      // التحقق من صلاحيات الأقسام
+      if (product.product_departments && product.product_departments.length > 0) {
+        const hasAllowedDepartment = product.product_departments.some(pd => 
+          hasPermission('view_department_all') || hasPermission(`view_department_${pd.department_id}`)
+        );
+        if (!hasAllowedDepartment) return false;
+      }
+
+      return true;
+    });
+
+    const uniqueCategories = [...new Set(allowedProducts.map(p => p.categories?.main_category).filter(Boolean))];
+    const uniqueBrands = [...new Set(allowedProducts.map(p => p.brand).filter(Boolean))];
     
-    // تصفية التصنيفات حسب الصلاحيات
-    if (!hasPermission('view_category_all')) {
-      const categoryMap = {
-        'ملابس': 'clothes',
-        'إلكترونيات': 'electronics',
-        'اكسسوارات': 'accessories',
-        'أحذية': 'shoes',
-        'حقائب': 'bags'
-      };
-      
-      uniqueCategories = uniqueCategories.filter(category => {
-        const categoryKey = categoryMap[category] || category.toLowerCase();
-        return hasPermission(`view_category_${categoryKey}`);
-      });
-    }
-    
-    const uniqueBrands = [...new Set(products.map(p => p.brand).filter(Boolean))];
     return { categories: uniqueCategories, brands: uniqueBrands };
   }, [products, hasPermission]);
   
@@ -91,25 +96,56 @@ const ProductsPage = () => {
   const filteredProducts = useMemo(() => {
     let tempProducts = products.filter(p => p.is_visible);
 
-    // تصفية المنتجات حسب صلاحيات التصنيفات
-    if (!hasPermission('view_category_all')) {
-      tempProducts = tempProducts.filter(p => {
-        const category = p.categories?.main_category?.toLowerCase();
-        if (!category) return false;
-        
-        // التحقق من وجود صلاحية للتصنيف المحدد
-        const categoryMap = {
-          'ملابس': 'clothes',
-          'إلكترونيات': 'electronics',
-          'اكسسوارات': 'accessories',
-          'أحذية': 'shoes',
-          'حقائب': 'bags'
-        };
-        
-        const categoryKey = categoryMap[category] || category;
-        return hasPermission(`view_category_${categoryKey}`);
-      });
-    }
+    // تطبيق صلاحيات المنتجات حسب التصنيفات والأقسام والمتغيرات
+    tempProducts = tempProducts.filter(product => {
+      // التحقق من صلاحيات التصنيفات
+      if (product.product_categories && product.product_categories.length > 0) {
+        const hasAllowedCategory = product.product_categories.some(pc => 
+          hasPermission('view_category_all') || hasPermission(`view_category_${pc.category_id}`)
+        );
+        if (!hasAllowedCategory) return false;
+      }
+
+      // التحقق من صلاحيات الأقسام
+      if (product.product_departments && product.product_departments.length > 0) {
+        const hasAllowedDepartment = product.product_departments.some(pd => 
+          hasPermission('view_department_all') || hasPermission(`view_department_${pd.department_id}`)
+        );
+        if (!hasAllowedDepartment) return false;
+      }
+
+      // التحقق من صلاحيات الألوان
+      if (product.variants && product.variants.length > 0) {
+        const hasAllowedColor = product.variants.some(variant => 
+          !variant.color_id || hasPermission('view_color_all') || hasPermission(`view_color_${variant.color_id}`)
+        );
+        if (!hasAllowedColor) return false;
+
+        // التحقق من صلاحيات الأحجام
+        const hasAllowedSize = product.variants.some(variant => 
+          !variant.size_id || hasPermission('view_size_all') || hasPermission(`view_size_${variant.size_id}`)
+        );
+        if (!hasAllowedSize) return false;
+      }
+
+      // التحقق من صلاحيات أنواع المنتجات
+      if (product.product_product_types && product.product_product_types.length > 0) {
+        const hasAllowedProductType = product.product_product_types.some(ppt => 
+          hasPermission('view_product_type_all') || hasPermission(`view_product_type_${ppt.product_type_id}`)
+        );
+        if (!hasAllowedProductType) return false;
+      }
+
+      // التحقق من صلاحيات المواسم والمناسبات
+      if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
+        const hasAllowedSeasonOccasion = product.product_seasons_occasions.some(pso => 
+          hasPermission('view_season_occasion_all') || hasPermission(`view_season_occasion_${pso.season_occasion_id}`)
+        );
+        if (!hasAllowedSeasonOccasion) return false;
+      }
+
+      return true;
+    });
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
