@@ -28,6 +28,7 @@ import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import TopPerformanceCards from '@/components/dashboard/TopPerformanceCards';
 
 const UnifiedDashboard = () => {
+  // جميع الهوكس يجب أن تُستدعى في الأعلى قبل أي return شرطي
   const navigate = useNavigate();
   const {
     user,
@@ -84,8 +85,10 @@ const UnifiedDashboard = () => {
     }
   }, [orders, profits, products, aiOrders, canViewAllData, getEmployeeStats]);
 
+  // حساب حالة التحميل بعد جميع الهوكس
   const loading = permissionsLoading || inventoryLoading;
 
+  // الآن يمكن استخدام early return بأمان
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
