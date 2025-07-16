@@ -35,6 +35,7 @@ import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard'
 import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
 import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
+import EmployeePermissionsManager from '@/components/manage-employees/EmployeePermissionsManager';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -145,6 +146,7 @@ const SettingsPage = () => {
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
+  const [isPermissionsManagerOpen, setIsPermissionsManagerOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -236,6 +238,18 @@ const SettingsPage = () => {
                 iconColor="from-indigo-500 to-indigo-600"
                 onClick={() => setIsRoleManagerOpen(true)}
                 badge={<Badge variant="secondary">جديد</Badge>}
+              />
+            )}
+
+            {/* إدارة صلاحيات الموظفين الشاملة - للمدراء فقط */}
+            {isAdmin && (
+              <ModernCard
+                icon={Users}
+                title="إدارة صلاحيات الموظفين"
+                description="نظام شامل لإدارة صلاحيات المنتجات والأقسام والمواسم للموظفين"
+                iconColor="from-emerald-500 to-emerald-600"
+                onClick={() => setIsPermissionsManagerOpen(true)}
+                badge={<Badge variant="destructive">نظام جديد</Badge>}
               />
             )}
 
@@ -494,6 +508,11 @@ const SettingsPage = () => {
       <EmployeeProfitsManager 
         open={isProfitsManagerOpen} 
         onOpenChange={setIsProfitsManagerOpen} 
+      />
+
+      <EmployeePermissionsManager 
+        open={isPermissionsManagerOpen} 
+        onOpenChange={setIsPermissionsManagerOpen} 
       />
     </>
   );
