@@ -44,7 +44,7 @@ const AddProductPage = () => {
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
   
   const [productInfo, setProductInfo] = useState({
-    name: '', price: '', costPrice: '', description: '', employeeProfitPercentage: '',
+    name: '', price: '', costPrice: '', description: '',
   });
   const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
   const [selectedCategories, setSelectedCategories] = useState([]);
