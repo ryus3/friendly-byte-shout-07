@@ -30,6 +30,16 @@
     /* Font scaling for display settings */
     --font-scale: 1;
     
+    /* Mobile-optimized sizes */
+    --mobile-text-xs: 0.7rem;
+    --mobile-text-sm: 0.8rem;
+    --mobile-text-base: 0.9rem;
+    --mobile-text-lg: 1rem;
+    --mobile-spacing-xs: 0.25rem;
+    --mobile-spacing-sm: 0.5rem;
+    --mobile-spacing-md: 0.75rem;
+    --mobile-spacing-lg: 1rem;
+    
     /* Order Status Colors - Professional Design */
     --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
     --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة */
@@ -243,5 +253,87 @@
 @media (max-width: 768px) {
   body {
     font-size: calc(0.9rem * var(--font-scale));
+    padding: 0.5rem;
+  }
+  
+  /* تحسين Dialog للهاتف */
+  .dialog-content {
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    margin: 1rem !important;
+  }
+  
+  /* تحسين الجداول للهاتف */
+  .table-responsive {
+    overflow-x: auto;
+  }
+  
+  /* تحسين البطاقات للهاتف */
+  .mobile-card {
+    padding: 0.75rem !important;
+    margin: 0.5rem 0 !important;
+  }
+  
+  /* تحسين الأزرار للهاتف */
+  .mobile-button {
+    min-height: 44px;
+    font-size: 0.875rem;
+  }
+  
+  /* تحسين الشبكة للهاتف */
+  .mobile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+  
+  /* تحسين النصوص للهاتف */
+  .mobile-text-xs { font-size: var(--mobile-text-xs) !important; }
+  .mobile-text-sm { font-size: var(--mobile-text-sm) !important; }
+  .mobile-text-base { font-size: var(--mobile-text-base) !important; }
+  .mobile-text-lg { font-size: var(--mobile-text-lg) !important; }
+  
+  /* تحسين التباعد للهاتف */
+  .mobile-spacing-xs { padding: var(--mobile-spacing-xs) !important; }
+  .mobile-spacing-sm { padding: var(--mobile-spacing-sm) !important; }
+  .mobile-spacing-md { padding: var(--mobile-spacing-md) !important; }
+  .mobile-spacing-lg { padding: var(--mobile-spacing-lg) !important; }
+}
+
+/* تحسين الهاتف الصغير */
+@media (max-width: 480px) {
+  body {
+    font-size: calc(0.8rem * var(--font-scale));
+    padding: 0.25rem;
+  }
+  
+  .mobile-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.25rem !important;
+  }
+  
+  .dialog-content {
+    margin: 0.5rem !important;
+    max-width: 98vw !important;
+  }
+}
+
+/* Dropdown improvements for mobile */
+@layer components {
+  .mobile-dropdown {
+    @apply bg-card/95 backdrop-blur-md border border-border/50 shadow-xl z-50;
+  }
+  
+  @media (max-width: 768px) {
+    .mobile-dropdown {
+      @apply fixed bottom-0 left-0 right-0 top-auto rounded-t-xl border-t max-h-[60vh] overflow-y-auto;
+      transform: translateY(100%);
+      animation: slideUp 0.3s ease-out forwards;
+    }
+  }
+}
+
+@keyframes slideUp {
+  to {
+    transform: translateY(0);
   }
 }

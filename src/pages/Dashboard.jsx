@@ -227,8 +227,17 @@ const Dashboard = () => {
         );
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
-        // حساب إجمالي الإيرادات من final_amount (تتضمن رسوم التوصيل)
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        // حساب إجمالي الإيرادات (المبيعات فقط بدون رسوم التوصيل)
+        const totalProductSales = deliveredOrders.reduce((sum, o) => {
+            const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
+            return sum + productsSalesOnly;
+        }, 0);
+        
+        // حساب إجمالي رسوم التوصيل منفصلة
+        const totalDeliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+        
+        // إجمالي الإيرادات = المبيعات + رسوم التوصيل
+        const totalRevenue = totalProductSales + totalDeliveryFees;
         
         // حساب تكلفة البضاعة المباعة من العناصر الفعلية
         const cogs = deliveredOrders.reduce((sum, o) => {
@@ -238,18 +247,23 @@ const Dashboard = () => {
           }, 0);
           return sum + orderCogs;
         }, 0);
-        const grossProfit = totalRevenue - cogs;
+        
+        // الربح الإجمالي = المبيعات - تكلفة البضاعة (بدون رسوم التوصيل)
+        const grossProfit = totalProductSales - cogs;
+        
         const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const totalExpenses = generalExpenses + employeeSettledDues;
-        const netProfit = grossProfit - totalExpenses;
+        
+        // صافي الأرباح = الربح الإجمالي + رسوم التوصيل - المصروفات العامة
+        const netProfit = grossProfit + totalDeliveryFees - totalExpenses;
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
           const day = format(parseISO(o.updated_at || o.created_at), 'dd');
           if (!salesByDay[day]) salesByDay[day] = 0;
-          // استخدام final_amount للمبيعات اليومية
-          salesByDay[day] += o.final_amount || o.total_amount || 0;
+          // استخدام المبيعات بدون رسوم التوصيل للمبيعات اليومية
+          salesByDay[day] += (o.total_amount || 0) - (o.delivery_fee || 0);
         });
         
         const expensesByDay = {};
@@ -268,7 +282,20 @@ const Dashboard = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
 
-        return { totalRevenue, cogs, grossProfit, totalExpenses, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
+        return { 
+            totalRevenue, 
+            totalProductSales, 
+            totalDeliveryFees, 
+            cogs, 
+            grossProfit, 
+            totalExpenses, 
+            employeeSettledDues, 
+            generalExpenses, 
+            netProfit, 
+            chartData, 
+            filteredExpenses: expensesInRange, 
+            deliveredOrders 
+        };
     }, [periods.netProfit, orders, accounting, products]);
 
     const dashboardData = useMemo(() => {
@@ -300,7 +327,7 @@ const Dashboard = () => {
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
           // المبيعات = إجمالي الطلب - رسوم التوصيل (فقط أسعار المنتجات)
-          const productsSalesOnly = (o.total_amount || 0);
+          const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
           return sum + productsSalesOnly;
         }, 0);
 
@@ -309,7 +336,7 @@ const Dashboard = () => {
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => {
           // المبيعات = إجمالي الطلب - رسوم التوصيل (فقط أسعار المنتجات)
-          const productsSalesOnly = (o.total_amount || 0);
+          const productsSalesOnly = (o.total_amount || 0) - (o.delivery_fee || 0);
           return sum + productsSalesOnly;
         }, 0);
 
@@ -463,7 +490,7 @@ const Dashboard = () => {
                 {hasPermission('request_profit_settlement') && !hasPermission('manage_profit_settlement') && (
                     <SettlementRequestCard pendingProfit={dashboardData.pendingProfit} onSettle={() => navigate('/profits-summary')} />
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 mobile-grid">
                     {allStatCards.slice(0, 8).map((stat, index) => (
                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
                             <StatCard {...stat} />
@@ -471,7 +498,7 @@ const Dashboard = () => {
                     ))}
                 </div>
                 {hasPermission('view_dashboard_top_lists') && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mobile-grid">
                         <TopListCard title="الزبائن الأكثر طلباً" items={dashboardData.topCustomers} titleIcon={Users} itemIcon={UserIcon} sortByPhone={true} />
                         <TopListCard title="المحافظات الأكثر طلباً" items={dashboardData.topProvinces} titleIcon={MapPin} itemIcon={MapPin} />
                         <TopListCard title="المنتجات الأكثر طلباً" items={dashboardData.topProducts} titleIcon={Package} itemIcon={TrendingUp} />
