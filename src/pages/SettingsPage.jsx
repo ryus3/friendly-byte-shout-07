@@ -25,7 +25,6 @@ import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
-import PermissionBasedEmployeeSettings from '@/components/settings/PermissionBasedEmployeeSettings';
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
@@ -140,7 +139,6 @@ const SettingsPage = () => {
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
-  const [selectedEmployeeForPermissions, setSelectedEmployeeForPermissions] = useState(null);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -220,20 +218,7 @@ const SettingsPage = () => {
                 description="إضافة وتعديل الموظفين وإدارة الصلاحيات والمتغيرات"
                 iconColor="from-green-500 to-green-600"
                 onClick={() => setIsManageEmployeesOpen(true)}
-              >
-                <div className="mt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedEmployeeForPermissions(user?.user_id);
-                    }}
-                  >
-                    إدارة صلاحيات المتغيرات
-                  </Button>
-                </div>
-              </ModernCard>
+              />
             )}
 
             {/* إعدادات العملاء - للجميع */}
@@ -482,18 +467,6 @@ const SettingsPage = () => {
           onOpenChange={setIsDeliverySettingsOpen}
         />
       )}
-
-        {/* إدارة صلاحيات المتغيرات */}
-        {selectedEmployeeForPermissions && (
-          <div className="fixed inset-0 z-50 bg-background">
-            <PermissionBasedEmployeeSettings
-              employeeId={selectedEmployeeForPermissions}
-              onClose={() => setSelectedEmployeeForPermissions(null)}
-            />
-          </div>
-        )}
-
-      <SystemStatusDashboard />
     </>
   );
 };
