@@ -209,182 +209,198 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-background border shadow-lg backdrop-blur-sm"
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl lg:max-w-4xl h-[90vh] overflow-hidden flex flex-col bg-background border shadow-lg backdrop-blur-sm"
         style={{ zIndex: 9999 }}>
-        <DialogHeader className="flex-shrink-0 pb-2">
+        <DialogHeader className="flex-shrink-0 pb-2 border-b">
           <DialogTitle className="text-base font-semibold">قواعد الأرباح: {employee?.full_name || employee?.username}</DialogTitle>
           <DialogDescription className="text-xs">
             إدارة قواعد الأرباح - نسب مئوية أو مبالغ ثابتة حسب المنتج أو التصنيف
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-2">
-            <Card>
-                <CardContent className="p-3 flex flex-col sm:flex-row gap-3 items-center">
-                    <Label className="whitespace-nowrap text-sm">نسخ القواعد من:</Label>
-                    <Select onValueChange={handleCopyRules}>
-                        <SelectTrigger className="w-full sm:w-[200px] h-8">
-                            <SelectValue placeholder="اختر موظفاً..." />
-                        </SelectTrigger>
-                        <SelectContent style={{ zIndex: 10001 }} className="bg-background border shadow-lg">
-                            {employees.filter(e => (e.user_id || e.id) !== (employee?.user_id || employee?.id)).map(emp => (
-                                 <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
-                                   {emp.full_name || emp.username}
-                                 </SelectItem>
-                             ))}
-                        </SelectContent>
-                    </Select>
-                </CardContent>
-            </Card>
+        
+        <div className="flex-1 overflow-hidden min-h-0 flex flex-col">
+          {/* شريط نسخ القواعد */}
+          <Card className="flex-shrink-0 mb-3">
+            <CardContent className="p-3 flex flex-col sm:flex-row gap-3 items-center">
+              <Label className="whitespace-nowrap text-sm">نسخ القواعد من:</Label>
+              <Select onValueChange={handleCopyRules}>
+                <SelectTrigger className="w-full sm:w-[200px] h-8">
+                  <SelectValue placeholder="اختر موظفاً..." />
+                </SelectTrigger>
+                <SelectContent style={{ zIndex: 10001 }} className="bg-background border shadow-lg">
+                  {employees.filter(e => (e.user_id || e.id) !== (employee?.user_id || employee?.id)).map(emp => (
+                    <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
+                      {emp.full_name || emp.username}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
 
-          <Tabs defaultValue="product" className="w-full flex flex-col flex-1 min-h-0">
-            <TabsList className="grid w-full grid-cols-4 mb-2 flex-shrink-0 h-8">
+          {/* التبويبات */}
+          <Tabs defaultValue="product" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-4 mb-3 flex-shrink-0 h-8">
               <TabsTrigger value="product" className="text-xs px-1">المنتجات</TabsTrigger>
               <TabsTrigger value="category" className="text-xs px-1">التصنيفات</TabsTrigger>
               <TabsTrigger value="department" className="text-xs px-1">الأقسام</TabsTrigger>
               <TabsTrigger value="general" className="text-xs px-1">عامة</TabsTrigger>
             </TabsList>
-            <TabsContent value="product" className="flex-1 overflow-y-auto min-h-0 mt-0">
-              <Card className="h-full">
-                <CardContent className="p-2 space-y-2 h-full overflow-y-auto">
-                  <div className="p-3 border rounded-lg bg-secondary/50 space-y-2">
+            
+            {/* محتوى التبويبات مع scrolling صحيح */}
+            <div className="flex-1 overflow-hidden">
+              <TabsContent value="product" className="h-full overflow-y-auto mt-0 pr-2">
+                <Card className="h-full">
+                  <CardContent className="p-2 space-y-2">
+                    {/* أداة تحديد عدة منتجات */}
+                    <div className="p-3 border rounded-lg bg-secondary/50 space-y-2 sticky top-0 z-10 bg-background">
                       <h4 className="font-semibold text-sm">تحديد ربح لعدة منتجات</h4>
                       <MultiProductSelector selectedProducts={selectedProducts} setSelectedProducts={setSelectedProducts} />
                       <Input
-                          type="number"
-                          placeholder="مبلغ الربح (د.ع)"
-                          value={multiProductProfit}
-                          onChange={(e) => setMultiProductProfit(e.target.value)}
-                          className="h-8"
+                        type="number"
+                        placeholder="مبلغ الربح (د.ع)"
+                        value={multiProductProfit}
+                        onChange={(e) => setMultiProductProfit(e.target.value)}
+                        className="h-8"
                       />
                       <Button onClick={applyMultiProductProfit} className="w-full h-8 text-sm">تطبيق على المحدد</Button>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="text-xs">
-                        <TableHead className="text-xs">المنتج</TableHead>
-                        <TableHead className="text-xs">الربح (د.ع)</TableHead>
-                        <TableHead className="w-8"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                     <TableBody>
-                       {(products || []).slice(0, 50).map(p => (
-                         <TableRow key={p.id} className="text-xs">
-                           <TableCell className="text-xs">{p.name}</TableCell>
-                           <TableCell>
-                             <Input
-                               type="number"
-                               placeholder="مبلغ"
-                               value={getRuleValue('product', p.id)}
-                               onChange={(e) => handleRuleChange('product', p.id, e.target.value)}
-                               className="h-7 text-xs"
-                             />
-                           </TableCell>
-                           <TableCell>
-                             <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('product', p.id)} className="h-6 w-6 p-0">
-                               <X className="w-3 h-3 text-destructive" />
-                             </Button>
-                           </TableCell>
-                         </TableRow>
-                       ))}
-                       {(!products || products.length === 0) && (
-                         <TableRow>
-                           <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                             جاري تحميل المنتجات...
-                           </TableCell>
-                         </TableRow>
-                       )}
-                     </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="category" className="flex-1 overflow-y-auto min-h-0 mt-0">
-               <Card>
-                <CardContent className="p-2">
-                   <Table>
-                    <TableHeader>
-                      <TableRow className="text-xs">
-                        <TableHead className="text-xs">التصنيف</TableHead>
-                        <TableHead className="text-xs">الربح (د.ع)</TableHead>
-                         <TableHead className="w-8"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                     <TableBody>
-                       {categories.map(cat => (
-                         <TableRow key={cat.id} className="text-xs">
-                           <TableCell className="text-xs">{cat.name}</TableCell>
-                           <TableCell>
-                             <Input
-                               type="number"
-                               placeholder="مبلغ"
-                               value={getRuleValue('category', cat.id)}
-                               onChange={(e) => handleRuleChange('category', cat.id, e.target.value)}
-                               className="h-7 text-xs"
-                             />
-                           </TableCell>
-                           <TableCell>
-                             <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('category', cat.id)} className="h-6 w-6 p-0">
-                               <X className="w-3 h-3 text-destructive" />
-                             </Button>
-                           </TableCell>
-                         </TableRow>
-                       ))}
-                       {categories.length === 0 && (
-                         <TableRow>
-                           <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                             جاري تحميل التصنيفات...
-                           </TableCell>
-                         </TableRow>
-                       )}
-                     </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                    </div>
+                    
+                    {/* جدول المنتجات */}
+                    <div className="overflow-auto">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-background z-5">
+                          <TableRow className="text-xs">
+                            <TableHead className="text-xs">المنتج</TableHead>
+                            <TableHead className="text-xs">الربح (د.ع)</TableHead>
+                            <TableHead className="w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {(products || []).slice(0, 50).map(p => (
+                            <TableRow key={p.id} className="text-xs">
+                              <TableCell className="text-xs">{p.name}</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  placeholder="مبلغ"
+                                  value={getRuleValue('product', p.id)}
+                                  onChange={(e) => handleRuleChange('product', p.id, e.target.value)}
+                                  className="h-7 text-xs"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('product', p.id)} className="h-6 w-6 p-0">
+                                  <X className="w-3 h-3 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {(!products || products.length === 0) && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                                جاري تحميل المنتجات...
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="category" className="h-full overflow-y-auto mt-0 pr-2">
+                <Card className="h-full">
+                  <CardContent className="p-2">
+                    <div className="overflow-auto h-full">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-background z-5">
+                          <TableRow className="text-xs">
+                            <TableHead className="text-xs">التصنيف</TableHead>
+                            <TableHead className="text-xs">الربح (د.ع)</TableHead>
+                            <TableHead className="w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {categories.map(cat => (
+                            <TableRow key={cat.id} className="text-xs">
+                              <TableCell className="text-xs">{cat.name}</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  placeholder="مبلغ"
+                                  value={getRuleValue('category', cat.id)}
+                                  onChange={(e) => handleRuleChange('category', cat.id, e.target.value)}
+                                  className="h-7 text-xs"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('category', cat.id)} className="h-6 w-6 p-0">
+                                  <X className="w-3 h-3 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {categories.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                                جاري تحميل التصنيفات...
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-            <TabsContent value="department" className="flex-1 overflow-y-auto min-h-0 mt-0">
-               <Card>
-                <CardContent className="p-2">
-                   <Table>
-                    <TableHeader>
-                      <TableRow className="text-xs">
-                        <TableHead className="text-xs">القسم</TableHead>
-                        <TableHead className="text-xs">الربح (د.ع)</TableHead>
-                         <TableHead className="w-8"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                     <TableBody>
-                       {departments.map(dept => (
-                         <TableRow key={dept.id} className="text-xs">
-                           <TableCell className="text-xs">{dept.name}</TableCell>
-                           <TableCell>
-                             <Input
-                               type="number"
-                               placeholder="مبلغ"
-                               value={getRuleValue('department', dept.id)}
-                               onChange={(e) => handleRuleChange('department', dept.id, e.target.value)}
-                               className="h-7 text-xs"
-                             />
-                           </TableCell>
-                           <TableCell>
-                             <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('department', dept.id)} className="h-6 w-6 p-0">
-                               <X className="w-3 h-3 text-destructive" />
-                             </Button>
-                           </TableCell>
-                         </TableRow>
-                       ))}
-                       {departments.length === 0 && (
-                         <TableRow>
-                           <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
-                             جاري تحميل الأقسام...
-                           </TableCell>
-                         </TableRow>
-                       )}
-                     </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
+              <TabsContent value="department" className="h-full overflow-y-auto mt-0 pr-2">
+                <Card className="h-full">
+                  <CardContent className="p-2">
+                    <div className="overflow-auto h-full">
+                      <Table>
+                        <TableHeader className="sticky top-0 bg-background z-5">
+                          <TableRow className="text-xs">
+                            <TableHead className="text-xs">القسم</TableHead>
+                            <TableHead className="text-xs">الربح (د.ع)</TableHead>
+                            <TableHead className="w-8"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {departments.map(dept => (
+                            <TableRow key={dept.id} className="text-xs">
+                              <TableCell className="text-xs">{dept.name}</TableCell>
+                              <TableCell>
+                                <Input
+                                  type="number"
+                                  placeholder="مبلغ"
+                                  value={getRuleValue('department', dept.id)}
+                                  onChange={(e) => handleRuleChange('department', dept.id, e.target.value)}
+                                  className="h-7 text-xs"
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('department', dept.id)} className="h-6 w-6 p-0">
+                                  <X className="w-3 h-3 text-destructive" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {departments.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                                جاري تحميل الأقسام...
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             <TabsContent value="general" className="flex-1 overflow-y-auto min-h-0 mt-0">
               <Card>
                 <CardContent className="p-2 space-y-2">
