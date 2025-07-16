@@ -67,11 +67,15 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
           profiles: profilesData.find(profile => profile.user_id === code.user_id)
         })).filter(code => code.profiles);
         
-        setEmployeeCodes(getUserSpecificTelegramCode(mergedData));
+        // تطبيق الفلترة بناءً على الصلاحيات - إظهار رمز المستخدم الحالي فقط إذا لم يكن مدير
+        const filteredCodes = getUserSpecificTelegramCode(mergedData);
+        setEmployeeCodes(filteredCodes);
         return;
       }
       
-      setEmployeeCodes(getUserSpecificTelegramCode(data || []));
+      // تطبيق الفلترة بناءً على الصلاحيات - إظهار رمز المستخدم الحالي فقط إذا لم يكن مدير
+      const filteredCodes = getUserSpecificTelegramCode(data || []);
+      setEmployeeCodes(filteredCodes);
     } catch (error) {
       console.error('Error fetching employee codes:', error);
       toast({

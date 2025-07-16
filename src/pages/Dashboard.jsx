@@ -354,6 +354,19 @@ const Dashboard = () => {
 
     if (inventoryLoading) return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
 
+    // حساب بيانات الأرباح الشخصية للموظف
+    const employeeProfitsData = useMemo(() => {
+        const userProfits = filterProfitsByUser(profitsData.pending.concat(profitsData.settled));
+        const personalPending = userProfits.filter(p => p.status === 'pending');
+        const personalSettled = userProfits.filter(p => p.status === 'settled');
+        
+        return {
+            personalPendingProfit: personalPending.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
+            personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
+            totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
+        };
+    }, [profitsData, filterProfitsByUser]);
+
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 
             key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: (canViewAllData ? aiOrders?.length : userAiOrders?.length) || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
@@ -371,10 +384,26 @@ const Dashboard = () => {
             key: 'netProfit', title: 'صافي الارباح', value: dashboardData.netProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         hasPermission('view_profits') && {
-            key: 'pendingProfit', title: 'الأرباح المعلقة', value: dashboardData.pendingProfit, icon: Hourglass, colors: ['yellow-500', 'amber-500'], format: 'currency', currentPeriod: periods.pendingProfit, onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), onClick: () => setIsPendingProfitsOpen(true)
+            key: 'pendingProfit', 
+            title: 'الأرباح المعلقة', 
+            value: canViewAllData ? dashboardData.pendingProfit : employeeProfitsData.personalPendingProfit, 
+            icon: Hourglass, 
+            colors: ['yellow-500', 'amber-500'], 
+            format: 'currency', 
+            currentPeriod: periods.pendingProfit, 
+            onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), 
+            onClick: canViewAllData ? () => setIsPendingProfitsOpen(true) : () => navigate('/my-profits?status=pending')
         },
         hasPermission('view_orders') && {
-            key: 'deliveredSales', title: 'المبيعات المستلمة', value: dashboardData.deliveredSales, icon: CheckCircle, colors: ['purple-500', 'violet-500'], format: 'currency', currentPeriod: periods.deliveredSales, onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), onClick: () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales')
+            key: 'deliveredSales', 
+            title: canViewAllData ? 'المبيعات المستلمة' : 'أرباحي المستلمة', 
+            value: canViewAllData ? dashboardData.deliveredSales : employeeProfitsData.personalSettledProfit, 
+            icon: CheckCircle, 
+            colors: ['purple-500', 'violet-500'], 
+            format: 'currency', 
+            currentPeriod: periods.deliveredSales, 
+            onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), 
+            onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
         },
         hasPermission('view_orders') && {
             key: 'pendingSales', title: 'المبيعات المعلقة', value: dashboardData.pendingSales, icon: PackageCheck, colors: ['orange-500', 'red-500'], format: 'currency', currentPeriod: periods.pendingSales, onPeriodChange: (p) => handlePeriodChange('pendingSales', p), onClick: () => openSummaryDialog('pendingSales', dashboardData.pendingSalesOrders, 'pendingSales')

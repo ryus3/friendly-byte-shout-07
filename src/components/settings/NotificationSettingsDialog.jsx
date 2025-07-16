@@ -7,8 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Settings, Bell, Package, AlertTriangle, Users, TrendingUp, Volume2, VolumeX } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const NotificationSettingsDialog = ({ open, onOpenChange }) => {
+  const { canViewAllData, hasPermission } = usePermissionBasedData();
   const [settings, setSettings] = useState({
     // الإشعارات العامة
     generalNotifications: true,
@@ -24,7 +26,7 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
     orderStatusChanges: true,
     orderCancellations: true,
     
-    // إشعارات الموظفين
+    // إشعارات الموظفين (للمدير فقط)
     employeeActions: true,
     employeeRegistrations: true,
     
@@ -83,7 +85,8 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
         { key: 'orderCancellations', label: 'إلغاء الطلبات', description: 'إشعار عند إلغاء طلب' },
       ]
     },
-    {
+    // إشعارات الموظفين للمدير فقط
+    canViewAllData && {
       title: "إشعارات الموظفين",
       icon: Users,
       settings: [
@@ -91,7 +94,8 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
         { key: 'employeeRegistrations', label: 'تسجيل موظف جديد', description: 'إشعار عند تسجيل موظف جديد' },
       ]
     },
-    {
+    // إشعارات الذكاء الاصطناعي للمخولين فقط
+    hasPermission('use_ai_assistant') && {
       title: "إشعارات الذكاء الاصطناعي",
       icon: TrendingUp,
       settings: [
@@ -115,7 +119,7 @@ const NotificationSettingsDialog = ({ open, onOpenChange }) => {
         </DialogHeader>
 
         <div className="space-y-6">
-          {notificationCategories.map((category, index) => (
+          {notificationCategories.filter(Boolean).map((category, index) => (
             <Card key={index} className="border border-border/50">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">

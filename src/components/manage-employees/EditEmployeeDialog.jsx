@@ -8,7 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { permissionsMap } from '@/lib/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield, Trash2, Loader2, Package } from 'lucide-react';
+import { Shield, Trash2, Loader2, Package, Palette } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EmployeeVariantPermissions from './EmployeeVariantPermissions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -159,33 +161,52 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </div>
           </div>
           
-          <div>
-            <Label className="flex items-center gap-2 mb-2"><Shield /> الصلاحيات</Label>
-            <Accordion type="multiple" className="w-full" defaultValue={permissionsMap.map(p => p.category)} disabled={role === 'admin' || role === 'deputy'}>
-              {permissionsMap.map(category => (
-                <AccordionItem value={category.category} key={category.category}>
-                  <AccordionTrigger>{category.categoryLabel}</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="grid grid-cols-2 gap-4 p-4">
-                      {category.permissions.map(permission => (
-                        <div key={permission.id} className="flex items-center space-x-2 space-x-reverse">
-                          <Checkbox
-                            id={`perm-${employee.id}-${permission.id}`}
-                            checked={permissions.includes('*') || permissions.includes(permission.id)}
-                            onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
-                            disabled={role === 'admin' || role === 'deputy'}
-                          />
-                          <label htmlFor={`perm-${employee.id}-${permission.id}`} className="text-sm font-medium cursor-pointer">
-                            {permission.label}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
+          <Tabs defaultValue="permissions" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="permissions" className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                الصلاحيات العامة
+              </TabsTrigger>
+              <TabsTrigger value="variants" className="flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                صلاحيات المتغيرات
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="permissions" className="space-y-4">
+              <Accordion type="multiple" className="w-full" defaultValue={permissionsMap.map(p => p.category)} disabled={role === 'admin' || role === 'deputy'}>
+                {permissionsMap.map(category => (
+                  <AccordionItem value={category.category} key={category.category}>
+                    <AccordionTrigger>{category.categoryLabel}</AccordionTrigger>
+                    <AccordionContent>
+                      <div className="grid grid-cols-2 gap-4 p-4">
+                        {category.permissions.map(permission => (
+                          <div key={permission.id} className="flex items-center space-x-2 space-x-reverse">
+                            <Checkbox
+                              id={`perm-${employee.user_id}-${permission.id}`}
+                              checked={permissions.includes('*') || permissions.includes(permission.id)}
+                              onCheckedChange={(checked) => handlePermissionChange(permission.id, checked)}
+                              disabled={role === 'admin' || role === 'deputy'}
+                            />
+                            <label htmlFor={`perm-${employee.user_id}-${permission.id}`} className="text-sm font-medium cursor-pointer">
+                              {permission.label}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </TabsContent>
+            
+            <TabsContent value="variants" className="space-y-4">
+              <EmployeeVariantPermissions 
+                employee={employee} 
+                onSave={() => console.log('Variant permissions saved')}
+              />
+            </TabsContent>
+          </Tabs>
           
           <div className="space-y-2">
             <Label className="text-destructive">منطقة الخطر</Label>
