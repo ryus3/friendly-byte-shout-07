@@ -38,19 +38,44 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
   };
 
   const handleSaveChanges = async () => {
-    setIsSaving(true);
-    await updateUser(employee.id, { 
-        status, 
-        ...permissionsData
-    });
-    await refetchAdminData();
-    setIsSaving(false);
-    onOpenChange(false);
+    if (!permissionsData) return;
+    
+    try {
+      setIsSaving(true);
+      console.log('Updating user with data:', {
+        ...permissionsData,
+        status
+      });
+      
+      // تحويل الصلاحيات إلى JSON strings
+      const updateData = {
+        ...permissionsData,
+        status,
+        permissions: JSON.stringify(permissionsData.permissions || []),
+        category_permissions: JSON.stringify(permissionsData.category_permissions || ['all']),
+        color_permissions: JSON.stringify(permissionsData.color_permissions || ['all']),
+        size_permissions: JSON.stringify(permissionsData.size_permissions || ['all']),
+        department_permissions: JSON.stringify(permissionsData.department_permissions || ['all']),
+        product_type_permissions: JSON.stringify(permissionsData.product_type_permissions || ['all']),
+        season_occasion_permissions: JSON.stringify(permissionsData.season_occasion_permissions || ['all'])
+      };
+      
+      await updateUser(employee.user_id, updateData);
+      
+      console.log('User updated successfully');
+      await refetchAdminData();
+      
+      setIsSaving(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error updating employee:', error);
+      setIsSaving(false);
+    }
   };
 
   const handleDisableUser = async () => {
     setIsSaving(true);
-    await updateUser(employee.id, { status: 'suspended' });
+    await updateUser(employee.user_id, { status: 'suspended' });
     await refetchAdminData();
     setIsSaving(false);
     onOpenChange(false);

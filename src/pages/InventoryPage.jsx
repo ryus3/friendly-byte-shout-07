@@ -101,7 +101,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
 const InventoryPage = () => {
   const { products, orders, loading, settings, updateVariantStock } = useInventory();
-  const { allUsers, hasPermission } = useAuth();
+  const { allUsers, hasPermission, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -192,7 +192,43 @@ const InventoryPage = () => {
     if (!Array.isArray(products) || !settings) return [];
     const { lowStockThreshold = 5, mediumStockThreshold = 10 } = settings;
 
-    return products.map(product => {
+    // فلترة المنتجات بناءً على صلاحيات الموظف
+    const filteredProducts = products.filter(product => {
+      if (!user || user.role === 'admin' || user.role === 'deputy') return true;
+      
+      // فحص صلاحيات التصنيفات
+      let categoryPermissions = ['all'];
+      try {
+        categoryPermissions = JSON.parse(user.category_permissions || '["all"]');
+      } catch (e) {
+        categoryPermissions = ['all'];
+      }
+      
+      if (!categoryPermissions.includes('all') && product.categories?.main_category) {
+        if (!categoryPermissions.includes(product.categories.main_category)) {
+          return false;
+        }
+      }
+
+      // فحص صلاحيات الأقسام
+      let departmentPermissions = ['all'];
+      try {
+        departmentPermissions = JSON.parse(user.department_permissions || '["all"]');
+      } catch (e) {
+        departmentPermissions = ['all'];
+      }
+      
+      if (!departmentPermissions.includes('all') && product.departments?.length > 0) {
+        const hasAllowedDepartment = product.departments.some(dept => 
+          departmentPermissions.includes(dept.id)
+        );
+        if (!hasAllowedDepartment) return false;
+      }
+
+      return true;
+    });
+
+    return filteredProducts.map(product => {
         if (!product) return null;
         
         const variantsWithLevels = Array.isArray(product.variants) 
@@ -226,7 +262,7 @@ const InventoryPage = () => {
           variants: variantsWithLevels,
         };
     }).filter(item => item !== null);
-  }, [products, settings]);
+  }, [products, settings, user]);
   
   const reservedOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : [];

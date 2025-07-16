@@ -174,16 +174,16 @@ const UserCard = ({ user, onApprove, onReject }) => {
     const isAdminOrDeputy = role === 'admin' || role === 'deputy';
     
     handleAction(onApprove, user.id, { 
-      permissions: finalPermissions, 
+      permissions: JSON.stringify(finalPermissions), 
       role, 
       default_page: defaultPage,
       order_creation_mode: orderCreationMode,
-      category_permissions: isAdminOrDeputy ? ['all'] : categoryPermissions,
-      color_permissions: isAdminOrDeputy ? ['all'] : colorPermissions,
-      size_permissions: isAdminOrDeputy ? ['all'] : sizePermissions,
-      department_permissions: isAdminOrDeputy ? ['all'] : departmentPermissions,
-      product_type_permissions: isAdminOrDeputy ? ['all'] : productTypePermissions,
-      season_occasion_permissions: isAdminOrDeputy ? ['all'] : seasonOccasionPermissions
+      category_permissions: JSON.stringify(isAdminOrDeputy ? ['all'] : categoryPermissions),
+      color_permissions: JSON.stringify(isAdminOrDeputy ? ['all'] : colorPermissions),
+      size_permissions: JSON.stringify(isAdminOrDeputy ? ['all'] : sizePermissions),
+      department_permissions: JSON.stringify(isAdminOrDeputy ? ['all'] : departmentPermissions),
+      product_type_permissions: JSON.stringify(isAdminOrDeputy ? ['all'] : productTypePermissions),
+      season_occasion_permissions: JSON.stringify(isAdminOrDeputy ? ['all'] : seasonOccasionPermissions)
     });
   };
 
