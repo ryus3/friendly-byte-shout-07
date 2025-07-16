@@ -63,25 +63,40 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
   const handleSaveChanges = async () => {
     setIsSaving(true);
-    const finalPermissions = (role === 'admin' || role === 'deputy') ? ['*'] : permissions;
-    await updateUser(employee.id, { 
-        status, 
-        role, 
-        permissions: finalPermissions, 
-        default_page: defaultPage,
-        order_creation_mode: orderCreationMode
-    });
-    await refetchAdminData();
-    setIsSaving(false);
-    onOpenChange(false);
+    try {
+      const finalPermissions = (role === 'admin' || role === 'deputy') ? ['*'] : permissions;
+      const result = await updateUser(employee.user_id, { 
+          status, 
+          role, 
+          permissions: finalPermissions, 
+          default_page: defaultPage,
+          order_creation_mode: orderCreationMode
+      });
+      
+      if (result.success) {
+        await refetchAdminData();
+        onOpenChange(false);
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDisableUser = async () => {
     setIsSaving(true);
-    await updateUser(employee.id, { status: 'suspended' });
-    await refetchAdminData();
-    setIsSaving(false);
-    onOpenChange(false);
+    try {
+      const result = await updateUser(employee.user_id, { status: 'suspended' });
+      if (result.success) {
+        await refetchAdminData();
+        onOpenChange(false);
+      }
+    } catch (error) {
+      console.error('Error disabling user:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
