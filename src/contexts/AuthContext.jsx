@@ -384,7 +384,7 @@ export const AuthProvider = ({ children }) => {
       }
       
       // تحديث قائمة جميع المستخدمين
-      await refetchAdminData();
+      await fetchAdminData();
       
       return { success: true };
     } catch (error) {
