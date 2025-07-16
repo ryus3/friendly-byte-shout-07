@@ -184,7 +184,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl lg:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col z-50">
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl lg:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col z-50 bg-background border border-border">
         <DialogHeader className="flex-shrink-0 pb-3">
           <DialogTitle className="text-lg">قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
           <DialogDescription className="text-sm">

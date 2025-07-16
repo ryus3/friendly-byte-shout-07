@@ -58,7 +58,7 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col z-40">
+        <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col z-40 bg-background border border-border shadow-lg">
           <DialogHeader className="flex-shrink-0 pb-3">
             <DialogTitle className="flex items-center gap-2 text-lg">
               <DollarSign className="h-5 w-5 text-green-600" />
