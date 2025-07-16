@@ -355,8 +355,9 @@ const Dashboard = () => {
         user?.id, 
         user?.user_id, 
         canViewAllData, 
-        financialSummary?.netProfit
-    ]); // إزالة calculateManagerProfit من dependencies
+        financialSummary?.netProfit,
+        calculateManagerProfit
+    ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
