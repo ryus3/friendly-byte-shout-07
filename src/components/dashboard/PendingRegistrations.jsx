@@ -12,6 +12,7 @@ import { permissionsMap } from '@/lib/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { toast } from '@/components/ui/use-toast';
 
 
 const defaultPages = [
@@ -518,27 +519,63 @@ const PendingRegistrations = ({ onClose }) => {
   const { deleteNotificationByTypeAndData } = useNotifications();
   
   const handleApprove = async (userId, data) => {
-    const updatedData = {
-      ...data,
-      status: 'active',
-      category_permissions: JSON.stringify(data.category_permissions || []),
-      color_permissions: JSON.stringify(data.color_permissions || []),
-      size_permissions: JSON.stringify(data.size_permissions || []),
-      department_permissions: JSON.stringify(data.department_permissions || []),
-      product_type_permissions: JSON.stringify(data.product_type_permissions || []),
-      season_occasion_permissions: JSON.stringify(data.season_occasion_permissions || []),
-      permissions: JSON.stringify(data.permissions || [])
-    };
+    console.log('Approving user:', userId, 'with data:', data);
     
-    await updateUser(userId, updatedData);
-    await deleteNotificationByTypeAndData('new_registration', { id: userId });
-    refetchAdminData();
+    try {
+      // البيانات جاهزة مع JSON.stringify من UserCard
+      const result = await updateUser(userId, {
+        status: 'active',
+        role: data.role,
+        permissions: data.permissions, // Already stringified
+        default_page: data.default_page,
+        order_creation_mode: data.order_creation_mode,
+        category_permissions: data.category_permissions, // Already stringified
+        color_permissions: data.color_permissions, // Already stringified
+        size_permissions: data.size_permissions, // Already stringified
+        department_permissions: data.department_permissions, // Already stringified
+        product_type_permissions: data.product_type_permissions, // Already stringified
+        season_occasion_permissions: data.season_occasion_permissions // Already stringified
+      });
+      
+      console.log('User approved successfully:', result);
+      
+      await deleteNotificationByTypeAndData('new_registration', { id: userId });
+      await refetchAdminData();
+      
+      toast({
+        title: "تمت الموافقة",
+        description: "تم تفعيل حساب الموظف بنجاح",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error approving user:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء الموافقة على الحساب",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleReject = async (userId) => {
-    await updateUser(userId, { status: 'rejected', permissions: [] });
-    await deleteNotificationByTypeAndData('new_registration', { id: userId });
-    refetchAdminData();
+    try {
+      await updateUser(userId, { status: 'rejected', permissions: JSON.stringify([]) });
+      await deleteNotificationByTypeAndData('new_registration', { id: userId });
+      await refetchAdminData();
+      
+      toast({
+        title: "تم الرفض",
+        description: "تم رفض طلب التسجيل",
+        variant: "default"
+      });
+    } catch (error) {
+      console.error('Error rejecting user:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء رفض الطلب",
+        variant: "destructive"
+      });
+    }
   };
   
   return (

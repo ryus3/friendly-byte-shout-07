@@ -99,11 +99,33 @@ const ProductsPage = () => {
     // تطبيق صلاحيات المنتجات حسب التصنيفات والأقسام والمتغيرات
     tempProducts = tempProducts.filter(product => {
       // السماح للمدير برؤية كل شيء
-      if (user?.role === 'admin' || user?.permissions?.includes('*')) {
+      if (!user || user.role === 'admin' || user.role === 'deputy' || user?.permissions?.includes('*')) {
         return true;
       }
 
-      // التحقق من صلاحيات التصنيفات
+      console.log('Checking permissions for product:', product.name);
+      console.log('User permissions:', {
+        category_permissions: user.category_permissions,
+        department_permissions: user.department_permissions,
+        color_permissions: user.color_permissions,
+        size_permissions: user.size_permissions
+      });
+
+      // التحقق من صلاحيات التصنيفات الرئيسية
+      if (product.categories?.main_category) {
+        try {
+          const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+          console.log('Category permissions:', categoryPermissions, 'Product category:', product.categories.main_category);
+          if (!categoryPermissions.includes('all') && !categoryPermissions.includes(product.categories.main_category)) {
+            console.log('Product filtered out by category permissions');
+            return false;
+          }
+        } catch (e) {
+          console.error('Error parsing category permissions:', e);
+        }
+      }
+
+      // التحقق من صلاحيات التصنيفات عبر product_categories
       if (product.product_categories && product.product_categories.length > 0) {
         try {
           const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
@@ -111,7 +133,10 @@ const ProductsPage = () => {
             const hasAllowedCategory = product.product_categories.some(pc => 
               categoryPermissions.includes(pc.category_id)
             );
-            if (!hasAllowedCategory) return false;
+            if (!hasAllowedCategory) {
+              console.log('Product filtered out by product_categories permissions');
+              return false;
+            }
           }
         } catch (e) {
           console.error('Error parsing category permissions:', e);
@@ -126,7 +151,10 @@ const ProductsPage = () => {
             const hasAllowedDepartment = product.product_departments.some(pd => 
               departmentPermissions.includes(pd.department_id)
             );
-            if (!hasAllowedDepartment) return false;
+            if (!hasAllowedDepartment) {
+              console.log('Product filtered out by department permissions');
+              return false;
+            }
           }
         } catch (e) {
           console.error('Error parsing department permissions:', e);
@@ -141,7 +169,10 @@ const ProductsPage = () => {
             const hasAllowedColor = product.variants.some(variant => 
               !variant.color_id || colorPermissions.includes(variant.color_id)
             );
-            if (!hasAllowedColor) return false;
+            if (!hasAllowedColor) {
+              console.log('Product filtered out by color permissions');
+              return false;
+            }
           }
         } catch (e) {
           console.error('Error parsing color permissions:', e);
@@ -154,7 +185,10 @@ const ProductsPage = () => {
             const hasAllowedSize = product.variants.some(variant => 
               !variant.size_id || sizePermissions.includes(variant.size_id)
             );
-            if (!hasAllowedSize) return false;
+            if (!hasAllowedSize) {
+              console.log('Product filtered out by size permissions');
+              return false;
+            }
           }
         } catch (e) {
           console.error('Error parsing size permissions:', e);
@@ -169,7 +203,10 @@ const ProductsPage = () => {
             const hasAllowedProductType = product.product_product_types.some(ppt => 
               productTypePermissions.includes(ppt.product_type_id)
             );
-            if (!hasAllowedProductType) return false;
+            if (!hasAllowedProductType) {
+              console.log('Product filtered out by product type permissions');
+              return false;
+            }
           }
         } catch (e) {
           console.error('Error parsing product type permissions:', e);
@@ -184,13 +221,17 @@ const ProductsPage = () => {
             const hasAllowedSeasonOccasion = product.product_seasons_occasions.some(pso => 
               seasonOccasionPermissions.includes(pso.season_occasion_id)
             );
-            if (!hasAllowedSeasonOccasion) return false;
+            if (!hasAllowedSeasonOccasion) {
+              console.log('Product filtered out by season occasion permissions');
+              return false;
+            }
           }
         } catch (e) {
           console.error('Error parsing season occasion permissions:', e);
         }
       }
 
+      console.log('Product passed all permission checks:', product.name);
       return true;
     });
 
