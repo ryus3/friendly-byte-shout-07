@@ -27,12 +27,12 @@ const SidebarContent = ({ onClose }) => {
 
   const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', permission: 'view_dashboard', color: 'text-blue-500' },
-    { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'create_order', color: 'text-yellow-500' },
+    { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'quick_order_access', color: 'text-yellow-500' },
     { path: '/my-orders', icon: ShoppingCart, label: 'طلباتي', permission: 'view_orders', color: 'text-green-500' },
     { path: '/employee-follow-up', icon: Users, label: 'متابعة الموظفين', permission: 'view_all_orders', color: 'text-purple-500' },
     { path: '/products', icon: Package, label: 'المنتجات', permission: 'view_products', color: 'text-orange-500' },
     { path: '/manage-products', icon: PackagePlus, label: 'ادارة المنتجات', permission: 'manage_products', color: 'text-cyan-500' },
-    { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', permission: 'view_inventory', color: 'text-pink-500' },
+    { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', permission: 'detailed_inventory_access', color: 'text-pink-500' },
     { path: '/purchases', icon: TrendingUp, label: 'المشتريات', permission: 'view_purchases', color: 'text-emerald-500' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', permission: 'view_accounting', color: 'text-indigo-500' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', permission: 'view_notifications', color: 'text-red-500' },

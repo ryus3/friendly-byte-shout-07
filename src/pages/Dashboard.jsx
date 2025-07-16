@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
 import usePermissionBasedData from '@/hooks/usePermissionBasedData';
-import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
+import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle, MessageCircle, Zap } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import StatCard from '@/components/dashboard/StatCard';
@@ -428,6 +428,34 @@ const Dashboard = () => {
         },
     ].filter(Boolean);
 
+    // كروت اختصارات للموظفين
+    const quickAccessCards = [
+        hasPermission('quick_order_access') && {
+            title: 'طلب سريع',
+            description: 'إنشاء طلب جديد بسرعة',
+            icon: Zap,
+            colorClass: 'text-yellow-600',
+            onClick: () => navigate('/quick-order')
+        },
+        hasPermission('view_products') && {
+            title: 'المنتجات',
+            description: 'تصفح المنتجات المتاحة',
+            icon: Package,
+            colorClass: 'text-orange-600',
+            onClick: () => navigate('/products')
+        },
+        user?.telegram_employee_code && {
+            title: 'رمز التليغرام',
+            description: user.telegram_employee_code,
+            icon: MessageCircle,
+            colorClass: 'text-blue-600',
+            onClick: () => {
+                navigator.clipboard.writeText(user.telegram_employee_code);
+                toast({ title: 'تم النسخ', description: 'تم نسخ رمز التليغرام الخاص بك' });
+            }
+        }
+    ].filter(Boolean);
+
 
     return (
         <>
@@ -500,6 +528,32 @@ const Dashboard = () => {
                          </motion.div>
                     ))}
                 </div>
+
+                {/* كروت الوصول السريع للموظفين */}
+                {quickAccessCards.length > 0 && (
+                    <div className="mb-8">
+                        <h3 className="text-lg font-semibold mb-4 text-foreground">وصول سريع</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {quickAccessCards.map((card, index) => (
+                                <div 
+                                    key={index}
+                                    onClick={card.onClick}
+                                    className="p-4 rounded-lg border border-border/50 hover:border-primary/50 cursor-pointer transition-all duration-200 hover:shadow-md bg-card hover:bg-card/80"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`p-2 rounded-lg bg-secondary/50`}>
+                                            <card.icon className={`w-5 h-5 ${card.colorClass}`} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-foreground">{card.title}</h4>
+                                            <p className="text-sm text-muted-foreground">{card.description}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 {hasPermission('view_dashboard_top_lists') && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         <TopListCard title="الزبائن الأكثر طلباً" items={dashboardData.topCustomers} titleIcon={Users} itemIcon={UserIcon} sortByPhone={true} />
