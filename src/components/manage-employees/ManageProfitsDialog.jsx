@@ -161,9 +161,9 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>إدارة أرباح: {employee.fullName}</DialogTitle>
+          <DialogTitle>قواعد الأرباح: {employee.fullName}</DialogTitle>
           <DialogDescription>
-            قم بتعيين مبلغ ربح ثابت للموظف حسب المنتج أو التصنيف.
+            إدارة قواعد الأرباح الخاصة بالموظف - نسب مئوية أو مبالغ ثابتة حسب المنتج أو التصنيف مع حساب دقيق للمستحقات.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 max-h-[70vh] overflow-y-auto pr-2 space-y-4">
@@ -184,9 +184,10 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
             </Card>
 
           <Tabs defaultValue="product" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="product">حسب المنتج</TabsTrigger>
               <TabsTrigger value="category">حسب التصنيف</TabsTrigger>
+              <TabsTrigger value="general">القواعد العامة</TabsTrigger>
             </TabsList>
             <TabsContent value="product">
               <Card>
@@ -266,6 +267,57 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                       ))}
                     </TableBody>
                   </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="general">
+              <Card>
+                <CardContent className="p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                      <h4 className="font-semibold text-blue-700 dark:text-blue-300">نسبة الربح العامة</h4>
+                      <Input
+                        type="number"
+                        placeholder="نسبة مئوية عامة (%)"
+                        value={getRuleValue('general', 'percentage')}
+                        onChange={(e) => handleRuleChange('general', 'percentage', e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        تُطبق على جميع المنتجات التي لا تحتوي على قواعد محددة
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-3 p-4 border rounded-lg bg-green-50 dark:bg-green-950/30">
+                      <h4 className="font-semibold text-green-700 dark:text-green-300">مبلغ ثابت عام</h4>
+                      <Input
+                        type="number"
+                        placeholder="مبلغ ثابت (د.ع)"
+                        value={getRuleValue('general', 'fixed')}
+                        onChange={(e) => handleRuleChange('general', 'fixed', e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        مبلغ ثابت يُضاف لكل عملية بيع بغض النظر عن المنتج
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3 p-4 border rounded-lg bg-purple-50 dark:bg-purple-950/30">
+                    <h4 className="font-semibold text-purple-700 dark:text-purple-300">معلومات إضافية</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      <div className="text-center">
+                        <div className="font-bold text-lg text-purple-600">{rules.filter(r => r.ruleType === 'product').length}</div>
+                        <div className="text-muted-foreground">قواعد المنتجات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg text-blue-600">{rules.filter(r => r.ruleType === 'category').length}</div>
+                        <div className="text-muted-foreground">قواعد التصنيفات</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-lg text-green-600">{rules.filter(r => r.ruleType === 'general').length}</div>
+                        <div className="text-muted-foreground">القواعد العامة</div>
+                      </div>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

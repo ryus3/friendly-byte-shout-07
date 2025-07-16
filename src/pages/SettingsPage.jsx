@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import useUnifiedPermissions from '@/hooks/useUnifiedPermissions';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,9 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
-import RoleManagementDialog from '@/components/manage-employees/RoleManagementDialog';
+import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
+import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -122,32 +124,13 @@ const SettingsPage = () => {
   // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
   const {
     isAdmin,
+    isEmployee,
     canManageEmployees,
-    canViewAllData,
-    hasPermission: checkPermission,
-    loading: permissionsLoading
-  } = useUnifiedPermissions();
-
-  // صلاحيات إضافية من النظام القديم للتوافق - مع التحقق من التحميل
-  const canAccessDeliveryPartners = React.useMemo(() => {
-    if (permissionsLoading) return false;
-    return checkPermission('access_delivery_partners') || user?.delivery_partner_access;
-  }, [checkPermission, permissionsLoading, user?.delivery_partner_access]);
-
-  const canManageAccounting = React.useMemo(() => {
-    if (permissionsLoading) return false;
-    return checkPermission('manage_finances');
-  }, [checkPermission, permissionsLoading]);
-
-  const canManagePurchases = React.useMemo(() => {
-    if (permissionsLoading) return false;
-    return checkPermission('manage_purchases');
-  }, [checkPermission, permissionsLoading]);
-
-  const canManageSettings = React.useMemo(() => {
-    if (permissionsLoading) return false;
-    return checkPermission('manage_settings');
-  }, [checkPermission, permissionsLoading]);
+    canManageSettings,
+    canAccessDeliveryPartners,
+    canManageAccounting,
+    canManagePurchases
+  } = usePermissionBasedData();
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
@@ -161,6 +144,7 @@ const SettingsPage = () => {
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
+  const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -232,14 +216,14 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* إدارة الموظفين - للمدراء فقط */}
+            {/* قواعد الأرباح للموظفين - للمدراء فقط */}
             {canManageEmployees && (
               <ModernCard
-                icon={Users}
-                title="إدارة الموظفين"
-                description="إضافة وتعديل الموظفين وإدارة الصلاحيات والمتغيرات"
+                icon={DollarSign}
+                title="قواعد الأرباح للموظفين"
+                description="إدارة قواعد الأرباح وحساب المستحقات للموظفين حسب المنتجات والتصنيفات"
                 iconColor="from-green-500 to-green-600"
-                onClick={() => setIsManageEmployeesOpen(true)}
+                onClick={() => setIsProfitsManagerOpen(true)}
               />
             )}
 
@@ -502,9 +486,14 @@ const SettingsPage = () => {
         />
       )}
 
-      <RoleManagementDialog 
+      <UnifiedRoleManager 
         open={isRoleManagerOpen} 
         onOpenChange={setIsRoleManagerOpen} 
+      />
+
+      <EmployeeProfitsManager 
+        open={isProfitsManagerOpen} 
+        onOpenChange={setIsProfitsManagerOpen} 
       />
     </>
   );
