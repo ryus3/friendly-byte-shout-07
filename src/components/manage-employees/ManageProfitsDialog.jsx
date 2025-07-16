@@ -40,13 +40,13 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between"
+                    className="w-full justify-between bg-background hover:bg-accent"
                 >
                     <span className="truncate">{selectedProducts.length > 0 ? `${selectedProducts.length} منتج محدد` : "اختر المنتجات..."}</span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[200] bg-background border shadow-lg">
                 <Command>
                     <CommandInput placeholder="ابحث عن منتج..." />
                     <CommandList>
@@ -160,7 +160,14 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-5xl max-h-[95vh] overflow-hidden flex flex-col z-[100] fixed inset-4 sm:inset-8 md:inset-12 lg:inset-16 xl:inset-20 mx-auto my-auto bg-background border shadow-lg rounded-lg"
+        style={{ 
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 100
+        }}>
         <DialogHeader className="flex-shrink-0 pb-3 sm:pb-4">
           <DialogTitle className="text-lg sm:text-xl">قواعد الأرباح: {employee.full_name || employee.username}</DialogTitle>
           <DialogDescription className="text-sm sm:text-base">
@@ -175,7 +182,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                         <SelectTrigger className="w-full sm:w-[250px]">
                             <SelectValue placeholder="اختر موظفاً لنسخ قواعده..." />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[200] bg-background border shadow-lg">
                             {employees.filter(e => e.user_id !== employee.user_id).map(emp => (
                                  <SelectItem key={emp.user_id} value={emp.user_id}>{emp.full_name || emp.username}</SelectItem>
                              ))}
