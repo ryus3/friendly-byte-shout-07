@@ -304,47 +304,36 @@ const Dashboard = () => {
         };
 
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
-        // استخدام الطلبات المفلترة بدلاً من كل الطلبات
         const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
-        
-        // الطلبات المُوصلة التي لم يتم استلام فواتيرها بعد = أرباح معلقة
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
-        
-        // حساب الأرباح المعلقة من جميع الطلبات المُوصلة (بدون فواتير مستلمة)
-        // يشمل أرباح المدير + أرباح الموظفين
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
+        
         const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
-          // ربح الموظف من الطلب
           const employeeProfit = (o.items || []).reduce((itemSum, item) => {
             const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
             return itemSum + profit;
           }, 0);
           
-          // ربح المدير من الطلب (فقط إذا كان المستخدم الحالي مدير ويعرض طلبات الموظفين)
           const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
             ? calculateManagerProfit(o) : 0;
           
           return sum + employeeProfit + managerProfit;
         }, 0);
         
-        // حساب المبيعات المستلمة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
         const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          // المبيعات = إجمالي الطلب - رسوم التوصيل (فقط أسعار المنتجات)
           const productsSalesOnly = (o.total_amount || 0);
           return sum + productsSalesOnly;
         }, 0);
 
-        // حساب المبيعات المعلقة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
         const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
         const pendingSales = pendingSalesOrders.reduce((sum, o) => {
-          // المبيعات = إجمالي الطلب - رسوم التوصيل (فقط أسعار المنتجات)
           const productsSalesOnly = (o.total_amount || 0);
           return sum + productsSalesOnly;
         }, 0);
 
-        const result = {
+        return {
             totalOrdersCount: filteredTotalOrders.length,
             netProfit: financialSummary?.netProfit || 0,
             pendingProfit,
@@ -357,9 +346,17 @@ const Dashboard = () => {
             topProvinces: getTopProvinces(visibleOrders),
             topProducts: getTopProducts(visibleOrders),
         };
-        
-        return result;
-    }, [visibleOrders, periods, user, canViewAllData, calculateManagerProfit, financialSummary]);
+    }, [
+        visibleOrders, 
+        periods.totalOrders, 
+        periods.pendingProfit, 
+        periods.deliveredSales, 
+        periods.pendingSales, 
+        user?.id, 
+        user?.user_id, 
+        canViewAllData, 
+        financialSummary?.netProfit
+    ]); // إزالة calculateManagerProfit من dependencies
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
