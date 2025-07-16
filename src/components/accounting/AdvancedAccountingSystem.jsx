@@ -278,12 +278,13 @@ const AdvancedAccountingSystem = () => {
       change: '+12.5%'
     },
     {
-      title: 'صافي الارباح', // نفس اسم ونفس حساب لوحة التحكم
+      title: 'صافي الارباح', // تم توحيد الحساب مع لوحة التحكم ✓
       value: dashboardNetProfit,
       format: 'currency',
       icon: TrendingUp,
       colors: dashboardNetProfit >= 0 ? ['green-500', 'emerald-500'] : ['red-500', 'orange-500'],
-      change: `${financialAnalysis.netProfitMargin?.toFixed(1) || 0}%`
+      change: `متحد مع لوحة التحكم`,
+      key: 'unified-net-profit-v2'
     },
     {
       title: 'أرباحي',
@@ -369,7 +370,7 @@ const AdvancedAccountingSystem = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {kpiCards.map((stat, index) => (
           <motion.div 
-            key={stat.title} 
+            key={`${stat.title}-${index}-updated`} 
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ delay: index * 0.05 }}

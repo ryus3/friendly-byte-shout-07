@@ -30,14 +30,14 @@
     /* Font scaling for display settings */
     --font-scale: 1;
     
-    /* Order Status Colors - Professional Design */
+    /* Order Status Colors - Updated Based on User Images */
     --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
-    --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة */
+    --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة - يحتاج معالجة */
     --status-shipped: 262 83% 58%;       /* بنفسجي فاتح للشحن */
     --status-delivery: 217 91% 60%;      /* أزرق فاتح لقيد التوصيل */
-    --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم */
-    --status-returned: 0 84% 60%;        /* أحمر للراجعة */
-    --status-cancelled: 0 62% 52%;       /* أحمر داكن للملغي */
+    --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم - تم التسليم */
+    --status-returned: 0 84% 60%;        /* أحمر للراجعة - راجع */
+    --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي - تم الإرجاع */
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */
