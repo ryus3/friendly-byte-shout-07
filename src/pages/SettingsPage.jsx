@@ -493,8 +493,7 @@ const SettingsPage = () => {
           </div>
         )}
 
-        <SystemStatusDashboard />
-      </div>
+      <SystemStatusDashboard />
     </>
   );
 };
