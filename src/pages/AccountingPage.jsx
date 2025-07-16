@@ -152,7 +152,18 @@ const AccountingPage = () => {
         
         // حساب مبيعات وأرباح المدير
         const managerOrders = deliveredOrders.filter(o => o.created_by === currentUser?.id);
-        const managerSales = managerOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        console.log('الطلبات المُوصلة للمدير:', managerOrders);
+        console.log('عدد طلبات المدير:', managerOrders.length);
+        
+        const managerSales = managerOrders.reduce((sum, o) => {
+            const orderTotal = o.final_amount || o.total_amount || 0;
+            const deliveryFee = o.delivery_fee || 0;
+            const salesAmount = orderTotal - deliveryFee; // المبيعات بدون رسوم التوصيل
+            console.log(`الطلب ${o.order_number}: المجموع=${orderTotal}, التوصيل=${deliveryFee}, المبيعات=${salesAmount}`);
+            return sum + salesAmount;
+        }, 0);
+        console.log('إجمالي مبيعات المدير:', managerSales);
+        
         const myProfit = managerOrders.reduce((sum, o) => {
             const orderProfit = (o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0);
             return sum + orderProfit;
@@ -163,7 +174,14 @@ const AccountingPage = () => {
             const orderUser = allUsers?.find(u => u.id === o.created_by);
             return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy');
         });
-        const employeeSales = employeeOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+        console.log('الطلبات المُوصلة للموظفين:', employeeOrders);
+        
+        const employeeSales = employeeOrders.reduce((sum, o) => {
+            const orderTotal = o.final_amount || o.total_amount || 0;
+            const deliveryFee = o.delivery_fee || 0;
+            const salesAmount = orderTotal - deliveryFee; // المبيعات بدون رسوم التوصيل
+            return sum + salesAmount;
+        }, 0);
         const managerProfitFromEmployees = employeeOrders.reduce((sum, o) => sum + (calculateManagerProfit(o) || 0), 0);
         
         const totalProfit = myProfit + managerProfitFromEmployees;
