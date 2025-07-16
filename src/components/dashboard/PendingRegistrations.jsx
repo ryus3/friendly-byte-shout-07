@@ -27,18 +27,38 @@ const defaultPages = [
   { value: '/my-profits', label: 'أرباحي (خاص بالموظف)' },
 ];
 
+// صلاحيات افتراضية للموظف العادي
+const getDefaultPermissions = (role) => {
+  if (role === 'admin' || role === 'deputy') {
+    return ['*'];
+  }
+  
+  // صلاحيات افتراضية للموظف
+  return [
+    'view_products',
+    'create_orders', 
+    'view_orders',
+    'edit_orders',
+    'view_inventory',
+    'view_customers',
+    'create_customers',
+    'edit_customers',
+    'view_profits'
+  ];
+};
+
 const UserCard = ({ user, onApprove, onReject }) => {
   const { categories, colors, sizes, departments, productTypes, seasonsOccasions } = useVariants();
-  const [selectedPermissions, setSelectedPermissions] = useState([]);
+  const [selectedPermissions, setSelectedPermissions] = useState(getDefaultPermissions('employee'));
   const [role, setRole] = useState('employee');
   const [defaultPage, setDefaultPage] = useState('/');
   const [orderCreationMode, setOrderCreationMode] = useState('choice');
-  const [categoryPermissions, setCategoryPermissions] = useState([]);
-  const [colorPermissions, setColorPermissions] = useState([]);
-  const [sizePermissions, setSizePermissions] = useState([]);
-  const [departmentPermissions, setDepartmentPermissions] = useState([]);
-  const [productTypePermissions, setProductTypePermissions] = useState([]);
-  const [seasonOccasionPermissions, setSeasonOccasionPermissions] = useState([]);
+  const [categoryPermissions, setCategoryPermissions] = useState(['all']);
+  const [colorPermissions, setColorPermissions] = useState(['all']);
+  const [sizePermissions, setSizePermissions] = useState(['all']);
+  const [departmentPermissions, setDepartmentPermissions] = useState(['all']);
+  const [productTypePermissions, setProductTypePermissions] = useState(['all']);
+  const [seasonOccasionPermissions, setSeasonOccasionPermissions] = useState(['all']);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePermissionChange = (permissionId, checked) => {
@@ -87,10 +107,24 @@ const UserCard = ({ user, onApprove, onReject }) => {
   
   const handleRoleChange = (newRole) => {
     setRole(newRole);
+    setSelectedPermissions(getDefaultPermissions(newRole));
+    
+    // تحديد صلاحيات المتغيرات حسب الدور
     if (newRole === 'admin' || newRole === 'deputy') {
-      setSelectedPermissions(['*']);
-    } else if (role === 'admin' || role === 'deputy') {
-      setSelectedPermissions([]);
+      setCategoryPermissions(['all']);
+      setColorPermissions(['all']);
+      setSizePermissions(['all']);
+      setDepartmentPermissions(['all']);
+      setProductTypePermissions(['all']);
+      setSeasonOccasionPermissions(['all']);
+    } else {
+      // للموظف العادي: صلاحيات محددة افتراضية
+      setCategoryPermissions(['all']);
+      setColorPermissions(['all']);
+      setSizePermissions(['all']);
+      setDepartmentPermissions(['all']);
+      setProductTypePermissions(['all']);
+      setSeasonOccasionPermissions(['all']);
     }
   }
 
