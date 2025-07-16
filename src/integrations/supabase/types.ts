@@ -1776,6 +1776,10 @@ export type Database = {
           error_message: string
         }[]
       }
+      calculate_employee_detailed_profit: {
+        Args: { p_employee_id: string; p_order_id: string }
+        Returns: number
+      }
       calculate_employee_profit: {
         Args: {
           p_employee_id: string
@@ -1792,6 +1796,10 @@ export type Database = {
         Args: { order_id_input: string }
         Returns: undefined
       }
+      check_user_permission: {
+        Args: { p_user_id: string; p_permission_name: string }
+        Returns: boolean
+      }
       check_user_variant_permission: {
         Args: {
           p_user_id: string
@@ -1799,6 +1807,10 @@ export type Database = {
           p_item_id: string
         }
         Returns: boolean
+      }
+      create_auto_settlement_request: {
+        Args: { p_employee_id: string; p_order_ids: string[] }
+        Returns: string
       }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
@@ -1809,6 +1821,10 @@ export type Database = {
       finalize_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
+      }
+      generate_employee_telegram_code: {
+        Args: { p_user_id: string }
+        Returns: string
       }
       generate_order_number: {
         Args: Record<PropertyKey, never>
@@ -1842,6 +1858,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_product_access: {
+        Args: { p_user_id: string; p_permission_type: string }
+        Returns: Json
+      }
       is_admin_or_deputy: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -1874,6 +1894,16 @@ export type Database = {
           p_sku?: string
         }
         Returns: undefined
+      }
+      update_settlement_status: {
+        Args: {
+          p_settlement_id: string
+          p_new_status: string
+          p_reviewer_id: string
+          p_review_notes?: string
+          p_approved_amount?: number
+        }
+        Returns: boolean
       }
       username_exists: {
         Args: { p_username: string }
