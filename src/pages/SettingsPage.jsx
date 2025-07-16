@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import useUnifiedPermissions from '@/hooks/useUnifiedPermissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
-import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+import RoleManagementDialog from '@/components/manage-employees/RoleManagementDialog';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -122,13 +122,16 @@ const SettingsPage = () => {
   // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
   const {
     isAdmin,
-    isEmployee,
     canManageEmployees,
-    canManageSettings,
-    canAccessDeliveryPartners,
-    canManageAccounting,
-    canManagePurchases
-  } = usePermissionBasedData();
+    canViewAllData,
+    hasPermission
+  } = useUnifiedPermissions();
+
+  // صلاحيات إضافية من النظام القديم للتوافق
+  const canAccessDeliveryPartners = hasPermission('access_delivery_partners') || user?.delivery_partner_access;
+  const canManageAccounting = hasPermission('manage_finances');
+  const canManagePurchases = hasPermission('manage_purchases');
+  const canManageSettings = hasPermission('manage_settings');
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
@@ -483,7 +486,7 @@ const SettingsPage = () => {
         />
       )}
 
-      <UnifiedRoleManager 
+      <RoleManagementDialog 
         open={isRoleManagerOpen} 
         onOpenChange={setIsRoleManagerOpen} 
       />
