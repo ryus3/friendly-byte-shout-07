@@ -225,6 +225,11 @@ export const AuthProvider = ({ children }) => {
           duration: 7000,
         });
       } else {
+        // تحديث قائمة التسجيلات المعلقة للمدير
+        setTimeout(() => {
+          fetchAdminData();
+        }, 1000);
+        
         toast({
           title: "تم التسجيل بنجاح",
           description: `مرحباً ${fullName}، سيقوم المدير بمراجعة طلبك وتفعيله قريباً.`,

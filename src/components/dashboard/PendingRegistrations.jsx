@@ -143,6 +143,9 @@ const PendingRegistrations = () => {
           variant: "default"
         });
         
+        // تحديث فوري للقوائم
+        await refetchAdminData();
+        
         // إغلاق النافذة إذا كانت مفتوحة
         setShowUnifiedDialog(false);
         setSelectedEmployee(null);
