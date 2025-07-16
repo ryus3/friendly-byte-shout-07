@@ -109,6 +109,7 @@ const Dashboard = () => {
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
         try {
+            console.log('جاري جلب بيانات الأرباح...');
             const { data: profitsData, error } = await supabase
                 .from('profits')
                 .select(`
@@ -130,9 +131,14 @@ const Dashboard = () => {
                 console.error('خطأ في جلب الأرباح:', error);
                 return { pending: [], settled: [] };
             }
+
+            console.log('بيانات الأرباح المجلبة:', profitsData);
             
             const pending = profitsData?.filter(p => p.status === 'pending') || [];
             const settled = profitsData?.filter(p => p.status === 'settled') || [];
+
+            console.log('الأرباح المعلقة:', pending);
+            console.log('الأرباح المستلمة:', settled);
 
             setProfitsData({ pending, settled });
             return { pending, settled };
@@ -145,7 +151,7 @@ const Dashboard = () => {
     // تحديث بيانات الأرباح عند تحميل الصفحة
     useEffect(() => {
         fetchProfitsData();
-    }, []);
+    }, [fetchProfitsData]);
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
@@ -291,6 +297,8 @@ const Dashboard = () => {
             topProducts: []
         };
 
+        console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
+
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         // استخدام الطلبات المفلترة بدلاً من كل الطلبات
         const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
@@ -314,6 +322,9 @@ const Dashboard = () => {
           
           return sum + employeeProfit + managerProfit;
         }, 0);
+        
+        console.log('الطلبات المُوصلة بدون فواتير:', filteredDeliveredOrders.length);
+        console.log('مجموع الأرباح المعلقة:', pendingProfit);
         
         // حساب المبيعات المستلمة (من إجمالي سعر المنتجات فقط بدون التوصيل)
         const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
@@ -345,6 +356,8 @@ const Dashboard = () => {
             topProvinces: getTopProvinces(visibleOrders),
             topProducts: getTopProducts(visibleOrders),
         };
+        
+        console.log('النتيجة النهائية للدالشبورد:', result);
         
         return result;
     }, [visibleOrders, periods, user, canViewAllData, calculateManagerProfit, financialSummary]);
