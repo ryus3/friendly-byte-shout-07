@@ -151,7 +151,7 @@ const Dashboard = () => {
     // تحديث بيانات الأرباح عند تحميل الصفحة
     useEffect(() => {
         fetchProfitsData();
-    }, [fetchProfitsData]);
+    }, []);
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
@@ -296,8 +296,6 @@ const Dashboard = () => {
             topProvinces: [],
             topProducts: []
         };
-
-        console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
 
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         // استخدام الطلبات المفلترة بدلاً من كل الطلبات
