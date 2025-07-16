@@ -9,7 +9,6 @@ import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
-import NotificationsHandler from '@/contexts/NotificationsHandler';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 
 export const AppProviders = ({ children }) => {
@@ -19,7 +18,6 @@ export const AppProviders = ({ children }) => {
         <AuthProvider>
           <NotificationsProvider>
             <NotificationsSystemProvider>
-              <NotificationsHandler />
               <InventoryProvider>
                 <ProfitsProvider>
                   <VariantsProvider>

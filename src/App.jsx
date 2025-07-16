@@ -50,8 +50,12 @@ function ProtectedRoute({ children, permission }) {
 }
 
 function AppContent() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+
+  if (loading) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
+  }
 
   const childrenWithProps = (Component, props = {}) => (
     <Layout>
