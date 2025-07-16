@@ -227,8 +227,10 @@ const Dashboard = () => {
         );
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
-        // حساب إجمالي الإيرادات من final_amount (تتضمن رسوم التوصيل)
+        // حساب إجمالي الإيرادات والرسوم
         const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+        const salesWithoutDelivery = totalRevenue - deliveryFees;
         
         // حساب تكلفة البضاعة المباعة من العناصر الفعلية
         const cogs = deliveredOrders.reduce((sum, o) => {
@@ -238,7 +240,7 @@ const Dashboard = () => {
           }, 0);
           return sum + orderCogs;
         }, 0);
-        const grossProfit = totalRevenue - cogs;
+        const grossProfit = salesWithoutDelivery - cogs;
         const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const totalExpenses = generalExpenses + employeeSettledDues;
@@ -268,7 +270,7 @@ const Dashboard = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
 
-        return { totalRevenue, cogs, grossProfit, totalExpenses, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
     }, [periods.netProfit, orders, accounting, products]);
 
     const dashboardData = useMemo(() => {
@@ -412,36 +414,11 @@ const Dashboard = () => {
                             fetchProfitsData();
                         }}
                         pendingProfitOrders={dashboardData.pendingProfitOrders || []}
-                        onReceiveInvoices={async (orderIds) => {
-                            // استلام فواتير متعددة
-                            try {
-                                const { error } = await supabase
-                                    .from('orders')
-                                    .update({ 
-                                        receipt_received: true,
-                                        receipt_received_at: new Date().toISOString(),
-                                        receipt_received_by: user.id
-                                    })
-                                    .in('id', orderIds);
-                                
-                                if (error) throw error;
-                                
-                                // إعادة تحميل البيانات
-                                await fetchProfitsData();
-                                
-                                toast({
-                                    title: "تم استلام الفواتير",
-                                    description: `تم تسجيل استلام ${orderIds.length} فاتورة بنجاح`,
-                                    variant: "success"
-                                });
-                            } catch (error) {
-                                console.error('خطأ في استلام الفواتير:', error);
-                                toast({
-                                    title: "خطأ",
-                                    description: "فشل في تسجيل استلام الفواتير",
-                                    variant: "destructive"
-                                });
-                            }
+                        user={user}
+                        onReceiveInvoices={() => {
+                            console.log('تم استلام الفواتير بنجاح');
+                            // تحديث البيانات بعد استلام الفواتير
+                            fetchProfitsData();
                         }}
                     />
                 )}

@@ -244,4 +244,57 @@
   body {
     font-size: calc(0.9rem * var(--font-scale));
   }
+  
+  /* تحسين نوافذ الحوار للهاتف */
+  [data-radix-dialog-content] {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    height: 90vh !important;
+    max-height: 90vh !important;
+    margin: 0 !important;
+  }
+  
+  /* تحسين ScrollArea للهاتف */
+  [data-radix-scroll-area-viewport] {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* تحسين Dropdown للهاتف */
+  [data-radix-dropdown-menu-content] {
+    z-index: 9999 !important;
+    background: hsl(var(--background)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+    min-width: 200px !important;
+  }
+  
+  /* تحسين Accordion للهاتف */
+  [data-radix-accordion-content] {
+    overflow: visible !important;
+  }
+  
+  /* تحسين الأزرار للهاتف */
+  .mobile-button {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    min-height: 44px; /* معيار Apple للمس */
+  }
+  
+  /* تحسين النصوص للقراءة */
+  .mobile-text {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  
+  /* تحسين الكروت للهاتف */
+  .mobile-card {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
 }
