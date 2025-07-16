@@ -494,6 +494,7 @@ const SettingsPage = () => {
         )}
 
         <SystemStatusDashboard />
+        </div>
       </div>
     </>
   );
