@@ -374,8 +374,6 @@ const Dashboard = () => {
         navigate(`/my-orders?${query.toString()}`);
     }, [navigate, periods.totalOrders]);
 
-    if (inventoryLoading) return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
-
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
         if (!profitsData || !filterProfitsByUser) {
@@ -397,6 +395,8 @@ const Dashboard = () => {
             totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
     }, [profitsData, filterProfitsByUser]);
+
+    if (inventoryLoading) return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
 
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 
