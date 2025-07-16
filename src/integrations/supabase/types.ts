@@ -399,6 +399,54 @@ export type Database = {
           },
         ]
       }
+      order_discounts: {
+        Row: {
+          affects_employee_profit: boolean | null
+          applied_by: string
+          created_at: string
+          discount_amount: number
+          discount_reason: string | null
+          id: string
+          order_id: string
+          updated_at: string
+        }
+        Insert: {
+          affects_employee_profit?: boolean | null
+          applied_by: string
+          created_at?: string
+          discount_amount?: number
+          discount_reason?: string | null
+          id?: string
+          order_id: string
+          updated_at?: string
+        }
+        Update: {
+          affects_employee_profit?: boolean | null
+          applied_by?: string
+          created_at?: string
+          discount_amount?: number
+          discount_reason?: string | null
+          id?: string
+          order_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_discounts_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "order_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string
@@ -459,6 +507,7 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           created_by: string
+          custom_discount: number | null
           customer_address: string | null
           customer_city: string | null
           customer_id: string | null
@@ -469,6 +518,7 @@ export type Database = {
           delivery_partner: string | null
           delivery_status: string
           discount: number
+          discount_reason: string | null
           final_amount: number
           id: string
           notes: string | null
@@ -486,6 +536,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           created_by: string
+          custom_discount?: number | null
           customer_address?: string | null
           customer_city?: string | null
           customer_id?: string | null
@@ -496,6 +547,7 @@ export type Database = {
           delivery_partner?: string | null
           delivery_status?: string
           discount?: number
+          discount_reason?: string | null
           final_amount?: number
           id?: string
           notes?: string | null
@@ -513,6 +565,7 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           created_by?: string
+          custom_discount?: number | null
           customer_address?: string | null
           customer_city?: string | null
           customer_id?: string | null
@@ -523,6 +576,7 @@ export type Database = {
           delivery_partner?: string | null
           delivery_status?: string
           discount?: number
+          discount_reason?: string | null
           final_amount?: number
           id?: string
           notes?: string | null
@@ -861,45 +915,66 @@ export type Database = {
       }
       profiles: {
         Row: {
+          category_permissions: Json | null
+          color_permissions: Json | null
           created_at: string
           default_customer_name: string | null
           default_page: string | null
+          department_permissions: Json | null
           email: string
           full_name: string
           id: string
           is_active: boolean
+          order_creation_mode: string | null
           permissions: Json | null
+          product_type_permissions: Json | null
           role: string
+          season_occasion_permissions: Json | null
+          size_permissions: Json | null
           status: string
           updated_at: string
           user_id: string
           username: string
         }
         Insert: {
+          category_permissions?: Json | null
+          color_permissions?: Json | null
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
+          department_permissions?: Json | null
           email: string
           full_name: string
           id?: string
           is_active?: boolean
+          order_creation_mode?: string | null
           permissions?: Json | null
+          product_type_permissions?: Json | null
           role?: string
+          season_occasion_permissions?: Json | null
+          size_permissions?: Json | null
           status?: string
           updated_at?: string
           user_id: string
           username: string
         }
         Update: {
+          category_permissions?: Json | null
+          color_permissions?: Json | null
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
+          department_permissions?: Json | null
           email?: string
           full_name?: string
           id?: string
           is_active?: boolean
+          order_creation_mode?: string | null
           permissions?: Json | null
+          product_type_permissions?: Json | null
           role?: string
+          season_occasion_permissions?: Json | null
+          size_permissions?: Json | null
           status?: string
           updated_at?: string
           user_id?: string

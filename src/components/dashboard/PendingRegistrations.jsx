@@ -28,12 +28,17 @@ const defaultPages = [
 ];
 
 const UserCard = ({ user, onApprove, onReject }) => {
-  const { categories, colors, sizes } = useVariants();
+  const { categories, colors, sizes, departments, productTypes, seasonsOccasions } = useVariants();
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [role, setRole] = useState('employee');
   const [defaultPage, setDefaultPage] = useState('/');
   const [orderCreationMode, setOrderCreationMode] = useState('choice');
   const [categoryPermissions, setCategoryPermissions] = useState([]);
+  const [colorPermissions, setColorPermissions] = useState([]);
+  const [sizePermissions, setSizePermissions] = useState([]);
+  const [departmentPermissions, setDepartmentPermissions] = useState([]);
+  const [productTypePermissions, setProductTypePermissions] = useState([]);
+  const [seasonOccasionPermissions, setSeasonOccasionPermissions] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePermissionChange = (permissionId, checked) => {
@@ -47,6 +52,36 @@ const UserCard = ({ user, onApprove, onReject }) => {
   const handleCategoryPermissionChange = (category, checked) => {
     setCategoryPermissions(prev => 
       checked ? [...prev, category] : prev.filter(c => c !== category)
+    );
+  };
+
+  const handleColorPermissionChange = (color, checked) => {
+    setColorPermissions(prev => 
+      checked ? [...prev, color] : prev.filter(c => c !== color)
+    );
+  };
+
+  const handleSizePermissionChange = (size, checked) => {
+    setSizePermissions(prev => 
+      checked ? [...prev, size] : prev.filter(c => c !== size)
+    );
+  };
+
+  const handleDepartmentPermissionChange = (department, checked) => {
+    setDepartmentPermissions(prev => 
+      checked ? [...prev, department] : prev.filter(c => c !== department)
+    );
+  };
+
+  const handleProductTypePermissionChange = (productType, checked) => {
+    setProductTypePermissions(prev => 
+      checked ? [...prev, productType] : prev.filter(c => c !== productType)
+    );
+  };
+
+  const handleSeasonOccasionPermissionChange = (seasonOccasion, checked) => {
+    setSeasonOccasionPermissions(prev => 
+      checked ? [...prev, seasonOccasion] : prev.filter(c => c !== seasonOccasion)
     );
   };
   
@@ -68,13 +103,19 @@ const UserCard = ({ user, onApprove, onReject }) => {
 
   const handleApproveClick = () => {
     const finalPermissions = (role === 'admin' || role === 'deputy') ? ['*'] : selectedPermissions;
-    const finalCategoryPermissions = (role === 'admin' || role === 'deputy') ? ['all'] : categoryPermissions;
+    const isAdminOrDeputy = role === 'admin' || role === 'deputy';
+    
     handleAction(onApprove, user.id, { 
       permissions: finalPermissions, 
       role, 
       default_page: defaultPage,
       order_creation_mode: orderCreationMode,
-      category_permissions: finalCategoryPermissions
+      category_permissions: isAdminOrDeputy ? ['all'] : categoryPermissions,
+      color_permissions: isAdminOrDeputy ? ['all'] : colorPermissions,
+      size_permissions: isAdminOrDeputy ? ['all'] : sizePermissions,
+      department_permissions: isAdminOrDeputy ? ['all'] : departmentPermissions,
+      product_type_permissions: isAdminOrDeputy ? ['all'] : productTypePermissions,
+      season_occasion_permissions: isAdminOrDeputy ? ['all'] : seasonOccasionPermissions
     });
   };
 
@@ -258,16 +299,27 @@ const UserCard = ({ user, onApprove, onReject }) => {
             <Separator />
             
             <div className="space-y-3">
-              <h5 className="font-medium text-sm">الألوان المتاحة:</h5>
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-sm">الألوان المتاحة:</h5>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setColorPermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد كل الألوان
+                </Button>
+              </div>
               <div className="grid grid-cols-4 gap-2">
                 {colors.map(color => (
                   <div key={color.id} className="flex items-center space-x-2 space-x-reverse p-1">
                     <Checkbox
                       id={`color-${color.id}-${user.id}`}
-                      checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                      disabled={true}
+                      checked={colorPermissions.includes(color.id) || colorPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      onCheckedChange={(checked) => handleColorPermissionChange(color.id, checked)}
+                      disabled={role === 'admin' || role === 'deputy' || colorPermissions.includes('all')}
                     />
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Label htmlFor={`color-${color.id}-${user.id}`} className="text-xs cursor-pointer flex items-center gap-1">
                       <div 
                         className="w-3 h-3 rounded border" 
                         style={{ backgroundColor: color.hex_code }}
@@ -282,22 +334,123 @@ const UserCard = ({ user, onApprove, onReject }) => {
             <Separator />
             
             <div className="space-y-3">
-              <h5 className="font-medium text-sm">الأحجام المتاحة:</h5>
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-sm">الأحجام المتاحة:</h5>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSizePermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد كل الأحجام
+                </Button>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {sizes.map(size => (
                   <div key={size.id} className="flex items-center space-x-2 space-x-reverse p-1">
                     <Checkbox
                       id={`size-${size.id}-${user.id}`}
-                      checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
-                      disabled={true}
+                      checked={sizePermissions.includes(size.id) || sizePermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      onCheckedChange={(checked) => handleSizePermissionChange(size.id, checked)}
+                      disabled={role === 'admin' || role === 'deputy' || sizePermissions.includes('all')}
                     />
-                    <Label className="text-xs text-muted-foreground">{size.name}</Label>
+                    <Label htmlFor={`size-${size.id}-${user.id}`} className="text-xs cursor-pointer">{size.name}</Label>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                * الألوان والأحجام تتبع صلاحيات التصنيفات الرئيسية
-              </p>
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-sm">الأقسام المتاحة:</h5>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDepartmentPermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد كل الأقسام
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {departments.map(department => (
+                  <div key={department.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
+                    <Checkbox
+                      id={`dept-${department.id}-${user.id}`}
+                      checked={departmentPermissions.includes(department.id) || departmentPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      onCheckedChange={(checked) => handleDepartmentPermissionChange(department.id, checked)}
+                      disabled={role === 'admin' || role === 'deputy' || departmentPermissions.includes('all')}
+                    />
+                    <Label htmlFor={`dept-${department.id}-${user.id}`} className="text-xs cursor-pointer">
+                      {department.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-sm">أنواع المنتجات المتاحة:</h5>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setProductTypePermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد كل الأنواع
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {productTypes.map(type => (
+                  <div key={type.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
+                    <Checkbox
+                      id={`type-${type.id}-${user.id}`}
+                      checked={productTypePermissions.includes(type.id) || productTypePermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      onCheckedChange={(checked) => handleProductTypePermissionChange(type.id, checked)}
+                      disabled={role === 'admin' || role === 'deputy' || productTypePermissions.includes('all')}
+                    />
+                    <Label htmlFor={`type-${type.id}-${user.id}`} className="text-xs cursor-pointer">
+                      {type.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h5 className="font-medium text-sm">المواسم والمناسبات المتاحة:</h5>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSeasonOccasionPermissions(['all'])}
+                  disabled={role === 'admin' || role === 'deputy'}
+                >
+                  تحديد كل المواسم
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {seasonsOccasions.map(item => (
+                  <div key={item.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
+                    <Checkbox
+                      id={`season-${item.id}-${user.id}`}
+                      checked={seasonOccasionPermissions.includes(item.id) || seasonOccasionPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      onCheckedChange={(checked) => handleSeasonOccasionPermissionChange(item.id, checked)}
+                      disabled={role === 'admin' || role === 'deputy' || seasonOccasionPermissions.includes('all')}
+                    />
+                    <Label htmlFor={`season-${item.id}-${user.id}`} className="text-xs cursor-pointer">
+                      {item.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
