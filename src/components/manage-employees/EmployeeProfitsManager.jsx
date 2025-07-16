@@ -57,14 +57,7 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-full sm:max-w-7xl max-h-[95vh] overflow-hidden flex flex-col z-[100] fixed inset-4 sm:inset-8 md:inset-12 lg:inset-16 xl:inset-20 mx-auto my-auto bg-background border shadow-lg rounded-lg"
-          style={{ 
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 100
-          }}>
+        <DialogContent className="max-w-[95vw] w-full sm:max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0 pb-4">
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
@@ -233,13 +226,13 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                             <SelectTrigger>
                               <SelectValue placeholder="اختر موظف..." />
                             </SelectTrigger>
-                             <SelectContent className="z-[200] bg-background border shadow-lg">
-                                {employees.map(emp => (
-                                  <SelectItem key={emp.id} value={emp.id}>
-                                    {emp.full_name || emp.username || 'موظف غير محدد'}
-                                  </SelectItem>
-                                ))}
-                             </SelectContent>
+                            <SelectContent>
+                               {employees.map(emp => (
+                                 <SelectItem key={emp.id} value={emp.id}>
+                                   {emp.full_name || emp.username || 'موظف غير محدد'}
+                                 </SelectItem>
+                               ))}
+                            </SelectContent>
                           </Select>
                         </div>
                         
@@ -249,11 +242,11 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                             <SelectTrigger>
                               <SelectValue placeholder="اختر منتج..." />
                             </SelectTrigger>
-                             <SelectContent className="z-[200] bg-background border shadow-lg">
-                               {products.slice(0, 10).map(product => (
-                                 <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                               ))}
-                             </SelectContent>
+                            <SelectContent>
+                              {products.slice(0, 10).map(product => (
+                                <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                         </div>
                         
