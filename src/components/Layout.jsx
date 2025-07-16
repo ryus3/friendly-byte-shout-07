@@ -198,7 +198,7 @@ const Layout = ({ children }) => {
 
   return (
     <div className="flex h-dvh bg-background">
-      <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-50 bg-card border-l border-border">
+      <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-[60] bg-card border-l border-border">
         <SidebarContent onClose={() => setSidebarOpen(false)} />
       </div>
 
@@ -209,7 +209,7 @@ const Layout = ({ children }) => {
             animate={{ x: 0 }}
             exit={{ x: 300 }}
             transition={{ type: "spring", damping: 30, stiffness: 250 }}
-            className="fixed inset-y-0 right-0 z-50 w-72 bg-card border-l border-border lg:hidden"
+            className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
             dir="rtl"
           >
             <SidebarContent onClose={() => setSidebarOpen(false)} />
@@ -300,7 +300,7 @@ const Layout = ({ children }) => {
 
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/60 z-[55] lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

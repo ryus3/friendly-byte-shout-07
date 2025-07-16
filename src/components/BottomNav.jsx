@@ -229,7 +229,7 @@ const BottomNav = () => {
         animate={{ y: 0 }}
         exit={{ y: 100 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-0 right-0 left-0 bg-card/95 backdrop-blur-xl border-t border-border/50 z-50 md:hidden shadow-2xl"
+        className="fixed bottom-0 right-0 left-0 bg-card/95 backdrop-blur-xl border-t border-border/50 z-40 md:hidden shadow-2xl"
       >
         <div className="flex justify-around items-center h-16 px-3 relative">
           {/* القائمة */}

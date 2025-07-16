@@ -292,8 +292,9 @@ const AdvancedAccountingSystem = () => {
       format: 'currency',
       icon: User,
       colors: ['teal-500', 'cyan-500'],
-      change: 'طلبات مستلمة',
-      onClick: () => setShowUserProfitsDialog(true)
+      change: 'طلبات مستلمة فقط',
+      onClick: () => setShowUserProfitsDialog(true),
+      key: 'my-profits-interactive-v2'
     },
     {
       title: 'قيمة المخزون',
