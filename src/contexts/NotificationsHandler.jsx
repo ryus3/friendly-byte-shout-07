@@ -2,16 +2,22 @@ import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
   const { addNotification } = useNotifications();
-  const { canViewAllData } = usePermissionBasedData();
 
   useEffect(() => {
-    if (!supabase || !user || !canViewAllData) {
+    // التحقق من الشروط الأساسية
+    if (!supabase || !user || !addNotification) {
       return;
+    }
+    
+    // فحص إذا كان المستخدم مدير - تبسيط الفحص
+    const isAdmin = user.role === 'admin';
+    
+    if (!isAdmin) {
+      return; // إشعارات المدير فقط
     }
     
     // ADMIN ONLY NOTIFICATIONS - These create notifications directly
@@ -24,7 +30,7 @@ const NotificationsHandler = () => {
         { event: 'INSERT', schema: 'public', table: 'profiles' },
         (payload) => {
           if (payload.new.status === 'pending') {
-            fetchAdminData();
+            fetchAdminData?.();
             addNotification({
               type: 'new_registration',
               title: 'طلب تسجيل جديد',
@@ -45,7 +51,7 @@ const NotificationsHandler = () => {
       supabase.removeChannel(profilesChannel);
     };
     
-  }, [supabase, user, canViewAllData, fetchAdminData, addNotification]);
+  }, [user, fetchAdminData, addNotification]);
 
   return null;
 };
