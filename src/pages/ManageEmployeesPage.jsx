@@ -9,7 +9,7 @@ import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployee
 import { toast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
-import UpdateRolePermissionsDialog from '@/components/manage-employees/UpdateRolePermissionsDialog';
+
 
 const ManageEmployeesPage = () => {
   const { allUsers } = useAuth();
@@ -17,7 +17,7 @@ const ManageEmployeesPage = () => {
   const [filters, setFilters] = useState({ searchTerm: '', status: 'all', role: 'all' });
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -70,11 +70,6 @@ const ManageEmployeesPage = () => {
               <p className="text-muted-foreground mt-1">عرض وتعديل صلاحيات وحسابات الموظفين</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsBulkUpdateOpen(true)}>
-                <Shield className="w-4 h-4 ml-2" />
-                تعديل صلاحيات جماعي
-            </Button>
             <Button onClick={handleAddNew}>
               <UserPlus className="w-4 h-4 ml-2" />
               إضافة موظف جديد
@@ -126,10 +121,6 @@ const ManageEmployeesPage = () => {
               onOpenChange={setIsEditModalOpen}
           />
         )}
-        <UpdateRolePermissionsDialog 
-            open={isBulkUpdateOpen}
-            onOpenChange={setIsBulkUpdateOpen}
-        />
       </div>
     </>
   );
