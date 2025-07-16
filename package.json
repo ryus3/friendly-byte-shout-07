@@ -64,7 +64,7 @@
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^9.0.1",
-    "vite": "^5.4.19"
+    "vite": "^7.0.4"
   },
   "devDependencies": {
     "@types/node": "^24.0.14",
