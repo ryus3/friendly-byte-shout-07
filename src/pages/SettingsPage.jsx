@@ -280,9 +280,7 @@ const SettingsPage = () => {
                 description="إدارة أسعار التوصيل وشركات الشحن المتكاملة"
                 iconColor="from-green-500 to-emerald-600"
                 onClick={() => setIsDeliverySettingsOpen(true)}
-              />
-            )}
-              {hasPermission('delivery_partner_access') && (
+              >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">السعر الأساسي</span>
@@ -293,8 +291,8 @@ const SettingsPage = () => {
                     <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
                   </div>
                 </div>
-              )}
-            </ModernCard>
+              </ModernCard>
+            )}
 
             {hasPermission('delivery_partner_access') && (
               <ModernCard
