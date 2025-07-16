@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import useUnifiedPermissions from '@/hooks/useUnifiedPermissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,7 +32,7 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
-import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+import RoleManagementDialog from '@/components/manage-employees/RoleManagementDialog';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -122,13 +122,32 @@ const SettingsPage = () => {
   // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
   const {
     isAdmin,
-    isEmployee,
     canManageEmployees,
-    canManageSettings,
-    canAccessDeliveryPartners,
-    canManageAccounting,
-    canManagePurchases
-  } = usePermissionBasedData();
+    canViewAllData,
+    hasPermission: checkPermission,
+    loading: permissionsLoading
+  } = useUnifiedPermissions();
+
+  // صلاحيات إضافية من النظام القديم للتوافق - مع التحقق من التحميل
+  const canAccessDeliveryPartners = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return checkPermission('access_delivery_partners') || user?.delivery_partner_access;
+  }, [checkPermission, permissionsLoading, user?.delivery_partner_access]);
+
+  const canManageAccounting = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return checkPermission('manage_finances');
+  }, [checkPermission, permissionsLoading]);
+
+  const canManagePurchases = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return checkPermission('manage_purchases');
+  }, [checkPermission, permissionsLoading]);
+
+  const canManageSettings = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return checkPermission('manage_settings');
+  }, [checkPermission, permissionsLoading]);
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
@@ -213,12 +232,12 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* قواعد الأرباح للموظفين - للمدراء فقط */}
+            {/* إدارة الموظفين - للمدراء فقط */}
             {canManageEmployees && (
               <ModernCard
-                icon={DollarSign}
-                title="قواعد الأرباح للموظفين"
-                description="إدارة قواعد الأرباح وحساب المستحقات للموظفين حسب المنتجات والتصنيفات"
+                icon={Users}
+                title="إدارة الموظفين"
+                description="إضافة وتعديل الموظفين وإدارة الصلاحيات والمتغيرات"
                 iconColor="from-green-500 to-green-600"
                 onClick={() => setIsManageEmployeesOpen(true)}
               />
@@ -483,7 +502,7 @@ const SettingsPage = () => {
         />
       )}
 
-      <UnifiedRoleManager 
+      <RoleManagementDialog 
         open={isRoleManagerOpen} 
         onOpenChange={setIsRoleManagerOpen} 
       />
