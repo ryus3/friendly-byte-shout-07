@@ -194,7 +194,8 @@ const Dashboard = () => {
     }, []);
 
     const visibleOrders = useMemo(() => {
-        return filterDataByUser(orders || [], 'created_by');
+        if (!orders) return [];
+        return filterDataByUser(orders, 'created_by');
     }, [orders, filterDataByUser]);
     
     const userAiOrders = useMemo(() => filterDataByUser(aiOrders || [], 'created_by'), [aiOrders, filterDataByUser]);
@@ -279,7 +280,8 @@ const Dashboard = () => {
         console.log('حساب بيانات الدالشبورد - profitsData:', profitsData);
 
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
-        const deliveredOrders = (orders || []).filter(o => o.status === 'delivered');
+        // استخدام الطلبات المفلترة بدلاً من كل الطلبات
+        const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
         
         // الطلبات المُوصلة التي لم يتم استلام فواتيرها بعد = أرباح معلقة
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
@@ -406,7 +408,15 @@ const Dashboard = () => {
             onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
         },
         hasPermission('view_orders') && {
-            key: 'pendingSales', title: 'المبيعات المعلقة', value: dashboardData.pendingSales, icon: PackageCheck, colors: ['orange-500', 'red-500'], format: 'currency', currentPeriod: periods.pendingSales, onPeriodChange: (p) => handlePeriodChange('pendingSales', p), onClick: () => openSummaryDialog('pendingSales', dashboardData.pendingSalesOrders, 'pendingSales')
+            key: 'pendingSales', 
+            title: canViewAllData ? 'المبيعات المعلقة' : 'طلباتي المشحونة', 
+            value: canViewAllData ? dashboardData.pendingSales : dashboardData.pendingSales, 
+            icon: PackageCheck, 
+            colors: ['orange-500', 'red-500'], 
+            format: 'currency', 
+            currentPeriod: periods.pendingSales, 
+            onPeriodChange: (p) => handlePeriodChange('pendingSales', p), 
+            onClick: canViewAllData ? () => openSummaryDialog('pendingSales', dashboardData.pendingSalesOrders, 'pendingSales') : () => navigate('/my-orders?status=shipped')
         },
     ].filter(Boolean);
 

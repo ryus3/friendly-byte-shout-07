@@ -15,9 +15,9 @@ export const permissionsMap = [
       { id: 'view_notifications_page', label: 'عرض صفحة الإشعارات' },
       { id: 'view_manage_products_page', label: 'عرض صفحة إدارة المنتجات' },
       { id: 'view_add_product_page', label: 'عرض صفحة إضافة منتج' },
-      { id: 'view_barcode_inventory_page', label: 'عرض صفحة جرد الباركود' },
-      { id: 'view_quick_order_page', label: 'عرض صفحة الطلب السريع' },
-      { id: 'view_detailed_inventory_page', label: 'عرض صفحة الجرد التفصيلي' }
+      { id: 'barcode_inventory_access', label: 'الوصول لجرد الباركود' },
+      { id: 'quick_order_access', label: 'الوصول للطلب السريع' },
+      { id: 'detailed_inventory_access', label: 'الوصول للجرد التفصيلي' }
     ]
   },
   {
@@ -158,6 +158,7 @@ export const permissionsMap = [
       { id: 'manage_notifications', label: 'إدارة الإشعارات' },
       { id: 'view_system_logs', label: 'عرض سجلات النظام' },
       { id: 'backup_restore', label: 'النسخ الاحتياطي والاستعادة' },
+      { id: 'use_ai_assistant', label: 'استخدام مساعد الذكاء الاصطناعي' },
       { id: 'ai_features', label: 'استخدام ميزات الذكاء الاصطناعي' },
       { id: 'appearance_settings', label: 'إعدادات المظهر' },
       { id: 'security_settings', label: 'إعدادات الأمان' },
@@ -181,6 +182,7 @@ export const defaultPermissions = {
     'view_products_page', 
     'view_orders_page',
     'view_inventory_page',
+    'view_profits_page',
     
     // المنتجات والمخزن
     'view_products',
@@ -191,7 +193,6 @@ export const defaultPermissions = {
     'view_orders',
     'view_own_orders',
     'create_orders',
-    'quick_order',
     'checkout_orders',
     'view_order_details',
     'print_invoices',
@@ -203,6 +204,10 @@ export const defaultPermissions = {
     
     // الأرباح الخاصة
     'view_own_profits',
+    'view_profits',
+    
+    // الذكاء الاصطناعي
+    'use_ai_assistant',
     
     // إعدادات شخصية
     'profile_settings'

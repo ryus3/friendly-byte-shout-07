@@ -62,14 +62,22 @@ export const usePermissionBasedData = () => {
   const getNotificationsForUser = useMemo(() => {
     return (notifications) => {
       if (!notifications) return [];
-      if (canViewAllData) return notifications;
-      return notifications.filter(notification => 
-        !notification.user_id || // إشعارات عامة
-        notification.user_id === user?.id || 
-        notification.user_id === user?.user_id
-      );
+      if (canViewAllData) return notifications; // المدير يرى كل الإشعارات
+      
+      // الموظف يرى فقط إشعاراته الشخصية أو الإشعارات العامة للموظفين
+      return notifications.filter(notification => {
+        // الإشعارات الشخصية للمستخدم
+        if (notification.user_id === user?.user_id || notification.user_id === user?.id) {
+          return true;
+        }
+        // الإشعارات العامة (null) فقط للمدراء والنواب
+        if (notification.user_id === null && (isAdmin || isDeputy)) {
+          return true;
+        }
+        return false;
+      });
     };
-  }, [canViewAllData, user?.id, user?.user_id]);
+  }, [canViewAllData, user?.id, user?.user_id, isAdmin, isDeputy]);
 
   const filterCategoriesByPermission = useMemo(() => {
     return (categories) => {
