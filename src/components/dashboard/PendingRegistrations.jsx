@@ -1,28 +1,39 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Check, X, Shield, User, UserPlus, Home, Loader2 } from 'lucide-react';
+import { Check, X, Shield, User, UserPlus, Home, Loader2, Package, Eye } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { permissionsMap } from '@/lib/permissions';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
 import { useNotifications } from '@/contexts/NotificationsContext';
 
 
 const defaultPages = [
   { value: '/', label: 'لوحة التحكم' },
-  { value: '/my-orders', label: 'طلباتي' },
   { value: '/quick-order', label: 'طلب سريع' },
-  { value: '/products', label: 'المنتجات' },
+  { value: '/products', label: 'عرض المنتجات' },
+  { value: '/manage-products', label: 'إدارة المنتجات' },
+  { value: '/inventory', label: 'الجرد' },
+  { value: '/orders', label: 'الطلبات' },
+  { value: '/purchases', label: 'المشتريات' },
+  { value: '/settings', label: 'الإعدادات' },
+  { value: '/my-orders', label: 'طلباتي (خاص بالموظف)' },
+  { value: '/my-profits', label: 'أرباحي (خاص بالموظف)' },
 ];
 
 const UserCard = ({ user, onApprove, onReject }) => {
+  const { categories, colors, sizes } = useVariants();
   const [selectedPermissions, setSelectedPermissions] = useState([]);
   const [role, setRole] = useState('employee');
   const [defaultPage, setDefaultPage] = useState('/');
+  const [orderCreationMode, setOrderCreationMode] = useState('choice');
+  const [categoryPermissions, setCategoryPermissions] = useState([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePermissionChange = (permissionId, checked) => {
@@ -30,6 +41,12 @@ const UserCard = ({ user, onApprove, onReject }) => {
       checked
         ? [...prev, permissionId]
         : prev.filter(p => p !== permissionId)
+    );
+  };
+
+  const handleCategoryPermissionChange = (category, checked) => {
+    setCategoryPermissions(prev => 
+      checked ? [...prev, category] : prev.filter(c => c !== category)
     );
   };
   
@@ -51,7 +68,14 @@ const UserCard = ({ user, onApprove, onReject }) => {
 
   const handleApproveClick = () => {
     const finalPermissions = (role === 'admin' || role === 'deputy') ? ['*'] : selectedPermissions;
-    handleAction(onApprove, user.id, { permissions: finalPermissions, role, default_page: defaultPage });
+    const finalCategoryPermissions = (role === 'admin' || role === 'deputy') ? ['all'] : categoryPermissions;
+    handleAction(onApprove, user.id, { 
+      permissions: finalPermissions, 
+      role, 
+      default_page: defaultPage,
+      order_creation_mode: orderCreationMode,
+      category_permissions: finalCategoryPermissions
+    });
   };
 
   const handleRejectClick = () => {
@@ -123,13 +147,29 @@ const UserCard = ({ user, onApprove, onReject }) => {
               </SelectContent>
             </Select>
           </div>
+          <div className="md:col-span-2">
+            <h4 className="font-semibold mb-2 flex items-center gap-2">
+              <Package className="w-5 h-5 text-primary" />
+              نمط إنشاء الطلب
+            </h4>
+            <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="choice">السماح بالاختيار</SelectItem>
+                <SelectItem value="local_only">إجباري محلي</SelectItem>
+                <SelectItem value="partner_only">إجباري شركة توصيل</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div>
           <h4 className="font-semibold mb-3 flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
             تحديد الصلاحيات
           </h4>
-          <Accordion type="multiple" className="w-full">
+          <Accordion type="multiple" className="w-full" defaultValue={permissionsMap.map(p => p.category)}>
             {permissionsMap.map(category => (
               <AccordionItem value={category.category} key={category.category}>
                 <AccordionTrigger disabled={role === 'admin' || role === 'deputy'}>
@@ -158,6 +198,108 @@ const UserCard = ({ user, onApprove, onReject }) => {
               </AccordionItem>
             ))}
           </Accordion>
+        </div>
+
+        {/* صلاحيات التصنيفات والمتغيرات */}
+        <div>
+          <h4 className="font-semibold mb-3 flex items-center gap-2">
+            <Eye className="w-5 h-5 text-primary" />
+            صلاحيات التصنيفات والمتغيرات
+          </h4>
+          <div className="p-4 border rounded-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 space-x-reverse">
+                <Checkbox
+                  id={`cat-all-${user.id}`}
+                  checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                  onCheckedChange={(checked) => handleCategoryPermissionChange('all', checked)}
+                  disabled={role === 'admin' || role === 'deputy'}
+                />
+                <Label htmlFor={`cat-all-${user.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  عرض جميع التصنيفات والمتغيرات
+                </Label>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCategoryPermissions(['all'])}
+                disabled={role === 'admin' || role === 'deputy'}
+              >
+                تحديد الكل
+              </Button>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <h5 className="font-medium text-sm">التصنيفات الرئيسية:</h5>
+              <div className="grid grid-cols-2 gap-3">
+                {categories.map(category => (
+                  <div key={category.id} className="flex items-center space-x-2 space-x-reverse p-2 border rounded">
+                    <Checkbox
+                      id={`cat-${category.id}-${user.id}`}
+                      checked={categoryPermissions.includes(category.id) || categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      onCheckedChange={(checked) => handleCategoryPermissionChange(category.id, checked)}
+                      disabled={role === 'admin' || role === 'deputy' || categoryPermissions.includes('all')}
+                    />
+                    <Label htmlFor={`cat-${category.id}-${user.id}`} className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                      <div 
+                        className="w-4 h-4 rounded border" 
+                        style={{ backgroundColor: category.color_hex || '#666' }}
+                      ></div>
+                      {category.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <h5 className="font-medium text-sm">الألوان المتاحة:</h5>
+              <div className="grid grid-cols-4 gap-2">
+                {colors.map(color => (
+                  <div key={color.id} className="flex items-center space-x-2 space-x-reverse p-1">
+                    <Checkbox
+                      id={`color-${color.id}-${user.id}`}
+                      checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      disabled={true}
+                    />
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <div 
+                        className="w-3 h-3 rounded border" 
+                        style={{ backgroundColor: color.hex_code }}
+                      ></div>
+                      {color.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-3">
+              <h5 className="font-medium text-sm">الأحجام المتاحة:</h5>
+              <div className="grid grid-cols-3 gap-2">
+                {sizes.map(size => (
+                  <div key={size.id} className="flex items-center space-x-2 space-x-reverse p-1">
+                    <Checkbox
+                      id={`size-${size.id}-${user.id}`}
+                      checked={categoryPermissions.includes('all') || role === 'admin' || role === 'deputy'}
+                      disabled={true}
+                    />
+                    <Label className="text-xs text-muted-foreground">{size.name}</Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                * الألوان والأحجام تتبع صلاحيات التصنيفات الرئيسية
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </motion.div>
