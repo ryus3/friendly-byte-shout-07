@@ -21,7 +21,7 @@ import { toast } from '@/components/ui/use-toast';
 const ProductsPage = () => {
   const location = useLocation();
   const { products, loading, addToCart, clearCart } = useInventory();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const { colors } = useVariants();
   
   const { categories, brands } = useMemo(() => {
@@ -94,54 +94,101 @@ const ProductsPage = () => {
   }, [location]);
 
   const filteredProducts = useMemo(() => {
-    let tempProducts = products.filter(p => p.is_visible);
+    let tempProducts = products.filter(p => p.is_active !== false);
 
     // تطبيق صلاحيات المنتجات حسب التصنيفات والأقسام والمتغيرات
     tempProducts = tempProducts.filter(product => {
+      // السماح للمدير برؤية كل شيء
+      if (user?.role === 'admin' || user?.permissions?.includes('*')) {
+        return true;
+      }
+
       // التحقق من صلاحيات التصنيفات
       if (product.product_categories && product.product_categories.length > 0) {
-        const hasAllowedCategory = product.product_categories.some(pc => 
-          hasPermission('view_category_all') || hasPermission(`view_category_${pc.category_id}`)
-        );
-        if (!hasAllowedCategory) return false;
+        try {
+          const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+          if (!categoryPermissions.includes('all')) {
+            const hasAllowedCategory = product.product_categories.some(pc => 
+              categoryPermissions.includes(pc.category_id)
+            );
+            if (!hasAllowedCategory) return false;
+          }
+        } catch (e) {
+          console.error('Error parsing category permissions:', e);
+        }
       }
 
       // التحقق من صلاحيات الأقسام
       if (product.product_departments && product.product_departments.length > 0) {
-        const hasAllowedDepartment = product.product_departments.some(pd => 
-          hasPermission('view_department_all') || hasPermission(`view_department_${pd.department_id}`)
-        );
-        if (!hasAllowedDepartment) return false;
+        try {
+          const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
+          if (!departmentPermissions.includes('all')) {
+            const hasAllowedDepartment = product.product_departments.some(pd => 
+              departmentPermissions.includes(pd.department_id)
+            );
+            if (!hasAllowedDepartment) return false;
+          }
+        } catch (e) {
+          console.error('Error parsing department permissions:', e);
+        }
       }
 
       // التحقق من صلاحيات الألوان
       if (product.variants && product.variants.length > 0) {
-        const hasAllowedColor = product.variants.some(variant => 
-          !variant.color_id || hasPermission('view_color_all') || hasPermission(`view_color_${variant.color_id}`)
-        );
-        if (!hasAllowedColor) return false;
+        try {
+          const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+          if (!colorPermissions.includes('all')) {
+            const hasAllowedColor = product.variants.some(variant => 
+              !variant.color_id || colorPermissions.includes(variant.color_id)
+            );
+            if (!hasAllowedColor) return false;
+          }
+        } catch (e) {
+          console.error('Error parsing color permissions:', e);
+        }
 
         // التحقق من صلاحيات الأحجام
-        const hasAllowedSize = product.variants.some(variant => 
-          !variant.size_id || hasPermission('view_size_all') || hasPermission(`view_size_${variant.size_id}`)
-        );
-        if (!hasAllowedSize) return false;
+        try {
+          const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
+          if (!sizePermissions.includes('all')) {
+            const hasAllowedSize = product.variants.some(variant => 
+              !variant.size_id || sizePermissions.includes(variant.size_id)
+            );
+            if (!hasAllowedSize) return false;
+          }
+        } catch (e) {
+          console.error('Error parsing size permissions:', e);
+        }
       }
 
       // التحقق من صلاحيات أنواع المنتجات
       if (product.product_product_types && product.product_product_types.length > 0) {
-        const hasAllowedProductType = product.product_product_types.some(ppt => 
-          hasPermission('view_product_type_all') || hasPermission(`view_product_type_${ppt.product_type_id}`)
-        );
-        if (!hasAllowedProductType) return false;
+        try {
+          const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
+          if (!productTypePermissions.includes('all')) {
+            const hasAllowedProductType = product.product_product_types.some(ppt => 
+              productTypePermissions.includes(ppt.product_type_id)
+            );
+            if (!hasAllowedProductType) return false;
+          }
+        } catch (e) {
+          console.error('Error parsing product type permissions:', e);
+        }
       }
 
       // التحقق من صلاحيات المواسم والمناسبات
       if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
-        const hasAllowedSeasonOccasion = product.product_seasons_occasions.some(pso => 
-          hasPermission('view_season_occasion_all') || hasPermission(`view_season_occasion_${pso.season_occasion_id}`)
-        );
-        if (!hasAllowedSeasonOccasion) return false;
+        try {
+          const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
+          if (!seasonOccasionPermissions.includes('all')) {
+            const hasAllowedSeasonOccasion = product.product_seasons_occasions.some(pso => 
+              seasonOccasionPermissions.includes(pso.season_occasion_id)
+            );
+            if (!hasAllowedSeasonOccasion) return false;
+          }
+        } catch (e) {
+          console.error('Error parsing season occasion permissions:', e);
+        }
       }
 
       return true;
@@ -175,7 +222,7 @@ const ProductsPage = () => {
     });
 
     return tempProducts;
-  }, [products, filters]);
+  }, [products, filters, user]);
   
   const handleCreateOrder = (product, variant, quantity) => {
     clearCart();

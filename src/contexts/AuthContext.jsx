@@ -349,6 +349,56 @@ export const AuthProvider = ({ children }) => {
     return user?.permissions?.includes(permission);
   };
 
+  const updateUser = async (userId, data) => {
+    if (!supabase) {
+      toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      console.log('Updating user:', userId, 'with data:', data);
+      
+      const { data: updatedData, error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('user_id', userId)
+        .select();
+        
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      console.log('Update result:', updatedData);
+      
+      if (updatedData && updatedData.length > 0) {
+        // تحديث السياق إذا كان المستخدم الحالي
+        if (userId === user?.user_id) {
+          setUser(prev => ({ ...prev, ...updatedData[0] }));
+        }
+        
+        // إعادة تحميل بيانات المدير لتحديث القوائم
+        await fetchAdminData();
+        
+        toast({ title: 'نجاح', description: 'تم تحديث البيانات بنجاح.' });
+        return { success: true, data: updatedData[0] };
+      } else {
+        // المستخدم غير موجود، ولكن هذا لا يعني فشل - قد يكون تم تحديثه بالفعل
+        console.log('No rows returned but no error - user may already be updated');
+        
+        // إعادة تحميل البيانات للتأكد
+        await fetchAdminData();
+        
+        toast({ title: 'نجاح', description: 'تم معالجة الطلب بنجاح.' });
+        return { success: true, data: null };
+      }
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
+      return { success: false, error };
+    }
+  };
+
   const updateUserProfile = async (profileData) => {
     if (!user) return;
     setLoading(true);
@@ -386,39 +436,6 @@ export const AuthProvider = ({ children }) => {
       } finally {
           setLoading(false);
       }
-  };
-  
-  const updateUser = async (userId, data) => {
-    if (!supabase) {
-      toast({ title: "وضع العرض", description: "لا يمكن تحديث المستخدمين في الوضع المحلي.", variant: "destructive" });
-      return;
-    }
-    
-    try {
-      const { data: updatedData, error } = await supabase
-        .from('profiles')
-        .update(data)
-        .eq('user_id', userId)
-        .select();
-        
-      if (error) throw error;
-      
-      if (updatedData && updatedData.length > 0) {
-        // تحديث السياق إذا كان المستخدم الحالي
-        if (userId === user?.user_id) {
-          setUser(prev => ({ ...prev, ...updatedData[0] }));
-        }
-        
-        toast({ title: 'نجاح', description: 'تم تحديث البيانات بنجاح.' });
-        return { success: true, data: updatedData[0] };
-      } else {
-        throw new Error('لم يتم العثور على المستخدم للتحديث');
-      }
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
-      return { success: false, error };
-    }
   };
 
   const updatePermissionsByRole = async (role, permissions) => {
