@@ -37,6 +37,22 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
             <Label htmlFor="costPrice">سعر التكلفة (اختياري)</Label>
             <Input id="costPrice" name="costPrice" type="number" value={productInfo.costPrice} onChange={handleInputChange} />
           </div>
+          <div>
+            <Label htmlFor="employeeProfitPercentage">نسبة ربح الموظف (د.ع)</Label>
+            <Input 
+              id="employeeProfitPercentage" 
+              name="employeeProfitPercentage" 
+              type="number" 
+              min="0"
+              step="0.01"
+              placeholder="مثال: 5000"
+              value={productInfo.employeeProfitPercentage} 
+              onChange={handleInputChange} 
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              مبلغ ثابت يحصل عليه الموظف عند بيع هذا المنتج - يمكن تعديله من قواعد الأرباح
+            </p>
+          </div>
         </div>
         <div>
           <Label htmlFor="description">وصف المنتج (اختياري)</Label>
@@ -54,11 +70,11 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
                 />
               </div>
             ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-export default ProductPrimaryInfo;
+                 </div>
+               </div>
+            </CardContent>
+          </Card>
+        );
+      };
+      
+      export default ProductPrimaryInfo;
