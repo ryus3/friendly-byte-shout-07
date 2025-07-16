@@ -32,6 +32,8 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
+import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
   const Icon = icon;
@@ -139,6 +141,7 @@ const SettingsPage = () => {
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
+  const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -218,6 +221,18 @@ const SettingsPage = () => {
                 description="إضافة وتعديل الموظفين وإدارة الصلاحيات والمتغيرات"
                 iconColor="from-green-500 to-green-600"
                 onClick={() => setIsManageEmployeesOpen(true)}
+              />
+            )}
+
+            {/* إدارة الأدوار والصلاحيات - للمدراء فقط */}
+            {isAdmin && (
+              <ModernCard
+                icon={Shield}
+                title="إدارة الأدوار والصلاحيات"
+                description="تعيين أدوار الموظفين وإدارة صلاحيات المنتجات"
+                iconColor="from-indigo-500 to-indigo-600"
+                onClick={() => setIsRoleManagerOpen(true)}
+                badge={<Badge variant="secondary">جديد</Badge>}
               />
             )}
 
@@ -467,6 +482,11 @@ const SettingsPage = () => {
           onOpenChange={setIsDeliverySettingsOpen}
         />
       )}
+
+      <UnifiedRoleManager 
+        open={isRoleManagerOpen} 
+        onOpenChange={setIsRoleManagerOpen} 
+      />
     </>
   );
 };
