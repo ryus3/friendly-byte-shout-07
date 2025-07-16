@@ -505,10 +505,11 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                          <div className="text-muted-foreground">عامة</div>
                        </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+                   </div>
+                 </CardContent>
+               </Card>
+             </TabsContent>
+            </div>
           </Tabs>
         </div>
         
