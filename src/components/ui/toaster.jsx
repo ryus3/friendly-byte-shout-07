@@ -66,7 +66,15 @@ const iconMap = {
 };
 
 export function Toaster() {
-	const { toasts } = useToast();
+	let toasts = [];
+	
+	try {
+		const { toasts: hookToasts } = useToast();
+		toasts = hookToasts || [];
+	} catch (error) {
+		console.warn('Toaster component failed to get toasts, using empty array');
+		toasts = [];
+	}
 
 	return (
 		<ToastProvider>

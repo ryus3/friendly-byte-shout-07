@@ -66,38 +66,55 @@ export const toast = ({ ...props }) => {
 }
 
 export function useToast() {
-  const [state, setState] = useState(toastStore.getState())
+  // حماية من null React context
+  let state, setState;
+  
+  try {
+    [state, setState] = useState(toastStore.getState());
+  } catch (error) {
+    console.warn('useToast hook called outside React context, using fallback');
+    return {
+      toast,
+      toasts: [],
+    };
+  }
   
   useEffect(() => {
-    const unsubscribe = toastStore.subscribe((state) => {
-      setState(state)
-    })
+    if (!setState) return;
     
-    return unsubscribe
-  }, [])
+    const unsubscribe = toastStore.subscribe((newState) => {
+      setState(newState);
+    });
+    
+    return unsubscribe;
+  }, [setState]);
   
   useEffect(() => {
-    const timeouts = []
+    if (!state || !state.toasts) return;
+    
+    const timeouts = [];
 
     state.toasts.forEach((toast) => {
       if (toast.duration === Infinity) {
-        return
+        return;
       }
 
       const timeout = setTimeout(() => {
-        toast.dismiss()
-      }, toast.duration || 5000)
+        if (toast.dismiss) {
+          toast.dismiss();
+        }
+      }, toast.duration || 5000);
 
-      timeouts.push(timeout)
-    })
+      timeouts.push(timeout);
+    });
 
     return () => {
-      timeouts.forEach((timeout) => clearTimeout(timeout))
-    }
-  }, [state.toasts])
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+    };
+  }, [state?.toasts]);
 
   return {
     toast,
-    toasts: state.toasts,
-  }
+    toasts: state?.toasts || [],
+  };
 }
