@@ -132,8 +132,9 @@ const AccountingPage = () => {
         const totalExpenses = generalExpenses + employeeSettledDues;
         const netProfit = grossProfit - totalExpenses;
     
+        // حساب قيمة المخزون على أساس سعر البيع (وليس التكلفة)
         const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
-            return sum + (Array.isArray(p.variants) ? p.variants.reduce((variantSum, v) => variantSum + (v.quantity * (v.cost_price || 0)), 0) : 0);
+            return sum + (Array.isArray(p.variants) ? p.variants.reduce((variantSum, v) => variantSum + (v.quantity * (v.price || v.base_price || 0)), 0) : 0);
         }, 0) : 0;
         
         const myProfit = deliveredOrders.filter(o => o.created_by === currentUser?.id).reduce((sum, o) => {

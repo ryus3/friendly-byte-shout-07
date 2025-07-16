@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   DollarSign, 
   TrendingUp, 
@@ -18,20 +20,27 @@ import {
   Activity,
   FileText,
   Calendar,
-  Filter
+  Filter,
+  User,
+  Package,
+  MapPin,
+  Phone,
+  Hourglass
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import StatCard from '@/components/dashboard/StatCard';
 
 const AdvancedAccountingSystem = () => {
-  const { accounting, orders, products, settings, settlementInvoices } = useInventory();
+  const { accounting, orders, products, settings, settlementInvoices, calculateProfit, allUsers } = useInventory();
   const { hasPermission, user } = useAuth();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [activeTab, setActiveTab] = useState('overview');
+  const [showUserProfitsDialog, setShowUserProfitsDialog] = useState(false);
 
   // حسابات مالية متقدمة
   const financialAnalysis = useMemo(() => {
@@ -116,6 +125,13 @@ const AdvancedAccountingSystem = () => {
       }, 0);
     }, 0);
 
+    // حساب قيمة المخزون على أساس سعر البيع (وليس التكلفة)
+    const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
+      return sum + (Array.isArray(p.variants) ? p.variants.reduce((variantSum, v) => 
+        variantSum + (v.quantity * (v.price || v.base_price || 0)), 0
+      ) : 0);
+    }, 0) : 0;
+
     // معدل العائد على رأس المال
     const roi = accounting.capital > 0 ? (netProfit / accounting.capital) * 100 : 0;
 
@@ -175,9 +191,10 @@ const AdvancedAccountingSystem = () => {
       chartData,
       filteredOrders,
       deliveredOrdersWithReceipts,
-      userPersonalProfit
+      userPersonalProfit,
+      inventoryValue
     };
-  }, [orders, accounting, products, selectedPeriod]);
+  }, [orders, accounting, products, selectedPeriod, user?.id, calculateProfit]);
 
   // تحليل نسب مالية
   const ratioAnalysis = useMemo(() => {
@@ -206,41 +223,65 @@ const AdvancedAccountingSystem = () => {
     };
   }, [financialAnalysis, accounting]);
 
-  // مؤشرات الأداء الرئيسية
+  // مؤشرات الأداء الرئيسية - نسخة من لوحة التحكم مع إضافات المركز المالي
   const kpiCards = [
     {
       title: 'إجمالي الإيرادات',
       value: financialAnalysis.totalRevenue || 0,
       format: 'currency',
       icon: DollarSign,
-      color: 'blue',
+      colors: ['blue-500', 'sky-500'],
       change: '+12.5%'
     },
     {
-      title: 'صافي الربح',
+      title: 'صافي الارباح', // نفس اسم لوحة التحكم
       value: financialAnalysis.netProfit || 0,
       format: 'currency',
       icon: TrendingUp,
-      color: financialAnalysis.netProfit >= 0 ? 'green' : 'red',
+      colors: financialAnalysis.netProfit >= 0 ? ['green-500', 'emerald-500'] : ['red-500', 'orange-500'],
       change: `${financialAnalysis.netProfitMargin?.toFixed(1) || 0}%`
     },
     {
       title: 'أرباحي',
       value: financialAnalysis.userPersonalProfit || 0,
       format: 'currency',
-      icon: Wallet,
-      color: 'teal',
-      change: 'طلبات مستلمة'
+      icon: User,
+      colors: ['teal-500', 'cyan-500'],
+      change: 'طلبات مستلمة',
+      onClick: () => setShowUserProfitsDialog(true)
     },
     {
-      title: 'هامش الربح الإجمالي',
-      value: financialAnalysis.grossProfitMargin || 0,
-      format: 'percentage',
-      icon: PieChart,
-      color: 'purple',
-      change: 'هامش صحي'
+      title: 'قيمة المخزون',
+      value: financialAnalysis.inventoryValue || 0,
+      format: 'currency',
+      icon: Package,
+      colors: ['emerald-500', 'green-500'],
+      change: 'بسعر البيع'
     }
   ];
+
+  // حساب أرباح المستخدم من الطلبات المستلمة فقط لعرضها في النافذة المنبثقة
+  const userProfitOrders = useMemo(() => {
+    if (!orders || !user?.id) return [];
+    
+    const userDeliveredOrders = orders.filter(o => 
+      o.status === 'delivered' && 
+      o.receipt_received === true && 
+      o.created_by === user.id
+    );
+    
+    return userDeliveredOrders.map(order => {
+      const orderProfit = (order.items || []).reduce((sum, item) => {
+        const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+        return sum + profit;
+      }, 0);
+      
+      return {
+        ...order,
+        calculatedProfit: orderProfit
+      };
+    });
+  }, [orders, user?.id]);
 
   const formatValue = (value, format) => {
     switch (format) {
@@ -251,18 +292,6 @@ const AdvancedAccountingSystem = () => {
       default:
         return value.toLocaleString();
     }
-  };
-
-  const getColorClass = (color) => {
-    const colors = {
-      blue: 'from-blue-500 to-blue-600',
-      green: 'from-green-500 to-green-600',
-      red: 'from-red-500 to-red-600',
-      purple: 'from-purple-500 to-purple-600',
-      orange: 'from-orange-500 to-orange-600',
-      teal: 'from-teal-500 to-teal-600'
-    };
-    return colors[color] || colors.blue;
   };
 
   return (
@@ -292,45 +321,169 @@ const AdvancedAccountingSystem = () => {
         </CardHeader>
       </Card>
 
-      {/* مؤشرات الأداء الرئيسية */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpiCards.map((kpi, index) => (
-          <motion.div
-            key={kpi.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
+      {/* مؤشرات الأداء الرئيسية - نفس تنسيق لوحة التحكم */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {kpiCards.map((stat, index) => (
+          <motion.div 
+            key={stat.title} 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ delay: index * 0.05 }}
           >
-            <Card className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className={cn("p-4 bg-gradient-to-br", getColorClass(kpi.color))}>
-                  <div className="flex items-center justify-between text-white">
-                    <div>
-                      <p className="text-sm opacity-90">{kpi.title}</p>
-                      <p className="text-2xl font-bold">
-                        {formatValue(kpi.value, kpi.format)}
-                      </p>
-                    </div>
-                    <kpi.icon className="w-8 h-8 opacity-80" />
-                  </div>
-                </div>
-                <div className="p-3 bg-card">
-                  <div className="flex items-center gap-2">
-                    {kpi.color === 'green' ? (
-                      <TrendingUp className="w-4 h-4 text-green-500" />
-                    ) : kpi.color === 'red' ? (
-                      <TrendingDown className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <Activity className="w-4 h-4 text-blue-500" />
-                    )}
-                    <span className="text-xs text-muted-foreground">{kpi.change}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <StatCard {...stat} />
           </motion.div>
         ))}
       </div>
+
+      {/* نافذة منبثقة لأرباح المستخدم */}
+      <Dialog open={showUserProfitsDialog} onOpenChange={setShowUserProfitsDialog}>
+        <DialogContent className="w-[95vw] max-w-2xl h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2">
+              <User className="h-5 w-5 sm:h-6 sm:w-6 text-teal-500" />
+              أرباحي من الطلبات المستلمة
+            </DialogTitle>
+            <div className="text-sm text-muted-foreground mt-2">
+              الطلبات التي بعتها أنا وتم استلام فواتيرها
+            </div>
+          </DialogHeader>
+
+          <div className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 pt-2 gap-4">
+            {/* إحصائيات سريعة */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0">
+              <Card className="bg-gradient-to-r from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-800/20">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-teal-500" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">عدد الطلبات</p>
+                      <p className="text-base sm:text-lg font-semibold">{userProfitOrders.length}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">إجمالي أرباحي</p>
+                      <p className="text-base sm:text-lg font-semibold">
+                        {userProfitOrders.reduce((sum, o) => sum + o.calculatedProfit, 0).toLocaleString()} د.ع
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+                    <div>
+                      <p className="text-xs sm:text-sm text-muted-foreground">متوسط الربح</p>
+                      <p className="text-base sm:text-lg font-semibold">
+                        {userProfitOrders.length > 0 
+                          ? Math.round(userProfitOrders.reduce((sum, o) => sum + o.calculatedProfit, 0) / userProfitOrders.length).toLocaleString()
+                          : 0} د.ع
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* قائمة الطلبات */}
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full w-full">
+                <div className="space-y-2 pr-2">
+                  {userProfitOrders.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>لا توجد طلبات مستلمة بعد</p>
+                    </div>
+                  ) : (
+                    userProfitOrders.map((order) => (
+                      <Card key={order.id} className="hover:shadow-md transition-all">
+                        <CardContent className="p-3 sm:p-4">
+                          <div className="flex flex-col gap-3">
+                            {/* معلومات الطلب الأساسية */}
+                            <div className="flex flex-col xs:flex-row xs:items-center gap-2">
+                              <Badge variant="outline" className="w-fit text-xs">
+                                {order.order_number}
+                              </Badge>
+                              <Badge variant="secondary" className="w-fit text-xs">
+                                مُستلم
+                              </Badge>
+                            </div>
+
+                            {/* معلومات العميل والأرباح */}
+                            <div className="flex flex-col sm:flex-row justify-between gap-3">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-sm font-medium truncate">{order.customer_name}</span>
+                                </div>
+                                {order.customer_phone && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-sm font-mono">{order.customer_phone}</span>
+                                  </div>
+                                )}
+                                {order.customer_province && (
+                                  <div className="flex items-center gap-2">
+                                    <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-sm truncate">{order.customer_province}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-sm">
+                                    {format(parseISO(order.created_at), 'dd MMM yyyy', { locale: ar })}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* الأرباح والمعلومات المالية */}
+                              <div className="flex sm:flex-col items-start sm:items-end gap-2 sm:gap-1 sm:text-right min-w-fit">
+                                <div className="flex-1 sm:flex-none">
+                                  <p className="text-base sm:text-lg font-bold text-green-600">
+                                    {order.calculatedProfit.toLocaleString()} د.ع
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">ربحي</p>
+                                </div>
+                                <div className="flex-1 sm:flex-none">
+                                  <p className="text-sm font-medium">
+                                    {(order.total_amount || 0).toLocaleString()} د.ع
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">إجمالي المبيعات</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </div>
+
+          {/* تذييل النافذة */}
+          <div className="flex-shrink-0 p-4 sm:p-6 pt-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+              <Button variant="outline" onClick={() => setShowUserProfitsDialog(false)} size="sm" className="w-full sm:w-auto">
+                إغلاق
+              </Button>
+              <div className="text-sm text-muted-foreground text-center sm:text-right">
+                {userProfitOrders.length} طلب مُستلم
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* تفاصيل التحليل المالي */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
