@@ -11,6 +11,25 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
     setProductInfo(prev => ({ ...prev, [name]: value }));
   };
 
+  // حساب نسبة الربح تلقائياً
+  const handleProfitCalculation = (field, value) => {
+    const newInfo = { ...productInfo, [field]: value };
+    
+    if (field === 'profitPercentage' && newInfo.costPrice) {
+      const costPrice = parseFloat(newInfo.costPrice);
+      const profitPercentage = parseFloat(value);
+      const price = costPrice + (costPrice * profitPercentage / 100);
+      newInfo.price = price.toFixed(2);
+    } else if ((field === 'price' || field === 'costPrice') && newInfo.price && newInfo.costPrice) {
+      const price = parseFloat(newInfo.price);
+      const costPrice = parseFloat(newInfo.costPrice);
+      const profitPercentage = ((price - costPrice) / costPrice * 100);
+      newInfo.profitPercentage = profitPercentage.toFixed(2);
+    }
+    
+    setProductInfo(newInfo);
+  };
+
   const getInitialImagePreview = (image) => {
     if (!image) return null;
     if (typeof image === 'string') return image;
@@ -31,14 +50,27 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
           </div>
           <div>
             <Label htmlFor="price">السعر الأساسي (د.ع)</Label>
-            <Input id="price" name="price" type="number" value={productInfo.price} onChange={handleInputChange} required />
+            <Input 
+              id="price" 
+              name="price" 
+              type="number" 
+              value={productInfo.price} 
+              onChange={(e) => handleProfitCalculation('price', e.target.value)} 
+              required 
+            />
           </div>
           <div>
             <Label htmlFor="costPrice">سعر التكلفة (اختياري)</Label>
-            <Input id="costPrice" name="costPrice" type="number" value={productInfo.costPrice} onChange={handleInputChange} />
+            <Input 
+              id="costPrice" 
+              name="costPrice" 
+              type="number" 
+              value={productInfo.costPrice} 
+              onChange={(e) => handleProfitCalculation('costPrice', e.target.value)} 
+            />
           </div>
           <div>
-            <Label htmlFor="employeeProfitPercentage">نسبة ربح الموظف (د.ع)</Label>
+            <Label htmlFor="employeeProfitPercentage">ربح الموظف (د.ع)</Label>
             <Input 
               id="employeeProfitPercentage" 
               name="employeeProfitPercentage" 
@@ -52,6 +84,27 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
             <p className="text-xs text-muted-foreground mt-1">
               مبلغ ثابت يحصل عليه الموظف عند بيع هذا المنتج - يمكن تعديله من قواعد الأرباح
             </p>
+          </div>
+          <div>
+            <Label htmlFor="profitPercentage">نسبة الربح (%)</Label>
+            <Input 
+              id="profitPercentage" 
+              name="profitPercentage" 
+              type="number" 
+              min="0"
+              step="0.01"
+              placeholder="مثال: 25"
+              value={productInfo.profitPercentage || ''} 
+              onChange={(e) => handleProfitCalculation('profitPercentage', e.target.value)} 
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              نسبة الربح المئوية على سعر التكلفة - يتم حساب السعر تلقائياً
+            </p>
+            {productInfo.costPrice && productInfo.profitPercentage && (
+              <div className="text-xs text-green-600 mt-1">
+                ربح متوقع: {((parseFloat(productInfo.price || 0) - parseFloat(productInfo.costPrice || 0))).toFixed(0)} د.ع
+              </div>
+            )}
           </div>
         </div>
         <div>

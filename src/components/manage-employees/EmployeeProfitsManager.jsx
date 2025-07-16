@@ -212,7 +212,7 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                 <TabsContent value="calculator" className="space-y-4">
                   <Card>
                     <CardHeader>
-                      <CardTitle>حاسبة الأرباح التجريبية</CardTitle>
+                      <CardTitle>حاسبة الأرباح المباشرة</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

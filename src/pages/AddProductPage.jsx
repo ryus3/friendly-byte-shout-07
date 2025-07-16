@@ -44,7 +44,7 @@ const AddProductPage = () => {
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
   
   const [productInfo, setProductInfo] = useState({
-    name: '', price: '', costPrice: '', description: '', employeeProfitPercentage: '',
+    name: '', price: '', costPrice: '', description: '', employeeProfitPercentage: '', profitPercentage: '',
   });
   const [generalImages, setGeneralImages] = useState(Array(4).fill(null));
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -144,6 +144,8 @@ const AddProductPage = () => {
       ...productInfo,
       price: parseFloat(productInfo.price),
       costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : null,
+      employeeProfitPercentage: productInfo.employeeProfitPercentage ? parseFloat(productInfo.employeeProfitPercentage) : null,
+      profitPercentage: productInfo.profitPercentage ? parseFloat(productInfo.profitPercentage) : null,
       selectedCategories,
       selectedProductTypes,
       selectedSeasonsOccasions,
