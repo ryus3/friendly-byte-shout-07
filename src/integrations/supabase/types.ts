@@ -1359,6 +1359,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_admin_or_deputy: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       link_telegram_user: {
         Args: { p_employee_code: string; p_telegram_chat_id: number }
         Returns: boolean
