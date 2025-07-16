@@ -278,6 +278,74 @@ export const AuthProvider = ({ children }) => {
     if (user?.role === 'admin' || user?.permissions?.includes('*')) {
       return true;
     }
+    
+    // التحقق من صلاحيات التصنيفات والمتغيرات
+    if (permission.startsWith('view_category_')) {
+      const categoryId = permission.replace('view_category_', '');
+      if (categoryId === 'all') return true;
+      try {
+        const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+        return categoryPermissions.includes('all') || categoryPermissions.includes(categoryId);
+      } catch (e) {
+        return true; // default to allow if parsing fails
+      }
+    }
+    
+    if (permission.startsWith('view_color_')) {
+      const colorId = permission.replace('view_color_', '');
+      if (colorId === 'all') return true;
+      try {
+        const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+        return colorPermissions.includes('all') || colorPermissions.includes(colorId);
+      } catch (e) {
+        return true;
+      }
+    }
+    
+    if (permission.startsWith('view_size_')) {
+      const sizeId = permission.replace('view_size_', '');
+      if (sizeId === 'all') return true;
+      try {
+        const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
+        return sizePermissions.includes('all') || sizePermissions.includes(sizeId);
+      } catch (e) {
+        return true;
+      }
+    }
+    
+    if (permission.startsWith('view_department_')) {
+      const departmentId = permission.replace('view_department_', '');
+      if (departmentId === 'all') return true;
+      try {
+        const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
+        return departmentPermissions.includes('all') || departmentPermissions.includes(departmentId);
+      } catch (e) {
+        return true;
+      }
+    }
+    
+    if (permission.startsWith('view_product_type_')) {
+      const productTypeId = permission.replace('view_product_type_', '');
+      if (productTypeId === 'all') return true;
+      try {
+        const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
+        return productTypePermissions.includes('all') || productTypePermissions.includes(productTypeId);
+      } catch (e) {
+        return true;
+      }
+    }
+    
+    if (permission.startsWith('view_season_occasion_')) {
+      const seasonOccasionId = permission.replace('view_season_occasion_', '');
+      if (seasonOccasionId === 'all') return true;
+      try {
+        const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
+        return seasonOccasionPermissions.includes('all') || seasonOccasionPermissions.includes(seasonOccasionId);
+      } catch (e) {
+        return true;
+      }
+    }
+    
     return user?.permissions?.includes(permission);
   };
 
@@ -331,18 +399,21 @@ export const AuthProvider = ({ children }) => {
         .from('profiles')
         .update(data)
         .eq('user_id', userId)
-        .select()
-        .single();
+        .select();
         
       if (error) throw error;
       
-      // تحديث السياق إذا كان المستخدم الحالي
-      if (userId === user?.user_id) {
-        setUser(prev => ({ ...prev, ...updatedData }));
+      if (updatedData && updatedData.length > 0) {
+        // تحديث السياق إذا كان المستخدم الحالي
+        if (userId === user?.user_id) {
+          setUser(prev => ({ ...prev, ...updatedData[0] }));
+        }
+        
+        toast({ title: 'نجاح', description: 'تم تحديث البيانات بنجاح.' });
+        return { success: true, data: updatedData[0] };
+      } else {
+        throw new Error('لم يتم العثور على المستخدم للتحديث');
       }
-      
-      toast({ title: 'نجاح', description: 'تم تحديث البيانات بنجاح.' });
-      return { success: true, data: updatedData };
     } catch (error) {
       console.error('Error updating user profile:', error);
       toast({ title: 'خطأ', description: `فشل تحديث المستخدم: ${error.message}`, variant: 'destructive' });
