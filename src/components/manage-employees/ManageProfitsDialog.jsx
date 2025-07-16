@@ -219,7 +219,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] w-full sm:max-w-2xl lg:max-w-3xl max-h-[80vh] overflow-hidden flex flex-col bg-background border shadow-lg backdrop-blur-sm"
+      <DialogContent className="max-w-[95vw] w-full sm:max-w-3xl lg:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-background border shadow-lg backdrop-blur-sm"
         style={{ zIndex: 9999 }}>
         <DialogHeader className="flex-shrink-0 pb-2">
           <DialogTitle className="text-base font-semibold">قواعد الأرباح: {employee?.full_name || employee?.username}</DialogTitle>
@@ -235,7 +235,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                         <SelectTrigger className="w-full sm:w-[200px] h-8">
                             <SelectValue placeholder="اختر موظفاً..." />
                         </SelectTrigger>
-                        <SelectContent style={{ zIndex: 10001 }}>
+                        <SelectContent style={{ zIndex: 10001 }} className="bg-background border shadow-lg">
                             {employees.filter(e => (e.user_id || e.id) !== (employee?.user_id || employee?.id)).map(emp => (
                                  <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
                                    {emp.full_name || emp.username}
