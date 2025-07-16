@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import useUnifiedPermissions from '@/hooks/useUnifiedPermissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -119,16 +119,16 @@ const SettingsPage = () => {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   
-  // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
+  // استخدام نظام الصلاحيات المحدث
   const {
     isAdmin,
-    isEmployee,
-    canManageEmployees,
-    canManageSettings,
-    canAccessDeliveryPartners,
-    canManageAccounting,
-    canManagePurchases
-  } = usePermissionBasedData();
+    isDepartmentManager,
+    isSalesEmployee,
+    isWarehouseEmployee,
+    hasPermission: checkPermission,
+    canViewAllData,
+    loading: permissionsLoading
+  } = useUnifiedPermissions();
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
@@ -144,7 +144,7 @@ const SettingsPage = () => {
   const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
-  if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
+  if (!user || permissionsLoading) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   return (
     <>
@@ -213,26 +213,26 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* إدارة الموظفين - للمدراء فقط */}
-            {canManageEmployees && (
+            {/* إدارة الموظفين الأساسية - للمدراء فقط */}
+            {checkPermission('manage_employees') && (
               <ModernCard
                 icon={Users}
                 title="إدارة الموظفين"
-                description="إضافة وتعديل الموظفين وإدارة الصلاحيات والمتغيرات"
+                description="إضافة وتعديل الموظفين وإدارة البيانات الأساسية"
                 iconColor="from-green-500 to-green-600"
                 onClick={() => setIsManageEmployeesOpen(true)}
               />
             )}
 
-            {/* إدارة الأدوار والصلاحيات - للمدراء فقط */}
+            {/* إدارة الأدوار والصلاحيات - للمديرين العليا فقط */}
             {isAdmin && (
               <ModernCard
                 icon={Shield}
                 title="إدارة الأدوار والصلاحيات"
-                description="تعيين أدوار الموظفين وإدارة صلاحيات المنتجات"
+                description="تعيين أدوار الموظفين وإدارة صلاحيات النظام والمنتجات"
                 iconColor="from-indigo-500 to-indigo-600"
                 onClick={() => setIsRoleManagerOpen(true)}
-                badge={<Badge variant="secondary">جديد</Badge>}
+                badge={<Badge variant="secondary">نظام محدث</Badge>}
               />
             )}
 
@@ -246,7 +246,7 @@ const SettingsPage = () => {
             />
           </div>
 
-          <SectionHeader 
+          <SectionHeader
             icon={FileText} 
             title="إدارة التقارير والتكامل"
             description="تقارير مالية متقدمة، إحصائيات شاملة، وربط مع الأنظمة الخارجية"
@@ -304,7 +304,7 @@ const SettingsPage = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* إعدادات التوصيل - حسب صلاحية delivery_partner_access */}
-            {canAccessDeliveryPartners && (
+            {checkPermission('manage_delivery_settings') && (
               <ModernCard
                 icon={DollarSign}
                 title="أسعار وإعدادات التوصيل"
@@ -326,7 +326,7 @@ const SettingsPage = () => {
             )}
 
             {/* شركات التوصيل - إجباري للجميع حسب صلاحية delivery_partner_access */}
-            {canAccessDeliveryPartners && (
+            {checkPermission('manage_delivery_partners') && (
               <ModernCard
                 icon={Truck}
                 title="شركات التوصيل"
@@ -434,7 +434,7 @@ const SettingsPage = () => {
       />
 
       {/* الحوارات - فلترة حسب الصلاحيات */}
-      {canManageEmployees && (
+      {checkPermission('manage_employees') && (
         <ManageEmployeesDialog
           open={isManageEmployeesOpen}
           onOpenChange={setIsManageEmployeesOpen}
@@ -456,7 +456,7 @@ const SettingsPage = () => {
         onOpenChange={setIsStockSettingsOpen}
       />
 
-      {canAccessDeliveryPartners && (
+      {checkPermission('manage_delivery_partners') && (
         <DeliveryPartnerDialog
           open={isLoginDialogOpen}
           onOpenChange={setIsLoginDialogOpen}
@@ -476,7 +476,7 @@ const SettingsPage = () => {
         />
       )}
 
-      {canAccessDeliveryPartners && (
+      {checkPermission('manage_delivery_settings') && (
         <DeliverySettingsDialog
           open={isDeliverySettingsOpen}
           onOpenChange={setIsDeliverySettingsOpen}
