@@ -511,6 +511,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
             </TabsContent>
           </Tabs>
         </div>
+        
         <DialogFooter className="flex-shrink-0 pt-2 gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs h-8 px-3">إلغاء</Button>
           <Button onClick={handleSave} className="text-xs h-8 px-3">حفظ التغييرات</Button>
