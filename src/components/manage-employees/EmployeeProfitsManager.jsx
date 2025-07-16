@@ -224,32 +224,42 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                         <div>
                           <Label>اختر موظف</Label>
-                           <Select>
-                             <SelectTrigger>
-                               <SelectValue placeholder="اختر موظف..." />
-                             </SelectTrigger>
-                             <SelectContent className="bg-background border shadow-lg" style={{ zIndex: 10001 }}>
-                                {employees.map(emp => (
-                                  <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
-                                    {emp.full_name || emp.username || 'موظف غير محدد'}
-                                  </SelectItem>
-                                ))}
-                             </SelectContent>
-                           </Select>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر موظف..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-background border shadow-lg" style={{ zIndex: 10001 }}>
+                               {employees.map(emp => (
+                                 <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
+                                   {emp.full_name || emp.username || 'موظف غير محدد'}
+                                 </SelectItem>
+                               ))}
+                               {employees.length === 0 && (
+                                 <SelectItem disabled value="no-employees">
+                                   جاري تحميل الموظفين...
+                                 </SelectItem>
+                               )}
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div>
                           <Label>اختر منتج</Label>
-                           <Select>
-                             <SelectTrigger>
-                               <SelectValue placeholder="اختر منتج..." />
-                             </SelectTrigger>
-                             <SelectContent className="bg-background border shadow-lg" style={{ zIndex: 10001 }}>
-                               {products.slice(0, 50).map(product => (
-                                 <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                               ))}
-                             </SelectContent>
-                           </Select>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر منتج..." />
+                            </SelectTrigger>
+                            <SelectContent className="bg-background border shadow-lg" style={{ zIndex: 10001 }}>
+                              {products.slice(0, 50).map(product => (
+                                <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
+                              ))}
+                              {(!products || products.length === 0) && (
+                                <SelectItem disabled value="no-products">
+                                  جاري تحميل المنتجات...
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                         
                         <div>

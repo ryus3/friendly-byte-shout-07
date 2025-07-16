@@ -21,6 +21,8 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
     const { products } = useInventory();
     const [open, setOpen] = useState(false);
 
+    console.log('Products in MultiProductSelector:', products?.length || 0);
+
     const handleSelect = (productId) => {
         setSelectedProducts(prev => 
             prev.includes(productId) 
@@ -30,9 +32,9 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
     };
 
     const selectedProductNames = products
-        .filter(p => selectedProducts.includes(p.id))
-        .map(p => p.name)
-        .join(', ');
+        ?.filter(p => selectedProducts.includes(p.id))
+        ?.map(p => p.name)
+        ?.join(', ') || '';
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -46,7 +48,7 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                     <span className="truncate text-right flex-1">
                         {selectedProducts.length > 0 
                             ? `${selectedProducts.length} منتج محدد${selectedProducts.length <= 3 ? ': ' + selectedProductNames : ''}` 
-                            : "اختر المنتجات..."
+                            : products?.length > 0 ? "اختر المنتجات..." : "جاري تحميل المنتجات..."
                         }
                     </span>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -56,9 +58,11 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                 <Command>
                     <CommandInput placeholder="ابحث عن منتج..." />
                     <CommandList>
-                        <CommandEmpty>لم يتم العثور على منتج.</CommandEmpty>
+                        <CommandEmpty>
+                            {products?.length === 0 ? "جاري تحميل المنتجات..." : "لم يتم العثور على منتج."}
+                        </CommandEmpty>
                         <CommandGroup>
-                            {products.map((product) => (
+                            {(products || []).map((product) => (
                                 <CommandItem
                                     key={product.id}
                                     value={product.name}
@@ -94,15 +98,24 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
   
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy');
+    console.log('All users:', allUsers?.length || 0);
+    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'manager');
   }, [allUsers]);
 
   // جلب التصنيفات والأقسام من قاعدة البيانات
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const { data: categoriesData } = await supabase.from('categories').select('*');
-        const { data: departmentsData } = await supabase.from('departments').select('*');
+        console.log('Fetching categories and departments...');
+        const { data: categoriesData, error: categoriesError } = await supabase.from('categories').select('*');
+        const { data: departmentsData, error: departmentsError } = await supabase.from('departments').select('*');
+        
+        if (categoriesError) throw categoriesError;
+        if (departmentsError) throw departmentsError;
+        
+        console.log('Categories fetched:', categoriesData?.length || 0);
+        console.log('Departments fetched:', departmentsData?.length || 0);
+        
         setCategories(categoriesData || []);
         setDepartments(departmentsData || []);
       } catch (error) {
@@ -276,27 +289,34 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                         <TableHead className="w-8"></TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
-                      {products.slice(0, 50).map(p => (
-                        <TableRow key={p.id} className="text-xs">
-                          <TableCell className="text-xs">{p.name}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              placeholder="مبلغ"
-                              value={getRuleValue('product', p.id)}
-                              onChange={(e) => handleRuleChange('product', p.id, e.target.value)}
-                              className="h-7 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('product', p.id)} className="h-6 w-6 p-0">
-                              <X className="w-3 h-3 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
+                     <TableBody>
+                       {(products || []).slice(0, 50).map(p => (
+                         <TableRow key={p.id} className="text-xs">
+                           <TableCell className="text-xs">{p.name}</TableCell>
+                           <TableCell>
+                             <Input
+                               type="number"
+                               placeholder="مبلغ"
+                               value={getRuleValue('product', p.id)}
+                               onChange={(e) => handleRuleChange('product', p.id, e.target.value)}
+                               className="h-7 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('product', p.id)} className="h-6 w-6 p-0">
+                               <X className="w-3 h-3 text-destructive" />
+                             </Button>
+                           </TableCell>
+                         </TableRow>
+                       ))}
+                       {(!products || products.length === 0) && (
+                         <TableRow>
+                           <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                             جاري تحميل المنتجات...
+                           </TableCell>
+                         </TableRow>
+                       )}
+                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
@@ -312,27 +332,34 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                          <TableHead className="w-8"></TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
-                      {categories.map(cat => (
-                        <TableRow key={cat.id} className="text-xs">
-                          <TableCell className="text-xs">{cat.name}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              placeholder="مبلغ"
-                              value={getRuleValue('category', cat.id)}
-                              onChange={(e) => handleRuleChange('category', cat.id, e.target.value)}
-                              className="h-7 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('category', cat.id)} className="h-6 w-6 p-0">
-                              <X className="w-3 h-3 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
+                     <TableBody>
+                       {categories.map(cat => (
+                         <TableRow key={cat.id} className="text-xs">
+                           <TableCell className="text-xs">{cat.name}</TableCell>
+                           <TableCell>
+                             <Input
+                               type="number"
+                               placeholder="مبلغ"
+                               value={getRuleValue('category', cat.id)}
+                               onChange={(e) => handleRuleChange('category', cat.id, e.target.value)}
+                               className="h-7 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('category', cat.id)} className="h-6 w-6 p-0">
+                               <X className="w-3 h-3 text-destructive" />
+                             </Button>
+                           </TableCell>
+                         </TableRow>
+                       ))}
+                       {categories.length === 0 && (
+                         <TableRow>
+                           <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                             جاري تحميل التصنيفات...
+                           </TableCell>
+                         </TableRow>
+                       )}
+                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
@@ -349,27 +376,34 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                          <TableHead className="w-8"></TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
-                      {departments.map(dept => (
-                        <TableRow key={dept.id} className="text-xs">
-                          <TableCell className="text-xs">{dept.name}</TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              placeholder="مبلغ"
-                              value={getRuleValue('department', dept.id)}
-                              onChange={(e) => handleRuleChange('department', dept.id, e.target.value)}
-                              className="h-7 text-xs"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('department', dept.id)} className="h-6 w-6 p-0">
-                              <X className="w-3 h-3 text-destructive" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
+                     <TableBody>
+                       {departments.map(dept => (
+                         <TableRow key={dept.id} className="text-xs">
+                           <TableCell className="text-xs">{dept.name}</TableCell>
+                           <TableCell>
+                             <Input
+                               type="number"
+                               placeholder="مبلغ"
+                               value={getRuleValue('department', dept.id)}
+                               onChange={(e) => handleRuleChange('department', dept.id, e.target.value)}
+                               className="h-7 text-xs"
+                             />
+                           </TableCell>
+                           <TableCell>
+                             <Button variant="ghost" size="sm" onClick={() => handleRemoveRule('department', dept.id)} className="h-6 w-6 p-0">
+                               <X className="w-3 h-3 text-destructive" />
+                             </Button>
+                           </TableCell>
+                         </TableRow>
+                       ))}
+                       {departments.length === 0 && (
+                         <TableRow>
+                           <TableCell colSpan={3} className="text-center text-muted-foreground py-4">
+                             جاري تحميل الأقسام...
+                           </TableCell>
+                         </TableRow>
+                       )}
+                     </TableBody>
                   </Table>
                 </CardContent>
               </Card>
