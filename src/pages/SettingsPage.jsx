@@ -124,14 +124,30 @@ const SettingsPage = () => {
     isAdmin,
     canManageEmployees,
     canViewAllData,
-    hasPermission
+    hasPermission,
+    loading: permissionsLoading
   } = useUnifiedPermissions();
 
-  // صلاحيات إضافية من النظام القديم للتوافق
-  const canAccessDeliveryPartners = hasPermission('access_delivery_partners') || user?.delivery_partner_access;
-  const canManageAccounting = hasPermission('manage_finances');
-  const canManagePurchases = hasPermission('manage_purchases');
-  const canManageSettings = hasPermission('manage_settings');
+  // صلاحيات إضافية من النظام القديم للتوافق - مع التحقق من التحميل
+  const canAccessDeliveryPartners = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return hasPermission('access_delivery_partners') || user?.delivery_partner_access;
+  }, [hasPermission, permissionsLoading, user?.delivery_partner_access]);
+
+  const canManageAccounting = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return hasPermission('manage_finances');
+  }, [hasPermission, permissionsLoading]);
+
+  const canManagePurchases = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return hasPermission('manage_purchases');
+  }, [hasPermission, permissionsLoading]);
+
+  const canManageSettings = React.useMemo(() => {
+    if (permissionsLoading) return false;
+    return hasPermission('manage_settings');
+  }, [hasPermission, permissionsLoading]);
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
