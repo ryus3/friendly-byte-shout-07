@@ -242,15 +242,15 @@ const SettingsPage = () => {
               />
             )}
 
-            {/* إدارة صلاحيات المنتجات المتقدمة - للمدراء فقط */}
+            {/* صلاحيات المنتجات المتقدمة - للمدراء فقط */}
             {isAdmin && (
               <ModernCard
                 icon={Shield}
                 title="صلاحيات المنتجات المتقدمة"
-                description="إدارة تفصيلية لصلاحيات المنتجات والأقسام والمواسم للموظفين"
+                description="نظام مفصل ومتخصص لإدارة صلاحيات المنتجات بشكل دقيق ومتقدم"
                 iconColor="from-purple-500 to-purple-600"
                 onClick={() => setIsPermissionsManagerOpen(true)}
-                badge={<Badge variant="outline">متقدم</Badge>}
+                badge={<Badge variant="outline">متخصص</Badge>}
               />
             )}
 

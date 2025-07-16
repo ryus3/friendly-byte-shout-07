@@ -286,13 +286,13 @@ const EmployeePermissionsManager = ({ open, onOpenChange }) => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="categories" className="w-full">
-              <TabsList className="grid w-full grid-cols-6">
-                <TabsTrigger value="categories">التصنيفات</TabsTrigger>
-                <TabsTrigger value="departments">الأقسام</TabsTrigger>
-                <TabsTrigger value="colors">الألوان</TabsTrigger>
-                <TabsTrigger value="sizes">المقاسات</TabsTrigger>
-                <TabsTrigger value="types">الأنواع</TabsTrigger>
-                <TabsTrigger value="seasons">المواسم</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto">
+                <TabsTrigger value="categories" className="text-xs p-2">التصنيفات</TabsTrigger>
+                <TabsTrigger value="departments" className="text-xs p-2">الأقسام</TabsTrigger>
+                <TabsTrigger value="colors" className="text-xs p-2">الألوان</TabsTrigger>
+                <TabsTrigger value="sizes" className="text-xs p-2">المقاسات</TabsTrigger>
+                <TabsTrigger value="types" className="text-xs p-2">الأنواع</TabsTrigger>
+                <TabsTrigger value="seasons" className="text-xs p-2">المواسم</TabsTrigger>
               </TabsList>
               
               <TabsContent value="categories" className="space-y-2">
@@ -435,7 +435,7 @@ const EmployeePermissionsManager = ({ open, onOpenChange }) => {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-[95vw] w-full max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+          <DialogHeader className="pb-4">
             <DialogTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
               إدارة صلاحيات: {selectedEmployee.full_name}
