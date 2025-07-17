@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Shield, Power, Edit, PowerOff, DollarSign } from 'lucide-react';
+import { User, Mail, Power, Edit, PowerOff, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth, usePermissions } from '@/contexts/UnifiedAuthContext';
+import { RoleIconMap } from '@/components/ui/custom-icons';
 
 const EmployeeCard = ({ user, onEdit, index }) => {
   const { hasPermission } = usePermissions();
@@ -12,8 +13,8 @@ const EmployeeCard = ({ user, onEdit, index }) => {
   // استخدام الأدوار الجديدة من user_roles
   const getUserRoleBadges = () => {
     if (!user.roles || user.roles.length === 0) {
-      return <Badge variant='secondary' className='bg-gray-500/20 text-gray-500 border-gray-500/30'>
-        <Shield className="w-4 h-4 ml-2" />
+      return <Badge variant='secondary' style={{ backgroundColor: 'hsl(var(--role-pending) / 0.2)', color: 'hsl(var(--role-pending))', borderColor: 'hsl(var(--role-pending) / 0.3)' }}>
+        <User className="w-4 h-4 ml-2" />
         لا يوجد دور
       </Badge>;
     }
@@ -22,41 +23,42 @@ const EmployeeCard = ({ user, onEdit, index }) => {
       const getRoleStyle = (roleName) => {
         switch(roleName) {
           case 'super_admin':
-            return 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 border-purple-500/30';
+            return { backgroundColor: 'hsl(var(--role-super-admin) / 0.2)', color: 'hsl(var(--role-super-admin))', borderColor: 'hsl(var(--role-super-admin) / 0.3)' };
           case 'department_manager':
-            return 'bg-gradient-to-r from-blue-500/20 to-indigo-500/20 text-blue-600 border-blue-500/30';
+            return { backgroundColor: 'hsl(var(--role-department-manager) / 0.2)', color: 'hsl(var(--role-department-manager))', borderColor: 'hsl(var(--role-department-manager) / 0.3)' };
           case 'sales_employee':
-            return 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-600 border-green-500/30';
+            return { backgroundColor: 'hsl(var(--role-sales-employee) / 0.2)', color: 'hsl(var(--role-sales-employee))', borderColor: 'hsl(var(--role-sales-employee) / 0.3)' };
           case 'warehouse_employee':
-            return 'bg-gradient-to-r from-orange-500/20 to-amber-500/20 text-orange-600 border-orange-500/30';
-          case 'cashier':
-            return 'bg-gradient-to-r from-teal-500/20 to-cyan-500/20 text-teal-600 border-teal-500/30';
-          case 'delivery_coordinator':
-            return 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-600 border-red-500/30';
+            return { backgroundColor: 'hsl(var(--role-warehouse-employee) / 0.2)', color: 'hsl(var(--role-warehouse-employee))', borderColor: 'hsl(var(--role-warehouse-employee) / 0.3)' };
+          case 'accountant':
+            return { backgroundColor: 'hsl(var(--role-accountant) / 0.2)', color: 'hsl(var(--role-accountant))', borderColor: 'hsl(var(--role-accountant) / 0.3)' };
           default:
-            return 'bg-gray-500/20 text-gray-600 border-gray-500/30';
+            return { backgroundColor: 'hsl(var(--role-pending) / 0.2)', color: 'hsl(var(--role-pending))', borderColor: 'hsl(var(--role-pending) / 0.3)' };
         }
       };
-
       const getRoleDisplayName = (roleName) => {
         switch(roleName) {
           case 'super_admin': return 'المدير العام';
           case 'department_manager': return 'مدير القسم';
           case 'sales_employee': return 'موظف مبيعات';
           case 'warehouse_employee': return 'موظف مخزن';
-          case 'cashier': return 'كاشير';
-          case 'delivery_coordinator': return 'منسق توصيل';
+          case 'accountant': return 'محاسب';
           default: return role;
         }
+      };
+
+      const getRoleIcon = (roleName) => {
+        const IconComponent = RoleIconMap[roleName];
+        return IconComponent ? <IconComponent className="w-4 h-4 ml-2" /> : <User className="w-4 h-4 ml-2" />;
       };
 
       return (
         <Badge 
           key={index} 
           variant='default' 
-          className={`${getRoleStyle(role)} font-medium`}
+          style={getRoleStyle(role)}
         >
-          <Shield className="w-4 h-4 ml-2" />
+          {getRoleIcon(role)}
           {getRoleDisplayName(role)}
         </Badge>
       );

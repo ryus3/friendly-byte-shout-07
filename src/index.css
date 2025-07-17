@@ -30,6 +30,14 @@
     /* Font scaling for display settings */
     --font-scale: 1;
     
+    /* Role Colors - Professional Design */
+    --role-super-admin: 280 100% 70%;      /* بنفسجي للمدير العام */
+    --role-department-manager: 220 100% 60%; /* أزرق لمدير القسم */
+    --role-sales-employee: 142 69% 58%;     /* أخضر لموظف المبيعات */
+    --role-warehouse-employee: 24 95% 53%;  /* برتقالي لموظف المستودع */
+    --role-accountant: 45 93% 47%;          /* أصفر للمحاسب */
+    --role-pending: 0 0% 60%;               /* رمادي للمعلق */
+    
     /* Order Status Colors - Updated Based on User Images */
     --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
     --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة - يحتاج معالجة */
