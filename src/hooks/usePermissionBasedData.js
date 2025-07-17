@@ -26,16 +26,16 @@ export const usePermissionBasedData = () => {
 
   // صلاحيات الإدارة العامة
   const canManageProducts = useMemo(() => {
-    return isAdmin || isDeputy;
-  }, [isAdmin, isDeputy]);
+    return isAdmin || isDepartmentManager;
+  }, [isAdmin, isDepartmentManager]);
 
   const canManageAccounting = useMemo(() => {
-    return isAdmin || isDeputy;
-  }, [isAdmin, isDeputy]);
+    return isAdmin || isDepartmentManager;
+  }, [isAdmin, isDepartmentManager]);
 
   const canManagePurchases = useMemo(() => {
-    return isAdmin || isDeputy || isWarehouse;
-  }, [isAdmin, isDeputy, isWarehouse]);
+    return isAdmin || isDepartmentManager || isWarehouseEmployee;
+  }, [isAdmin, isDepartmentManager, isWarehouseEmployee]);
 
   // فلترة البيانات حسب المستخدم
   const filterDataByUser = useMemo(() => {
@@ -92,13 +92,13 @@ export const usePermissionBasedData = () => {
         
         // الإشعارات العامة (null) - المدير والنائب يرون الإشعارات العامة
         if (notificationUserId === null) {
-          return isAdmin || isDeputy;
+          return isAdmin || isDepartmentManager;
         }
         
         return false;
       });
     };
-  }, [user?.id, user?.user_id, isAdmin, isDeputy]);
+  }, [user?.id, user?.user_id, isAdmin, isDepartmentManager]);
 
   // فلترة التصنيفات والمتغيرات حسب الصلاحيات
   const filterCategoriesByPermission = useMemo(() => {
