@@ -20,10 +20,27 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUserProfile = useCallback(async (supabaseUser) => {
     if (!supabase || !supabaseUser) return null;
+    
+    // جلب بيانات المستخدم مع أدواره وصلاحياته
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('*, default_page')
+      .select(`
+        *, 
+        default_page,
+        user_roles!inner(
+          role_id,
+          is_active,
+          roles!inner(
+            name,
+            display_name,
+            hierarchy_level,
+            is_active
+          )
+        )
+      `)
       .eq('user_id', supabaseUser.id)
+      .eq('user_roles.is_active', true)
+      .eq('user_roles.roles.is_active', true)
       .single();
 
     if (error) {
@@ -33,7 +50,27 @@ export const AuthProvider = ({ children }) => {
       }
       return null;
     }
-    return { ...supabaseUser, ...profile };
+
+    // إضافة الدور الأعلى والصلاحيات
+    let userRole = null;
+    let highestHierarchy = 999;
+    
+    if (profile.user_roles && profile.user_roles.length > 0) {
+      // العثور على الدور ذو المستوى الأعلى (رقم أقل = مستوى أعلى)
+      profile.user_roles.forEach(userRole => {
+        if (userRole.roles.hierarchy_level < highestHierarchy) {
+          highestHierarchy = userRole.roles.hierarchy_level;
+          userRole = userRole.roles.name;
+        }
+      });
+    }
+
+    return { 
+      ...supabaseUser, 
+      ...profile, 
+      current_role: userRole,
+      is_super_admin: userRole === 'super_admin'
+    };
   }, []);
 
   const fetchAdminData = useCallback(async () => {
@@ -54,7 +91,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   useEffect(() => {
-    if (user?.role === 'admin' || user?.role === 'deputy' || user?.permissions?.includes('*')) {
+    if (user?.current_role === 'super_admin' || user?.current_role === 'department_manager' || user?.is_super_admin) {
       fetchAdminData();
     } else if (user) {
       // Regular users should not see other users' data
@@ -278,10 +315,32 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
   
-  const hasPermission = (permission) => {
-    // نظام الصلاحيات معطل - جميع المستخدمين لديهم كل الصلاحيات
-    return true;
-  };
+  const hasPermission = useCallback(async (permission) => {
+    if (!user?.user_id) return false;
+    
+    // المدير العام له جميع الصلاحيات
+    if (user?.current_role === 'super_admin' || user?.is_super_admin) {
+      return true;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .rpc('check_user_permission', {
+          p_user_id: user.user_id,
+          p_permission_name: permission
+        });
+
+      if (error) {
+        console.error('Error checking permission:', error);
+        return false;
+      }
+
+      return data || false;
+    } catch (error) {
+      console.error('Permission check failed:', error);
+      return false;
+    }
+  }, [user?.user_id, user?.current_role, user?.is_super_admin]);
 
   const updateUser = async (userId, data) => {
     if (!supabase) {

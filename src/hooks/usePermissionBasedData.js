@@ -4,35 +4,39 @@ import { useAuth } from '@/contexts/AuthContext';
 export const usePermissionBasedData = () => {
   const { user, hasPermission } = useAuth();
 
-  // فحص الأدوار
+  // فحص الأدوار (النظام الجديد)
   const isAdmin = useMemo(() => {
-    return user?.role === 'admin';
-  }, [user?.role]);
+    return user?.current_role === 'super_admin' || user?.is_super_admin;
+  }, [user?.current_role, user?.is_super_admin]);
 
   const isEmployee = useMemo(() => {
-    return user?.role === 'employee';
-  }, [user?.role]);
+    return user?.current_role === 'sales_employee';
+  }, [user?.current_role]);
 
   const isDeputy = useMemo(() => {
-    return user?.role === 'deputy';
-  }, [user?.role]);
+    return user?.current_role === 'department_manager';
+  }, [user?.current_role]);
 
   const isWarehouse = useMemo(() => {
-    return user?.role === 'warehouse';
-  }, [user?.role]);
+    return user?.current_role === 'warehouse_employee';
+  }, [user?.current_role]);
+
+  const isCashier = useMemo(() => {
+    return user?.current_role === 'cashier';
+  }, [user?.current_role]);
 
   // صلاحيات شاملة
   const canViewAllData = useMemo(() => {
-    return isAdmin || isDeputy || hasPermission('view_all_orders') || hasPermission('*');
-  }, [isAdmin, isDeputy, hasPermission]);
+    return isAdmin || isDeputy;
+  }, [isAdmin, isDeputy]);
 
   const canManageSettings = useMemo(() => {
-    return isAdmin || hasPermission('manage_settings');
-  }, [isAdmin, hasPermission]);
+    return isAdmin;
+  }, [isAdmin]);
 
   const canManageEmployees = useMemo(() => {
-    return isAdmin || hasPermission('manage_employees');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || isDeputy;
+  }, [isAdmin, isDeputy]);
 
   // صلاحيات شركات التوصيل
   const canAccessDeliveryPartners = useMemo(() => {
@@ -41,16 +45,16 @@ export const usePermissionBasedData = () => {
 
   // صلاحيات الإدارة العامة
   const canManageProducts = useMemo(() => {
-    return isAdmin || hasPermission('manage_products');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || isDeputy;
+  }, [isAdmin, isDeputy]);
 
   const canManageAccounting = useMemo(() => {
-    return isAdmin || hasPermission('view_accounting');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || isDeputy;
+  }, [isAdmin, isDeputy]);
 
   const canManagePurchases = useMemo(() => {
-    return isAdmin || hasPermission('view_purchases');
-  }, [isAdmin, hasPermission]);
+    return isAdmin || isDeputy || isWarehouse;
+  }, [isAdmin, isDeputy, isWarehouse]);
 
   // فلترة البيانات حسب المستخدم
   const filterDataByUser = useMemo(() => {
@@ -245,6 +249,7 @@ export const usePermissionBasedData = () => {
     isEmployee,
     isDeputy,
     isWarehouse,
+    isCashier,
     
     // صلاحيات عامة
     canViewAllData,
