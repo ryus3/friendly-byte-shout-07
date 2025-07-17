@@ -85,7 +85,6 @@ const Dashboard = () => {
     const { 
         filterDataByUser, 
         canViewAllData, 
-        hasPermission,
         isAdmin,
         isEmployee,
         canManageEmployees 
