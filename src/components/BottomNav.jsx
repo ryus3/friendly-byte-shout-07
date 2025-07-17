@@ -19,8 +19,8 @@ const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, bad
     onClick={onClick}
     whileTap={{ scale: 0.95 }}
     className={cn(
-      "relative flex flex-col items-center justify-center gap-1 text-muted-foreground hover:text-primary transition-all duration-300 flex-1 h-14 rounded-lg",
-      isActive && "text-primary bg-primary/5 shadow-sm",
+      "relative flex flex-col items-center justify-center gap-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-300 flex-1 h-14 rounded-lg",
+      isActive && "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 shadow-sm",
       className
     )}
     {...props}
@@ -31,7 +31,7 @@ const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, bad
         <motion.span
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center border border-background"
+          className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center border-2 border-white dark:border-gray-900"
         >
           {badgeCount > 9 ? '9+' : badgeCount}
         </motion.span>
@@ -233,7 +233,7 @@ const BottomNav = () => {
         animate={{ y: 0 }}
         exit={{ y: 100 }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-0 right-0 left-0 bg-card/95 backdrop-blur-xl border-t border-border/50 z-40 md:hidden shadow-2xl"
+        className="fixed bottom-0 right-0 left-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-700 z-40 md:hidden shadow-2xl"
       >
         <div className="flex justify-around items-center h-16 px-3 relative">
           {/* القائمة */}
