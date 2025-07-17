@@ -316,6 +316,24 @@
     z-index: 9999 !important;
   }
   
+  /* Fix dropdown z-index inside dialogs */
+  [data-radix-select-content] {
+    z-index: 10000 !important;
+  }
+  
+  [data-radix-select-viewport] {
+    z-index: 10000 !important;
+  }
+  
+  /* Dropdown positioning and styling */
+  .select-content {
+    z-index: 10000 !important;
+    background: hsl(var(--popover));
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  
   /* Additional Utilities */
   .text-primary { color: hsl(var(--primary)) }
   .bg-primary { background-color: hsl(var(--primary)) }
