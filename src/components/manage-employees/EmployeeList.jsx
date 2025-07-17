@@ -20,7 +20,6 @@ const EmployeeCard = ({ user, onEdit, index }) => {
   }
 
   return (
-    <>
     <motion.div
       layout
       initial={{ opacity: 0, y: 20 }}
@@ -55,6 +54,7 @@ const EmployeeCard = ({ user, onEdit, index }) => {
       </div>
     </motion.div>
   );
+};
 
 const EmployeeList = ({ users, onEdit }) => {
   if (!users || users.length === 0) {
