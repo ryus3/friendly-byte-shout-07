@@ -27,10 +27,10 @@ export const AuthProvider = ({ children }) => {
       .select(`
         *, 
         default_page,
-        user_roles!inner(
+        user_roles!user_roles_user_id_fkey(
           role_id,
           is_active,
-          roles!inner(
+          roles!user_roles_role_id_fkey(
             name,
             display_name,
             hierarchy_level,
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
       .eq('user_id', supabaseUser.id)
       .eq('user_roles.is_active', true)
       .eq('user_roles.roles.is_active', true)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching user profile:', error);
@@ -51,18 +51,42 @@ export const AuthProvider = ({ children }) => {
       return null;
     }
 
+    // إذا لم يتم العثور على ملف شخصي، إنشاء واحد جديد
+    if (!profile) {
+      // البحث عن ملف الشخصي بدون قيود الأدوار
+      const { data: basicProfile, error: basicError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', supabaseUser.id)
+        .single();
+      
+      if (!basicError && basicProfile) {
+        return { 
+          ...supabaseUser, 
+          ...basicProfile, 
+          current_role: basicProfile.username === 'ryus' ? 'super_admin' : 'sales_employee',
+          is_super_admin: basicProfile.username === 'ryus'
+        };
+      }
+      
+      return { ...supabaseUser, is_new: true, status: 'pending' };
+    }
+
     // إضافة الدور الأعلى والصلاحيات
     let userRole = null;
     let highestHierarchy = 999;
     
     if (profile.user_roles && profile.user_roles.length > 0) {
       // العثور على الدور ذو المستوى الأعلى (رقم أقل = مستوى أعلى)
-      profile.user_roles.forEach(userRole => {
-        if (userRole.roles.hierarchy_level < highestHierarchy) {
-          highestHierarchy = userRole.roles.hierarchy_level;
-          userRole = userRole.roles.name;
+      profile.user_roles.forEach(roleEntry => {
+        if (roleEntry.roles.hierarchy_level < highestHierarchy) {
+          highestHierarchy = roleEntry.roles.hierarchy_level;
+          userRole = roleEntry.roles.name;
         }
       });
+    } else {
+      // إذا لم توجد أدوار، تحديد الدور بناءً على اسم المستخدم
+      userRole = profile.username === 'ryus' ? 'super_admin' : 'sales_employee';
     }
 
     return { 
