@@ -68,19 +68,13 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                                     key={product.id}
                                     value={product.name}
                                     onSelect={() => handleSelect(product.id)}
-                                    className="flex items-center gap-2 cursor-pointer hover:bg-accent aria-selected:bg-accent p-2"
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-accent"
                                 >
                                     <Checkbox
                                         checked={selectedProducts.includes(product.id)}
-                                        onChange={() => handleSelect(product.id)}
-                                        className="pointer-events-none"
+                                        readOnly
                                     />
-                                    <span 
-                                        className="flex-1 text-right cursor-pointer select-none"
-                                        onClick={() => handleSelect(product.id)}
-                                    >
-                                        {product.name}
-                                    </span>
+                                    <span className="flex-1">{product.name}</span>
                                     {selectedProducts.includes(product.id) && (
                                         <Check className="h-4 w-4 text-primary" />
                                     )}
@@ -236,15 +230,11 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                   <SelectValue placeholder="اختر موظفاً..." />
                 </SelectTrigger>
                 <SelectContent style={{ zIndex: 10001 }} className="bg-background border shadow-lg">
-                  {employees.filter(e => (e.user_id || e.id) !== (employee?.user_id || employee?.id)).length > 0 ? (
-                    employees.filter(e => (e.user_id || e.id) !== (employee?.user_id || employee?.id)).map(emp => (
-                      <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
-                        {emp.full_name || emp.username}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-employees" disabled>لا يوجد موظفين آخرين</SelectItem>
-                  )}
+                  {employees.filter(e => (e.user_id || e.id) !== (employee?.user_id || employee?.id)).map(emp => (
+                    <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
+                      {emp.full_name || emp.username}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </CardContent>

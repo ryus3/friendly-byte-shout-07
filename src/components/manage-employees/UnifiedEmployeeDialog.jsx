@@ -73,45 +73,48 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[85vw] max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col p-4 z-[9999] fixed top-[10vh] left-[50%] transform -translate-x-1/2">
-        <DialogHeader className="pb-3 border-b flex-shrink-0">
-          <DialogTitle className="text-lg flex items-center gap-2">
-            <User className="h-5 w-5 text-primary" />
+      <DialogContent className="w-[95vw] max-w-6xl h-[95vh] max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6">
+        <DialogHeader>
+          <DialogTitle className="text-xl">
             إدارة الموظف: {employee.full_name}
           </DialogTitle>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto gap-1">
-            <TabsTrigger value="basic" className="flex items-center gap-2 text-sm p-3 min-w-0">
-              <User className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">الإعدادات الأساسية</span>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+            <TabsTrigger value="basic" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">الإعدادات الأساسية</span>
+              <span className="sm:hidden">أساسية</span>
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center gap-2 text-sm p-3 min-w-0">
-              <Shield className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">الأدوار والصلاحيات</span>
+            <TabsTrigger value="roles" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">الأدوار والصلاحيات</span>
+              <span className="sm:hidden">أدوار</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-2 text-sm p-3 min-w-0">
-              <Package className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">صلاحيات المنتجات</span>
+            <TabsTrigger value="products" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">صلاحيات المنتجات</span>
+              <span className="sm:hidden">منتجات</span>
             </TabsTrigger>
-            <TabsTrigger value="view" className="flex items-center gap-2 text-sm p-3 min-w-0">
-              <Eye className="h-4 w-4 flex-shrink-0" />
-              <span className="truncate">معاينة النظام</span>
+            <TabsTrigger value="view" className="flex items-center justify-center gap-2 text-xs sm:text-sm p-2 sm:p-3">
+              <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">معاينة النظام</span>
+              <span className="sm:hidden">معاينة</span>
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto mt-4">
-            <TabsContent value="basic" className="space-y-6 m-0">
-              <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-6 rounded-xl border border-border/50">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex-1 overflow-y-auto mt-2 sm:mt-4">
+            <TabsContent value="basic" className="space-y-6">
+              <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-4 rounded-xl border border-border/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="status" className="text-sm font-medium">حالة الحساب</Label>
                     <Select value={status} onValueChange={setStatus}>
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000]">
+                      <SelectContent>
                         <SelectItem value="active">✅ نشط</SelectItem>
                         <SelectItem value="pending">⏳ قيد المراجعة</SelectItem>
                         <SelectItem value="suspended">❌ معلق</SelectItem>
@@ -122,10 +125,10 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                   <div className="space-y-2">
                     <Label htmlFor="defaultPage" className="text-sm font-medium">الصفحة الافتراضية</Label>
                     <Select value={defaultPage} onValueChange={setDefaultPage}>
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000]">
+                      <SelectContent>
                         {defaultPages.map(page => (
                           <SelectItem key={page.value} value={page.value}>
                             {page.label}
@@ -135,13 +138,13 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                     </Select>
                   </div>
 
-                  <div className="space-y-2 sm:col-span-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="orderMode" className="text-sm font-medium">نمط إنشاء الطلبات</Label>
                     <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000]">
+                      <SelectContent>
                         <SelectItem value="both">كلاهما (عادي + سريع)</SelectItem>
                         <SelectItem value="normal">طلبات عادية فقط</SelectItem>
                         <SelectItem value="quick">طلبات سريعة فقط</SelectItem>
@@ -152,8 +155,8 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleBasicSave} disabled={saving} className="px-6 h-9">
-                  {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
+                <Button onClick={handleBasicSave} disabled={saving} className="px-8">
+                  {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات الأساسية'}
                 </Button>
               </div>
             </TabsContent>
@@ -174,13 +177,13 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               />
             </TabsContent>
 
-            <TabsContent value="view" className="space-y-4 m-0">
-              <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-3 sm:p-4 rounded-lg border border-border/50">
-                <h3 className="font-semibold mb-3 flex items-center text-sm sm:text-base">
-                  <Eye className="ml-2 h-4 w-4 text-primary" />
+            <TabsContent value="view" className="space-y-4">
+              <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-6 rounded-xl border border-border/50">
+                <h3 className="font-semibold mb-4 flex items-center">
+                  <Eye className="ml-2 h-5 w-5 text-primary" />
                   معلومات الموظف
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs sm:text-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center space-x-2 space-x-reverse">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">الاسم:</span> 
@@ -203,8 +206,8 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       {status === 'active' ? 'نشط' : status === 'pending' ? 'قيد المراجعة' : 'معلق'}
                     </Badge>
                   </div>
-                  <div className="flex items-center space-x-2 space-x-reverse sm:col-span-2">
-                    <Settings className="h-3 w-3 text-muted-foreground" />
+                  <div className="flex items-center space-x-2 space-x-reverse md:col-span-2">
+                    <Settings className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">تاريخ الإنشاء:</span> 
                     <span>{new Date(employee.created_at).toLocaleDateString('ar-EG')}</span>
                     <span className="mx-2">|</span>
@@ -215,11 +218,12 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-semibold text-sm">نصائح للنظام:</h3>
-                <ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">
+                <h3 className="font-semibold">نصائح للنظام الجديد:</h3>
+                <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
                   <li>يمكن للموظف الواحد أن يحمل عدة أدوار</li>
-                  <li>صلاحيات المنتجات تتحكم في أي منتجات يستطيع الموظف رؤيتها</li>
+                  <li>صلاحيات المنتجات المتقدمة تتحكم في أي منتجات يستطيع الموظف رؤيتها</li>
                   <li>الأدوار تحدد الصفحات والوظائف المتاحة</li>
+                  <li>يُنصح بعدم حذف الحسابات القديمة - فقط قم بتعيين الأدوار الجديدة</li>
                 </ul>
               </div>
             </TabsContent>

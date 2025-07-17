@@ -389,8 +389,7 @@ const Dashboard = () => {
 
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
-        // التأكد من وجود البيانات وأنها في شكل صحيح
-        if (!profitsData || typeof profitsData !== 'object') {
+        if (!profitsData) {
             return {
                 personalPendingProfit: 0,
                 personalSettledProfit: 0,
@@ -398,35 +397,23 @@ const Dashboard = () => {
             };
         }
         
-        // التأكد من وجود المصفوفات
-        const pendingArray = Array.isArray(profitsData.pending) ? profitsData.pending : [];
-        const settledArray = Array.isArray(profitsData.settled) ? profitsData.settled : [];
-        const allProfits = [...pendingArray, ...settledArray];
-        
-        // التأكد من وجود بيانات المستخدم
-        if (!user?.id && !user?.user_id) {
-            return {
-                personalPendingProfit: 0,
-                personalSettledProfit: 0,
-                totalPersonalProfit: 0
-            };
-        }
+        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
         // فلترة الأرباح للمستخدم الحالي
         const userProfits = canViewAllData 
             ? allProfits 
             : allProfits.filter(profit => {
-                const employeeId = profit?.employee_id;
+                const employeeId = profit.employee_id;
                 return employeeId === user?.id || employeeId === user?.user_id;
             });
             
-        const personalPending = userProfits.filter(p => p?.status === 'pending');
-        const personalSettled = userProfits.filter(p => p?.status === 'settled');
+        const personalPending = userProfits.filter(p => p.status === 'pending');
+        const personalSettled = userProfits.filter(p => p.status === 'settled');
         
         return {
-            personalPendingProfit: personalPending.reduce((sum, p) => sum + (p?.employee_profit || 0), 0),
-            personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p?.employee_profit || 0), 0),
-            totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p?.employee_profit || 0), 0)
+            personalPendingProfit: personalPending.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
+            personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
+            totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 

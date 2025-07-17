@@ -40,7 +40,7 @@ const ManageEmployeesDialog = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-background border shadow-lg">
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>إدارة الموظفين والصلاحيات</DialogTitle>
             <DialogDescription>
