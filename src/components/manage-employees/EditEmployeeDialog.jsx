@@ -113,7 +113,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
             <div className="space-y-2">
               <Label>حالة الحساب</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="اختر حالة الحساب" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">نشط</SelectItem>
                   <SelectItem value="pending">قيد المراجعة</SelectItem>
@@ -128,7 +128,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
                 if (value === 'admin' || value === 'deputy') setPermissions(['*']);
                 else if (role === 'admin' || role === 'deputy') setPermissions([]);
               }}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="اختر الدور" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">مدير</SelectItem>
                   <SelectItem value="deputy">نائب مدير</SelectItem>
@@ -140,7 +140,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
             <div className="space-y-2">
               <Label>الصفحة الافتراضية</Label>
               <Select value={defaultPage} onValueChange={setDefaultPage}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="اختر الصفحة الافتراضية" /></SelectTrigger>
                 <SelectContent>
                   {defaultPages.map(page => (
                       <SelectItem key={page.value} value={page.value}>{page.label}</SelectItem>
@@ -151,7 +151,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
             <div className="space-y-2">
               <Label className="flex items-center gap-2"><Package /> نمط إنشاء الطلب</Label>
               <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="اختر نمط إنشاء الطلب" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="choice">السماح بالاختيار</SelectItem>
                   <SelectItem value="local_only">إجباري محلي</SelectItem>
