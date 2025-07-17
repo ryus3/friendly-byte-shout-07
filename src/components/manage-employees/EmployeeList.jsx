@@ -43,7 +43,7 @@ const EmployeeCard = ({ user, onEdit, index }) => {
           case 'sales_employee': return 'موظف مبيعات';
           case 'warehouse_employee': return 'موظف مخزن';
           case 'accountant': return 'محاسب';
-          default: return role;
+          default: return roleName;
         }
       };
 
