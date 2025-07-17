@@ -71,9 +71,9 @@ const ManageEmployeesPage = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setIsBulkUpdateOpen(true)}>
+            <Button variant="outline" onClick={() => navigate('/manage-employees-full')}>
                 <Shield className="w-4 h-4 ml-2" />
-                إدارة الأدوار والصلاحيات
+                الصفحة الكاملة لإدارة الموظفين
             </Button>
             <Button onClick={handleAddNew}>
               <UserPlus className="w-4 h-4 ml-2" />
