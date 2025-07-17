@@ -24,11 +24,21 @@ export const UnifiedAuthProvider = ({ children }) => {
     if (!supabase || !supabaseUser) return null;
     
     try {
-      // جلب بيانات المستخدم الأساسية
+      // جلب بيانات المستخدم الأساسية مع الأدوار
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          user_roles!inner(
+            roles(
+              name,
+              display_name,
+              hierarchy_level
+            )
+          )
+        `)
         .eq('user_id', supabaseUser.id)
+        .eq('user_roles.is_active', true)
         .maybeSingle();
 
       if (error) {
@@ -40,9 +50,13 @@ export const UnifiedAuthProvider = ({ children }) => {
         return { ...supabaseUser, is_new: true, status: 'pending' };
       }
 
+      // استخراج الأدوار
+      const roles = profile.user_roles?.map(ur => ur.roles.name) || [];
+      
       return { 
         ...supabaseUser, 
-        ...profile
+        ...profile,
+        roles
       };
     } catch (error) {
       console.error('Profile fetch failed:', error);
@@ -54,14 +68,36 @@ export const UnifiedAuthProvider = ({ children }) => {
     if (!supabase) return;
     
     try {
-      const { data, error } = await supabase.from('profiles').select('*');
+      // جلب جميع المستخدمين مع أدوارهم
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles(
+            roles(
+              name,
+              display_name,
+              hierarchy_level
+            ),
+            is_active
+          )
+        `);
+      
       if (error) {
         console.error('Error fetching all users:', error);
         return;
       }
       
-      const pending = data.filter(u => u.status === 'pending');
-      setAllUsers(data);
+      // إضافة الأدوار لكل مستخدم
+      const usersWithRoles = data.map(user => ({
+        ...user,
+        roles: user.user_roles
+          ?.filter(ur => ur.is_active)
+          ?.map(ur => ur.roles.name) || []
+      }));
+      
+      const pending = usersWithRoles.filter(u => u.status === 'pending');
+      setAllUsers(usersWithRoles);
       setPendingRegistrations(pending);
     } catch (error) {
       console.error('Admin data fetch failed:', error);
