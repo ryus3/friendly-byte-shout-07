@@ -25,7 +25,7 @@ import RestrictedTelegramSettings from '@/components/settings/RestrictedTelegram
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
-import ManageEmployeesDialog from '@/components/settings/ManageEmployeesDialog';
+
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
@@ -138,7 +138,7 @@ const SettingsPage = () => {
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [isManageEmployeesOpen, setIsManageEmployeesOpen] = useState(false);
+  
   const [isCustomerSettingsOpen, setIsCustomerSettingsOpen] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
@@ -220,6 +220,17 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* إدارة الموظفين - للمدراء فقط */}
+            {canManageEmployees && (
+              <ModernCard
+                icon={Users}
+                title="إدارة الموظفين"
+                description="إدارة الموظفين وحساباتهم وحالة التفعيل"
+                iconColor="from-blue-500 to-purple-600"
+                onClick={() => navigate('/manage-employees')}
+              />
+            )}
+
             {/* قواعد الأرباح للموظفين - للمدراء فقط */}
             {canManageEmployees && (
               <ModernCard
@@ -453,12 +464,6 @@ const SettingsPage = () => {
       />
 
       {/* الحوارات - فلترة حسب الصلاحيات */}
-      {canManageEmployees && (
-        <ManageEmployeesDialog
-          open={isManageEmployeesOpen}
-          onOpenChange={setIsManageEmployeesOpen}
-        />
-      )}
 
       <CustomerSettingsDialog
         open={isCustomerSettingsOpen}
