@@ -7,9 +7,10 @@ export const useAiChat = () => useContext(AiChatContext);
 
 export const AiChatProvider = ({ children }) => {
   const [aiChatOpen, setAiChatOpen] = useState(false);
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   
-  const canUseAiChat = hasPermission('use_ai_assistant');
+  // المدير ونائب المدير يمكنهم استخدام المساعد الذكي دائماً
+  const canUseAiChat = user?.role === 'admin' || user?.role === 'deputy' || hasPermission('use_ai_assistant');
 
   const value = {
     aiChatOpen,
