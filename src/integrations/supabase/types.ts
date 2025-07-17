@@ -1160,6 +1160,7 @@ export type Database = {
           order_creation_mode: string | null
           permissions: Json | null
           product_type_permissions: Json | null
+          role: string
           season_occasion_permissions: Json | null
           size_permissions: Json | null
           status: string
@@ -1182,6 +1183,7 @@ export type Database = {
           order_creation_mode?: string | null
           permissions?: Json | null
           product_type_permissions?: Json | null
+          role?: string
           season_occasion_permissions?: Json | null
           size_permissions?: Json | null
           status?: string
@@ -1204,6 +1206,7 @@ export type Database = {
           order_creation_mode?: string | null
           permissions?: Json | null
           product_type_permissions?: Json | null
+          role?: string
           season_occasion_permissions?: Json | null
           size_permissions?: Json | null
           status?: string
@@ -1797,10 +1800,6 @@ export type Database = {
         Args: { p_user_id: string; p_permission_name: string }
         Returns: boolean
       }
-      check_user_role: {
-        Args: { p_user_id: string; p_role_name: string }
-        Returns: boolean
-      }
       check_user_variant_permission: {
         Args: {
           p_user_id: string
@@ -1858,10 +1857,6 @@ export type Database = {
           email: string
           user_id: string
         }[]
-      }
-      get_user_highest_role: {
-        Args: { p_user_id: string }
-        Returns: string
       }
       get_user_product_access: {
         Args: { p_user_id: string; p_permission_type: string }

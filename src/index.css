@@ -312,7 +312,7 @@
     margin-bottom: 0.5rem;
   }
   
-  /* Dialog and Modal Z-Index Management - Updated to prevent overlapping issues */
+  /* Dialog and Modal Z-Index Management */
   .dialog-overlay {
     z-index: 9998 !important;
   }
@@ -321,7 +321,7 @@
     z-index: 9999 !important;
   }
   
-  /* Ensure dialogs are above sidebar and other components */
+  /* Ensure dialogs are above sidebar */
   [data-radix-dialog-overlay] {
     z-index: 9998 !important;
   }
@@ -330,33 +330,13 @@
     z-index: 9999 !important;
   }
   
-  /* Fix dropdown and select z-index inside dialogs */
+  /* Fix dropdown z-index inside dialogs */
   [data-radix-select-content] {
     z-index: 10000 !important;
   }
   
   [data-radix-select-viewport] {
     z-index: 10000 !important;
-  }
-  
-  /* Popover content inside dialogs */
-  [data-radix-popover-content] {
-    z-index: 10000 !important;
-  }
-  
-  /* Dropdown menu content inside dialogs */
-  [data-radix-dropdown-menu-content] {
-    z-index: 10000 !important;
-  }
-  
-  /* Command palette and search components */
-  [data-radix-command-dialog] {
-    z-index: 10000 !important;
-  }
-  
-  /* Tooltip content */
-  [data-radix-tooltip-content] {
-    z-index: 10001 !important;
   }
   
   /* Enhanced dialog positioning and sizing */

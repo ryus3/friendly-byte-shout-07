@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import { useAuth } from '@/contexts/AuthContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const EmployeeCard = ({ user, onView, index }) => {
   const [profitsDialogOpen, setProfitsDialogOpen] = useState(false);
   const { hasPermission } = useAuth();
-  const { isAdmin, isDepartmentManager, isWarehouseEmployee } = usePermissionBasedData();
+  const isAdmin = user.role === 'admin';
+  const isDeputy = user.role === 'deputy';
+  const isWarehouse = user.role === 'warehouse';
   const isActive = user.status === 'active';
 
   const getRoleBadge = () => {

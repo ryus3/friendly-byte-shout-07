@@ -2,18 +2,19 @@ import { useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
   const { addNotification } = useNotifications();
-  const { isAdmin } = usePermissionBasedData();
 
   useEffect(() => {
     // التحقق من الشروط الأساسية
     if (!supabase || !user || !addNotification) {
       return;
     }
+    
+    // فحص إذا كان المستخدم مدير - تبسيط الفحص
+    const isAdmin = user.role === 'admin';
     
     if (!isAdmin) {
       return; // إشعارات المدير فقط
@@ -50,7 +51,7 @@ const NotificationsHandler = () => {
       supabase.removeChannel(profilesChannel);
     };
     
-  }, [user, fetchAdminData, addNotification, isAdmin]);
+  }, [user, fetchAdminData, addNotification]);
 
   return null;
 };

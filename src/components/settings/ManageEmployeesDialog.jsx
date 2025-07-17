@@ -27,7 +27,7 @@ const ManageEmployeesDialog = ({ open, onOpenChange }) => {
                               (user.email?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase()) ||
                               (user.username?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase());
       const statusMatch = filters.status === 'all' || user.status === filters.status;
-      const roleMatch = filters.role === 'all'; // النظام الهرمي لا يستخدم roles مباشرة
+      const roleMatch = filters.role === 'all' || user.role === filters.role;
       return searchTermMatch && statusMatch && roleMatch;
     }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
   }, [allUsers, filters]);
@@ -40,7 +40,7 @@ const ManageEmployeesDialog = ({ open, onOpenChange }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-background border shadow-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-background border shadow-lg">
           <DialogHeader>
             <DialogTitle>إدارة الموظفين والصلاحيات</DialogTitle>
             <DialogDescription>
@@ -68,11 +68,10 @@ const ManageEmployeesDialog = ({ open, onOpenChange }) => {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">كل الأدوار</SelectItem>
-                  <SelectItem value="super_admin">المدير العام</SelectItem>
-                  <SelectItem value="department_manager">مدير القسم</SelectItem>
-                  <SelectItem value="sales_employee">موظف مبيعات</SelectItem>
-                  <SelectItem value="warehouse_employee">موظف مخزن</SelectItem>
-                  <SelectItem value="cashier">كاشير</SelectItem>
+                  <SelectItem value="admin">مدير</SelectItem>
+                  <SelectItem value="deputy">نائب مدير</SelectItem>
+                  <SelectItem value="employee">موظف</SelectItem>
+                  <SelectItem value="warehouse">مخزن</SelectItem>
                 </SelectContent>
               </Select>
             </div>

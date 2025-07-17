@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast.js';
 import { supabase } from '@/lib/customSupabaseClient.js'; // Use the custom client
-import useUnifiedPermissions from '@/hooks/useUnifiedPermissions';
 
 const AuthContext = createContext(null);
 
@@ -50,29 +49,16 @@ export const AuthProvider = ({ children }) => {
         pending.push(u);
       } 
     });
-    setAllUsers(data);
+    setAllUsers(data); // Store all users including pending ones
     setPendingRegistrations(pending);
   }, []);
 
-  // استخدام النظام الهرمي للتحقق من صلاحيات جلب البيانات الإدارية
   useEffect(() => {
-    if (user?.user_id) {
-      // فحص الصلاحيات من النظام الهرمي
-      const checkAdminAccess = async () => {
-        const { data: hasPermission } = await supabase
-          .rpc('check_user_permission', {
-            p_user_id: user.user_id,
-            p_permission_name: 'view_all_data'
-          });
-        
-        if (hasPermission) {
-          fetchAdminData();
-        } else {
-          setAllUsers([user]);
-        }
-      };
-      
-      checkAdminAccess();
+    if (user?.role === 'admin' || user?.role === 'deputy' || user?.permissions?.includes('*')) {
+      fetchAdminData();
+    } else if (user) {
+      // Regular users should not see other users' data
+      setAllUsers([user]);
     }
   }, [user, fetchAdminData]);
 
@@ -292,22 +278,14 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
   
-  // استخدام النظام الهرمي للتحقق من الصلاحيات
-  const hasPermission = async (permission) => {
-    if (!permission || !user?.user_id) return false;
+  const hasPermission = (permission) => {
+    if (!permission) return true;
     
-    try {
-      const { data: hasPermission } = await supabase
-        .rpc('check_user_permission', {
-          p_user_id: user.user_id,
-          p_permission_name: permission
-        });
-      
-      return hasPermission || false;
-    } catch (error) {
-      console.error('Error checking permission:', error);
-      return false;
-    }
+    // فحص صلاحيات المدير مباشرة
+    if (user?.role === 'admin') return true;
+    
+    // fallback للنظام القديم
+    return user?.permissions?.includes(permission) || user?.permissions?.includes('*');
   };
 
   const updateUser = async (userId, data) => {
@@ -320,6 +298,7 @@ export const AuthProvider = ({ children }) => {
       console.log('=== START updateUser ===');
       console.log('Updating user:', userId, 'with data:', data);
       console.log('Current user ID in context:', user?.user_id);
+      console.log('Current user role:', user?.role);
       
       const { data: result, error } = await supabase
         .from('profiles')
@@ -401,6 +380,24 @@ export const AuthProvider = ({ children }) => {
       }
   };
 
+  const updatePermissionsByRole = async (role, permissions) => {
+    if (!supabase) {
+      toast({ title: "Error", description: "Supabase client not available.", variant: "destructive" });
+      return;
+    }
+    const { error } = await supabase
+      .from('profiles')
+      .update({ permissions })
+      .eq('role', role);
+
+    if (error) {
+      toast({ title: 'خطأ', description: `فشل تحديث الصلاحيات: ${error.message}`, variant: 'destructive' });
+    } else {
+      toast({ title: 'نجاح', description: `تم تحديث صلاحيات كل المستخدمين من دور "${role}" بنجاح.` });
+      await fetchAdminData(); // Refetch all users to update the UI
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -414,8 +411,9 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     updateUserProfile,
     changePassword,
+    updatePermissionsByRole,
     refetchAdminData: fetchAdminData,
-    fetchAdminData,
+    fetchAdminData, // expose this for the handler
   };
 
   return (
