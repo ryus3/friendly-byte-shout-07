@@ -1146,66 +1146,45 @@ export type Database = {
       }
       profiles: {
         Row: {
-          category_permissions: Json | null
-          color_permissions: Json | null
           created_at: string
           default_customer_name: string | null
           default_page: string | null
           delivery_partner_access: boolean | null
-          department_permissions: Json | null
           email: string
           full_name: string
           id: string
           is_active: boolean
           order_creation_mode: string | null
-          permissions: Json | null
-          product_type_permissions: Json | null
-          season_occasion_permissions: Json | null
-          size_permissions: Json | null
           status: string
           updated_at: string
           user_id: string
           username: string
         }
         Insert: {
-          category_permissions?: Json | null
-          color_permissions?: Json | null
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
           delivery_partner_access?: boolean | null
-          department_permissions?: Json | null
           email: string
           full_name: string
           id?: string
           is_active?: boolean
           order_creation_mode?: string | null
-          permissions?: Json | null
-          product_type_permissions?: Json | null
-          season_occasion_permissions?: Json | null
-          size_permissions?: Json | null
           status?: string
           updated_at?: string
           user_id: string
           username: string
         }
         Update: {
-          category_permissions?: Json | null
-          color_permissions?: Json | null
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
           delivery_partner_access?: boolean | null
-          department_permissions?: Json | null
           email?: string
           full_name?: string
           id?: string
           is_active?: boolean
           order_creation_mode?: string | null
-          permissions?: Json | null
-          product_type_permissions?: Json | null
-          season_occasion_permissions?: Json | null
-          size_permissions?: Json | null
           status?: string
           updated_at?: string
           user_id?: string
