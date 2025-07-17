@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -28,7 +29,8 @@ import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 const OrdersPage = () => {
   const { orders, aiOrders, loading: inventoryLoading, calculateProfit, updateOrder, deleteOrders: deleteOrdersContext, refetchProducts } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
-  const { user, allUsers, hasPermission } = useAuth();
+  const { user, allUsers } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
   

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +19,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 const EmployeeFollowUpPage = () => {
-  const { allUsers, hasPermission } = useAuth();
+  const { allUsers } = useAuth();
+  const { hasPermission } = usePermissions();
   const { orders, loading, calculateManagerProfit, updateOrder, refetchProducts, settlementInvoices, deleteOrders } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   

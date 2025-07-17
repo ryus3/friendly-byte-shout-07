@@ -1,42 +1,23 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export const usePermissionBasedData = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission, isAdmin, isDepartmentManager, isSalesEmployee, isWarehouseEmployee, isCashier } = usePermissions();
 
-  // فحص الأدوار (النظام الجديد)
-  const isAdmin = useMemo(() => {
-    return user?.current_role === 'super_admin' || user?.is_super_admin;
-  }, [user?.current_role, user?.is_super_admin]);
-
-  const isEmployee = useMemo(() => {
-    return user?.current_role === 'sales_employee';
-  }, [user?.current_role]);
-
-  const isDeputy = useMemo(() => {
-    return user?.current_role === 'department_manager';
-  }, [user?.current_role]);
-
-  const isWarehouse = useMemo(() => {
-    return user?.current_role === 'warehouse_employee';
-  }, [user?.current_role]);
-
-  const isCashier = useMemo(() => {
-    return user?.current_role === 'cashier';
-  }, [user?.current_role]);
-
-  // صلاحيات شاملة
+  // نستخدم المتغيرات مباشرة من usePermissions دون إعادة تعريفها
   const canViewAllData = useMemo(() => {
-    return isAdmin || isDeputy;
-  }, [isAdmin, isDeputy]);
+    return isAdmin || isDepartmentManager;
+  }, [isAdmin, isDepartmentManager]);
 
   const canManageSettings = useMemo(() => {
     return isAdmin;
   }, [isAdmin]);
 
   const canManageEmployees = useMemo(() => {
-    return isAdmin || isDeputy;
-  }, [isAdmin, isDeputy]);
+    return isAdmin || isDepartmentManager;
+  }, [isAdmin, isDepartmentManager]);
 
   // صلاحيات شركات التوصيل
   const canAccessDeliveryPartners = useMemo(() => {
@@ -246,9 +227,9 @@ export const usePermissionBasedData = () => {
     // بيانات المستخدم والأدوار
     user,
     isAdmin,
-    isEmployee,
-    isDeputy,
-    isWarehouse,
+    isEmployee: isSalesEmployee,
+    isDeputy: isDepartmentManager,
+    isWarehouse: isWarehouseEmployee,
     isCashier,
     
     // صلاحيات عامة
