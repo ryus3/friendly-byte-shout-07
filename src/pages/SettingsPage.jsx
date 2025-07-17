@@ -237,7 +237,7 @@ const SettingsPage = () => {
                 title="إدارة الموظفين"
                 description="نظام متكامل لإدارة الموظفين والأدوار والصلاحيات وصلاحيات المنتجات"
                 iconColor="from-green-500 to-green-600"
-                onClick={() => navigate('/manage-employees-full')}
+                onClick={() => setIsEmployeeManagementOpen(true)}
                 badge={<Badge variant="default">النظام المتكامل</Badge>}
               />
             )}

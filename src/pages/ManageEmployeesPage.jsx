@@ -1,12 +1,55 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users } from 'lucide-react';
+import { Search, UserPlus, ArrowRight, Shield, Settings, Eye } from 'lucide-react';
+import EmployeeList from '@/components/manage-employees/EmployeeList';
+import EmployeeDetailsDialog from '@/components/manage-employees/EmployeeDetailsDialog';
+import { toast } from '@/components/ui/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useNavigate } from 'react-router-dom';
+import UpdateRolePermissionsDialog from '@/components/manage-employees/UpdateRolePermissionsDialog';
 
 const ManageEmployeesPage = () => {
+  const { allUsers } = useAuth();
   const navigate = useNavigate();
+  const [filters, setFilters] = useState({ searchTerm: '', status: 'all', role: 'all' });
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+
+  const handleFilterChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+  };
+  
+  const handleSelectFilterChange = (name, value) => {
+    setFilters({ ...filters, [name]: value });
+  };
+
+  const filteredUsers = useMemo(() => {
+    if (!allUsers) return [];
+    return allUsers.filter(user => {
+      const searchTermMatch = (user.full_name?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase()) ||
+                              (user.email?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase()) ||
+                              (user.username?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase());
+      const statusMatch = filters.status === 'all' || user.status === filters.status;
+      const roleMatch = filters.role === 'all' || user.role === filters.role;
+      return searchTermMatch && statusMatch && roleMatch;
+    }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  }, [allUsers, filters]);
+
+  const handleViewEmployee = (employee) => {
+    setEditingEmployee(employee);
+    setIsEditModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    toast({
+      title: "لإضافة موظف جديد",
+      description: "اطلب منه التسجيل في النظام ثم قم بالموافقة عليه من لوحة التحكم.",
+    });
+  };
 
   return (
     <>
@@ -15,38 +58,79 @@ const ManageEmployeesPage = () => {
         <meta name="description" content="إدارة صلاحيات وحسابات الموظفين" />
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto p-6">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
+      <div className="space-y-6 p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => navigate('/settings')}>
-              <ArrowRight className="h-4 w-4 ml-2" />
-              رجوع للإعدادات
+                <ArrowRight className="h-4 w-4 ml-2" />
+                رجوع
             </Button>
             <div>
               <h1 className="text-3xl font-bold gradient-text">إدارة الموظفين</h1>
               <p className="text-muted-foreground mt-1">عرض وتعديل صلاحيات وحسابات الموظفين</p>
             </div>
           </div>
-
-          {/* Redirect to Full Page */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                إدارة شاملة للموظفين
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">
-                يمكنك إدارة جميع الموظفين وصلاحياتهم من الصفحة المخصصة لذلك
-              </p>
-              <Button onClick={() => navigate('/manage-employees-full')}>
-                الذهاب لإدارة الموظفين
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/manage-employees-full')}>
+                <Shield className="w-4 h-4 ml-2" />
+                الصفحة الكاملة لإدارة الموظفين
+            </Button>
+            <Button onClick={handleAddNew}>
+              <UserPlus className="w-4 h-4 ml-2" />
+              إضافة موظف جديد
+            </Button>
+          </div>
         </div>
+
+        <div className="bg-card rounded-xl p-4 border border-border grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative md:col-span-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Input 
+              placeholder="البحث بالاسم، المستخدم، أو الإيميل..." 
+              name="searchTerm"
+              value={filters.searchTerm} 
+              onChange={handleFilterChange} 
+              className="pr-10" 
+            />
+          </div>
+          <Select name="status" value={filters.status} onValueChange={(v) => handleSelectFilterChange('status', v)}>
+            <SelectTrigger><SelectValue placeholder="حالة الموظف" /></SelectTrigger>
+            <SelectContent className="bg-popover border border-border">
+              <SelectItem value="all">كل الحالات</SelectItem>
+              <SelectItem value="active">نشط</SelectItem>
+              <SelectItem value="pending">قيد المراجعة</SelectItem>
+              <SelectItem value="suspended">معلق</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select name="role" value={filters.role} onValueChange={(v) => handleSelectFilterChange('role', v)}>
+            <SelectTrigger><SelectValue placeholder="دور الموظف" /></SelectTrigger>
+            <SelectContent className="bg-popover border border-border">
+              <SelectItem value="all">كل الأدوار</SelectItem>
+              <SelectItem value="admin">مدير</SelectItem>
+              <SelectItem value="deputy">نائب مدير</SelectItem>
+              <SelectItem value="employee">موظف مبيعات</SelectItem>
+              <SelectItem value="warehouse">موظف مخزن</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <EmployeeList 
+          users={filteredUsers} 
+          onView={handleViewEmployee}
+        />
+
+        {editingEmployee && (
+          <EmployeeDetailsDialog
+              employee={editingEmployee}
+              open={isEditModalOpen}
+              onOpenChange={setIsEditModalOpen}
+          />
+        )}
+        
+        <UpdateRolePermissionsDialog 
+            open={isBulkUpdateOpen}
+            onOpenChange={setIsBulkUpdateOpen}
+        />
       </div>
     </>
   );
