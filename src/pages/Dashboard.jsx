@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import useCleanPermissions from '@/hooks/useCleanPermissions';
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -87,7 +87,7 @@ const Dashboard = () => {
         isAdmin,
         isEmployee,
         canManageEmployees 
-    } = usePermissionBasedData();
+    } = useCleanPermissions();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -372,64 +372,81 @@ const Dashboard = () => {
     }, [periods.netProfit, orders, accounting?.expenses, products]);
 
     const dashboardData = useMemo(() => {
-        if (!visibleOrders || !user) return {
-            totalOrdersCount: 0,
-            netProfit: 0,
-            pendingProfit: 0,
-            deliveredSales: 0,
-            pendingSales: 0,
-            pendingProfitOrders: [],
-            deliveredSalesOrders: [],
-            pendingSalesOrders: [],
-            topCustomers: [],
-            topProvinces: [],
-            topProducts: []
-        };
+        try {
+            if (!visibleOrders || !user) return {
+                totalOrdersCount: 0,
+                netProfit: 0,
+                pendingProfit: 0,
+                deliveredSales: 0,
+                pendingSales: 0,
+                pendingProfitOrders: [],
+                deliveredSalesOrders: [],
+                pendingSalesOrders: [],
+                topCustomers: [],
+                topProvinces: [],
+                topProducts: []
+            };
 
-        const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
-        const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
-        const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
-        const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
-        
-        const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
-          const employeeProfit = (o.items || []).reduce((itemSum, item) => {
-            const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
-            return itemSum + profit;
-          }, 0);
-          
-          // Remove the unstable calculateManagerProfit reference
-          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id
-            ? 0 : 0; // Simplified to avoid infinite loop
-          
-          return sum + employeeProfit + managerProfit;
-        }, 0);
-        
-        const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
-        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          const productsSalesOnly = (o.total_amount || 0);
-          return sum + productsSalesOnly;
-        }, 0);
+            const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
+            const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
+            const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
+            const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
+            
+            const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
+              try {
+                const employeeProfit = (o.items || []).reduce((itemSum, item) => {
+                  const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+                  return itemSum + profit;
+                }, 0);
+                
+                return sum + employeeProfit;
+              } catch {
+                return sum;
+              }
+            }, 0);
+            
+            const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
+            const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
+              const productsSalesOnly = (o.total_amount || 0);
+              return sum + productsSalesOnly;
+            }, 0);
 
-        const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
-        const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
-        const pendingSales = pendingSalesOrders.reduce((sum, o) => {
-          const productsSalesOnly = (o.total_amount || 0);
-          return sum + productsSalesOnly;
-        }, 0);
+            const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
+            const pendingSalesOrders = filterOrdersByPeriod(shippedOrders, periods.pendingSales);
+            const pendingSales = pendingSalesOrders.reduce((sum, o) => {
+              const productsSalesOnly = (o.total_amount || 0);
+              return sum + productsSalesOnly;
+            }, 0);
 
-        return {
-            totalOrdersCount: filteredTotalOrders.length,
-            netProfit: 0, // سيتم حسابها من financialSummary بشكل منفصل
-            pendingProfit,
-            deliveredSales,
-            pendingSales,
-            pendingProfitOrders: filteredDeliveredOrders,
-            deliveredSalesOrders,
-            pendingSalesOrders,
-            topCustomers: getTopCustomers(visibleOrders),
-            topProvinces: getTopProvinces(visibleOrders),
-            topProducts: getTopProducts(visibleOrders),
-        };
+            return {
+                totalOrdersCount: filteredTotalOrders.length,
+                netProfit: 0, // سيتم حسابها من financialSummary بشكل منفصل
+                pendingProfit,
+                deliveredSales,
+                pendingSales,
+                pendingProfitOrders: filteredDeliveredOrders,
+                deliveredSalesOrders,
+                pendingSalesOrders,
+                topCustomers: getTopCustomers(visibleOrders),
+                topProvinces: getTopProvinces(visibleOrders),
+                topProducts: getTopProducts(visibleOrders),
+            };
+        } catch (error) {
+            console.error('Error in dashboardData calculation:', error);
+            return {
+                totalOrdersCount: 0,
+                netProfit: 0,
+                pendingProfit: 0,
+                deliveredSales: 0,
+                pendingSales: 0,
+                pendingProfitOrders: [],
+                deliveredSalesOrders: [],
+                pendingSalesOrders: [],
+                topCustomers: [],
+                topProvinces: [],
+                topProducts: []
+            };
+        }
     }, [
         visibleOrders, 
         periods.totalOrders, 
@@ -437,8 +454,7 @@ const Dashboard = () => {
         periods.deliveredSales, 
         periods.pendingSales, 
         user?.id, 
-        user?.user_id, 
-        canViewAllData
+        user?.user_id
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
