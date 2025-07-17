@@ -409,7 +409,14 @@ const Dashboard = () => {
         };
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 
-    // Move the loading check AFTER all hooks are called
+    // Move the loading check AFTER all hooks are called but add console for debugging
+    console.log('Dashboard Debug:', { 
+        inventoryLoading, 
+        orders: orders?.length, 
+        user: user?.full_name,
+        permissions: user?.permissions
+    });
+    
     if (inventoryLoading) {
         return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
     }
