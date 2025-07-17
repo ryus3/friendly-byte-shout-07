@@ -29,7 +29,6 @@ const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
 const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
 const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
-const ManageEmployeesPageFull = lazy(() => import('@/pages/ManageEmployeesPageFull.jsx'));
 const ManageLabelsPage = lazy(() => import('@/pages/ManageLabelsPage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
@@ -96,7 +95,6 @@ function AppContent() {
           <Route path="/profit-settlement/:employeeId" element={<ProtectedRoute permission="manage_profit_settlement">{childrenWithProps(ProfitSettlementPage)}</ProtectedRoute>} />
           <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_users">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
-          <Route path="/manage-employees-full" element={<ProtectedRoute permission="manage_users">{childrenWithProps(ManageEmployeesPageFull)}</ProtectedRoute>} />
           <Route path="/manage-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(ManageLabelsPage)}</ProtectedRoute>} />
 
         </Routes>
