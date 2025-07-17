@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissionBasedData } from '@/hooks/usePermissionBasedData';
 import OrdersStats from './OrdersStats';
 
 const PermissionBasedOrderStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => {
