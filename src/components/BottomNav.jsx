@@ -13,8 +13,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 
-const NavButton = ({ onClick, icon: Icon, label, className, badgeCount, isActive }) => (
+const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
   <motion.button
+    ref={ref}
     onClick={onClick}
     whileTap={{ scale: 0.95 }}
     className={cn(
@@ -22,6 +23,7 @@ const NavButton = ({ onClick, icon: Icon, label, className, badgeCount, isActive
       isActive && "text-primary bg-primary/5 shadow-sm",
       className
     )}
+    {...props}
   >
     <div className="relative">
       <Icon className={cn("w-5 h-5 transition-all duration-200", isActive && "scale-110")} />
@@ -37,7 +39,9 @@ const NavButton = ({ onClick, icon: Icon, label, className, badgeCount, isActive
     </div>
     <span className={cn("text-xs font-medium transition-all duration-200", isActive && "font-bold text-xs")}>{label}</span>
   </motion.button>
-);
+));
+
+NavButton.displayName = "NavButton";
 
 const MenuSheet = ({ children, open, onOpenChange }) => (
   <Sheet open={open} onOpenChange={onOpenChange}>
