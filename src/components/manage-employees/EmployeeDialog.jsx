@@ -7,7 +7,7 @@ const EmployeeDialog = ({ open, onOpenChange, children, title }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className={cn(
-          "w-[90vw] max-w-4xl max-h-[80vh]",
+          "w-[90vw] max-w-4xl max-h-[85vh]",
           "bg-background border border-border rounded-lg shadow-xl",
           "p-0 gap-0 overflow-hidden"
         )}

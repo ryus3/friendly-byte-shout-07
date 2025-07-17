@@ -94,7 +94,7 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
               <SelectTrigger className="h-9">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="z-[10000]">
+              <SelectContent>
                 {availableRoles.map(role => (
                   <SelectItem key={role.value} value={role.value}>
                     {role.label} - {role.description}

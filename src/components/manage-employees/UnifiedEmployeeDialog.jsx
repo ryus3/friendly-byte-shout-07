@@ -73,7 +73,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[85vw] max-w-4xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col p-4 z-[9999] fixed top-[10vh] left-[50%] transform -translate-x-1/2">
+      <DialogContent className="w-[85vw] max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-4">
         <DialogHeader className="pb-3 border-b flex-shrink-0">
           <DialogTitle className="text-lg flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
@@ -111,7 +111,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000]">
+                       <SelectContent>
                         <SelectItem value="active">✅ نشط</SelectItem>
                         <SelectItem value="pending">⏳ قيد المراجعة</SelectItem>
                         <SelectItem value="suspended">❌ معلق</SelectItem>
@@ -125,7 +125,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000]">
+                       <SelectContent>
                         {defaultPages.map(page => (
                           <SelectItem key={page.value} value={page.value}>
                             {page.label}
@@ -141,7 +141,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-9">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000]">
+                      <SelectContent>
                         <SelectItem value="both">كلاهما (عادي + سريع)</SelectItem>
                         <SelectItem value="normal">طلبات عادية فقط</SelectItem>
                         <SelectItem value="quick">طلبات سريعة فقط</SelectItem>
