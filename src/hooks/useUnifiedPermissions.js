@@ -5,140 +5,140 @@ import { supabase } from '@/lib/customSupabaseClient';
 export const useUnifiedPermissions = () => {
   const { user } = useAuth();
   const [userRoles, setUserRoles] = useState([]);
-  const [permissions, setPermissions] = useState([]);
+  const [userPermissions, setUserPermissions] = useState([]);
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    if (user?.id) {
-      fetchUserPermissions();
-    } else {
-      setLoading(false);
-    }
-  }, [user?.id]);
+    if (!user?.user_id) return;
 
-  const fetchUserPermissions = async () => {
-    try {
-      setLoading(true);
-      
-      // 1. Get user roles from new system
-      const { data: userRolesData } = await supabase
-        .from('user_roles')
-        .select(`
-          role_id,
-          is_active,
-          roles (
-            id,
-            name,
-            display_name,
-            hierarchy_level
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('is_active', true);
+    const fetchUserPermissions = async () => {
+      try {
+        setLoading(true);
 
-      setUserRoles(userRolesData || []);
-
-      // 2. Get permissions for user roles
-      if (userRolesData?.length > 0) {
-        const roleIds = userRolesData.map(ur => ur.role_id);
-        
-        const { data: permissionsData } = await supabase
-          .from('role_permissions')
+        // جلب أدوار المستخدم
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
           .select(`
-            permission_id,
-            permissions (
+            role_id,
+            roles (
               id,
               name,
               display_name,
-              category
+              hierarchy_level
             )
           `)
-          .in('role_id', roleIds);
+          .eq('user_id', user.user_id)
+          .eq('is_active', true);
 
-        const uniquePermissions = [];
-        const permissionIds = new Set();
-        
-        permissionsData?.forEach(rp => {
-          if (rp.permissions && !permissionIds.has(rp.permissions.id)) {
-            permissionIds.add(rp.permissions.id);
-            uniquePermissions.push(rp.permissions);
-          }
+        if (rolesError) throw rolesError;
+
+        // جلب صلاحيات المستخدم عبر الأدوار
+        const roleIds = roles?.map(ur => ur.role_id) || [];
+        let permissions = [];
+
+        if (roleIds.length > 0) {
+          const { data: perms, error: permsError } = await supabase
+            .from('role_permissions')
+            .select(`
+              permissions (
+                id,
+                name,
+                display_name,
+                category
+              )
+            `)
+            .in('role_id', roleIds);
+
+          if (permsError) throw permsError;
+          permissions = perms?.map(rp => rp.permissions) || [];
+        }
+
+        // جلب صلاحيات المنتجات
+        const { data: productPerms, error: productPermsError } = await supabase
+          .from('user_product_permissions')
+          .select('*')
+          .eq('user_id', user.user_id);
+
+        if (productPermsError) throw productPermsError;
+
+        // تنظيم صلاحيات المنتجات
+        const productPermissionsMap = {};
+        productPerms?.forEach(perm => {
+          productPermissionsMap[perm.permission_type] = {
+            allowed_items: perm.allowed_items || [],
+            has_full_access: perm.has_full_access || false
+          };
         });
-        
-        setPermissions(uniquePermissions);
+
+        setUserRoles(roles || []);
+        setUserPermissions(permissions || []);
+        setProductPermissions(productPermissionsMap);
+      } catch (error) {
+        console.error('خطأ في جلب صلاحيات المستخدم:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      // 3. Get product permissions
-      const { data: productPermsData } = await supabase
-        .from('user_product_permissions')
-        .select('*')
-        .eq('user_id', user.id);
+    fetchUserPermissions();
+  }, [user?.user_id]);
 
-      const productPermsMap = {};
-      productPermsData?.forEach(pp => {
-        productPermsMap[pp.permission_type] = {
-          has_full_access: pp.has_full_access,
-          allowed_items: pp.allowed_items || []
-        };
-      });
-      
-      setProductPermissions(productPermsMap);
-    } catch (error) {
-      console.error('Error fetching user permissions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // التحقق من صلاحية معينة
+  const hasPermission = useMemo(() => {
+    return (permissionName) => {
+      return userPermissions.some(perm => perm.name === permissionName);
+    };
+  }, [userPermissions]);
 
-  // Role checks
-  const hasRole = (roleName) => {
-    return userRoles.some(ur => ur.roles?.name === roleName);
-  };
+  // التحقق من دور معين
+  const hasRole = useMemo(() => {
+    return (roleName) => {
+      return userRoles.some(ur => ur.roles.name === roleName);
+    };
+  }, [userRoles]);
 
-  // Permission checks
-  const hasPermission = (permissionName) => {
-    return permissions.some(p => p.name === permissionName);
-  };
+  // فحص الأدوار الأساسية
+  const isAdmin = useMemo(() => hasRole('super_admin'), [hasRole]);
+  const isDepartmentManager = useMemo(() => hasRole('department_manager'), [hasRole]);
+  const isSalesEmployee = useMemo(() => hasRole('sales_employee'), [hasRole]);
+  const isWarehouseEmployee = useMemo(() => hasRole('warehouse_employee'), [hasRole]);
+  const isCashier = useMemo(() => hasRole('cashier'), [hasRole]);
 
-  // Derived role checks based on new system
-  const isSuperAdmin = useMemo(() => hasRole('super_admin'), [userRoles]);
-  const isDepartmentManager = useMemo(() => hasRole('department_manager'), [userRoles]);
-  const isSalesEmployee = useMemo(() => hasRole('sales_employee'), [userRoles]);
-  const isWarehouseEmployee = useMemo(() => hasRole('warehouse_employee'), [userRoles]);
-  const isCashier = useMemo(() => hasRole('cashier'), [userRoles]);
-  
-  // Legacy compatibility
-  const isAdmin = useMemo(() => isSuperAdmin, [isSuperAdmin]);
-  const isEmployee = useMemo(() => isSalesEmployee, [isSalesEmployee]);
-  const isDeputy = useMemo(() => isDepartmentManager, [isDepartmentManager]);
-  const isWarehouse = useMemo(() => isWarehouseEmployee, [isWarehouseEmployee]);
+  // فحص الصلاحيات الأساسية
+  const canViewAllData = useMemo(() => {
+    return isAdmin || hasPermission('view_all_data');
+  }, [isAdmin, hasPermission]);
 
-  // Derived permissions
-  const canViewAllData = useMemo(() => hasPermission('view_all_data') || isSuperAdmin, [permissions, isSuperAdmin]);
-  const canManageEmployees = useMemo(() => hasPermission('manage_employees') || isSuperAdmin, [permissions, isSuperAdmin]);
-  const canManageSettings = useMemo(() => hasPermission('manage_settings') || isSuperAdmin, [permissions, isSuperAdmin]);
+  const canManageEmployees = useMemo(() => {
+    return isAdmin || hasPermission('manage_employees');
+  }, [isAdmin, hasPermission]);
 
-  // Data filtering
+  const canManageFinances = useMemo(() => {
+    return isAdmin || hasPermission('manage_finances');
+  }, [isAdmin, hasPermission]);
+
+  // فلترة البيانات حسب الصلاحيات
   const filterDataByUser = useMemo(() => {
     return (data, userIdField = 'created_by') => {
       if (!data) return [];
       if (canViewAllData) return data;
-      
       return data.filter(item => {
         const itemUserId = item[userIdField];
-        return itemUserId === user?.id;
+        return itemUserId === user?.user_id || itemUserId === user?.id;
       });
     };
-  }, [canViewAllData, user?.id]);
+  }, [canViewAllData, user?.user_id, user?.id]);
 
+  // فلترة المنتجات حسب الصلاحيات
   const filterProductsByPermissions = useMemo(() => {
     return (products) => {
       if (!products) return [];
-      if (isSuperAdmin || canViewAllData) return products;
+      if (isAdmin) return products;
 
       return products.filter(product => {
-        // Check categories
+        // فحص التصنيفات
         const categoryPerm = productPermissions.category;
         if (categoryPerm && !categoryPerm.has_full_access) {
           if (product.categories?.length > 0) {
@@ -149,7 +149,7 @@ export const useUnifiedPermissions = () => {
           }
         }
 
-        // Check departments
+        // فحص الأقسام
         const departmentPerm = productPermissions.department;
         if (departmentPerm && !departmentPerm.has_full_access) {
           if (product.departments?.length > 0) {
@@ -163,50 +163,54 @@ export const useUnifiedPermissions = () => {
         return true;
       });
     };
-  }, [isSuperAdmin, canViewAllData, productPermissions]);
+  }, [isAdmin, productPermissions]);
 
+  // حساب إحصائيات الموظف الشخصية
   const getEmployeeStats = useMemo(() => {
     return (orders, profits) => {
-      const filteredOrders = filterDataByUser(orders);
-      const filteredProfits = filterDataByUser(profits, 'employee_id');
+      const userOrders = filterDataByUser(orders);
+      const userProfits = filterDataByUser(profits, 'employee_id');
 
-      const pendingOrders = filteredOrders.filter(o => o.status === 'pending');
-      const completedOrders = filteredOrders.filter(o => o.status === 'completed');
-      const totalRevenue = filteredOrders.reduce((sum, o) => sum + (o.final_amount || 0), 0);
-      const totalProfits = filteredProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+      const pendingOrders = userOrders.filter(o => o.status === 'pending');
+      const completedOrders = userOrders.filter(o => o.status === 'completed');
+      const pendingProfits = userProfits.filter(p => p.status === 'pending');
+      const settledProfits = userProfits.filter(p => p.status === 'settled');
 
       return {
-        totalOrders: filteredOrders.length,
+        totalOrders: userOrders.length,
         pendingOrders: pendingOrders.length,
         completedOrders: completedOrders.length,
-        totalRevenue,
-        totalProfits
+        totalRevenue: userOrders.reduce((sum, o) => sum + (o.final_amount || 0), 0),
+        pendingProfits: pendingProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
+        settledProfits: settledProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
+        totalProfits: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
       };
     };
   }, [filterDataByUser]);
 
   return {
+    // البيانات الأساسية
     user,
     userRoles,
-    permissions,
+    userPermissions,
     productPermissions,
     loading,
-    hasRole,
-    hasPermission,
-    // New role checks
-    isSuperAdmin,
+
+    // فحص الأدوار
+    isAdmin,
     isDepartmentManager,
     isSalesEmployee,
     isWarehouseEmployee,
     isCashier,
-    // Legacy compatibility
-    isAdmin,
-    isEmployee,
-    isDeputy,
-    isWarehouse,
+    hasRole,
+
+    // فحص الصلاحيات
+    hasPermission,
     canViewAllData,
     canManageEmployees,
-    canManageSettings,
+    canManageFinances,
+
+    // فلترة البيانات
     filterDataByUser,
     filterProductsByPermissions,
     getEmployeeStats

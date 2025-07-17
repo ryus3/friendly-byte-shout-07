@@ -160,15 +160,17 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
             <TabsContent value="roles" className="h-full">
               <UnifiedRoleManager 
-                employee={employee} 
+                user={employee} 
                 onUpdate={handleUpdate}
+                onClose={() => {}}
               />
             </TabsContent>
 
             <TabsContent value="products" className="h-full">
               <ProductPermissionsManager 
-                employee={employee} 
+                user={employee} 
                 onUpdate={handleUpdate}
+                onClose={() => {}}
               />
             </TabsContent>
 
