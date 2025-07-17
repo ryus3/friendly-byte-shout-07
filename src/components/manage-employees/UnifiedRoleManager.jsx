@@ -1,77 +1,171 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Shield, UserPlus, Eye, Settings, Trash2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Trash2, Shield, Eye } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
-const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpenChange }) => {
-  const [currentRole, setCurrentRole] = useState(selectedUser?.role || 'employee');
-  const [permissions, setPermissions] = useState(selectedUser?.permissions || []);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+const UnifiedRoleManager = ({ employee, onUpdate }) => {
+  const { toast } = useToast();
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [userRoles, setUserRoles] = useState([]);
+  const [selectedRoleId, setSelectedRoleId] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  // الأدوار المتاحة في النظام
-  const availableRoles = [
-    { value: 'admin', label: 'مدير عام', description: 'جميع الصلاحيات' },
-    { value: 'deputy', label: 'نائب مدير', description: 'صلاحيات إدارية محدودة' },
-    { value: 'manager', label: 'مدير قسم', description: 'إدارة قسم محدد' },
-    { value: 'employee', label: 'موظف', description: 'صلاحيات أساسية' },
-    { value: 'warehouse', label: 'مخزن', description: 'إدارة المخزون' },
-    { value: 'cashier', label: 'كاشير', description: 'نقاط البيع' }
-  ];
+  // جلب البيانات عند تحميل المكون
+  useEffect(() => {
+    if (employee?.user_id) {
+      fetchRoles();
+      fetchUserRoles();
+    }
+  }, [employee?.user_id]);
 
-  const handleSaveRole = async () => {
+  // جلب جميع الأدوار المتاحة
+  const fetchRoles = async () => {
     try {
-      setSaving(true);
+      const { data, error } = await supabase
+        .from('roles')
+        .select('*')
+        .eq('is_active', true)
+        .order('hierarchy_level', { ascending: true });
+
+      if (error) throw error;
+      setAvailableRoles(data || []);
+    } catch (error) {
+      console.error('خطأ في جلب الأدوار:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب الأدوار المتاحة",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // جلب أدوار المستخدم الحالية
+  const fetchUserRoles = async () => {
+    if (!employee?.user_id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select(`
+          id,
+          role_id,
+          assigned_at,
+          roles (
+            id,
+            name,
+            display_name,
+            hierarchy_level
+          )
+        `)
+        .eq('user_id', employee.user_id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setUserRoles(data || []);
+    } catch (error) {
+      console.error('خطأ في جلب أدوار المستخدم:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في جلب أدوار المستخدم",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // إضافة دور جديد
+  const addRole = async () => {
+    if (!selectedRoleId || !employee?.user_id) return;
+
+    try {
+      setIsLoading(true);
+      
+      // التحقق من عدم وجود الدور مسبقاً
+      const existingRole = userRoles.find(ur => ur.role_id === selectedRoleId);
+      if (existingRole) {
+        toast({
+          title: "تنبيه",
+          description: "هذا الدور مضاف مسبقاً للمستخدم",
+          variant: "destructive"
+        });
+        return;
+      }
 
       const { error } = await supabase
-        .from('profiles')
-        .update({
-          role: currentRole,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', selectedUser.user_id);
+        .from('user_roles')
+        .insert({
+          user_id: employee.user_id,
+          role_id: selectedRoleId,
+          is_active: true
+        });
 
       if (error) throw error;
 
       toast({
-        title: 'نجح',
-        description: 'تم تحديث دور الموظف بنجاح',
+        title: "نجح",
+        description: "تم إضافة الدور بنجاح"
       });
 
-      onUpdate?.();
+      // إعادة جلب البيانات
+      await fetchUserRoles();
+      setSelectedRoleId('');
+      
+      // استدعاء دالة التحديث
+      if (onUpdate) onUpdate();
+      
     } catch (error) {
-      console.error('خطأ في تحديث الدور:', error);
+      console.error('خطأ في إضافة الدور:', error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ في تحديث الدور',
-        variant: 'destructive'
+        title: "خطأ",
+        description: "فشل في إضافة الدور",
+        variant: "destructive"
       });
     } finally {
-      setSaving(false);
+      setIsLoading(false);
     }
   };
 
-  // إذا لم يكن هناك مستخدم محدد
-  if (!selectedUser) {
+  // حذف دور
+  const removeRole = async (userRoleId) => {
+    try {
+      setIsLoading(true);
+      
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ is_active: false })
+        .eq('id', userRoleId);
+
+      if (error) throw error;
+
+      toast({
+        title: "نجح",
+        description: "تم حذف الدور بنجاح"
+      });
+
+      // إعادة جلب البيانات
+      await fetchUserRoles();
+      
+      // استدعاء دالة التحديث
+      if (onUpdate) onUpdate();
+      
+    } catch (error) {
+      console.error('خطأ في حذف الدور:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف الدور",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // إذا لم يكن هناك موظف محدد
+  if (!employee) {
     return (
       <div className="flex items-center justify-center h-40">
         <p className="text-muted-foreground">لم يتم تحديد موظف</p>
@@ -80,64 +174,115 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
   }
 
   return (
-    <div className="space-y-4">
-      <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-3 sm:p-4 rounded-lg border border-border/50">
-        <h3 className="font-semibold mb-3 flex items-center text-sm sm:text-base">
-          <Shield className="ml-2 h-4 w-4 text-primary" />
-          إدارة الأدوار والصلاحيات
-        </h3>
-        
-        <div className="space-y-4">
+    <div className="space-y-6">
+      {/* الأدوار الحالية */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            الأدوار الحالية
+          </CardTitle>
+          <CardDescription>
+            الأدوار المعينة حالياً للموظف {employee.full_name}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {userRoles.length > 0 ? (
+            <div className="space-y-2">
+              {userRoles.map((userRole) => (
+                <div key={userRole.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="secondary">
+                      {userRole.roles?.display_name || userRole.roles?.name}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      مضاف في: {new Date(userRole.assigned_at).toLocaleDateString('ar-EG')}
+                    </span>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeRole(userRole.id)}
+                    disabled={isLoading}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">
+              لا توجد أدوار مضافة للموظف
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* إضافة دور جديد */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5" />
+            إضافة دور جديد
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">الدور الحالي</Label>
-            <Select value={currentRole} onValueChange={setCurrentRole}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
+            <Label>اختر دور لإضافته</Label>
+            <Select 
+              value={selectedRoleId} 
+              onValueChange={setSelectedRoleId}
+              disabled={isLoading}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="اختر دور لإضافته" />
               </SelectTrigger>
               <SelectContent>
-                {availableRoles.map(role => (
-                  <SelectItem key={role.value} value={role.value}>
-                    {role.label} - {role.description}
-                  </SelectItem>
-                ))}
+                {availableRoles
+                  .filter(role => !userRoles.some(ur => ur.role_id === role.id))
+                  .map(role => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.display_name || role.name}
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSaveRole} disabled={saving} className="px-6 h-9">
-              {saving ? 'جاري الحفظ...' : 'حفظ الدور'}
-            </Button>
-          </div>
-        </div>
-      </div>
+          
+          <Button 
+            onClick={addRole} 
+            disabled={!selectedRoleId || isLoading}
+            className="w-full"
+          >
+            {isLoading ? 'جاري الإضافة...' : 'إضافة الدور'}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* دليل الأدوار */}
-      <Card className="border-2 border-dashed border-muted-foreground/25">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-sm text-muted-foreground">
-            <Eye className="ml-2 h-4 w-4" />
-            دليل الأدوار والصلاحيات
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Eye className="h-5 w-5" />
+            دليل الأدوار المتاحة
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <div className="flex items-center justify-between p-2 rounded-lg bg-red-50 dark:bg-red-950/20">
-              <Badge variant="default" className="bg-red-600 text-xs">مدير عام</Badge>
-              <span className="text-muted-foreground text-xs">جميع الصلاحيات</span>
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-              <Badge variant="default" className="bg-blue-600 text-xs">نائب مدير</Badge>
-              <span className="text-muted-foreground text-xs">صلاحيات محدودة</span>
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/20">
-              <Badge variant="default" className="bg-purple-600 text-xs">مدير قسم</Badge>
-              <span className="text-muted-foreground text-xs">إدارة قسم محدد</span>
-            </div>
-            <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
-              <Badge variant="default" className="bg-orange-600 text-xs">موظف مخزن</Badge>
-              <span className="text-muted-foreground text-xs">مخزون + جرد</span>
-            </div>
+          <div className="space-y-2">
+            {availableRoles.map(role => (
+              <div key={role.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <Badge variant="outline">{role.display_name || role.name}</Badge>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {role.description || 'لا يوجد وصف'}
+                  </p>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  المستوى: {role.hierarchy_level}
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

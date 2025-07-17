@@ -15,7 +15,7 @@ import {
 import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 
-const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
+const ProductPermissionsManager = ({ employee: selectedUser, onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('categories');
@@ -202,9 +202,6 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="h-8 px-3 text-xs">
-              إغلاق
-            </Button>
             <Button onClick={handleSave} disabled={saving} className="h-8 px-3 text-xs">
               {saving ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
             </Button>
