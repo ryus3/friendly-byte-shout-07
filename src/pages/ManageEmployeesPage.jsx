@@ -34,7 +34,11 @@ const ManageEmployeesPage = () => {
                               (user.email?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase()) ||
                               (user.username?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase());
       const statusMatch = filters.status === 'all' || user.status === filters.status;
-      const roleMatch = filters.role === 'all' || user.role === filters.role;
+      
+      // فلترة الأدوار باستخدام النظام الجديد
+      const roleMatch = filters.role === 'all' || 
+                       (user.roles && user.roles.includes(filters.role));
+      
       return searchTermMatch && statusMatch && roleMatch;
     }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
   }, [allUsers, filters]);
