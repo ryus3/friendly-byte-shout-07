@@ -33,10 +33,7 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
-import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
-import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
-import EmployeePermissionsManager from '@/components/manage-employees/EmployeePermissionsManager';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {

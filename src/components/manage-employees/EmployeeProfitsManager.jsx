@@ -9,10 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Users, TrendingUp, Calculator, Settings } from 'lucide-react';
-import ManageProfitsDialog from './ManageProfitsDialog';
 
 const EmployeeProfitsManager = ({ open, onOpenChange }) => {
   const { products, employeeProfitRules, setEmployeeProfitRule, getEmployeeProfitRules } = useInventory();
@@ -283,11 +282,6 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
         </DialogContent>
       </Dialog>
 
-      <ManageProfitsDialog
-        employee={selectedEmployee}
-        open={showEmployeeDialog}
-        onOpenChange={setShowEmployeeDialog}
-      />
     </>
   );
 };

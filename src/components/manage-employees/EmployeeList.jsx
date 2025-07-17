@@ -3,11 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Shield, Power, Edit, PowerOff, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const EmployeeCard = ({ user, onEdit, index }) => {
-  const [profitsDialogOpen, setProfitsDialogOpen] = useState(false);
   const { hasPermission } = useAuth();
   const isAdmin = user.role === 'admin';
   const isDeputy = user.role === 'deputy';
@@ -50,25 +48,13 @@ const EmployeeCard = ({ user, onEdit, index }) => {
             {isActive ? <Power className="w-4 h-4 ml-2" /> : <PowerOff className="w-4 h-4 ml-2" />}
             {isActive ? 'نشط' : 'معطل'}
           </Badge>
-          {hasPermission('manage_profit_rules') && (
-            <Button size="icon" variant="outline" onClick={() => setProfitsDialogOpen(true)}>
-              <DollarSign className="w-4 h-4 text-green-500" />
-            </Button>
-          )}
           <Button size="icon" variant="outline" onClick={() => onEdit(user)}>
             <Edit className="w-4 h-4" />
           </Button>
         </div>
       </div>
     </motion.div>
-    <ManageProfitsDialog
-        employee={user}
-        open={profitsDialogOpen}
-        onOpenChange={setProfitsDialogOpen}
-    />
-    </>
   );
-};
 
 const EmployeeList = ({ users, onEdit }) => {
   if (!users || users.length === 0) {
