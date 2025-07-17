@@ -177,34 +177,35 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                 {/* عرض جميع رموز الموظفين */}
                 {employeeCodes.map((employeeCode) => {
                   const profile = employeeCode.profiles;
-                  const isOwner = user?.id === employeeCode.user_id;
+                  const isCurrentUser = user?.id === employeeCode.user_id;
+                  const isAdmin = canViewAllData;
                   
                   return (
                     <div key={employeeCode.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          isOwner 
-                            ? 'bg-gradient-to-r from-purple-500 to-blue-500' 
-                            : 'bg-gradient-to-r from-green-500 to-teal-500'
-                        }`}>
+                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                           isCurrentUser 
+                             ? 'bg-gradient-to-r from-purple-500 to-blue-500' 
+                             : 'bg-gradient-to-r from-green-500 to-teal-500'
+                         }`}>
                           <span className="text-white font-bold text-sm">
                             {profile?.full_name?.charAt(0) || 'U'}
                           </span>
                         </div>
                         <div>
                           <p className="font-semibold">{profile?.full_name || 'مستخدم'}</p>
-                          <Badge variant={isOwner ? "outline" : "secondary"} className="text-xs">
-                            {isOwner ? 'أنت' : 'موظف'}
+                          <Badge variant={isCurrentUser ? "outline" : "secondary"} className="text-xs">
+                            {isCurrentUser ? 'أنت' : (isAdmin ? 'مدير' : 'موظف')}
                           </Badge>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge 
-                          variant="outline" 
-                          className={`font-mono text-sm px-3 py-1 ${
-                            isOwner ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-green-50 text-green-700 border-green-300'
-                          }`}
-                        >
+                         <Badge 
+                           variant="outline" 
+                           className={`font-mono text-sm px-3 py-1 ${
+                             isCurrentUser ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-green-50 text-green-700 border-green-300'
+                           }`}
+                         >
                           {employeeCode.employee_code}
                         </Badge>
                         <Button
