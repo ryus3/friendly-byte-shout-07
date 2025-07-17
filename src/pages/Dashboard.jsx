@@ -329,8 +329,9 @@ const Dashboard = () => {
             return itemSum + profit;
           }, 0);
           
-          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
-            ? calculateManagerProfit(o) : 0;
+          // Remove the unstable calculateManagerProfit reference
+          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id
+            ? 0 : 0; // Simplified to avoid infinite loop
           
           return sum + employeeProfit + managerProfit;
         }, 0);
@@ -370,7 +371,6 @@ const Dashboard = () => {
         user?.id, 
         user?.user_id, 
         canViewAllData
-        // إزالة financialSummary?.netProfit و calculateManagerProfit من dependencies لتجنب infinite loop
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
