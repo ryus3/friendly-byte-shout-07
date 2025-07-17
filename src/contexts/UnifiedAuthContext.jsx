@@ -89,12 +89,22 @@ export const UnifiedAuthProvider = ({ children }) => {
       }
       
       // إضافة الأدوار لكل مستخدم
-      const usersWithRoles = data.map(user => ({
-        ...user,
-        roles: user.user_roles
+      const usersWithRoles = data.map(user => {
+        const activeRoles = user.user_roles
           ?.filter(ur => ur.is_active)
-          ?.map(ur => ur.roles.name) || []
-      }));
+          ?.map(ur => ur.roles.name) || [];
+        
+        console.log('User roles debug:', {
+          user: user.full_name,
+          allRoles: user.user_roles,
+          activeRoles
+        });
+        
+        return {
+          ...user,
+          roles: activeRoles
+        };
+      });
       
       const pending = usersWithRoles.filter(u => u.status === 'pending');
       setAllUsers(usersWithRoles);

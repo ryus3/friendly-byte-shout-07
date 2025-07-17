@@ -30,7 +30,7 @@ const TelegramCodesManager = () => {
       setLoading(true);
       
       let query = supabase
-        .from('employee_telegram_codes')
+        .from('telegram_employee_codes')
         .select(`
           *,
           profiles!telegram_employee_codes_user_id_fkey(
@@ -87,10 +87,10 @@ const TelegramCodesManager = () => {
 
       // تحديث أو إدراج الكود الجديد
       const { error: upsertError } = await supabase
-        .from('employee_telegram_codes')
+        .from('telegram_employee_codes')
         .upsert({
           user_id: userId,
-          telegram_code: data,
+          employee_code: data,
           is_active: true
         });
 
@@ -134,7 +134,7 @@ const TelegramCodesManager = () => {
   const filteredCodes = codes.filter(code =>
     code.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     code.profiles?.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    code.telegram_code?.toLowerCase().includes(searchTerm.toLowerCase())
+    code.employee_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -231,7 +231,7 @@ const TelegramCodesManager = () => {
                         <div className="flex items-center gap-1">
                           <TelegramIcon className="w-4 h-4" />
                           <span className="font-mono font-bold text-primary">
-                            {code.telegram_code}
+                            {code.employee_code}
                           </span>
                         </div>
                         {code.telegram_chat_id && (
@@ -253,7 +253,7 @@ const TelegramCodesManager = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => copyToClipboard(code.telegram_code)}
+                      onClick={() => copyToClipboard(code.employee_code)}
                     >
                       <Copy className="w-4 h-4" />
                     </Button>
