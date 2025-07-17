@@ -29,7 +29,7 @@ export const UnifiedAuthProvider = ({ children }) => {
         .from('profiles')
         .select(`
           *,
-          user_roles!inner(
+          user_roles!user_roles_user_id_fkey!inner(
             roles(
               name,
               display_name,
