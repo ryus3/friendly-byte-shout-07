@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from './UnifiedAuthContext';
 import { useNotifications } from './NotificationsContext';
 import { supabase } from '@/lib/customSupabaseClient';
 

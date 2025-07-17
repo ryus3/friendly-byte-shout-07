@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from './UnifiedAuthContext';
 
 const AiChatContext = createContext();
 

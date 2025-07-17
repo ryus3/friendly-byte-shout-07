@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast.js';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
