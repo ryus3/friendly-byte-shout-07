@@ -146,9 +146,7 @@ const SettingsPage = () => {
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
-  const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
-  const [isPermissionsManagerOpen, setIsPermissionsManagerOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -242,29 +240,6 @@ const SettingsPage = () => {
               />
             )}
 
-            {/* إدارة الأدوار والصلاحيات - للمدراء فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Shield}
-                title="إدارة الأدوار والصلاحيات"
-                description="تعيين أدوار الموظفين وإدارة صلاحيات المنتجات"
-                iconColor="from-indigo-500 to-indigo-600"
-                onClick={() => setIsRoleManagerOpen(true)}
-                badge={<Badge variant="secondary">جديد</Badge>}
-              />
-            )}
-
-            {/* إدارة صلاحيات الموظفين الشاملة - للمدراء فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Users}
-                title="إدارة صلاحيات الموظفين"
-                description="نظام شامل لإدارة صلاحيات المنتجات والأقسام والمواسم للموظفين"
-                iconColor="from-emerald-500 to-emerald-600"
-                onClick={() => setIsPermissionsManagerOpen(true)}
-                badge={<Badge variant="destructive">نظام جديد</Badge>}
-              />
-            )}
 
             {/* إعدادات العملاء - للجميع */}
             <ModernCard
@@ -507,19 +482,9 @@ const SettingsPage = () => {
         />
       )}
 
-      <UnifiedRoleManager 
-        open={isRoleManagerOpen} 
-        onOpenChange={setIsRoleManagerOpen} 
-      />
-
       <EmployeeProfitsManager 
         open={isProfitsManagerOpen} 
         onOpenChange={setIsProfitsManagerOpen} 
-      />
-
-      <EmployeePermissionsManager 
-        open={isPermissionsManagerOpen} 
-        onOpenChange={setIsPermissionsManagerOpen} 
       />
     </>
   );
