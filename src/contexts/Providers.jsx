@@ -1,7 +1,7 @@
 import React from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
-import { AuthProvider } from '@/contexts/AuthContext.jsx';
+import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
@@ -15,7 +15,7 @@ export const AppProviders = ({ children }) => {
   return (
     <ThemeProvider>
       <SupabaseProvider>
-        <AuthProvider>
+        <UnifiedAuthProvider>
           <NotificationsProvider>
             <NotificationsSystemProvider>
               <InventoryProvider>
@@ -32,7 +32,7 @@ export const AppProviders = ({ children }) => {
               </InventoryProvider>
             </NotificationsSystemProvider>
           </NotificationsProvider>
-        </AuthProvider>
+        </UnifiedAuthProvider>
       </SupabaseProvider>
     </ThemeProvider>
   );

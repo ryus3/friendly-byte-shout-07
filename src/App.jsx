@@ -3,7 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { AppProviders } from '@/contexts/Providers.jsx';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
+import { usePermissions } from '@/hooks/usePermissions.js';
 import Layout from '@/components/Layout.jsx';
 import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';
@@ -32,7 +33,8 @@ const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx')
 const ManageLabelsPage = lazy(() => import('@/pages/ManageLabelsPage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
-  const { user, loading, hasPermission } = useAuth();
+  const { user, loading } = useAuth();
+  const { hasPermission } = usePermissions();
   
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
