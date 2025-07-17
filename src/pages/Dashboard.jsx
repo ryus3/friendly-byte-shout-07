@@ -106,9 +106,14 @@ const Dashboard = () => {
     const [profitsData, setProfitsData] = useState({ pending: [], settled: [] });
     const [profitsLoading, setProfitsLoading] = useState(false);
 
+    const [dialogs, setDialogs] = useState({
+        pendingRegs: false,
+        aiOrders: false,
+    });
+
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
-        if (profitsLoading) return; // منع الاستدعاءات المتعددة
+        if (profitsLoading) return;
         
         setProfitsLoading(true);
         try {
@@ -143,7 +148,7 @@ const Dashboard = () => {
         } finally {
             setProfitsLoading(false);
         }
-    }, []); // إزالة profitsLoading من dependency array
+    }, []);
 
     // تحديث بيانات الأرباح عند تحميل الصفحة مرة واحدة فقط
     useEffect(() => {
@@ -156,7 +161,12 @@ const Dashboard = () => {
         return () => {
             mounted = false;
         };
-    }, []); // dependency array فارغ لمنع الـ infinite loop
+    }, []);
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
@@ -196,20 +206,9 @@ const Dashboard = () => {
         setDialog({ open: false, type: '', orders: [] });
     }, [navigate, periods.totalOrders]);
 
-    const [dialogs, setDialogs] = useState({
-        pendingRegs: false,
-        aiOrders: false,
-    });
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
     const visibleOrders = useMemo(() => {
         if (!orders) return [];
         
-        // فلترة الطلبات بناءً على صلاحيات المستخدم
         return canViewAllData 
             ? orders 
             : orders.filter(order => {
@@ -228,6 +227,7 @@ const Dashboard = () => {
                 return createdBy === user?.id || createdBy === user?.user_id;
             });
     }, [aiOrders, canViewAllData, user?.id, user?.user_id]);
+
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
@@ -249,7 +249,6 @@ const Dashboard = () => {
             return isValid(itemDate) && itemDate >= from && itemDate <= to;
         };
         
-        // الطلبات المُوصلة التي تم استلام فواتيرها فقط لحساب صافي الأرباح الفعلية
         const deliveredOrders = (orders || []).filter(o => 
             o.status === 'delivered' && 
             o.receipt_received === true && 
@@ -257,12 +256,10 @@ const Dashboard = () => {
         );
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
-        // حساب إجمالي الإيرادات والرسوم
         const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
         const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
         const salesWithoutDelivery = totalRevenue - deliveryFees;
         
-        // حساب تكلفة البضاعة المباعة من العناصر الفعلية
         const cogs = deliveredOrders.reduce((sum, o) => {
           const orderCogs = (o.items || []).reduce((itemSum, item) => {
             const costPrice = item.costPrice || item.cost_price || 0;
@@ -280,7 +277,6 @@ const Dashboard = () => {
         deliveredOrders.forEach(o => {
           const day = format(parseISO(o.updated_at || o.created_at), 'dd');
           if (!salesByDay[day]) salesByDay[day] = 0;
-          // استخدام final_amount للمبيعات اليومية
           salesByDay[day] += o.final_amount || o.total_amount || 0;
         });
         
@@ -350,7 +346,7 @@ const Dashboard = () => {
 
         return {
             totalOrdersCount: filteredTotalOrders.length,
-            netProfit: 0, // سيتم حسابها من financialSummary بشكل منفصل
+            netProfit: 0,
             pendingProfit,
             deliveredSales,
             pendingSales,
@@ -370,7 +366,6 @@ const Dashboard = () => {
         user?.id, 
         user?.user_id, 
         canViewAllData
-        // إزالة financialSummary?.netProfit و calculateManagerProfit من dependencies لتجنب infinite loop
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
@@ -385,8 +380,6 @@ const Dashboard = () => {
         navigate(`/my-orders?${query.toString()}`);
     }, [navigate, periods.totalOrders]);
 
-    if (inventoryLoading) return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
-
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
         if (!profitsData) {
@@ -399,7 +392,6 @@ const Dashboard = () => {
         
         const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
-        // فلترة الأرباح للمستخدم الحالي
         const userProfits = canViewAllData 
             ? allProfits 
             : allProfits.filter(profit => {
@@ -416,6 +408,11 @@ const Dashboard = () => {
             totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
+
+    // Move the loading check AFTER all hooks are called
+    if (inventoryLoading) {
+        return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
+    }
 
     const allStatCards = [
         hasPermission('use_ai_assistant') && { 
@@ -468,7 +465,6 @@ const Dashboard = () => {
         },
     ].filter(Boolean);
 
-
     return (
         <>
             <Helmet><title>لوحة التحكم - RYUS</title></Helmet>
@@ -503,14 +499,12 @@ const Dashboard = () => {
                         open={isPendingProfitsOpen}
                         onClose={() => {
                             setIsPendingProfitsOpen(false);
-                            // إعادة تحميل بيانات الأرباح بعد إغلاق الحوار
                             fetchProfitsData();
                         }}
                         pendingProfitOrders={dashboardData.pendingProfitOrders || []}
                         user={user}
                         onReceiveInvoices={() => {
                             console.log('تم استلام الفواتير بنجاح');
-                            // تحديث البيانات بعد استلام الفواتير
                             fetchProfitsData();
                         }}
                     />
@@ -526,7 +520,6 @@ const Dashboard = () => {
                 )}
             </AnimatePresence>
             <div className="space-y-8">
-                {/* نظام المراقبة الخفي للمخزون والإشعارات */}
                 <StockMonitoringSystem />
                 
                 <WelcomeHeader user={user} currentTime={currentTime} />
