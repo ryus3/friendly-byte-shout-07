@@ -238,7 +238,7 @@ const ManageProfitsDialog = ({ employee, open, onOpenChange }) => {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>لا يوجد موظفين آخرين</SelectItem>
+                    <SelectItem value="no-employees" disabled>لا يوجد موظفين آخرين</SelectItem>
                   )}
                 </SelectContent>
               </Select>
