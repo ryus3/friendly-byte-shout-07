@@ -234,28 +234,69 @@ const Dashboard = () => {
         const periodKey = periods.netProfit;
         const now = new Date();
         let from, to;
+        
+        // Stable date calculations
         switch (periodKey) {
-            case 'today': from = subDays(now, 1); to = now; break;
-            case 'week': from = startOfWeek(now, { weekStartsOn: 1 }); to = now; break;
-            case 'year': from = startOfYear(now); to = now; break;
-            default: from = startOfMonth(now); to = endOfMonth(now); break;
+            case 'today': 
+                from = subDays(now, 1); 
+                to = now; 
+                break;
+            case 'week': 
+                from = startOfWeek(now, { weekStartsOn: 1 }); 
+                to = now; 
+                break;
+            case 'year': 
+                from = startOfYear(now); 
+                to = now; 
+                break;
+            default: 
+                from = startOfMonth(now); 
+                to = endOfMonth(now); 
+                break;
         }
 
-        if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
-        
-        const filterByDate = (itemDateStr) => {
-            if (!from || !to || !itemDateStr) return true;
-            const itemDate = parseISO(itemDateStr);
-            return isValid(itemDate) && itemDate >= from && itemDate <= to;
-        };
+        if (!orders || !accounting || !products) {
+            return { 
+                netProfit: 0, 
+                chartData: [], 
+                deliveredOrders: [],
+                totalRevenue: 0,
+                deliveryFees: 0,
+                salesWithoutDelivery: 0,
+                cogs: 0,
+                grossProfit: 0,
+                totalExpenses: 0,
+                employeeSettledDues: 0,
+                generalExpenses: 0,
+                filteredExpenses: []
+            };
+        }
         
         // الطلبات المُوصلة التي تم استلام فواتيرها فقط لحساب صافي الأرباح الفعلية
-        const deliveredOrders = (orders || []).filter(o => 
-            o.status === 'delivered' && 
-            o.receipt_received === true && 
-            filterByDate(o.updated_at || o.created_at)
-        );
-        const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
+        const deliveredOrders = orders.filter(o => {
+            if (o.status !== 'delivered' || !o.receipt_received) return false;
+            
+            const orderDate = o.updated_at || o.created_at;
+            if (!orderDate) return true;
+            
+            try {
+                const itemDate = parseISO(orderDate);
+                return isValid(itemDate) && itemDate >= from && itemDate <= to;
+            } catch {
+                return true;
+            }
+        });
+        
+        const expensesInRange = (accounting.expenses || []).filter(e => {
+            if (!e.transaction_date) return true;
+            
+            try {
+                const itemDate = parseISO(e.transaction_date);
+                return isValid(itemDate) && itemDate >= from && itemDate <= to;
+            } catch {
+                return true;
+            }
+        });
         
         // حساب إجمالي الإيرادات والرسوم
         const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
@@ -270,25 +311,39 @@ const Dashboard = () => {
           }, 0);
           return sum + orderCogs;
         }, 0);
+        
         const grossProfit = salesWithoutDelivery - cogs;
-        const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
-        const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
+        const generalExpenses = expensesInRange
+            .filter(e => e.related_data?.category !== 'مستحقات الموظفين')
+            .reduce((sum, e) => sum + e.amount, 0);
+        const employeeSettledDues = expensesInRange
+            .filter(e => e.related_data?.category === 'مستحقات الموظفين')
+            .reduce((sum, e) => sum + e.amount, 0);
         const totalExpenses = generalExpenses + employeeSettledDues;
         const netProfit = grossProfit - totalExpenses;
         
+        // Chart data calculation with error handling
         const salesByDay = {};
+        const expensesByDay = {};
+        
         deliveredOrders.forEach(o => {
-          const day = format(parseISO(o.updated_at || o.created_at), 'dd');
-          if (!salesByDay[day]) salesByDay[day] = 0;
-          // استخدام final_amount للمبيعات اليومية
-          salesByDay[day] += o.final_amount || o.total_amount || 0;
+            try {
+                const day = format(parseISO(o.updated_at || o.created_at), 'dd');
+                if (!salesByDay[day]) salesByDay[day] = 0;
+                salesByDay[day] += o.final_amount || o.total_amount || 0;
+            } catch {
+                // Skip invalid dates
+            }
         });
         
-        const expensesByDay = {};
         expensesInRange.forEach(e => {
-            const day = format(parseISO(e.transaction_date), 'dd');
-            if (!expensesByDay[day]) expensesByDay[day] = 0;
-            expensesByDay[day] += e.amount;
+            try {
+                const day = format(parseISO(e.transaction_date), 'dd');
+                if (!expensesByDay[day]) expensesByDay[day] = 0;
+                expensesByDay[day] += e.amount;
+            } catch {
+                // Skip invalid dates
+            }
         });
     
         const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
@@ -300,8 +355,21 @@ const Dashboard = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
 
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
-    }, [periods.netProfit, orders, accounting, products]);
+        return { 
+            totalRevenue, 
+            deliveryFees, 
+            salesWithoutDelivery, 
+            cogs, 
+            grossProfit, 
+            totalExpenses, 
+            employeeSettledDues, 
+            generalExpenses, 
+            netProfit, 
+            chartData, 
+            filteredExpenses: expensesInRange, 
+            deliveredOrders 
+        };
+    }, [periods.netProfit, orders, accounting?.expenses, products]);
 
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !user) return {
