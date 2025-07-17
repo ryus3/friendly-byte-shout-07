@@ -108,9 +108,6 @@ const Dashboard = () => {
 
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
-        if (profitsLoading) return; // منع الاستدعاءات المتعددة
-        
-        setProfitsLoading(true);
         try {
             const { data: profitsData, error } = await supabase
                 .from('profits')
@@ -140,23 +137,13 @@ const Dashboard = () => {
             setProfitsData({ pending, settled });
         } catch (error) {
             console.error('خطأ في fetchProfitsData:', error);
-        } finally {
-            setProfitsLoading(false);
         }
-    }, []); // إزالة profitsLoading من dependency array
+    }, []);
 
     // تحديث بيانات الأرباح عند تحميل الصفحة مرة واحدة فقط
     useEffect(() => {
-        let mounted = true;
-        
-        if (mounted && !profitsLoading) {
-            fetchProfitsData();
-        }
-        
-        return () => {
-            mounted = false;
-        };
-    }, []); // dependency array فارغ لمنع الـ infinite loop
+        fetchProfitsData();
+    }, [fetchProfitsData]);
 
     const openSummaryDialog = useCallback((type, filteredOrders, periodKey) => {
         const periodLabels = {
