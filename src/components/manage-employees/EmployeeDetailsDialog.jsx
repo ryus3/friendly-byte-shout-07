@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +29,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import { permissionsMap, defaultPermissions } from '@/lib/permissions';
+import EmployeeDialog from './EmployeeDialog';
 
 const EmployeeDetailsDialog = ({ employee, open, onOpenChange }) => {
   const { updateUser } = useAuth();
@@ -135,14 +135,11 @@ const EmployeeDetailsDialog = ({ employee, open, onOpenChange }) => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            تفاصيل الموظف: {employee?.full_name}
-          </DialogTitle>
-        </DialogHeader>
+    <EmployeeDialog 
+      open={open} 
+      onOpenChange={onOpenChange}
+      title={`تفاصيل الموظف: ${employee?.full_name}`}
+    >
 
         <Tabs defaultValue="basic" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
@@ -338,8 +335,7 @@ const EmployeeDetailsDialog = ({ employee, open, onOpenChange }) => {
             </div>
           </TabsContent>
         </Tabs>
-      </DialogContent>
-    </Dialog>
+    </EmployeeDialog>
   );
 };
 
