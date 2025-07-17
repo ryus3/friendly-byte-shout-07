@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext.jsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button.jsx';
 import { Input } from '@/components/ui/input.jsx';
@@ -11,8 +11,13 @@ import { ThemeSwitcher } from '@/components/ThemeSwitcher.jsx';
 
 const LoginPage = () => {
   const [view, setView] = useState('login'); // 'login', 'register', 'forgot'
-  const { login, registerWithEmail, forgotPassword, loading } = useAuth();
+  const { login, registerWithEmail, forgotPassword, loading, user } = useAuth();
   const navigate = useNavigate();
+
+  // إذا كان المستخدم مسجل دخول بالفعل، توجيهه إلى الصفحة الرئيسية
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleLogin = async (e) => {
     e.preventDefault();

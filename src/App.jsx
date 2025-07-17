@@ -44,7 +44,19 @@ function ProtectedRoute({ children, permission }) {
     return <Navigate to="/login" replace />;
   }
 
+  // فحص إذا كان المستخدم معلق
+  if (user.status === 'pending') {
+    return <Navigate to="/login" replace />;
+  }
+
+  // First check if user has the required permission for this route
   if (permission && !hasPermission(permission)) {
+    // If user doesn't have permission, redirect to default page or dashboard
+    toast({ 
+      title: "غير مصرح", 
+      description: "ليس لديك صلاحية للوصول إلى هذه الصفحة",
+      variant: "destructive" 
+    });
     return <Navigate to={user.defaultPage || '/'} replace />;
   }
   
@@ -76,7 +88,7 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
-          <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
+           <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
           
           <Route path="/quick-order" element={<ProtectedRoute permission="quick_order">{childrenWithProps(QuickOrderPage)}</ProtectedRoute>} />
           <Route path="/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPage)}</ProtectedRoute>} />
