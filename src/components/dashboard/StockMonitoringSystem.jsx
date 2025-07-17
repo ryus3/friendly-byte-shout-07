@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const StockMonitoringSystem = () => {
   const { addNotification } = useNotifications();
@@ -20,7 +20,7 @@ const StockMonitoringSystem = () => {
   }, []);
 
   useEffect(() => {
-    if (!user || !hasPermission('*')) return;
+    if (!user || !hasPermission('view_all_data')) return;
 
     const stockChannel = supabase
       .channel('stock-monitoring-system')
