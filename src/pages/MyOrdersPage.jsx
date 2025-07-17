@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,7 +21,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 
 const MyOrdersPage = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { orders, aiOrders, loading, updateOrder, deleteOrders, refetchProducts } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   

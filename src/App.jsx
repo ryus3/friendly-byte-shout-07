@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
+import { toast } from '@/components/ui/use-toast.js';
 import { AppProviders } from '@/contexts/Providers.jsx';
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { usePermissions } from '@/hooks/usePermissions.js';
@@ -105,10 +106,10 @@ function AppContent() {
           <Route path="/appearance-settings" element={<ProtectedRoute>{childrenWithProps(AppearanceSettingsPage)}</ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
           
-          <Route path="/profits-summary" element={<ProtectedRoute permission="view_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
+          <Route path="/profits-summary" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
           <Route path="/profit-settlement/:employeeId" element={<ProtectedRoute permission="manage_profit_settlement">{childrenWithProps(ProfitSettlementPage)}</ProtectedRoute>} />
           <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
-          <Route path="/manage-employees" element={<ProtectedRoute permission="manage_users">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
+          <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/manage-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(ManageLabelsPage)}</ProtectedRoute>} />
 
         </Routes>

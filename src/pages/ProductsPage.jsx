@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { useVariants } from '@/contexts/VariantsContext';
@@ -21,7 +22,8 @@ import { toast } from '@/components/ui/use-toast';
 const ProductsPage = () => {
   const location = useLocation();
   const { products, loading, addToCart, clearCart } = useInventory();
-  const { hasPermission, user } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { colors } = useVariants();
   
   const { categories, brands } = useMemo(() => {

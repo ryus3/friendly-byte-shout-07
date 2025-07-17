@@ -2,7 +2,8 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -101,7 +102,8 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
 const InventoryPage = () => {
   const { products, orders, loading, settings, updateVariantStock } = useInventory();
-  const { allUsers, hasPermission, user } = useAuth();
+  const { allUsers, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
 

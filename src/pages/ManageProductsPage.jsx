@@ -17,11 +17,13 @@ import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import EditProductDialog from '@/components/manage-products/EditProductDialog';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const ManageProductsPage = () => {
   const { products, deleteProducts, loading, refetchProducts } = useInventory();
-  const { hasPermission, user } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'list');

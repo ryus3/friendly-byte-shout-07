@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/contexts/AuthContext.jsx';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
@@ -20,7 +21,8 @@ import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 
 const SidebarContent = ({ onClose }) => {
-  const { user, logout, hasPermission } = useAuth();
+  const { user, logout } = useAuth();
+  const { hasPermission } = usePermissions();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();

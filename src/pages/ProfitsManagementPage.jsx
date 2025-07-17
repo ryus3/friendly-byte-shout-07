@@ -6,13 +6,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, FileText, Download } from 'lucide-react';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const ProfitsManagementPage = () => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { 
     profits, 
     settlementRequests, 

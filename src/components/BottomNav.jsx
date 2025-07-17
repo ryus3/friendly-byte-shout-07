@@ -4,7 +4,8 @@ import { ShoppingCart, Bot, Home, Search, Menu, User, Settings, Package } from '
 import { useInventory } from '@/contexts/InventoryContext';
 import CartDialog from '@/components/orders/CartDialog';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAiChat } from '@/contexts/AiChatContext';
 import { cn } from '@/lib/utils';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
@@ -58,7 +59,8 @@ const MenuSheet = ({ children, open, onOpenChange }) => (
 );
 
 const MenuContent = ({ onClose }) => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const location = useLocation();
 

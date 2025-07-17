@@ -3,7 +3,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
 import usePermissionBasedData from '@/hooks/usePermissionBasedData';
@@ -78,6 +79,7 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 
 const Dashboard = () => {
     const { user, pendingRegistrations } = useAuth();
+    const { hasPermission } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits } = useProfits();
     const { 

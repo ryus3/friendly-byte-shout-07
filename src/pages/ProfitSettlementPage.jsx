@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
     import { Helmet } from 'react-helmet-async';
     import { useParams, useNavigate, useLocation } from 'react-router-dom';
     import { useInventory } from '@/contexts/InventoryContext';
-    import { useAuth } from '@/contexts/AuthContext';
+    import { useAuth } from '@/contexts/UnifiedAuthContext';
     import { Button } from '@/components/ui/button';
     import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
     import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';

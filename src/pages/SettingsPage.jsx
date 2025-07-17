@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -116,7 +117,8 @@ const SectionHeader = ({ icon, title, description }) => {
 };
 
 const SettingsPage = () => {
-  const { user, hasPermission, updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
+  const { hasPermission } = usePermissions();
   const { settings, updateSettings } = useInventory();
   const { isLoggedIn: isWaseetLoggedIn, waseetUser, logout: logoutWaseet, setSyncInterval, syncInterval } = useAlWaseet();
   const { theme, setTheme } = useTheme();

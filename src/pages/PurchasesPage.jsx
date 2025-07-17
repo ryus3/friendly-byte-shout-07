@@ -5,7 +5,8 @@ import { useFullPurchases } from '@/hooks/useFullPurchases';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import PurchasesStats from '@/components/purchases/PurchasesStats';
 import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
@@ -16,7 +17,7 @@ import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog'
 const PurchasesPage = () => {
   const { purchases: inventoryPurchases, loading: inventoryLoading } = useInventory();
   const { purchases: hookPurchases, loading: hookLoading, fetchPurchases } = useFullPurchases();
-  const { hasPermission } = useAuth();
+  const { hasPermission } = usePermissions();
 
   // استخدام البيانات من الهوك إذا كانت متوفرة، وإلا استخدام بيانات الإنفنتوري
   const purchases = hookPurchases.length > 0 ? hookPurchases : inventoryPurchases;
