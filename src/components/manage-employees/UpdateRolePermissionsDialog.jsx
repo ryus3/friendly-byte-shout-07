@@ -51,13 +51,13 @@ const UpdateRolePermissionsDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[90vw] max-w-3xl h-[80vh] max-h-[80vh] overflow-hidden flex flex-col p-3 sm:p-4 z-[100]">
-        <DialogHeader className="pb-2 border-b">
-          <DialogTitle className="text-lg flex items-center gap-2">
+      <DialogContent className="w-[92vw] max-w-4xl h-[85vh] max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6 z-[9999]">
+        <DialogHeader className="pb-3 border-b">
+          <DialogTitle className="text-xl flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
             تحديث صلاحيات جماعي
           </DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogDescription className="text-base">
             تطبيق نفس الصلاحيات على جميع المستخدمين الذين لديهم الدور المحدد.
           </DialogDescription>
         </DialogHeader>

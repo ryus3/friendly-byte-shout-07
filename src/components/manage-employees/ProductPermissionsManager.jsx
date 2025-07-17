@@ -17,6 +17,7 @@ import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle 
 const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('categories');
   const [permissions, setPermissions] = useState({
     category: { has_full_access: false, allowed_items: [] },
     color: { has_full_access: false, allowed_items: [] },
@@ -209,15 +210,15 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       </div>
 
       <Tabs defaultValue="category" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-6 h-auto">
           {permissionTabs.map(tab => (
             <TabsTrigger
               key={tab.key}
               value={tab.key}
-              className="text-xs flex items-center space-x-1 space-x-reverse"
+              className="text-sm flex items-center gap-2 p-3 min-w-0"
             >
-              <tab.icon className="h-3 w-3" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <tab.icon className="h-4 w-4 flex-shrink-0" />
+              <span className="truncate">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
