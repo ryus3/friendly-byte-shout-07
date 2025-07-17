@@ -206,7 +206,7 @@ const EmployeeDetailsDialog = ({ employee, open, onOpenChange }) => {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                         <SelectContent className="bg-popover border border-border">
+                        <SelectContent className="bg-popover border border-border z-[9999]">
                           <SelectItem value="admin">مدير عام</SelectItem>
                           <SelectItem value="deputy">نائب مدير</SelectItem>
                           <SelectItem value="employee">موظف مبيعات</SelectItem>
@@ -228,7 +228,7 @@ const EmployeeDetailsDialog = ({ employee, open, onOpenChange }) => {
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-popover border border-border">
+                        <SelectContent className="bg-popover border border-border z-[9999]">
                           <SelectItem value="active">نشط</SelectItem>
                           <SelectItem value="pending">معلق</SelectItem>
                           <SelectItem value="suspended">محظور</SelectItem>

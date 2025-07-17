@@ -51,7 +51,7 @@ const UpdateRolePermissionsDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[92vw] max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6">
+      <DialogContent className="w-[92vw] max-w-4xl h-[85vh] max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6 z-[9999]">
         <DialogHeader className="pb-3 border-b">
           <DialogTitle className="text-xl flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />

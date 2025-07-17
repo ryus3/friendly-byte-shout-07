@@ -103,7 +103,7 @@ const EditEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>تعديل الموظف: {employee.full_name}</DialogTitle>
           <DialogDescription>تغيير حالة الحساب، الدور، والصلاحيات.</DialogDescription>
