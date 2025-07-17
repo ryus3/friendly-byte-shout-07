@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Shield, Power, Edit, PowerOff, DollarSign } from 'lucide-react';
+import { User, Mail, Shield, Power, Eye, PowerOff, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import { useAuth } from '@/contexts/AuthContext';
 
-const EmployeeCard = ({ user, onEdit, index }) => {
+const EmployeeCard = ({ user, onView, index }) => {
   const [profitsDialogOpen, setProfitsDialogOpen] = useState(false);
   const { hasPermission } = useAuth();
   const isAdmin = user.role === 'admin';
@@ -15,10 +15,10 @@ const EmployeeCard = ({ user, onEdit, index }) => {
   const isActive = user.status === 'active';
 
   const getRoleBadge = () => {
-    if (isAdmin) return <Badge variant='default' className='bg-green-500/20 text-green-500 border-green-500/30'><Shield className="w-4 h-4 ml-2" />مدير</Badge>;
+    if (isAdmin) return <Badge variant='default' className='bg-red-500/20 text-red-500 border-red-500/30'><Shield className="w-4 h-4 ml-2" />مدير عام</Badge>;
     if (isDeputy) return <Badge variant='default' className='bg-yellow-500/20 text-yellow-500 border-yellow-500/30'><Shield className="w-4 h-4 ml-2" />نائب مدير</Badge>;
-    if (isWarehouse) return <Badge variant='secondary' className='bg-indigo-500/20 text-indigo-500 border-indigo-500/30'><Shield className="w-4 h-4 ml-2" />مخزن</Badge>;
-    return <Badge variant='secondary'><Shield className="w-4 h-4 ml-2" />موظف</Badge>;
+    if (isWarehouse) return <Badge variant='secondary' className='bg-purple-500/20 text-purple-500 border-purple-500/30'><Shield className="w-4 h-4 ml-2" />موظف مخزن</Badge>;
+    return <Badge variant='secondary' className='bg-blue-500/20 text-blue-500 border-blue-500/30'><Shield className="w-4 h-4 ml-2" />موظف مبيعات</Badge>;
   }
 
   return (
@@ -55,8 +55,9 @@ const EmployeeCard = ({ user, onEdit, index }) => {
               <DollarSign className="w-4 h-4 text-green-500" />
             </Button>
           )}
-          <Button size="icon" variant="outline" onClick={() => onEdit(user)}>
-            <Edit className="w-4 h-4" />
+          <Button size="sm" variant="outline" onClick={() => onView(user)}>
+            <Eye className="w-4 h-4 ml-2" />
+            عرض التفاصيل
           </Button>
         </div>
       </div>
@@ -70,7 +71,7 @@ const EmployeeCard = ({ user, onEdit, index }) => {
   );
 };
 
-const EmployeeList = ({ users, onEdit }) => {
+const EmployeeList = ({ users, onView }) => {
   if (!users || users.length === 0) {
     return (
       <div className="text-center py-12">
@@ -85,7 +86,7 @@ const EmployeeList = ({ users, onEdit }) => {
     <div className="space-y-4">
       <AnimatePresence>
         {users.map((user, index) => (
-          <EmployeeCard key={user.id} user={user} onEdit={onEdit} index={index} />
+          <EmployeeCard key={user.id} user={user} onView={onView} index={index} />
         ))}
       </AnimatePresence>
     </div>

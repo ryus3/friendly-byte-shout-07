@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { usePermissionBasedData } from '@/hooks/usePermissionBasedData';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -228,7 +228,6 @@ const Dashboard = () => {
                 return createdBy === user?.id || createdBy === user?.user_id;
             });
     }, [aiOrders, canViewAllData, user?.id, user?.user_id]);
-    
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
@@ -386,6 +385,8 @@ const Dashboard = () => {
         navigate(`/my-orders?${query.toString()}`);
     }, [navigate, periods.totalOrders]);
 
+    if (inventoryLoading) return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
+
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
         if (!profitsData) {
@@ -467,10 +468,6 @@ const Dashboard = () => {
         },
     ].filter(Boolean);
 
-    // عرض الـ loader إذا كانت البيانات لا تزال تحمل
-    if (inventoryLoading) {
-        return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
-    }
 
     return (
         <>
