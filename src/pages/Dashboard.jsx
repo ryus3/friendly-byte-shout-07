@@ -228,6 +228,7 @@ const Dashboard = () => {
                 return createdBy === user?.id || createdBy === user?.user_id;
             });
     }, [aiOrders, canViewAllData, user?.id, user?.user_id]);
+    
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
@@ -385,8 +386,6 @@ const Dashboard = () => {
         navigate(`/my-orders?${query.toString()}`);
     }, [navigate, periods.totalOrders]);
 
-    if (inventoryLoading) return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
-
     // حساب بيانات الأرباح الشخصية للموظف
     const employeeProfitsData = useMemo(() => {
         if (!profitsData) {
@@ -468,6 +467,10 @@ const Dashboard = () => {
         },
     ].filter(Boolean);
 
+    // عرض الـ loader إذا كانت البيانات لا تزال تحمل
+    if (inventoryLoading) {
+        return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
+    }
 
     return (
         <>
