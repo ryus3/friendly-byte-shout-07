@@ -281,11 +281,19 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = (permission) => {
     if (!permission) return true;
     
-    // فحص صلاحيات المدير مباشرة
+    // المدير لديه جميع الصلاحيات دائماً
     if (user?.role === 'admin') return true;
     
-    // fallback للنظام القديم
-    return user?.permissions?.includes(permission) || user?.permissions?.includes('*');
+    // نائب المدير لديه معظم الصلاحيات
+    if (user?.role === 'deputy') return true;
+    
+    // فحص الصلاحيات المخصصة
+    if (user?.permissions) {
+      if (user.permissions.includes('*')) return true;
+      if (user.permissions.includes(permission)) return true;
+    }
+    
+    return false;
   };
 
   const updateUser = async (userId, data) => {
