@@ -106,10 +106,12 @@ const ManageEmployeesPage = () => {
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">كل الأدوار</SelectItem>
-              <SelectItem value="admin">مدير</SelectItem>
-              <SelectItem value="deputy">نائب مدير</SelectItem>
-              <SelectItem value="employee">موظف</SelectItem>
-              <SelectItem value="warehouse">مخزن</SelectItem>
+              <SelectItem value="super_admin">المدير العام</SelectItem>
+              <SelectItem value="department_manager">مدير القسم</SelectItem>
+              <SelectItem value="sales_employee">موظف مبيعات</SelectItem>
+              <SelectItem value="warehouse_employee">موظف مخزن</SelectItem>
+              <SelectItem value="cashier">كاشير</SelectItem>
+              <SelectItem value="delivery_coordinator">منسق توصيل</SelectItem>
             </SelectContent>
           </Select>
         </div>
