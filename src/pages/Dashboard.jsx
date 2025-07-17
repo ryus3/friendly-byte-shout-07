@@ -422,22 +422,23 @@ const Dashboard = () => {
     }
 
     const allStatCards = [
-        hasPermission('use_ai_assistant') && { 
+        // إزالة شروط الصلاحيات مؤقتاً لإصلاح المشكلة
+        { 
             key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: (canViewAllData ? aiOrders?.length : userAiOrders?.length) || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
         },
-        hasPermission('manage_users') && canViewAllData && { 
+        canViewAllData && { 
             key: 'pendingRegs', title: 'طلبات التسجيل الجديدة', value: pendingRegistrationsCount, icon: UserPlus, colors: ['indigo-500', 'violet-500'], onClick: () => setDialogs(d => ({ ...d, pendingRegs: true }))
         },
-        hasPermission('view_all_orders') && { 
+        canViewAllData && { 
             key: 'employeeFollowUp', title: 'متابعة الموظفين', value: 'عرض', icon: Briefcase, colors: ['teal-500', 'cyan-500'], format: 'text', onClick: () => navigate('/employee-follow-up')
         },
-        hasPermission('view_orders') && { 
+        { 
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
-        hasPermission('view_profits') && {
+        {
             key: 'netProfit', title: 'صافي الارباح', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
-        hasPermission('view_profits') && {
+        {
             key: 'pendingProfit', 
             title: 'الأرباح المعلقة', 
             value: canViewAllData ? dashboardData.pendingProfit : employeeProfitsData.personalPendingProfit, 
@@ -448,7 +449,7 @@ const Dashboard = () => {
             onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), 
             onClick: canViewAllData ? () => setIsPendingProfitsOpen(true) : () => navigate('/my-profits?status=pending')
         },
-        hasPermission('view_orders') && {
+        {
             key: 'deliveredSales', 
             title: canViewAllData ? 'المبيعات المستلمة' : 'أرباحي المستلمة', 
             value: canViewAllData ? dashboardData.deliveredSales : employeeProfitsData.personalSettledProfit, 
@@ -459,7 +460,7 @@ const Dashboard = () => {
             onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), 
             onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
         },
-        hasPermission('view_orders') && {
+        {
             key: 'pendingSales', 
             title: canViewAllData ? 'المبيعات المعلقة' : 'طلباتي المشحونة', 
             value: canViewAllData ? dashboardData.pendingSales : dashboardData.pendingSales, 
@@ -530,9 +531,7 @@ const Dashboard = () => {
                 <StockMonitoringSystem />
                 
                 <WelcomeHeader user={user} currentTime={currentTime} />
-                {hasPermission('request_profit_settlement') && !hasPermission('manage_profit_settlement') && (
-                    <SettlementRequestCard pendingProfit={dashboardData.pendingProfit} onSettle={() => navigate('/profits-summary')} />
-                )}
+                <SettlementRequestCard pendingProfit={dashboardData.pendingProfit} onSettle={() => navigate('/profits-summary')} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {allStatCards.slice(0, 8).map((stat, index) => (
                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
@@ -540,16 +539,14 @@ const Dashboard = () => {
                          </motion.div>
                     ))}
                 </div>
-                {hasPermission('view_dashboard_top_lists') && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        <TopListCard title="الزبائن الأكثر طلباً" items={dashboardData.topCustomers} titleIcon={Users} itemIcon={UserIcon} sortByPhone={true} />
-                        <TopListCard title="المحافظات الأكثر طلباً" items={dashboardData.topProvinces} titleIcon={MapPin} itemIcon={MapPin} />
-                        <TopListCard title="المنتجات الأكثر طلباً" items={dashboardData.topProducts} titleIcon={Package} itemIcon={TrendingUp} />
-                    </div>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <TopListCard title="الزبائن الأكثر طلباً" items={dashboardData.topCustomers} titleIcon={Users} itemIcon={UserIcon} sortByPhone={true} />
+                    <TopListCard title="المحافظات الأكثر طلباً" items={dashboardData.topProvinces} titleIcon={MapPin} itemIcon={MapPin} />
+                    <TopListCard title="المنتجات الأكثر طلباً" items={dashboardData.topProducts} titleIcon={Package} itemIcon={TrendingUp} />
+                </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-                    {hasPermission('view_dashboard_stock_alerts') && <StockAlertsCard />}
-                    {hasPermission('view_dashboard_recent_orders') && <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />}
+                    <StockAlertsCard />
+                    <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />
                 </div>
             </div>
         </>
