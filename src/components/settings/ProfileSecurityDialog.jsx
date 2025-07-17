@@ -116,7 +116,13 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
         });
       } else {
         // Normal update for non-sensitive data
-        await updateProfile(profileData);
+        const updateData = {
+          full_name: profileData.full_name,
+          phone: profileData.phone,
+          address: profileData.address,
+          bio: profileData.bio
+        };
+        await updateProfile(updateData);
         toast({
           title: "تم التحديث بنجاح",
           description: "تم حفظ معلومات الملف الشخصي"

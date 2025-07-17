@@ -13,10 +13,12 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('categories');
   const [permissions, setPermissions] = useState({
     category: { has_full_access: false, allowed_items: [] },
     color: { has_full_access: false, allowed_items: [] },
@@ -190,84 +192,94 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">صلاحيات المنتجات المتقدمة</h3>
-          <p className="text-sm text-muted-foreground">
-            {selectedUser?.full_name} ({selectedUser?.email})
-          </p>
-        </div>
-        <div className="flex space-x-2 space-x-reverse">
-          <Button variant="outline" onClick={onClose}>
-            إغلاق
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
-          </Button>
+    <div className="space-y-4">
+      <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-4 rounded-lg border border-border/50">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-base font-semibold">صلاحيات المنتجات المتقدمة</h3>
+            <p className="text-sm text-muted-foreground">
+              تحديد التصنيفات والألوان والأحجام التي يستطيع {selectedUser?.full_name} رؤيتها
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} className="h-8 px-3 text-xs">
+              إغلاق
+            </Button>
+            <Button onClick={handleSave} disabled={saving} className="h-8 px-3 text-xs">
+              {saving ? 'جاري الحفظ...' : 'حفظ الصلاحيات'}
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultValue="category" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 mb-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-4 h-auto">
           {permissionTabs.map(tab => (
             <TabsTrigger
               key={tab.key}
               value={tab.key}
-              className="text-xs flex items-center space-x-1 space-x-reverse"
+              className="text-xs flex items-center gap-1 p-2 min-w-0"
             >
-              <tab.icon className="h-3 w-3" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              <tab.icon className="h-3 w-3 flex-shrink-0" />
+              <span className="truncate">{tab.label}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
         {permissionTabs.map(tab => (
-          <TabsContent key={tab.key} value={tab.key} className="space-y-4">
-            <Card className="border-2">
-              <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
-                <CardTitle className="flex items-center justify-between text-base">
+          <TabsContent key={tab.key} value={tab.key} className="space-y-3 m-0">
+            <Card className="border">
+              <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30 pb-3">
+                <CardTitle className="flex items-center justify-between text-sm">
                   <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center ml-3">
-                      <tab.icon className="h-5 w-5 text-primary" />
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center ml-2">
+                      <tab.icon className="h-4 w-4 text-primary" />
                     </div>
                     <div>
                       <span>صلاحيات {tab.label}</span>
                       <p className="text-xs text-muted-foreground font-normal mt-1">
-                        تحديد {tab.label} التي يمكن للموظف رؤيتها
+                        تحديد {tab.label} التي يمكن للموظف رؤيتها في النظام
                       </p>
                     </div>
                   </div>
-                  <Badge variant={permissions[tab.key].has_full_access ? "default" : "secondary"}>
-                    {permissions[tab.key].has_full_access ? "وصول كامل" : "وصول محدود"}
-                  </Badge>
+                  <div className="text-left">
+                    <Badge variant={permissions[tab.key].has_full_access ? "default" : "secondary"} className="text-xs">
+                      {permissions[tab.key].has_full_access ? "وصول كامل" : "وصول محدود"}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {permissions[tab.key].has_full_access 
+                        ? `جميع ${tab.options.length} عنصر`
+                        : `${permissions[tab.key].allowed_items.length} من ${tab.options.length}`
+                      }
+                    </p>
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 p-4">
                 {/* الوصول الكامل */}
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                <div className="flex items-center justify-between p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20">
                   <div className="flex items-center space-x-3 space-x-reverse">
                     <Checkbox
-                      id={`${tab.key}-full-access`}
                       checked={permissions[tab.key].has_full_access}
                       onCheckedChange={(checked) => 
                         updatePermission(tab.key, 'has_full_access', checked)
                       }
+                      className="data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                     />
-                    <label
-                      htmlFor={`${tab.key}-full-access`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      وصول كامل لجميع {tab.label}
-                    </label>
+                    <div>
+                      <Label className="text-sm font-medium cursor-pointer">وصول كامل</Label>
+                      <p className="text-xs text-muted-foreground">
+                        السماح بالوصول لجميع {tab.label} (الحالية والمستقبلية)
+                      </p>
+                    </div>
                   </div>
                   {permissions[tab.key].has_full_access ? (
-                    <Badge variant="default" className="bg-green-600">
+                    <Badge variant="default" className="text-xs">
                       <CheckCircle className="h-3 w-3 ml-1" />
                       مفعل
                     </Badge>
                   ) : (
-                    <Badge variant="outline">
+                    <Badge variant="outline" className="text-xs">
                       <XCircle className="h-3 w-3 ml-1" />
                       محدود
                     </Badge>
@@ -277,14 +289,17 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                 {/* اختيار عناصر محددة */}
                 {!permissions[tab.key].has_full_access && (
                   <div>
-                    <h4 className="text-sm font-medium mb-3">
-                      اختيار {tab.label} محددة ({permissions[tab.key].allowed_items.length} من {tab.options.length})
+                    <h4 className="text-sm font-medium mb-3 flex items-center justify-between">
+                      <span>اختيار {tab.label} محددة</span>
+                      <Badge variant="outline" className="text-xs">
+                        {permissions[tab.key].allowed_items.length} من {tab.options.length}
+                      </Badge>
                     </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded-lg p-3">
                       {tab.options.map(option => (
                         <div
                           key={option.id}
-                          className="flex items-center space-x-2 space-x-reverse p-2 rounded border hover:bg-muted/50"
+                          className="flex items-center space-x-2 space-x-reverse p-2 rounded border hover:bg-muted/50 transition-colors"
                         >
                           <Checkbox
                             id={`${tab.key}-${option.id}`}
@@ -293,7 +308,8 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                           />
                           <label
                             htmlFor={`${tab.key}-${option.id}`}
-                            className="text-sm cursor-pointer flex-1"
+                            className="text-sm cursor-pointer flex-1 truncate"
+                            title={option.name}
                           >
                             {option.name}
                           </label>
@@ -303,9 +319,9 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                   </div>
                 )}
 
-                {/* إحصائيات */}
-                <div className="text-xs text-muted-foreground">
-                  {permissions[tab.key].has_full_access 
+                {/* إحصائيات سريعة */}
+                <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
+                  💡 {permissions[tab.key].has_full_access 
                     ? `الموظف يستطيع رؤية جميع ${tab.label} (${tab.options.length} عنصر)`
                     : `الموظف يستطيع رؤية ${permissions[tab.key].allowed_items.length} من ${tab.options.length} عنصر`
                   }

@@ -32,10 +32,10 @@ import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
-import UnifiedRoleManager from '@/components/manage-employees/UnifiedRoleManager';
+
 import ManageProfitsDialog from '@/components/manage-employees/ManageProfitsDialog';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
-import EmployeePermissionsManager from '@/components/manage-employees/EmployeePermissionsManager';
+import EmployeeManagementDialog from '@/components/manage-employees/EmployeeManagementDialog';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -144,9 +144,9 @@ const SettingsPage = () => {
   const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
-  const [isRoleManagerOpen, setIsRoleManagerOpen] = useState(false);
+  
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
-  const [isPermissionsManagerOpen, setIsPermissionsManagerOpen] = useState(false);
+  const [isEmployeeManagementOpen, setIsEmployeeManagementOpen] = useState(false);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -229,29 +229,19 @@ const SettingsPage = () => {
               />
             )}
 
-            {/* إدارة الأدوار والصلاحيات - للمدراء فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Shield}
-                title="إدارة الأدوار والصلاحيات"
-                description="تعيين أدوار الموظفين وإدارة صلاحيات المنتجات"
-                iconColor="from-indigo-500 to-indigo-600"
-                onClick={() => setIsRoleManagerOpen(true)}
-                badge={<Badge variant="secondary">جديد</Badge>}
-              />
-            )}
 
-            {/* إدارة صلاحيات الموظفين الشاملة - للمدراء فقط */}
+            {/* إدارة الموظفين - للمدراء فقط */}
             {isAdmin && (
               <ModernCard
                 icon={Users}
-                title="إدارة صلاحيات الموظفين"
-                description="نظام شامل لإدارة صلاحيات المنتجات والأقسام والمواسم للموظفين"
-                iconColor="from-emerald-500 to-emerald-600"
-                onClick={() => setIsPermissionsManagerOpen(true)}
-                badge={<Badge variant="destructive">نظام جديد</Badge>}
+                title="إدارة الموظفين"
+                description="نظام متكامل لإدارة الموظفين والأدوار والصلاحيات وصلاحيات المنتجات"
+                iconColor="from-green-500 to-green-600"
+                onClick={() => setIsEmployeeManagementOpen(true)}
+                badge={<Badge variant="default">النظام المتكامل</Badge>}
               />
             )}
+
 
             {/* إعدادات العملاء - للجميع */}
             <ModernCard
@@ -500,19 +490,15 @@ const SettingsPage = () => {
         />
       )}
 
-      <UnifiedRoleManager 
-        open={isRoleManagerOpen} 
-        onOpenChange={setIsRoleManagerOpen} 
-      />
 
       <EmployeeProfitsManager 
         open={isProfitsManagerOpen} 
         onOpenChange={setIsProfitsManagerOpen} 
       />
 
-      <EmployeePermissionsManager 
-        open={isPermissionsManagerOpen} 
-        onOpenChange={setIsPermissionsManagerOpen} 
+      <EmployeeManagementDialog 
+        open={isEmployeeManagementOpen} 
+        onOpenChange={setIsEmployeeManagementOpen} 
       />
     </>
   );

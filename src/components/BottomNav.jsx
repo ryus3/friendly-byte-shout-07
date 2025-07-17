@@ -13,9 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 
-const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
+const NavButton = ({ onClick, icon: Icon, label, className, badgeCount, isActive }) => (
   <motion.button
-    ref={ref}
     onClick={onClick}
     whileTap={{ scale: 0.95 }}
     className={cn(
@@ -23,7 +22,6 @@ const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, bad
       isActive && "text-primary bg-primary/5 shadow-sm",
       className
     )}
-    {...props}
   >
     <div className="relative">
       <Icon className={cn("w-5 h-5 transition-all duration-200", isActive && "scale-110")} />
@@ -39,9 +37,7 @@ const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, bad
     </div>
     <span className={cn("text-xs font-medium transition-all duration-200", isActive && "font-bold text-xs")}>{label}</span>
   </motion.button>
-));
-
-NavButton.displayName = "NavButton";
+);
 
 const MenuSheet = ({ children, open, onOpenChange }) => (
   <Sheet open={open} onOpenChange={onOpenChange}>
@@ -69,7 +65,7 @@ const MenuContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
 
-  const visibleMenuItems = menuItems; // عرض جميع العناصر بدون فحص الصلاحيات
+  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -263,7 +259,7 @@ const BottomNav = () => {
               "relative w-16 h-16 -mt-7 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/20",
               canUseAiChat 
                 ? "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 text-white hover:shadow-blue-500/30 hover:scale-110 hover:rotate-2" 
-                : "bg-gradient-to-br from-muted to-muted-foreground text-muted-foreground"
+                : "bg-gradient-to-br from-gray-400 to-gray-600 text-white/70"
             )}
             onClick={handleAiChat}
           >

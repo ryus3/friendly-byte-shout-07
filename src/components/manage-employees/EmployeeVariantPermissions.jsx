@@ -9,7 +9,18 @@ import { toast } from '@/components/ui/use-toast';
 import { Package, Palette, Ruler, Grid3X3, Tag, Calendar } from 'lucide-react';
 
 const EmployeeVariantPermissions = ({ employee, onSave }) => {
-  const { categories, colors, sizes, departments, productTypes, seasonsOccasions } = useVariants();
+  const { categories, colors, sizes, departments, productTypes, seasonsOccasions, loading } = useVariants();
+  
+  // إضافة console.log لتتبع البيانات
+  console.log('EmployeeVariantPermissions Data:', {
+    categories: categories?.length,
+    colors: colors?.length,
+    sizes: sizes?.length,
+    departments: departments?.length,
+    productTypes: productTypes?.length,
+    seasonsOccasions: seasonsOccasions?.length,
+    loading
+  });
   const [permissions, setPermissions] = useState({
     categories: [],
     colors: [],
@@ -133,15 +144,23 @@ const EmployeeVariantPermissions = ({ employee, onSave }) => {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">جاري تحميل البيانات...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {renderPermissionSection('التصنيفات الرئيسية', Package, categories, 'categories', 'categories')}
-        {renderPermissionSection('الأقسام', Grid3X3, departments, 'departments', 'departments')}
-        {renderPermissionSection('الألوان', Palette, colors, 'colors', 'colors')}
-        {renderPermissionSection('الأحجام', Ruler, sizes, 'sizes', 'sizes')}
-        {renderPermissionSection('أنواع المنتجات', Tag, productTypes, 'productTypes', 'productTypes')}
-        {renderPermissionSection('المواسم والمناسبات', Calendar, seasonsOccasions, 'seasonsOccasions', 'seasonsOccasions')}
+        {renderPermissionSection('التصنيفات الرئيسية', Package, categories || [], 'categories', 'categories')}
+        {renderPermissionSection('الأقسام', Grid3X3, departments || [], 'departments', 'departments')}
+        {renderPermissionSection('الألوان', Palette, colors || [], 'colors', 'colors')}
+        {renderPermissionSection('الأحجام', Ruler, sizes || [], 'sizes', 'sizes')}
+        {renderPermissionSection('أنواع المنتجات', Tag, productTypes || [], 'productTypes', 'productTypes')}
+        {renderPermissionSection('المواسم والمناسبات', Calendar, seasonsOccasions || [], 'seasonsOccasions', 'seasonsOccasions')}
       </div>
 
       <div className="flex justify-end">

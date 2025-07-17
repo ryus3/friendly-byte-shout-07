@@ -20,174 +20,128 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { Shield, UserPlus, Eye, Settings, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpenChange }) => {
-  const [userRoles, setUserRoles] = useState([]);
-  const [availableRoles, setAvailableRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [currentRole, setCurrentRole] = useState(selectedUser?.role || 'employee');
+  const [permissions, setPermissions] = useState(selectedUser?.permissions || []);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [selectedRoleId, setSelectedRoleId] = useState('');
 
-  // جلب البيانات عند تحميل المكون
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
+  // الأدوار المتاحة في النظام
+  const availableRoles = [
+    { value: 'admin', label: 'مدير عام', description: 'جميع الصلاحيات' },
+    { value: 'deputy', label: 'نائب مدير', description: 'صلاحيات إدارية محدودة' },
+    { value: 'manager', label: 'مدير قسم', description: 'إدارة قسم محدد' },
+    { value: 'employee', label: 'موظف', description: 'صلاحيات أساسية' },
+    { value: 'warehouse', label: 'مخزن', description: 'إدارة المخزون' },
+    { value: 'cashier', label: 'كاشير', description: 'نقاط البيع' }
+  ];
 
-        // جلب الأدوار المتاحة
-        const { data: roles, error: rolesError } = await supabase
-          .from('roles')
-          .select('*')
-          .eq('is_active', true)
-          .order('hierarchy_level', { ascending: false });
+  const handleSaveRole = async () => {
+    try {
+      setSaving(true);
 
-        if (rolesError) throw rolesError;
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          role: currentRole,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', selectedUser.user_id);
 
-        setAvailableRoles(roles || []);
-      } catch (error) {
-        console.error('خطأ في جلب البيانات:', error);
-        toast({
-          title: 'خطأ',
-          description: 'حدث خطأ في جلب البيانات',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (error) throw error;
 
-    if (open) {
-      fetchData();
+      toast({
+        title: 'نجح',
+        description: 'تم تحديث دور الموظف بنجاح',
+      });
+
+      onUpdate?.();
+    } catch (error) {
+      console.error('خطأ في تحديث الدور:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في تحديث الدور',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
     }
-  }, [open]);
+  };
 
-  // إذا لم يكن هناك مستخدم محدد، فهذا Dialog مستقل
-  if (!open) {
-    return null;
+  // إذا لم يكن هناك مستخدم محدد
+  if (!selectedUser) {
+    return (
+      <div className="flex items-center justify-center h-40">
+        <p className="text-muted-foreground">لم يتم تحديد موظف</p>
+      </div>
+    );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            إدارة الأدوار والصلاحيات
-            {selectedUser && ` - ${selectedUser.full_name || selectedUser.username}`}
-          </DialogTitle>
-          <DialogDescription>
-            إدارة أدوار المستخدمين وتعيين الصلاحيات والوصول للنظام
-          </DialogDescription>
-        </DialogHeader>
+    <div className="space-y-4">
+      <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-3 sm:p-4 rounded-lg border border-border/50">
+        <h3 className="font-semibold mb-3 flex items-center text-sm sm:text-base">
+          <Shield className="ml-2 h-4 w-4 text-primary" />
+          إدارة الأدوار والصلاحيات
+        </h3>
+        
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">الدور الحالي</Label>
+            <Select value={currentRole} onValueChange={setCurrentRole}>
+              <SelectTrigger className="h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {availableRoles.map(role => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label} - {role.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="flex-1 overflow-y-auto space-y-4 py-4">
-          {loading ? (
-            <div className="flex items-center justify-center p-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  الأدوار المتاحة
-                </h3>
-                
-                <div className="space-y-2">
-                  {availableRoles.map(role => (
-                    <Card key={role.id} className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">{role.display_name}</h4>
-                          <p className="text-sm text-muted-foreground">{role.description}</p>
-                        </div>
-                        <Badge variant="outline">
-                          مستوى {role.hierarchy_level}
-                        </Badge>
-                      </div>
-                    </Card>
-                  ))}
-                  
-                  {availableRoles.length === 0 && (
-                    <Card className="p-4">
-                      <div className="text-center text-muted-foreground">
-                        <Shield className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                        <p>لا توجد أدوار متاحة</p>
-                      </div>
-                    </Card>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
-                  إدارة سريعة
-                </h3>
-                
-                <div className="space-y-3">
-                  <Card className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/30">
-                    <div className="flex items-center gap-3">
-                      <Shield className="h-8 w-8 text-blue-600" />
-                      <div>
-                        <h4 className="font-semibold text-blue-700 dark:text-blue-300">صلاحيات النظام</h4>
-                        <p className="text-sm text-blue-600 dark:text-blue-400">إدارة وصول المستخدمين للنظام</p>
-                      </div>
-                    </div>
-                  </Card>
-
-                  <Card className="p-4 bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/30">
-                    <div className="flex items-center gap-3">
-                      <UserPlus className="h-8 w-8 text-green-600" />
-                      <div>
-                        <h4 className="font-semibold text-green-700 dark:text-green-300">أدوار المستخدمين</h4>
-                        <p className="text-sm text-green-600 dark:text-green-400">تعيين وإدارة أدوار الموظفين</p>
-                      </div>
-                    </div>
-                  </Card>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* دليل الأدوار */}
-          <Card className="border-2 border-dashed border-muted-foreground/25">
-            <CardHeader>
-              <CardTitle className="flex items-center text-base text-muted-foreground">
-                <Eye className="ml-2 h-5 w-5" />
-                دليل الأدوار والصلاحيات
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-red-50 dark:bg-red-950/20">
-                  <Badge variant="default" className="bg-red-600">مدير عام</Badge>
-                  <span className="text-muted-foreground text-xs">جميع الصلاحيات</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-                  <Badge variant="default" className="bg-blue-600">مدير قسم</Badge>
-                  <span className="text-muted-foreground text-xs">إدارة قسم محدد</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/20">
-                  <Badge variant="default" className="bg-purple-600">موظف مبيعات</Badge>
-                  <span className="text-muted-foreground text-xs">طلبات + أرباح</span>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
-                  <Badge variant="default" className="bg-orange-600">موظف مخزن</Badge>
-                  <span className="text-muted-foreground text-xs">مخزون + جرد</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex justify-end">
+            <Button onClick={handleSaveRole} disabled={saving} className="px-6 h-9">
+              {saving ? 'جاري الحفظ...' : 'حفظ الدور'}
+            </Button>
+          </div>
         </div>
+      </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            إغلاق
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      {/* دليل الأدوار */}
+      <Card className="border-2 border-dashed border-muted-foreground/25">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-sm text-muted-foreground">
+            <Eye className="ml-2 h-4 w-4" />
+            دليل الأدوار والصلاحيات
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-red-50 dark:bg-red-950/20">
+              <Badge variant="default" className="bg-red-600 text-xs">مدير عام</Badge>
+              <span className="text-muted-foreground text-xs">جميع الصلاحيات</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+              <Badge variant="default" className="bg-blue-600 text-xs">نائب مدير</Badge>
+              <span className="text-muted-foreground text-xs">صلاحيات محدودة</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/20">
+              <Badge variant="default" className="bg-purple-600 text-xs">مدير قسم</Badge>
+              <span className="text-muted-foreground text-xs">إدارة قسم محدد</span>
+            </div>
+            <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20">
+              <Badge variant="default" className="bg-orange-600 text-xs">موظف مخزن</Badge>
+              <span className="text-muted-foreground text-xs">مخزون + جرد</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

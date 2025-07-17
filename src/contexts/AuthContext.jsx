@@ -279,8 +279,13 @@ export const AuthProvider = ({ children }) => {
   };
   
   const hasPermission = (permission) => {
-    // نظام الصلاحيات معطل - جميع المستخدمين لديهم كل الصلاحيات
-    return true;
+    if (!permission) return true;
+    
+    // فحص صلاحيات المدير مباشرة
+    if (user?.role === 'admin') return true;
+    
+    // fallback للنظام القديم
+    return user?.permissions?.includes(permission) || user?.permissions?.includes('*');
   };
 
   const updateUser = async (userId, data) => {
