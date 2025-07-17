@@ -27,7 +27,7 @@ const ManageEmployeesDialog = ({ open, onOpenChange }) => {
                               (user.email?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase()) ||
                               (user.username?.toLowerCase() || '').includes(filters.searchTerm.toLowerCase());
       const statusMatch = filters.status === 'all' || user.status === filters.status;
-      const roleMatch = filters.role === 'all' || user.role === filters.role;
+      const roleMatch = filters.role === 'all'; // النظام الهرمي لا يستخدم roles مباشرة
       return searchTermMatch && statusMatch && roleMatch;
     }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
   }, [allUsers, filters]);
@@ -68,10 +68,11 @@ const ManageEmployeesDialog = ({ open, onOpenChange }) => {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">كل الأدوار</SelectItem>
-                  <SelectItem value="admin">مدير</SelectItem>
-                  <SelectItem value="deputy">نائب مدير</SelectItem>
-                  <SelectItem value="employee">موظف</SelectItem>
-                  <SelectItem value="warehouse">مخزن</SelectItem>
+                  <SelectItem value="super_admin">المدير العام</SelectItem>
+                  <SelectItem value="department_manager">مدير القسم</SelectItem>
+                  <SelectItem value="sales_employee">موظف مبيعات</SelectItem>
+                  <SelectItem value="warehouse_employee">موظف مخزن</SelectItem>
+                  <SelectItem value="cashier">كاشير</SelectItem>
                 </SelectContent>
               </Select>
             </div>

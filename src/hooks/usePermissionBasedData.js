@@ -1,45 +1,50 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import useUnifiedPermissions from './useUnifiedPermissions';
 
 export const usePermissionBasedData = () => {
-  const { user, hasPermission } = useAuth();
+  const {
+    user,
+    userRoles,
+    userPermissions,
+    productPermissions,
+    loading,
+    isAdmin,
+    isDepartmentManager,
+    isSalesEmployee,
+    isWarehouseEmployee,
+    isCashier,
+    hasRole,
+    hasPermission,
+    canViewAllData,
+    canManageEmployees,
+    canManageFinances,
+    filterDataByUser,
+    filterProductsByPermissions,
+    getEmployeeStats
+  } = useUnifiedPermissions();
 
-  // فحص الأدوار
-  const isAdmin = useMemo(() => {
-    return user?.role === 'admin';
-  }, [user?.role]);
-
+  // الأدوار الأساسية (compatibility مع النظام القديم)
   const isEmployee = useMemo(() => {
-    return user?.role === 'employee';
-  }, [user?.role]);
+    return isSalesEmployee || isWarehouseEmployee || isCashier;
+  }, [isSalesEmployee, isWarehouseEmployee, isCashier]);
 
   const isDeputy = useMemo(() => {
-    return user?.role === 'deputy';
-  }, [user?.role]);
+    return isDepartmentManager;
+  }, [isDepartmentManager]);
 
   const isWarehouse = useMemo(() => {
-    return user?.role === 'warehouse';
-  }, [user?.role]);
+    return isWarehouseEmployee;
+  }, [isWarehouseEmployee]);
 
-  // صلاحيات شاملة
-  const canViewAllData = useMemo(() => {
-    return isAdmin || isDeputy || hasPermission('view_all_orders') || hasPermission('*');
-  }, [isAdmin, isDeputy, hasPermission]);
-
+  // الصلاحيات المتقدمة
   const canManageSettings = useMemo(() => {
     return isAdmin || hasPermission('manage_settings');
   }, [isAdmin, hasPermission]);
 
-  const canManageEmployees = useMemo(() => {
-    return isAdmin || hasPermission('manage_employees');
-  }, [isAdmin, hasPermission]);
-
-  // صلاحيات شركات التوصيل
   const canAccessDeliveryPartners = useMemo(() => {
     return user?.delivery_partner_access === true;
   }, [user?.delivery_partner_access]);
 
-  // صلاحيات الإدارة العامة
   const canManageProducts = useMemo(() => {
     return isAdmin || hasPermission('manage_products');
   }, [isAdmin, hasPermission]);
@@ -49,21 +54,10 @@ export const usePermissionBasedData = () => {
   }, [isAdmin, hasPermission]);
 
   const canManagePurchases = useMemo(() => {
-    return isAdmin || hasPermission('view_purchases');
+    return isAdmin || hasPermission('manage_purchases');
   }, [isAdmin, hasPermission]);
 
-  // فلترة البيانات حسب المستخدم
-  const filterDataByUser = useMemo(() => {
-    return (data, userIdField = 'created_by') => {
-      if (!data) return [];
-      if (canViewAllData) return data;
-      return data.filter(item => {
-        const itemUserId = item[userIdField];
-        return itemUserId === user?.id || itemUserId === user?.user_id;
-      });
-    };
-  }, [canViewAllData, user?.id, user?.user_id]);
-
+  // فلترة الأرباح حسب المستخدم
   const filterProfitsByUser = useMemo(() => {
     return (profits) => {
       if (!profits) return [];
@@ -75,11 +69,11 @@ export const usePermissionBasedData = () => {
     };
   }, [canViewAllData, user?.id, user?.user_id]);
 
+  // رموز التليغرام الشخصية
   const getUserSpecificTelegramCode = useMemo(() => {
     return (employeeCodes) => {
       if (!employeeCodes) return [];
       if (canViewAllData) return employeeCodes;
-      // الموظف يرى رمزه الشخصي فقط
       return employeeCodes.filter(code => {
         const codeUserId = code.user_id;
         return codeUserId === user?.id || codeUserId === user?.user_id;
@@ -87,6 +81,7 @@ export const usePermissionBasedData = () => {
     };
   }, [canViewAllData, user?.id, user?.user_id]);
 
+  // التحقق من صلاحية الوصول للصفحات
   const canAccessPage = useMemo(() => {
     return (pagePermission) => {
       if (isAdmin) return true;
@@ -94,162 +89,133 @@ export const usePermissionBasedData = () => {
     };
   }, [isAdmin, hasPermission]);
 
+  // فلترة الإشعارات
   const getNotificationsForUser = useMemo(() => {
     return (notifications) => {
       if (!notifications) return [];
       
       return notifications.filter(notification => {
-        // الإشعارات الشخصية للمستخدم
         const notificationUserId = notification.user_id;
         if (notificationUserId === user?.user_id || notificationUserId === user?.id) {
           return true;
         }
         
-        // الإشعارات العامة (null) - المدير والنائب يرون الإشعارات العامة
+        // الإشعارات العامة للمديرين
         if (notificationUserId === null) {
-          return isAdmin || isDeputy;
+          return isAdmin || isDepartmentManager;
         }
         
         return false;
       });
     };
-  }, [user?.id, user?.user_id, isAdmin, isDeputy]);
+  }, [user?.id, user?.user_id, isAdmin, isDepartmentManager]);
 
-  // فلترة التصنيفات والمتغيرات حسب الصلاحيات
+  // فلترة المتغيرات (للتوافق مع النظام القديم - استخدم النظام الجديد)
   const filterCategoriesByPermission = useMemo(() => {
     return (categories) => {
       if (!categories) return [];
       if (isAdmin) return categories;
       
-      try {
-        const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
-        if (categoryPermissions.includes('all')) return categories;
-        return categories.filter(cat => categoryPermissions.includes(cat.id));
-      } catch (e) {
-        console.warn('خطأ في تحليل صلاحيات التصنيفات:', e);
-        return []; // أكثر أماناً للموظفين
-      }
+      const categoryPerm = productPermissions.category;
+      if (!categoryPerm || categoryPerm.has_full_access) return categories;
+      
+      return categories.filter(cat => 
+        categoryPerm.allowed_items.includes(cat.id)
+      );
     };
-  }, [isAdmin, user?.category_permissions]);
+  }, [isAdmin, productPermissions.category]);
 
   const filterSizesByPermission = useMemo(() => {
     return (sizes) => {
       if (!sizes) return [];
       if (isAdmin) return sizes;
       
-      try {
-        const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
-        if (sizePermissions.includes('all')) return sizes;
-        return sizes.filter(size => sizePermissions.includes(size.id));
-      } catch (e) {
-        console.warn('خطأ في تحليل صلاحيات الأحجام:', e);
-        return [];
-      }
+      const sizePerm = productPermissions.size;
+      if (!sizePerm || sizePerm.has_full_access) return sizes;
+      
+      return sizes.filter(size => 
+        sizePerm.allowed_items.includes(size.id)
+      );
     };
-  }, [isAdmin, user?.size_permissions]);
+  }, [isAdmin, productPermissions.size]);
 
   const filterColorsByPermission = useMemo(() => {
     return (colors) => {
       if (!colors) return [];
       if (isAdmin) return colors;
       
-      try {
-        const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
-        if (colorPermissions.includes('all')) return colors;
-        return colors.filter(color => colorPermissions.includes(color.id));
-      } catch (e) {
-        console.warn('خطأ في تحليل صلاحيات الألوان:', e);
-        return [];
-      }
+      const colorPerm = productPermissions.color;
+      if (!colorPerm || colorPerm.has_full_access) return colors;
+      
+      return colors.filter(color => 
+        colorPerm.allowed_items.includes(color.id)
+      );
     };
-  }, [isAdmin, user?.color_permissions]);
+  }, [isAdmin, productPermissions.color]);
 
   const filterDepartmentsByPermission = useMemo(() => {
     return (departments) => {
       if (!departments) return [];
       if (isAdmin) return departments;
       
-      try {
-        const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
-        if (departmentPermissions.includes('all')) return departments;
-        return departments.filter(dept => departmentPermissions.includes(dept.id));
-      } catch (e) {
-        console.warn('خطأ في تحليل صلاحيات الأقسام:', e);
-        return [];
-      }
+      const departmentPerm = productPermissions.department;
+      if (!departmentPerm || departmentPerm.has_full_access) return departments;
+      
+      return departments.filter(dept => 
+        departmentPerm.allowed_items.includes(dept.id)
+      );
     };
-  }, [isAdmin, user?.department_permissions]);
+  }, [isAdmin, productPermissions.department]);
 
-  // فلترة أنواع المنتجات والمواسم
   const filterProductTypesByPermission = useMemo(() => {
     return (productTypes) => {
       if (!productTypes) return [];
       if (isAdmin) return productTypes;
       
-      try {
-        const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
-        if (productTypePermissions.includes('all')) return productTypes;
-        return productTypes.filter(type => productTypePermissions.includes(type.id));
-      } catch (e) {
-        console.warn('خطأ في تحليل صلاحيات أنواع المنتجات:', e);
-        return [];
-      }
+      const productTypePerm = productPermissions.product_type;
+      if (!productTypePerm || productTypePerm.has_full_access) return productTypes;
+      
+      return productTypes.filter(type => 
+        productTypePerm.allowed_items.includes(type.id)
+      );
     };
-  }, [isAdmin, user?.product_type_permissions]);
+  }, [isAdmin, productPermissions.product_type]);
 
   const filterSeasonsOccasionsByPermission = useMemo(() => {
     return (seasonsOccasions) => {
       if (!seasonsOccasions) return [];
       if (isAdmin) return seasonsOccasions;
       
-      try {
-        const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
-        if (seasonOccasionPermissions.includes('all')) return seasonsOccasions;
-        return seasonsOccasions.filter(item => seasonOccasionPermissions.includes(item.id));
-      } catch (e) {
-        console.warn('خطأ في تحليل صلاحيات المواسم والمناسبات:', e);
-        return [];
-      }
-    };
-  }, [isAdmin, user?.season_occasion_permissions]);
-
-  // فلترة المنتجات المدمجة حسب كل الصلاحيات
-  const filterProductsByPermissions = useMemo(() => {
-    return (products) => {
-      if (!products) return [];
-      if (isAdmin) return products;
+      const seasonPerm = productPermissions.season_occasion;
+      if (!seasonPerm || seasonPerm.has_full_access) return seasonsOccasions;
       
-      // فلترة المنتجات حسب التصنيفات والأقسام والأنواع والمواسم المسموحة
-      return products.filter(product => {
-        // فحص التصنيفات
-        if (product.categories && product.categories.length > 0) {
-          const allowedCategories = filterCategoriesByPermission(product.categories);
-          if (allowedCategories.length === 0) return false;
-        }
-        
-        // فحص الأقسام
-        if (product.departments && product.departments.length > 0) {
-          const allowedDepartments = filterDepartmentsByPermission(product.departments);
-          if (allowedDepartments.length === 0) return false;
-        }
-        
-        return true;
-      });
+      return seasonsOccasions.filter(item => 
+        seasonPerm.allowed_items.includes(item.id)
+      );
     };
-  }, [isAdmin, filterCategoriesByPermission, filterDepartmentsByPermission]);
+  }, [isAdmin, productPermissions.season_occasion]);
 
   return {
-    // بيانات المستخدم والأدوار
+    // البيانات الأساسية
     user,
+    loading,
+    
+    // الأدوار (النظام الجديد + التوافق مع القديم)
     isAdmin,
     isEmployee,
     isDeputy,
     isWarehouse,
+    isDepartmentManager,
+    isSalesEmployee,
+    isWarehouseEmployee,
+    isCashier,
+    hasRole,
     
-    // صلاحيات عامة
+    // الصلاحيات العامة
     canViewAllData,
     canManageSettings,
     canManageEmployees,
+    canManageFinances,
     canAccessPage,
     canAccessDeliveryPartners,
     canManageProducts,
@@ -262,7 +228,7 @@ export const usePermissionBasedData = () => {
     getUserSpecificTelegramCode,
     getNotificationsForUser,
     
-    // فلترة التصنيفات والمتغيرات
+    // فلترة التصنيفات والمتغيرات (للتوافق مع النظام القديم)
     filterCategoriesByPermission,
     filterSizesByPermission,
     filterColorsByPermission,
@@ -271,7 +237,11 @@ export const usePermissionBasedData = () => {
     filterSeasonsOccasionsByPermission,
     filterProductsByPermissions,
     
-    // وظائف الصلاحيات
+    // النظام الجديد
+    userRoles,
+    userPermissions,
+    productPermissions,
+    getEmployeeStats,
     hasPermission
   };
 };

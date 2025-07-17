@@ -29,7 +29,8 @@ const EmployeeManagementDialog = ({ open, onOpenChange }) => {
   // جلب الموظفين
   useEffect(() => {
     if (allUsers && Array.isArray(allUsers)) {
-      setEmployees(allUsers.filter(user => user.role !== 'super_admin'));
+      // عرض جميع المستخدمين - النظام الهرمي يتولى التصفية
+      setEmployees(allUsers);
     }
   }, [allUsers]);
 
