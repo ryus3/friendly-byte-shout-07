@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/use-toast';
 import { 
   MessageCircle, Copy, Users, Bot, CheckCircle, AlertCircle, Smartphone, Settings 
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import TelegramBotSetup from './TelegramBotSetup';
 import usePermissionBasedData from '@/hooks/usePermissionBasedData';
@@ -36,7 +36,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
           linked_at,
           created_at,
           updated_at,
-          profiles!telegram_employee_codes_user_id_fkey(user_id, full_name, role, username, is_active)
+          profiles!telegram_employee_codes_user_id_fkey(user_id, full_name, username, is_active)
         `)
         .eq('profiles.is_active', true)
         .order('created_at', { ascending: true });
@@ -55,7 +55,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
         const userIds = altData.map(code => code.user_id);
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('user_id, full_name, role, username, is_active')
+          .select('user_id, full_name, username, is_active')
           .in('user_id', userIds)
           .eq('is_active', true);
         
@@ -177,7 +177,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                 {/* عرض جميع رموز الموظفين */}
                 {employeeCodes.map((employeeCode) => {
                   const profile = employeeCode.profiles;
-                  const isOwner = profile?.role === 'admin';
+                  const isOwner = user?.id === employeeCode.user_id;
                   
                   return (
                     <div key={employeeCode.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
@@ -194,7 +194,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                         <div>
                           <p className="font-semibold">{profile?.full_name || 'مستخدم'}</p>
                           <Badge variant={isOwner ? "outline" : "secondary"} className="text-xs">
-                            {isOwner ? 'مالك' : profile?.role === 'manager' ? 'مدير' : 'موظف'}
+                            {isOwner ? 'أنت' : 'موظف'}
                           </Badge>
                         </div>
                       </div>
