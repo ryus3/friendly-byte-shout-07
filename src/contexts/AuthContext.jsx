@@ -279,21 +279,8 @@ export const AuthProvider = ({ children }) => {
   };
   
   const hasPermission = (permission) => {
-    if (!permission) return true;
-    
-    // المدير لديه جميع الصلاحيات دائماً
-    if (user?.role === 'admin') return true;
-    
-    // نائب المدير لديه معظم الصلاحيات
-    if (user?.role === 'deputy') return true;
-    
-    // فحص الصلاحيات المخصصة
-    if (user?.permissions) {
-      if (user.permissions.includes('*')) return true;
-      if (user.permissions.includes(permission)) return true;
-    }
-    
-    return false;
+    // نظام الصلاحيات معطل - جميع المستخدمين لديهم كل الصلاحيات
+    return true;
   };
 
   const updateUser = async (userId, data) => {

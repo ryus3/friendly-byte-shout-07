@@ -9,7 +9,7 @@ export const AiChatProvider = ({ children }) => {
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const { hasPermission } = useAuth();
   
-  const canUseAiChat = hasPermission('use_ai_assistant');
+  const canUseAiChat = true; // المساعد الذكي متاح للجميع
 
   const value = {
     aiChatOpen,
