@@ -253,6 +253,20 @@
     max-height: 90vh !important;
     margin: 0 !important;
   }
+}
+
+/* تطبيق التنسيق على جميع نوافذ DialogContent */
+[data-radix-dialog-content] {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  z-index: 9999 !important;
+  transform: translate(-50%, -50%) !important;
+  max-width: min(90vw, 64rem) !important;
+  max-height: min(85vh, 50rem) !important;
+}
+
+@media (max-width: 768px) {
   
   /* تحسين ScrollArea للهاتف */
   [data-radix-scroll-area-viewport] {
