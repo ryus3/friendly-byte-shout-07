@@ -68,19 +68,14 @@ const MultiProductSelector = ({ selectedProducts, setSelectedProducts }) => {
                                     key={product.id}
                                     value={product.name}
                                     onSelect={() => handleSelect(product.id)}
-                                    className="flex items-center gap-2 cursor-pointer hover:bg-accent aria-selected:bg-accent p-2"
+                                    className="flex items-center gap-2 cursor-pointer hover:bg-accent aria-selected:bg-accent"
                                 >
                                     <Checkbox
                                         checked={selectedProducts.includes(product.id)}
                                         onChange={() => handleSelect(product.id)}
-                                        className="pointer-events-none"
+                                        className="pointer-events-auto"
                                     />
-                                    <span 
-                                        className="flex-1 text-right cursor-pointer select-none"
-                                        onClick={() => handleSelect(product.id)}
-                                    >
-                                        {product.name}
-                                    </span>
+                                    <span className="flex-1 text-right">{product.name}</span>
                                     {selectedProducts.includes(product.id) && (
                                         <Check className="h-4 w-4 text-primary" />
                                     )}
