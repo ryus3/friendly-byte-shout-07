@@ -33,7 +33,7 @@ const TelegramCodesManager = () => {
         .from('employee_telegram_codes')
         .select(`
           *,
-          profiles!inner(
+          profiles!telegram_employee_codes_user_id_fkey(
             full_name,
             username,
             email,
