@@ -86,8 +86,8 @@ const ManageEmployeesPage = () => {
           </div>
         </div>
 
-        <div className="bg-card rounded-xl p-4 border border-border grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="relative md:col-span-1">
+        <div className="bg-card rounded-xl p-4 border border-border grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="relative lg:col-span-1">
             <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input 
               placeholder="البحث بالاسم، المستخدم، أو الإيميل..." 

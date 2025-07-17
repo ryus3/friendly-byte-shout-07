@@ -81,22 +81,27 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="basic" className="flex items-center space-x-2 space-x-reverse">
+          {/* تحسين الـ tabs للهاتف */}
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+            <TabsTrigger value="basic" className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2 text-xs lg:text-sm p-2 lg:p-3">
               <User className="h-4 w-4" />
-              <span>الإعدادات الأساسية</span>
+              <span className="hidden sm:block">الإعدادات الأساسية</span>
+              <span className="sm:hidden">الأساسية</span>
             </TabsTrigger>
-            <TabsTrigger value="roles" className="flex items-center space-x-2 space-x-reverse">
+            <TabsTrigger value="roles" className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2 text-xs lg:text-sm p-2 lg:p-3">
               <Shield className="h-4 w-4" />
-              <span>الأدوار والصلاحيات</span>
+              <span className="hidden sm:block">الأدوار والصلاحيات</span>
+              <span className="sm:hidden">الأدوار</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center space-x-2 space-x-reverse">
+            <TabsTrigger value="products" className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2 text-xs lg:text-sm p-2 lg:p-3">
               <Package className="h-4 w-4" />
-              <span>صلاحيات المنتجات</span>
+              <span className="hidden sm:block">صلاحيات المنتجات</span>
+              <span className="sm:hidden">المنتجات</span>
             </TabsTrigger>
-            <TabsTrigger value="view" className="flex items-center space-x-2 space-x-reverse">
+            <TabsTrigger value="view" className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2 text-xs lg:text-sm p-2 lg:p-3">
               <Eye className="h-4 w-4" />
-              <span>معاينة النظام</span>
+              <span className="hidden sm:block">معاينة النظام</span>
+              <span className="sm:hidden">معاينة</span>
             </TabsTrigger>
           </TabsList>
 
