@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext } from 'react';
-import { useAuth } from './UnifiedAuthContext';
+import { useAuth, usePermissions } from './UnifiedAuthContext';
 
 const AiChatContext = createContext();
 
@@ -7,7 +7,7 @@ export const useAiChat = () => useContext(AiChatContext);
 
 export const AiChatProvider = ({ children }) => {
   const [aiChatOpen, setAiChatOpen] = useState(false);
-  const { hasPermission } = useAuth();
+  const { hasPermission } = usePermissions();
   
   const canUseAiChat = true; // المساعد الذكي متاح للجميع
 

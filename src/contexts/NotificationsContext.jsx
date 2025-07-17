@@ -1,6 +1,7 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
+import { usePermissions } from './UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast.js';
 import { Bell, UserPlus, AlertTriangle, ShoppingCart, Bot, CheckCircle } from 'lucide-react';
@@ -17,7 +18,8 @@ export const useNotifications = () => {
 
 export const NotificationsProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
-    const { user, hasPermission } = useAuth();
+    const { user } = useAuth();
+    const { hasPermission } = usePermissions();
   
     // Cache management for data optimization
     const [lastFetch, setLastFetch] = useState(0);

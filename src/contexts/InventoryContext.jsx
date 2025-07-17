@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { toast } from '@/components/ui/use-toast.js';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useAuth, usePermissions } from '@/contexts/UnifiedAuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -14,7 +14,8 @@ const InventoryContext = createContext();
 export const useInventory = () => useContext(InventoryContext);
 
 export const InventoryProvider = ({ children }) => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { addNotification } = useNotifications();
   const { notifyLowStock } = useNotificationsSystem();
   const [loading, setLoading] = useState(true);

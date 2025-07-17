@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './UnifiedAuthContext';
+import { useAuth, usePermissions } from './UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 
@@ -12,7 +12,8 @@ export const useNotificationsSystem = () => {
 };
 
 export const NotificationsSystemProvider = ({ children }) => {
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 

@@ -73,7 +73,7 @@ export const UnifiedAuthProvider = ({ children }) => {
         .from('profiles')
         .select(`
           *,
-          user_roles(
+          user_roles!user_roles_user_id_fkey(
             roles(
               name,
               display_name,

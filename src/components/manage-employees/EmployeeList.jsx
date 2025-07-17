@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Shield, Power, Edit, PowerOff, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useAuth, usePermissions } from '@/contexts/UnifiedAuthContext';
 
 const EmployeeCard = ({ user, onEdit, index }) => {
-  const { hasPermission } = useAuth();
+  const { hasPermission } = usePermissions();
   const isActive = user.status === 'active';
 
   // استخدام الأدوار الجديدة من user_roles
