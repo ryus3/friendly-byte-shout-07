@@ -325,13 +325,27 @@
     z-index: 10000 !important;
   }
   
+  /* Enhanced dialog positioning and sizing */
+  [data-radix-dialog-content] {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(85vw, 1000px) !important;
+    max-height: 85vh !important;
+    z-index: 9999 !important;
+    overflow-y: auto !important;
+  }
+
   /* Dropdown positioning and styling */
-  .select-content {
+  .select-content,
+  [data-radix-select-content],
+  [data-radix-popover-content] {
     z-index: 10000 !important;
-    background: hsl(var(--popover));
-    border: 1px solid hsl(var(--border));
-    border-radius: var(--radius);
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    background: hsl(var(--popover)) !important;
+    border: 1px solid hsl(var(--border)) !important;
+    border-radius: var(--radius) !important;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
   }
   
   /* Additional Utilities */

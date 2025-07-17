@@ -3,9 +3,9 @@ import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, UserPlus, ArrowRight, Shield } from 'lucide-react';
+import { Search, UserPlus, ArrowRight, Shield, Settings, Eye } from 'lucide-react';
 import EmployeeList from '@/components/manage-employees/EmployeeList';
-import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
+import EmployeeDetailsDialog from '@/components/manage-employees/EmployeeDetailsDialog';
 import { toast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
@@ -39,7 +39,7 @@ const ManageEmployeesPage = () => {
     }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
   }, [allUsers, filters]);
 
-  const handleEdit = (employee) => {
+  const handleViewEmployee = (employee) => {
     setEditingEmployee(employee);
     setIsEditModalOpen(true);
   };
@@ -58,7 +58,7 @@ const ManageEmployeesPage = () => {
         <meta name="description" content="إدارة صلاحيات وحسابات الموظفين" />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="space-y-6 p-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => navigate('/settings')}>
@@ -73,7 +73,7 @@ const ManageEmployeesPage = () => {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setIsBulkUpdateOpen(true)}>
                 <Shield className="w-4 h-4 ml-2" />
-                تعديل صلاحيات جماعي
+                إدارة الأدوار والصلاحيات
             </Button>
             <Button onClick={handleAddNew}>
               <UserPlus className="w-4 h-4 ml-2" />
@@ -94,8 +94,8 @@ const ManageEmployeesPage = () => {
             />
           </div>
           <Select name="status" value={filters.status} onValueChange={(v) => handleSelectFilterChange('status', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger><SelectValue placeholder="حالة الموظف" /></SelectTrigger>
+            <SelectContent className="bg-popover border border-border">
               <SelectItem value="all">كل الحالات</SelectItem>
               <SelectItem value="active">نشط</SelectItem>
               <SelectItem value="pending">قيد المراجعة</SelectItem>
@@ -103,29 +103,30 @@ const ManageEmployeesPage = () => {
             </SelectContent>
           </Select>
           <Select name="role" value={filters.role} onValueChange={(v) => handleSelectFilterChange('role', v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
+            <SelectTrigger><SelectValue placeholder="دور الموظف" /></SelectTrigger>
+            <SelectContent className="bg-popover border border-border">
               <SelectItem value="all">كل الأدوار</SelectItem>
               <SelectItem value="admin">مدير</SelectItem>
               <SelectItem value="deputy">نائب مدير</SelectItem>
-              <SelectItem value="employee">موظف</SelectItem>
-              <SelectItem value="warehouse">مخزن</SelectItem>
+              <SelectItem value="employee">موظف مبيعات</SelectItem>
+              <SelectItem value="warehouse">موظف مخزن</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <EmployeeList 
           users={filteredUsers} 
-          onEdit={handleEdit}
+          onView={handleViewEmployee}
         />
 
         {editingEmployee && (
-          <UnifiedEmployeeDialog
+          <EmployeeDetailsDialog
               employee={editingEmployee}
               open={isEditModalOpen}
               onOpenChange={setIsEditModalOpen}
           />
         )}
+        
         <UpdateRolePermissionsDialog 
             open={isBulkUpdateOpen}
             onOpenChange={setIsBulkUpdateOpen}
