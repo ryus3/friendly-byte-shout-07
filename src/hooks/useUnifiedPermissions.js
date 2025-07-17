@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
-export const useUnifiedPermissions = () => {
-  const { user } = useAuth();
+export const useUnifiedPermissions = (passedUser) => {
+  const auth = useAuth();
+  const user = passedUser || auth?.user;
   const [userRoles, setUserRoles] = useState([]);
   const [userPermissions, setUserPermissions] = useState([]);
   const [productPermissions, setProductPermissions] = useState({});
