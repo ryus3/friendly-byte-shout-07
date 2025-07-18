@@ -642,7 +642,17 @@ export const UnifiedAuthProvider = ({ children }) => {
     userRoles,
     userPermissions,
     productPermissions,
-    filterProductsByPermissions
+    filterProductsByPermissions,
+    // إضافة debug للصلاحيات
+    debugPermissions: () => {
+      console.log('🔍 Debug الصلاحيات:', {
+        userRoles,
+        userPermissions,
+        productPermissions,
+        isAdmin,
+        user
+      });
+    }
   };
 
   return (

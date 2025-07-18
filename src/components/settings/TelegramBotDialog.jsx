@@ -122,120 +122,129 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-blue-500" />
-            بوت التليغرام
+          <DialogTitle className="flex items-center gap-3 text-xl">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <Bot className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-bold">بوت التليغرام الذكي</h3>
+              <p className="text-sm text-muted-foreground font-normal">رمزك الشخصي للاتصال مع بوت التليغرام</p>
+            </div>
           </DialogTitle>
-          <DialogDescription>
-            إعداد وإدارة بوت التليغرام لتلقي الإشعارات وإدارة الطلبات
-          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Bot Status */}
-          <Card className="bg-green-50 border-green-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-green-700">
-                <CheckCircle className="w-5 h-5" />
-                البوت جاهز تلقائياً
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 text-sm text-green-700">
-                <p>✅ تم إعداد البوت تلقائياً ويعمل الآن!</p>
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <p className="font-medium">📱 اسم البوت: @Ryusiq_bot</p>
-                  <p className="text-xs mt-1">البوت نشط ويستقبل الطلبات تلقائياً من الموظفين</p>
+          {/* Top Section - Bot Info */}
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+            <CardContent className="p-6">
+              <div className="text-center space-y-3">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto">
+                  <MessageCircle className="w-8 h-8 text-white" />
                 </div>
-                <div className="text-xs">
-                  <p><strong>✨ كل شيء تلقائي:</strong></p>
-                  <ul className="list-disc list-inside space-y-1 mr-4 mt-1">
-                    <li>لا حاجة لإعداد يدوي</li>
-                    <li>الموظفين يحتاجون فقط لرموزهم</li>
-                    <li>التوجيه الذكي داخل البوت</li>
-                    <li>دعم متقدم حسب الصلاحيات</li>
-                  </ul>
+                <h3 className="text-lg font-bold text-green-800">البوت نشط ويستقبل الطلبات تلقائياً من الموظفين</h3>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-2 text-green-700">
+                    <span>🤖</span>
+                    <span className="font-semibold">@Ryusiq_bot</span>
+                  </div>
+                  <div className="text-sm text-green-600 space-y-1">
+                    <p>✨ <strong>كل شيء تلقائي:</strong></p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Badge variant="secondary" className="text-xs">لا حاجة لإعداد يدوي</Badge>
+                      <Badge variant="secondary" className="text-xs">الموظفين يحتاجون فقط لرموزهم</Badge>
+                      <Badge variant="secondary" className="text-xs">التوجيه الذكي داخل البوت</Badge>
+                      <Badge variant="secondary" className="text-xs">دعم متقدم حسب الصلاحيات</Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-
-          {/* رموز الموظفين */}
+          {/* Employee Codes Section */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-blue-500" />
-                رموز الموظفين للبوت
+                <Users className="w-5 h-5 text-blue-500" />
+                رموز الموظفين
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {canViewAllData ? 'كل موظف له رمز للاتصال بالبوت @Ryusiq_bot' : 'رمزك الشخصي للاتصال بالبوت'}
+                {canViewAllData ? 'كل موظف له رمز للاتصال بالبوت' : 'رمزك الشخصي للاتصال بالبوت'}
               </p>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {/* عرض جميع رموز الموظفين */}
                 {employeeCodes.map((employeeCode) => {
                   const profile = employeeCode.profiles;
-                  const isCurrentUser = user?.id === employeeCode.user_id;
-                  const isAdmin = canViewAllData;
+                  const isCurrentUser = user?.user_id === employeeCode.user_id;
+                  const isLinked = !!employeeCode.telegram_chat_id;
                   
                   return (
-                    <div key={employeeCode.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex items-center gap-3">
-                         <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                           isCurrentUser 
-                             ? 'bg-gradient-to-r from-purple-500 to-blue-500' 
-                             : 'bg-gradient-to-r from-green-500 to-teal-500'
-                         }`}>
-                          <span className="text-white font-bold text-sm">
+                    <div key={employeeCode.id} className={`p-4 rounded-lg border transition-colors ${
+                      isCurrentUser ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                            isCurrentUser 
+                              ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
+                              : 'bg-gradient-to-r from-green-500 to-teal-500'
+                          }`}>
                             {profile?.full_name?.charAt(0) || 'U'}
-                          </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              {isCurrentUser && (
+                                <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
+                                  المدير العام
+                                </Badge>
+                              )}
+                              <Badge variant={isLinked ? "default" : "outline"} className="text-xs">
+                                {isLinked ? 'متصل' : 'حالة الاتصال'}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold">{profile?.full_name || 'مستخدم'}</p>
-                          <Badge variant={isCurrentUser ? "outline" : "secondary"} className="text-xs">
-                            {isCurrentUser ? 'أنت' : 'موظف'}
-                          </Badge>
-                          {profile?.user_id && (
-                            <Badge variant="secondary" className="text-xs mr-1">
-                              📱
+                        <div className="flex items-center gap-2">
+                          <div className="text-center">
+                            <Badge 
+                              variant="outline" 
+                              className={`font-mono text-lg px-4 py-2 ${
+                                isCurrentUser 
+                                  ? 'bg-blue-100 text-blue-700 border-blue-300' 
+                                  : 'bg-green-100 text-green-700 border-green-300'
+                              }`}
+                            >
+                              {employeeCode.employee_code}
                             </Badge>
-                          )}
+                            <p className="text-xs text-muted-foreground mt-1">عرض الرمز</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyToClipboard(employeeCode.employee_code)}
+                            className="h-10"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                         <Badge 
-                           variant="outline" 
-                           className={`font-mono text-sm px-3 py-1 ${
-                             isCurrentUser ? 'bg-purple-50 text-purple-700 border-purple-300' : 'bg-green-50 text-green-700 border-green-300'
-                           }`}
-                         >
-                          {employeeCode.employee_code}
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => copyToClipboard(employeeCode.employee_code)}
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
                       </div>
                     </div>
                   );
                 })}
 
                 {employeeCodes.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
                     {canViewAllData ? (
                       <>
-                        <p>لا يوجد موظفين مضافين بعد</p>
+                        <p className="text-lg font-semibold">لا يوجد موظفين مضافين بعد</p>
                         <p className="text-sm">أضف موظفين من إدارة الموظفين</p>
                       </>
                     ) : (
                       <>
-                        <p>لم يتم إنشاء رمز تليجرام بعد</p>
+                        <p className="text-lg font-semibold">لم يتم إنشاء رمز تليجرام بعد</p>
                         <p className="text-sm">يرجى مراجعة المدير لإنشاء رمزك</p>
                       </>
                     )}
@@ -245,8 +254,8 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
             </CardContent>
           </Card>
 
-          {/* تعليمات الاستخدام */}
-          <Card className="bg-blue-50 border-blue-200">
+          {/* Instructions */}
+          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-blue-700">
                 <Smartphone className="w-5 h-5" />
@@ -254,22 +263,26 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 text-sm text-blue-700">
-                <div className="flex items-start gap-2">
-                  <span className="font-bold">1.</span>
-                  <p>ابحث عن البوت في التليغرام واضغط Start</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                    <p className="text-sm text-blue-700">ابحث عن البوت في التليغرام واضغط <span className="font-semibold">Start</span></p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                    <p className="text-sm text-blue-700">أرسل الرمز الخاص بك إلى البوت</p>
+                  </div>
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-bold">2.</span>
-                  <p>أرسل الرمز الخاص بك إلى البوت</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-bold">3.</span>
-                  <p>ستتلقى رسالة تأكيد ربط الحساب</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-bold">4.</span>
-                  <p>ستبدأ بتلقي الإشعارات فوراً</p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                    <p className="text-sm text-blue-700">ستتلقى رسالة تأكيد ربط الحساب</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                    <p className="text-sm text-blue-700">ستبدأ بتلقي الإشعارات فوراً</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -281,16 +294,6 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
             إغلاق
           </Button>
         </div>
-
-        <TelegramBotSetup 
-          open={showSetup} 
-          onOpenChange={(open) => {
-            setShowSetup(open);
-            if (!open) {
-              checkBotConfiguration();
-            }
-          }} 
-        />
       </DialogContent>
     </Dialog>
   );

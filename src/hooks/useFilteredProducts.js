@@ -1,109 +1,111 @@
 import { useMemo } from 'react';
-import usePermissionBasedData from './usePermissionBasedData';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 /**
  * Hook موحد لفلترة المنتجات حسب صلاحيات المستخدم
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
-  const { 
-    isAdmin, 
-    filterCategoriesByPermission,
-    filterDepartmentsByPermission,
-    filterColorsByPermission,
-    filterSizesByPermission,
-    filterProductTypesByPermission,
-    filterSeasonsOccasionsByPermission
-  } = usePermissionBasedData();
+  const { user, productPermissions, isAdmin } = useAuth();
+  
+  // إضافة تسجيل للتشخيص
+  console.log('🔍 useFilteredProducts Debug:', {
+    products: products?.length || 0,
+    user: user?.full_name,
+    isAdmin,
+    productPermissions,
+    hasPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
+  });
 
   const filteredProducts = useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
     
+    console.log('🔍 فلترة المنتجات:', {
+      totalProducts: products.length,
+      isAdmin,
+      productPermissions: Object.keys(productPermissions || {}).length
+    });
+    
     // المديرون يرون كل المنتجات
-    if (isAdmin) return products;
+    if (isAdmin) {
+      console.log('✅ المدير - عرض جميع المنتجات');
+      return products;
+    }
 
-    // فلترة المنتجات حسب صلاحيات الموظف
+    // إذا لم تكن هناك صلاحيات محددة، عرض جميع المنتجات (للموظفين الجدد)
+    if (!productPermissions || Object.keys(productPermissions).length === 0) {
+      console.log('⚠️ لا توجد صلاحيات محددة - عرض جميع المنتجات');
+      return products;
+    }
+
+    // فلترة المنتجات حسب صلاحيات الموظف بناءً على productPermissions
     const filtered = products.filter(product => {
-      // فحص التصنيفات (categories) - إذا كان للمنتج تصنيفات
-      if (product.product_categories && product.product_categories.length > 0) {
-        const productCategories = product.product_categories.map(pc => pc.categories).filter(Boolean);
-        const allowedCategories = filterCategoriesByPermission(productCategories);
-        if (allowedCategories.length === 0) {
-          return false; // المنتج له تصنيفات لكن المستخدم لا يملك صلاحية عليها
+      let hasPermission = true;
+
+      // فحص التصنيفات (categories)
+      const categoryPerm = productPermissions.category;
+      if (categoryPerm && !categoryPerm.has_full_access && product.product_categories?.length > 0) {
+        const hasAllowedCategory = product.product_categories.some(pc => 
+          categoryPerm.allowed_items.includes(pc.category_id)
+        );
+        if (!hasAllowedCategory) {
+          console.log('❌ منتج مرفوض بسبب التصنيف:', product.name);
+          hasPermission = false;
         }
       }
 
-      // فحص الأقسام (departments) - إذا كان للمنتج أقسام
-      if (product.product_departments && product.product_departments.length > 0) {
-        const productDepartments = product.product_departments.map(pd => pd.departments).filter(Boolean);
-        const allowedDepartments = filterDepartmentsByPermission(productDepartments);
-        if (allowedDepartments.length === 0) return false; // المنتج له أقسام لكن المستخدم لا يملك صلاحية عليها
+      // فحص الأقسام (departments)
+      const departmentPerm = productPermissions.department;
+      if (departmentPerm && !departmentPerm.has_full_access && product.product_departments?.length > 0) {
+        const hasAllowedDepartment = product.product_departments.some(pd => 
+          departmentPerm.allowed_items.includes(pd.department_id)
+        );
+        if (!hasAllowedDepartment) {
+          console.log('❌ منتج مرفوض بسبب القسم:', product.name);
+          hasPermission = false;
+        }
       }
 
-      // فحص أنواع المنتجات (product_types) - إذا كان للمنتج أنواع
-      if (product.product_product_types && product.product_product_types.length > 0) {
-        const productTypes = product.product_product_types.map(ppt => ppt.product_types).filter(Boolean);
-        const allowedProductTypes = filterProductTypesByPermission(productTypes);
-        if (allowedProductTypes.length === 0) return false; // المنتج له أنواع لكن المستخدم لا يملك صلاحية عليها
+      // فحص أنواع المنتجات (product_types)
+      const productTypePerm = productPermissions.product_type;
+      if (productTypePerm && !productTypePerm.has_full_access && product.product_product_types?.length > 0) {
+        const hasAllowedProductType = product.product_product_types.some(ppt => 
+          productTypePerm.allowed_items.includes(ppt.product_type_id)
+        );
+        if (!hasAllowedProductType) {
+          console.log('❌ منتج مرفوض بسبب نوع المنتج:', product.name);
+          hasPermission = false;
+        }
       }
 
-      // فحص المواسم والمناسبات (seasons_occasions) - إذا كان للمنتج مواسم
-      if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
-        const seasonsOccasions = product.product_seasons_occasions.map(pso => pso.seasons_occasions).filter(Boolean);
-        const allowedSeasonsOccasions = filterSeasonsOccasionsByPermission(seasonsOccasions);
-        if (allowedSeasonsOccasions.length === 0) return false; // المنتج له مواسم لكن المستخدم لا يملك صلاحية عليها
+      // فحص المواسم والمناسبات (seasons_occasions)
+      const seasonPerm = productPermissions.season_occasion;
+      if (seasonPerm && !seasonPerm.has_full_access && product.product_seasons_occasions?.length > 0) {
+        const hasAllowedSeason = product.product_seasons_occasions.some(pso => 
+          seasonPerm.allowed_items.includes(pso.season_occasion_id)
+        );
+        if (!hasAllowedSeason) {
+          console.log('❌ منتج مرفوض بسبب الموسم:', product.name);
+          hasPermission = false;
+        }
       }
 
-      // إذا وصل إلى هنا، المنتج مسموح له
-
-      // فحص المتغيرات (variants) - فلترة حسب الألوان والأحجام
-      if (product.variants && product.variants.length > 0) {
-        const allowedVariants = product.variants.filter(variant => {
-          let variantHasPermission = true;
-
-          // فحص الألوان - إذا كان للمتغير لون محدد
-          if (variant.color_id || variant.colors) {
-            const variantColors = variant.colors ? [variant.colors] : [];
-            if (variantColors.length > 0) {
-              const allowedColors = filterColorsByPermission(variantColors);
-              if (allowedColors.length === 0) variantHasPermission = false;
-            }
-          }
-
-          // فحص الأحجام - إذا كان للمتغير حجم محدد
-          if (variant.size_id || variant.sizes) {
-            const variantSizes = variant.sizes ? [variant.sizes] : [];
-            if (variantSizes.length > 0) {
-              const allowedSizes = filterSizesByPermission(variantSizes);
-              if (allowedSizes.length === 0) variantHasPermission = false;
-            }
-          }
-
-          return variantHasPermission;
-        });
-
-        // إذا لم تكن هناك متغيرات مسموحة، أخفي المنتج
-        if (allowedVariants.length === 0) return false;
-
-        // فلترة المتغيرات في المنتج نفسه
-        product.variants = allowedVariants;
-        product.product_variants = allowedVariants;
+      if (hasPermission) {
+        console.log('✅ منتج مقبول:', product.name);
       }
 
-      return true;
+      return hasPermission;
+    });
+    
+    console.log('🔍 نتيجة الفلترة:', {
+      originalCount: products.length,
+      filteredCount: filtered.length,
+      difference: products.length - filtered.length,
+      permissionTypes: Object.keys(productPermissions || {})
     });
     
     return filtered;
-  }, [
-    products, 
-    isAdmin, 
-    filterCategoriesByPermission,
-    filterDepartmentsByPermission,
-    filterColorsByPermission,
-    filterSizesByPermission,
-    filterProductTypesByPermission,
-    filterSeasonsOccasionsByPermission
-  ]);
+  }, [products, isAdmin, productPermissions]);
 
   return filteredProducts;
 };
@@ -112,11 +114,7 @@ export const useFilteredProducts = (products) => {
  * Hook لفلترة متغيرات منتج واحد
  */
 export const useFilteredVariants = (variants) => {
-  const { 
-    isAdmin, 
-    filterColorsByPermission,
-    filterSizesByPermission
-  } = usePermissionBasedData();
+  const { isAdmin, productPermissions } = useAuth();
 
   const filteredVariants = useMemo(() => {
     if (!variants || !Array.isArray(variants)) return [];
@@ -124,29 +122,32 @@ export const useFilteredVariants = (variants) => {
     // المديرون يرون كل المتغيرات
     if (isAdmin) return variants;
 
+    // إذا لم تكن هناك صلاحيات محددة، عرض جميع المتغيرات
+    if (!productPermissions || Object.keys(productPermissions).length === 0) {
+      return variants;
+    }
+
     // فلترة المتغيرات حسب صلاحيات الموظف
     return variants.filter(variant => {
       // فحص الألوان
-      if (variant.color_id || variant.colors) {
-        const variantColors = variant.colors ? [variant.colors] : [];
-        if (variantColors.length > 0) {
-          const allowedColors = filterColorsByPermission(variantColors);
-          if (allowedColors.length === 0) return false;
+      const colorPerm = productPermissions.color;
+      if (colorPerm && !colorPerm.has_full_access && variant.color_id) {
+        if (!colorPerm.allowed_items.includes(variant.color_id)) {
+          return false;
         }
       }
 
       // فحص الأحجام
-      if (variant.size_id || variant.sizes) {
-        const variantSizes = variant.sizes ? [variant.sizes] : [];
-        if (variantSizes.length > 0) {
-          const allowedSizes = filterSizesByPermission(variantSizes);
-          if (allowedSizes.length === 0) return false;
+      const sizePerm = productPermissions.size;
+      if (sizePerm && !sizePerm.has_full_access && variant.size_id) {
+        if (!sizePerm.allowed_items.includes(variant.size_id)) {
+          return false;
         }
       }
 
       return true;
     });
-  }, [variants, isAdmin, filterColorsByPermission, filterSizesByPermission]);
+  }, [variants, isAdmin, productPermissions]);
 
   return filteredVariants;
 };
