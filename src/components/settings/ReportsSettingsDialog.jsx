@@ -13,7 +13,7 @@ import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
 import InventoryPDF from '@/components/pdf/InventoryPDF';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subDays } from 'date-fns';
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {

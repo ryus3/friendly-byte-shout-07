@@ -217,20 +217,28 @@ const ProfitsManagementPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {profits.map(profit => (
+                  {profits.length > 0 ? profits.map(profit => (
                     <div key={profit.id} className="flex justify-between items-center p-4 border rounded-lg">
                       <div>
                         <p className="font-medium">طلب #{profit.order_id}</p>
+                        <p className="text-sm text-muted-foreground">
+                          الموظف: {profit.employee?.full_name || 'غير محدد'}
+                        </p>
                         <p className="text-sm text-muted-foreground">
                           {formatDate(profit.created_at)}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">{formatCurrency(profit.total_profit)}</p>
+                        <p className="font-bold">{formatCurrency(profit.employee_profit || 0)}</p>
                         {getStatusBadge(profit.status)}
                       </div>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>لا توجد أرباح مسجلة حتى الآن</p>
+                      <p className="text-sm mt-2">ستظهر الأرباح تلقائياً عند إنشاء الطلبات</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -387,20 +395,27 @@ const ProfitsManagementPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {profits.filter(p => p.employee_id === user?.id).map(profit => (
-                    <div key={profit.id} className="flex justify-between items-center p-4 border rounded-lg">
-                      <div>
-                        <p className="font-medium">طلب #{profit.order_id}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDate(profit.created_at)}
-                        </p>
+                  {profits.filter(p => p.employee_id === user?.user_id).length > 0 ? (
+                    profits.filter(p => p.employee_id === user?.user_id).map(profit => (
+                      <div key={profit.id} className="flex justify-between items-center p-4 border rounded-lg">
+                        <div>
+                          <p className="font-medium">طلب #{profit.order_id}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(profit.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold">{formatCurrency(profit.employee_profit || 0)}</p>
+                          {getStatusBadge(profit.status)}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold">{formatCurrency(profit.total_profit)}</p>
-                        {getStatusBadge(profit.status)}
-                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>لا توجد أرباح لك حتى الآن</p>
+                      <p className="text-sm mt-2">أنشئ طلبات مبيعات لبدء تجميع الأرباح</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
