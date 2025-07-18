@@ -250,12 +250,14 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 gap-6 mb-8">
-            <ModernCard
-              icon={FileText}
-              title="إدارة التقارير والإحصائيات"
-              description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
-              iconColor="from-gradient-start to-gradient-end"
-              onClick={() => setIsReportsOpen(true)}
+            {/* التقارير - للمدراء فقط */}
+            {canManageSettings && (
+              <ModernCard
+                icon={FileText}
+                title="إدارة التقارير والإحصائيات"
+                description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
+                iconColor="from-gradient-start to-gradient-end"
+                onClick={() => setIsReportsOpen(true)}
             >
               <div className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -297,6 +299,7 @@ const SettingsPage = () => {
                 </div>
               </div>
             </ModernCard>
+            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -388,7 +391,7 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      <ProfileSecurityDialog 
+      <ProfileSecurityDialog
         open={isEditProfileOpen}
         onOpenChange={setIsEditProfileOpen} 
       />
@@ -410,10 +413,13 @@ const SettingsPage = () => {
         onOpenChange={setIsCustomerSettingsOpen}
       />
 
-      <ReportsSettingsDialog
-        open={isReportsOpen}
-        onOpenChange={setIsReportsOpen}
-      />
+      {/* التقارير - للمدراء فقط */}
+      {canManageSettings && (
+        <ReportsSettingsDialog
+          open={isReportsOpen}
+          onOpenChange={setIsReportsOpen}
+        />
+      )}
 
 
       {canAccessDeliveryPartners && (
