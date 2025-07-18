@@ -191,22 +191,27 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             
             <div className="label-barcode-container">
               {label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود' ? (
-                <Barcode 
-                  value={label.barcode} 
-                  format="CODE128"
-                  height={30}
-                  width={1.8}
-                  fontSize={8}
-                  margin={1}
-                  displayValue={true}
-                  background="#FFFFFF"
-                  lineColor="#000000"
-                  textAlign="center"
-                  textPosition="bottom"
-                  textMargin={2}
-                />
+                <div>
+                  <Barcode 
+                    value={label.barcode} 
+                    format="CODE128"
+                    height={30}
+                    width={1.8}
+                    fontSize={8}
+                    margin={1}
+                    displayValue={true}
+                    background="#FFFFFF"
+                    lineColor="#000000"
+                    textAlign="center"
+                    textPosition="bottom"
+                    textMargin={2}
+                  />
+                </div>
               ) : (
-                <div className="no-barcode">لا يوجد باركود</div>
+                <div className="no-barcode">
+                  <p>لا يوجد باركود</p>
+                  <p className="text-xs">{label.color} - {label.size}</p>
+                </div>
               )}
             </div>
             

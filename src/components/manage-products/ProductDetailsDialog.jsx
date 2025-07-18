@@ -151,20 +151,52 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
               </p>
               
               {/* عرض الباركود */}
-              {(selectedVariant?.barcode || product.barcode) && (
-                <div className="space-y-2">
-                  <h5 className="font-medium text-sm">الباركود</h5>
-                  <div className="bg-white p-2 rounded border">
-                    <Barcode 
-                      value={selectedVariant?.barcode || product.barcode} 
-                      width={1.5} 
-                      height={40} 
-                      fontSize={12}
-                      displayValue={true}
-                    />
-                  </div>
+              <div className="space-y-2">
+                <h5 className="font-medium text-sm">الباركود</h5>
+                <div className="bg-white p-2 rounded border">
+                  {selectedVariant ? (
+                    // عرض باركود المتغير المحدد
+                    selectedVariant.barcode ? (
+                      <div className="space-y-1">
+                        <Barcode 
+                          value={selectedVariant.barcode} 
+                          width={1.5} 
+                          height={40} 
+                          fontSize={12}
+                          displayValue={true}
+                          format="CODE128"
+                          background="#FFFFFF"
+                          lineColor="#000000"
+                        />
+                        <p className="text-xs text-center text-muted-foreground">
+                          {selectedVariant.colors?.name || selectedVariant.color} - {selectedVariant.sizes?.name || selectedVariant.size}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">لا يوجد باركود لهذا المتغير</p>
+                    )
+                  ) : (
+                    // عرض باركود المنتج العام إذا لم يتم اختيار متغير
+                    product.barcode ? (
+                      <div className="space-y-1">
+                        <Barcode 
+                          value={product.barcode} 
+                          width={1.5} 
+                          height={40} 
+                          fontSize={12}
+                          displayValue={true}
+                          format="CODE128"
+                          background="#FFFFFF"
+                          lineColor="#000000"
+                        />
+                        <p className="text-xs text-center text-muted-foreground">باركود المنتج العام</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">اختر لون ومقاس لرؤية الباركود</p>
+                    )
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
