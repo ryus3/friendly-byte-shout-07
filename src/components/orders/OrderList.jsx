@@ -47,8 +47,7 @@ const OrderList = ({
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="transform-gpu"
         >
-          >
-            <MemoizedOrderCard
+          <MemoizedOrderCard
               order={order}
               onViewOrder={() => onViewOrder(order)}
               onEditOrder={() => onEditOrder && onEditOrder(order)}
