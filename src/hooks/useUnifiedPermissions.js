@@ -1,45 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
-  let authContext;
+  // استدعاء جميع hooks في البداية دائماً
+  const [userRoles, setUserRoles] = useState([]);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [productPermissions, setProductPermissions] = useState({});
+  const [loading, setLoading] = useState(true);
+  
+  let authContext = null;
+  let hasError = false;
   
   try {
     authContext = useAuth();
   } catch (error) {
     console.error('useUnifiedPermissions: Error accessing AuthContext:', error);
-    return {
-      user: null,
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {},
-      loading: false,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      hasRole: () => false,
-      hasPermission: () => false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: () => [],
-      filterProductsByPermissions: () => [],
-      getEmployeeStats: () => ({})
-    };
+    hasError = true;
   }
   
   const user = passedUser || authContext?.user;
-  const [userRoles, setUserRoles] = useState([]);
-  const [userPermissions, setUserPermissions] = useState([]);
-  const [productPermissions, setProductPermissions] = useState({});
-  const [loading, setLoading] = useState(true);
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    if (!user?.user_id) return;
+    // التحقق من الأخطاء أولاً
+    if (hasError || !authContext || !user?.user_id) {
+      setLoading(false);
+      return;
+    }
 
     const fetchUserPermissions = async () => {
       try {
@@ -111,21 +99,23 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [user?.user_id]);
+  }, [user?.user_id, hasError, authContext]);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
+    if (hasError || !authContext) return () => false;
     return (permissionName) => {
       return userPermissions.some(perm => perm.name === permissionName);
     };
-  }, [userPermissions]);
+  }, [userPermissions, hasError, authContext]);
 
   // التحقق من دور معين
   const hasRole = useMemo(() => {
+    if (hasError || !authContext) return () => false;
     return (roleName) => {
       return userRoles.some(ur => ur.roles.name === roleName);
     };
-  }, [userRoles]);
+  }, [userRoles, hasError, authContext]);
 
   // فحص الأدوار الأساسية
   const isAdmin = useMemo(() => hasRole('super_admin'), [hasRole]);
@@ -215,6 +205,30 @@ export const useUnifiedPermissions = (passedUser) => {
       };
     };
   }, [filterDataByUser]);
+
+  // إذا حدث خطأ، إرجاع قيم افتراضية آمنة
+  if (hasError || !authContext) {
+    return {
+      user: null,
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {},
+      loading: false,
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      hasRole: () => false,
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      filterDataByUser: () => [],
+      filterProductsByPermissions: () => [],
+      getEmployeeStats: () => ({})
+    };
+  }
 
   return {
     // البيانات الأساسية
