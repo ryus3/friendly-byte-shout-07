@@ -104,7 +104,12 @@ const SidebarContent = ({ onClose }) => {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name || 'المستخدم'}</h3>
-              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.activeRoles || user?.roles || [])}</p>
+              <p className="text-sm text-muted-foreground">
+                {user && (user.activeRoles?.length > 0 || user.roles?.length > 0) 
+                  ? getRoleDisplayName(user.activeRoles || user.roles || [])
+                  : 'جاري التحميل...'
+                }
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
