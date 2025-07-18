@@ -17,9 +17,9 @@ const getStatusInfo = (status) => {
     case 'delivered': return { badge: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
     case 'cancelled': return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
     case 'returned': return { badge: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
-    case 'return_received': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
-    default: return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    case 'returned_in_stock': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    case 'return_received': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    default: return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
   }
 };
 
@@ -88,7 +88,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${statusInfo.badge}`}>
-                {statusInfo.icon} {statusInfo.text}
+                {statusInfo.icon} 
+                <span>{statusInfo.text}</span>
               </div>
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border">

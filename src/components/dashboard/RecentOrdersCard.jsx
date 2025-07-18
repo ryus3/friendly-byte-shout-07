@@ -62,24 +62,24 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'return_received': { 
         label: 'تم الإرجاع للمخزن', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
       },
       'returned_in_stock': { 
         label: 'تم الإرجاع للمخزن', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
       }
     };
     const statusInfo = statusMap[status] || { 
       label: 'تم الإرجاع للمخزن', 
       icon: Package,
-      className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
+      className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
     };
     const StatusIcon = statusInfo.icon;
     return (
-      <Badge className={cn("text-xs px-2 py-1 flex items-center gap-1.5 font-medium", statusInfo.className)}>
-        <StatusIcon className="w-3 h-3" />
-        {statusInfo.label}
+      <Badge className={cn("text-xs px-2 py-1 flex items-center gap-2 font-medium", statusInfo.className)}>
+        <StatusIcon className="w-3 h-3 flex-shrink-0" />
+        <span>{statusInfo.label}</span>
       </Badge>
     );
   };
@@ -185,20 +185,20 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       <div className="h-3 w-px bg-border/50" />
                       
                       <div className="flex items-center gap-1.5">
-                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-xs font-medium transition-all ${
+                        <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium transition-all shadow-sm ${
                           order.delivery_partner === 'محلي' || !order.delivery_partner 
-                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200' 
+                            ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border-emerald-200' 
                             : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200'
                         }`}>
                           {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
                             <>
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                              <span>محلي</span>
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                              <span>🏠 محلي</span>
                             </>
                           ) : (
                             <>
                               <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                              <span>{order.delivery_partner.length > 8 ? order.delivery_partner.substring(0, 8) + '...' : order.delivery_partner}</span>
+                              <span>🚚 {order.delivery_partner.length > 6 ? order.delivery_partner.substring(0, 6) + '..' : order.delivery_partner}</span>
                             </>
                           )}
                         </div>

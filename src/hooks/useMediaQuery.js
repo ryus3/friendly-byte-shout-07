@@ -1,26 +1,18 @@
 import { useState, useEffect } from 'react';
 
 export const useMediaQuery = (query) => {
-  // التحقق من وجود React context قبل استدعاء useState
-  let matches;
-  let setMatches;
+  // التحقق من وجود window في البيئة
+  const isClient = typeof window !== 'undefined';
   
-  try {
-    [matches, setMatches] = useState(() => {
-      // التحقق من وجود window و matchMedia
-      if (typeof window !== 'undefined' && window.matchMedia) {
-        return window.matchMedia(query).matches;
-      }
+  const [matches, setMatches] = useState(() => {
+    if (!isClient || !window.matchMedia) {
       return false;
-    });
-  } catch (error) {
-    console.warn('useMediaQuery hook called outside React context, using fallback');
-    return false;
-  }
+    }
+    return window.matchMedia(query).matches;
+  });
 
   useEffect(() => {
-    // التحقق من وجود window و matchMedia
-    if (typeof window === 'undefined' || !window.matchMedia) {
+    if (!isClient || !window.matchMedia) {
       return;
     }
 
@@ -31,18 +23,26 @@ export const useMediaQuery = (query) => {
       setMatches(media.matches);
     }
     
-    const listener = () => {
-      if (setMatches) {
-        setMatches(media.matches);
-      }
+    const listener = (event) => {
+      setMatches(event.matches);
     };
     
-    media.addEventListener('change', listener);
+    // استخدام addEventListener بدلاً من addListener
+    if (media.addEventListener) {
+      media.addEventListener('change', listener);
+    } else {
+      // للمتصفحات القديمة
+      media.addListener(listener);
+    }
     
     return () => {
-      media.removeEventListener('change', listener);
+      if (media.removeEventListener) {
+        media.removeEventListener('change', listener);
+      } else {
+        media.removeListener(listener);
+      }
     };
-  }, [matches, query, setMatches]);
+  }, [query, isClient, matches]);
 
-  return matches || false;
+  return matches;
 };

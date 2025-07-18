@@ -76,18 +76,18 @@ const OrderCard = ({
       'return_received': { 
         label: 'تم الإرجاع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
+        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
       },
       'returned_in_stock': { 
         label: 'تم الإرجاع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
+        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
       }
     };
     return configs[status] || { 
       label: 'تم الإرجاع للمخزن', 
       icon: PackageCheck,
-      color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
+      color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
     };
   };
 
@@ -136,40 +136,42 @@ const OrderCard = ({
                   className="mt-1"
                 />
                 <div className="flex flex-col space-y-1">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="flex flex-col gap-1">
-                      <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        رقم الطلب: {order.order_number}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* عنصر التوصيل المحدث */}
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
-                        order.delivery_partner === 'محلي' || !order.delivery_partner 
-                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200 shadow-sm' 
-                          : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200 shadow-sm'
-                      }`}>
-                        {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                            <span>توصيل محلي</span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                            <span>{order.delivery_partner}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                  <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    رقم الطلب: {order.order_number}
+                  </p>
+                  
+                  {/* عنصر التوصيل المطور بأشكال مميزة */}
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all shadow-md w-fit ${
+                    order.delivery_partner === 'محلي' || !order.delivery_partner 
+                      ? 'bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 text-emerald-700 border-emerald-300 shadow-emerald-200' 
+                      : 'bg-gradient-to-r from-blue-50 via-cyan-50 to-sky-50 text-blue-700 border-blue-300 shadow-blue-200'
+                  }`}>
+                    {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
+                      <>
+                        <div className="relative">
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                          <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                        </div>
+                        <span className="font-semibold">🏠 توصيل محلي</span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="relative">
+                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                          <div className="absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-blue-300"></div>
+                        </div>
+                        <span className="font-semibold">🚚 {order.delivery_partner.length > 12 ? order.delivery_partner.substring(0, 12) + '...' : order.delivery_partner}</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
               
-              <div className={`flex items-center space-x-1 rtl:space-x-reverse px-2 py-1 rounded-md border ${statusConfig.color}`}>
-                <StatusIcon className="h-4 w-4" />
-                <span className="text-sm font-medium">{statusConfig.label}</span>
+              {/* حالة الطلب */}
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-sm backdrop-blur-sm ${statusConfig.color}`}>
+                <StatusIcon className="h-4 w-4 flex-shrink-0" />
+                <span>{statusConfig.label}</span>
               </div>
             </div>
 

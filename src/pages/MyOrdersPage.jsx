@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import ProfitSummaryCard from '@/components/profits/ProfitSummaryCard';
+import EmployeeStatsCards from '@/components/dashboard/EmployeeStatsCards';
 import Loader from '@/components/ui/loader';
 import { ShoppingCart, Package, RefreshCw, Loader2, Search, Printer, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -24,7 +24,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const MyOrdersPage = () => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
-  const { orders, aiOrders, loading, updateOrder, deleteOrders, refetchProducts } = useInventory();
+  const { orders, aiOrders, loading, updateOrder, deleteOrders, refetchProducts, calculateProfit } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   
   const [filters, setFilters] = useState({
@@ -46,6 +46,39 @@ const MyOrdersPage = () => {
     if (hasPermission('view_all_orders')) return orders;
     return orders.filter(order => order.created_by === user.id);
   }, [orders, user.id, hasPermission]);
+
+  // حساب إحصائيات الموظف للكارت الأساسي
+  const employeeStats = useMemo(() => {
+    if (!myOrders || !user) return null;
+
+    const totalOrders = myOrders.length;
+    const pendingOrders = myOrders.filter(o => o.status === 'pending').length;
+    const completedOrders = myOrders.filter(o => o.status === 'delivered').length;
+    const totalRevenue = myOrders.reduce((sum, order) => sum + (order.final_amount || 0), 0);
+    
+    const deliveredOrders = myOrders.filter(o => o.status === 'delivered');
+    const totalProfits = deliveredOrders.reduce((sum, order) => {
+      const profit = calculateProfit ? calculateProfit(order) : 0;
+      return sum + (profit.employeeProfit || 0);
+    }, 0);
+    
+    const pendingProfits = deliveredOrders.filter(o => !o.invoice_received).reduce((sum, order) => {
+      const profit = calculateProfit ? calculateProfit(order) : 0;
+      return sum + (profit.employeeProfit || 0);
+    }, 0);
+    
+    const settledProfits = totalProfits - pendingProfits;
+
+    return {
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      totalRevenue,
+      totalProfits,
+      pendingProfits,
+      settledProfits
+    };
+  }, [myOrders, user, calculateProfit]);
   
   const filteredOrders = useMemo(() => {
     return myOrders.filter(order => {
@@ -228,32 +261,31 @@ const MyOrdersPage = () => {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3">
-            {loading ? <Loader /> : (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-                <OrderList 
-                  orders={filteredOrders}
-                  onViewOrder={handleViewOrder}
-                  onUpdateStatus={handleUpdateStatus}
-                  canEditStatus={canEditStatus}
-                  isReturnedList={false}
-                  selectedReturnedOrders={selectedOrdersForDeletion}
-                  onSelectReturnedOrder={setSelectedOrdersForDeletion}
-                />
-              </motion.div>
-            )}
-          </div>
+        <div className="space-y-6">
+          {/* كارت الأرباح الأساسي */}
+          {employeeStats && (
+            <EmployeeStatsCards 
+              stats={employeeStats}
+              userRole={user?.role || user?.roles?.[0]} 
+              canRequestSettlement={hasPermission('request_settlement')}
+              user={user}
+            />
+          )}
           
-          <div className="lg:col-span-1">
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }} 
-              animate={{ opacity: 1, x: 0 }} 
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <ProfitSummaryCard />
+          {/* قائمة الطلبات */}
+          {loading ? <Loader /> : (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+              <OrderList 
+                orders={filteredOrders}
+                onViewOrder={handleViewOrder}
+                onUpdateStatus={handleUpdateStatus}
+                canEditStatus={canEditStatus}
+                isReturnedList={false}
+                selectedReturnedOrders={selectedOrdersForDeletion}
+                onSelectReturnedOrder={setSelectedOrdersForDeletion}
+              />
             </motion.div>
-          </div>
+          )}
         </div>
       </div>
 
