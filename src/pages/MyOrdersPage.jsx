@@ -55,8 +55,8 @@ const MyOrdersPage = () => {
   const isMobile = useMediaQuery("(max-width: 768px)");
 
   const canEditStatus = hasPermission('update_order_status');
-  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
-  const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement') && user?.role !== 'super_admin';
+  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || user?.roles?.includes('super_admin') || user?.roles?.includes('admin') || hasPermission('manage_profit_settlement');
+  const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement') && !user?.roles?.includes('super_admin');
 
   const myOrders = useMemo(() => {
     if (!orders) return [];
@@ -500,6 +500,7 @@ const MyOrdersPage = () => {
                 onFilterChange={handleFilterChange}
                 onExpensesClick={() => setDialogs(d => ({...d, expenses: true}))}
                 onSettledDuesClick={() => setDialogs(d => ({...d, settledDues: true}))}
+                user={user}
             />
           </motion.div>
 
