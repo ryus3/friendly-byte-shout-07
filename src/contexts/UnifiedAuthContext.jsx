@@ -551,6 +551,53 @@ export const UnifiedAuthProvider = ({ children }) => {
           }
         }
 
+        // فحص أنواع المنتجات عبر product_product_types
+        const productTypePerm = productPermissions.product_type;
+        if (productTypePerm && !productTypePerm.has_full_access) {
+          if (product.product_product_types && product.product_product_types.length > 0) {
+            const hasAllowedProductType = product.product_product_types.some(ppt => 
+              productTypePerm.allowed_items.includes(ppt.product_type_id)
+            );
+            if (!hasAllowedProductType) return false;
+          }
+        }
+
+        // فحص المواسم والمناسبات عبر product_seasons_occasions
+        const seasonOccasionPerm = productPermissions.season_occasion;
+        if (seasonOccasionPerm && !seasonOccasionPerm.has_full_access) {
+          if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
+            const hasAllowedSeasonOccasion = product.product_seasons_occasions.some(pso => 
+              seasonOccasionPerm.allowed_items.includes(pso.season_occasion_id)
+            );
+            if (!hasAllowedSeasonOccasion) return false;
+          }
+        }
+
+        // فحص الألوان والقياسات في المتغيرات
+        if (product.product_variants && product.product_variants.length > 0) {
+          const hasValidVariant = product.product_variants.some(variant => {
+            // فحص الألوان
+            const colorPerm = productPermissions.color;
+            if (colorPerm && !colorPerm.has_full_access && variant.color_id) {
+              if (!colorPerm.allowed_items.includes(variant.color_id)) {
+                return false;
+              }
+            }
+
+            // فحص القياسات
+            const sizePerm = productPermissions.size;
+            if (sizePerm && !sizePerm.has_full_access && variant.size_id) {
+              if (!sizePerm.allowed_items.includes(variant.size_id)) {
+                return false;
+              }
+            }
+
+            return true;
+          });
+
+          if (!hasValidVariant) return false;
+        }
+
         return true;
       });
     };
