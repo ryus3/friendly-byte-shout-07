@@ -29,6 +29,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
           description: productData.description,
           base_price: productData.price,
           cost_price: productData.costPrice,
+          profit_amount: productData.profitAmount || 0,
           barcode: generateUniqueBarcode(productData.name, 'PRODUCT', 'MAIN', Date.now().toString()),
           is_active: productData.isVisible,
           created_by: user?.user_id || user?.id
@@ -155,6 +156,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             size_id: variant.sizeId,
             price: parseFloat(variant.price) || 0,
             cost_price: parseFloat(variant.costPrice) || 0,
+            profit_amount: parseFloat(variant.profitAmount) || productData.profitAmount || 0,
             barcode: uniqueBarcode,
             images: imageUrl ? [imageUrl] : []
           });
@@ -212,6 +214,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
                 description: productData.description,
                 base_price: productData.price,
                 cost_price: productData.costPrice,
+                profit_amount: productData.profitAmount || 0,
                 is_active: productData.isVisible,
             })
             .eq('id', productId);
@@ -330,6 +333,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
                 size_id: v.sizeId,
                 price: v.price,
                 cost_price: v.costPrice,
+                profit_amount: v.profitAmount || productData.profitAmount || 0,
                 barcode: v.barcode,
                 images: imageUrl ? [imageUrl] : []
             };

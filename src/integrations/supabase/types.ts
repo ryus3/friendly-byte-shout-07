@@ -1031,6 +1031,7 @@ export type Database = {
           is_active: boolean
           price: number
           product_id: string
+          profit_amount: number | null
           size_id: string | null
           updated_at: string
         }
@@ -1044,6 +1045,7 @@ export type Database = {
           is_active?: boolean
           price: number
           product_id: string
+          profit_amount?: number | null
           size_id?: string | null
           updated_at?: string
         }
@@ -1057,6 +1059,7 @@ export type Database = {
           is_active?: boolean
           price?: number
           product_id?: string
+          profit_amount?: number | null
           size_id?: string | null
           updated_at?: string
         }
@@ -1097,6 +1100,7 @@ export type Database = {
           images: string[] | null
           is_active: boolean
           name: string
+          profit_amount: number | null
           updated_at: string
         }
         Insert: {
@@ -1111,6 +1115,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean
           name: string
+          profit_amount?: number | null
           updated_at?: string
         }
         Update: {
@@ -1125,6 +1130,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean
           name?: string
+          profit_amount?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -1752,23 +1758,21 @@ export type Database = {
           error_message: string
         }[]
       }
-      calculate_employee_detailed_profit: {
-        Args: { p_employee_id: string; p_order_id: string }
-        Returns: number
-      }
-      calculate_employee_profit: {
+      calculate_employee_item_profit: {
         Args: {
           p_employee_id: string
           p_product_id: string
+          p_variant_id: string
           p_quantity: number
-          p_selling_price: number
-          p_cost_price: number
-          p_category_id?: string
-          p_department_id?: string
+          p_base_profit_amount: number
         }
         Returns: number
       }
       calculate_order_profit: {
+        Args: { order_id_input: string }
+        Returns: undefined
+      }
+      calculate_order_profit_fixed_amounts: {
         Args: { order_id_input: string }
         Returns: undefined
       }

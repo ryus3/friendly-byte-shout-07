@@ -70,19 +70,19 @@ const ProductPrimaryInfo = ({ productInfo, setProductInfo, generalImages, onImag
             />
           </div>
           <div>
-            <Label htmlFor="employeeProfitPercentage">ربح الموظف (د.ع)</Label>
+            <Label htmlFor="profitAmount">ربح الموظف (د.ع)</Label>
             <Input 
-              id="employeeProfitPercentage" 
-              name="employeeProfitPercentage" 
+              id="profitAmount" 
+              name="profitAmount" 
               type="number" 
               min="0"
-              step="0.01"
+              step="1000"
               placeholder="مثال: 5000"
-              value={productInfo.employeeProfitPercentage} 
+              value={productInfo.profitAmount || ''} 
               onChange={handleInputChange} 
             />
             <p className="text-xs text-muted-foreground mt-1">
-              مبلغ ثابت يحصل عليه الموظف عند بيع هذا المنتج - يمكن تعديله من قواعد الأرباح
+              مبلغ ثابت يحصل عليه الموظف عند بيع هذا المنتج (لا يحصل المدير على ربح)
             </p>
           </div>
           <div>
