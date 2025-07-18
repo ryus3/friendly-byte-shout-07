@@ -700,6 +700,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             activePartner={activePartner}
             dataFetchError={dataFetchError}
             settings={settings}
+            discount={discount}
+            setDiscount={setDiscount}
+            subtotal={subtotal}
+            total={total}
           />
         </fieldset>
 

@@ -4,17 +4,33 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
-const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProductSelectOpen, isSubmittingState, isDeliveryPartnerSelected, packageSizes, loadingPackageSizes, activePartner, settings }) => {
+const OrderDetailsForm = ({ 
+  formData, 
+  handleChange, 
+  handleSelectChange, 
+  setProductSelectOpen, 
+  isSubmittingState, 
+  isDeliveryPartnerSelected, 
+  packageSizes, 
+  loadingPackageSizes, 
+  activePartner, 
+  dataFetchError, 
+  settings,
+  discount,
+  setDiscount,
+  subtotal,
+  total
+}) => {
   const { cart, removeFromCart } = useInventory();
+  const { hasPermission } = useAuth();
   
-  // حساب المجاميع
-  const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
-  const deliveryFee = activePartner === 'local' ? (settings?.deliveryFee || 0) : 0;
-  const totalAmount = subtotal + deliveryFee;
+  const deliveryFee = settings?.deliveryFee || 0;
+  const finalTotal = total + (formData.type === 'توصيل' ? deliveryFee : 0);
 
   return (
     <Card>
@@ -50,13 +66,45 @@ const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProdu
           </div>
           {cart.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">السلة فارغة</p>}
           
-          {/* ملخص السعر */}
+          {/* ملخص السعر مع خانة الخصم */}
           {cart.length > 0 && (
             <div className="mt-4 p-4 bg-secondary/50 rounded-lg border space-y-2">
               <div className="flex justify-between text-sm">
                 <span>مجموع المنتجات:</span>
                 <span>{subtotal.toLocaleString()} د.ع</span>
               </div>
+              
+              {/* خانة الخصم */}
+              {hasPermission('apply_order_discounts') && (
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="discount" className="text-sm flex items-center gap-1">
+                    <Tag className="w-4 h-4" /> الخصم
+                  </Label>
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="0"
+                    max={subtotal}
+                    value={discount} 
+                    onChange={(e) => setDiscount(Math.max(0, Math.min(subtotal, Number(e.target.value))))} 
+                    className="w-24 text-right"
+                    placeholder="0"
+                  />
+                </div>
+              )}
+              
+              {discount > 0 && (
+                <div className="flex justify-between text-sm text-destructive">
+                  <span>الخصم:</span>
+                  <span>-{discount.toLocaleString()} د.ع</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between text-sm">
+                <span>المجموع بعد الخصم:</span>
+                <span>{total.toLocaleString()} د.ع</span>
+              </div>
+              
               {deliveryFee > 0 && (
                 <div className="flex justify-between text-sm">
                   <span>رسوم التوصيل:</span>
@@ -64,8 +112,8 @@ const OrderDetailsForm = ({ formData, handleSelectChange, handleChange, setProdu
                 </div>
               )}
               <div className="flex justify-between text-base font-semibold border-t pt-2">
-                <span>المجموع الكلي:</span>
-                <span className="text-primary">{totalAmount.toLocaleString()} د.ع</span>
+                <span>المجموع النهائي:</span>
+                <span className="text-primary">{finalTotal.toLocaleString()} د.ع</span>
               </div>
             </div>
           )}
