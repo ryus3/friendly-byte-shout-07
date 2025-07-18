@@ -174,11 +174,12 @@ const MyOrdersPage = () => {
                 <SelectContent>
                   <SelectItem value="all">كل الحالات</SelectItem>
                   <SelectItem value="pending">قيد التجهيز</SelectItem>
-                  <SelectItem value="processing">قيد التسليم</SelectItem>
+                  <SelectItem value="processing">قيد المعالجة</SelectItem>
                   <SelectItem value="shipped">تم الشحن</SelectItem>
+                  <SelectItem value="delivery">قيد التوصيل</SelectItem>
                   <SelectItem value="delivered">تم التسليم</SelectItem>
                   <SelectItem value="returned">راجع</SelectItem>
-                  <SelectItem value="returned_in_stock">راجع بالمخزن</SelectItem>
+                  <SelectItem value="returned_in_stock">تم الإرجاع للمخزن</SelectItem>
                   <SelectItem value="cancelled">ملغي</SelectItem>
                 </SelectContent>
               </Select>

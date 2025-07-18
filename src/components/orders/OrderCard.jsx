@@ -30,46 +30,60 @@ const OrderCard = ({
 }) => {
   const { hasPermission } = useAuth();
   
-  // تحديد لون وأيقونة الحالة الموحدة
+  // تحديد لون وأيقونة الحالة الموحدة مع ألوان الأدوار الجميلة
   const getStatusConfig = (status) => {
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Package,
-        color: 'bg-blue-50 text-blue-700 border-blue-200'
+        color: 'bg-[hsl(var(--status-pending)_/_0.2)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)_/_0.3)]'
+      },
+      'processing': { 
+        label: 'قيد المعالجة', 
+        icon: Package,
+        color: 'bg-[hsl(var(--status-processing)_/_0.2)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.3)]'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        color: 'bg-orange-50 text-orange-700 border-orange-200'
+        color: 'bg-[hsl(var(--status-shipped)_/_0.2)] text-[hsl(var(--status-shipped))] border-[hsl(var(--status-shipped)_/_0.3)]'
+      },
+      'delivery': { 
+        label: 'قيد التوصيل', 
+        icon: Truck,
+        color: 'bg-[hsl(var(--status-delivery)_/_0.2)] text-[hsl(var(--status-delivery))] border-[hsl(var(--status-delivery)_/_0.3)]'
       },
       'needs_processing': { 
         label: 'تحتاج معالجة', 
         icon: AlertCircle,
-        color: 'bg-red-50 text-red-700 border-red-200'
+        color: 'bg-[hsl(var(--status-processing)_/_0.2)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.3)]'
       },
       'delivered': { 
         label: 'تم التوصيل', 
         icon: CheckCircle,
-        color: 'bg-green-50 text-green-700 border-green-200'
+        color: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]'
       },
       'returned': { 
         label: 'راجع', 
         icon: RotateCcw,
-        color: 'bg-orange-50 text-orange-700 border-orange-200'
+        color: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
-        color: 'bg-red-50 text-red-700 border-red-200'
+        color: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]'
       },
       'return_received': { 
-        label: 'مستلم الراجع', 
+        label: 'تم الإرجاع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-purple-50 text-purple-700 border-purple-200'
+        color: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]'
       }
     };
-    return configs[status] || configs['pending'];
+    return configs[status] || { 
+      label: 'تم الإرجاع للمخزن', 
+      icon: PackageCheck,
+      color: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]'
+    };
   };
 
   const statusConfig = getStatusConfig(order.status);
@@ -123,7 +137,7 @@ const OrderCard = ({
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
                     <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
-                    <Badge className={deliveryBadgeColor}>
+                    <Badge className={`${deliveryBadgeColor} ml-2`}>
                       {order.delivery_partner}
                     </Badge>
                   </div>
