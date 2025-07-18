@@ -22,40 +22,55 @@ export const useFilteredProducts = (products) => {
     // المديرون يرون كل المنتجات
     if (isAdmin) return products;
 
+    console.log('🔍 فلترة المنتجات:', {
+      productsCount: products.length,
+      isAdmin,
+      user: usePermissionBasedData()?.user
+    });
+
     // فلترة المنتجات حسب صلاحيات الموظف
     return products.filter(product => {
-      let hasValidPermission = false;
+      console.log('🔍 فحص منتج:', product.name, {
+        product_categories: product.product_categories,
+        product_departments: product.product_departments,
+        product_product_types: product.product_product_types,
+        product_seasons_occasions: product.product_seasons_occasions
+      });
 
-      // فحص التصنيفات (categories)
+      // فحص التصنيفات (categories) - إذا كان للمنتج تصنيفات
       if (product.product_categories && product.product_categories.length > 0) {
         const productCategories = product.product_categories.map(pc => pc.categories).filter(Boolean);
         const allowedCategories = filterCategoriesByPermission(productCategories);
-        if (allowedCategories.length > 0) hasValidPermission = true;
+        console.log('تصنيفات المنتج:', { productCategories, allowedCategories });
+        if (allowedCategories.length === 0) return false; // المنتج له تصنيفات لكن المستخدم لا يملك صلاحية عليها
       }
 
-      // فحص الأقسام (departments)
+      // فحص الأقسام (departments) - إذا كان للمنتج أقسام
       if (product.product_departments && product.product_departments.length > 0) {
         const productDepartments = product.product_departments.map(pd => pd.departments).filter(Boolean);
         const allowedDepartments = filterDepartmentsByPermission(productDepartments);
-        if (allowedDepartments.length > 0) hasValidPermission = true;
+        console.log('أقسام المنتج:', { productDepartments, allowedDepartments });
+        if (allowedDepartments.length === 0) return false; // المنتج له أقسام لكن المستخدم لا يملك صلاحية عليها
       }
 
-      // فحص أنواع المنتجات (product_types)
+      // فحص أنواع المنتجات (product_types) - إذا كان للمنتج أنواع
       if (product.product_product_types && product.product_product_types.length > 0) {
         const productTypes = product.product_product_types.map(ppt => ppt.product_types).filter(Boolean);
         const allowedProductTypes = filterProductTypesByPermission(productTypes);
-        if (allowedProductTypes.length > 0) hasValidPermission = true;
+        console.log('أنواع المنتج:', { productTypes, allowedProductTypes });
+        if (allowedProductTypes.length === 0) return false; // المنتج له أنواع لكن المستخدم لا يملك صلاحية عليها
       }
 
-      // فحص المواسم والمناسبات (seasons_occasions)
+      // فحص المواسم والمناسبات (seasons_occasions) - إذا كان للمنتج مواسم
       if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
         const seasonsOccasions = product.product_seasons_occasions.map(pso => pso.seasons_occasions).filter(Boolean);
         const allowedSeasonsOccasions = filterSeasonsOccasionsByPermission(seasonsOccasions);
-        if (allowedSeasonsOccasions.length > 0) hasValidPermission = true;
+        console.log('مواسم المنتج:', { seasonsOccasions, allowedSeasonsOccasions });
+        if (allowedSeasonsOccasions.length === 0) return false; // المنتج له مواسم لكن المستخدم لا يملك صلاحية عليها
       }
 
-      // إذا لم توجد أي صلاحيات صالحة، أخفي المنتج
-      if (!hasValidPermission) return false;
+      // إذا وصل إلى هنا، المنتج مسموح له
+      console.log('✅ المنتج مسموح:', product.name);
 
       // فحص المتغيرات (variants) - فلترة حسب الألوان والأحجام
       if (product.variants && product.variants.length > 0) {
