@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   Edit2, 
   Trash2, 
@@ -17,7 +17,6 @@ import {
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import OrderStatusBadge from '@/components/ui/order-status-badge';
 
 const OrderCard = ({ 
   order, 
@@ -124,7 +123,7 @@ const OrderCard = ({
                 <div className="flex flex-col space-y-1">
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
                     <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
-                    <Badge className="bg-green-100 text-green-800 border-green-200" variant="outline">
+                    <Badge className={deliveryBadgeColor}>
                       {order.delivery_partner}
                     </Badge>
                   </div>
@@ -134,7 +133,10 @@ const OrderCard = ({
                 </div>
               </div>
               
-              <OrderStatusBadge status={order.status} size="sm" />
+              <div className={`flex items-center space-x-1 rtl:space-x-reverse px-2 py-1 rounded-md border ${statusConfig.color}`}>
+                <StatusIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">{statusConfig.label}</span>
+              </div>
             </div>
 
             {/* معلومات الزبون */}

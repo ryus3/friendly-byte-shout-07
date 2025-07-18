@@ -21,7 +21,6 @@ import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard';
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
-import OrderStatusBadge from '@/components/ui/order-status-badge';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';

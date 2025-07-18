@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, MapPin, Package, Truck, Home, Calendar, Clock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ShoppingCart, MapPin, Package, CreditCard, Truck, Home, Calendar, Clock } from 'lucide-react';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import OrderStatusBadge from '@/components/ui/order-status-badge';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -22,9 +22,51 @@ const RecentOrdersCard = ({ recentOrders }) => {
     navigate('/my-orders');
   };
 
-  // استخدام النظام الموحد لحالات الطلبات
   const getStatusBadge = (status) => {
-    return <OrderStatusBadge status={status} size="sm" />;
+    const statusMap = {
+      'pending': { 
+        label: 'قيد التجهيز', 
+        icon: Clock,
+        className: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'processing': { 
+        label: 'قيد التسليم', 
+        icon: Package,
+        className: 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-700 border-blue-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'shipped': { 
+        label: 'تم الشحن', 
+        icon: Truck,
+        className: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'delivered': { 
+        label: 'تم التوصيل', 
+        icon: Package,
+        className: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'returned': { 
+        label: 'راجع', 
+        icon: Package,
+        className: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'cancelled': { 
+        label: 'ملغي', 
+        icon: Package,
+        className: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm'
+      }
+    };
+    const statusInfo = statusMap[status] || { 
+      label: status, 
+      icon: Package,
+      className: 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 border-gray-200 shadow-sm'
+    };
+    const StatusIcon = statusInfo.icon;
+    return (
+      <Badge className={cn("text-xs px-2 py-1 flex items-center gap-1.5 font-medium", statusInfo.className)}>
+        <StatusIcon className="w-3 h-3" />
+        {statusInfo.label}
+      </Badge>
+    );
   };
 
   const getDeliveryType = (order) => {
