@@ -14,58 +14,97 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
     <div ref={ref} className="print-area">
       <style>{`
         @media print {
+          * {
+            -webkit-print-color-adjust: exact !important;
+            color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          
           .print-area {
             display: block !important;
+            background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
+          
           .label-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 5mm;
-            padding: 10mm;
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 5mm !important;
+            padding: 10mm !important;
+            background: white !important;
           }
+          
           .label-card {
-            width: 60mm;
-            height: 40mm;
-            border: 1px solid #000;
-            padding: 2mm;
-            page-break-inside: avoid;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background: white;
+            width: 60mm !important;
+            height: 40mm !important;
+            border: 2px solid #000 !important;
+            padding: 2mm !important;
+            page-break-inside: avoid !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            background: white !important;
+            box-sizing: border-box !important;
           }
+          
           .label-header {
-            text-align: center;
-            margin-bottom: 1mm;
+            text-align: center !important;
+            margin-bottom: 1mm !important;
           }
+          
           .label-product-name {
-            font-size: 12px;
-            font-weight: bold;
-            margin: 0;
-            line-height: 1.2;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            margin: 0 !important;
+            line-height: 1.1 !important;
+            color: #000 !important;
           }
+          
           .label-variant-info {
-            font-size: 10px;
-            margin: 0;
-            color: #666;
+            font-size: 9px !important;
+            margin: 0 !important;
+            color: #000 !important;
           }
+          
           .label-barcode-container {
-            text-align: center;
-            margin: 2mm 0;
-            height: 20mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-align: center !important;
+            margin: 1mm 0 !important;
+            height: 15mm !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: white !important;
           }
+          
           .label-barcode-container svg {
-            max-width: 100%;
-            height: auto;
+            max-width: 100% !important;
+            height: auto !important;
+            background: white !important;
           }
+          
+          .label-barcode-container svg rect {
+            fill: white !important;
+          }
+          
+          .label-barcode-container svg path,
+          .label-barcode-container svg rect[fill="#000000"],
+          .label-barcode-container svg rect[fill="black"] {
+            fill: #000 !important;
+          }
+          
           .label-price {
-            font-size: 14px;
-            font-weight: bold;
-            text-align: center;
-            margin: 0;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+            margin: 0 !important;
+            color: #000 !important;
+          }
+          
+          .no-barcode {
+            font-size: 8px !important;
+            color: #000 !important;
+            text-align: center !important;
           }
         }
         
@@ -75,7 +114,9 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             grid-template-columns: repeat(3, 1fr);
             gap: 12px;
             padding: 16px;
+            background: #f8f9fa;
           }
+          
           .label-card {
             width: 200px;
             height: 140px;
@@ -86,43 +127,53 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             justify-content: space-between;
             background: white;
             border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
           }
+          
           .label-header {
             text-align: center;
             margin-bottom: 8px;
           }
+          
           .label-product-name {
             font-size: 14px;
             font-weight: bold;
             margin: 0;
             line-height: 1.2;
+            color: #1a1a1a;
           }
+          
           .label-variant-info {
             font-size: 12px;
             margin: 0;
             color: #666;
           }
+          
           .label-barcode-container {
             text-align: center;
             margin: 8px 0;
-            height: 60px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
             border: 1px dashed #ddd;
             border-radius: 4px;
+            background: white;
           }
+          
           .label-barcode-container svg {
             max-width: 100%;
             height: auto;
           }
+          
           .label-price {
             font-size: 16px;
             font-weight: bold;
             text-align: center;
             margin: 0;
-            color: #333;
+            color: #1a1a1a;
           }
+          
           .no-barcode {
             color: #999;
             font-size: 10px;
@@ -139,17 +190,20 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             </div>
             
             <div className="label-barcode-container">
-              {label.barcode && label.barcode.trim() !== '' ? (
+              {label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود' ? (
                 <Barcode 
                   value={label.barcode} 
                   format="CODE128"
-                  height={40}
-                  width={1.5}
-                  fontSize={10}
-                  margin={0}
+                  height={30}
+                  width={1.8}
+                  fontSize={8}
+                  margin={1}
                   displayValue={true}
-                  background="transparent"
+                  background="#FFFFFF"
                   lineColor="#000000"
+                  textAlign="center"
+                  textPosition="bottom"
+                  textMargin={2}
                 />
               ) : (
                 <div className="no-barcode">لا يوجد باركود</div>
@@ -170,7 +224,19 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
 
   const handlePrint = useReactToPrint({
     content: () => printComponentRef.current,
-    pageStyle: `@page { size: A4; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; } }`
+    pageStyle: `
+      @page { 
+        size: A4; 
+        margin: 10mm; 
+      } 
+      @media print { 
+        body { 
+          -webkit-print-color-adjust: exact; 
+          color-adjust: exact;
+          print-color-adjust: exact;
+        } 
+      }
+    `
   });
 
   const handleQuantityChange = (sku, value) => {
@@ -322,8 +388,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                               <p className="text-sm font-medium">
                                 {variant.colors?.name || variant.color || 'غير محدد'} / {variant.sizes?.name || variant.size || 'غير محدد'}
                               </p>
-                              <p className="text-xs text-muted-foreground">
-                                الباركود: {variant.barcode || 'سيتم التوليد تلقائياً'}
+                              <p className="text-xs text-muted-foreground font-mono">
+                                {variant.barcode || 'سيتم التوليد تلقائياً'}
                               </p>
                             </div>
                             <div className="flex items-center gap-1">
@@ -359,8 +425,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                     <div className="flex items-center gap-2 p-2 border rounded">
                       <div className="flex-1">
                         <p className="text-sm font-medium">منتج عام</p>
-                        <p className="text-xs text-muted-foreground">
-                          الباركود: {product.barcode || 'سيتم التوليد تلقائياً'}
+                        <p className="text-xs text-muted-foreground font-mono">
+                          {product.barcode || 'سيتم التوليد تلقائياً'}
                         </p>
                       </div>
                       <div className="flex items-center gap-1">
