@@ -38,14 +38,14 @@
     --role-accountant: 45 93% 47%;          /* أصفر للمحاسب */
     --role-pending: 0 0% 60%;               /* رمادي للمعلق */
     
-    /* Order Status Colors - Updated Based on User Images */
+    /* Order Status Colors - Updated Based on User Request */
     --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
-    --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة - يحتاج معالجة */
+    --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة */
     --status-shipped: 262 83% 58%;       /* بنفسجي فاتح للشحن */
     --status-delivery: 217 91% 60%;      /* أزرق فاتح لقيد التوصيل */
-    --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم - تم التسليم */
-    --status-returned: 0 84% 60%;        /* أحمر للراجعة - راجع */
-    --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي - تم الإرجاع */
+    --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم */
+    --status-returned: 0 84% 60%;        /* أحمر للراجعة */
+    --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي */
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */
@@ -99,33 +99,94 @@
   .font-brand {
     font-family: 'Playfair Display', serif;
   }
-}
-
-@layer components {
-  .glass-effect {
-    @apply backdrop-blur-lg bg-card/90 dark:bg-card/80 border border-border/50 dark:border-border/60 shadow-lg;
-  }
-
-  .gradient-text {
-    @apply bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent;
+  
+  /* Order Status Badge Styles - Unified System */
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200;
+    border: 1px solid transparent;
   }
   
-  .gradient-primary {
-    @apply bg-gradient-to-r from-primary to-primary/80 text-primary-foreground;
+  .status-pending {
+    background: hsl(var(--status-pending) / 0.15);
+    color: hsl(var(--status-pending));
+    border-color: hsl(var(--status-pending) / 0.25);
   }
   
-  .gradient-secondary {
-    @apply bg-gradient-to-r from-secondary to-muted text-secondary-foreground;
+  .status-processing {
+    background: hsl(var(--status-processing) / 0.15);
+    color: hsl(var(--status-processing));
+    border-color: hsl(var(--status-processing) / 0.25);
   }
-
-  .product-card {
-    @apply relative overflow-hidden rounded-xl bg-card border border-border/20 shadow-lg transition-all duration-300;
+  
+  .status-shipped {
+    background: hsl(var(--status-shipped) / 0.15);
+    color: hsl(var(--status-shipped));
+    border-color: hsl(var(--status-shipped) / 0.25);
   }
-  .product-card:hover {
-     @apply shadow-2xl shadow-primary/10 border-primary/30;
+  
+  .status-delivery {
+    background: hsl(var(--status-delivery) / 0.15);
+    color: hsl(var(--status-delivery));
+    border-color: hsl(var(--status-delivery) / 0.25);
   }
-  .dark .product-card:hover {
-    box-shadow: 0 0 25px 5px hsl(var(--primary) / 0.2);
+  
+  .status-delivered {
+    background: hsl(var(--status-delivered) / 0.15);
+    color: hsl(var(--status-delivered));
+    border-color: hsl(var(--status-delivered) / 0.25);
+  }
+  
+  .status-returned {
+    background: hsl(var(--status-returned) / 0.15);
+    color: hsl(var(--status-returned));
+    border-color: hsl(var(--status-returned) / 0.25);
+  }
+  
+  .status-cancelled {
+    background: hsl(var(--status-cancelled) / 0.15);
+    color: hsl(var(--status-cancelled));
+    border-color: hsl(var(--status-cancelled) / 0.25);
+  }
+  
+  /* Hover Effects for Status Badges */
+  .status-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.15);
+  }
+  
+  .status-pending:hover {
+    background: hsl(var(--status-pending) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-pending) / 0.3);
+  }
+  
+  .status-processing:hover {
+    background: hsl(var(--status-processing) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-processing) / 0.3);
+  }
+  
+  .status-shipped:hover {
+    background: hsl(var(--status-shipped) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-shipped) / 0.3);
+  }
+  
+  .status-delivery:hover {
+    background: hsl(var(--status-delivery) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-delivery) / 0.3);
+  }
+  
+  .status-delivered:hover {
+    background: hsl(var(--status-delivered) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-delivered) / 0.3);
+  }
+  
+  .status-returned:hover {
+    background: hsl(var(--status-returned) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-returned) / 0.3);
+  }
+  
+  .status-cancelled:hover {
+    background: hsl(var(--status-cancelled) / 0.25);
+    box-shadow: 0 4px 12px hsl(var(--status-cancelled) / 0.3);
   }
 
   .product-list-item {
