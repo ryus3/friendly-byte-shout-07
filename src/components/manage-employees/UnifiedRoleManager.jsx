@@ -74,6 +74,26 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
     }
   }, [open, selectedUser]);
 
+  // دالة للحصول على وصف الدور
+  const getRoleDescription = (roleName) => {
+    switch(roleName) {
+      case 'super_admin':
+        return 'صلاحيات كاملة في النظام - إدارة جميع الموظفين والأقسام والمنتجات والطلبات والمالية';
+      case 'department_manager':
+        return 'إدارة قسم معين - الإشراف على الموظفين والمنتجات ومراجعة الطلبات والأرباح';
+      case 'sales_employee':
+        return 'موظف مبيعات - إنشاء الطلبات وإدارة العملاء وعرض المنتجات المسموحة';
+      case 'warehouse_employee':
+        return 'موظف مخزن - إدارة المخزون والجرد وتحديث كميات المنتجات';
+      case 'cashier':
+        return 'كاشير - معالجة المدفوعات وإصدار الفواتير ومتابعة حالة الطلبات';
+      case 'delivery_coordinator':
+        return 'منسق توصيل - تنسيق عمليات التوصيل ومتابعة شركات الشحن وتحديث حالة التسليم';
+      default:
+        return 'دور في النظام مع صلاحيات محددة';
+    }
+  };
+
   // دالة للحصول على لون الدور
   const getRoleColor = (roleName) => {
     switch(roleName) {
@@ -112,16 +132,37 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
     try {
       setIsProcessing(true);
       
-      const { error } = await supabase
+      // أولاً تحقق من وجود دور غير نشط وقم بتفعيله
+      const { data: existingRole, error: checkError } = await supabase
         .from('user_roles')
-        .insert({
-          user_id: selectedUser.user_id,
-          role_id: roleId,
-          assigned_by: (await supabase.auth.getUser()).data.user?.id,
-          is_active: true
-        });
+        .select('*')
+        .eq('user_id', selectedUser.user_id)
+        .eq('role_id', roleId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (checkError) throw checkError;
+
+      if (existingRole) {
+        // إذا كان الدور موجود، قم بتفعيله
+        const { error: updateError } = await supabase
+          .from('user_roles')
+          .update({ is_active: true })
+          .eq('id', existingRole.id);
+
+        if (updateError) throw updateError;
+      } else {
+        // إذا لم يكن موجود، أنشئ دور جديد
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: selectedUser.user_id,
+            role_id: roleId,
+            assigned_by: (await supabase.auth.getUser()).data.user?.id,
+            is_active: true
+          });
+
+        if (insertError) throw insertError;
+      }
 
       toast({
         title: 'نجح',
@@ -301,19 +342,12 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
                             <h4 className="font-bold text-foreground">
                               {role.display_name}
                             </h4>
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm text-muted-foreground">
-                                المستوى {role.hierarchy_level}
-                              </p>
-                              {role.description && (
-                                <>
-                                  <span className="text-muted-foreground">•</span>
-                                  <p className="text-sm text-muted-foreground truncate">
-                                    {role.description}
-                                  </p>
-                                </>
-                              )}
-                            </div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              المستوى {role.hierarchy_level}
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              {getRoleDescription(role.name)}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <Badge 
