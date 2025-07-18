@@ -18,18 +18,18 @@ export const AppProviders = ({ children }) => {
         <UnifiedAuthProvider>
           <NotificationsProvider>
             <NotificationsSystemProvider>
-              <InventoryProvider>
-                <ProfitsProvider>
-                  <VariantsProvider>
+              <VariantsProvider>
+                <InventoryProvider>
+                  <ProfitsProvider>
                     <AlWaseetProvider>
                         <AiChatProvider>
                           <StockMonitoringSystem />
                           {children}
                         </AiChatProvider>
                     </AlWaseetProvider>
-                  </VariantsProvider>
-                </ProfitsProvider>
-              </InventoryProvider>
+                  </ProfitsProvider>
+                </InventoryProvider>
+              </VariantsProvider>
             </NotificationsSystemProvider>
           </NotificationsProvider>
         </UnifiedAuthProvider>
