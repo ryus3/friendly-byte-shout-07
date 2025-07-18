@@ -228,6 +228,12 @@ export const UnifiedAuthProvider = ({ children }) => {
 
     if (productPermsError) throw productPermsError;
 
+    console.log('🔍 صلاحيات المنتجات من قاعدة البيانات:', {
+      user_id: user.user_id,
+      productPerms,
+      error: productPermsError
+    });
+
     // تنظيم صلاحيات المنتجات
     const productPermissionsMap = {};
     productPerms?.forEach(perm => {
@@ -236,6 +242,8 @@ export const UnifiedAuthProvider = ({ children }) => {
         has_full_access: perm.has_full_access || false
       };
     });
+
+    console.log('🔍 صلاحيات المنتجات بعد التنظيم:', productPermissionsMap);
 
         setUserRoles(roles || []);
         setUserPermissions(permissions || []);
