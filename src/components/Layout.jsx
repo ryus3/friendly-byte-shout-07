@@ -69,17 +69,19 @@ const SidebarContent = ({ onClose }) => {
     
     // ترتيب الأدوار حسب الأولوية
     const roleDisplayMap = {
-      'admin': 'المدير العام',
-      'deputy': 'نائب المدير',
-      'department_manager': 'مدير قسم',
+      'super_admin': 'المدير العام',
+      'admin': 'مدير',
+      'deputy_manager': 'نائب المدير',
+      'department_manager': 'رئيس قسم',
       'sales_employee': 'موظف مبيعات',
-      'warehouse_employee': 'مسؤول المخزن',
+      'warehouse_employee': 'موظف مخزن',
+      'delivery_coordinator': 'منسق توصيل',
       'cashier': 'كاشير',
       'employee': 'موظف'
     };
     
     // البحث عن أعلى دور في التسلسل الهرمي
-    const priority = ['admin', 'deputy', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier', 'employee'];
+    const priority = ['super_admin', 'admin', 'deputy_manager', 'department_manager', 'sales_employee', 'warehouse_employee', 'delivery_coordinator', 'cashier', 'employee'];
     for (const role of priority) {
       if (userRoles.includes(role)) {
         return roleDisplayMap[role] || 'مستخدم';
@@ -99,7 +101,7 @@ const SidebarContent = ({ onClose }) => {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
-              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.roles)}</p>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.activeRoles || [])}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

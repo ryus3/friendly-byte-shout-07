@@ -25,13 +25,13 @@ import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
+import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 import RestrictedStockSettings from '@/components/settings/RestrictedStockSettings';
 import { PackageX } from 'lucide-react';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
-import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
