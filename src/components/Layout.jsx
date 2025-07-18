@@ -41,7 +41,7 @@ const SidebarContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
   
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
+  const visibleMenuItems = menuItems; // عرض جميع العناصر بدون فحص الصلاحيات
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {

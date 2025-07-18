@@ -16,7 +16,7 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight, Volume2, DollarSign,
+  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
   BarChart, TrendingUp
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
@@ -28,8 +28,7 @@ import EditProfileDialog from '@/components/settings/EditProfileDialog';
 
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
-import RestrictedStockSettings from '@/components/settings/RestrictedStockSettings';
-import { PackageX } from 'lucide-react';
+import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
@@ -141,7 +140,7 @@ const SettingsPage = () => {
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
-  
+  const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
@@ -200,7 +199,13 @@ const SettingsPage = () => {
               onClick={() => setIsNotificationSettingsOpen(true)}
             />
 
-            <RestrictedStockSettings />
+            <ModernCard
+              icon={PackageX}
+              title="إشعارات المخزون المتقدمة"
+              description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsStockSettingsOpen(true)}
+            />
           </div>
 
           <SectionHeader 
@@ -442,6 +447,10 @@ const SettingsPage = () => {
         onOpenChange={setIsReportsOpen}
       />
 
+      <StockNotificationSettings
+        open={isStockSettingsOpen}
+        onOpenChange={setIsStockSettingsOpen}
+      />
 
       {canAccessDeliveryPartners && (
         <DeliveryPartnerDialog

@@ -166,7 +166,7 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                رمز الموظف للتليغرام
+                رموز الموظفين
               </CardTitle>
               <p className="text-sm text-muted-foreground">
                 {canViewAllData ? 'كل موظف له رمز بسيط مرتبط بحسابه' : 'رمزك الشخصي للاتصال بالبوت'}
