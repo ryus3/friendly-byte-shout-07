@@ -25,7 +25,6 @@ import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
-import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
@@ -390,7 +389,7 @@ const SettingsPage = () => {
           )}
         </div>
 
-        <ProfileSecurityDialog
+        <EditProfileDialog
         open={isEditProfileOpen}
         onOpenChange={setIsEditProfileOpen} 
       />
