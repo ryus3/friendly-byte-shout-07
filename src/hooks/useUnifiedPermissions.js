@@ -10,6 +10,29 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // إضافة check للتأكد من تحميل المستخدم
+  if (auth?.loading || !user) {
+    return {
+      loading: true,
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      hasRole: () => false,
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      filterDataByUser: (data) => [],
+      filterProductsByPermissions: (products) => [],
+      getEmployeeStats: () => ({}),
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {}
+    };
+  }
+
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
     if (!user?.user_id) return;

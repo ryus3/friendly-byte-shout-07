@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
-import RestrictedTelegramSettings from '@/components/settings/RestrictedTelegramSettings';
+
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
@@ -347,7 +347,15 @@ const SettingsPage = () => {
             )}
 
             {/* بوت التليغرام - بحسب المستخدم */}
-            <RestrictedTelegramSettings />
+            <ModernCard
+              icon={MessageCircle}
+              title="بوت التليغرام الذكي"
+              description="عرض رمزك الشخصي للاتصال بالبوت وإنشاء طلبات الذكاء الاصطناعي"
+              iconColor="from-blue-500 to-blue-600"
+              onClick={() => setIsTelegramOpen(true)}
+            />
+          </div>
+
           </div>
 
           {/* أدوات النظام - للمدراء فقط */}
@@ -415,13 +423,11 @@ const SettingsPage = () => {
         />
       )}
 
-      {/* حوار التليغرام - للمدراء فقط */}
-      {isAdmin && (
-        <TelegramBotDialog 
-          open={isTelegramOpen} 
-          onOpenChange={setIsTelegramOpen} 
-        />
-      )}
+      {/* حوار التليغرام - للجميع */}
+      <TelegramBotDialog 
+        open={isTelegramOpen} 
+        onOpenChange={setIsTelegramOpen} 
+      />
 
       {canAccessDeliveryPartners && (
         <DeliverySettingsDialog

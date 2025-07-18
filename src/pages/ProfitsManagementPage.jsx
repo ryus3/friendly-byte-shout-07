@@ -395,8 +395,8 @@ const ProfitsManagementPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {profits.filter(p => p.employee_id === user?.user_id).length > 0 ? (
-                    profits.filter(p => p.employee_id === user?.user_id).map(profit => (
+                  {profits.filter(p => p.employee_id === user?.id).length > 0 ? (
+                    profits.filter(p => p.employee_id === user?.id).map(profit => (
                       <div key={profit.id} className="flex justify-between items-center p-4 border rounded-lg">
                         <div>
                           <p className="font-medium">طلب #{profit.order_id}</p>

@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
+import QuickOrderMobileOptimized from '@/components/quick-order/QuickOrderMobileOptimized';
 
 const QuickOrderPage = () => {
     const formRef = useRef(null);
@@ -10,7 +10,7 @@ const QuickOrderPage = () => {
             <Helmet>
                 <title>طلب سريع - نظام RYUS</title>
             </Helmet>
-            <QuickOrderContent 
+            <QuickOrderMobileOptimized 
                 isDialog={false} 
                 formRef={formRef} 
                 setIsSubmitting={setIsSubmitting} 

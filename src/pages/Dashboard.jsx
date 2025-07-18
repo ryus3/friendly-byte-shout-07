@@ -19,7 +19,7 @@ import Loader from '@/components/ui/loader';
 import { filterOrdersByPeriod, getTopCustomers, getTopProducts, getTopProvinces } from '@/lib/dashboard-helpers';
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard';
-import RestrictedStockAlertsCard from '@/components/dashboard/RestrictedStockAlertsCard';
+import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
