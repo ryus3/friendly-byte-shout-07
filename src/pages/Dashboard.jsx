@@ -436,8 +436,11 @@ const Dashboard = () => {
         { 
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
-        {
+        canViewAllData && {
             key: 'netProfit', title: 'صافي الارباح', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
+        },
+        !canViewAllData && {
+            key: 'myProfit', title: 'أرباحي الشخصية', value: employeeProfitsData.totalPersonalProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', onClick: () => navigate('/profits-management')
         },
         {
             key: 'pendingProfit', 
