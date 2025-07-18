@@ -9,11 +9,23 @@ const PermissionBasedProductGrid = ({ products, isLoading, ...otherProps }) => {
 
   // فلترة المنتجات حسب صلاحيات المستخدم من UnifiedAuthContext
   const filteredProducts = useMemo(() => {
-    if (!products || !Array.isArray(products)) return [];
-    if (isAdmin) return products;
+    console.log('PermissionBasedProductGrid - المنتجات الواردة:', products);
+    console.log('PermissionBasedProductGrid - isAdmin:', isAdmin);
+    console.log('PermissionBasedProductGrid - filterProductsByPermissions:', filterProductsByPermissions);
+    
+    if (!products || !Array.isArray(products)) {
+      console.log('PermissionBasedProductGrid - لا توجد منتجات أو ليست مصفوفة');
+      return [];
+    }
+    if (isAdmin) {
+      console.log('PermissionBasedProductGrid - المستخدم مدير، إرجاع جميع المنتجات');
+      return products;
+    }
     
     // استخدام نظام الفلترة من UnifiedAuthContext
-    return filterProductsByPermissions ? filterProductsByPermissions(products) : [];
+    const filtered = filterProductsByPermissions ? filterProductsByPermissions(products) : [];
+    console.log('PermissionBasedProductGrid - المنتجات بعد الفلترة:', filtered);
+    return filtered;
   }, [products, isAdmin, filterProductsByPermissions]);
 
   // إذا لم يكن هناك منتجات مسموحة للموظف

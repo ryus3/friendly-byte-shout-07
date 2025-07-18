@@ -240,6 +240,12 @@ export const UnifiedAuthProvider = ({ children }) => {
         setUserRoles(roles || []);
         setUserPermissions(permissions || []);
         setProductPermissions(productPermissionsMap);
+        
+        console.log('صلاحيات المستخدم تم جلبها:', {
+          roles: roles || [],
+          permissions: permissions || [],
+          productPermissions: productPermissionsMap
+        });
       } catch (error) {
         console.error('خطأ في جلب صلاحيات المستخدم:', error);
       }

@@ -286,6 +286,7 @@ export const InventoryProvider = ({ children }) => {
       if (purchasesRes.error) throw purchasesRes.error;
 
       // معالجة وتحويل بيانات المنتجات
+      console.log('البيانات الخام من قاعدة البيانات:', productsRes.data);
       const processedProducts = (productsRes.data || []).map(product => {
         const productInventory = product.inventory || [];
         
@@ -334,15 +335,10 @@ export const InventoryProvider = ({ children }) => {
         };
       });
 
-      // تحميل الإعدادات من قاعدة البيانات
-      if (settingsRes.data && settingsRes.data.length > 0) {
-        const dbSettings = {};
-        settingsRes.data.forEach(setting => {
-          dbSettings[setting.key] = setting.value;
-        });
-        setSettings(prev => ({ ...prev, ...dbSettings }));
-      }
-
+      console.log('InventoryContext - المنتجات المعالجة:', processedProducts);
+      setProducts(processedProducts);
+      console.log('InventoryContext - تم تعيين المنتجات:', processedProducts.length, 'منتج');
+      
       // معالجة وتحويل بيانات الطلبات
       const processedOrders = (ordersRes.data || []).map(order => {
         // تحويل order_items إلى items بالتنسيق المطلوب
@@ -368,11 +364,9 @@ export const InventoryProvider = ({ children }) => {
           ...order,
           items,
           total: order.final_amount || order.total_amount, // لضمان التوافق مع الكود القديم
-          order_items: order.order_items // الاحتفاظ بالبيانات الأصلية
         };
       });
 
-      setProducts(processedProducts);
       setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
       setAiOrders(aiOrdersRes.data || []);
 

@@ -104,7 +104,9 @@ const ProductsPage = () => {
 
   // فلترة المنتجات أولاً بالصلاحيات ثم بالفلاتر الإضافية
   const permissionFilteredProducts = useMemo(() => {
+    console.log('ProductsPage - المنتجات الأصلية:', products);
     let filtered = filterProductsByPermissions(products);
+    console.log('ProductsPage - المنتجات بعد فلترة الصلاحيات:', filtered);
     
     // تطبيق فلاتر إضافية للمستخدمين الذين لديهم صلاحيات متعددة
     if (permissionFilters.department !== 'all') {
