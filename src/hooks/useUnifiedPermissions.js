@@ -10,9 +10,9 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // إضافة check للتأكد من تحميل المستخدم
   const isLoading = auth?.loading || !user;
   
+  // إرجاع فوري للتحميل بدون إعادة رندر
   if (isLoading) {
     return {
       loading: true,

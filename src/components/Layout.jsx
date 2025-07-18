@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -41,7 +41,7 @@ const SidebarContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
   
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
+  const visibleMenuItems = useMemo(() => menuItems.filter(item => hasPermission(item.permission)), [menuItems, hasPermission]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
@@ -62,14 +62,29 @@ const SidebarContent = ({ onClose }) => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const getRoleDisplayName = (role) => {
-    switch (role) {
-      case 'admin': return 'مدير';
-      case 'deputy': return 'نائب مدير';
-      case 'employee': return 'موظف';
-      case 'warehouse': return 'مسؤول مخزن';
-      default: return 'مستخدم';
+  const getRoleDisplayName = (userRoles) => {
+    if (!userRoles || userRoles.length === 0) return 'مستخدم';
+    
+    // ترتيب الأدوار حسب الأولوية
+    const roleDisplayMap = {
+      'admin': 'المدير العام',
+      'deputy': 'نائب المدير',
+      'department_manager': 'مدير قسم',
+      'sales_employee': 'موظف مبيعات',
+      'warehouse_employee': 'مسؤول المخزن',
+      'cashier': 'كاشير',
+      'employee': 'موظف'
+    };
+    
+    // البحث عن أعلى دور في التسلسل الهرمي
+    const priority = ['admin', 'deputy', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier', 'employee'];
+    for (const role of priority) {
+      if (userRoles.includes(role)) {
+        return roleDisplayMap[role] || 'مستخدم';
+      }
     }
+    
+    return 'مستخدم';
   };
 
   return (
@@ -82,7 +97,7 @@ const SidebarContent = ({ onClose }) => {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
-              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role)}</p>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.roles)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -99,7 +114,7 @@ const SidebarContent = ({ onClose }) => {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto sidebar-optimized">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -107,7 +122,9 @@ const SidebarContent = ({ onClose }) => {
             return (
               <div
                 key={item.path}
-                className={`sidebar-item ${isActive ? 'active' : ''}`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 hover:bg-accent cursor-pointer ${
+                  isActive ? 'bg-gradient-to-r from-primary/20 to-primary/5 border-r-4 border-primary text-primary font-semibold' : ''
+                }`}
                 onClick={() => handleNavigation(item.path)}
               >
                 <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
