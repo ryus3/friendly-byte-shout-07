@@ -22,13 +22,40 @@ export const useFilteredProducts = (products) => {
     // المديرون يرون كل المنتجات
     if (isAdmin) return products;
 
+    console.log('🔍 بدء فلترة المنتجات:', {
+      totalProducts: products.length,
+      isAdmin,
+      filtrationFunctions: {
+        filterCategoriesByPermission: typeof filterCategoriesByPermission,
+        filterDepartmentsByPermission: typeof filterDepartmentsByPermission,
+        filterProductTypesByPermission: typeof filterProductTypesByPermission,
+        filterSeasonsOccasionsByPermission: typeof filterSeasonsOccasionsByPermission
+      }
+    });
+
     // فلترة المنتجات حسب صلاحيات الموظف
-    return products.filter(product => {
+    const filtered = products.filter(product => {
+      console.log('🔍 فحص منتج:', product.name, {
+        id: product.id,
+        categories: product.product_categories,
+        departments: product.product_departments,
+        productTypes: product.product_product_types,
+        seasonsOccasions: product.product_seasons_occasions
+      });
+
       // فحص التصنيفات (categories) - إذا كان للمنتج تصنيفات
       if (product.product_categories && product.product_categories.length > 0) {
         const productCategories = product.product_categories.map(pc => pc.categories).filter(Boolean);
         const allowedCategories = filterCategoriesByPermission(productCategories);
-        if (allowedCategories.length === 0) return false; // المنتج له تصنيفات لكن المستخدم لا يملك صلاحية عليها
+        console.log('📂 فحص تصنيفات المنتج:', {
+          productName: product.name,
+          productCategories,
+          allowedCategories
+        });
+        if (allowedCategories.length === 0) {
+          console.log('❌ مرفوض - لا توجد تصنيفات مسموحة');
+          return false; // المنتج له تصنيفات لكن المستخدم لا يملك صلاحية عليها
+        }
       }
 
       // فحص الأقسام (departments) - إذا كان للمنتج أقسام
@@ -53,6 +80,7 @@ export const useFilteredProducts = (products) => {
       }
 
       // إذا وصل إلى هنا، المنتج مسموح له
+      console.log('✅ منتج مقبول:', product.name);
 
       // فحص المتغيرات (variants) - فلترة حسب الألوان والأحجام
       if (product.variants && product.variants.length > 0) {
@@ -90,6 +118,14 @@ export const useFilteredProducts = (products) => {
 
       return true;
     });
+    
+    console.log('📊 نتيجة الفلترة:', {
+      originalCount: products.length,
+      filteredCount: filtered.length,
+      filtered: filtered.map(p => p.name)
+    });
+    
+    return filtered;
   }, [
     products, 
     isAdmin, 
