@@ -3,29 +3,8 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins as HandCoins } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const SettlementRequestCard = ({ pendingProfit, onSettle }) => {
-  const { user } = useAuth();
-  
-  // إضافة تسجيل للتشخيص
-  console.log('🔍 SettlementRequestCard Debug:', {
-    user: user?.full_name,
-    role: user?.role,
-    roles: user?.roles,
-    pendingProfit,
-    shouldShow: !(user?.role === 'super_admin' || user?.role === 'manager' || user?.roles?.includes('super_admin') || user?.roles?.includes('manager'))
-  });
-  
-  // إخفاء الكارد للمديرين والسوبر أدمن - تحقق من الدور وقائمة الأدوار
-  if (user?.role === 'super_admin' || 
-      user?.role === 'manager' || 
-      user?.roles?.includes('super_admin') || 
-      user?.roles?.includes('manager')) {
-    console.log('❌ إخفاء طلب المحاسبة للمدير');
-    return null;
-  }
-  
   if (pendingProfit <= 0) return null;
 
   return (
