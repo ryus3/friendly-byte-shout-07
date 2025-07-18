@@ -16,7 +16,7 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
+  Sun, Moon, Monitor, Palette, ChevronRight, Volume2, DollarSign,
   BarChart, TrendingUp
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
@@ -28,7 +28,8 @@ import EditProfileDialog from '@/components/settings/EditProfileDialog';
 
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
-import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
+import RestrictedStockSettings from '@/components/settings/RestrictedStockSettings';
+import { PackageX } from 'lucide-react';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
@@ -140,7 +141,7 @@ const SettingsPage = () => {
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
-  const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
+  
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
@@ -199,13 +200,7 @@ const SettingsPage = () => {
               onClick={() => setIsNotificationSettingsOpen(true)}
             />
 
-            <ModernCard
-              icon={PackageX}
-              title="إشعارات المخزون المتقدمة"
-              description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
-              iconColor="from-red-500 to-red-600"
-              onClick={() => setIsStockSettingsOpen(true)}
-            />
+            <RestrictedStockSettings />
           </div>
 
           <SectionHeader 
@@ -351,43 +346,8 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* بوت التليغرام - إجباري للجميع مع رمز شخصي */}
-            <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام الذكي"
-              description={isAdmin 
-                ? "نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام" 
-                : "رمزك الشخصي للاتصال مع بوت التليغرام"
-              }
-              iconColor="from-blue-500 to-indigo-600"
-              onClick={() => setIsTelegramOpen(true)}
-            >
-              <div className="space-y-3">
-                {isAdmin ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
-                      <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
-                      <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">رمزك الشخصي</span>
-                      <span className="font-bold text-blue-600">عرض الرمز</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">حالة الاتصال</span>
-                      <span className="font-bold text-green-600">متاح</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </ModernCard>
+            {/* بوت التليغرام - بحسب المستخدم */}
+            <RestrictedTelegramSettings />
           </div>
 
           {/* أدوات النظام - للمدراء فقط */}
@@ -447,10 +407,6 @@ const SettingsPage = () => {
         onOpenChange={setIsReportsOpen}
       />
 
-      <StockNotificationSettings
-        open={isStockSettingsOpen}
-        onOpenChange={setIsStockSettingsOpen}
-      />
 
       {canAccessDeliveryPartners && (
         <DeliveryPartnerDialog
@@ -459,16 +415,11 @@ const SettingsPage = () => {
         />
       )}
 
-      {/* حوار التليغرام - مختلف حسب الدور */}
-      {isAdmin ? (
+      {/* حوار التليغرام - للمدراء فقط */}
+      {isAdmin && (
         <TelegramBotDialog 
           open={isTelegramOpen} 
           onOpenChange={setIsTelegramOpen} 
-        />
-      ) : (
-        <RestrictedTelegramSettings 
-          open={isTelegramOpen} 
-          onOpenChange={setIsTelegramOpen}
         />
       )}
 

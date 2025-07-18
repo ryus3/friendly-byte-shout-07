@@ -19,7 +19,7 @@ import Loader from '@/components/ui/loader';
 import { filterOrdersByPeriod, getTopCustomers, getTopProducts, getTopProvinces } from '@/lib/dashboard-helpers';
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
 import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard';
-import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
+import RestrictedStockAlertsCard from '@/components/dashboard/RestrictedStockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
@@ -436,8 +436,11 @@ const Dashboard = () => {
         { 
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
-        {
+        canViewAllData && {
             key: 'netProfit', title: 'صافي الارباح', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
+        },
+        !canViewAllData && {
+            key: 'myProfit', title: 'أرباحي الشخصية', value: employeeProfitsData.totalPersonalProfit, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', onClick: () => navigate('/profits-management')
         },
         {
             key: 'pendingProfit', 
@@ -546,7 +549,7 @@ const Dashboard = () => {
                     <TopListCard title="المنتجات الأكثر طلباً" items={dashboardData.topProducts} titleIcon={Package} itemIcon={TrendingUp} />
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-                    <StockAlertsCard />
+                    <RestrictedStockAlertsCard />
                     <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />
                 </div>
             </div>
