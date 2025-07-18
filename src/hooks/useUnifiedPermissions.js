@@ -10,13 +10,32 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // إضافة check للتأكد من تحميل المستخدم
+  if (auth?.loading || !user) {
+    return {
+      loading: true,
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      hasRole: () => false,
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      filterDataByUser: (data) => [],
+      filterProductsByPermissions: (products) => [],
+      getEmployeeStats: () => ({}),
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {}
+    };
+  }
+
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    // إذا كان المستخدم غير محمل أو غير موجود، نوقف التحميل
-    if (auth?.loading || !user?.user_id) {
-      setLoading(auth?.loading || false);
-      return;
-    }
+    if (!user?.user_id) return;
 
     const fetchUserPermissions = async () => {
       try {
@@ -88,7 +107,7 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [auth?.loading, user?.user_id]);
+  }, [user?.user_id]);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
@@ -100,7 +119,7 @@ export const useUnifiedPermissions = (passedUser) => {
   // التحقق من دور معين
   const hasRole = useMemo(() => {
     return (roleName) => {
-      return userRoles.some(ur => ur.roles?.name === roleName);
+      return userRoles.some(ur => ur.roles.name === roleName);
     };
   }, [userRoles]);
 
@@ -192,29 +211,6 @@ export const useUnifiedPermissions = (passedUser) => {
       };
     };
   }, [filterDataByUser]);
-
-  // إضافة check للتأكد من تحميل المستخدم
-  if (auth?.loading || !user) {
-    return {
-      loading: true,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      hasRole: () => false,
-      hasPermission: () => false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: (data) => [],
-      filterProductsByPermissions: (products) => [],
-      getEmployeeStats: () => ({}),
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {}
-    };
-  }
 
   return {
     // البيانات الأساسية
