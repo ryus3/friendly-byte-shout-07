@@ -4,6 +4,31 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
   const auth = useAuth();
+  
+  // Defensive programming - ensure we have React context
+  if (!auth) {
+    console.error('useUnifiedPermissions: useAuth returned null - component may be rendered outside UnifiedAuthProvider');
+    return {
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {},
+      loading: false,
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      hasRole: () => false,
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      filterDataByUser: (data) => data || [],
+      filterProductsByPermissions: (products) => products || [],
+      getEmployeeStats: () => ({ total: 0, personal: 0 })
+    };
+  }
+  
   const user = passedUser || auth?.user;
   const [userRoles, setUserRoles] = useState([]);
   const [userPermissions, setUserPermissions] = useState([]);
