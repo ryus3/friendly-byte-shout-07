@@ -57,6 +57,8 @@
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
     --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--muted)));
+    --gradient-welcome: linear-gradient(135deg, hsl(var(--primary)), hsl(262 83% 58%));
+    --gradient-glass: linear-gradient(135deg, hsl(var(--background) / 0.9), hsl(var(--background) / 0.7));
   }
  
   .dark {
@@ -215,6 +217,38 @@
 
   .stock-progress-bar {
     @apply h-1.5 rounded-full transition-all duration-500;
+  }
+  
+  /* Welcome Header Beautiful Styles */
+  .glass-effect {
+    background: var(--gradient-glass);
+    backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--border) / 0.2);
+    box-shadow: 0 8px 32px hsl(var(--primary) / 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .glass-effect:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px hsl(var(--primary) / 0.15);
+  }
+  
+  .gradient-text {
+    background: var(--gradient-welcome);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease-in-out infinite;
+  }
+  
+  @keyframes gradient-shift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
   }
 }
 
