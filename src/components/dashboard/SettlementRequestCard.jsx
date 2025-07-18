@@ -3,8 +3,16 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Coins as HandCoins } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const SettlementRequestCard = ({ pendingProfit, onSettle }) => {
+  const { user } = useAuth();
+  
+  // إخفاء الكارد للمديرين والسوبر أدمن
+  if (user?.role === 'super_admin' || user?.role === 'manager') {
+    return null;
+  }
+  
   if (pendingProfit <= 0) return null;
 
   return (
