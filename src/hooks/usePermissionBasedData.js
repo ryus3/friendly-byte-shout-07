@@ -103,31 +103,20 @@ export const usePermissionBasedData = () => {
   // فلترة التصنيفات والمتغيرات حسب الصلاحيات - استخدام صلاحيات المنتجات من السياق
   const filterCategoriesByPermission = useMemo(() => {
     return (categories) => {
-      console.log('🔍 فلترة التصنيفات:', {
-        categories,
-        isAdmin,
-        user_productPermissions: user?.productPermissions,
-        user_full: user
-      });
-      
       if (!categories) return [];
       if (isAdmin) return categories;
       
       // استخدام صلاحيات المنتجات من UnifiedAuthContext
       const categoryPermissions = user?.productPermissions?.category;
       if (!categoryPermissions) {
-        console.log('❌ لا توجد صلاحيات تصنيفات');
         return []; // لا توجد صلاحيات = لا يرى شيء
       }
       
       if (categoryPermissions.has_full_access) {
-        console.log('✅ صلاحية كاملة للتصنيفات');
         return categories;
       }
       
-      const filtered = categories.filter(cat => categoryPermissions.allowed_items.includes(cat.id));
-      console.log('🔍 تصنيفات مفلترة:', filtered);
-      return filtered;
+      return categories.filter(cat => categoryPermissions.allowed_items.includes(cat.id));
     };
   }, [isAdmin, user?.productPermissions]);
 
