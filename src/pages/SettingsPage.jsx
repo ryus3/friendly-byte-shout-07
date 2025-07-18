@@ -231,7 +231,7 @@ const SettingsPage = () => {
               <ModernCard
                 icon={DollarSign}
                 title="قواعد الأرباح للموظفين"
-                description="إدارة قواعد الأرباح وحساب المستحقات للموظفين حسب المنتجات والتصنيفات"
+                description="إدارة قواعد الأرباح بالمبالغ الثابتة (د.ع) - النظام الجديد يحسب الأرباح عند استلام الفاتورة وليس التوصيل"
                 iconColor="from-green-500 to-green-600"
                 onClick={() => setIsProfitsManagerOpen(true)}
               />

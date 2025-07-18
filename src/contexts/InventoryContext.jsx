@@ -496,34 +496,69 @@ export const InventoryProvider = ({ children }) => {
 
   const setEmployeeProfitRule = async (employeeId, rules) => {
     try {
-      // حذف القواعد القديمة للموظف
-      const { error: deleteError } = await supabase
-        .from('employee_profit_rules')
-        .delete()
-        .eq('employee_id', employeeId);
-
-      if (deleteError) throw deleteError;
-
-      // إضافة القواعد الجديدة
-      if (rules && rules.length > 0) {
-        const { error: insertError } = await supabase
+      // إذا كانت قاعدة واحدة (إضافة جديدة)
+      if (!Array.isArray(rules)) {
+        const rule = rules;
+        
+        // إذا كان حذف قاعدة
+        if (rule.id && rule.is_active === false) {
+          const { error: deleteError } = await supabase
+            .from('employee_profit_rules')
+            .delete()
+            .eq('id', rule.id);
+          
+          if (deleteError) throw deleteError;
+        } else {
+          // إضافة قاعدة جديدة
+          const { error: insertError } = await supabase
+            .from('employee_profit_rules')
+            .insert({
+              employee_id: employeeId,
+              rule_type: rule.rule_type,
+              target_id: rule.target_id,
+              profit_amount: rule.profit_amount || 0,
+              profit_percentage: null, // لا نستخدم النسب بعد الآن
+              is_active: rule.is_active !== false
+            });
+          
+          if (insertError) throw insertError;
+        }
+      } else {
+        // حذف القواعد القديمة للموظف
+        const { error: deleteError } = await supabase
           .from('employee_profit_rules')
-          .insert(rules.map(rule => ({
-            employee_id: employeeId,
-            rule_type: rule.rule_type,
-            target_id: rule.target_id,
-            profit_amount: rule.profit_amount || 0,
-            profit_percentage: rule.profit_percentage || null,
-            is_active: rule.is_active !== false
-          })));
+          .delete()
+          .eq('employee_id', employeeId);
 
-        if (insertError) throw insertError;
+        if (deleteError) throw deleteError;
+
+        // إضافة القواعد الجديدة
+        if (rules && rules.length > 0) {
+          const { error: insertError } = await supabase
+            .from('employee_profit_rules')
+            .insert(rules.map(rule => ({
+              employee_id: employeeId,
+              rule_type: rule.rule_type,
+              target_id: rule.target_id,
+              profit_amount: rule.profit_amount || 0,
+              profit_percentage: null,
+              is_active: rule.is_active !== false
+            })));
+
+          if (insertError) throw insertError;
+        }
       }
 
       // تحديث البيانات المحلية
+      // إعادة جلب القواعد المحدثة
+      const { data: updatedRules } = await supabase
+        .from('employee_profit_rules')
+        .select('*')
+        .eq('employee_id', employeeId);
+
       setEmployeeProfitRules(prev => ({
         ...prev,
-        [employeeId]: rules
+        [employeeId]: updatedRules || []
       }));
 
       toast({ 

@@ -321,7 +321,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
   const employeeRules = employeeId ? getEmployeeProfitRules(employeeId) : [];
 
   const handleAddRule = async () => {
-    if (!employeeId || !targetId) {
+    if (!employeeId || (ruleType !== 'default' && !targetId)) {
       toast({
         title: "خطأ",
         description: "الرجاء ملء جميع الحقول المطلوبة",
@@ -330,10 +330,10 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       return;
     }
 
-    if (!profitAmount && !profitPercentage) {
+    if (!profitAmount || parseFloat(profitAmount) <= 0) {
       toast({
         title: "خطأ",
-        description: "الرجاء إدخال مبلغ الربح أو النسبة المئوية",
+        description: "الرجاء إدخال مبلغ ربح صحيح أكبر من صفر",
         variant: "destructive"
       });
       return;
@@ -343,9 +343,9 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
     try {
       await setEmployeeProfitRule(employeeId, {
         rule_type: ruleType,
-        target_id: targetId,
-        profit_amount: profitAmount ? parseFloat(profitAmount) : 0,
-        profit_percentage: profitPercentage ? parseFloat(profitPercentage) : null,
+        target_id: ruleType === 'default' ? 'default' : targetId,
+        profit_amount: parseFloat(profitAmount),
+        profit_percentage: null,
         is_active: true
       });
 
@@ -357,7 +357,6 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       // إعادة تعيين النموذج
       setTargetId('');
       setProfitAmount('');
-      setProfitPercentage('');
     } catch (error) {
       toast({
         title: "خطأ",
@@ -392,10 +391,16 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       return product ? product.name : 'منتج محذوف';
     } else if (rule.rule_type === 'category') {
       const category = categories.find(c => c.id === rule.target_id);
-      return category ? category.name : 'تصنيف محذوف';
+      return category ? category.name : 'فئة محذوفة';
     } else if (rule.rule_type === 'department') {
       const department = departments.find(d => d.id === rule.target_id);
       return department ? department.name : 'قسم محذوف';
+    } else if (rule.rule_type === 'variant') {
+      const product = products.find(p => p.variants?.some(v => v.id === rule.target_id));
+      const variant = product?.variants?.find(v => v.id === rule.target_id);
+      return variant ? `${product.name} - ${variant.color_name || ''} ${variant.size_name || ''}` : 'متغير محذوف';
+    } else if (rule.rule_type === 'product_type') {
+      return 'نوع منتج';
     }
     return 'غير محدد';
   };
@@ -404,10 +409,21 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
     switch (ruleType) {
       case 'product':
         return products.map(p => ({ value: p.id, label: p.name }));
+      case 'variant':
+        // يمكن إضافة جلب المتغيرات هنا لاحقاً
+        return products.flatMap(p => 
+          p.variants?.map(v => ({ 
+            value: v.id, 
+            label: `${p.name} - ${v.color_name || ''} ${v.size_name || ''}` 
+          })) || []
+        );
       case 'category':
         return categories.map(c => ({ value: c.id, label: c.name }));
       case 'department':
         return departments.map(d => ({ value: d.id, label: d.name }));
+      case 'product_type':
+        // يجب جلب أنواع المنتجات من السياق
+        return [];
       default:
         return [];
     }
@@ -424,7 +440,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
             قواعد الأرباح - {employee.full_name || employee.username}
           </DialogTitle>
           <DialogDescription>
-            إدارة قواعد الأرباح الخاصة بالموظف
+            إدارة قواعد الأرباح بالمبالغ الثابتة (د.ع) - المديرون لا يحصلون على أرباح
           </DialogDescription>
         </DialogHeader>
 
@@ -432,7 +448,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
           {/* إضافة قاعدة جديدة */}
           <Card>
             <CardHeader>
-              <CardTitle>إضافة قاعدة ربح جديدة</CardTitle>
+              <CardTitle>إضافة قاعدة ربح جديدة (مبلغ ثابت)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -443,27 +459,34 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="default">افتراضي (لجميع المنتجات)</SelectItem>
                       <SelectItem value="product">منتج محدد</SelectItem>
-                      <SelectItem value="category">تصنيف</SelectItem>
-                      <SelectItem value="department">قسم</SelectItem>
+                      <SelectItem value="variant">متغير محدد</SelectItem>
+                      <SelectItem value="category">فئة المنتج</SelectItem>
+                      <SelectItem value="department">قسم المنتج</SelectItem>
+                      <SelectItem value="product_type">نوع المنتج</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
                   <Label>العنصر المستهدف</Label>
-                  <Select value={targetId} onValueChange={setTargetId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر العنصر..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px]">
-                      {getOptions().map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {ruleType === 'default' ? (
+                    <Input value="افتراضي لجميع المنتجات" disabled />
+                  ) : (
+                    <Select value={targetId} onValueChange={setTargetId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر العنصر..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px]">
+                        {getOptions().map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 <div>
@@ -472,30 +495,21 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                     type="number"
                     value={profitAmount}
                     onChange={(e) => setProfitAmount(e.target.value)}
-                    placeholder="0"
+                    placeholder="مثال: 5000"
+                    min="0"
+                    step="1000"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة
+                  </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>نسبة الربح (%)</Label>
-                  <Input
-                    type="number"
-                    value={profitPercentage}
-                    onChange={(e) => setProfitPercentage(e.target.value)}
-                    placeholder="0"
-                    max="100"
-                    min="0"
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <Button onClick={handleAddRule} disabled={loading} className="w-full">
-                    {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    إضافة القاعدة
-                  </Button>
-                </div>
+              <div className="flex justify-end">
+                <Button onClick={handleAddRule} disabled={loading} className="min-w-[120px]">
+                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  إضافة القاعدة
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -519,8 +533,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                       <TableRow>
                         <TableHead>النوع</TableHead>
                         <TableHead>العنصر</TableHead>
-                        <TableHead>مبلغ ثابت</TableHead>
-                        <TableHead>نسبة %</TableHead>
+                        <TableHead>مبلغ الربح (د.ع)</TableHead>
                         <TableHead>الحالة</TableHead>
                         <TableHead>إجراءات</TableHead>
                       </TableRow>
@@ -530,16 +543,19 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                         <TableRow key={rule.id}>
                           <TableCell>
                             <Badge variant="outline">
-                              {rule.rule_type === 'product' ? 'منتج' : 
-                               rule.rule_type === 'category' ? 'تصنيف' : 'قسم'}
+                              {rule.rule_type === 'default' ? 'افتراضي' :
+                               rule.rule_type === 'product' ? 'منتج' : 
+                               rule.rule_type === 'variant' ? 'متغير' :
+                               rule.rule_type === 'category' ? 'فئة' : 
+                               rule.rule_type === 'department' ? 'قسم' :
+                               rule.rule_type === 'product_type' ? 'نوع' : 'غير محدد'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{getTargetName(rule)}</TableCell>
                           <TableCell>
-                            {rule.profit_amount > 0 ? `${rule.profit_amount.toLocaleString()} د.ع` : '-'}
+                            {rule.rule_type === 'default' ? 'جميع المنتجات' : getTargetName(rule)}
                           </TableCell>
-                          <TableCell>
-                            {rule.profit_percentage ? `${rule.profit_percentage}%` : '-'}
+                          <TableCell className="font-semibold text-green-600">
+                            {rule.profit_amount.toLocaleString()} د.ع
                           </TableCell>
                           <TableCell>
                             <Badge variant={rule.is_active ? "default" : "secondary"}>
