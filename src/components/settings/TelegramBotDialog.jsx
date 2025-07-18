@@ -120,15 +120,15 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-              <Bot className="w-6 h-6 text-white" />
+          <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-lg sm:text-xl">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
-            <div>
+            <div className="text-right">
               <h3 className="font-bold">بوت التليغرام الذكي</h3>
-              <p className="text-sm text-muted-foreground font-normal">رمزك الشخصي للاتصال مع بوت التليغرام</p>
+              <p className="text-xs sm:text-sm text-muted-foreground font-normal">رمزك الشخصي للاتصال مع بوت التليغرام</p>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -136,20 +136,36 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
         <div className="space-y-6">
           {/* Top Section - Bot Info */}
           <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto">
-                  <MessageCircle className="w-8 h-8 text-white" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto">
+                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-green-800">البوت نشط ويستقبل الطلبات تلقائياً من الموظفين</h3>
+                <h3 className="text-base sm:text-lg font-bold text-green-800">البوت نشط ويستقبل الطلبات تلقائياً</h3>
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2 text-green-700">
                     <span>🤖</span>
-                    <span className="font-semibold">@Ryusiq_bot</span>
+                    <span className="font-semibold text-sm sm:text-base">@Ryusiq_bot</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => copyToClipboard('Ryusiq_bot')}
+                      className="h-8 px-2 bg-green-100 hover:bg-green-200 border-green-300 text-green-700"
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
                   </div>
-                  <div className="text-sm text-green-600 space-y-1">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => window.open('https://t.me/Ryusiq_bot', '_blank')}
+                  >
+                    نشط ومتصل
+                  </Button>
+                  <div className="text-xs sm:text-sm text-green-600 space-y-1">
                     <p>✨ <strong>كل شيء تلقائي:</strong></p>
-                    <div className="flex flex-wrap justify-center gap-2">
+                    <div className="flex flex-wrap justify-center gap-1 sm:gap-2">
                       <Badge variant="secondary" className="text-xs">لا حاجة لإعداد يدوي</Badge>
                       <Badge variant="secondary" className="text-xs">الموظفين يحتاجون فقط لرموزهم</Badge>
                       <Badge variant="secondary" className="text-xs">التوجيه الذكي داخل البوت</Badge>
@@ -180,37 +196,37 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                   const isLinked = !!employeeCode.telegram_chat_id;
                   
                   return (
-                    <div key={employeeCode.id} className={`p-4 rounded-lg border transition-colors ${
+                    <div key={employeeCode.id} className={`p-3 sm:p-4 rounded-lg border transition-colors ${
                       isCurrentUser ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
                     }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base ${
                             isCurrentUser 
                               ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
                               : 'bg-gradient-to-r from-green-500 to-teal-500'
                           }`}>
                             {profile?.full_name?.charAt(0) || 'U'}
                           </div>
-                          <div>
-                            <p className="font-semibold text-lg">{profile?.full_name || 'مستخدم غير معروف'}</p>
-                            <div className="flex items-center gap-2 mt-1">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm sm:text-lg truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                            <div className="flex flex-wrap items-center gap-1 sm:gap-2 mt-1">
                               {isCurrentUser && (
-                                <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
+                                <Badge variant="default" className="text-xs bg-blue-100 text-blue-700 border-blue-300">
                                   المدير العام
                                 </Badge>
                               )}
                               <Badge variant={isLinked ? "default" : "outline"} className="text-xs">
-                                {isLinked ? 'متصل' : 'حالة الاتصال'}
+                                {isLinked ? '✅ متصل' : '⚪ غير متصل'}
                               </Badge>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-center">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <div className="text-center flex-1 sm:flex-none">
                             <Badge 
                               variant="outline" 
-                              className={`font-mono text-lg px-4 py-2 ${
+                              className={`font-mono text-sm sm:text-lg px-3 py-2 w-full sm:w-auto ${
                                 isCurrentUser 
                                   ? 'bg-blue-100 text-blue-700 border-blue-300' 
                                   : 'bg-green-100 text-green-700 border-green-300'
@@ -218,15 +234,16 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                             >
                               {employeeCode.employee_code}
                             </Badge>
-                            <p className="text-xs text-muted-foreground mt-1">عرض الرمز</p>
+                            <p className="text-xs text-muted-foreground mt-1">الرمز</p>
                           </div>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => copyToClipboard(employeeCode.employee_code)}
-                            className="h-10"
+                            className="h-10 px-3 bg-background hover:bg-muted border-border text-foreground hover:text-foreground"
                           >
                             <Copy className="w-4 h-4" />
+                            <span className="hidden sm:inline mr-1">نسخ</span>
                           </Button>
                         </div>
                       </div>
@@ -263,25 +280,25 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                    <p className="text-sm text-blue-700">ابحث عن البوت في التليغرام واضغط <span className="font-semibold">Start</span></p>
+                    <p className="text-xs sm:text-sm text-blue-700">ابحث عن البوت في التليغرام واضغط <span className="font-semibold">Start</span></p>
                   </div>
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                    <p className="text-sm text-blue-700">أرسل الرمز الخاص بك إلى البوت</p>
+                    <p className="text-xs sm:text-sm text-blue-700">أرسل الرمز الخاص بك إلى البوت</p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
-                    <p className="text-sm text-blue-700">ستتلقى رسالة تأكيد ربط الحساب</p>
+                    <p className="text-xs sm:text-sm text-blue-700">ستتلقى رسالة تأكيد ربط الحساب</p>
                   </div>
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
-                    <p className="text-sm text-blue-700">ستبدأ بتلقي الإشعارات فوراً</p>
+                    <p className="text-xs sm:text-sm text-blue-700">ستبدأ بتلقي الإشعارات فوراً</p>
                   </div>
                 </div>
               </div>
@@ -290,7 +307,11 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
         </div>
 
         <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto"
+          >
             إغلاق
           </Button>
         </div>
