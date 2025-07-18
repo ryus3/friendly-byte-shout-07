@@ -220,8 +220,26 @@ export const UnifiedAuthProvider = ({ children }) => {
           permissions = perms?.map(rp => rp.permissions) || [];
         }
 
+        // جلب صلاحيات المنتجات
+        const { data: productPerms, error: productPermsError } = await supabase
+          .from('user_product_permissions')
+          .select('*')
+          .eq('user_id', user.user_id);
+
+        if (productPermsError) throw productPermsError;
+
+        // تنظيم صلاحيات المنتجات
+        const productPermissionsMap = {};
+        productPerms?.forEach(perm => {
+          productPermissionsMap[perm.permission_type] = {
+            allowed_items: perm.allowed_items || [],
+            has_full_access: perm.has_full_access || false
+          };
+        });
+
         setUserRoles(roles || []);
         setUserPermissions(permissions || []);
+        setProductPermissions(productPermissionsMap);
       } catch (error) {
         console.error('خطأ في جلب صلاحيات المستخدم:', error);
       }
@@ -509,18 +527,34 @@ export const UnifiedAuthProvider = ({ children }) => {
     return (products) => {
       if (!products) return [];
       if (isAdmin) return products;
-      
-      // للموظفين: فلترة المنتجات حسب صلاحيات المنتجات من قاعدة البيانات
+
       return products.filter(product => {
-        // المديرون يرون كل شيء
-        if (isAdmin) return true;
-        
-        // TODO: تطبيق فلترة حسب صلاحيات المنتجات من جدول user_product_permissions
-        // حالياً، جميع الموظفين يرون جميع المنتجات (سيتم تطوير هذا لاحقاً)
+        // فحص التصنيفات عبر product_categories
+        const categoryPerm = productPermissions.category;
+        if (categoryPerm && !categoryPerm.has_full_access) {
+          if (product.product_categories && product.product_categories.length > 0) {
+            const hasAllowedCategory = product.product_categories.some(pc => 
+              categoryPerm.allowed_items.includes(pc.category_id)
+            );
+            if (!hasAllowedCategory) return false;
+          }
+        }
+
+        // فحص الأقسام عبر product_departments
+        const departmentPerm = productPermissions.department;
+        if (departmentPerm && !departmentPerm.has_full_access) {
+          if (product.product_departments && product.product_departments.length > 0) {
+            const hasAllowedDepartment = product.product_departments.some(pd => 
+              departmentPerm.allowed_items.includes(pd.department_id)
+            );
+            if (!hasAllowedDepartment) return false;
+          }
+        }
+
         return true;
       });
     };
-  }, [isAdmin]);
+  }, [isAdmin, productPermissions]);
 
   const value = {
     user,
@@ -543,6 +577,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     isAdmin,
     userRoles,
     userPermissions,
+    productPermissions,
     filterProductsByPermissions
   };
 

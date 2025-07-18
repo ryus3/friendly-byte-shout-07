@@ -9,7 +9,10 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, LayoutGrid, List, SlidersHorizontal, Search, ShoppingCart, Check, X, QrCode } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader2, Plus, LayoutGrid, List, SlidersHorizontal, Search, ShoppingCart, Check, X, QrCode, Filter } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import PermissionBasedProductGrid from '@/components/products/PermissionBasedProductGrid';
 import ProductList from '@/components/products/ProductList';
@@ -22,37 +25,69 @@ import { toast } from '@/components/ui/use-toast';
 const ProductsPage = () => {
   const location = useLocation();
   const { products, loading, addToCart, clearCart } = useInventory();
-  const { user } = useAuth();
+  const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
   const { hasPermission } = usePermissions();
-  const { colors } = useVariants();
+  const { colors, categories: allCategories, departments: allDepartments } = useVariants();
+  
+  // فلتر خاص بالصلاحيات - محفوظ محلياً
+  const [permissionFilters, setPermissionFilters] = useLocalStorage('productPermissionFilters', {
+    category: 'all',
+    department: 'all'
+  });
+
+  // الحصول على البيانات المسموحة للمستخدم
+  const allowedData = useMemo(() => {
+    if (isAdmin) {
+      return {
+        allowedCategories: allCategories,
+        allowedDepartments: allDepartments
+      };
+    }
+
+    const categoryPerm = productPermissions?.category;
+    const departmentPerm = productPermissions?.department;
+
+    const allowedCategories = categoryPerm?.has_full_access 
+      ? allCategories 
+      : allCategories.filter(cat => categoryPerm?.allowed_items?.includes(cat.id)) || [];
+
+    const allowedDepartments = departmentPerm?.has_full_access 
+      ? allDepartments 
+      : allDepartments.filter(dept => departmentPerm?.allowed_items?.includes(dept.id)) || [];
+
+    return {
+      allowedCategories,
+      allowedDepartments
+    };
+  }, [isAdmin, allCategories, allDepartments, productPermissions]);
+
+  // فلترة المنتجات أولاً بالصلاحيات ثم بالفلاتر الإضافية
+  const permissionFilteredProducts = useMemo(() => {
+    let filtered = filterProductsByPermissions(products);
+    
+    // تطبيق فلاتر إضافية للمستخدمين الذين لديهم صلاحيات متعددة
+    if (permissionFilters.department !== 'all') {
+      filtered = filtered.filter(product => 
+        product.product_departments?.some(pd => pd.department_id === permissionFilters.department)
+      );
+    }
+
+    if (permissionFilters.category !== 'all') {
+      filtered = filtered.filter(product => 
+        product.product_categories?.some(pc => pc.category_id === permissionFilters.category)
+      );
+    }
+
+    return filtered;
+  }, [products, filterProductsByPermissions, permissionFilters]);
   
   const { categories, brands } = useMemo(() => {
-    // استخراج التصنيفات والعلامات التجارية المسموحة فقط
-    const allowedProducts = products.filter(product => {
-      // التحقق من صلاحيات التصنيفات
-      if (product.product_categories && product.product_categories.length > 0) {
-        const hasAllowedCategory = product.product_categories.some(pc => 
-          hasPermission('view_category_all') || hasPermission(`view_category_${pc.category_id}`)
-        );
-        if (!hasAllowedCategory) return false;
-      }
-
-      // التحقق من صلاحيات الأقسام
-      if (product.product_departments && product.product_departments.length > 0) {
-        const hasAllowedDepartment = product.product_departments.some(pd => 
-          hasPermission('view_department_all') || hasPermission(`view_department_${pd.department_id}`)
-        );
-        if (!hasAllowedDepartment) return false;
-      }
-
-      return true;
-    });
-
-    const uniqueCategories = [...new Set(allowedProducts.map(p => p.categories?.main_category).filter(Boolean))];
-    const uniqueBrands = [...new Set(allowedProducts.map(p => p.brand).filter(Boolean))];
+    // استخراج التصنيفات والعلامات التجارية من المنتجات المفلترة
+    const uniqueCategories = [...new Set(permissionFilteredProducts.map(p => p.categories?.main_category).filter(Boolean))];
+    const uniqueBrands = [...new Set(permissionFilteredProducts.map(p => p.brand).filter(Boolean))];
     
     return { categories: uniqueCategories, brands: uniqueBrands };
-  }, [products, hasPermission]);
+  }, [permissionFilteredProducts]);
   
   const [viewMode, setViewMode] = useLocalStorage('productsViewMode', 'list');
   const [filters, setFilters] = useState({
@@ -96,7 +131,7 @@ const ProductsPage = () => {
   }, [location]);
 
   const filteredProducts = useMemo(() => {
-    let tempProducts = products.filter(p => p.is_active !== false);
+    let tempProducts = permissionFilteredProducts.filter(p => p.is_active !== false);
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
@@ -126,7 +161,7 @@ const ProductsPage = () => {
     });
 
     return tempProducts;
-  }, [products, filters]);
+  }, [permissionFilteredProducts, filters]);
   
   const handleCreateOrder = (product, variant, quantity) => {
     clearCart();
@@ -142,12 +177,117 @@ const ProductsPage = () => {
 
   const handleBarcodeScan = (barcode) => {
     setFilters(prev => ({ ...prev, searchTerm: barcode }));
-    const foundProduct = products.find(p => p.variants.some(v => v.barcode === barcode));
+    const foundProduct = permissionFilteredProducts.find(p => p.variants.some(v => v.barcode === barcode));
     if (foundProduct) {
       handleProductSelect(foundProduct);
     } else {
       toast({ title: "لم يتم العثور على المنتج", description: "لا يوجد منتج بهذا الباركود.", variant: "destructive" });
     }
+  };
+
+  const resetPermissionFilters = () => {
+    setPermissionFilters({ category: 'all', department: 'all' });
+  };
+
+  const hasActivePermissionFilters = permissionFilters.category !== 'all' || permissionFilters.department !== 'all';
+
+  // مكون فلتر الصلاحيات
+  const PermissionBasedFilter = () => {
+    // إذا لم يكن لدى المستخدم صلاحيات متعددة، لا نعرض الفلتر
+    if (!isAdmin && allowedData.allowedCategories.length <= 1 && allowedData.allowedDepartments.length <= 1) {
+      return null;
+    }
+
+    return (
+      <Card className="mb-4">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4" />
+              <CardTitle className="text-sm">فلترة المنتجات حسب الصلاحيات</CardTitle>
+            </div>
+            {hasActivePermissionFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={resetPermissionFilters}
+                className="text-xs h-7"
+              >
+                <X className="w-3 h-3 ml-1" />
+                إعادة تعيين
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* فلتر الأقسام */}
+            {allowedData.allowedDepartments.length > 1 && (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">القسم</Label>
+                <Select
+                  value={permissionFilters.department}
+                  onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, department: value }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="اختر القسم" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الأقسام</SelectItem>
+                    {allowedData.allowedDepartments.map(dept => (
+                      <SelectItem key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* فلتر التصنيفات */}
+            {allowedData.allowedCategories.length > 1 && (
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">التصنيف الرئيسي</Label>
+                <Select
+                  value={permissionFilters.category}
+                  onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, category: value }))}
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="اختر التصنيف" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع التصنيفات</SelectItem>
+                    {allowedData.allowedCategories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {/* معلومات الفلترة الحالية */}
+          {hasActivePermissionFilters && (
+            <div className="pt-2 border-t">
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {permissionFilters.department !== 'all' && (
+                  <span className="bg-accent px-2 py-1 rounded">
+                    القسم: {allowedData.allowedDepartments.find(d => d.id === permissionFilters.department)?.name}
+                  </span>
+                )}
+                {permissionFilters.category !== 'all' && (
+                  <span className="bg-accent px-2 py-1 rounded">
+                    التصنيف: {allowedData.allowedCategories.find(c => c.id === permissionFilters.category)?.name}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -165,7 +305,8 @@ const ProductsPage = () => {
         <meta name="description" content="تصفح جميع المنتجات المتاحة في المخزون." />
       </Helmet>
       <div className="flex flex-col h-full">
-        <header className="flex-shrink-0 p-4 border-b">
+        <header className="flex-shrink-0 p-4 border-b space-y-4">
+          <PermissionBasedFilter />
           <ProductFilters
             filters={filters}
             setFilters={setFilters}
