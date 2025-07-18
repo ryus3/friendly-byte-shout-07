@@ -510,9 +510,16 @@ export const UnifiedAuthProvider = ({ children }) => {
   // إنشاء functions الصلاحيات
   const hasPermission = useMemo(() => {
     return (permissionName) => {
+      if (!user || !userPermissions) return false;
+      
+      // Super admin and admin have all permissions
+      if (user.role === 'super_admin' || user.role === 'admin') {
+        return true;
+      }
+      
       return userPermissions.some(perm => perm.name === permissionName);
     };
-  }, [userPermissions]);
+  }, [user, userPermissions]);
 
   const hasRole = useMemo(() => {
     return (roleName) => {

@@ -18,25 +18,33 @@ import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, 
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {
   const { orders, products, accounting, purchases } = useInventory();
-  const { allUsers } = useAuth();
+  const { allUsers, user, hasPermission } = useAuth();
   const [generatingReport, setGeneratingReport] = useState(null);
+  
+  // تحديد ما إذا كان المستخدم يستطيع رؤية جميع البيانات أم بياناته فقط
+  const canViewAllData = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('view_all_data');
 
-  // حساب البيانات الحقيقية للنظام
+  // حساب البيانات للمستخدم أو النظام كاملاً
   const calculateRealData = () => {
     const safeOrders = Array.isArray(orders) ? orders : [];
     const safeProducts = Array.isArray(products) ? products : [];
     const safePurchases = Array.isArray(purchases) ? purchases : [];
-    const deliveredOrders = safeOrders.filter(o => o.status === 'delivered');
     
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (parseFloat(o.final_amount) || 0), 0);
-    const totalOrders = deliveredOrders.length;
-    const totalProducts = safeProducts.filter(p => p.is_active !== false).length;
+    // فلترة البيانات حسب صلاحيات المستخدم
+    const filteredOrders = canViewAllData 
+      ? safeOrders.filter(o => o.status === 'delivered')
+      : safeOrders.filter(o => o.status === 'delivered' && o.created_by === user?.id);
     
-    // حساب المصاريف من جدول المشتريات والمصاريف
-    const purchasesExpenses = safePurchases.reduce((sum, p) => sum + (parseFloat(p.total_amount) || 0), 0);
-    const otherExpenses = Array.isArray(accounting?.expenses) 
-      ? accounting.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) 
-      : 0;
+    const filteredPurchases = canViewAllData ? safePurchases : [];
+    const filteredExpenses = canViewAllData ? (Array.isArray(accounting?.expenses) ? accounting.expenses : []) : [];
+    
+    const totalRevenue = filteredOrders.reduce((sum, o) => sum + (parseFloat(o.final_amount) || 0), 0);
+    const totalOrders = filteredOrders.length;
+    const totalProducts = canViewAllData ? safeProducts.filter(p => p.is_active !== false).length : 0;
+    
+    // حساب المصاريف من جدول المشتريات والمصاريف (للمدراء فقط)
+    const purchasesExpenses = filteredPurchases.reduce((sum, p) => sum + (parseFloat(p.total_amount) || 0), 0);
+    const otherExpenses = filteredExpenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
     const totalExpenses = purchasesExpenses + otherExpenses;
     
     // حساب المخزون بطريقة أفضل
@@ -63,9 +71,11 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       netProfit: totalRevenue - totalExpenses,
       averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
       profitMargin: totalRevenue > 0 ? `${((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1)}%` : '0%',
-      orders: deliveredOrders,
-      products: safeProducts,
-      purchases: safePurchases
+      orders: filteredOrders,
+      products: canViewAllData ? safeProducts : [],
+      purchases: filteredPurchases,
+      userRole: user?.role || 'employee',
+      userName: user?.full_name || 'غير محدد'
     };
   };
 
@@ -186,7 +196,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
             التقارير والإحصائيات
           </DialogTitle>
           <DialogDescription>
-            إنشاء وتصدير تقارير PDF شاملة من البيانات الحقيقية للنظام
+            إنشاء وتصدير تقارير PDF {canViewAllData ? 'شاملة من البيانات الحقيقية للنظام' : 'من بياناتك الشخصية'}
           </DialogDescription>
         </DialogHeader>
 
@@ -194,7 +204,9 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
           {/* ملخص سريع للبيانات */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">ملخص البيانات الحالية</CardTitle>
+              <CardTitle className="text-lg">
+                ملخص {canViewAllData ? 'بيانات النظام' : 'بياناتك الشخصية'}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

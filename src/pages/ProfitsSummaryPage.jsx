@@ -56,8 +56,9 @@ const ProfitsSummaryPage = () => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
 
-  const canViewAll = hasPermission('manage_profit_settlement');
-  const canRequestSettlement = hasPermission('request_profit_settlement') && !canViewAll;
+  // تحديد الصلاحيات بناءً على الدور - المدراء يرون كل شيء، الموظفون يرون أرباحهم فقط
+  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
+  const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement');
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -239,6 +240,7 @@ const ProfitsSummaryPage = () => {
     
     let filtered = profitData.detailedProfits;
     
+    // إذا لم يكن المستخدم مدير، يرى أرباحه فقط
     if (!canViewAll) {
         filtered = filtered.filter(p => p.created_by === user?.id);
     } else if (filters.employeeId !== 'all') {
