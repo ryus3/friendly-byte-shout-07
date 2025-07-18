@@ -19,11 +19,12 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import EditProductDialog from '@/components/manage-products/EditProductDialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 
 const ManageProductsPage = () => {
   const { products, deleteProducts, loading, refetchProducts } = useInventory();
   const { user } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'list');
@@ -34,85 +35,27 @@ const ManageProductsPage = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const filteredProducts = useMemo(() => {
-    let tempProducts = products.filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // استخدام hook الفلترة المحسن
+  const filteredProducts = useFilteredProducts(products);
+  
+  // فلترة إضافية للبحث
+  const searchFilteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return filteredProducts;
+    
+    return filteredProducts.filter(product => 
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.variants?.some(variant => 
+        variant.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        variant.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     );
-    
-    // تطبيق صلاحيات المنتجات للموظفين
-    if (user && user.role !== 'admin' && user.role !== 'deputy' && !user?.permissions?.includes('*')) {
-      tempProducts = tempProducts.filter(product => {
-        // التحقق من صلاحيات التصنيفات الرئيسية
-        if (product.categories?.main_category) {
-          try {
-            const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
-            if (!categoryPermissions.includes('all') && !categoryPermissions.includes(product.categories.main_category)) {
-              return false;
-            }
-          } catch (e) {
-            console.error('Error parsing category permissions:', e);
-          }
-        }
-
-        // التحقق من صلاحيات التصنيفات عبر product_categories
-        if (product.product_categories && product.product_categories.length > 0) {
-          try {
-            const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
-            if (!categoryPermissions.includes('all')) {
-              const hasAllowedCategory = product.product_categories.some(pc => 
-                categoryPermissions.includes(pc.category_id)
-              );
-              if (!hasAllowedCategory) return false;
-            }
-          } catch (e) {
-            console.error('Error parsing category permissions:', e);
-          }
-        }
-
-        // التحقق من صلاحيات الأقسام
-        if (product.product_departments && product.product_departments.length > 0) {
-          try {
-            const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
-            if (!departmentPermissions.includes('all')) {
-              const hasAllowedDepartment = product.product_departments.some(pd => 
-                departmentPermissions.includes(pd.department_id)
-              );
-              if (!hasAllowedDepartment) return false;
-            }
-          } catch (e) {
-            console.error('Error parsing department permissions:', e);
-          }
-        }
-
-        // التحقق من صلاحيات الألوان والأحجام
-        if (product.variants && product.variants.length > 0) {
-          try {
-            const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
-            const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
-            
-            if (!colorPermissions.includes('all') || !sizePermissions.includes('all')) {
-              const hasAllowedVariant = product.variants.some(variant => {
-                const colorOk = colorPermissions.includes('all') || !variant.color_id || colorPermissions.includes(variant.color_id);
-                const sizeOk = sizePermissions.includes('all') || !variant.size_id || sizePermissions.includes(variant.size_id);
-                return colorOk && sizeOk;
-              });
-              if (!hasAllowedVariant) return false;
-            }
-          } catch (e) {
-            console.error('Error parsing color/size permissions:', e);
-          }
-        }
-
-        return true;
-      });
-    }
-    
-    return tempProducts;
-  }, [products, searchTerm, user]);
+  }, [filteredProducts, searchTerm]);
   
   console.log('ManageProductsPage Debug:', {
     isMobile,
     viewMode,
+    searchFilteredProductsLength: searchFilteredProducts.length,
     filteredProductsLength: filteredProducts.length,
     productsLength: products.length
   });
@@ -135,11 +78,11 @@ const ManageProductsPage = () => {
 
   const handleSelectAll = useCallback((isChecked) => {
     if (isChecked) {
-      setSelectedProductIds(filteredProducts.map(p => p.id));
+      setSelectedProductIds(searchFilteredProducts.map(p => p.id));
     } else {
       setSelectedProductIds([]);
     }
-  }, [filteredProducts]);
+  }, [searchFilteredProducts]);
 
   const handleDeleteSelected = async () => {
     const { success } = await deleteProducts(selectedProductIds);
@@ -261,13 +204,13 @@ const ManageProductsPage = () => {
           isMobile={isMobile}
         />
 
-        {filteredProducts.length > 0 && viewMode === 'list' && (
+        {searchFilteredProducts.length > 0 && viewMode === 'list' && (
           <div className="flex items-center gap-4 p-3 bg-card border rounded-lg">
             <Checkbox 
               id="select-all"
-              checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
+              checked={selectedProductIds.length === searchFilteredProducts.length && searchFilteredProducts.length > 0}
               onCheckedChange={handleSelectAll}
-              indeterminate={selectedProductIds.length > 0 && selectedProductIds.length < filteredProducts.length}
+              indeterminate={selectedProductIds.length > 0 && selectedProductIds.length < searchFilteredProducts.length}
             />
             <label htmlFor="select-all" className="text-sm font-medium">تحديد الكل</label>
           </div>
@@ -276,7 +219,7 @@ const ManageProductsPage = () => {
         <AnimatePresence>
           {viewMode === 'list' ? (
             <motion.div layout className="space-y-3">
-              {filteredProducts && filteredProducts.length > 0 && filteredProducts.map((product) => (
+              {searchFilteredProducts && searchFilteredProducts.length > 0 && searchFilteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                   <ManageProductListItem 
                     product={product} 
@@ -290,7 +233,7 @@ const ManageProductsPage = () => {
             </motion.div>
           ) : (
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {filteredProducts && filteredProducts.length > 0 && filteredProducts.map((product) => (
+              {searchFilteredProducts && searchFilteredProducts.length > 0 && searchFilteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductCard
                     product={product}

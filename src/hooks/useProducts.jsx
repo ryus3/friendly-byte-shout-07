@@ -149,6 +149,13 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             variant.size || 'DEFAULT',
             newProduct.id
           );
+          
+          console.log('📦 Generated barcode for variant:', {
+            productName: productData.name,
+            color: variant.color,
+            size: variant.size,
+            barcode: uniqueBarcode
+          });
 
           finalVariants.push({
             product_id: newProduct.id,
@@ -157,7 +164,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             price: parseFloat(variant.price) || 0,
             cost_price: parseFloat(variant.costPrice) || 0,
             profit_amount: parseFloat(variant.profitAmount) || productData.profitAmount || 0,
-            barcode: uniqueBarcode,
+            barcode: uniqueBarcode, // استخدام الباركود الفريد المولد
             images: imageUrl ? [imageUrl] : []
           });
       }

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 /**
@@ -6,7 +6,15 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
-  const { user, productPermissions, isAdmin } = useAuth();
+  const auth = useAuth();
+  
+  // التحقق من وجود Auth context أولاً
+  if (!auth) {
+    console.warn('useAuth context is null');
+    return products || [];
+  }
+  
+  const { user, productPermissions, isAdmin } = auth;
   
   // إضافة تسجيل للتشخيص
   console.log('🔍 useFilteredProducts Debug:', {
@@ -114,7 +122,15 @@ export const useFilteredProducts = (products) => {
  * Hook لفلترة متغيرات منتج واحد
  */
 export const useFilteredVariants = (variants) => {
-  const { isAdmin, productPermissions } = useAuth();
+  const auth = useAuth();
+  
+  // التحقق من وجود Auth context أولاً
+  if (!auth) {
+    console.warn('useAuth context is null in useFilteredVariants');
+    return variants || [];
+  }
+  
+  const { isAdmin, productPermissions } = auth;
 
   const filteredVariants = useMemo(() => {
     if (!variants || !Array.isArray(variants)) return [];

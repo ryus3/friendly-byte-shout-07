@@ -7,7 +7,7 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useProducts } from '@/hooks/useProducts.jsx';
 import { useCart } from '@/hooks/useCart.jsx';
-import { useFilteredProducts } from '@/hooks/useFilteredProducts';
+
 import { v4 as uuidv4 } from 'uuid';
 
 const InventoryContext = createContext();
@@ -57,9 +57,8 @@ export const InventoryProvider = ({ children }) => {
     Promise.all(stockChanges).catch(err => console.error("Stock update failed:", err));
   }
 
-  // Using custom hooks - مع تطبيق فلترة الصلاحيات
+  // Using custom hooks - بدون فلترة هنا (ستتم في الصفحات)
   const { products: allProducts, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings, addNotification, user);
-  const filteredProducts = useFilteredProducts(allProducts);
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   
   // الطلبات - بدون hooks مشكوك بها
@@ -375,7 +374,6 @@ export const InventoryProvider = ({ children }) => {
       });
 
       setProducts(processedProducts);
-      // لا نحتاج لتطبيق فلترة هنا لأن useFilteredProducts يتولى ذلك
       setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
       setAiOrders(aiOrdersRes.data || []);
 
@@ -476,7 +474,7 @@ export const InventoryProvider = ({ children }) => {
   const checkLowStockNotifications = useCallback(async () => {
     if (!allProducts || !notifyLowStock) return;
     
-    const lowStockProducts = getLowStockProducts(settings.lowStockThreshold || 5, filteredProducts);
+    const lowStockProducts = getLowStockProducts(settings.lowStockThreshold || 5, allProducts);
     
     lowStockProducts.forEach(async (variant) => {
       const product = allProducts.find(p => p.variants?.some(v => v.id === variant.id));
@@ -484,7 +482,7 @@ export const InventoryProvider = ({ children }) => {
         await notifyLowStock(product, variant);
       }
     });
-  }, [allProducts, filteredProducts, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
+  }, [allProducts, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
 
   // فحص المخزون كل مرة تتغير فيها المنتجات المفلترة
   useEffect(() => {
@@ -750,18 +748,17 @@ export const InventoryProvider = ({ children }) => {
 
   return (
     <InventoryContext.Provider value={{
-    // البيانات الأساسية - استخدام المنتجات المفلترة
-    products: filteredProducts, // المنتجات المفلترة حسب الصلاحيات
-    allProducts, // جميع المنتجات (للمديرين فقط)
-    orders, 
-    aiOrders,
-    cart, 
-    settings, 
-    categories, 
-    departments,
-    accounting, 
-    loading, 
-    employeeProfitRules,
+      // البيانات الأساسية - بدون فلترة في Context
+      products: allProducts,
+      orders, 
+      aiOrders,
+      cart, 
+      settings, 
+      categories, 
+      departments,
+      accounting, 
+      loading, 
+      employeeProfitRules,
     
     // العمليات
     addProduct, updateProduct, deleteProducts, 
@@ -769,7 +766,7 @@ export const InventoryProvider = ({ children }) => {
     createOrder: (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => createOrder(customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData),
     updateOrder, deleteOrders, updateSettings, addToCart, removeFromCart, updateCartItemQuantity,
     clearCart, 
-    getLowStockProducts: (limit) => getLowStockProducts(limit, filteredProducts), // تطبيق الفلترة على المخزون المنخفض
+    getLowStockProducts: (limit) => getLowStockProducts(limit, allProducts),
     approveAiOrder,
     updateVariantStock, calculateProfit, requestProfitSettlement,
     getEmployeeProfitRules, setEmployeeProfitRule, settleEmployeeProfits,
