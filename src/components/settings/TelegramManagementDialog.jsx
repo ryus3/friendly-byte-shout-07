@@ -405,85 +405,86 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                             </div>
                           </div>
                           
-                           <div className="flex flex-col gap-3">
-                             {/* الرمز */}
-                             <div className="bg-muted/50 rounded-lg p-2 text-center">
-                               {isEditing ? (
-                                 <Input 
-                                   value={newCodeValue}
-                                   onChange={(e) => setNewCodeValue(e.target.value)}
-                                   placeholder="الرمز الجديد"
-                                   className="text-center text-sm h-8"
-                                 />
-                               ) : (
-                                 <code className="text-lg font-mono font-bold text-primary">
-                                   {employeeCode.employee_code}
-                                 </code>
-                               )}
-                             </div>
-                             
-                             {/* الإجراءات */}
-                             <div className="flex gap-1 justify-center">
-                               {isEditing ? (
-                                 <>
-                                   <Button
-                                     variant="ghost"
-                                     size="sm"
-                                     onClick={() => updateEmployeeCode(employeeCode.id, newCodeValue)}
-                                     disabled={!newCodeValue.trim()}
-                                     className="h-8 w-8 p-0"
-                                   >
-                                     <CheckCircle className="w-4 h-4" />
-                                   </Button>
-                                   <Button
-                                     variant="ghost"
-                                     size="sm"
-                                     onClick={() => {
-                                       setEditingCode(null);
-                                       setNewCodeValue('');
-                                     }}
-                                     className="h-8 w-8 p-0"
-                                   >
-                                     <AlertCircle className="w-4 h-4" />
-                                   </Button>
-                                 </>
-                               ) : (
-                                 <>
-                                   <Button
-                                     variant="ghost"
-                                     size="sm"
-                                     onClick={() => copyToClipboard(employeeCode.employee_code)}
-                                     className="h-8 w-8 p-0"
-                                   >
-                                     <Copy className="w-4 h-4" />
-                                   </Button>
-                                   {canViewAllData && (
-                                     <>
-                                       <Button
-                                         variant="ghost"
-                                         size="sm"
-                                         onClick={() => {
-                                           setEditingCode(employeeCode.id);
-                                           setNewCodeValue(employeeCode.employee_code);
-                                         }}
-                                         className="h-8 w-8 p-0"
-                                       >
-                                         <Edit className="w-4 h-4" />
-                                       </Button>
-                                       <Button
-                                         variant="ghost"
-                                         size="sm"
-                                         onClick={() => deleteEmployeeCode(employeeCode.id)}
-                                         className="h-8 w-8 p-0 text-destructive hover:text-destructive/80"
-                                       >
-                                         <Trash2 className="w-4 h-4" />
-                                       </Button>
-                                     </>
-                                   )}
-                                 </>
-                               )}
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                            {isEditing ? (
+                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full">
+                                <Input 
+                                  value={newCodeValue}
+                                  onChange={(e) => setNewCodeValue(e.target.value)}
+                                  placeholder="الرمز الجديد"
+                                  className="w-full sm:w-32 text-xs sm:text-sm"
+                                />
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateEmployeeCode(employeeCode.id, newCodeValue)}
+                                    disabled={!newCodeValue.trim()}
+                                    className="flex-1 sm:flex-none"
+                                  >
+                                    حفظ
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingCode(null);
+                                      setNewCodeValue('');
+                                    }}
+                                    className="flex-1 sm:flex-none"
+                                  >
+                                    إلغاء
+                                  </Button>
+                                </div>
                               </div>
-                           </div>
+                            ) : (
+                              <>
+                                <div className="text-center w-full sm:w-auto">
+                                  <Badge 
+                                    variant="outline" 
+                                    className={`font-mono text-sm sm:text-lg px-3 sm:px-4 py-2 w-full sm:w-auto justify-center ${
+                                      isCurrentUser
+                                        ? 'bg-blue-100 text-blue-700 border-blue-300' 
+                                        : 'bg-green-100 text-green-700 border-green-300'
+                                    }`}
+                                  >
+                                    {employeeCode.employee_code}
+                                  </Badge>
+                                  <p className="text-xs text-muted-foreground mt-1">الرمز</p>
+                                </div>
+                                <div className="flex gap-2 justify-center sm:justify-start">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => copyToClipboard(employeeCode.employee_code)}
+                                  >
+                                    <Copy className="w-4 h-4" />
+                                  </Button>
+                                  {canViewAllData && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingCode(employeeCode.id);
+                                          setNewCodeValue(employeeCode.employee_code);
+                                        }}
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => deleteEmployeeCode(employeeCode.id)}
+                                        className="text-red-500 hover:text-red-700"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
                          </div>
                        </div>
                     );
