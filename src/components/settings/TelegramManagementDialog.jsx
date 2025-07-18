@@ -227,7 +227,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-[95vw] sm:h-[95vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -361,59 +361,60 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                     const isEditing = editingCode === employeeCode.id;
                     
                     return (
-                      <div key={employeeCode.id} className={`p-4 rounded-lg border transition-colors ${
+                      <div key={employeeCode.id} className={`p-3 sm:p-4 rounded-lg border transition-colors ${
                         isCurrentUser ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
                       }`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
-                              isCurrentUser 
-                                ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
-                                : 'bg-gradient-to-r from-green-500 to-teal-500'
-                            }`}>
-                              {profile?.full_name?.charAt(0) || 'U'}
-                            </div>
-                            <div>
-                              <p className="font-semibold text-lg">{profile?.full_name || 'مستخدم غير معروف'}</p>
-                              <div className="flex items-center gap-2 mt-1">
-                                {isCurrentUser && (
-                                  <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
-                                    {canViewAllData ? 'أنت (مدير)' : 'أنت'}
-                                  </Badge>
-                                )}
-                                <Badge 
-                                  variant={isLinked ? "default" : "outline"} 
-                                  className={`text-xs ${isLinked ? 'bg-green-100 text-green-700' : ''}`}
-                                >
-                                  {isLinked ? (
-                                    <>
-                                      <Link className="w-3 h-3 ml-1" />
-                                      متصل
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Unlink className="w-3 h-3 ml-1" />
-                                      غير متصل
-                                    </>
-                                  )}
-                                </Badge>
-                              </div>
-                            </div>
-                          </div>
+                        <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base ${
+                      isCurrentUser 
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
+                        : 'bg-gradient-to-r from-green-500 to-teal-500'
+                    }`}>
+                      {profile?.full_name?.charAt(0) || 'U'}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm sm:text-lg truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                      <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
+                        {isCurrentUser && (
+                          <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
+                            {canViewAllData ? 'أنت (مدير)' : 'أنت'}
+                          </Badge>
+                        )}
+                        <Badge 
+                          variant={isLinked ? "default" : "outline"} 
+                          className={`text-xs ${isLinked ? 'bg-green-100 text-green-700' : ''}`}
+                        >
+                          {isLinked ? (
+                            <>
+                              <Link className="w-3 h-3 ml-1" />
+                              متصل
+                            </>
+                          ) : (
+                            <>
+                              <Unlink className="w-3 h-3 ml-1" />
+                              غير متصل
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
                           
                           <div className="flex items-center gap-2">
                             {isEditing ? (
-                              <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                                 <Input 
                                   value={newCodeValue}
                                   onChange={(e) => setNewCodeValue(e.target.value)}
                                   placeholder="الرمز الجديد"
-                                  className="w-32"
+                                  className="w-24 sm:w-32 text-sm"
                                 />
                                 <Button
                                   size="sm"
                                   onClick={() => updateEmployeeCode(employeeCode.id, newCodeValue)}
                                   disabled={!newCodeValue.trim()}
+                                  className="text-xs px-2"
                                 >
                                   حفظ
                                 </Button>
@@ -424,6 +425,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                     setEditingCode(null);
                                     setNewCodeValue('');
                                   }}
+                                  className="text-xs px-2"
                                 >
                                   إلغاء
                                 </Button>

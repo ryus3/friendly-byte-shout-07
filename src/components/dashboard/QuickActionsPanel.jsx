@@ -63,7 +63,7 @@ const QuickActionsPanel = ({ userPermissions, navigate }) => {
       icon: Receipt,
       color: "bg-emerald-500 hover:bg-emerald-600",
       action: () => navigate('/profits'),
-      permission: userPermissions.canRequestSettlement
+      permission: userPermissions.canRequestSettlement && user?.role !== 'super_admin'
     },
     {
       title: "إدارة الموظفين",

@@ -58,7 +58,7 @@ const ProfitsSummaryPage = () => {
 
   // تحديد الصلاحيات بناءً على الدور - المدراء يرون كل شيء، الموظفون يرون أرباحهم فقط
   const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
-  const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement');
+  const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement') && user?.role !== 'super_admin';
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
