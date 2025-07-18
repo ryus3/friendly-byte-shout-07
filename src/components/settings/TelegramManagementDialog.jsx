@@ -482,9 +482,10 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                    )}
                                  </>
                                )}
-                             </div>
-                        </div>
-                      </div>
+                              </div>
+                           </div>
+                         </div>
+                       </div>
                     );
                   })
                 ) : (
