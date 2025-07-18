@@ -114,9 +114,11 @@ const MenuContent = ({ onClose }) => {
 const SearchSheet = ({ children, open, onOpenChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const { products } = useInventory();
+  const { filterProductsByPermissions } = useAuth();
   const navigate = useNavigate();
 
-  const filteredProducts = products.filter(product =>
+  const allowedProducts = filterProductsByPermissions ? filterProductsByPermissions(products) : products;
+  const filteredProducts = allowedProducts.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 6);

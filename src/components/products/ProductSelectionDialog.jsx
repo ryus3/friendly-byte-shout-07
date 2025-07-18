@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Minus, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
@@ -109,6 +110,7 @@ const ProductItem = ({ product, onSelect }) => {
 
 const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [] }) => {
   const { products } = useInventory();
+  const { filterProductsByPermissions } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
 
@@ -118,13 +120,18 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
     }
   }, [open, initialCart]);
 
+  // تطبيق فلترة الصلاحيات أولاً
+  const permissionFilteredProducts = useMemo(() => {
+    return filterProductsByPermissions ? filterProductsByPermissions(products) : products;
+  }, [products, filterProductsByPermissions]);
+
   const filteredProducts = useMemo(() => {
-    return products.filter(p => 
+    return permissionFilteredProducts.filter(p => 
       p.is_active &&
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       p.variants && p.variants.length > 0
     );
-  }, [products, searchTerm]);
+  }, [permissionFilteredProducts, searchTerm]);
 
   const handleSelectProduct = (product, variant, quantity) => {
     const newItem = {

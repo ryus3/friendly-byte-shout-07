@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandList } from '@/components/ui/command';
 import { Check, PlusCircle, Barcode as BarcodeIcon, ScanLine } from 'lucide-react';
@@ -16,6 +17,7 @@ import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 
 const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     const { products, settings } = useInventory();
+    const { filterProductsByPermissions } = useAuth();
     const { colors, sizes, addColor, addSize } = useVariants();
     const navigate = useNavigate();
     const location = useLocation();
@@ -33,9 +35,14 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     const [isSizeDialogOpen, setIsSizeDialogOpen] = useState(false);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
 
+    const allowedProducts = useMemo(() => 
+        filterProductsByPermissions ? filterProductsByPermissions(products) : products,
+        [products, filterProductsByPermissions]
+    );
+
     const filteredProducts = useMemo(() => 
-        products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())),
-        [products, searchTerm]
+        allowedProducts.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())),
+        [allowedProducts, searchTerm]
     );
 
     const productColors = useMemo(() => {
@@ -131,7 +138,7 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
 
     const handleBarcodeScan = (decodedText) => {
         setIsScannerOpen(false);
-        const foundProduct = products.find(p => p.variants.some(v => v.sku === decodedText));
+        const foundProduct = allowedProducts.find(p => p.variants.some(v => v.sku === decodedText));
         if (foundProduct) {
             const variant = foundProduct.variants.find(v => v.sku === decodedText);
             const color = colors.find(c => c.id === variant.colorId);

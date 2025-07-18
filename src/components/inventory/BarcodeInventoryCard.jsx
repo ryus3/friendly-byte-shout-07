@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 
 
@@ -35,6 +36,7 @@ const BarcodeInventoryCard = () => {
 
 const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
     const { products } = useInventory();
+    const { filterProductsByPermissions } = useAuth();
     const [isScanning, setIsScanning] = useState(false);
     const [scannedItems, setScannedItems] = useState({});
     const [cameraError, setCameraError] = useState(null);
@@ -51,8 +53,10 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
         };
     }, []);
 
+    const allowedProducts = filterProductsByPermissions ? filterProductsByPermissions(products) : products;
+
     const findVariantByBarcode = (barcode) => {
-        for (const product of products) {
+        for (const product of allowedProducts) {
             const variant = product.variants.find(v => v.barcode === barcode || v.sku === barcode);
             if (variant) return { product, variant };
         }
