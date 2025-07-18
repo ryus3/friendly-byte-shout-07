@@ -167,6 +167,8 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                 user={employee} 
                 onUpdate={handleUpdate}
                 onClose={() => {}}
+                open={activeTab === 'roles'}
+                onOpenChange={() => {}}
               />
             </TabsContent>
 
