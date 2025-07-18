@@ -10,48 +10,50 @@ import {
 } from 'lucide-react';
 
 const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false }) => {
-  // حساب أفضل العملاء
+  // حساب أفضل العملاء حسب رقم الهاتف
   const topCustomers = React.useMemo(() => {
     if (!orders?.length) return [];
     
     const customerStats = orders.reduce((acc, order) => {
+      const customerPhone = order.customer_phone || 'غير محدد';
       const customerName = order.customer_name || 'غير محدد';
-      if (!acc[customerName]) {
-        acc[customerName] = {
+      if (!acc[customerPhone]) {
+        acc[customerPhone] = {
+          phone: customerPhone,
           name: customerName,
           totalOrders: 0,
           totalAmount: 0
         };
       }
-      acc[customerName].totalOrders += 1;
-      acc[customerName].totalAmount += order.final_amount || 0;
+      acc[customerPhone].totalOrders += 1;
+      acc[customerPhone].totalAmount += order.final_amount || 0;
       return acc;
     }, {});
 
     return Object.values(customerStats)
-      .sort((a, b) => b.totalAmount - a.totalAmount)
+      .sort((a, b) => b.totalOrders - a.totalOrders)
       .slice(0, 3);
   }, [orders]);
 
-  // حساب أفضل المحافظات
+  // حساب أفضل المدن حسب عدد الطلبات
   const topProvinces = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    const provinceStats = orders.reduce((acc, order) => {
-      const province = order.customer_province || 'غير محدد';
-      if (!acc[province]) {
-        acc[province] = {
-          name: province,
+    const cityStats = orders.reduce((acc, order) => {
+      const city = order.customer_city || order.customer_province || 'غير محدد';
+      if (!acc[city]) {
+        acc[city] = {
+          name: city,
           totalOrders: 0,
           totalAmount: 0
         };
       }
-      acc[province].totalOrders += 1;
-      acc[province].totalAmount += order.final_amount || 0;
+      acc[city].totalOrders += 1;
+      acc[city].totalAmount += order.final_amount || 0;
       return acc;
     }, {});
 
-    return Object.values(provinceStats)
+    return Object.values(cityStats)
       .sort((a, b) => b.totalOrders - a.totalOrders)
       .slice(0, 3);
   }, [orders]);
@@ -114,16 +116,19 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
         </CardHeader>
         <CardContent className="space-y-2">
           {topCustomers.length > 0 ? topCustomers.map((customer, index) => (
-            <div key={customer.name} className="flex items-center justify-between">
+            <div key={customer.phone} className="flex items-center justify-between">
               <div className="flex items-center">
                 <Badge variant={index === 0 ? "default" : "secondary"} className="w-6 h-6 rounded-full p-0 flex items-center justify-center text-xs">
                   {index + 1}
                 </Badge>
-                <span className="mr-2 text-sm truncate max-w-[100px]">{customer.name}</span>
+                <div className="mr-2">
+                  <div className="text-sm truncate max-w-[100px]">{customer.name}</div>
+                  <div className="text-xs text-muted-foreground">{customer.phone}</div>
+                </div>
               </div>
               <div className="text-left">
-                <div className="text-sm font-medium">{customer.totalAmount.toLocaleString()} د.ع</div>
-                <div className="text-xs text-muted-foreground">{customer.totalOrders} طلب</div>
+                <div className="text-sm font-medium">{customer.totalOrders} طلب</div>
+                <div className="text-xs text-muted-foreground">{customer.totalAmount.toLocaleString()} د.ع</div>
               </div>
             </div>
           )) : (
@@ -139,7 +144,7 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center">
             <MapPin className="ml-2 h-4 w-4 text-green-500" />
-            أفضل المحافظات
+            أكثر المدن طلباً
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
