@@ -141,7 +141,7 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, user }) => 
             <DollarSign className="ml-2 h-5 w-5 text-green-600" />
             أرباحي المالية
           </h2>
-          {canRequestSettlement && stats.pendingProfits > 0 && user?.role !== 'super_admin' && (
+          {canRequestSettlement && stats.pendingProfits > 0 && user?.role !== 'super_admin' && user?.role !== 'manager' && (
             <Button 
               onClick={() => setShowSettlementDialog(true)}
               size="sm"
@@ -197,7 +197,7 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, user }) => 
       )}
 
       {/* مربع حوار طلب التحاسب */}
-      {canRequestSettlement && user?.role !== 'super_admin' && (
+      {canRequestSettlement && user?.role !== 'super_admin' && user?.role !== 'manager' && (
         <EmployeeSettlementDialog
           open={showSettlementDialog}
           onOpenChange={setShowSettlementDialog}

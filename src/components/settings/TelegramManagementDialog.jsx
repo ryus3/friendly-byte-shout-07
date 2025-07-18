@@ -227,36 +227,36 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-[98vw] sm:max-h-[92vh] sm:p-4">
+      <DialogContent className="w-[95vw] max-w-6xl max-h-[90vh] overflow-hidden z-50 p-3 sm:p-6">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-              <Bot className="w-6 h-6 text-white" />
+          <DialogTitle className="flex items-center gap-2 sm:gap-3 text-base sm:text-xl">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+              <Bot className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h3 className="font-bold">إدارة بوت التليغرام الذكي</h3>
-              <p className="text-sm text-muted-foreground font-normal">
+              <h3 className="font-bold text-sm sm:text-base">إدارة بوت التليغرام الذكي</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground font-normal">
                 {canViewAllData ? 'إدارة كاملة لرموز جميع الموظفين' : 'عرض رمزك الشخصي'}
               </p>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 max-h-[70vh] overflow-y-auto">
           {/* معلومات البوت */}
           <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-            <CardContent className="p-6">
-              <div className="text-center space-y-3">
-                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto">
-                  <MessageCircle className="w-8 h-8 text-white" />
+            <CardContent className="p-3 sm:p-6">
+              <div className="text-center space-y-2 sm:space-y-3">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto">
+                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-lg font-bold text-green-800">البوت نشط ويستقبل الطلبات تلقائياً</h3>
+                <h3 className="text-sm sm:text-lg font-bold text-green-800">البوت نشط ويستقبل الطلبات تلقائياً</h3>
                 <div className="flex flex-col items-center gap-2">
                   <div className="flex items-center gap-2 text-green-700">
                     <span>🤖</span>
-                    <span className="font-semibold">@Ryusiq_bot</span>
+                    <span className="font-semibold text-sm sm:text-base">@Ryusiq_bot</span>
                   </div>
-                  <Badge variant="outline" className="text-green-700 border-green-300">
+                  <Badge variant="outline" className="text-green-700 border-green-300 text-xs sm:text-sm">
                     نشط ومتصل
                   </Badge>
                 </div>
