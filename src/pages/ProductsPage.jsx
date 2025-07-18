@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import PermissionBasedProductGrid from '@/components/products/PermissionBasedProductGrid';
 import ProductList from '@/components/products/ProductList';
 import ProductFilters from '@/components/products/ProductFilters';
+import AdvancedProductFilters from '@/components/products/AdvancedProductFilters';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
@@ -93,6 +94,9 @@ const ProductsPage = () => {
   const [filters, setFilters] = useState({
     searchTerm: '',
     category: 'all',
+    department: 'all',
+    seasonOccasion: 'all',
+    productType: 'all',
     brand: 'all',
     color: 'all',
     size: 'all',
@@ -103,6 +107,7 @@ const ProductsPage = () => {
     quickOrder: false,
     productVariant: false,
     barcodeScanner: false,
+    advancedFilters: false,
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
 
@@ -142,17 +147,51 @@ const ProductsPage = () => {
       );
     }
 
-    if (filters.category !== 'all') {
-      tempProducts = tempProducts.filter(p => p.categories?.main_category === filters.category);
+    // فلترة حسب القسم
+    if (filters.department !== 'all') {
+      tempProducts = tempProducts.filter(p => 
+        p.product_departments?.some(pd => pd.department_id === filters.department)
+      );
     }
+
+    // فلترة حسب التصنيف
+    if (filters.category !== 'all') {
+      tempProducts = tempProducts.filter(p => 
+        p.product_categories?.some(pc => pc.category_id === filters.category)
+      );
+    }
+
+    // فلترة حسب الموسم/المناسبة
+    if (filters.seasonOccasion !== 'all') {
+      tempProducts = tempProducts.filter(p => 
+        p.product_seasons_occasions?.some(pso => pso.season_occasion_id === filters.seasonOccasion)
+      );
+    }
+
+    // فلترة حسب نوع المنتج
+    if (filters.productType !== 'all') {
+      tempProducts = tempProducts.filter(p => 
+        p.product_product_types?.some(ppt => ppt.product_type_id === filters.productType)
+      );
+    }
+
+    // فلترة حسب العلامة التجارية
     if (filters.brand !== 'all') {
       tempProducts = tempProducts.filter(p => p.brand === filters.brand);
     }
+
+    // فلترة حسب اللون
     if (filters.color !== 'all') {
-      tempProducts = tempProducts.filter(p => p.variants.some(v => v.color === filters.color));
+      tempProducts = tempProducts.filter(p => 
+        p.variants.some(v => v.color_id === filters.color)
+      );
     }
+
+    // فلترة حسب الحجم
     if (filters.size !== 'all') {
-      tempProducts = tempProducts.filter(p => p.variants.some(v => v.size === filters.size));
+      tempProducts = tempProducts.filter(p => 
+        p.variants.some(v => v.size_id === filters.size)
+      );
     }
     
     tempProducts = tempProducts.filter(p => {
@@ -314,6 +353,7 @@ const ProductsPage = () => {
             brands={brands}
             colors={colors}
             onBarcodeSearch={() => setDialogs(prev => ({ ...prev, barcodeScanner: true }))}
+            onAdvancedFilters={() => setDialogs(prev => ({ ...prev, advancedFilters: true }))}
             viewMode={viewMode}
             setViewMode={setViewMode}
             onProductSelect={handleProductSelect}
@@ -349,6 +389,13 @@ const ProductsPage = () => {
         open={dialogs.barcodeScanner}
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
         onScanSuccess={handleBarcodeScan}
+      />
+
+      <AdvancedProductFilters
+        open={dialogs.advancedFilters}
+        onOpenChange={(open) => setDialogs(prev => ({ ...prev, advancedFilters: open }))}
+        filters={filters}
+        setFilters={setFilters}
       />
 
       {hasPermission('create_order') && (

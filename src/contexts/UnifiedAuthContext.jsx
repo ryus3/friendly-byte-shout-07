@@ -220,22 +220,22 @@ export const UnifiedAuthProvider = ({ children }) => {
           permissions = perms?.map(rp => rp.permissions) || [];
         }
 
-        // جلب صلاحيات المنتجات
-        const { data: productPerms, error: productPermsError } = await supabase
-          .from('user_product_permissions')
-          .select('*')
-          .eq('user_id', user.user_id);
+    // جلب صلاحيات المنتجات
+    const { data: productPerms, error: productPermsError } = await supabase
+      .from('user_product_permissions')
+      .select('*')
+      .eq('user_id', user.user_id);
 
-        if (productPermsError) throw productPermsError;
+    if (productPermsError) throw productPermsError;
 
-        // تنظيم صلاحيات المنتجات
-        const productPermissionsMap = {};
-        productPerms?.forEach(perm => {
-          productPermissionsMap[perm.permission_type] = {
-            allowed_items: perm.allowed_items || [],
-            has_full_access: perm.has_full_access || false
-          };
-        });
+    // تنظيم صلاحيات المنتجات
+    const productPermissionsMap = {};
+    productPerms?.forEach(perm => {
+      productPermissionsMap[perm.permission_type] = {
+        allowed_items: perm.allowed_items || [],
+        has_full_access: perm.has_full_access || false
+      };
+    });
 
         setUserRoles(roles || []);
         setUserPermissions(permissions || []);
@@ -548,6 +548,50 @@ export const UnifiedAuthProvider = ({ children }) => {
               departmentPerm.allowed_items.includes(pd.department_id)
             );
             if (!hasAllowedDepartment) return false;
+          }
+        }
+
+        // فحص المواسم عبر product_seasons_occasions
+        const seasonPerm = productPermissions.season_occasion;
+        if (seasonPerm && !seasonPerm.has_full_access) {
+          if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
+            const hasAllowedSeason = product.product_seasons_occasions.some(pso => 
+              seasonPerm.allowed_items.includes(pso.season_occasion_id)
+            );
+            if (!hasAllowedSeason) return false;
+          }
+        }
+
+        // فحص أنواع المنتجات عبر product_product_types
+        const productTypePerm = productPermissions.product_type;
+        if (productTypePerm && !productTypePerm.has_full_access) {
+          if (product.product_product_types && product.product_product_types.length > 0) {
+            const hasAllowedProductType = product.product_product_types.some(ppt => 
+              productTypePerm.allowed_items.includes(ppt.product_type_id)
+            );
+            if (!hasAllowedProductType) return false;
+          }
+        }
+
+        // فحص الألوان عبر المتغيرات
+        const colorPerm = productPermissions.color;
+        if (colorPerm && !colorPerm.has_full_access) {
+          if (product.variants && product.variants.length > 0) {
+            const hasAllowedColor = product.variants.some(variant => 
+              colorPerm.allowed_items.includes(variant.color_id)
+            );
+            if (!hasAllowedColor) return false;
+          }
+        }
+
+        // فحص الأحجام عبر المتغيرات
+        const sizePerm = productPermissions.size;
+        if (sizePerm && !sizePerm.has_full_access) {
+          if (product.variants && product.variants.length > 0) {
+            const hasAllowedSize = product.variants.some(variant => 
+              sizePerm.allowed_items.includes(variant.size_id)
+            );
+            if (!hasAllowedSize) return false;
           }
         }
 

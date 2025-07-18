@@ -10,7 +10,7 @@ import { useVariants } from '@/contexts/VariantsContext';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 
-const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBarcodeSearch, viewMode, setViewMode, onProductSelect }) => {
+const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBarcodeSearch, onAdvancedFilters, viewMode, setViewMode, onProductSelect }) => {
   const { products } = useInventory();
   const { user } = useAuth();
   const { categories: allCategories, colors: allColors, sizes: allSizes, departments: allDepartments, productTypes: allProductTypes, seasonsOccasions: allSeasonsOccasions } = useVariants();
@@ -194,116 +194,16 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
         </Button>
         
         {/* فلترة متقدمة */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="glass-effect border-border/80 hover:bg-accent"
-              title="فلترة متقدمة"
-            >
-              <SlidersHorizontal className="w-4 h-4 ml-2" />
-              <span className="hidden sm:inline">فلترة</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <h4 className="font-medium leading-none">الفلاتر المتقدمة</h4>
-                <p className="text-sm text-muted-foreground">
-                  فلترة حسب البيانات الحقيقية للمنتجات
-                </p>
-              </div>
-              <div className="grid gap-3">
-                {/* الأصناف الحقيقية */}
-                <div className="space-y-2">
-                  <Label htmlFor="category">الصنف</Label>
-                  <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="كل الأصناف" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل الأصناف</SelectItem>
-                      {allowedData.allowedCategories.map(category => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* العلامات التجارية الحقيقية */}
-                <div className="space-y-2">
-                  <Label htmlFor="brand">العلامة التجارية</Label>
-                  <Select value={filters.brand} onValueChange={(value) => handleFilterChange('brand', value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="كل العلامات" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل العلامات</SelectItem>
-                      {allowedData.allowedBrands.map(brand => (
-                        <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* الألوان الحقيقية */}
-                <div className="space-y-2">
-                  <Label htmlFor="color">اللون</Label>
-                  <Select value={filters.color} onValueChange={(value) => handleFilterChange('color', value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="كل الألوان" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل الألوان</SelectItem>
-                      {allowedData.allowedColors.map(color => (
-                        <SelectItem key={color} value={color}>{color}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* الأحجام الحقيقية */}
-                <div className="space-y-2">
-                  <Label htmlFor="size">الحجم</Label>
-                  <Select value={filters.size} onValueChange={(value) => handleFilterChange('size', value)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="كل الأحجام" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل الأحجام</SelectItem>
-                      {allowedData.allowedSizes.map(size => (
-                        <SelectItem key={size} value={size}>{size}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                {/* نطاق السعر */}
-                <div className="space-y-2">
-                  <Label htmlFor="price">نطاق السعر</Label>
-                  <Slider
-                    id="price"
-                    min={0}
-                    max={500000}
-                    step={1000}
-                    value={filters.price}
-                    onValueChange={(value) => handleFilterChange('price', value)}
-                    className="py-2"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{filters.price[0].toLocaleString()} د.ع</span>
-                    <span>{filters.price[1].toLocaleString()} د.ع</span>
-                  </div>
-                </div>
-              </div>
-              <Button variant="ghost" onClick={resetFilters} className="text-sm">
-                <X className="w-4 h-4 ml-2" />
-                إعادة تعيين الفلاتر
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={onAdvancedFilters}
+          className="glass-effect border-border/80 hover:bg-accent"
+          title="فلترة متقدمة"
+        >
+          <SlidersHorizontal className="w-4 h-4 ml-2" />
+          <span className="hidden sm:inline">فلاتر</span>
+        </Button>
       </div>
     </div>
   );
