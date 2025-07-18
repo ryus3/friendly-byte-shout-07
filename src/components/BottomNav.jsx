@@ -71,7 +71,7 @@ const MenuContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
 
-  const visibleMenuItems = menuItems; // عرض جميع العناصر بدون فحص الصلاحيات
+  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
 
   const handleNavigation = (path) => {
     navigate(path);
