@@ -2,6 +2,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
@@ -101,7 +102,8 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
 
 const InventoryPage = () => {
-  const { products, orders, loading, settings, updateVariantStock } = useInventory();
+  const { allProducts, orders, loading, settings, updateVariantStock } = useInventory();
+  const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
   const { hasPermission } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -194,43 +196,8 @@ const InventoryPage = () => {
     if (!Array.isArray(products) || !settings) return [];
     const { lowStockThreshold = 5, mediumStockThreshold = 10 } = settings;
 
-    // فلترة المنتجات بناءً على صلاحيات الموظف
-    const filteredProducts = products.filter(product => {
-      if (!user || user.role === 'admin' || user.role === 'deputy') return true;
-      
-      // فحص صلاحيات التصنيفات
-      let categoryPermissions = ['all'];
-      try {
-        categoryPermissions = JSON.parse(user.category_permissions || '["all"]');
-      } catch (e) {
-        categoryPermissions = ['all'];
-      }
-      
-      if (!categoryPermissions.includes('all') && product.categories?.main_category) {
-        if (!categoryPermissions.includes(product.categories.main_category)) {
-          return false;
-        }
-      }
-
-      // فحص صلاحيات الأقسام
-      let departmentPermissions = ['all'];
-      try {
-        departmentPermissions = JSON.parse(user.department_permissions || '["all"]');
-      } catch (e) {
-        departmentPermissions = ['all'];
-      }
-      
-      if (!departmentPermissions.includes('all') && product.departments?.length > 0) {
-        const hasAllowedDepartment = product.departments.some(dept => 
-          departmentPermissions.includes(dept.id)
-        );
-        if (!hasAllowedDepartment) return false;
-      }
-
-      return true;
-    });
-
-    return filteredProducts.map(product => {
+    // المنتجات مفلترة تلقائياً من useFilteredProducts
+    return products.map(product => {
         if (!product) return null;
         
         const variantsWithLevels = Array.isArray(product.variants) 

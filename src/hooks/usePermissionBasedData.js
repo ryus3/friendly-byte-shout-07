@@ -108,13 +108,6 @@ export const usePermissionBasedData = () => {
       
       // استخدام صلاحيات المنتجات من UnifiedAuthContext
       const categoryPermissions = user?.productPermissions?.category;
-      console.log('🔍 تصفية التصنيفات:', {
-        categoryPermissions,
-        categories,
-        isAdmin,
-        userProductPermissions: user?.productPermissions
-      });
-      
       if (!categoryPermissions) return []; // لا توجد صلاحيات = لا يرى شيء
       
       if (categoryPermissions.has_full_access) return categories;
