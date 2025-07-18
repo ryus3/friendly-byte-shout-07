@@ -474,24 +474,24 @@ export const InventoryProvider = ({ children }) => {
 
   // فحص المخزون المنخفض والإشعار - استخدام المنتجات المفلترة
   const checkLowStockNotifications = useCallback(async () => {
-    if (!filteredProducts || !notifyLowStock) return;
+    if (!allProducts || !notifyLowStock) return;
     
     const lowStockProducts = getLowStockProducts(settings.lowStockThreshold || 5, filteredProducts);
     
     lowStockProducts.forEach(async (variant) => {
-      const product = filteredProducts.find(p => p.variants?.some(v => v.id === variant.id));
+      const product = allProducts.find(p => p.variants?.some(v => v.id === variant.id));
       if (product) {
         await notifyLowStock(product, variant);
       }
     });
-  }, [filteredProducts, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
+  }, [allProducts, filteredProducts, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
 
   // فحص المخزون كل مرة تتغير فيها المنتجات المفلترة
   useEffect(() => {
-    if (filteredProducts && filteredProducts.length > 0) {
+    if (allProducts && allProducts.length > 0) {
       checkLowStockNotifications();
     }
-  }, [filteredProducts, checkLowStockNotifications]);
+  }, [allProducts, checkLowStockNotifications]);
 
   const getEmployeeProfitRules = useCallback((employeeId) => {
     return employeeProfitRules[employeeId] || [];
