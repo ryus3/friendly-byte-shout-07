@@ -47,30 +47,55 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
         </div>
         <div className="md:col-span-2 space-y-2">
            <Label className="mb-2 block">الكميات والأسعار والقياسات</Label>
-            {allSizesForType.map(variant => {
-              if (!variant || variant.colorId !== color.id) return null;
+            
+            {/* حل مشكلة عرض المتغيرات في التعديل */}
+            {(allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).map((variant, index) => {
+              if (!variant || (allSizesForType.length > 0 && variant.colorId !== color.id)) return null;
+              
+              // للمنتجات الجديدة نستخدم allSizesForType، للتعديل نستخدم variants
+              const isNewProduct = allSizesForType && allSizesForType.length > 0;
+              const variantData = isNewProduct ? variant : variant;
               
               return (
-                <div key={variant.sizeId} className="grid grid-cols-12 items-end gap-2 p-2 border rounded-md">
-                    <Label className="text-center col-span-2">{variant.size}</Label>
+                <div key={isNewProduct ? variant.sizeId : variant.id || index} className="grid grid-cols-12 items-end gap-2 p-2 border rounded-md">
+                    <Label className="text-center col-span-2">{isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size || 'غير محدد')}</Label>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">الكمية</Label>
-                      <Input type="number" placeholder="0" defaultValue={variant.quantity || 0} onChange={e => handleVariantChange(color.id, variant.sizeId, 'quantity', parseInt(e.target.value) || 0)} required />
+                      <Input 
+                        type="number" 
+                        placeholder="0" 
+                        defaultValue={isNewProduct ? (variantData.quantity || 0) : (variantData.inventory?.[0]?.quantity || variantData.quantity || 0)} 
+                        onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', parseInt(e.target.value) || 0)} 
+                        required 
+                      />
                     </div>
                      <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">التكلفة</Label>
-                      <Input type="number" defaultValue={variant.costPrice || costPrice || 0} onChange={e => handleVariantChange(color.id, variant.sizeId, 'costPrice', parseFloat(e.target.value) || 0)} />
+                      <Input 
+                        type="number" 
+                        defaultValue={isNewProduct ? (variantData.costPrice || costPrice || 0) : (variantData.cost_price || costPrice || 0)} 
+                        onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', parseFloat(e.target.value) || 0)} 
+                      />
                     </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">البيع</Label>
-                      <Input type="number" defaultValue={variant.price || price || 0} onChange={e => handleVariantChange(color.id, variant.sizeId, 'price', parseFloat(e.target.value) || 0)} />
+                      <Input 
+                        type="number" 
+                        defaultValue={isNewProduct ? (variantData.price || price || 0) : (variantData.price || price || 0)} 
+                        onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', parseFloat(e.target.value) || 0)} 
+                      />
                     </div>
                     <div className="col-span-2 space-y-1">
                       <Label className="text-xs text-muted-foreground">تلميح</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Input type="text" placeholder="..." defaultValue={variant.hint || ''} onChange={e => handleVariantChange(color.id, variant.sizeId, 'hint', e.target.value)} />
+                            <Input 
+                              type="text" 
+                              placeholder="..." 
+                              defaultValue={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
+                              onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
+                            />
                           </TooltipTrigger>
                           <TooltipContent><p>تلميح خاص بهذا القياس لهذا المنتج فقط</p></TooltipContent>
                         </Tooltip>
@@ -86,20 +111,34 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                               </Button>
                             </DialogTrigger>
                           </TooltipTrigger>
-                          <TooltipContent><p>عرض الباركود (SKU)</p></TooltipContent>
+                          <TooltipContent><p>عرض الباركود</p></TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                       <DialogContent>
                         <DialogHeader>
-                          <DialogTitle>باركود المتغير (SKU)</DialogTitle>
+                          <DialogTitle>باركود المتغير</DialogTitle>
                         </DialogHeader>
                         <div className="flex flex-col items-center justify-center p-4">
-                          <Barcode value={variant.sku} />
-                          <p className="mt-2 font-mono">{variant.sku}</p>
+                          {(isNewProduct ? variantData.barcode : variantData.barcode) ? (
+                            <>
+                              <Barcode value={isNewProduct ? variantData.barcode : variantData.barcode} />
+                              <p className="mt-2 font-mono">{isNewProduct ? variantData.barcode : variantData.barcode}</p>
+                            </>
+                          ) : (
+                            <div className="text-center text-muted-foreground">
+                              <p>سيتم توليد الباركود عند الحفظ</p>
+                              <p className="text-sm mt-2">المعاينة: {`${color.name}-${isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size)}-${Date.now().toString().slice(-4)}`}</p>
+                            </div>
+                          )}
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <Button variant="ghost" size="icon" className="col-span-1 text-destructive hover:text-destructive" onClick={() => handleRemoveSizeFromColor(variant.sizeId)}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="col-span-1 text-destructive hover:text-destructive" 
+                      onClick={() => handleRemoveSizeFromColor(isNewProduct ? variantData.sizeId : variantData.size_id)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                 </div>

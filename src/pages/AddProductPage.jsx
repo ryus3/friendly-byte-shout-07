@@ -14,6 +14,7 @@ import { CSS } from '@dnd-kit/utilities';
 import Loader from '@/components/ui/loader';
 import { Progress } from "@/components/ui/progress";
 import { supabase } from '@/lib/customSupabaseClient';
+import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
 import MultiSelectCategorization from '@/components/add-product/MultiSelectCategorization';
@@ -100,7 +101,12 @@ const AddProductPage = () => {
           
           if (sizesForThisType.length > 0) {
             sizesForThisType.forEach(size => {
-              const sku = `${settings?.sku_prefix || 'PROD'}-${color.name.slice(0,3)}-${size.name}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase().replace(/\s+/g, '-');
+              // توليد باركود فريد للمتغير
+              const barcode = generateUniqueBarcode(
+                productInfo.name || 'منتج',
+                color.name,
+                size.name
+              );
               newVariants.push({
                 colorId: color.id,
                 sizeId: size.id,
@@ -111,8 +117,7 @@ const AddProductPage = () => {
                 quantity: 0,
                 price: parseFloat(productInfo.price) || 0,
                 costPrice: parseFloat(productInfo.costPrice) || 0,
-                sku: sku,
-                barcode: sku,
+                barcode: barcode,
                 hint: ''
               });
             });
