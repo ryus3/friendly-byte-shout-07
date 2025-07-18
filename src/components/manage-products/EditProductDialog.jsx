@@ -231,8 +231,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
                           <SortableColorCard
                             key={color.id}
                             color={color}
-                            allSizesForType={variants.filter(v => v.color_id === color.id)}
-                            variants={variants}
+                            allSizesForType={allSizesForType}
+                            variants={variants.filter(v => v.color_id === color.id)}
                             setVariants={setVariants}
                             price={productInfo.price}
                             costPrice={productInfo.costPrice}

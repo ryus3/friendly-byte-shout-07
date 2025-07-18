@@ -1,150 +1,137 @@
 /**
- * أداة لتحديث الباركود للمتغيرات الموجودة
- * تشغل مرة واحدة لضمان وجود باركود فريد لكل متغير
+ * مكتبة ترحيل وتحديث الباركود للمنتجات الموجودة
  */
 
 import { supabase } from '@/lib/customSupabaseClient';
-import { generateUniqueBarcode, isBarcodeUnique } from '@/lib/barcode-utils';
+import { generateUniqueBarcode, validateBarcode } from '@/lib/barcode-utils';
 
-export const updateExistingVariantsBarcodes = async () => {
+/**
+ * تحديث الباركود للمنتجات والمتغيرات الموجودة
+ */
+export const updateExistingBarcodes = async () => {
   try {
-    console.log('🔄 بدء تحديث الباركود للمتغيرات الموجودة...');
-
-    // جلب جميع المتغيرات التي لا تحتوي على باركود أو باركود غير صحيح
+    console.log('🔄 بدء تحديث الباركود للمنتجات الموجودة...');
+    
+    // 1. تحديث باركود المنتجات الأساسية
+    const { data: products, error: productsError } = await supabase
+      .from('products')
+      .select('id, name, barcode')
+      .or('barcode.is.null,barcode.eq.""');
+      
+    if (productsError) throw productsError;
+    
+    console.log(`📦 العثور على ${products?.length || 0} منتج بحاجة لباركود`);
+    
+    // تحديث باركود المنتجات
+    for (const product of products || []) {
+      const newBarcode = generateUniqueBarcode(product.name, 'PRODUCT', 'MAIN', product.id);
+      await supabase
+        .from('products')
+        .update({ barcode: newBarcode })
+        .eq('id', product.id);
+      console.log(`✅ تم تحديث باركود المنتج: ${product.name} -> ${newBarcode}`);
+    }
+    
+    // 2. تحديث باركود المتغيرات
     const { data: variants, error: variantsError } = await supabase
       .from('product_variants')
       .select(`
-        *,
-        products (id, name),
-        colors (name),
-        sizes (name)
+        id, 
+        product_id, 
+        barcode,
+        products!inner(name),
+        colors(name),
+        sizes(name)
       `)
-      .or('barcode.is.null,barcode.eq.');
-
-    if (variantsError) {
-      console.error('خطأ في جلب المتغيرات:', variantsError);
-      return;
-    }
-
-    if (!variants || variants.length === 0) {
-      console.log('✅ جميع المتغيرات تحتوي على باركود صحيح');
-      return;
-    }
-
-    console.log(`📦 العثور على ${variants.length} متغير يحتاج لباركود`);
-
-    // جلب جميع المنتجات لفحص تفرد الباركود
-    const { data: allProducts } = await supabase
-      .from('products')
-      .select('*, variants:product_variants(*)');
-
-    const updatedVariants = [];
-
-    for (const variant of variants) {
-      try {
-        const productName = variant.products?.name || 'منتج';
-        const colorName = variant.colors?.name || 'لون افتراضي';
-        const sizeName = variant.sizes?.name || 'حجم افتراضي';
-
-        let uniqueBarcode;
-        let attempts = 0;
-        const maxAttempts = 10;
-
-        // محاولة توليد باركود فريد
-        do {
-          uniqueBarcode = generateUniqueBarcode(
-            productName,
-            colorName,
-            sizeName,
-            variant.product_id
-          );
-          attempts++;
-        } while (
-          !isBarcodeUnique(uniqueBarcode, allProducts, variant.id) && 
-          attempts < maxAttempts
-        );
-
-        if (attempts >= maxAttempts) {
-          console.warn(`⚠️ فشل في توليد باركود فريد للمتغير ${variant.id} بعد ${maxAttempts} محاولات`);
-          continue;
-        }
-
-        updatedVariants.push({
-          id: variant.id,
-          barcode: uniqueBarcode
-        });
-
-        console.log(`✅ تم توليد باركود للمتغير: ${productName} - ${colorName} - ${sizeName} = ${uniqueBarcode}`);
-
-      } catch (error) {
-        console.error(`❌ خطأ في معالجة المتغير ${variant.id}:`, error);
-      }
-    }
-
-    // تحديث المتغيرات في قاعدة البيانات على دفعات
-    const batchSize = 50;
-    for (let i = 0; i < updatedVariants.length; i += batchSize) {
-      const batch = updatedVariants.slice(i, i + batchSize);
+      .or('barcode.is.null,barcode.eq.""');
       
-      for (const variant of batch) {
-        const { error } = await supabase
-          .from('product_variants')
-          .update({ barcode: variant.barcode })
-          .eq('id', variant.id);
-
-        if (error) {
-          console.error(`❌ خطأ في تحديث المتغير ${variant.id}:`, error);
-        }
-      }
+    if (variantsError) throw variantsError;
+    
+    console.log(`🎨 العثور على ${variants?.length || 0} متغير بحاجة لباركود`);
+    
+    // تحديث باركود المتغيرات
+    for (const variant of variants || []) {
+      const productName = variant.products?.name || 'منتج';
+      const colorName = variant.colors?.name || 'لون';
+      const sizeName = variant.sizes?.name || 'مقاس';
       
-      console.log(`📦 تم تحديث ${Math.min(i + batchSize, updatedVariants.length)} من ${updatedVariants.length} متغير`);
+      const newBarcode = generateUniqueBarcode(
+        productName,
+        colorName,
+        sizeName,
+        variant.product_id
+      );
+      
+      await supabase
+        .from('product_variants')
+        .update({ barcode: newBarcode })
+        .eq('id', variant.id);
+        
+      console.log(`✅ تم تحديث باركود المتغير: ${productName} (${colorName}-${sizeName}) -> ${newBarcode}`);
     }
-
-    console.log(`🎉 تم الانتهاء من تحديث ${updatedVariants.length} متغير بنجاح!`);
-    return { success: true, updated: updatedVariants.length };
-
+    
+    console.log('🎉 تم تحديث جميع الباركودات بنجاح!');
+    return { success: true, updatedProducts: products?.length || 0, updatedVariants: variants?.length || 0 };
+    
   } catch (error) {
-    console.error('❌ خطأ عام في تحديث الباركود:', error);
+    console.error('❌ خطأ في تحديث الباركودات:', error);
     return { success: false, error: error.message };
   }
 };
 
 /**
- * فحص تفرد جميع الباركود في النظام
+ * التحقق من صحة جميع الباركودات في النظام
  */
-export const validateAllBarcodes = async () => {
+export const validateSystemBarcodes = async () => {
   try {
+    console.log('🔍 بدء فحص صحة الباركودات...');
+    
+    // فحص باركود المنتجات
+    const { data: products } = await supabase
+      .from('products')
+      .select('id, name, barcode');
+      
+    const invalidProducts = products?.filter(p => !validateBarcode(p.barcode)) || [];
+    
+    // فحص باركود المتغيرات
     const { data: variants } = await supabase
       .from('product_variants')
-      .select('id, barcode, products(name)');
-
-    if (!variants) return { valid: true, duplicates: [] };
-
-    const barcodeMap = new Map();
-    const duplicates = [];
-
-    variants.forEach(variant => {
-      if (variant.barcode) {
-        if (barcodeMap.has(variant.barcode)) {
-          duplicates.push({
-            barcode: variant.barcode,
-            variants: [barcodeMap.get(variant.barcode), variant]
-          });
-        } else {
-          barcodeMap.set(variant.barcode, variant);
-        }
-      }
-    });
-
+      .select('id, barcode, products!inner(name)');
+      
+    const invalidVariants = variants?.filter(v => !validateBarcode(v.barcode)) || [];
+    
+    console.log(`📊 نتائج الفحص:`);
+    console.log(`   - منتجات صحيحة: ${(products?.length || 0) - invalidProducts.length}`);
+    console.log(`   - منتجات غير صحيحة: ${invalidProducts.length}`);
+    console.log(`   - متغيرات صحيحة: ${(variants?.length || 0) - invalidVariants.length}`);
+    console.log(`   - متغيرات غير صحيحة: ${invalidVariants.length}`);
+    
     return {
-      valid: duplicates.length === 0,
-      duplicates,
-      totalVariants: variants.length,
-      withBarcode: variants.filter(v => v.barcode).length
+      success: true,
+      totalProducts: products?.length || 0,
+      invalidProducts: invalidProducts.length,
+      totalVariants: variants?.length || 0,
+      invalidVariants: invalidVariants.length,
+      details: {
+        invalidProducts,
+        invalidVariants
+      }
     };
-
+    
   } catch (error) {
-    console.error('خطأ في فحص الباركود:', error);
-    return { valid: false, error: error.message };
+    console.error('❌ خطأ في فحص الباركودات:', error);
+    return { success: false, error: error.message };
   }
+};
+
+/**
+ * تشغيل تحديث الباركود تلقائياً عند تحميل النظام
+ */
+export const autoUpdateBarcodes = async () => {
+  const validationResult = await validateSystemBarcodes();
+  if (validationResult.success && (validationResult.invalidProducts > 0 || validationResult.invalidVariants > 0)) {
+    console.log('🔧 العثور على باركودات غير صحيحة، سيتم تحديثها تلقائياً...');
+    return await updateExistingBarcodes();
+  }
+  return { success: true, message: 'جميع الباركودات صحيحة' };
 };

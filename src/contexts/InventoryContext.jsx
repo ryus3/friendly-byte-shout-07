@@ -7,6 +7,7 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useProducts } from '@/hooks/useProducts.jsx';
 import { useCart } from '@/hooks/useCart.jsx';
+import { autoUpdateBarcodes } from '@/lib/barcode-migration';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -405,11 +406,28 @@ export const InventoryProvider = ({ children }) => {
   }, [user, setProducts]);
 
   useEffect(() => {
-    if (user) {
-      fetchInitialData();
-    } else {
-      setLoading(false);
-    }
+    const initializeData = async () => {
+      if (user) {
+        setLoading(true);
+        try {
+          // تشغيل تحديث الباركود تلقائياً
+          const barcodeUpdate = await autoUpdateBarcodes();
+          if (barcodeUpdate.success) {
+            console.log('✅ تم فحص وتحديث الباركودات بنجاح');
+          }
+          
+          await fetchInitialData();
+        } catch (error) {
+          console.error('Error initializing data:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    initializeData();
   }, [fetchInitialData, user]);
 
   // Real-time subscriptions for AI orders and regular orders

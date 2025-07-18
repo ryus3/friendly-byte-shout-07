@@ -20,7 +20,11 @@ const StockMonitoringSystem = () => {
   }, []);
 
   useEffect(() => {
-    if (!user || !hasPermission('view_all_data')) return;
+    if (!user?.user_id || !hasPermission) return;
+    
+    // التحقق من الصلاحية
+    const checkPermission = hasPermission('view_all_data');
+    if (!checkPermission) return;
 
     const stockChannel = supabase
       .channel('stock-monitoring-system')
@@ -117,9 +121,11 @@ const StockMonitoringSystem = () => {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(stockChannel);
+      if (stockChannel) {
+        supabase.removeChannel(stockChannel);
+      }
     };
-  }, [user, hasPermission, addNotification]);
+  }, [user?.user_id, hasPermission, addNotification]);
 
   return null;
 };

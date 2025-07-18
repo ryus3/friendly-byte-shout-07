@@ -334,6 +334,18 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
         
         const finalVariants = productData.variants.map(v => {
             let imageUrl = uploadedColorUrls[v.colorId] || existingColorImageUrls[v.colorId] || v.image || null;
+            
+            // توليد باركود فريد إذا لم يكن موجود
+            let barcode = v.barcode;
+            if (!barcode || barcode.trim() === '') {
+              barcode = generateUniqueBarcode(
+                productData.name,
+                v.color || 'DEFAULT',
+                v.size || 'DEFAULT',
+                productId
+              );
+            }
+            
             return {
                 product_id: productId,
                 color_id: v.colorId,
@@ -341,7 +353,7 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
                 price: v.price,
                 cost_price: v.costPrice,
                 profit_amount: v.profitAmount || productData.profitAmount || 0,
-                barcode: v.barcode,
+                barcode: barcode,
                 images: imageUrl ? [imageUrl] : []
             };
         });
