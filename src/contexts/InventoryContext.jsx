@@ -583,7 +583,7 @@ export const InventoryProvider = ({ children }) => {
     const profitRules = employeeProfitRules[employeeId] || [];
     if (!item.price || !item.cost_price || !employeeId) return 0;
   
-    const productInfo = products.find(p => p.id === item.productId);
+    const productInfo = allProducts.find(p => p.id === item.productId);
     if (!productInfo) return 0;
 
     const specificRule = profitRules.find(r => r.rule_type === 'product' && r.target_id === String(item.productId));
@@ -600,7 +600,7 @@ export const InventoryProvider = ({ children }) => {
 
     const defaultProfit = (item.price - item.cost_price) * item.quantity;
     return defaultProfit > 0 ? defaultProfit : 0;
-  }, [employeeProfitRules, products]);
+  }, [employeeProfitRules, allProducts]);
 
   const calculateManagerProfit = useCallback((order) => {
     if (!order || !order.items || !order.created_by) return 0;
