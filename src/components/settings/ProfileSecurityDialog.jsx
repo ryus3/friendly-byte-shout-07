@@ -34,7 +34,7 @@ import { motion } from 'framer-motion';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
-  const { addNotification } = useNotificationsSystem();
+  const { createNotification } = useNotificationsSystem();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -78,7 +78,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
       
       if (usernameChanged || emailChanged) {
         // Send notification to admin for approval
-        addNotification({
+        createNotification({
           type: 'profile_change_request',
           title: 'طلب تغيير بيانات المستخدم',
           message: `الموظف ${user.full_name} يطلب تغيير ${usernameChanged ? 'اسم المستخدم' : ''}${usernameChanged && emailChanged ? ' و' : ''}${emailChanged ? 'البريد الإلكتروني' : ''}`,
