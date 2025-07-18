@@ -209,7 +209,7 @@ const Layout = ({ children }) => {
             initial={{ x: 300 }}
             animate={{ x: 0 }}
             exit={{ x: 300 }}
-            transition={{ type: "spring", damping: 30, stiffness: 250 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
             dir="rtl"
           >

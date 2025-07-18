@@ -10,8 +10,8 @@ export const usePermissionsCache = () => {
   const [cache, setCache] = useState(new Map());
   const [lastUpdate, setLastUpdate] = useState(0);
   
-  // مدة الكاش بالميلي ثانية (5 دقائق)
-  const CACHE_DURATION = 5 * 60 * 1000;
+  // مدة الكاش بالميلي ثانية (15 دقيقة)
+  const CACHE_DURATION = 15 * 60 * 1000;
   
   // تنظيف الكاش التلقائي
   useEffect(() => {
