@@ -17,7 +17,6 @@ const ProfitStats = ({
   };
 
   const getPersonalValue = (value, fallback = 0) => {
-    // للموظف: إظهار أرباحه الشخصية فقط
     return value || fallback;
   };
 
@@ -47,7 +46,7 @@ const ProfitStats = ({
     statCards.unshift(
       { 
         key: 'netProfit', 
-        title: 'صافي ربح النظام', 
+        title: 'صافي الربح', 
         value: profitData.netProfit || 0, 
         icon: User, 
         colors: ['green-500', 'emerald-500'], 
@@ -82,12 +81,12 @@ const ProfitStats = ({
       }
     );
   } else {
-    // للموظف: أرباحه الشخصية فقط من مبيعاته هو وليس أرباح المدير
+    // للموظف: أرباحه الشخصية فقط
     statCards.unshift(
       { 
-        key: 'myTotalProfit', 
-        title: 'إجمالي أرباحي الشخصية', 
-        value: getPersonalValue(profitData.personalPendingProfit + profitData.personalSettledProfit), 
+        key: 'myProfit', 
+        title: 'إجمالي أرباحي', 
+        value: getPersonalValue(profitData.totalPersonalProfit), 
         icon: User, 
         colors: ['green-500', 'emerald-500'], 
         format: 'currency' 

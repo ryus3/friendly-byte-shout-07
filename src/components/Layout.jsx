@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
   Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell
@@ -27,10 +27,9 @@ const SidebarContent = ({ onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // تحديد القائمة مباشرة وفوراً
-  const menuItems = useMemo(() => [
+  const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', permission: 'view_dashboard', color: 'text-blue-500' },
-    { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'create_orders', color: 'text-yellow-500' },
+    { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'create_order', color: 'text-yellow-500' },
     { path: '/my-orders', icon: ShoppingCart, label: 'طلباتي', permission: 'view_orders', color: 'text-green-500' },
     { path: '/employee-follow-up', icon: Users, label: 'متابعة الموظفين', permission: 'view_all_orders', color: 'text-purple-500' },
     { path: '/products', icon: Package, label: 'المنتجات', permission: 'view_products', color: 'text-orange-500' },
@@ -40,13 +39,9 @@ const SidebarContent = ({ onClose }) => {
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', permission: 'view_accounting', color: 'text-indigo-500' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', permission: 'view_notifications', color: 'text-red-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
-  ], []);
+  ];
   
-  // فلترة العناصر بناءً على الصلاحيات فوراً بدون تأخير
-  const visibleMenuItems = useMemo(() => {
-    // عرض جميع العناصر فوراً، ثم فلترة لاحقاً حسب الصلاحيات
-    return menuItems.filter(item => !hasPermission || hasPermission(item.permission));
-  }, [menuItems, hasPermission]);
+  const visibleMenuItems = menuItems; // عرض جميع العناصر بدون فحص الصلاحيات
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
@@ -67,31 +62,14 @@ const SidebarContent = ({ onClose }) => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const getRoleDisplayName = (userRoles) => {
-    if (!userRoles || userRoles.length === 0) return 'مستخدم';
-    
-    // ترتيب الأدوار حسب الأولوية
-    const roleDisplayMap = {
-      'super_admin': 'المدير العام',
-      'admin': 'مدير',
-      'deputy_manager': 'نائب المدير',
-      'department_manager': 'رئيس قسم',
-      'sales_employee': 'موظف مبيعات',
-      'warehouse_employee': 'موظف مخزن',
-      'delivery_coordinator': 'منسق توصيل',
-      'cashier': 'كاشير',
-      'employee': 'موظف'
-    };
-    
-    // البحث عن أعلى دور في التسلسل الهرمي
-    const priority = ['super_admin', 'admin', 'deputy_manager', 'department_manager', 'sales_employee', 'warehouse_employee', 'delivery_coordinator', 'cashier', 'employee'];
-    for (const role of priority) {
-      if (userRoles.includes(role)) {
-        return roleDisplayMap[role] || 'مستخدم';
-      }
+  const getRoleDisplayName = (role) => {
+    switch (role) {
+      case 'admin': return 'مدير';
+      case 'deputy': return 'نائب مدير';
+      case 'employee': return 'موظف';
+      case 'warehouse': return 'مسؤول مخزن';
+      default: return 'مستخدم';
     }
-    
-    return 'مستخدم';
   };
 
   return (
@@ -103,13 +81,8 @@ const SidebarContent = ({ onClose }) => {
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">{user?.full_name || 'المستخدم'}</h3>
-              <p className="text-sm text-muted-foreground">
-                {user && (user.activeRoles?.length > 0 || user.roles?.length > 0) 
-                  ? getRoleDisplayName(user.activeRoles || user.roles || [])
-                  : 'جاري التحميل...'
-                }
-              </p>
+              <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -132,16 +105,15 @@ const SidebarContent = ({ onClose }) => {
             const isActive = location.pathname === item.path;
             
             return (
-              <div
-                key={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 hover:bg-accent cursor-pointer ${
-                  isActive ? 'bg-gradient-to-r from-primary/20 to-primary/5 border-r-4 border-primary text-primary font-semibold' : ''
-                }`}
-                onClick={() => handleNavigation(item.path)}
-              >
-                <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
-                <span className="font-medium">{item.label}</span>
-              </div>
+              <React.Fragment key={item.path}>
+                <div
+                  className={`sidebar-item ${isActive ? 'active' : ''}`}
+                  onClick={() => handleNavigation(item.path)}
+                >
+                  <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
+                  <span className="font-medium">{item.label}</span>
+                </div>
+              </React.Fragment>
             );
           })}
         </nav>
@@ -238,7 +210,7 @@ const Layout = ({ children }) => {
             initial={{ x: 300 }}
             animate={{ x: 0 }}
             exit={{ x: 300 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            transition={{ type: "spring", damping: 30, stiffness: 250 }}
             className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
             dir="rtl"
           >

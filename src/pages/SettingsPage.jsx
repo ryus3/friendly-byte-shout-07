@@ -16,22 +16,21 @@ import {
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
-  Sun, Moon, Monitor, Palette, ChevronRight, Volume2, DollarSign,
+  Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
   BarChart, TrendingUp
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
-
+import RestrictedTelegramSettings from '@/components/settings/RestrictedTelegramSettings';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
-import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
-import RestrictedStockSettings from '@/components/settings/RestrictedStockSettings';
-import { PackageX } from 'lucide-react';
+import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
+import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
@@ -141,8 +140,8 @@ const SettingsPage = () => {
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
-  
-  const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
+  const [isStockSettingsOpen, setIsStockSettingsOpen] = useState(false);
+  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
 
@@ -200,7 +199,13 @@ const SettingsPage = () => {
               onClick={() => setIsNotificationSettingsOpen(true)}
             />
 
-            <RestrictedStockSettings />
+            <ModernCard
+              icon={PackageX}
+              title="إشعارات المخزون المتقدمة"
+              description="إعدادات تفصيلية: حدود المخزون، التكرار، السكوت، والتنبيهات التلقائية"
+              iconColor="from-red-500 to-red-600"
+              onClick={() => setIsStockSettingsOpen(true)}
+            />
           </div>
 
           <SectionHeader 
@@ -250,14 +255,12 @@ const SettingsPage = () => {
           />
           
           <div className="grid grid-cols-1 gap-6 mb-8">
-            {/* التقارير - للمدراء فقط */}
-            {canManageSettings && (
-              <ModernCard
-                icon={FileText}
-                title="إدارة التقارير والإحصائيات"
-                description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
-                iconColor="from-gradient-start to-gradient-end"
-                onClick={() => setIsReportsOpen(true)}
+            <ModernCard
+              icon={FileText}
+              title="إدارة التقارير والإحصائيات"
+              description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
+              iconColor="from-gradient-start to-gradient-end"
+              onClick={() => setIsReportsOpen(true)}
             >
               <div className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -299,7 +302,6 @@ const SettingsPage = () => {
                 </div>
               </div>
             </ModernCard>
-            )}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -349,16 +351,43 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* بوت التليغرام - بحسب المستخدم */}
+            {/* بوت التليغرام - إجباري للجميع مع رمز شخصي */}
             <ModernCard
               icon={MessageCircle}
               title="بوت التليغرام الذكي"
-              description="عرض رمزك الشخصي للاتصال بالبوت وإنشاء طلبات الذكاء الاصطناعي"
-              iconColor="from-blue-500 to-blue-600"
-              onClick={() => setIsTelegramDialogOpen(true)}
-            />
-          </div>
-
+              description={isAdmin 
+                ? "نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام" 
+                : "رمزك الشخصي للاتصال مع بوت التليغرام"
+              }
+              iconColor="from-blue-500 to-indigo-600"
+              onClick={() => setIsTelegramOpen(true)}
+            >
+              <div className="space-y-3">
+                {isAdmin ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
+                      <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
+                      <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">رمزك الشخصي</span>
+                      <span className="font-bold text-blue-600">عرض الرمز</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">حالة الاتصال</span>
+                      <span className="font-bold text-green-600">متاح</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </ModernCard>
           </div>
 
           {/* أدوات النظام - للمدراء فقط */}
@@ -389,9 +418,10 @@ const SettingsPage = () => {
             </>
           )}
         </div>
+      </div>
 
-        <ProfileSecurityDialog
-        open={isEditProfileOpen}
+      <ProfileSecurityDialog 
+        open={isEditProfileOpen} 
         onOpenChange={setIsEditProfileOpen} 
       />
       
@@ -412,14 +442,15 @@ const SettingsPage = () => {
         onOpenChange={setIsCustomerSettingsOpen}
       />
 
-      {/* التقارير - للمدراء فقط */}
-      {canManageSettings && (
-        <ReportsSettingsDialog
-          open={isReportsOpen}
-          onOpenChange={setIsReportsOpen}
-        />
-      )}
+      <ReportsSettingsDialog
+        open={isReportsOpen}
+        onOpenChange={setIsReportsOpen}
+      />
 
+      <StockNotificationSettings
+        open={isStockSettingsOpen}
+        onOpenChange={setIsStockSettingsOpen}
+      />
 
       {canAccessDeliveryPartners && (
         <DeliveryPartnerDialog
@@ -428,11 +459,18 @@ const SettingsPage = () => {
         />
       )}
 
-      {/* حوار التليغرام - للجميع */}
-      <TelegramBotDialog 
-        open={isTelegramDialogOpen} 
-        onOpenChange={setIsTelegramDialogOpen} 
-      />
+      {/* حوار التليغرام - مختلف حسب الدور */}
+      {isAdmin ? (
+        <TelegramBotDialog 
+          open={isTelegramOpen} 
+          onOpenChange={setIsTelegramOpen} 
+        />
+      ) : (
+        <RestrictedTelegramSettings 
+          open={isTelegramOpen} 
+          onOpenChange={setIsTelegramOpen}
+        />
+      )}
 
       {canAccessDeliveryPartners && (
         <DeliverySettingsDialog

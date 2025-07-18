@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
@@ -14,25 +14,24 @@ import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import ProfitSettlementPage from '@/pages/ProfitSettlementPage.jsx';
 
-// تحميل مباشر للصفحات المهمة
-import LoginPage from '@/pages/LoginPage.jsx';
-import UpdatePasswordPage from '@/pages/UpdatePasswordPage.jsx';
-import Dashboard from '@/pages/Dashboard.jsx';
-import ProductsPage from '@/pages/ProductsPage.jsx';
-import ManageProductsPage from '@/pages/ManageProductsPage.jsx';
-import AddProductPage from '@/pages/AddProductPage.jsx';
-import ManageVariantsPage from '@/pages/ManageVariantsPage.jsx';
-import InventoryPage from '@/pages/InventoryPage.jsx';
-import OrdersPage from '@/pages/OrdersPage.jsx';
-import PurchasesPage from '@/pages/PurchasesPage.jsx';
-import SettingsPage from '@/pages/SettingsPage.jsx';
-import AppearanceSettingsPage from '@/pages/AppearanceSettingsPage.jsx';
-import NotificationsPage from '@/pages/NotificationsPage.jsx';
-import QuickOrderPage from '@/pages/QuickOrderPage.jsx';
-import ProfitsSummaryPage from '@/pages/ProfitsSummaryPage.jsx';
-import AccountingPage from '@/pages/AccountingPage.jsx';
-import ManageEmployeesPage from '@/pages/ManageEmployeesPage.jsx';
-import ManageLabelsPage from '@/pages/ManageLabelsPage.jsx';
+const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
+const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
+const Dashboard = lazy(() => import('@/pages/Dashboard.jsx'));
+const ProductsPage = lazy(() => import('@/pages/ProductsPage.jsx'));
+const ManageProductsPage = lazy(() => import('@/pages/ManageProductsPage.jsx'));
+const AddProductPage = lazy(() => import('@/pages/AddProductPage.jsx'));
+const ManageVariantsPage = lazy(() => import('@/pages/ManageVariantsPage.jsx'));
+const InventoryPage = lazy(() => import('@/pages/InventoryPage.jsx'));
+const OrdersPage = lazy(() => import('@/pages/OrdersPage.jsx'));
+const PurchasesPage = lazy(() => import('@/pages/PurchasesPage.jsx'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage.jsx'));
+const AppearanceSettingsPage = lazy(() => import('@/pages/AppearanceSettingsPage.jsx'));
+const NotificationsPage = lazy(() => import('@/pages/NotificationsPage.jsx'));
+const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
+const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
+const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
+const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
+const ManageLabelsPage = lazy(() => import('@/pages/ManageLabelsPage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -81,12 +80,13 @@ function AppContent() {
 
   return (
     <div className="h-dvh bg-background text-foreground">
-      <Helmet>
+       <Helmet>
         <title>RYUS</title>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
       </Helmet>
-      <Routes>
+      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
+        <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
            <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
@@ -113,6 +113,7 @@ function AppContent() {
           <Route path="/manage-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(ManageLabelsPage)}</ProtectedRoute>} />
 
         </Routes>
+      </Suspense>
       <Toaster />
       <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
@@ -121,7 +122,6 @@ function AppContent() {
 }
 
 function App() {
-
   return (
     <HelmetProvider>
         <Router>

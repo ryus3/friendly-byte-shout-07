@@ -2,300 +2,314 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
+import { Badge } from '@/components/ui/badge';
 import { 
-  FileText, Download, DollarSign, Package, BarChart3, TrendingUp
+  FileText, Download, BarChart3, 
+  TrendingUp, DollarSign, Package, Users, ShoppingCart
 } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
+import InventoryPDF from '@/components/pdf/InventoryPDF';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subDays } from 'date-fns';
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {
   const { orders, products, accounting, purchases } = useInventory();
-  const { user } = useAuth();
-  const { canViewAllData, hasPermission } = usePermissions();
+  const { allUsers } = useAuth();
   const [generatingReport, setGeneratingReport] = useState(null);
 
-  // حساب البيانات حسب الصلاحيات
-  const calculateFilteredData = () => {
+  // حساب البيانات الحقيقية للنظام
+  const calculateRealData = () => {
     const safeOrders = Array.isArray(orders) ? orders : [];
     const safeProducts = Array.isArray(products) ? products : [];
     const safePurchases = Array.isArray(purchases) ? purchases : [];
+    const deliveredOrders = safeOrders.filter(o => o.status === 'delivered');
     
-    // فلترة البيانات حسب الصلاحيات
-    const filteredOrders = canViewAllData 
-      ? safeOrders 
-      : safeOrders.filter(order => order.created_by === user?.user_id);
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (parseFloat(o.final_amount) || 0), 0);
+    const totalOrders = deliveredOrders.length;
+    const totalProducts = safeProducts.filter(p => p.is_active !== false).length;
     
-    // حساب الإحصائيات
-    const totalOrders = filteredOrders.length;
+    // حساب المصاريف من جدول المشتريات والمصاريف
+    const purchasesExpenses = safePurchases.reduce((sum, p) => sum + (parseFloat(p.total_amount) || 0), 0);
+    const otherExpenses = Array.isArray(accounting?.expenses) 
+      ? accounting.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) 
+      : 0;
+    const totalExpenses = purchasesExpenses + otherExpenses;
     
-    // حساب المبيعات على أساس سعر المنتج فقط (بدون التوصيل)
-    const totalRevenue = filteredOrders.reduce((sum, order) => {
-      const productAmount = (order.total_amount || 0) - (order.delivery_fee || 0);
-      return sum + Math.max(0, productAmount);
+    // حساب المخزون بطريقة أفضل
+    const totalStock = safeProducts.reduce((sum, p) => {
+      if (p.variants && Array.isArray(p.variants)) {
+        return sum + p.variants.reduce((vSum, v) => vSum + (parseInt(v.quantity) || 0), 0);
+      }
+      return sum;
     }, 0);
     
-    const totalDeliveryFees = filteredOrders.reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
-    const totalWithDelivery = filteredOrders.reduce((sum, order) => sum + (order.final_amount || 0), 0);
-    
-    const completedOrders = filteredOrders.filter(order => order.status === 'completed' || order.status === 'delivered');
-    const pendingOrders = filteredOrders.filter(order => order.status === 'pending');
+    const totalVariants = safeProducts.reduce((sum, p) => 
+      sum + (p.variants?.length || 0), 0
+    );
     
     return {
+      totalRevenue,
       totalOrders,
-      totalRevenue, // سعر المنتجات فقط
-      totalDeliveryFees,
-      totalWithDelivery,
-      completedOrders: completedOrders.length,
-      pendingOrders: pendingOrders.length,
-      activeProducts: safeProducts.filter(p => p.is_active).length,
-      totalProducts: safeProducts.length,
-      totalPurchases: safePurchases.length,
-      ordersData: filteredOrders,
-      productsData: safeProducts
+      totalProducts,
+      totalVariants,
+      totalStock,
+      totalExpenses,
+      purchasesExpenses,
+      otherExpenses,
+      netProfit: totalRevenue - totalExpenses,
+      averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
+      profitMargin: totalRevenue > 0 ? `${((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1)}%` : '0%',
+      orders: deliveredOrders,
+      products: safeProducts,
+      purchases: safePurchases
     };
   };
 
-  const systemData = calculateFilteredData();
+  const realData = calculateRealData();
 
-  // عنوان التقرير حسب الصلاحيات
-  const getReportTitle = () => {
-    return canViewAllData ? 'تقارير النظام الشاملة' : 'تقاريري الشخصية';
+  // تحديد فترات التقارير
+  const getDateRanges = () => {
+    const now = new Date();
+    return {
+      daily: { from: subDays(now, 1), to: now },
+      weekly: { from: startOfWeek(now, { weekStartsOn: 1 }), to: endOfWeek(now, { weekStartsOn: 1 }) },
+      monthly: { from: startOfMonth(now), to: endOfMonth(now) },
+      yearly: { from: startOfYear(now), to: endOfYear(now) }
+    };
   };
 
-  const handleReportGeneration = (type) => {
-    setGeneratingReport(type);
-    setTimeout(() => {
-      setGeneratingReport(null);
-      toast({
-        title: "تم إنشاء التقرير",
-        description: `تم إنشاء ${type === 'financial' ? 'التقرير المالي' : 'تقرير المخزون'} بنجاح`,
-      });
-    }, 2000);
+  const dateRanges = getDateRanges();
+
+  const reportTypes = [
+    {
+      id: 'financial',
+      title: 'التقرير المالي',
+      description: 'ملخص شامل للمبيعات والمصاريف والأرباح',
+      icon: DollarSign,
+      color: 'text-green-500',
+      data: {
+        revenue: realData.totalRevenue,
+        expenses: realData.totalExpenses,
+        profit: realData.netProfit,
+        margin: realData.profitMargin
+      }
+    },
+    {
+      id: 'inventory',
+      title: 'تقرير المخزون',
+      description: 'حالة المخزون الحالية لجميع المنتجات',
+      icon: Package,
+      color: 'text-blue-500',
+      data: {
+        products: realData.totalProducts,
+        variants: realData.totalVariants,
+        stock: realData.totalStock
+      }
+    },
+    {
+      id: 'sales',
+      title: 'تقرير المبيعات',
+      description: 'تفاصيل المبيعات والطلبات',
+      icon: ShoppingCart,
+      color: 'text-purple-500',
+      data: {
+        orders: realData.totalOrders,
+        revenue: realData.totalRevenue,
+        average: realData.averageOrderValue
+      }
+    },
+    {
+      id: 'full',
+      title: 'التقرير الشامل',
+      description: 'تقرير يحتوي على جميع البيانات',
+      icon: BarChart3,
+      color: 'text-indigo-500',
+      data: realData
+    }
+  ];
+
+  const generatePDFComponent = (reportType) => {
+    const summary = {
+      totalRevenue: realData.totalRevenue || 0,
+      totalExpenses: realData.totalExpenses || 0,
+      netProfit: realData.netProfit || 0,
+      cogs: realData.purchasesExpenses || 0,
+      grossProfit: (realData.totalRevenue || 0) - (realData.purchasesExpenses || 0),
+      generalExpenses: realData.otherExpenses || 0,
+      totalProfit: realData.netProfit || 0,
+      inventoryValue: (realData.totalStock || 0) * 50000, // متوسط سعر تقديري محدث
+      chartData: [],
+      orders: realData.orders || [],
+      products: realData.products || [],
+      purchases: realData.purchases || []
+    };
+
+    try {
+      switch (reportType) {
+        case 'financial':
+          return <FinancialReportPDF summary={summary} dateRange={dateRanges.monthly} />;
+        case 'inventory':
+          return <InventoryPDF products={realData.products || []} />;
+        case 'sales':
+          return <InventoryReportPDF products={realData.products || []} orders={realData.orders || []} />;
+        case 'full':
+        default:
+          return <InventoryReportPDF products={realData.products || []} orders={realData.orders || []} summary={summary} />;
+      }
+    } catch (error) {
+      console.error('خطأ في إنتاج PDF:', error);
+      return <div>خطأ في إنتاج التقرير</div>;
+    }
+  };
+
+  const getFileName = (reportType) => {
+    const date = new Date().toISOString().split('T')[0];
+    const names = {
+      financial: `التقرير-المالي-${date}`,
+      inventory: `تقرير-المخزون-${date}`,
+      sales: `تقرير-المبيعات-${date}`,
+      full: `التقرير-الشامل-${date}`
+    };
+    return `${names[reportType] || 'تقرير'}.pdf`;
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            {getReportTitle()}
+            التقارير والإحصائيات
           </DialogTitle>
           <DialogDescription>
-            {canViewAllData 
-              ? 'إنشاء وتصدير التقارير الشاملة للنظام' 
-              : 'إنشاء وتصدير تقاريرك الشخصية'
-            }
+            إنشاء وتصدير تقارير PDF شاملة من البيانات الحقيقية للنظام
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-              <TabsTrigger value="financial">التقرير المالي</TabsTrigger>
-              <TabsTrigger value="inventory">تقرير المخزون</TabsTrigger>
-            </TabsList>
+        <div className="space-y-6">
+          {/* ملخص سريع للبيانات */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">ملخص البيانات الحالية</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-500">{realData.totalRevenue.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground">إجمالي المبيعات (د.ع)</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-500">{realData.totalProducts}</p>
+                  <p className="text-sm text-muted-foreground">المنتجات</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-500">{realData.totalOrders}</p>
+                  <p className="text-sm text-muted-foreground">الطلبات المكتملة</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-orange-500">{realData.totalStock}</p>
+                  <p className="text-sm text-muted-foreground">إجمالي المخزون</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <TabsContent value="overview" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    الإحصائيات العامة
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                      <div className="text-2xl font-bold text-blue-600">{systemData.totalOrders.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {canViewAllData ? 'إجمالي طلبات النظام' : 'إجمالي طلباتي'}
+          {/* التقارير المتاحة */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">التقارير المتاحة للتصدير</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {reportTypes.map((report) => {
+                const Icon = report.icon;
+                return (
+                  <Card key={report.id} className="group hover:shadow-md transition-all">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`p-2 rounded-lg bg-muted ${report.color}`}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{report.title}</h4>
+                          <p className="text-sm text-muted-foreground mb-3">{report.description}</p>
+                          
+                          {/* عرض البيانات المختصرة */}
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {report.id === 'financial' && (
+                              <>
+                                <Badge variant="outline" className="text-xs">
+                                  إيرادات: {report.data.revenue.toLocaleString()} د.ع
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  ربح: {report.data.profit.toLocaleString()} د.ع
+                                </Badge>
+                              </>
+                            )}
+                            {report.id === 'inventory' && (
+                              <>
+                                <Badge variant="outline" className="text-xs">
+                                  منتجات: {report.data.products}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  مخزون: {report.data.stock}
+                                </Badge>
+                              </>
+                            )}
+                            {report.id === 'sales' && (
+                              <>
+                                <Badge variant="outline" className="text-xs">
+                                  طلبات: {report.data.orders}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  متوسط: {report.data.average.toLocaleString()} د.ع
+                                </Badge>
+                              </>
+                            )}
+                          </div>
+
+                          <PDFDownloadLink
+                            document={generatePDFComponent(report.id)}
+                            fileName={getFileName(report.id)}
+                            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-3 w-full"
+                          >
+                            {({ loading }) => (
+                              <>
+                                <Download className="w-4 h-4 ml-2" />
+                                {loading ? 'جاري التجهيز...' : 'تصدير PDF'}
+                              </>
+                            )}
+                          </PDFDownloadLink>
+                        </div>
                       </div>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
-                      <div className="text-2xl font-bold text-green-600">{systemData.totalRevenue.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {canViewAllData ? 'مبيعات النظام (د.ع)' : 'مبيعاتي (د.ع)'}
-                      </div>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30">
-                      <div className="text-2xl font-bold text-purple-600">{systemData.completedOrders.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">الطلبات المكتملة</div>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
-                      <div className="text-2xl font-bold text-orange-600">{systemData.activeProducts.toLocaleString()}</div>
-                      <div className="text-sm text-muted-foreground">المنتجات النشطة</div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* معلومات إضافية */}
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <TrendingUp className="w-5 h-5 text-blue-500 mt-1" />
+                <div>
+                  <h4 className="font-semibold">محتويات التقارير</h4>
+                  <div className="text-sm text-muted-foreground space-y-1 mt-2">
+                    <p>• <strong>التقرير المالي:</strong> ملخص الإيرادات والمصاريف والأرباح مع الرسوم البيانية</p>
+                    <p>• <strong>تقرير المخزون:</strong> حالة المخزون الحالية لجميع المنتجات والمتغيرات</p>
+                    <p>• <strong>تقرير المبيعات:</strong> تفاصيل الطلبات والمبيعات والعملاء</p>
+                    <p>• <strong>التقرير الشامل:</strong> يحتوي على جميع البيانات السابقة في تقرير واحد</p>
                   </div>
-                  
-                  {systemData.totalDeliveryFees > 0 && (
-                    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">إجمالي رسوم التوصيل:</span>
-                        <span className="text-lg font-bold text-blue-600">{systemData.totalDeliveryFees.toLocaleString()} د.ع</span>
-                      </div>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="text-sm font-medium">الإجمالي مع التوصيل:</span>
-                        <span className="text-lg font-bold text-green-600">{systemData.totalWithDelivery.toLocaleString()} د.ع</span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="financial" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
-                    التقرير المالي
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    {canViewAllData 
-                      ? 'تقرير مالي شامل يحتوي على جميع المعاملات والأرباح في النظام'
-                      : 'تقرير أرباحك ومبيعاتك الشخصية'
-                    }
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 border rounded-lg">
-                      <h4 className="font-semibold mb-2">ملخص المبيعات</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>إجمالي الطلبات:</span>
-                          <span className="font-medium">{systemData.totalOrders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>قيمة المنتجات:</span>
-                          <span className="font-medium">{systemData.totalRevenue.toLocaleString()} د.ع</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>رسوم التوصيل:</span>
-                          <span className="font-medium">{systemData.totalDeliveryFees.toLocaleString()} د.ع</span>
-                        </div>
-                        <div className="flex justify-between border-t pt-2">
-                          <span className="font-semibold">الإجمالي:</span>
-                          <span className="font-semibold">{systemData.totalWithDelivery.toLocaleString()} د.ع</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 border rounded-lg">
-                      <h4 className="font-semibold mb-2">حالة الطلبات</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span>مكتملة:</span>
-                          <span className="font-medium text-green-600">{systemData.completedOrders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>معلقة:</span>
-                          <span className="font-medium text-orange-600">{systemData.pendingOrders}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>منتجات نشطة:</span>
-                          <span className="font-medium">{systemData.activeProducts}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <PDFDownloadLink 
-                    document={<FinancialReportPDF 
-                      orders={systemData.ordersData} 
-                      products={systemData.productsData}
-                      reportTitle={canViewAllData ? "التقرير المالي الشامل" : "تقرير المبيعات الشخصي"}
-                      userInfo={{
-                        name: user?.full_name || user?.username,
-                        isAdmin: canViewAllData,
-                        generatedAt: new Date().toLocaleDateString('ar')
-                      }}
-                    />}
-                    fileName={`financial-report-${new Date().toISOString().split('T')[0]}.pdf`}
-                    className="w-full"
-                  >
-                    {({ blob, url, loading, error }) => (
-                      <Button 
-                        className="w-full" 
-                        disabled={loading}
-                        onClick={() => handleReportGeneration('financial')}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {loading ? 'جاري إنشاء التقرير...' : 'تصدير التقرير المالي (PDF)'}
-                      </Button>
-                    )}
-                  </PDFDownloadLink>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="inventory" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Package className="w-5 h-5" />
-                    تقرير المخزون
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    تقرير شامل لحالة المخزون والمنتجات المتاحة
-                  </p>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">{systemData.totalProducts}</div>
-                      <div className="text-sm text-muted-foreground">إجمالي المنتجات</div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">{systemData.activeProducts}</div>
-                      <div className="text-sm text-muted-foreground">المنتجات النشطة</div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-orange-600">{systemData.totalProducts - systemData.activeProducts}</div>
-                      <div className="text-sm text-muted-foreground">المنتجات غير النشطة</div>
-                    </div>
-                  </div>
-
-                  <PDFDownloadLink 
-                    document={<InventoryReportPDF 
-                      products={systemData.productsData}
-                      reportTitle="تقرير المخزون التفصيلي"
-                      userInfo={{
-                        name: user?.full_name || user?.username,
-                        generatedAt: new Date().toLocaleDateString('ar')
-                      }}
-                    />}
-                    fileName={`inventory-report-${new Date().toISOString().split('T')[0]}.pdf`}
-                    className="w-full"
-                  >
-                    {({ blob, url, loading, error }) => (
-                      <Button 
-                        className="w-full" 
-                        disabled={loading}
-                        onClick={() => handleReportGeneration('inventory')}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {loading ? 'جاري إنشاء التقرير...' : 'تصدير تقرير المخزون (PDF)'}
-                      </Button>
-                    )}
-                  </PDFDownloadLink>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="flex justify-end pt-4 border-t">
+        <div className="flex justify-end gap-3 pt-4 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             إغلاق
           </Button>

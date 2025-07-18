@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Trash2, Loader2, Check, X, Shield, Eye, Home, Package } from 'lucide-react';

@@ -10,34 +10,9 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const isLoading = auth?.loading || !user;
-  
-  // إرجاع فوري للتحميل بدون إعادة رندر
-  if (isLoading) {
-    return {
-      loading: true,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      hasRole: () => false,
-      hasPermission: () => false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: (data) => [],
-      filterProductsByPermissions: (products) => [],
-      getEmployeeStats: () => ({}),
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {}
-    };
-  }
-
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    if (!user?.user_id || isLoading) return;
+    if (!user?.user_id) return;
 
     const fetchUserPermissions = async () => {
       try {
@@ -109,7 +84,7 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [user?.user_id, isLoading]);
+  }, [user?.user_id]);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
