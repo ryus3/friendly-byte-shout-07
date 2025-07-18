@@ -73,16 +73,16 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[95vh] sm:h-[90vh] overflow-hidden flex flex-col p-4 sm:p-6">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl">
             إدارة الموظف: {employee.full_name}
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           {/* تحسين الـ tabs للهاتف */}
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto flex-shrink-0 mb-4">
             <TabsTrigger value="basic" className="flex flex-col lg:flex-row items-center gap-1 lg:gap-2 text-xs lg:text-sm p-2 lg:p-3">
               <User className="h-4 w-4" />
               <span className="hidden sm:block">الإعدادات الأساسية</span>
@@ -105,8 +105,8 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex-1 overflow-y-auto mt-4">
-            <TabsContent value="basic" className="space-y-6">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <TabsContent value="basic" className="space-y-6 mt-0">
               <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-4 rounded-xl border border-border/50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -162,7 +162,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               </div>
             </TabsContent>
 
-            <TabsContent value="roles" className="h-full">
+            <TabsContent value="roles" className="h-full mt-0">
               <UnifiedRoleManager 
                 user={employee} 
                 onUpdate={handleUpdate}
@@ -172,7 +172,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               />
             </TabsContent>
 
-            <TabsContent value="products" className="h-full">
+            <TabsContent value="products" className="h-full mt-0">
               <ProductPermissionsManager 
                 user={employee} 
                 onUpdate={handleUpdate}
@@ -180,7 +180,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               />
             </TabsContent>
 
-            <TabsContent value="view" className="space-y-4">
+            <TabsContent value="view" className="space-y-4 mt-0">
               <div className="bg-gradient-to-r from-muted/30 to-muted/50 p-6 rounded-xl border border-border/50">
                 <h3 className="font-semibold mb-4 flex items-center">
                   <Eye className="ml-2 h-5 w-5 text-primary" />

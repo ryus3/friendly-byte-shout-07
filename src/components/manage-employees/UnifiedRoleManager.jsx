@@ -245,18 +245,18 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
                     return (
                       <div 
                         key={userRole.id}
-                        className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4"
+                        className="bg-emerald-50 dark:bg-emerald-950/30 border-2 border-emerald-300 dark:border-emerald-700 rounded-lg p-4 shadow-sm"
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0`}>
-                            <IconComponent className="h-4 w-4" />
+                          <div className={`p-3 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0 shadow-md`}>
+                            <IconComponent className="h-5 w-5" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-green-900 dark:text-green-100">
+                            <h4 className="font-bold text-emerald-900 dark:text-emerald-100 text-lg">
                               {role.display_name}
                             </h4>
-                            <p className="text-sm text-green-700 dark:text-green-300">
-                              منذ {new Date(userRole.assigned_at).toLocaleDateString('ar-SA')}
+                            <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
+                              نشط منذ {new Date(userRole.assigned_at).toLocaleDateString('ar-SA')}
                             </p>
                           </div>
                           <Button
@@ -264,7 +264,7 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
                             size="sm"
                             onClick={() => handleRemoveRole(userRole.id)}
                             disabled={isProcessing}
-                            className="text-xs px-3 py-1 h-8"
+                            className="text-xs px-4 py-2 h-9 font-medium shadow-sm"
                           >
                             إزالة
                           </Button>
@@ -300,33 +300,49 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
                 return (
                   <div 
                     key={role.id}
-                    className={`rounded-lg p-4 transition-all duration-200 border ${
+                    className={`rounded-lg p-4 transition-all duration-200 border-2 shadow-sm ${
                       isAssigned 
-                        ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
-                        : 'bg-card border-border hover:border-primary/50'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700' 
+                        : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0`}>
-                        <IconComponent className="h-4 w-4" />
+                      <div className={`p-3 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0 shadow-md`}>
+                        <IconComponent className="h-5 w-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className={`font-bold ${isAssigned ? 'text-green-900 dark:text-green-100' : 'text-foreground'}`}>
+                        <h4 className={`font-bold text-lg mb-1 ${
+                          isAssigned 
+                            ? 'text-emerald-900 dark:text-emerald-100' 
+                            : 'text-slate-900 dark:text-slate-100'
+                        }`}>
                           {role.display_name}
                         </h4>
-                        <p className={`text-sm mb-2 ${isAssigned ? 'text-green-700 dark:text-green-300' : 'text-muted-foreground'}`}>
+                        <p className={`text-sm mb-2 font-medium ${
+                          isAssigned 
+                            ? 'text-emerald-700 dark:text-emerald-300' 
+                            : 'text-slate-600 dark:text-slate-400'
+                        }`}>
                           المستوى {role.hierarchy_level}
                         </p>
-                        <p className={`text-xs leading-relaxed ${isAssigned ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+                        <p className={`text-xs leading-relaxed ${
+                          isAssigned 
+                            ? 'text-emerald-600 dark:text-emerald-400' 
+                            : 'text-slate-500 dark:text-slate-400'
+                        }`}>
                           {getRoleDescription(role.name)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge 
                           variant={isAssigned ? "default" : "secondary"}
-                          className="text-xs"
+                          className={`text-xs font-medium px-3 py-1 ${
+                            isAssigned 
+                              ? 'bg-emerald-600 text-white dark:bg-emerald-500' 
+                              : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+                          }`}
                         >
-                          {isAssigned ? "مُعيّن" : "غير مُعيّن"}
+                          {isAssigned ? "✓ مُعيّن" : "○ غير مُعيّن"}
                         </Badge>
                         
                         <Button
@@ -341,7 +357,7 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
                             }
                           }}
                           disabled={isProcessing}
-                          className="text-xs px-3 py-1 h-8"
+                          className="text-xs px-4 py-2 h-9 font-medium shadow-sm"
                         >
                           {isProcessing ? "..." : (isAssigned ? "إزالة" : "تعيين")}
                         </Button>
