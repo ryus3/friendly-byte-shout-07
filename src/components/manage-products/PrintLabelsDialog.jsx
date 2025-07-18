@@ -1,15 +1,73 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import Barcode from 'react-barcode';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Printer, Minus, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { generateUniqueBarcode } from '@/lib/barcode-utils';
+
+// مكون بديل للباركود باستخدام خطوط CSS بسيطة
+const SimpleBarcodeDisplay = ({ value, width = 150, height = 30 }) => {
+  if (!value || value.trim() === '') return null;
+  
+  // تحويل النص إلى رقم ثنائي بسيط لإنشاء نمط خطوط
+  const generatePattern = (text) => {
+    let pattern = '';
+    for (let i = 0; i < text.length; i++) {
+      const charCode = text.charCodeAt(i);
+      pattern += (charCode % 2 === 0) ? '1' : '0';
+      pattern += (charCode % 3 === 0) ? '11' : '01';
+    }
+    return pattern.substring(0, 50); // أخذ أول 50 خط
+  };
+
+  const pattern = generatePattern(value);
+  
+  return (
+    <div className="barcode-container" style={{ width: `${width}px`, margin: '0 auto' }}>
+      <div 
+        className="barcode-lines"
+        style={{
+          display: 'flex',
+          height: `${height}px`,
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          background: 'white',
+          padding: '2px',
+          border: '1px solid #ccc'
+        }}
+      >
+        {pattern.split('').map((bit, index) => (
+          <div
+            key={index}
+            style={{
+              width: '2px',
+              height: bit === '1' ? '100%' : '60%',
+              backgroundColor: '#000',
+              margin: '0 0.5px'
+            }}
+          />
+        ))}
+      </div>
+      <div 
+        style={{ 
+          textAlign: 'center', 
+          fontSize: '10px', 
+          fontFamily: 'monospace',
+          marginTop: '2px',
+          background: 'white'
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+};
 
 const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
+  console.log('🏷️ LabelPreview received labels:', labelsToPrint);
+  
   return (
     <div ref={ref} className="print-area">
       <style>{`
@@ -77,20 +135,12 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             background: white !important;
           }
           
-          .label-barcode-container svg {
-            max-width: 100% !important;
-            height: auto !important;
+          .barcode-container {
             background: white !important;
           }
           
-          .label-barcode-container svg rect {
-            fill: white !important;
-          }
-          
-          .label-barcode-container svg path,
-          .label-barcode-container svg rect[fill="#000000"],
-          .label-barcode-container svg rect[fill="black"] {
-            fill: #000 !important;
+          .barcode-lines {
+            background: white !important;
           }
           
           .label-price {
@@ -103,7 +153,7 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           
           .no-barcode {
             font-size: 8px !important;
-            color: #000 !important;
+            color: #666 !important;
             text-align: center !important;
           }
         }
@@ -161,11 +211,6 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             background: white;
           }
           
-          .label-barcode-container svg {
-            max-width: 100%;
-            height: auto;
-          }
-          
           .label-price {
             font-size: 16px;
             font-weight: bold;
@@ -182,42 +227,36 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
       `}</style>
       <div className="label-grid">
-        {labelsToPrint.map((label, index) => (
-          <div key={index} className="label-card">
-            <div className="label-header">
-              <h3 className="label-product-name">{label.name}</h3>
-              <p className="label-variant-info">{label.color} / {label.size}</p>
-            </div>
-            
-            <div className="label-barcode-container">
-              {label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود' ? (
-                <div>
-                  <Barcode 
-                    value={label.barcode} 
-                    format="CODE128"
-                    height={30}
-                    width={1.8}
-                    fontSize={8}
-                    margin={1}
-                    displayValue={true}
-                    background="#FFFFFF"
-                    lineColor="#000000"
-                    textAlign="center"
-                    textPosition="bottom"
-                    textMargin={2}
-                  />
+        {labelsToPrint && labelsToPrint.length > 0 ? (
+          labelsToPrint.map((label, index) => {
+            console.log(`🏷️ Rendering label ${index}:`, label);
+            return (
+              <div key={index} className="label-card">
+                <div className="label-header">
+                  <h3 className="label-product-name">{label.name || 'منتج غير معروف'}</h3>
+                  <p className="label-variant-info">{label.color || 'لون غير محدد'} / {label.size || 'قياس غير محدد'}</p>
                 </div>
-              ) : (
-                <div className="no-barcode">
-                  <p>لا يوجد باركود</p>
-                  <p className="text-xs">{label.color} - {label.size}</p>
+                
+                <div className="label-barcode-container">
+                  {label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود' ? (
+                    <SimpleBarcodeDisplay value={label.barcode} width={150} height={25} />
+                  ) : (
+                    <div className="no-barcode">
+                      <p>لا يوجد باركود</p>
+                      <p className="text-xs">({label.color} - {label.size})</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-            
-            <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
+                
+                <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
+              </div>
+            );
+          })
+        ) : (
+          <div className="col-span-3 text-center p-8">
+            <p>لا توجد ملصقات للطباعة</p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
@@ -226,6 +265,8 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
 const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
   const [labelQuantities, setLabelQuantities] = useState({});
   const printComponentRef = useRef();
+
+  console.log('🏷️ PrintLabelsDialog received products:', products);
 
   const handlePrint = useReactToPrint({
     content: () => printComponentRef.current,
@@ -251,12 +292,15 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
   const labelsToPrint = useMemo(() => {
     const labels = [];
     
-    if (!products || products.length === 0) return labels;
+    if (!products || products.length === 0) {
+      console.log('🏷️ No products provided');
+      return labels;
+    }
     
-    console.log('🏷️ معالجة المنتجات للطباعة:', products);
+    console.log('🏷️ Processing products for labels:', products);
     
     products.forEach(product => {
-      console.log('🏷️ معالجة المنتج:', product.name, { 
+      console.log('🏷️ Processing product:', product.name, { 
         productBarcode: product.barcode, 
         variantsCount: product.variants?.length || 0 
       });
@@ -267,7 +311,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
           const sku = `${product.id}-${variant.id}`;
           const quantity = labelQuantities[sku] || 1;
           
-          console.log('🏷️ معالجة المتغير:', {
+          console.log('🏷️ Processing variant:', {
             sku,
             variantBarcode: variant.barcode,
             productBarcode: product.barcode,
@@ -276,7 +320,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
           });
           
           // استخدام الباركود من المتغير أولاً، ثم من المنتج
-          const barcode = variant.barcode || product.barcode;
+          const barcode = variant.barcode || product.barcode || `NO-BARCODE-${sku}`;
           
           for (let i = 0; i < quantity; i++) {
             labels.push({
@@ -293,9 +337,9 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
         // منتج بدون متغيرات
         const sku = product.id;
         const quantity = labelQuantities[sku] || 1;
-        const barcode = product.barcode;
+        const barcode = product.barcode || `NO-BARCODE-${sku}`;
         
-        console.log('🏷️ منتج بدون متغيرات:', {
+        console.log('🏷️ Product without variants:', {
           name: product.name,
           barcode: barcode
         });
@@ -313,7 +357,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
       }
     });
     
-    console.log('🏷️ ملصقات جاهزة للطباعة:', labels);
+    console.log('🏷️ Final labels ready for printing:', labels);
     return labels;
   }, [products, labelQuantities]);
 
@@ -363,7 +407,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
         <DialogHeader>
           <DialogTitle>طباعة ملصقات المنتجات</DialogTitle>
           <DialogDescription>
-            اختر كمية الملصقات لكل متغير واطبع الملصقات
+            اختر كمية الملصقات لكل متغير واطبع الملصقات - تم استخدام نظام باركود مبسط
           </DialogDescription>
         </DialogHeader>
         
