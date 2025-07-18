@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useInventory } from '@/contexts/InventoryContext';

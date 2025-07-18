@@ -107,7 +107,7 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [user?.user_id]);
+  }, [user?.user_id || '']);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
