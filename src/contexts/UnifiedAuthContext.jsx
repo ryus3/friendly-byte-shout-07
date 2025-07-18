@@ -50,13 +50,14 @@ export const UnifiedAuthProvider = ({ children }) => {
         return { ...supabaseUser, is_new: true, status: 'pending' };
       }
 
-      // استخراج الأدوار
-      const roles = profile.user_roles?.map(ur => ur.roles.name) || [];
+      // استخراج الأدوار النشطة
+      const activeRoles = profile.user_roles?.map(ur => ur.roles.name) || [];
       
       return { 
         ...supabaseUser, 
         ...profile,
-        roles
+        roles: activeRoles,
+        activeRoles
       };
     } catch (error) {
       console.error('Profile fetch failed:', error);

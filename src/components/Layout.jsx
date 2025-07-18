@@ -42,11 +42,11 @@ const SidebarContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ], []);
   
-  // فلترة العناصر بناءً على الصلاحيات فوراً مع memoization
-  const visibleMenuItems = useMemo(() => 
-    menuItems.filter(item => hasPermission(item.permission)), 
-    [menuItems, hasPermission]
-  );
+  // فلترة العناصر بناءً على الصلاحيات فوراً بدون تأخير
+  const visibleMenuItems = useMemo(() => {
+    if (!hasPermission) return menuItems; // إذا لم تكن الصلاحيات محملة بعد، أظهر كل شيء
+    return menuItems.filter(item => hasPermission(item.permission));
+  }, [menuItems, hasPermission]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
@@ -104,7 +104,7 @@ const SidebarContent = ({ onClose }) => {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
-              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.activeRoles || [])}</p>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.activeRoles || user?.roles || [])}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
