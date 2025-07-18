@@ -113,12 +113,10 @@ const MenuContent = ({ onClose }) => {
 
 const SearchSheet = ({ children, open, onOpenChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const { products } = useInventory();
-  const { filterProductsByPermissions } = useAuth();
+  const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
   const navigate = useNavigate();
 
-  const allowedProducts = filterProductsByPermissions ? filterProductsByPermissions(products) : products;
-  const filteredProducts = allowedProducts.filter(product =>
+  const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.description?.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 6);

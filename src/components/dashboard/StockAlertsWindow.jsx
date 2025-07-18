@@ -11,9 +11,10 @@ import { cn } from '@/lib/utils';
 
 const StockAlertsWindow = ({ open, onOpenChange }) => {
   const navigate = useNavigate();
-  const { getLowStockProducts, settings } = useInventory();
+  const { getLowStockProducts, settings, products } = useInventory();
   const [selectedLevel, setSelectedLevel] = useState('all');
   
+  // استخدام المنتجات المفلترة من السياق (InventoryContext يطبق الفلترة تلقائياً)
   const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
   
   const getStockLevel = (stock, minStock) => {

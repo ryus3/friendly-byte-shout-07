@@ -6,20 +6,17 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/InventoryContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import StockAlertsWindow from './StockAlertsWindow';
 import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
-  const { getLowStockProducts, settings, products } = useInventory();
+  const { getLowStockProducts, settings } = useInventory();
   const { canManageFinances, isAdmin } = usePermissions();
-  const { filterProductsByPermissions } = usePermissionBasedData();
   const [alertsWindowOpen, setAlertsWindowOpen] = useState(false);
   
-  // تطبيق فلترة الصلاحيات على المنتجات أولاً ثم جلب المنتجات منخفضة المخزون
-  const allowedProducts = filterProductsByPermissions(products);
-  const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5, allowedProducts);
+  // استخدام المنتجات المفلترة من السياق (InventoryContext يطبق الفلترة تلقائياً)
+  const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
   
   // إخفاء إعدادات المخزون عن موظفي المبيعات
   const canManageStockSettings = canManageFinances || isAdmin;

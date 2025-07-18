@@ -11,11 +11,9 @@ import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XC
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const BarcodeInventoryPage = () => {
-    const { products } = useInventory();
-    const { filterProductsByPermissions } = usePermissionBasedData();
+    const { products } = useInventory(); // المنتجات المفلترة حسب الصلاحيات تلقائياً
     const [isScanning, setIsScanning] = useState(false);
     const [scannedItems, setScannedItems] = useState({});
     const [lastScanned, setLastScanned] = useState(null);
@@ -34,10 +32,8 @@ const BarcodeInventoryPage = () => {
     }, []);
 
     const findVariantByBarcode = (barcode) => {
-        // تطبيق فلترة الصلاحيات على المنتجات
-        const allowedProducts = filterProductsByPermissions(products);
-        
-        for (const product of allowedProducts) {
+        // المنتجات مفلترة تلقائياً من السياق
+        for (const product of products) {
             const variant = product.variants.find(v => v.barcode === barcode || v.sku === barcode);
             if (variant) {
                 return { product, variant };

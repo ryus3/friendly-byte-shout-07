@@ -438,34 +438,41 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
     }
   }, [products, settings, addNotification, setProducts]);
 
-  const getLowStockProducts = useCallback((limit) => {
-    if (!products || !settings) return [];
+  const getLowStockProducts = useCallback((limit, filteredProducts = null) => {
+    // استخدام المنتجات المفلترة إذا تم تمريرها، وإلا استخدم جميع المنتجات
+    const productsToCheck = filteredProducts || products;
+    
+    if (!productsToCheck || !settings) return [];
     
     const lowStockVariants = [];
-    products.forEach(product => {
-        if (product.is_visible) {
-            product.variants.forEach(variant => {
-                const lowStockThreshold = product.minStock || settings.lowStockThreshold || 5;
-                // منتج منخفض: أقل من أو يساوي الحد الأدنى وليس صفر
-                // منتج جيد: 11 فما فوق
-                if (variant.quantity > 0 && variant.quantity <= lowStockThreshold) {
-                    lowStockVariants.push({
-                        ...variant,
-                        productName: product.name,
-                        productId: product.id,
-                        productImage: product.images?.[0] || null,
-                        lowStockThreshold: lowStockThreshold,
-                    });
-                }
+    productsToCheck.forEach(product => {
+      if (product.variants && product.variants.length > 0) {
+        product.variants.forEach(variant => {
+          const currentStock = variant.quantity || 0;
+          const minStock = variant.min_stock || settings.lowStockThreshold || 5;
+          const reservedStock = variant.reserved || 0;
+          const availableStock = currentStock - reservedStock;
+          
+          if (availableStock <= minStock) {
+            lowStockVariants.push({
+              id: variant.id,
+              product_id: product.id,
+              productName: product.name,
+              productImage: product.images?.[0] || variant.images?.[0],
+              color: variant.color,
+              size: variant.size,
+              quantity: availableStock,
+              minStock: minStock,
+              reserved: reservedStock,
+              total: currentStock
             });
-        }
+          }
+        });
+      }
     });
-
-    const sortedLowStock = lowStockVariants.sort((a, b) => a.quantity - b.quantity);
     
-    return limit ? sortedLowStock.slice(0, limit) : sortedLowStock;
+    return lowStockVariants.sort((a, b) => a.quantity - b.quantity).slice(0, limit);
   }, [products, settings]);
-
   return {
     products,
     setProducts,
