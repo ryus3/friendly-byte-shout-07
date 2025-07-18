@@ -10,6 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import AiOrderCard from './AiOrderCard';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const AiOrdersManager = ({ onClose }) => {
   const { user, hasPermission } = useAuth();
@@ -19,12 +20,44 @@ const AiOrdersManager = ({ onClose }) => {
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [editingOrder, setEditingOrder] = React.useState(null);
   const [quickOrderDialogOpen, setQuickOrderDialogOpen] = React.useState(false);
+  const [userEmployeeCode, setUserEmployeeCode] = React.useState(null);
+
+  // جلب رمز الموظف للمستخدم الحالي
+  React.useEffect(() => {
+    const fetchEmployeeCode = async () => {
+      if (!user?.user_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('telegram_employee_codes')
+          .select('employee_code')
+          .eq('user_id', user.user_id)
+          .single();
+        
+        if (!error && data) {
+          setUserEmployeeCode(data.employee_code);
+        }
+      } catch (err) {
+        console.error('Error fetching employee code:', err);
+      }
+    };
+    
+    fetchEmployeeCode();
+  }, [user?.user_id]);
 
   const userAiOrders = React.useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
-    if (user?.role === 'admin') return aiOrders;
-    return aiOrders.filter(order => order.created_by === user?.id);
-  }, [aiOrders, user]);
+    
+    // للمدير - عرض كل الطلبات
+    if (hasPermission('view_all_data')) return aiOrders;
+    
+    // للموظفين - فلترة حسب رمز الموظف
+    if (!userEmployeeCode) return [];
+    
+    return aiOrders.filter(order => {
+      return order.created_by === userEmployeeCode;
+    });
+  }, [aiOrders, userEmployeeCode, hasPermission]);
 
   const handleSelectAll = (checked) => {
     if (checked) {

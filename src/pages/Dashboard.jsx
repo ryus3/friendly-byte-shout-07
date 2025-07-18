@@ -218,16 +218,40 @@ const Dashboard = () => {
             });
     }, [orders, canViewAllData, user?.id, user?.user_id]);
     
+    const [userEmployeeCode, setUserEmployeeCode] = useState(null);
+
+    // جلب رمز الموظف
+    useEffect(() => {
+        const fetchEmployeeCode = async () => {
+            if (!user?.user_id || canViewAllData) return;
+            
+            try {
+                const { data } = await supabase
+                    .from('telegram_employee_codes')
+                    .select('employee_code')
+                    .eq('user_id', user.user_id)
+                    .single();
+                
+                if (data) setUserEmployeeCode(data.employee_code);
+            } catch (err) {
+                console.error('Error fetching employee code:', err);
+            }
+        };
+        
+        fetchEmployeeCode();
+    }, [user?.user_id, canViewAllData]);
+
     const userAiOrders = useMemo(() => {
         if (!aiOrders) return [];
         
-        return canViewAllData 
-            ? aiOrders 
-            : aiOrders.filter(order => {
-                const createdBy = order.created_by;
-                return createdBy === user?.id || createdBy === user?.user_id;
-            });
-    }, [aiOrders, canViewAllData, user?.id, user?.user_id]);
+        // للمدير - عرض كل الطلبات
+        if (canViewAllData) return aiOrders;
+        
+        // للموظفين - فلترة حسب رمز الموظف
+        if (!userEmployeeCode) return [];
+        
+        return aiOrders.filter(order => order.created_by === userEmployeeCode);
+    }, [aiOrders, canViewAllData, userEmployeeCode]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
