@@ -529,7 +529,7 @@ export const UnifiedAuthProvider = ({ children }) => {
       if (isAdmin) return products;
 
       return products.filter(product => {
-        // فحص التصنيفات عبر product_categories
+        // فحص التصنيفات عبر product_categories - أولوية 1
         const categoryPerm = productPermissions.category;
         if (categoryPerm && !categoryPerm.has_full_access) {
           if (product.product_categories && product.product_categories.length > 0) {
@@ -540,7 +540,7 @@ export const UnifiedAuthProvider = ({ children }) => {
           }
         }
 
-        // فحص الأقسام عبر product_departments
+        // فحص الأقسام عبر product_departments - أولوية 2
         const departmentPerm = productPermissions.department;
         if (departmentPerm && !departmentPerm.has_full_access) {
           if (product.product_departments && product.product_departments.length > 0) {
@@ -548,6 +548,50 @@ export const UnifiedAuthProvider = ({ children }) => {
               departmentPerm.allowed_items.includes(pd.department_id)
             );
             if (!hasAllowedDepartment) return false;
+          }
+        }
+
+        // فحص المواسم عبر product_seasons_occasions - أولوية 3
+        const seasonPerm = productPermissions.season_occasion;
+        if (seasonPerm && !seasonPerm.has_full_access) {
+          if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
+            const hasAllowedSeason = product.product_seasons_occasions.some(pso => 
+              seasonPerm.allowed_items.includes(pso.season_occasion_id)
+            );
+            if (!hasAllowedSeason) return false;
+          }
+        }
+
+        // فحص أنواع المنتجات عبر product_product_types - أولوية 4
+        const productTypePerm = productPermissions.product_type;
+        if (productTypePerm && !productTypePerm.has_full_access) {
+          if (product.product_product_types && product.product_product_types.length > 0) {
+            const hasAllowedProductType = product.product_product_types.some(ppt => 
+              productTypePerm.allowed_items.includes(ppt.product_type_id)
+            );
+            if (!hasAllowedProductType) return false;
+          }
+        }
+
+        // فحص الألوان عبر المتغيرات - أولوية 5
+        const colorPerm = productPermissions.color;
+        if (colorPerm && !colorPerm.has_full_access) {
+          if (product.variants && product.variants.length > 0) {
+            const hasAllowedColor = product.variants.some(variant => 
+              colorPerm.allowed_items.includes(variant.color_id)
+            );
+            if (!hasAllowedColor) return false;
+          }
+        }
+
+        // فحص الأحجام عبر المتغيرات - أولوية 6
+        const sizePerm = productPermissions.size;
+        if (sizePerm && !sizePerm.has_full_access) {
+          if (product.variants && product.variants.length > 0) {
+            const hasAllowedSize = product.variants.some(variant => 
+              sizePerm.allowed_items.includes(variant.size_id)
+            );
+            if (!hasAllowedSize) return false;
           }
         }
 
