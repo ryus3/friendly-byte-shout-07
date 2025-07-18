@@ -24,56 +24,63 @@ export const useFilteredProducts = (products) => {
 
     // فلترة المنتجات حسب صلاحيات الموظف
     return products.filter(product => {
+      let hasPermission = false;
+
       // فحص التصنيفات (categories)
       if (product.product_categories && product.product_categories.length > 0) {
         const productCategories = product.product_categories.map(pc => pc.categories).filter(Boolean);
         const allowedCategories = filterCategoriesByPermission(productCategories);
-        if (allowedCategories.length === 0) return false;
+        if (allowedCategories.length > 0) hasPermission = true;
       }
 
       // فحص الأقسام (departments)
       if (product.product_departments && product.product_departments.length > 0) {
         const productDepartments = product.product_departments.map(pd => pd.departments).filter(Boolean);
         const allowedDepartments = filterDepartmentsByPermission(productDepartments);
-        if (allowedDepartments.length === 0) return false;
+        if (allowedDepartments.length > 0) hasPermission = true;
       }
 
       // فحص أنواع المنتجات (product_types)
       if (product.product_product_types && product.product_product_types.length > 0) {
         const productTypes = product.product_product_types.map(ppt => ppt.product_types).filter(Boolean);
         const allowedProductTypes = filterProductTypesByPermission(productTypes);
-        if (allowedProductTypes.length === 0) return false;
+        if (allowedProductTypes.length > 0) hasPermission = true;
       }
 
       // فحص المواسم والمناسبات (seasons_occasions)
       if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
         const seasonsOccasions = product.product_seasons_occasions.map(pso => pso.seasons_occasions).filter(Boolean);
         const allowedSeasonsOccasions = filterSeasonsOccasionsByPermission(seasonsOccasions);
-        if (allowedSeasonsOccasions.length === 0) return false;
+        if (allowedSeasonsOccasions.length > 0) hasPermission = true;
       }
+
+      // إذا لم توجد أي علاقات مع التصنيفات أو الأقسام، أخفي المنتج للموظفين
+      if (!hasPermission) return false;
 
       // فحص المتغيرات (variants) - فلترة حسب الألوان والأحجام
       if (product.variants && product.variants.length > 0) {
         const allowedVariants = product.variants.filter(variant => {
-          // فحص الألوان
+          let variantHasPermission = true;
+
+          // فحص الألوان - إذا كان للمتغير لون محدد
           if (variant.color_id || variant.colors) {
             const variantColors = variant.colors ? [variant.colors] : [];
             if (variantColors.length > 0) {
               const allowedColors = filterColorsByPermission(variantColors);
-              if (allowedColors.length === 0) return false;
+              if (allowedColors.length === 0) variantHasPermission = false;
             }
           }
 
-          // فحص الأحجام
+          // فحص الأحجام - إذا كان للمتغير حجم محدد
           if (variant.size_id || variant.sizes) {
             const variantSizes = variant.sizes ? [variant.sizes] : [];
             if (variantSizes.length > 0) {
               const allowedSizes = filterSizesByPermission(variantSizes);
-              if (allowedSizes.length === 0) return false;
+              if (allowedSizes.length === 0) variantHasPermission = false;
             }
           }
 
-          return true;
+          return variantHasPermission;
         });
 
         // إذا لم تكن هناك متغيرات مسموحة، أخفي المنتج
