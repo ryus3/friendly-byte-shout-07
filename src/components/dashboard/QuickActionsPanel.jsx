@@ -14,8 +14,10 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const QuickActionsPanel = ({ userPermissions, navigate }) => {
+  const { user } = useAuth();
   const quickActions = [
     {
       title: "طلب جديد",

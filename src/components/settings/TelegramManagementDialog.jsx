@@ -227,7 +227,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-[95vw] sm:h-[95vh]">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto sm:max-w-[98vw] sm:max-h-[92vh] sm:p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
@@ -361,119 +361,173 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                     const isEditing = editingCode === employeeCode.id;
                     
                     return (
-                      <div key={employeeCode.id} className={`p-3 sm:p-4 rounded-lg border transition-colors ${
-                        isCurrentUser ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
-                      }`}>
-                        <div className="flex items-center justify-between flex-wrap gap-2 sm:gap-0">
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base ${
-                      isCurrentUser 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
-                        : 'bg-gradient-to-r from-green-500 to-teal-500'
-                    }`}>
-                      {profile?.full_name?.charAt(0) || 'U'}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-sm sm:text-lg truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
-                      <div className="flex items-center gap-1 sm:gap-2 mt-1 flex-wrap">
-                        {isCurrentUser && (
-                          <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
-                            {canViewAllData ? 'أنت (مدير)' : 'أنت'}
-                          </Badge>
-                        )}
-                        <Badge 
-                          variant={isLinked ? "default" : "outline"} 
-                          className={`text-xs ${isLinked ? 'bg-green-100 text-green-700' : ''}`}
-                        >
-                          {isLinked ? (
-                            <>
-                              <Link className="w-3 h-3 ml-1" />
-                              متصل
-                            </>
-                          ) : (
-                            <>
-                              <Unlink className="w-3 h-3 ml-1" />
-                              غير متصل
-                            </>
-                          )}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
+                       <div key={employeeCode.id} className={`p-3 sm:p-4 rounded-lg border transition-colors ${
+                         isCurrentUser ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                       }`}>
+                         {/* Mobile Layout */}
+                         <div className="sm:hidden space-y-3">
+                           <div className="flex items-center gap-3">
+                             <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                               isCurrentUser 
+                                 ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
+                                 : 'bg-gradient-to-r from-green-500 to-teal-500'
+                             }`}>
+                               {profile?.full_name?.charAt(0) || 'U'}
+                             </div>
+                             <div className="flex-1">
+                               <p className="font-semibold text-sm">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                               <div className="flex gap-1 mt-1">
+                                 {isCurrentUser && (
+                                   <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
+                                     {canViewAllData ? 'أنت (مدير)' : 'أنت'}
+                                   </Badge>
+                                 )}
+                                 <Badge 
+                                   variant={isLinked ? "default" : "outline"} 
+                                   className={`text-xs ${isLinked ? 'bg-green-100 text-green-700' : ''}`}
+                                 >
+                                   {isLinked ? (
+                                     <>
+                                       <Link className="w-3 h-3 ml-1" />
+                                       متصل
+                                     </>
+                                   ) : (
+                                     <>
+                                       <Unlink className="w-3 h-3 ml-1" />
+                                       غير متصل
+                                     </>
+                                   )}
+                                 </Badge>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
+
+                         {/* Desktop Layout */}
+                         <div className="hidden sm:flex items-center justify-between">
+                           <div className="flex items-center gap-3 flex-1 min-w-0">
+                             <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold ${
+                               isCurrentUser 
+                                 ? 'bg-gradient-to-r from-blue-500 to-purple-500' 
+                                 : 'bg-gradient-to-r from-green-500 to-teal-500'
+                             }`}>
+                               {profile?.full_name?.charAt(0) || 'U'}
+                             </div>
+                             <div className="min-w-0 flex-1">
+                               <p className="font-semibold text-lg truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                               <div className="flex items-center gap-2 mt-1">
+                                 {isCurrentUser && (
+                                   <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
+                                     {canViewAllData ? 'أنت (مدير)' : 'أنت'}
+                                   </Badge>
+                                 )}
+                                 <Badge 
+                                   variant={isLinked ? "default" : "outline"} 
+                                   className={`text-xs ${isLinked ? 'bg-green-100 text-green-700' : ''}`}
+                                 >
+                                   {isLinked ? (
+                                     <>
+                                       <Link className="w-3 h-3 ml-1" />
+                                       متصل
+                                     </>
+                                   ) : (
+                                     <>
+                                       <Unlink className="w-3 h-3 ml-1" />
+                                       غير متصل
+                                     </>
+                                   )}
+                                 </Badge>
+                               </div>
+                             </div>
+                           </div>
+                         </div>
                           
-                          <div className="flex items-center gap-2">
-                            {isEditing ? (
-                          <div className="flex items-center gap-2 flex-wrap">
-                                <Input 
-                                  value={newCodeValue}
-                                  onChange={(e) => setNewCodeValue(e.target.value)}
-                                  placeholder="الرمز الجديد"
-                                  className="w-24 sm:w-32 text-sm"
-                                />
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateEmployeeCode(employeeCode.id, newCodeValue)}
-                                  disabled={!newCodeValue.trim()}
-                                  className="text-xs px-2"
-                                >
-                                  حفظ
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setEditingCode(null);
-                                    setNewCodeValue('');
-                                  }}
-                                  className="text-xs px-2"
-                                >
-                                  إلغاء
-                                </Button>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="text-center">
-                                  <Badge 
-                                    variant="outline" 
-                                    className={`font-mono text-lg px-4 py-2 ${
-                                      isCurrentUser 
-                                        ? 'bg-blue-100 text-blue-700 border-blue-300' 
-                                        : 'bg-green-100 text-green-700 border-green-300'
-                                    }`}
-                                  >
-                                    {employeeCode.employee_code}
-                                  </Badge>
-                                  <p className="text-xs text-muted-foreground mt-1">الرمز</p>
-                                </div>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => copyToClipboard(employeeCode.employee_code)}
-                                >
-                                  <Copy className="w-4 h-4" />
-                                </Button>
-                                {canViewAllData && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => {
-                                        setEditingCode(employeeCode.id);
-                                        setNewCodeValue(employeeCode.employee_code);
-                                      }}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => deleteEmployeeCode(employeeCode.id)}
-                                      className="text-red-500 hover:text-red-700"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </>
-                                )}
+                         {/* Code Actions */}
+                         <div className={isEditing ? "space-y-3" : "flex flex-col sm:flex-row gap-2 sm:gap-3 mt-3 sm:mt-0"}>
+                           {isEditing ? (
+                             <div className="flex items-center gap-2">
+                               <Input 
+                                 value={newCodeValue}
+                                 onChange={(e) => setNewCodeValue(e.target.value)}
+                                 placeholder="الرمز الجديد"
+                                 className="flex-1 text-sm"
+                               />
+                               <Button
+                                 size="sm"
+                                 onClick={() => updateEmployeeCode(employeeCode.id, newCodeValue)}
+                                 disabled={!newCodeValue.trim()}
+                                 className="text-xs px-2"
+                               >
+                                 حفظ
+                               </Button>
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => {
+                                   setEditingCode(null);
+                                   setNewCodeValue('');
+                                 }}
+                                 className="text-xs px-2"
+                               >
+                                 إلغاء
+                               </Button>
+                             </div>
+                           ) : (
+                             <>
+                                {/* Code Display */}
+                                <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
+                                  <div className="flex-1 text-center sm:text-right">
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`font-mono text-sm sm:text-lg px-3 py-2 w-full sm:w-auto justify-center ${
+                                         isCurrentUser 
+                                           ? 'bg-blue-100 text-blue-700 border-blue-300' 
+                                           : 'bg-green-100 text-green-700 border-green-300'
+                                       }`}
+                                     >
+                                       {employeeCode.employee_code}
+                                     </Badge>
+                                     <p className="text-xs text-muted-foreground mt-1 sm:hidden">الرمز</p>
+                                   </div>
+
+                                   {/* Action Buttons */}
+                                   <div className="flex gap-2 w-full sm:w-auto justify-center">
+                                     <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => copyToClipboard(employeeCode.employee_code)}
+                                       className="flex-1 sm:flex-none"
+                                     >
+                                       <Copy className="w-4 h-4" />
+                                       <span className="sm:hidden ml-2">نسخ</span>
+                                     </Button>
+                                     {canViewAllData && (
+                                       <>
+                                         <Button
+                                           size="sm"
+                                           variant="outline"
+                                           onClick={() => {
+                                             setEditingCode(employeeCode.id);
+                                             setNewCodeValue(employeeCode.employee_code);
+                                           }}
+                                           className="flex-1 sm:flex-none"
+                                         >
+                                           <Edit className="w-4 h-4" />
+                                           <span className="sm:hidden ml-2">تعديل</span>
+                                         </Button>
+                                         <Button
+                                           size="sm"
+                                           variant="outline"
+                                           onClick={() => deleteEmployeeCode(employeeCode.id)}
+                                           className="text-red-500 hover:text-red-700 flex-1 sm:flex-none"
+                                         >
+                                           <Trash2 className="w-4 h-4" />
+                                           <span className="sm:hidden ml-2">حذف</span>
+                                         </Button>
+                                       </>
+                                     )}
+                                   </div>
+                                 </div>
                               </>
                             )}
                           </div>
