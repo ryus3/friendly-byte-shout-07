@@ -19,7 +19,11 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <p className="label-product-name">{label.name}</p>
               <p className="label-variant-info">{label.color} / {label.size}</p>
               <div className="label-barcode-container">
-                <Barcode value={label.barcode} height={25} width={1.2} fontSize={0} margin={2} />
+                {label.barcode && label.barcode.trim() !== '' ? (
+                  <Barcode value={label.barcode} height={25} width={1.2} fontSize={0} margin={2} />
+                ) : (
+                  <div className="barcode-placeholder">لا يوجد باركود</div>
+                )}
               </div>
               <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
             </div>
@@ -170,7 +174,11 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                         <p className="label-product-name">{label.name}</p>
                         <p className="label-variant-info">{label.color} / {label.size}</p>
                         <div className="label-barcode-container">
-                          <Barcode value={label.barcode} height={25} width={1.2} fontSize={0} margin={2} />
+                          {label.barcode && label.barcode.trim() !== '' ? (
+                            <Barcode value={label.barcode} height={25} width={1.2} fontSize={0} margin={2} />
+                          ) : (
+                            <div className="barcode-placeholder text-sm text-muted-foreground">لا يوجد باركود</div>
+                          )}
                         </div>
                         <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
                       </div>

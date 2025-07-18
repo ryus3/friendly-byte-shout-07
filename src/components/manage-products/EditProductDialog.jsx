@@ -9,6 +9,7 @@ import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Progress } from "@/components/ui/progress";
+import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
 import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
 import MultiSelectCategorization from '@/components/add-product/MultiSelectCategorization';
@@ -84,12 +85,29 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
         if (size) setSizeType(size.type);
       }
       
-      setVariants(product.product_variants || product.variants || []);
+      // تحديث المتغيرات مع توليد باركود إذا لم يكن موجود
+      const productVariants = product.product_variants || product.variants || [];
+      const updatedVariants = productVariants.map(variant => {
+        let barcode = variant.barcode;
+        if (!barcode || barcode.trim() === '') {
+          // توليد باركود جديد للمتغيرات التي لا تحتوي على باركود
+          const color = allColors.find(c => c.id === variant.color_id);
+          const size = sizes.find(s => s.id === variant.size_id);
+          barcode = generateUniqueBarcode(
+            product.name,
+            color?.name || 'DEFAULT',
+            size?.name || 'DEFAULT',
+            product.id
+          );
+        }
+        return { ...variant, barcode };
+      });
+      
+      setVariants(updatedVariants);
 
       // تحديد صور الألوان
       const initialColorImages = {};
-      const variantsList = product.product_variants || product.variants || [];
-      variantsList.forEach(v => {
+      updatedVariants.forEach(v => {
         if (v.images && v.images.length > 0 && !initialColorImages[v.color_id]) {
           initialColorImages[v.color_id] = v.images[0];
         }
@@ -239,8 +257,9 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
                             handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
                             handleImageRemove={() => handleColorImageRemove(color.id)}
                             initialImage={preview}
+                            isEditMode={true}
                           />
-                        )
+                        );
                       })}
                     </div>
                   </SortableContext>
