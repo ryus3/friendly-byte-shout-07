@@ -532,7 +532,13 @@ const Dashboard = () => {
                 <StockMonitoringSystem />
                 
                 <WelcomeHeader user={user} currentTime={currentTime} />
-                <SettlementRequestCard pendingProfit={dashboardData.pendingProfit} onSettle={() => navigate('/profits-summary')} />
+                {/* إخفاء طلب التحاسب للمديرين والسوبر أدمن */}
+                {user?.role !== 'super_admin' && user?.role !== 'manager' && (
+                  <SettlementRequestCard 
+                    pendingProfit={dashboardData.pendingProfit} 
+                    onSettle={() => navigate('/profits-summary')} 
+                  />
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {allStatCards.slice(0, 8).map((stat, index) => (
                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>

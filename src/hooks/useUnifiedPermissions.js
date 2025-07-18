@@ -1,10 +1,37 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
-  const auth = useAuth();
-  const user = passedUser || auth?.user;
+  let authContext;
+  
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.error('useUnifiedPermissions: Error accessing AuthContext:', error);
+    return {
+      user: null,
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {},
+      loading: false,
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      hasRole: () => false,
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      filterDataByUser: () => [],
+      filterProductsByPermissions: () => [],
+      getEmployeeStats: () => ({})
+    };
+  }
+  
+  const user = passedUser || authContext?.user;
   const [userRoles, setUserRoles] = useState([]);
   const [userPermissions, setUserPermissions] = useState([]);
   const [productPermissions, setProductPermissions] = useState({});
