@@ -103,7 +103,7 @@ export const useFilteredProducts = (products) => {
     });
     
     return filtered;
-  }, [products, isAdmin, productPermissions, authContext]);
+  }, [products, isAdmin || false, productPermissions || null, user?.id || null]);
 };
 
 /**
@@ -148,7 +148,7 @@ export const useFilteredVariants = (variants) => {
 
       return true;
     });
-  }, [variants, isAdmin, productPermissions, authContext]);
+  }, [variants, isAdmin || false, productPermissions || null, authContext?.user?.id || null]);
 };
 
 export default useFilteredProducts;
