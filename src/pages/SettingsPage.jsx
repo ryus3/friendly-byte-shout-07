@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/customSupabaseClient';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -20,8 +21,8 @@ import {
   BarChart, TrendingUp
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
+import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
 import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
-import RestrictedTelegramSettings from '@/components/settings/RestrictedTelegramSettings';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
@@ -129,7 +130,8 @@ const SettingsPage = () => {
     canManageSettings,
     canAccessDeliveryPartners,
     canManageAccounting,
-    canManagePurchases
+    canManagePurchases,
+    canViewAllData
   } = usePermissionBasedData();
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
@@ -144,6 +146,28 @@ const SettingsPage = () => {
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
+  const [employeeCodes, setEmployeeCodes] = useState([]);
+
+  // جلب عدد رموز الموظفين للعرض في الكارت
+  useEffect(() => {
+    const fetchEmployeeCodesCount = async () => {
+      if (!canViewAllData) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('telegram_employee_codes')
+          .select('id')
+          .eq('is_active', true);
+        
+        if (error) throw error;
+        setEmployeeCodes(data || []);
+      } catch (error) {
+        console.error('Error fetching employee codes count:', error);
+      }
+    };
+
+    fetchEmployeeCodesCount();
+  }, [canViewAllData]);
 
   // Early return بعد جميع الـ hooks
   if (!user) return <div className="flex h-full w-full items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -351,8 +375,36 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* بوت التليغرام - للجميع مع رمز شخصي */}
-            <RestrictedTelegramSettings />
+            {/* بوت التليغرام الذكي - للجميع مع رمز شخصي */}
+            <ModernCard
+              icon={MessageCircle}
+              title="بوت التليغرام الذكي"
+              description={canViewAllData ? "إدارة بوت التليغرام ورموز الموظفين والإشعارات" : "رمزك الشخصي للاتصال مع بوت التليغرام"}
+              iconColor="from-blue-500 to-indigo-600"
+              onClick={() => setIsTelegramOpen(true)}
+              badge={
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                  متاح
+                </Badge>
+              }
+            >
+              <div className="space-y-3 mt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">اسم البوت</span>
+                  <span className="font-bold text-blue-600">@Ryusiq_bot</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">حالة الاتصال</span>
+                  <span className="font-bold text-green-600">نشط</span>
+                </div>
+                {canViewAllData && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
+                    <span className="font-bold text-purple-600">{employeeCodes.length || '0'}</span>
+                  </div>
+                )}
+              </div>
+            </ModernCard>
           </div>
 
           {/* أدوات النظام - للمدراء فقط */}
@@ -431,6 +483,11 @@ const SettingsPage = () => {
           onOpenChange={setIsDeliverySettingsOpen}
         />
       )}
+
+      <TelegramManagementDialog
+        open={isTelegramOpen}
+        onOpenChange={setIsTelegramOpen}
+      />
 
       <EmployeeProfitsManager 
         open={isProfitsManagerOpen} 
