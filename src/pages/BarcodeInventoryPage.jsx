@@ -9,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Camera, QrCode, AlertTriangle, Play, Pause, ListChecks, CheckCircle, XCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const BarcodeInventoryPage = () => {
-    const { products } = useInventory(); // المنتجات المفلترة حسب الصلاحيات تلقائياً
+    const { allProducts } = useInventory(); // جلب كل المنتجات
+    const products = useFilteredProducts(allProducts); // تطبيق الفلترة حسب الصلاحيات
     const [isScanning, setIsScanning] = useState(false);
     const [scannedItems, setScannedItems] = useState({});
     const [lastScanned, setLastScanned] = useState(null);

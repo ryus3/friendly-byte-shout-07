@@ -11,12 +11,37 @@ import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
-  const { getLowStockProducts, settings } = useInventory();
+  const { products, settings } = useInventory(); // المنتجات المفلترة تلقائياً
   const { canManageFinances, isAdmin } = usePermissions();
   const [alertsWindowOpen, setAlertsWindowOpen] = useState(false);
   
-  // استخدام المنتجات المفلترة من السياق (InventoryContext يطبق الفلترة تلقائياً)
-  const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
+  // حساب المنتجات منخفضة المخزون - تجميع حسب المنتج وليس المتغيرات
+  const lowStockProducts = React.useMemo(() => {
+    if (!products || !Array.isArray(products)) return [];
+    
+    const threshold = settings?.lowStockThreshold || 5;
+    const lowStockItems = [];
+    
+    products.forEach(product => {
+      if (product.variants && product.variants.length > 0) {
+        // حساب إجمالي الكمية للمنتج (جميع المتغيرات)
+        const totalQuantity = product.variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0);
+        
+        // إذا كان إجمالي المنتج أقل من الحد المطلوب
+        if (totalQuantity <= threshold) {
+          lowStockItems.push({
+            id: product.id,
+            productName: product.name,
+            productImage: product.images?.[0],
+            totalQuantity: totalQuantity,
+            variants: product.variants
+          });
+        }
+      }
+    });
+    
+    return lowStockItems;
+  }, [products, settings?.lowStockThreshold]);
   
   // إخفاء إعدادات المخزون عن موظفي المبيعات
   const canManageStockSettings = canManageFinances || isAdmin;
@@ -25,11 +50,10 @@ const StockAlertsCard = () => {
     setAlertsWindowOpen(true);
   };
   
-  const handleLowStockProductClick = (variant) => {
-    navigate(`/inventory?product=${variant.product_id}&variant=${variant.id}`, {
+  const handleLowStockProductClick = (product) => {
+    navigate(`/inventory?product=${product.id}`, {
       state: { 
-        productId: variant.product_id, 
-        variantId: variant.id,
+        productId: product.id,
         highlight: true
       }
     });
@@ -57,18 +81,18 @@ const StockAlertsCard = () => {
       <CardContent className="p-4 space-y-3">
         {lowStockProducts && lowStockProducts.length > 0 ? (
           <>
-            {lowStockProducts.slice(0, 5).map((variant, index) => (
+            {lowStockProducts.slice(0, 5).map((product, index) => (
               <div
-                key={variant.id}
+                key={product.id}
                 className="flex items-center justify-between p-3 bg-card border border-border/50 rounded-lg cursor-pointer"
-                onClick={() => handleLowStockProductClick(variant)}
+                onClick={() => handleLowStockProductClick(product)}
               >
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted border border-border/30">
-                    {variant.productImage ? (
+                    {product.productImage ? (
                       <img 
-                        src={variant.productImage} 
-                        alt={variant.productName} 
+                        src={product.productImage} 
+                        alt={product.productName} 
                         className="w-10 h-10 rounded-md object-cover"
                       />
                     ) : (
@@ -77,15 +101,15 @@ const StockAlertsCard = () => {
                   </div>
                   <div>
                     <h4 className="font-medium text-sm text-foreground">
-                      {variant.productName}
+                      {product.productName}
                     </h4>
                     <p className="text-xs text-muted-foreground">
-                      {variant.size} - {variant.color}
+                      {product.variants.length} متغيرات
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center justify-center w-8 h-8 bg-red-500 rounded-full text-white text-sm font-bold">
-                  {variant.quantity}
+                  {product.totalQuantity}
                 </div>
               </div>
             ))}
