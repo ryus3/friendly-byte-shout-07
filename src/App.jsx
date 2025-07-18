@@ -13,7 +13,6 @@ import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import ProfitSettlementPage from '@/pages/ProfitSettlementPage.jsx';
-import { performanceMonitor } from '@/utils/performance-monitor.js';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
@@ -123,23 +122,6 @@ function AppContent() {
 }
 
 function App() {
-  // بدء مراقبة الأداء عند تحميل التطبيق
-  React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      performanceMonitor.startMonitoring();
-      
-      // إضافة أوامر للوحة التحكم للمطورين
-      window.getPerformanceReport = () => performanceMonitor.getPerformanceReport();
-      window.enableDataSavingMode = () => performanceMonitor.enableDataSavingMode();
-    }
-    
-    return () => {
-      if (process.env.NODE_ENV === 'development') {
-        performanceMonitor.stopMonitoring();
-      }
-    };
-  }, []);
-
   return (
     <HelmetProvider>
         <Router>
