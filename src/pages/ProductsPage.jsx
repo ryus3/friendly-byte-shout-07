@@ -27,23 +27,12 @@ const ProductsPage = () => {
   const { products, loading, addToCart, clearCart } = useInventory();
   const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
   const { hasPermission } = usePermissions();
-  const { 
-    colors, 
-    categories: allCategories, 
-    departments: allDepartments,
-    sizes: allSizes,
-    productTypes: allProductTypes,
-    seasonsOccasions: allSeasonsOccasions
-  } = useVariants();
+  const { colors, categories: allCategories, departments: allDepartments } = useVariants();
   
   // فلتر خاص بالصلاحيات - محفوظ محلياً
   const [permissionFilters, setPermissionFilters] = useLocalStorage('productPermissionFilters', {
     category: 'all',
-    department: 'all',
-    product_type: 'all',
-    season_occasion: 'all',
-    color: 'all',
-    size: 'all'
+    department: 'all'
   });
 
   // الحصول على البيانات المسموحة للمستخدم
@@ -51,20 +40,12 @@ const ProductsPage = () => {
     if (isAdmin) {
       return {
         allowedCategories: allCategories,
-        allowedDepartments: allDepartments,
-        allowedProductTypes: allProductTypes,
-        allowedSeasonsOccasions: allSeasonsOccasions,
-        allowedColors: colors,
-        allowedSizes: allSizes
+        allowedDepartments: allDepartments
       };
     }
 
     const categoryPerm = productPermissions?.category;
     const departmentPerm = productPermissions?.department;
-    const productTypePerm = productPermissions?.product_type;
-    const seasonOccasionPerm = productPermissions?.season_occasion;
-    const colorPerm = productPermissions?.color;
-    const sizePerm = productPermissions?.size;
 
     const allowedCategories = categoryPerm?.has_full_access 
       ? allCategories 
@@ -74,31 +55,11 @@ const ProductsPage = () => {
       ? allDepartments 
       : allDepartments.filter(dept => departmentPerm?.allowed_items?.includes(dept.id)) || [];
 
-    const allowedProductTypes = productTypePerm?.has_full_access 
-      ? allProductTypes 
-      : allProductTypes.filter(pt => productTypePerm?.allowed_items?.includes(pt.id)) || [];
-
-    const allowedSeasonsOccasions = seasonOccasionPerm?.has_full_access 
-      ? allSeasonsOccasions 
-      : allSeasonsOccasions.filter(so => seasonOccasionPerm?.allowed_items?.includes(so.id)) || [];
-
-    const allowedColors = colorPerm?.has_full_access 
-      ? colors 
-      : colors.filter(color => colorPerm?.allowed_items?.includes(color.id)) || [];
-
-    const allowedSizes = sizePerm?.has_full_access 
-      ? allSizes 
-      : allSizes.filter(size => sizePerm?.allowed_items?.includes(size.id)) || [];
-
     return {
       allowedCategories,
-      allowedDepartments,
-      allowedProductTypes,
-      allowedSeasonsOccasions,
-      allowedColors,
-      allowedSizes
+      allowedDepartments
     };
-  }, [isAdmin, allCategories, allDepartments, allProductTypes, allSeasonsOccasions, colors, allSizes, productPermissions]);
+  }, [isAdmin, allCategories, allDepartments, productPermissions]);
 
   // فلترة المنتجات أولاً بالصلاحيات ثم بالفلاتر الإضافية
   const permissionFilteredProducts = useMemo(() => {
@@ -114,30 +75,6 @@ const ProductsPage = () => {
     if (permissionFilters.category !== 'all') {
       filtered = filtered.filter(product => 
         product.product_categories?.some(pc => pc.category_id === permissionFilters.category)
-      );
-    }
-
-    if (permissionFilters.product_type !== 'all') {
-      filtered = filtered.filter(product => 
-        product.product_product_types?.some(ppt => ppt.product_type_id === permissionFilters.product_type)
-      );
-    }
-
-    if (permissionFilters.season_occasion !== 'all') {
-      filtered = filtered.filter(product => 
-        product.product_seasons_occasions?.some(pso => pso.season_occasion_id === permissionFilters.season_occasion)
-      );
-    }
-
-    if (permissionFilters.color !== 'all') {
-      filtered = filtered.filter(product => 
-        product.product_variants?.some(pv => pv.color_id === permissionFilters.color)
-      );
-    }
-
-    if (permissionFilters.size !== 'all') {
-      filtered = filtered.filter(product => 
-        product.product_variants?.some(pv => pv.size_id === permissionFilters.size)
       );
     }
 
@@ -248,35 +185,16 @@ const ProductsPage = () => {
     }
   };
 
-  // فحص ما إذا كان هناك فلاتر نشطة
-  const hasActivePermissionFilters = Object.values(permissionFilters).some(value => value !== 'all');
-
-  // إعادة تعيين فلاتر الصلاحيات
   const resetPermissionFilters = () => {
-    setPermissionFilters({
-      category: 'all',
-      department: 'all',
-      product_type: 'all',
-      season_occasion: 'all',
-      color: 'all',
-      size: 'all'
-    });
+    setPermissionFilters({ category: 'all', department: 'all' });
   };
 
-  
+  const hasActivePermissionFilters = permissionFilters.category !== 'all' || permissionFilters.department !== 'all';
 
   // مكون فلتر الصلاحيات
   const PermissionBasedFilter = () => {
     // إذا لم يكن لدى المستخدم صلاحيات متعددة، لا نعرض الفلتر
-    const hasMultiplePermissions = isAdmin || 
-      allowedData.allowedCategories.length > 1 || 
-      allowedData.allowedDepartments.length > 1 ||
-      allowedData.allowedProductTypes.length > 1 ||
-      allowedData.allowedSeasonsOccasions.length > 1 ||
-      allowedData.allowedColors.length > 1 ||
-      allowedData.allowedSizes.length > 1;
-    
-    if (!hasMultiplePermissions) {
+    if (!isAdmin && allowedData.allowedCategories.length <= 1 && allowedData.allowedDepartments.length <= 1) {
       return null;
     }
 
@@ -302,7 +220,7 @@ const ProductsPage = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {/* فلتر الأقسام */}
             {allowedData.allowedDepartments.length > 1 && (
               <div className="space-y-2">
@@ -348,104 +266,6 @@ const ProductsPage = () => {
                 </Select>
               </div>
             )}
-
-            {/* فلتر أنواع المنتجات */}
-            {allowedData.allowedProductTypes.length > 1 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">نوع المنتج</Label>
-                <Select
-                  value={permissionFilters.product_type}
-                  onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, product_type: value }))}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="اختر نوع المنتج" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع الأنواع</SelectItem>
-                    {allowedData.allowedProductTypes.map(pt => (
-                      <SelectItem key={pt.id} value={pt.id}>
-                        {pt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* فلتر المواسم والمناسبات */}
-            {allowedData.allowedSeasonsOccasions.length > 1 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">الموسم/المناسبة</Label>
-                <Select
-                  value={permissionFilters.season_occasion}
-                  onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, season_occasion: value }))}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="اختر الموسم" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع المواسم</SelectItem>
-                    {allowedData.allowedSeasonsOccasions.map(so => (
-                      <SelectItem key={so.id} value={so.id}>
-                        {so.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* فلتر الألوان */}
-            {allowedData.allowedColors.length > 1 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">اللون</Label>
-                <Select
-                  value={permissionFilters.color}
-                  onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, color: value }))}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="اختر اللون" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع الألوان</SelectItem>
-                    {allowedData.allowedColors.map(color => (
-                      <SelectItem key={color.id} value={color.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full border" 
-                            style={{ backgroundColor: color.hex_code }}
-                          />
-                          {color.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* فلتر القياسات */}
-            {allowedData.allowedSizes.length > 1 && (
-              <div className="space-y-2">
-                <Label className="text-xs font-medium">القياس</Label>
-                <Select
-                  value={permissionFilters.size}
-                  onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, size: value }))}
-                >
-                  <SelectTrigger className="h-9">
-                    <SelectValue placeholder="اختر القياس" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع القياسات</SelectItem>
-                    {allowedData.allowedSizes.map(size => (
-                      <SelectItem key={size.id} value={size.id}>
-                        {size.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
           {/* معلومات الفلترة الحالية */}
@@ -460,30 +280,6 @@ const ProductsPage = () => {
                 {permissionFilters.category !== 'all' && (
                   <span className="bg-accent px-2 py-1 rounded">
                     التصنيف: {allowedData.allowedCategories.find(c => c.id === permissionFilters.category)?.name}
-                  </span>
-                )}
-                {permissionFilters.product_type !== 'all' && (
-                  <span className="bg-accent px-2 py-1 rounded">
-                    نوع المنتج: {allowedData.allowedProductTypes.find(pt => pt.id === permissionFilters.product_type)?.name}
-                  </span>
-                )}
-                {permissionFilters.season_occasion !== 'all' && (
-                  <span className="bg-accent px-2 py-1 rounded">
-                    الموسم: {allowedData.allowedSeasonsOccasions.find(so => so.id === permissionFilters.season_occasion)?.name}
-                  </span>
-                )}
-                {permissionFilters.color !== 'all' && (
-                  <span className="bg-accent px-2 py-1 rounded flex items-center gap-1">
-                    <div 
-                      className="w-3 h-3 rounded-full border" 
-                      style={{ backgroundColor: allowedData.allowedColors.find(c => c.id === permissionFilters.color)?.hex_code }}
-                    />
-                    اللون: {allowedData.allowedColors.find(c => c.id === permissionFilters.color)?.name}
-                  </span>
-                )}
-                {permissionFilters.size !== 'all' && (
-                  <span className="bg-accent px-2 py-1 rounded">
-                    القياس: {allowedData.allowedSizes.find(s => s.id === permissionFilters.size)?.name}
                   </span>
                 )}
               </div>
