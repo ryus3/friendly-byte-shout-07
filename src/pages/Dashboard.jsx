@@ -549,7 +549,7 @@ const Dashboard = () => {
                     <TopListCard title="المنتجات الأكثر طلباً" items={dashboardData.topProducts} titleIcon={Package} itemIcon={TrendingUp} />
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-                    <RestrictedStockAlertsCard />
+                    <StockAlertsCard />
                     <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />
                 </div>
             </div>

@@ -142,7 +142,7 @@ const SettingsPage = () => {
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   
-  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
+  const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
 
@@ -352,7 +352,7 @@ const SettingsPage = () => {
               title="بوت التليغرام الذكي"
               description="عرض رمزك الشخصي للاتصال بالبوت وإنشاء طلبات الذكاء الاصطناعي"
               iconColor="from-blue-500 to-blue-600"
-              onClick={() => setIsTelegramOpen(true)}
+              onClick={() => setIsTelegramDialogOpen(true)}
             />
           </div>
 
@@ -386,10 +386,10 @@ const SettingsPage = () => {
             </>
           )}
         </div>
-      </>
+      </div>
 
-      <ProfileSecurityDialog
-        open={isEditProfileOpen} 
+      <ProfileSecurityDialog 
+        open={isEditProfileOpen}
         onOpenChange={setIsEditProfileOpen} 
       />
       
@@ -425,8 +425,8 @@ const SettingsPage = () => {
 
       {/* حوار التليغرام - للجميع */}
       <TelegramBotDialog 
-        open={isTelegramOpen} 
-        onOpenChange={setIsTelegramOpen} 
+        open={isTelegramDialogOpen} 
+        onOpenChange={setIsTelegramDialogOpen} 
       />
 
       {canAccessDeliveryPartners && (
