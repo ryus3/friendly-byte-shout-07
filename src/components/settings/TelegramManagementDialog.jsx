@@ -451,42 +451,40 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                   </Badge>
                                   <p className="text-xs text-muted-foreground mt-1">الرمز</p>
                                 </div>
-                                <div className="flex gap-2 justify-center sm:justify-start">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => copyToClipboard(employeeCode.employee_code)}
-                                  >
-                                    <Copy className="w-4 h-4" />
-                                  </Button>
-                                  {canViewAllData && (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                          setEditingCode(employeeCode.id);
-                                          setNewCodeValue(employeeCode.employee_code);
-                                        }}
-                                      >
-                                        <Edit className="w-4 h-4" />
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => deleteEmployeeCode(employeeCode.id)}
-                                        className="text-red-500 hover:text-red-700"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyToClipboard(employeeCode.employee_code)}
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                                {canViewAllData && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingCode(employeeCode.id);
+                                        setNewCodeValue(employeeCode.employee_code);
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => deleteEmployeeCode(employeeCode.id)}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                )}
                               </>
                             )}
                           </div>
-                         </div>
-                       </div>
+                        </div>
+                      </div>
                     );
                   })
                 ) : (
