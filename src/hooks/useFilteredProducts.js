@@ -24,38 +24,38 @@ export const useFilteredProducts = (products) => {
 
     // فلترة المنتجات حسب صلاحيات الموظف
     return products.filter(product => {
-      let hasPermission = false;
+      let hasValidPermission = false;
 
       // فحص التصنيفات (categories)
       if (product.product_categories && product.product_categories.length > 0) {
         const productCategories = product.product_categories.map(pc => pc.categories).filter(Boolean);
         const allowedCategories = filterCategoriesByPermission(productCategories);
-        if (allowedCategories.length > 0) hasPermission = true;
+        if (allowedCategories.length > 0) hasValidPermission = true;
       }
 
       // فحص الأقسام (departments)
       if (product.product_departments && product.product_departments.length > 0) {
         const productDepartments = product.product_departments.map(pd => pd.departments).filter(Boolean);
         const allowedDepartments = filterDepartmentsByPermission(productDepartments);
-        if (allowedDepartments.length > 0) hasPermission = true;
+        if (allowedDepartments.length > 0) hasValidPermission = true;
       }
 
       // فحص أنواع المنتجات (product_types)
       if (product.product_product_types && product.product_product_types.length > 0) {
         const productTypes = product.product_product_types.map(ppt => ppt.product_types).filter(Boolean);
         const allowedProductTypes = filterProductTypesByPermission(productTypes);
-        if (allowedProductTypes.length > 0) hasPermission = true;
+        if (allowedProductTypes.length > 0) hasValidPermission = true;
       }
 
       // فحص المواسم والمناسبات (seasons_occasions)
       if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
         const seasonsOccasions = product.product_seasons_occasions.map(pso => pso.seasons_occasions).filter(Boolean);
         const allowedSeasonsOccasions = filterSeasonsOccasionsByPermission(seasonsOccasions);
-        if (allowedSeasonsOccasions.length > 0) hasPermission = true;
+        if (allowedSeasonsOccasions.length > 0) hasValidPermission = true;
       }
 
-      // إذا لم توجد أي علاقات مع التصنيفات أو الأقسام، أخفي المنتج للموظفين
-      if (!hasPermission) return false;
+      // إذا لم توجد أي صلاحيات صالحة، أخفي المنتج
+      if (!hasValidPermission) return false;
 
       // فحص المتغيرات (variants) - فلترة حسب الألوان والأحجام
       if (product.variants && product.variants.length > 0) {
