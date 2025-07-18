@@ -1,93 +1,20 @@
 import React, { useMemo } from 'react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import ProductGrid from './ProductGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Eye } from 'lucide-react';
 
 const PermissionBasedProductGrid = ({ products, isLoading, ...otherProps }) => {
-  const {
-    isAdmin,
-    filterProductsByPermissions,
-    filterCategoriesByPermission,
-    filterColorsByPermission,
-    filterSizesByPermission,
-    filterDepartmentsByPermission,
-    filterProductTypesByPermission,
-    filterSeasonsOccasionsByPermission
-  } = usePermissionBasedData();
+  const { isAdmin, filterProductsByPermissions } = useAuth();
 
-  // فلترة المنتجات حسب صلاحيات المستخدم
+  // فلترة المنتجات حسب صلاحيات المستخدم من UnifiedAuthContext
   const filteredProducts = useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
-    
     if (isAdmin) return products;
     
-    // تطبيق فلترة تفصيلية للموظفين
-    return products.filter(product => {
-      // فحص صلاحيات التصنيفات
-      if (product.category_id) {
-        const allowedCategories = filterCategoriesByPermission([{ id: product.category_id }]);
-        if (allowedCategories.length === 0) return false;
-      }
-      
-      // فحص صلاحيات الأقسام من خلال product_departments
-      if (product.departments && product.departments.length > 0) {
-        const allowedDepartments = filterDepartmentsByPermission(product.departments);
-        if (allowedDepartments.length === 0) return false;
-      }
-      
-      // فحص صلاحيات التصنيفات المتعددة من خلال product_categories
-      if (product.categories && product.categories.length > 0) {
-        const allowedCategories = filterCategoriesByPermission(product.categories);
-        if (allowedCategories.length === 0) return false;
-      }
-      
-      // فحص صلاحيات أنواع المنتجات
-      if (product.product_types && product.product_types.length > 0) {
-        const allowedProductTypes = filterProductTypesByPermission(product.product_types);
-        if (allowedProductTypes.length === 0) return false;
-      }
-      
-      // فحص صلاحيات المواسم والمناسبات
-      if (product.seasons_occasions && product.seasons_occasions.length > 0) {
-        const allowedSeasonsOccasions = filterSeasonsOccasionsByPermission(product.seasons_occasions);
-        if (allowedSeasonsOccasions.length === 0) return false;
-      }
-      
-      // فحص صلاحيات الألوان والأحجام من خلال المتغيرات
-      if (product.variants && product.variants.length > 0) {
-        const allowedVariants = product.variants.filter(variant => {
-          // فحص اللون
-          if (variant.color_id) {
-            const allowedColors = filterColorsByPermission([{ id: variant.color_id }]);
-            if (allowedColors.length === 0) return false;
-          }
-          
-          // فحص الحجم
-          if (variant.size_id) {
-            const allowedSizes = filterSizesByPermission([{ id: variant.size_id }]);
-            if (allowedSizes.length === 0) return false;
-          }
-          
-          return true;
-        });
-        
-        // إذا لم تبقى متغيرات مسموحة، لا تعرض المنتج
-        if (allowedVariants.length === 0) return false;
-      }
-      
-      return true;
-    });
-  }, [
-    products, 
-    isAdmin, 
-    filterCategoriesByPermission, 
-    filterDepartmentsByPermission, 
-    filterProductTypesByPermission, 
-    filterSeasonsOccasionsByPermission,
-    filterColorsByPermission,
-    filterSizesByPermission
-  ]);
+    // استخدام نظام الفلترة من UnifiedAuthContext
+    return filterProductsByPermissions ? filterProductsByPermissions(products) : [];
+  }, [products, isAdmin, filterProductsByPermissions]);
 
   // إذا لم يكن هناك منتجات مسموحة للموظف
   if (!isAdmin && filteredProducts.length === 0 && !isLoading) {

@@ -504,6 +504,24 @@ export const UnifiedAuthProvider = ({ children }) => {
 
   const isAdmin = useMemo(() => hasRole('super_admin'), [hasRole]);
 
+  // فلترة المنتجات حسب الصلاحيات
+  const filterProductsByPermissions = useMemo(() => {
+    return (products) => {
+      if (!products) return [];
+      if (isAdmin) return products;
+      
+      // للموظفين: فلترة المنتجات حسب صلاحيات المنتجات من قاعدة البيانات
+      return products.filter(product => {
+        // المديرون يرون كل شيء
+        if (isAdmin) return true;
+        
+        // TODO: تطبيق فلترة حسب صلاحيات المنتجات من جدول user_product_permissions
+        // حالياً، جميع الموظفين يرون جميع المنتجات (سيتم تطوير هذا لاحقاً)
+        return true;
+      });
+    };
+  }, [isAdmin]);
+
   const value = {
     user,
     session,
@@ -524,7 +542,8 @@ export const UnifiedAuthProvider = ({ children }) => {
     hasRole,
     isAdmin,
     userRoles,
-    userPermissions
+    userPermissions,
+    filterProductsByPermissions
   };
 
   return (

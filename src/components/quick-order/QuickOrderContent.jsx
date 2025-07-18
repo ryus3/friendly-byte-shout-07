@@ -340,7 +340,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [formData.city_id, activePartner, waseetToken]);
   
-  // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك
+  // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
     const safeCart = Array.isArray(cart) ? cart : [];
     const quantityCount = safeCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
@@ -354,7 +354,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
     // للوسيط أو الشركات الأخرى، لا توجد رسوم إضافية
     
-    const totalWithDelivery = subtotal + deliveryFee;
+    // حساب السعر النهائي مع الخصم ورسوم التوصيل
+    const totalAfterDiscount = subtotal - (discount || 0);
+    const finalPriceWithDelivery = totalAfterDiscount + deliveryFee;
     
     const detailsString = safeCart
       .map(item => 
@@ -366,10 +368,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     setFormData(prev => ({
       ...prev, 
       quantity: quantityCount > 0 ? quantityCount : 1,
-      price: totalWithDelivery > 0 ? totalWithDelivery : '',
+      price: finalPriceWithDelivery > 0 ? finalPriceWithDelivery : '',
       details: detailsString,
     }));
-  }, [cart, settings?.deliveryFee, activePartner]);
+  }, [cart, settings?.deliveryFee, activePartner, discount]);
 
   const validateField = (name, value) => {
     let errorMsg = '';
