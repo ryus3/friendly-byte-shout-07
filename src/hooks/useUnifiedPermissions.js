@@ -12,7 +12,10 @@ export const useUnifiedPermissions = (passedUser) => {
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    if (!user?.user_id) return;
+    if (!user?.user_id) {
+      setLoading(false); // إنهاء التحميل إذا لم يوجد مستخدم
+      return;
+    }
 
     const fetchUserPermissions = async () => {
       try {

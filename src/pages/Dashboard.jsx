@@ -79,7 +79,7 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 
 const Dashboard = () => {
     const { user, pendingRegistrations } = useAuth();
-    const { hasPermission } = usePermissions();
+    const { hasPermission, loading } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits } = useProfits();
     const { 
@@ -439,10 +439,13 @@ const Dashboard = () => {
         inventoryLoading, 
         orders: orders?.length, 
         user: user?.full_name,
-        permissions: user?.permissions
+        permissionsLoading: loading,
+        canViewAllData,
+        isAdmin
     });
     
-    if (inventoryLoading) {
+    // إظهار loader عند تحميل البيانات الأساسية
+    if (inventoryLoading || loading || !user) {
         return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
     }
 
