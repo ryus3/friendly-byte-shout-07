@@ -216,203 +216,164 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
     }
   };
 
-  if (!open) {
-    return null;
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between text-xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg">
-                <Shield className="h-5 w-5 text-primary" />
-              </div>
-              <span>إدارة أدوار المستخدم</span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="h-8 w-8 p-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogTitle>
+    <div className="space-y-6">
+      {loading ? (
+        <div className="flex items-center justify-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-3">جاري التحميل...</span>
+        </div>
+      ) : (
+        <>
+          {/* أدوار المستخدم الحالية */}
           {selectedUser && (
-            <DialogDescription>
-              إدارة أدوار وصلاحيات المستخدم: <strong>{selectedUser.full_name}</strong>
-            </DialogDescription>
-          )}
-        </DialogHeader>
-
-        <div className="flex-1 overflow-y-auto space-y-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="ml-3">جاري التحميل...</span>
-            </div>
-          ) : (
-            <>
-              {/* أدوار المستخدم الحالية */}
-              {selectedUser && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <h3 className="text-lg font-bold">الأدوار الحالية</h3>
-                    <Badge variant="secondary">
-                      {userRoles.length} دور
-                    </Badge>
-                  </div>
-                  
-                  {userRoles.length > 0 ? (
-                    <div className="space-y-3">
-                      {userRoles.map((userRole) => {
-                        const role = userRole.roles;
-                        const IconComponent = getRoleIcon(role.name);
-                        
-                        return (
-                          <div 
-                            key={userRole.id}
-                            className="bg-card border border-green-200 rounded-lg p-4"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className={`p-2 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0`}>
-                                <IconComponent className="h-4 w-4" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-foreground">
-                                  {role.display_name}
-                                </h4>
-                                <p className="text-sm text-muted-foreground">
-                                  منذ {new Date(userRole.assigned_at).toLocaleDateString('ar-SA')}
-                                </p>
-                              </div>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => handleRemoveRole(userRole.id)}
-                                disabled={isProcessing}
-                                className="text-xs px-3 py-1 h-8"
-                              >
-                                إزالة
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">لا يوجد أدوار مُعيّنة</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* الأدوار المتاحة */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Shield className="h-5 w-5 text-blue-600" />
-                  <h3 className="text-lg font-bold">الأدوار المتاحة</h3>
-                  <Badge variant="outline">
-                    {availableRoles.length} دور
-                  </Badge>
-                </div>
-
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <h3 className="text-lg font-bold">الأدوار الحالية</h3>
+                <Badge variant="secondary">
+                  {userRoles.length} دور
+                </Badge>
+              </div>
+              
+              {userRoles.length > 0 ? (
                 <div className="space-y-3">
-                  {availableRoles.map((role) => {
+                  {userRoles.map((userRole) => {
+                    const role = userRole.roles;
                     const IconComponent = getRoleIcon(role.name);
-                    const isAssigned = userRoles.some(ur => ur.role_id === role.id);
                     
                     return (
                       <div 
-                        key={role.id}
-                        className={`bg-card border rounded-lg p-4 transition-all duration-200 ${
-                          isAssigned ? 'border-green-200 bg-green-50/50' : 'border-border'
-                        }`}
+                        key={userRole.id}
+                        className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4"
                       >
                         <div className="flex items-center gap-3">
                           <div className={`p-2 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0`}>
                             <IconComponent className="h-4 w-4" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-foreground">
+                            <h4 className="font-bold text-green-900 dark:text-green-100">
                               {role.display_name}
                             </h4>
-                            <p className="text-sm text-muted-foreground mb-2">
-                              المستوى {role.hierarchy_level}
-                            </p>
-                            <p className="text-xs text-muted-foreground leading-relaxed">
-                              {getRoleDescription(role.name)}
+                            <p className="text-sm text-green-700 dark:text-green-300">
+                              منذ {new Date(userRole.assigned_at).toLocaleDateString('ar-SA')}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <Badge 
-                              variant={isAssigned ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {isAssigned ? "مُعيّن" : "غير مُعيّن"}
-                            </Badge>
-                            
-                            <Button
-                              size="sm"
-                              variant={isAssigned ? "destructive" : "default"}
-                              onClick={() => {
-                                if (isAssigned) {
-                                  const userRole = userRoles.find(ur => ur.role_id === role.id);
-                                  if (userRole) handleRemoveRole(userRole.id);
-                                } else {
-                                  handleAssignRole(role.id);
-                                }
-                              }}
-                              disabled={isProcessing}
-                              className="text-xs px-3 py-1 h-8"
-                            >
-                              {isProcessing ? "..." : (isAssigned ? "إزالة" : "تعيين")}
-                            </Button>
-                          </div>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRemoveRole(userRole.id)}
+                            disabled={isProcessing}
+                            className="text-xs px-3 py-1 h-8"
+                          >
+                            إزالة
+                          </Button>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground bg-muted/20 rounded-lg">
+                  <AlertCircle className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">لا يوجد أدوار مُعيّنة</p>
+                </div>
+              )}
+            </div>
+          )}
 
-              {/* معلومات مهمة */}
-              <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="space-y-2">
-                    <h4 className="font-bold text-blue-900 dark:text-blue-100">
-                      💡 كيفية تعديل أدوار الموظفين:
-                    </h4>
-                    <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                      <p>• اضغط على زر "تعيين" لإضافة دور جديد للموظف</p>
-                      <p>• اضغط على زر "إزالة" لحذف دور من الموظف</p>
-                      <p>• يمكن للموظف الواحد أن يحمل عدة أدوار معاً</p>
-                      <p>• تأكد من تعيين الأدوار المناسبة حسب مهام كل موظف</p>
+          {/* الأدوار المتاحة */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Shield className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-bold">الأدوار المتاحة</h3>
+              <Badge variant="outline">
+                {availableRoles.length} دور
+              </Badge>
+            </div>
+
+            <div className="space-y-3">
+              {availableRoles.map((role) => {
+                const IconComponent = getRoleIcon(role.name);
+                const isAssigned = userRoles.some(ur => ur.role_id === role.id);
+                
+                return (
+                  <div 
+                    key={role.id}
+                    className={`rounded-lg p-4 transition-all duration-200 border ${
+                      isAssigned 
+                        ? 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800' 
+                        : 'bg-card border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white flex-shrink-0`}>
+                        <IconComponent className="h-4 w-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className={`font-bold ${isAssigned ? 'text-green-900 dark:text-green-100' : 'text-foreground'}`}>
+                          {role.display_name}
+                        </h4>
+                        <p className={`text-sm mb-2 ${isAssigned ? 'text-green-700 dark:text-green-300' : 'text-muted-foreground'}`}>
+                          المستوى {role.hierarchy_level}
+                        </p>
+                        <p className={`text-xs leading-relaxed ${isAssigned ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+                          {getRoleDescription(role.name)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge 
+                          variant={isAssigned ? "default" : "secondary"}
+                          className="text-xs"
+                        >
+                          {isAssigned ? "مُعيّن" : "غير مُعيّن"}
+                        </Badge>
+                        
+                        <Button
+                          size="sm"
+                          variant={isAssigned ? "destructive" : "default"}
+                          onClick={() => {
+                            if (isAssigned) {
+                              const userRole = userRoles.find(ur => ur.role_id === role.id);
+                              if (userRole) handleRemoveRole(userRole.id);
+                            } else {
+                              handleAssignRole(role.id);
+                            }
+                          }}
+                          disabled={isProcessing}
+                          className="text-xs px-3 py-1 h-8"
+                        >
+                          {isProcessing ? "..." : (isAssigned ? "إزالة" : "تعيين")}
+                        </Button>
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* معلومات مهمة */}
+          <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="space-y-2">
+                <h4 className="font-bold text-blue-900 dark:text-blue-100">
+                  💡 معلومات مهمة حول الصلاحيات:
+                </h4>
+                <div className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                  <p><strong>الأدوار:</strong> تحدد الصفحات والوظائف المتاحة للمستخدم</p>
+                  <p><strong>الصلاحيات:</strong> تحدد البيانات التي يمكن للمستخدم رؤيتها (منتجات، أقسام، إلخ)</p>
+                  <p><strong>موظف مبيعات + كاشير:</strong> يحاسب طلباته فقط - ليس كل النظام</p>
+                  <p><strong>مدير القسم:</strong> يحاسب طلبات قسمه فقط</p>
+                  <p><strong>المدير العام:</strong> يحاسب كل شيء في النظام</p>
                 </div>
               </div>
-            </>
-          )}
-        </div>
-
-        <DialogFooter className="flex-shrink-0 pt-4 border-t">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            className="w-full sm:w-auto"
-          >
-            إغلاق
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 

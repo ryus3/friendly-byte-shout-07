@@ -166,7 +166,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
               <UnifiedRoleManager 
                 user={employee} 
                 onUpdate={handleUpdate}
-                onClose={() => {}}
+                onClose={() => setIsEditModalOpen(false)}
                 open={activeTab === 'roles'}
                 onOpenChange={() => {}}
               />
