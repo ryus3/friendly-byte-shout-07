@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Printer, Minus, Plus } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
 const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
   return (
@@ -48,7 +49,20 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
         products.forEach(product => {
             if (product && product.variants && product.variants.length > 0) {
                 product.variants.forEach(variant => {
-                    const sku = variant.barcode || `${product.name}-${variant.color?.name || 'DEF'}-${variant.size?.name || 'DEF'}`;
+                    // توليد باركود فريد إذا لم يكن موجود
+                    let barcode = variant.barcode;
+                    if (!barcode || barcode.trim() === '') {
+                        // استيراد دالة توليد الباركود
+                        const { generateUniqueBarcode } = require('@/lib/barcode-utils');
+                        barcode = generateUniqueBarcode(
+                            product.name,
+                            variant.color?.name || 'DEF',
+                            variant.size?.name || 'DEF',
+                            product.id
+                        );
+                    }
+                    
+                    const sku = barcode || `${product.name}-${variant.color?.name || 'DEF'}-${variant.size?.name || 'DEF'}`;
                     const quantity = labelQuantities[sku] || 0;
                     for (let i = 0; i < quantity; i++) {
                         labels.push({
@@ -56,7 +70,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                             color: variant.color?.name || variant.color || 'غير محدد',
                             size: variant.size?.name || variant.size || 'غير محدد',
                             price: variant.price || product.base_price || product.price || 0,
-                            barcode: variant.barcode || sku
+                            barcode: barcode
                         });
                     }
                 });
@@ -108,9 +122,19 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   <div key={product.id}>
                     <h3 className="font-bold text-lg mb-2">{product.name}</h3>
                     <div className="space-y-2">
-                      {product.variants && product.variants.length > 0 ? product.variants.map(variant => {
-                        const sku = variant.barcode || `${product.name}-${variant.color?.name || 'DEF'}-${variant.size?.name || 'DEF'}`;
-                        const stockQuantity = variant.inventory?.[0]?.quantity || variant.quantity || 0;
+                        {product.variants && product.variants.length > 0 ? product.variants.map(variant => {
+                         // توليد باركود فريد إذا لم يكن موجود
+                         let barcode = variant.barcode;
+                         if (!barcode || barcode.trim() === '') {
+                           barcode = generateUniqueBarcode(
+                             product.name,
+                             variant.color?.name || 'DEF',
+                             variant.size?.name || 'DEF',
+                             product.id
+                           );
+                         }
+                         const sku = barcode || `${product.name}-${variant.color?.name || 'DEF'}-${variant.size?.name || 'DEF'}`;
+                         const stockQuantity = variant.inventory?.[0]?.quantity || variant.quantity || 0;
                         return (
                           <div key={sku} className="grid grid-cols-3 gap-2 items-center">
                             <Label className="col-span-1">
