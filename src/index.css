@@ -38,7 +38,7 @@
     --role-accountant: 45 93% 47%;          /* أصفر للمحاسب */
     --role-pending: 0 0% 60%;               /* رمادي للمعلق */
     
-    /* Order Status Colors - Enhanced with Perfect Spacing */
+    /* Order Status Colors - Updated Based on User Images */
     --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
     --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة - يحتاج معالجة */
     --status-shipped: 262 83% 58%;       /* بنفسجي فاتح للشحن */
@@ -46,12 +46,6 @@
     --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم - تم التسليم */
     --status-returned: 0 84% 60%;        /* أحمر للراجعة - راجع */
     --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي - تم الإرجاع */
-    --status-warehouse-return: 0 62% 30%; /* أحمر داكن جداً لتم الإرجاع للمخزن - خلفية */
-    --status-warehouse-return-text: 0 84% 60%; /* أحمر لامع للنص */
-
-    /* Delivery Partner Colors - Professional and Harmonious */
-    --delivery-local: 142 69% 58%;       /* أخضر إحترافي للتوصيل المحلي */
-    --delivery-company: 217 91% 60%;     /* أزرق إحترافي لشركة التوصيل */
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */

@@ -30,69 +30,54 @@ const OrderCard = ({
 }) => {
   const { hasPermission } = useAuth();
   
-  // تحديد لون وأيقونة الحالة الموحدة مع ألوان الأدوار الجميلة
+  // تحديد لون وأيقونة الحالة الموحدة
   const getStatusConfig = (status) => {
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Package,
-        color: 'bg-[hsl(var(--status-pending)_/_0.2)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)_/_0.3)]'
-      },
-      'processing': { 
-        label: 'قيد المعالجة', 
-        icon: Package,
-        color: 'bg-[hsl(var(--status-processing)_/_0.2)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.3)]'
+        color: 'bg-blue-50 text-blue-700 border-blue-200'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        color: 'bg-[hsl(var(--status-shipped)_/_0.2)] text-[hsl(var(--status-shipped))] border-[hsl(var(--status-shipped)_/_0.3)]'
-      },
-      'delivery': { 
-        label: 'قيد التوصيل', 
-        icon: Truck,
-        color: 'bg-[hsl(var(--status-delivery)_/_0.2)] text-[hsl(var(--status-delivery))] border-[hsl(var(--status-delivery)_/_0.3)]'
+        color: 'bg-orange-50 text-orange-700 border-orange-200'
       },
       'needs_processing': { 
         label: 'تحتاج معالجة', 
         icon: AlertCircle,
-        color: 'bg-[hsl(var(--status-processing)_/_0.2)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.3)]'
+        color: 'bg-red-50 text-red-700 border-red-200'
       },
       'delivered': { 
         label: 'تم التوصيل', 
         icon: CheckCircle,
-        color: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]'
+        color: 'bg-green-50 text-green-700 border-green-200'
       },
       'returned': { 
         label: 'راجع', 
         icon: RotateCcw,
-        color: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]'
+        color: 'bg-orange-50 text-orange-700 border-orange-200'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
-        color: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]'
+        color: 'bg-red-50 text-red-700 border-red-200'
       },
       'return_received': { 
-        label: 'تم الإرجاع للمخزن', 
+        label: 'مستلم الراجع', 
         icon: PackageCheck,
-        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
-      },
-      'returned_in_stock': { 
-        label: 'تم الإرجاع للمخزن', 
-        icon: PackageCheck,
-        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
+        color: 'bg-purple-50 text-purple-700 border-purple-200'
       }
     };
-    return configs[status] || { 
-      label: 'تم الإرجاع للمخزن', 
-      icon: PackageCheck,
-      color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
-    };
+    return configs[status] || configs['pending'];
   };
 
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
+  
+  // تحديد نوع التوصيل
+  const isLocalOrder = order.delivery_partner === 'محلي';
+  const deliveryBadgeColor = isLocalOrder ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
 
   // التحقق من الصلاحيات - يمكن التعديل/الحذف فقط في حالة "قيد التجهيز"
   const canEdit = order.status === 'pending';
@@ -136,41 +121,21 @@ const OrderCard = ({
                   className="mt-1"
                 />
                 <div className="flex flex-col space-y-1">
-                  <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
+                    <Badge className={deliveryBadgeColor}>
+                      {order.delivery_partner}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     رقم الطلب: {order.order_number}
                   </p>
-                  
-                  {/* عنصر التوصيل المطور بأشكال مميزة احترافية */}
-                  <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-full border text-xs font-medium transition-all shadow-lg w-fit backdrop-blur-sm ${
-                    order.delivery_partner === 'محلي' || !order.delivery_partner 
-                      ? 'bg-[hsl(var(--delivery-local)_/_0.15)] text-[hsl(var(--delivery-local))] border-[hsl(var(--delivery-local)_/_0.4)] shadow-[hsl(var(--delivery-local)_/_0.25)]' 
-                      : 'bg-[hsl(var(--delivery-company)_/_0.15)] text-[hsl(var(--delivery-company))] border-[hsl(var(--delivery-company)_/_0.4)] shadow-[hsl(var(--delivery-company)_/_0.25)]'
-                  }`}>
-                    {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
-                      <>
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                        </svg>
-                        <span className="font-semibold tracking-wide">توصيل محلي</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1ZM10 6a2 2 0 0 1 4 0v1h-4V6Zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10Z"/>
-                          <circle cx="18" cy="4" r="3" fill="currentColor"/>
-                        </svg>
-                        <span className="font-semibold tracking-wide">{order.delivery_partner.length > 10 ? order.delivery_partner.substring(0, 10) + '...' : order.delivery_partner}</span>
-                      </>
-                    )}
-                  </div>
                 </div>
               </div>
               
-              {/* حالة الطلب مع مسافة مناسبة */}
-              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border text-sm font-medium transition-all shadow-sm backdrop-blur-sm ${statusConfig.color}`}>
-                <StatusIcon className="h-4 w-4 flex-shrink-0" />
-                <span>{statusConfig.label}</span>
+              <div className={`flex items-center space-x-1 rtl:space-x-reverse px-2 py-1 rounded-md border ${statusConfig.color}`}>
+                <StatusIcon className="h-4 w-4" />
+                <span className="text-sm font-medium">{statusConfig.label}</span>
               </div>
             </div>
 

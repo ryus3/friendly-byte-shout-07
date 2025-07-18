@@ -38,16 +38,17 @@ const OrderList = ({
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      {orders.map(order => (
-        <motion.div
-          key={order.id}
-          layout
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="transform-gpu"
-        >
-          <MemoizedOrderCard
+      <AnimatePresence>
+        {orders.map(order => (
+          <motion.div
+            key={order.id}
+            layout
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <MemoizedOrderCard
               order={order}
               onViewOrder={() => onViewOrder(order)}
               onEditOrder={() => onEditOrder && onEditOrder(order)}
@@ -59,6 +60,7 @@ const OrderList = ({
             />
           </motion.div>
         ))}
+      </AnimatePresence>
     </div>
   );
 };

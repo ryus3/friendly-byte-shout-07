@@ -9,14 +9,22 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   
-  // استدعاء useAuth بطريقة آمنة
-  const authContext = useAuth();
+  let authContext = null;
+  let hasError = false;
+  
+  try {
+    authContext = useAuth();
+  } catch (error) {
+    console.error('useUnifiedPermissions: Error accessing AuthContext:', error);
+    hasError = true;
+  }
+  
   const user = passedUser || authContext?.user;
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    // التحقق من صحة البيانات أولاً
-    if (!authContext || !user?.user_id) {
+    // التحقق من الأخطاء أولاً
+    if (hasError || !authContext || !user?.user_id) {
       setLoading(false);
       return;
     }
@@ -91,23 +99,23 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [user?.user_id, authContext]);
+  }, [user?.user_id, hasError, authContext]);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
-    if (!authContext) return () => false;
+    if (hasError || !authContext) return () => false;
     return (permissionName) => {
       return userPermissions.some(perm => perm.name === permissionName);
     };
-  }, [userPermissions, authContext]);
+  }, [userPermissions, hasError, authContext]);
 
   // التحقق من دور معين
   const hasRole = useMemo(() => {
-    if (!authContext) return () => false;
+    if (hasError || !authContext) return () => false;
     return (roleName) => {
       return userRoles.some(ur => ur.roles.name === roleName);
     };
-  }, [userRoles, authContext]);
+  }, [userRoles, hasError, authContext]);
 
   // فحص الأدوار الأساسية
   const isAdmin = useMemo(() => hasRole('super_admin'), [hasRole]);
@@ -198,8 +206,8 @@ export const useUnifiedPermissions = (passedUser) => {
     };
   }, [filterDataByUser]);
 
-  // إذا لم يوجد authContext، إرجاع قيم افتراضية آمنة
-  if (!authContext) {
+  // إذا حدث خطأ، إرجاع قيم افتراضية آمنة
+  if (hasError || !authContext) {
     return {
       user: null,
       userRoles: [],

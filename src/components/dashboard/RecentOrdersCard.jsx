@@ -27,59 +27,44 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Clock,
-        className: 'bg-[hsl(var(--status-pending)_/_0.2)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm'
       },
       'processing': { 
-        label: 'قيد المعالجة', 
+        label: 'قيد التسليم', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-processing)_/_0.2)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-700 border-blue-300/50 shadow-sm backdrop-blur-sm'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        className: 'bg-[hsl(var(--status-shipped)_/_0.2)] text-[hsl(var(--status-shipped))] border-[hsl(var(--status-shipped)_/_0.3)] shadow-sm backdrop-blur-sm'
-      },
-      'delivery': { 
-        label: 'قيد التوصيل', 
-        icon: Truck,
-        className: 'bg-[hsl(var(--status-delivery)_/_0.2)] text-[hsl(var(--status-delivery))] border-[hsl(var(--status-delivery)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm'
       },
       'delivered': { 
         label: 'تم التوصيل', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm'
       },
       'returned': { 
         label: 'راجع', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)] shadow-sm backdrop-blur-sm'
-      },
-      'return_received': { 
-        label: 'تم الإرجاع للمخزن', 
-        icon: Package,
-        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
-      },
-      'returned_in_stock': { 
-        label: 'تم الإرجاع للمخزن', 
-        icon: Package,
-        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm'
       }
     };
     const statusInfo = statusMap[status] || { 
-      label: 'تم الإرجاع للمخزن', 
+      label: status, 
       icon: Package,
-      className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
+      className: 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 border-gray-200 shadow-sm'
     };
     const StatusIcon = statusInfo.icon;
     return (
-      <Badge className={cn("text-xs px-2 py-1 flex items-center gap-2 font-medium", statusInfo.className)}>
-        <StatusIcon className="w-3 h-3 flex-shrink-0" />
-        <span>{statusInfo.label}</span>
+      <Badge className={cn("text-xs px-2 py-1 flex items-center gap-1.5 font-medium", statusInfo.className)}>
+        <StatusIcon className="w-3 h-3" />
+        {statusInfo.label}
       </Badge>
     );
   };
@@ -184,24 +169,18 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       
                       <div className="h-3 w-px bg-border/50" />
                       
-                      <div className="flex items-center gap-1.5">
-                        <div className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border text-xs font-medium transition-all shadow-sm ${
-                          order.delivery_partner === 'محلي' || !order.delivery_partner 
-                            ? 'bg-gradient-to-r from-emerald-50 to-green-50 text-emerald-700 border-emerald-200' 
-                            : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200'
-                        }`}>
-                          {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
-                            <>
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                              <span>🏠 محلي</span>
-                            </>
-                          ) : (
-                            <>
-                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                              <span>🚚 {order.delivery_partner.length > 6 ? order.delivery_partner.substring(0, 6) + '..' : order.delivery_partner}</span>
-                            </>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-1">
+                        {getDeliveryType(order) === 'شركة توصيل' ? (
+                          <>
+                            <Truck className="w-3 h-3 text-blue-500" />
+                            <span className="text-xs text-blue-600">شركة</span>
+                          </>
+                        ) : (
+                          <>
+                            <Home className="w-3 h-3 text-green-500" />
+                            <span className="text-xs text-green-600">محلي</span>
+                          </>
+                        )}
                       </div>
                       
                       <div className="h-3 w-px bg-border/50" />

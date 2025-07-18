@@ -23,7 +23,6 @@ const AddProductPage = lazy(() => import('@/pages/AddProductPage.jsx'));
 const ManageVariantsPage = lazy(() => import('@/pages/ManageVariantsPage.jsx'));
 const InventoryPage = lazy(() => import('@/pages/InventoryPage.jsx'));
 const OrdersPage = lazy(() => import('@/pages/OrdersPage.jsx'));
-const MyOrdersPage = lazy(() => import('@/pages/MyOrdersPage.jsx'));
 const PurchasesPage = lazy(() => import('@/pages/PurchasesPage.jsx'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage.jsx'));
 const AppearanceSettingsPage = lazy(() => import('@/pages/AppearanceSettingsPage.jsx'));
@@ -99,7 +98,7 @@ function AppContent() {
           <Route path="/manage-variants" element={<ProtectedRoute permission="manage_variants">{childrenWithProps(ManageVariantsPage)}</ProtectedRoute>} />
           <Route path="/inventory" element={<ProtectedRoute permission="view_inventory">{childrenWithProps(InventoryPage)}</ProtectedRoute>} />
           
-          <Route path="/employee-follow-up" element={<ProtectedRoute permission="view_all_orders">{childrenWithProps(OrdersPage)}</ProtectedRoute>} />
+          <Route path="/employee-follow-up" element={<ProtectedRoute permission="view_all_orders">{childrenWithProps(EmployeeFollowUpPage)}</ProtectedRoute>} />
           <Route path="/my-orders" element={<ProtectedRoute permission="view_orders">{childrenWithProps(OrdersPage)}</ProtectedRoute>} />
 
           <Route path="/purchases" element={<ProtectedRoute permission="view_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />

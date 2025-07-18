@@ -17,9 +17,8 @@ const getStatusInfo = (status) => {
     case 'delivered': return { badge: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
     case 'cancelled': return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
     case 'returned': return { badge: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
-    case 'return_received': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
-    default: return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return-text))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    case 'returned_in_stock': return { badge: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: <Package className="w-4 h-4" />, text: 'راجع في المخزن' };
+    default: return { badge: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: <Clock className="w-4 h-4" />, text: 'غير محدد' };
   }
 };
 
@@ -88,8 +87,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
               <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${statusInfo.badge}`}>
-                {statusInfo.icon} 
-                <span>{statusInfo.text}</span>
+                {statusInfo.icon} {statusInfo.text}
               </div>
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border">
@@ -102,11 +100,9 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                             <span>البائع: {sellerName}</span>
                         </div>
                     )}
-                     <div className="flex items-center gap-1.5">
+                     <div className="flex items-center gap-1">
                          <Building className="w-3 h-3"/>
-                         <span className={`px-2 py-1 rounded text-xs font-medium border ${order.delivery_partner === 'محلي' || !order.delivery_partner ? 'bg-green-50 text-green-700 border-green-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                           {order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}
-                         </span>
+                         <span>{order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
                      </div>
                 </div>
               </div>
