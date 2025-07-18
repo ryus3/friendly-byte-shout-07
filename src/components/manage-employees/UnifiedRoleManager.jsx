@@ -22,6 +22,7 @@ import {
 
 const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpenChange }) => {
   const [availableRoles, setAvailableRoles] = useState([]);
+  const [userRoles, setUserRoles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // جلب البيانات عند تحميل المكون
@@ -40,6 +41,21 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
         if (rolesError) throw rolesError;
 
         setAvailableRoles(roles || []);
+
+        // جلب أدوار المستخدم الحالية
+        if (selectedUser) {
+          const { data: currentUserRoles, error: userRolesError } = await supabase
+            .from('user_roles')
+            .select(`
+              *,
+              roles(*)
+            `)
+            .eq('user_id', selectedUser.user_id)
+            .eq('is_active', true);
+
+          if (userRolesError) throw userRolesError;
+          setUserRoles(currentUserRoles || []);
+        }
       } catch (error) {
         console.error('خطأ في جلب البيانات:', error);
         toast({
@@ -55,7 +71,7 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
     if (open) {
       fetchData();
     }
-  }, [open]);
+  }, [open, selectedUser]);
 
   // دالة للحصول على لون الدور
   const getRoleColor = (roleName) => {
@@ -178,6 +194,63 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
             </div>
           ) : (
             <div className="space-y-8">
+              {/* أدوار المستخدم الحالية */}
+              {selectedUser && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                    </div>
+                    <h3 className="text-xl font-bold">أدوار المستخدم الحالية</h3>
+                    <Badge variant="secondary" className="ml-auto">
+                      {userRoles.length} دور نشط
+                    </Badge>
+                  </div>
+                  
+                  {userRoles.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {userRoles.map((userRole) => {
+                        const role = userRole.roles;
+                        const IconComponent = getRoleIcon(role.name);
+                        
+                        return (
+                          <div 
+                            key={userRole.id}
+                            className="group relative"
+                          >
+                            <div className={`absolute -inset-0.5 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg opacity-30 blur`}></div>
+                            
+                            <div className="relative bg-card border-2 border-green-200 rounded-lg p-4">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 bg-gradient-to-r ${getRoleColor(role.name)} rounded-lg text-white`}>
+                                  <IconComponent className="h-5 w-5" />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-foreground">
+                                    {role.display_name}
+                                  </h4>
+                                  <p className="text-sm text-muted-foreground">
+                                    نشط منذ {new Date(userRole.assigned_at).toLocaleDateString('ar-SA')}
+                                  </p>
+                                </div>
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                                  نشط
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>لا يوجد أدوار مُعيّنة لهذا المستخدم</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* الأدوار المتاحة */}
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
