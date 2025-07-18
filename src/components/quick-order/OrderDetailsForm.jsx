@@ -75,7 +75,16 @@ const OrderDetailsForm = ({
               </div>
               
               {/* خانة الخصم */}
-              {hasPermission('apply_order_discounts') && (
+              {(() => {
+                const hasDiscountPermission = hasPermission('apply_order_discounts');
+                console.log('Discount debug:', { 
+                  hasDiscountPermission, 
+                  cartLength: cart.length,
+                  subtotal,
+                  hasPermissionFunction: typeof hasPermission 
+                });
+                return hasDiscountPermission;
+              })() && (
                 <div className="flex justify-between items-center">
                   <Label htmlFor="discount" className="text-sm flex items-center gap-1">
                     <Tag className="w-4 h-4" /> الخصم
