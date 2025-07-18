@@ -19,6 +19,9 @@ export const UnifiedAuthProvider = ({ children }) => {
   const [allUsers, setAllUsers] = useState([]);
   const [pendingRegistrations, setPendingRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // استخدام hook الصلاحيات
+  const permissions = useUnifiedPermissions(user);
 
   const fetchUserProfile = useCallback(async (supabaseUser) => {
     if (!supabase || !supabaseUser) return null;
@@ -446,6 +449,8 @@ export const UnifiedAuthProvider = ({ children }) => {
     changePassword,
     refetchAdminData: fetchAdminData,
     fetchAdminData,
+    // إضافة الصلاحيات
+    ...permissions
   };
 
   return (
