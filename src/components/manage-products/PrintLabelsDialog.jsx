@@ -20,7 +20,7 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           .label-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8mm;
+            gap: 5mm;
             padding: 10mm;
           }
           .label-card {
@@ -32,34 +32,40 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            background: white;
           }
-          .label-content {
+          .label-header {
             text-align: center;
+            margin-bottom: 1mm;
           }
           .label-product-name {
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
-            margin-bottom: 2mm;
+            margin: 0;
             line-height: 1.2;
           }
           .label-variant-info {
-            font-size: 8px;
-            margin-bottom: 2mm;
+            font-size: 10px;
+            margin: 0;
+            color: #666;
           }
           .label-barcode-container {
+            text-align: center;
             margin: 2mm 0;
+            height: 20mm;
             display: flex;
+            align-items: center;
             justify-content: center;
           }
-          .barcode-placeholder {
-            font-size: 8px;
-            color: #666;
-            padding: 5mm 0;
+          .label-barcode-container svg {
+            max-width: 100%;
+            height: auto;
           }
           .label-price {
-            font-size: 9px;
+            font-size: 14px;
             font-weight: bold;
-            margin-top: 1mm;
+            text-align: center;
+            margin: 0;
           }
         }
         
@@ -67,82 +73,90 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           .label-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            gap: 12px;
             padding: 16px;
           }
           .label-card {
-            width: 180px;
-            height: 120px;
-            border: 1px solid #e2e8f0;
-            padding: 8px;
+            width: 200px;
+            height: 140px;
+            border: 2px solid #e2e8f0;
+            padding: 12px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             background: white;
+            border-radius: 8px;
           }
-          .label-content {
+          .label-header {
             text-align: center;
+            margin-bottom: 8px;
           }
           .label-product-name {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: bold;
-            margin-bottom: 4px;
+            margin: 0;
             line-height: 1.2;
           }
           .label-variant-info {
-            font-size: 10px;
-            margin-bottom: 4px;
+            font-size: 12px;
+            margin: 0;
             color: #666;
           }
           .label-barcode-container {
-            margin: 4px 0;
+            text-align: center;
+            margin: 8px 0;
+            height: 60px;
             display: flex;
+            align-items: center;
             justify-content: center;
+            border: 1px dashed #ddd;
+            border-radius: 4px;
           }
-          .barcode-placeholder {
-            font-size: 8px;
-            color: #666;
-            padding: 8px 0;
+          .label-barcode-container svg {
+            max-width: 100%;
+            height: auto;
           }
           .label-price {
-            font-size: 11px;
+            font-size: 16px;
             font-weight: bold;
-            margin-top: 2px;
+            text-align: center;
+            margin: 0;
+            color: #333;
+          }
+          .no-barcode {
+            color: #999;
+            font-size: 10px;
+            text-align: center;
           }
         }
       `}</style>
       <div className="label-grid">
         {labelsToPrint.map((label, index) => (
           <div key={index} className="label-card">
-            <div className="label-content">
-              <p className="label-product-name">{label.name}</p>
+            <div className="label-header">
+              <h3 className="label-product-name">{label.name}</h3>
               <p className="label-variant-info">{label.color} / {label.size}</p>
-              <div className="label-barcode-container">
-                {(() => {
-                  console.log('🏷️ طباعة الملصق:', { 
-                    labelName: label.name, 
-                    barcode: label.barcode,
-                    hasBarcode: label.barcode && label.barcode.trim() !== ''
-                  });
-                  
-                  if (label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود') {
-                    return (
-                      <Barcode 
-                        value={label.barcode} 
-                        height={25} 
-                        width={1.2} 
-                        fontSize={8}
-                        margin={2}
-                        displayValue={true}
-                      />
-                    );
-                  } else {
-                    return <div className="barcode-placeholder">يتم توليد الباركود تلقائياً</div>;
-                  }
-                })()}
-              </div>
-              <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
             </div>
+            
+            <div className="label-barcode-container">
+              {label.barcode && label.barcode.trim() !== '' ? (
+                <Barcode 
+                  value={label.barcode} 
+                  format="CODE128"
+                  height={40}
+                  width={1.5}
+                  fontSize={10}
+                  margin={0}
+                  displayValue={true}
+                  background="transparent"
+                  lineColor="#000000"
+                />
+              ) : (
+                <div className="no-barcode">لا يوجد باركود</div>
+              )}
+            </div>
+            
+            <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
           </div>
         ))}
       </div>
@@ -168,23 +182,30 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
     
     if (!products || products.length === 0) return labels;
     
+    console.log('🏷️ معالجة المنتجات للطباعة:', products);
+    
     products.forEach(product => {
+      console.log('🏷️ معالجة المنتج:', product.name, { 
+        productBarcode: product.barcode, 
+        variantsCount: product.variants?.length || 0 
+      });
+      
       if (product.variants && product.variants.length > 0) {
         // منتج بمتغيرات
         product.variants.forEach(variant => {
           const sku = `${product.id}-${variant.id}`;
           const quantity = labelQuantities[sku] || 1;
           
-          // توليد باركود إذا لم يكن موجود أو كان فارغ
-          let barcode = variant.barcode || product.barcode;
-          if (!barcode || barcode.trim() === '') {
-            barcode = generateUniqueBarcode(
-              product.name,
-              variant.colors?.name || variant.color || 'DEFAULT',
-              variant.sizes?.name || variant.size || 'DEFAULT',
-              product.id
-            );
-          }
+          console.log('🏷️ معالجة المتغير:', {
+            sku,
+            variantBarcode: variant.barcode,
+            productBarcode: product.barcode,
+            colorName: variant.colors?.name || variant.color,
+            sizeName: variant.sizes?.name || variant.size
+          });
+          
+          // استخدام الباركود من المتغير أولاً، ثم من المنتج
+          const barcode = variant.barcode || product.barcode;
           
           for (let i = 0; i < quantity; i++) {
             labels.push({
@@ -201,17 +222,12 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
         // منتج بدون متغيرات
         const sku = product.id;
         const quantity = labelQuantities[sku] || 1;
+        const barcode = product.barcode;
         
-        // توليد باركود إذا لم يكن موجود أو كان فارغ
-        let barcode = product.barcode;
-        if (!barcode || barcode.trim() === '') {
-          barcode = generateUniqueBarcode(
-            product.name,
-            'DEFAULT',
-            'DEFAULT',
-            product.id
-          );
-        }
+        console.log('🏷️ منتج بدون متغيرات:', {
+          name: product.name,
+          barcode: barcode
+        });
         
         for (let i = 0; i < quantity; i++) {
           labels.push({
@@ -226,7 +242,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
       }
     });
     
-    console.log('🏷️ ملصقات محضرة للطباعة:', labels);
+    console.log('🏷️ ملصقات جاهزة للطباعة:', labels);
     return labels;
   }, [products, labelQuantities]);
 
