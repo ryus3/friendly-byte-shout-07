@@ -27,8 +27,8 @@ const SidebarContent = ({ onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // تحديد القائمة مباشرة بدون lazy loading
-  const menuItems = [
+  // تحديد القائمة مباشرة وفوراً
+  const menuItems = useMemo(() => [
     { path: '/', icon: Home, label: 'لوحة التحكم', permission: 'view_dashboard', color: 'text-blue-500' },
     { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'create_orders', color: 'text-yellow-500' },
     { path: '/my-orders', icon: ShoppingCart, label: 'طلباتي', permission: 'view_orders', color: 'text-green-500' },
@@ -40,10 +40,13 @@ const SidebarContent = ({ onClose }) => {
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', permission: 'view_accounting', color: 'text-indigo-500' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', permission: 'view_notifications', color: 'text-red-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
-  ];
+  ], []);
   
-  // فلترة العناصر بناءً على الصلاحيات فوراً بدون تأخير
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
+  // فلترة العناصر بناءً على الصلاحيات فوراً مع memoization
+  const visibleMenuItems = useMemo(() => 
+    menuItems.filter(item => hasPermission(item.permission)), 
+    [menuItems, hasPermission]
+  );
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {

@@ -27,14 +27,14 @@ import {
   Save,
   RotateCcw
 } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useNotifications } from '@/contexts/NotificationsContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
-  const { addNotification } = useNotifications();
+  const { addNotification } = useNotificationsSystem();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
