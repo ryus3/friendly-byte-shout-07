@@ -267,20 +267,18 @@ const OrdersPage = () => {
                 onStatCardClick={handleStatCardClick}
              />
            </div>
-            {hasPermission('view_profits') && (
-              <div className="col-span-1 sm:col-span-2 lg:col-span-1">
-                <StatCard 
-                  title="ملخص الأرباح" 
-                  value={myProfits}
-                  format="currency"
-                  icon={DollarSign} 
-                  colors={['green-500', 'emerald-500']}
-                  onClick={() => navigate(profitsPagePath)}
-                  periods={{ all: 'كل الأرباح' }}
-                  currentPeriod="all"
-                />
-              </div>
-            )}
+            <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+              <StatCard 
+                title="ملخص الأرباح" 
+                value={myProfits}
+                format="currency"
+                icon={DollarSign} 
+                colors={['green-500', 'emerald-500']}
+                onClick={() => navigate(profitsPagePath)}
+                periods={{ all: 'كل الأرباح' }}
+                currentPeriod="all"
+              />
+            </div>
         </div>
 
         <OrdersToolbar filters={filters} onFiltersChange={handleToolbarFilterChange} />
