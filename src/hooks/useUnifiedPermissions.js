@@ -9,22 +9,14 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   
-  let authContext = null;
-  let hasError = false;
-  
-  try {
-    authContext = useAuth();
-  } catch (error) {
-    console.error('useUnifiedPermissions: Error accessing AuthContext:', error);
-    hasError = true;
-  }
-  
+  // استدعاء useAuth بطريقة آمنة
+  const authContext = useAuth();
   const user = passedUser || authContext?.user;
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    // التحقق من الأخطاء أولاً
-    if (hasError || !authContext || !user?.user_id) {
+    // التحقق من صحة البيانات أولاً
+    if (!authContext || !user?.user_id) {
       setLoading(false);
       return;
     }
@@ -99,23 +91,23 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [user?.user_id, hasError, authContext]);
+  }, [user?.user_id, authContext]);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
-    if (hasError || !authContext) return () => false;
+    if (!authContext) return () => false;
     return (permissionName) => {
       return userPermissions.some(perm => perm.name === permissionName);
     };
-  }, [userPermissions, hasError, authContext]);
+  }, [userPermissions, authContext]);
 
   // التحقق من دور معين
   const hasRole = useMemo(() => {
-    if (hasError || !authContext) return () => false;
+    if (!authContext) return () => false;
     return (roleName) => {
       return userRoles.some(ur => ur.roles.name === roleName);
     };
-  }, [userRoles, hasError, authContext]);
+  }, [userRoles, authContext]);
 
   // فحص الأدوار الأساسية
   const isAdmin = useMemo(() => hasRole('super_admin'), [hasRole]);
@@ -206,8 +198,8 @@ export const useUnifiedPermissions = (passedUser) => {
     };
   }, [filterDataByUser]);
 
-  // إذا حدث خطأ، إرجاع قيم افتراضية آمنة
-  if (hasError || !authContext) {
+  // إذا لم يوجد authContext، إرجاع قيم افتراضية آمنة
+  if (!authContext) {
     return {
       user: null,
       userRoles: [],
