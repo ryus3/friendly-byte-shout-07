@@ -25,6 +25,7 @@ import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const location = useLocation();
   const { products, loading, addToCart, clearCart } = useInventory();
   const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
@@ -265,8 +266,10 @@ const ProductsPage = () => {
 
   const hasActivePermissionFilters = Object.entries(permissionFilters).some(([key, value]) => value !== 'all');
 
-  // مكون فلتر الصلاحيات المحسن
+  // مكون فلتر الصلاحيات المحسن للهاتف
   const PermissionBasedFilter = () => {
+    const [isOpen, setIsOpen] = useState(false);
+    
     // تحديد ما إذا كان للمستخدم خيارات متعددة في أي من الفئات
     const hasMultipleOptions = 
       allowedData.allowedCategories.length > 1 || 
@@ -283,9 +286,9 @@ const ProductsPage = () => {
 
     return (
       <div className="mb-4">
-        <Popover>
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2 w-full sm:w-auto">
               <Settings2 className="w-4 h-4" />
               إعدادات الصفحة
               {hasActivePermissionFilters && (
@@ -295,25 +298,41 @@ const ProductsPage = () => {
               )}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[400px] p-4" align="start">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium text-sm">فلترة المنتجات</h4>
-                {hasActivePermissionFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetPermissionFilters}
-                    className="text-xs h-7"
-                  >
-                    <X className="w-3 h-3 ml-1" />
-                    إعادة تعيين
-                  </Button>
-                )}
+          <PopoverContent 
+            className="w-[90vw] max-w-md p-0 mx-4" 
+            align="start"
+            side="bottom"
+            sideOffset={8}
+          >
+            <div className="max-h-[70vh] overflow-y-auto">
+              <div className="p-4 border-b bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">فلترة المنتجات</h4>
+                  <div className="flex items-center gap-2">
+                    {hasActivePermissionFilters && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={resetPermissionFilters}
+                        className="text-xs h-7 px-2"
+                      >
+                        <X className="w-3 h-3 ml-1" />
+                        إعادة تعيين
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsOpen(false)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <Separator />
               
-              <div className="grid grid-cols-1 gap-4">
+              <div className="p-4 space-y-4">
                 {/* فلتر الأقسام */}
                 {allowedData.allowedDepartments.length > 1 && (
                   <div className="space-y-2">
@@ -322,7 +341,7 @@ const ProductsPage = () => {
                       value={permissionFilters.department}
                       onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, department: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="اختر القسم" />
                       </SelectTrigger>
                       <SelectContent>
@@ -345,7 +364,7 @@ const ProductsPage = () => {
                       value={permissionFilters.category}
                       onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, category: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="اختر التصنيف" />
                       </SelectTrigger>
                       <SelectContent>
@@ -368,7 +387,7 @@ const ProductsPage = () => {
                       value={permissionFilters.season_occasion}
                       onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, season_occasion: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="اختر الموسم" />
                       </SelectTrigger>
                       <SelectContent>
@@ -391,7 +410,7 @@ const ProductsPage = () => {
                       value={permissionFilters.product_type}
                       onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, product_type: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="اختر نوع المنتج" />
                       </SelectTrigger>
                       <SelectContent>
@@ -414,7 +433,7 @@ const ProductsPage = () => {
                       value={permissionFilters.color}
                       onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, color: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="اختر اللون" />
                       </SelectTrigger>
                       <SelectContent>
@@ -445,7 +464,7 @@ const ProductsPage = () => {
                       value={permissionFilters.size}
                       onValueChange={(value) => setPermissionFilters(prev => ({ ...prev, size: value }))}
                     >
-                      <SelectTrigger className="h-9">
+                      <SelectTrigger className="h-9 w-full">
                         <SelectValue placeholder="اختر الحجم" />
                       </SelectTrigger>
                       <SelectContent>
@@ -463,44 +482,41 @@ const ProductsPage = () => {
 
               {/* معلومات الفلترة الحالية */}
               {hasActivePermissionFilters && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">الفلاتر المطبقة:</Label>
-                    <div className="flex flex-wrap gap-1">
-                      {permissionFilters.department !== 'all' && (
-                        <span className="bg-accent px-2 py-1 rounded text-xs">
-                          القسم: {allowedData.allowedDepartments.find(d => d.id === permissionFilters.department)?.name}
-                        </span>
-                      )}
-                      {permissionFilters.category !== 'all' && (
-                        <span className="bg-accent px-2 py-1 rounded text-xs">
-                          التصنيف: {allowedData.allowedCategories.find(c => c.id === permissionFilters.category)?.name}
-                        </span>
-                      )}
-                      {permissionFilters.season_occasion !== 'all' && (
-                        <span className="bg-accent px-2 py-1 rounded text-xs">
-                          الموسم: {allowedData.allowedSeasonsOccasions.find(s => s.id === permissionFilters.season_occasion)?.name}
-                        </span>
-                      )}
-                      {permissionFilters.product_type !== 'all' && (
-                        <span className="bg-accent px-2 py-1 rounded text-xs">
-                          النوع: {allowedData.allowedProductTypes.find(t => t.id === permissionFilters.product_type)?.name}
-                        </span>
-                      )}
-                      {permissionFilters.color !== 'all' && (
-                        <span className="bg-accent px-2 py-1 rounded text-xs">
-                          اللون: {allowedData.allowedColors.find(c => c.id === permissionFilters.color)?.name}
-                        </span>
-                      )}
-                      {permissionFilters.size !== 'all' && (
-                        <span className="bg-accent px-2 py-1 rounded text-xs">
-                          الحجم: {allowedData.allowedSizes.find(s => s.id === permissionFilters.size)?.name}
-                        </span>
-                      )}
-                    </div>
+                <div className="p-4 border-t bg-muted/30">
+                  <Label className="text-xs font-medium text-muted-foreground mb-2 block">الفلاتر المطبقة:</Label>
+                  <div className="flex flex-wrap gap-1">
+                    {permissionFilters.department !== 'all' && (
+                      <span className="bg-accent px-2 py-1 rounded text-xs">
+                        القسم: {allowedData.allowedDepartments.find(d => d.id === permissionFilters.department)?.name}
+                      </span>
+                    )}
+                    {permissionFilters.category !== 'all' && (
+                      <span className="bg-accent px-2 py-1 rounded text-xs">
+                        التصنيف: {allowedData.allowedCategories.find(c => c.id === permissionFilters.category)?.name}
+                      </span>
+                    )}
+                    {permissionFilters.season_occasion !== 'all' && (
+                      <span className="bg-accent px-2 py-1 rounded text-xs">
+                        الموسم: {allowedData.allowedSeasonsOccasions.find(s => s.id === permissionFilters.season_occasion)?.name}
+                      </span>
+                    )}
+                    {permissionFilters.product_type !== 'all' && (
+                      <span className="bg-accent px-2 py-1 rounded text-xs">
+                        النوع: {allowedData.allowedProductTypes.find(t => t.id === permissionFilters.product_type)?.name}
+                      </span>
+                    )}
+                    {permissionFilters.color !== 'all' && (
+                      <span className="bg-accent px-2 py-1 rounded text-xs">
+                        اللون: {allowedData.allowedColors.find(c => c.id === permissionFilters.color)?.name}
+                      </span>
+                    )}
+                    {permissionFilters.size !== 'all' && (
+                      <span className="bg-accent px-2 py-1 rounded text-xs">
+                        الحجم: {allowedData.allowedSizes.find(s => s.id === permissionFilters.size)?.name}
+                      </span>
+                    )}
                   </div>
-                </>
+                </div>
               )}
             </div>
           </PopoverContent>
