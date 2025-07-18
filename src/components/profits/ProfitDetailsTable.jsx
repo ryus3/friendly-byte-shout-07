@@ -8,7 +8,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const ProfitDetailsTable = ({
-  orders,
+  profits,
   canViewAll,
   canRequestSettlement,
   selectedOrders,
@@ -18,7 +18,7 @@ const ProfitDetailsTable = ({
   onViewInvoice,
   onMarkReceived,
 }) => {
-  const allPendingSelectable = orders.filter(p => (p.profitStatus || 'pending') === 'pending');
+  const allPendingSelectable = profits.filter(p => (p.profitStatus || 'pending') === 'pending');
 
   return (
     <Table>
@@ -45,8 +45,8 @@ const ProfitDetailsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders.length > 0 ? (
-          orders.map(order => {
+        {profits.length > 0 ? (
+          profits.map(order => {
             const deliveryDate = order.created_at ? parseISO(order.created_at) : null;
             const isPending = (order.profitStatus || 'pending') === 'pending';
             return (

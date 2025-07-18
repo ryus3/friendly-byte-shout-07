@@ -58,6 +58,8 @@ const MyOrdersPage = () => {
   const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || user?.roles?.includes('super_admin') || user?.roles?.includes('admin') || hasPermission('manage_profit_settlement');
   const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement') && !user?.roles?.includes('super_admin');
 
+  // Debug logging - سيتم نقله بعد تعريف profitData
+
   const myOrders = useMemo(() => {
     if (!orders) return [];
     if (hasPermission('view_all_orders')) return orders;
@@ -222,6 +224,20 @@ const MyOrdersPage = () => {
         employeeSettledDues
     };
   }, [orders, allUsers, calculateProfit, filters.dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
+
+  // Debug logging بعد تعريف profitData
+  console.log('🔍 MyOrdersPage Debug:', {
+    user: user?.full_name,
+    roles: user?.roles,
+    role: user?.role,
+    canViewAll,
+    canRequestSettlement,
+    profitDataExists: !!profitData,
+    profitDataKeys: profitData ? Object.keys(profitData) : 'no profitData',
+    ordersCount: orders?.length || 0,
+    allUsersCount: allUsers?.length || 0,
+    detailedProfitsCount: profitData?.detailedProfits?.length || 0
+  });
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
@@ -602,6 +618,7 @@ const MyOrdersPage = () => {
         invoice={selectedInvoice}
         open={dialogs.invoice}
         onOpenChange={(open) => setDialogs(d => ({ ...d, invoice: open }))}
+        allUsers={allUsers}
       />
       <div className="print-only">
         {/* ... Printing content ... */}

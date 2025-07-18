@@ -6,7 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, DollarSign } from 'lucide-react';
 
 const ProfitDetailsMobile = ({
-  orders,
+  profits,
   canViewAll,
   canRequestSettlement,
   selectedOrders,
@@ -16,8 +16,8 @@ const ProfitDetailsMobile = ({
 }) => {
   return (
     <div className="space-y-4">
-      {orders.length > 0 ? (
-        orders.map(order => {
+      {profits.length > 0 ? (
+        profits.map(order => {
           const isPending = (order.profitStatus || 'pending') === 'pending';
           return (
             <Card key={order.id} className="p-4">

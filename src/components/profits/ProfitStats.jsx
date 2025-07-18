@@ -11,6 +11,14 @@ const ProfitStats = ({
   user, // إضافة user parameter
 }) => {
 
+  // Debug logging
+  console.log('🔍 ProfitStats Debug:', {
+    profitData,
+    canViewAll,
+    user: user?.full_name,
+    hasUser: !!user
+  });
+
   // فلترة البيانات بناءً على صلاحيات المستخدم
   const getFilteredValue = (value, fallback = 0) => {
     return canViewAll ? value : fallback;

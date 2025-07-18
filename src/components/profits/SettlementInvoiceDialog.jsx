@@ -17,7 +17,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
 
     if (!invoice) return null;
 
-    const settledBy = allUsers.find(u => u.id === invoice.settled_by_id);
+    const settledBy = allUsers?.find(u => u.id === invoice.settled_by_id);
     const settledOrdersDetails = (invoice.settled_orders || []).map(orderId => {
         return orders.find(o => o.id === orderId);
     }).filter(Boolean);
