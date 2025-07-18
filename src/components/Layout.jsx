@@ -99,21 +99,20 @@ const SidebarContent = ({ onClose }) => {
           </div>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto sidebar-optimized">
           {visibleMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             
             return (
-              <React.Fragment key={item.path}>
-                <div
-                  className={`sidebar-item ${isActive ? 'active' : ''}`}
-                  onClick={() => handleNavigation(item.path)}
-                >
-                  <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
-                  <span className="font-medium">{item.label}</span>
-                </div>
-              </React.Fragment>
+              <div
+                key={item.path}
+                className={`sidebar-item ${isActive ? 'active' : ''}`}
+                onClick={() => handleNavigation(item.path)}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
+                <span className="font-medium">{item.label}</span>
+              </div>
             );
           })}
         </nav>

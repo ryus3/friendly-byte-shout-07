@@ -11,7 +11,9 @@ export const useUnifiedPermissions = (passedUser) => {
   const [loading, setLoading] = useState(true);
 
   // إضافة check للتأكد من تحميل المستخدم
-  if (auth?.loading || !user) {
+  const isLoading = auth?.loading || !user;
+  
+  if (isLoading) {
     return {
       loading: true,
       isAdmin: false,
@@ -35,7 +37,7 @@ export const useUnifiedPermissions = (passedUser) => {
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    if (!user?.user_id) return;
+    if (!user?.user_id || isLoading) return;
 
     const fetchUserPermissions = async () => {
       try {
@@ -107,7 +109,7 @@ export const useUnifiedPermissions = (passedUser) => {
     };
 
     fetchUserPermissions();
-  }, [user?.user_id]);
+  }, [user?.user_id, isLoading]);
 
   // التحقق من صلاحية معينة
   const hasPermission = useMemo(() => {
