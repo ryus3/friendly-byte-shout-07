@@ -12,6 +12,12 @@ const EmployeeCard = ({ user, onEdit, index }) => {
 
   // استخدام الأدوار الجديدة من user_roles
   const getUserRoleBadges = () => {
+    console.log('EmployeeCard roles debug:', {
+      user: user.full_name,
+      userRoles: user.roles,
+      userObject: user
+    });
+    
     if (!user.roles || user.roles.length === 0) {
       return <Badge variant='secondary' style={{ backgroundColor: 'hsl(var(--role-pending) / 0.2)', color: 'hsl(var(--role-pending))', borderColor: 'hsl(var(--role-pending) / 0.3)' }}>
         <User className="w-4 h-4 ml-2" />
@@ -32,6 +38,10 @@ const EmployeeCard = ({ user, onEdit, index }) => {
             return { backgroundColor: 'hsl(var(--role-warehouse-employee) / 0.2)', color: 'hsl(var(--role-warehouse-employee))', borderColor: 'hsl(var(--role-warehouse-employee) / 0.3)' };
           case 'accountant':
             return { backgroundColor: 'hsl(var(--role-accountant) / 0.2)', color: 'hsl(var(--role-accountant))', borderColor: 'hsl(var(--role-accountant) / 0.3)' };
+          case 'delivery_coordinator':
+            return { backgroundColor: 'hsl(var(--role-department-manager) / 0.2)', color: 'hsl(var(--role-department-manager))', borderColor: 'hsl(var(--role-department-manager) / 0.3)' };
+          case 'cashier':
+            return { backgroundColor: 'hsl(var(--role-accountant) / 0.2)', color: 'hsl(var(--role-accountant))', borderColor: 'hsl(var(--role-accountant) / 0.3)' };
           default:
             return { backgroundColor: 'hsl(var(--role-pending) / 0.2)', color: 'hsl(var(--role-pending))', borderColor: 'hsl(var(--role-pending) / 0.3)' };
         }
@@ -43,6 +53,8 @@ const EmployeeCard = ({ user, onEdit, index }) => {
           case 'sales_employee': return 'موظف مبيعات';
           case 'warehouse_employee': return 'موظف مخزن';
           case 'accountant': return 'محاسب';
+          case 'delivery_coordinator': return 'منسق توصيل';
+          case 'cashier': return 'كاشير';
           default: return roleName;
         }
       };
