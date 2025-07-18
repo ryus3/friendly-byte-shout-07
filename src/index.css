@@ -45,12 +45,7 @@
     --status-delivery: 217 91% 60%;      /* أزرق فاتح لقيد التوصيل */
     --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم */
     --status-returned: 0 84% 60%;        /* أحمر للراجعة */
-    --status-return-received: 0 62% 30%; /* أحمر داكن لتم الإرجاع للمخزن */
     --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي */
-    
-    /* Delivery Partner Colors */
-    --delivery-local: 142 76% 36%;       /* أخضر للمحلي */
-    --delivery-company: 217 91% 60%;     /* أزرق لشركة التوصيل */
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */
@@ -147,34 +142,10 @@
     border-color: hsl(var(--status-returned) / 0.25);
   }
   
-  .status-return-received {
-    background: hsl(var(--status-return-received) / 0.15);
-    color: hsl(var(--status-return-received));
-    border-color: hsl(var(--status-return-received) / 0.25);
-  }
-  
   .status-cancelled {
     background: hsl(var(--status-cancelled) / 0.15);
     color: hsl(var(--status-cancelled));
     border-color: hsl(var(--status-cancelled) / 0.25);
-  }
-  
-  /* Delivery Partner Badge Styles */
-  .delivery-badge {
-    @apply inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all duration-200;
-    border: 1px solid transparent;
-  }
-  
-  .delivery-local {
-    background: hsl(var(--delivery-local) / 0.15);
-    color: hsl(var(--delivery-local));
-    border-color: hsl(var(--delivery-local) / 0.25);
-  }
-  
-  .delivery-company {
-    background: hsl(var(--delivery-company) / 0.15);
-    color: hsl(var(--delivery-company));
-    border-color: hsl(var(--delivery-company) / 0.25);
   }
   
   /* Hover Effects for Status Badges */
