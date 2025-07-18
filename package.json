@@ -39,6 +39,7 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@react-pdf/renderer": "^3.4.4",
     "@supabase/supabase-js": "2.30.0",
+    "@tailwindcss/postcss": "^4.1.11",
     "@vitejs/plugin-react": "^4.6.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

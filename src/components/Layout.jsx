@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
   Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell
@@ -27,6 +27,7 @@ const SidebarContent = ({ onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // تحديد القائمة مباشرة بدون lazy loading
   const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', permission: 'view_dashboard', color: 'text-blue-500' },
     { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'create_orders', color: 'text-yellow-500' },
@@ -41,7 +42,8 @@ const SidebarContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
   
-  const visibleMenuItems = useMemo(() => menuItems.filter(item => hasPermission(item.permission)), [menuItems, hasPermission]);
+  // فلترة العناصر بناءً على الصلاحيات فوراً بدون تأخير
+  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
