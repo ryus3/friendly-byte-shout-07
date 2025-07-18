@@ -17,8 +17,9 @@ const getStatusInfo = (status) => {
     case 'delivered': return { badge: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
     case 'cancelled': return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
     case 'returned': return { badge: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
-    default: return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    case 'returned_in_stock': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    case 'return_received': return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
+    default: return { badge: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'تم الإرجاع للمخزن' };
   }
 };
 

@@ -62,13 +62,18 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'return_received': { 
         label: 'تم الإرجاع للمخزن', 
         icon: Package,
-        className: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)] shadow-sm backdrop-blur-sm'
+        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
+      },
+      'returned_in_stock': { 
+        label: 'تم الإرجاع للمخزن', 
+        icon: Package,
+        className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
       }
     };
     const statusInfo = statusMap[status] || { 
       label: 'تم الإرجاع للمخزن', 
       icon: Package,
-      className: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)] shadow-sm backdrop-blur-sm'
+      className: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)] shadow-sm backdrop-blur-sm'
     };
     const StatusIcon = statusInfo.icon;
     return (
@@ -179,18 +184,24 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       
                       <div className="h-3 w-px bg-border/50" />
                       
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-gradient-to-r">
-                        {getDeliveryType(order) === 'شركة توصيل' ? (
-                          <>
-                            <Truck className="w-3 h-3 text-blue-600" />
-                            <span className="text-xs font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">شركة توصيل</span>
-                          </>
-                        ) : (
-                          <>
-                            <Home className="w-3 h-3 text-green-600" />
-                            <span className="text-xs font-medium text-green-700 bg-green-50 px-1.5 py-0.5 rounded border border-green-200">محلي</span>
-                          </>
-                        )}
+                      <div className="flex items-center gap-1.5">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-xs font-medium transition-all ${
+                          order.delivery_partner === 'محلي' || !order.delivery_partner 
+                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200' 
+                            : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200'
+                        }`}>
+                          {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
+                            <>
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                              <span>محلي</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                              <span>{order.delivery_partner.length > 8 ? order.delivery_partner.substring(0, 8) + '...' : order.delivery_partner}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="h-3 w-px bg-border/50" />

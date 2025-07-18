@@ -46,6 +46,7 @@
     --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم - تم التسليم */
     --status-returned: 0 84% 60%;        /* أحمر للراجعة - راجع */
     --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي - تم الإرجاع */
+    --status-warehouse-return: 0 62% 30%; /* أحمر داكن جداً لتم الإرجاع للمخزن */
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */

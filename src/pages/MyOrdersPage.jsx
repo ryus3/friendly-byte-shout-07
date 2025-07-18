@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
+import ProfitSummaryCard from '@/components/profits/ProfitSummaryCard';
 import Loader from '@/components/ui/loader';
 import { ShoppingCart, Package, RefreshCw, Loader2, Search, Printer, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -227,19 +228,33 @@ const MyOrdersPage = () => {
           </CardContent>
         </Card>
 
-        {loading ? <Loader /> : (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                 <OrderList 
-                    orders={filteredOrders}
-                    onViewOrder={handleViewOrder}
-                    onUpdateStatus={handleUpdateStatus}
-                    canEditStatus={canEditStatus}
-                    isReturnedList={false}
-                    selectedReturnedOrders={selectedOrdersForDeletion}
-                    onSelectReturnedOrder={setSelectedOrdersForDeletion}
-                 />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3">
+            {loading ? <Loader /> : (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+                <OrderList 
+                  orders={filteredOrders}
+                  onViewOrder={handleViewOrder}
+                  onUpdateStatus={handleUpdateStatus}
+                  canEditStatus={canEditStatus}
+                  isReturnedList={false}
+                  selectedReturnedOrders={selectedOrdersForDeletion}
+                  onSelectReturnedOrder={setSelectedOrdersForDeletion}
+                />
+              </motion.div>
+            )}
+          </div>
+          
+          <div className="lg:col-span-1">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              transition={{ duration: 0.4, delay: 0.2 }}
+            >
+              <ProfitSummaryCard />
             </motion.div>
-        )}
+          </div>
+        </div>
       </div>
 
       <OrderDetailsDialog

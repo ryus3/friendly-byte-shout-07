@@ -76,22 +76,23 @@ const OrderCard = ({
       'return_received': { 
         label: 'تم الإرجاع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]'
+        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
+      },
+      'returned_in_stock': { 
+        label: 'تم الإرجاع للمخزن', 
+        icon: PackageCheck,
+        color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
       }
     };
     return configs[status] || { 
       label: 'تم الإرجاع للمخزن', 
       icon: PackageCheck,
-      color: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]'
+      color: 'bg-[hsl(var(--status-warehouse-return)_/_0.2)] text-[hsl(var(--status-warehouse-return))] border-[hsl(var(--status-warehouse-return)_/_0.3)]'
     };
   };
 
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
-  
-  // تحديد نوع التوصيل
-  const isLocalOrder = order.delivery_partner === 'محلي';
-  const deliveryBadgeColor = isLocalOrder ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700';
 
   // التحقق من الصلاحيات - يمكن التعديل/الحذف فقط في حالة "قيد التجهيز"
   const canEdit = order.status === 'pending';
@@ -135,15 +136,34 @@ const OrderCard = ({
                   className="mt-1"
                 />
                 <div className="flex flex-col space-y-1">
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                    <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
-                    <Badge className={`${deliveryBadgeColor} ml-2`}>
-                      {order.delivery_partner}
-                    </Badge>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex flex-col gap-1">
+                      <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        رقم الطلب: {order.order_number}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* عنصر التوصيل المحدث */}
+                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-all ${
+                        order.delivery_partner === 'محلي' || !order.delivery_partner 
+                          ? 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 border-green-200 shadow-sm' 
+                          : 'bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700 border-blue-200 shadow-sm'
+                      }`}>
+                        {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span>توصيل محلي</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                            <span>{order.delivery_partner}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    رقم الطلب: {order.order_number}
-                  </p>
                 </div>
               </div>
               
