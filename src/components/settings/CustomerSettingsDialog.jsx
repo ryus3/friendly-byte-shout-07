@@ -84,7 +84,7 @@ const CustomerSettingsDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-md mx-auto sm:max-w-[600px] max-h-[90vh] overflow-y-auto"  dir="rtl">
+      <DialogContent className="w-[95vw] max-w-4xl h-[95vh] max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg">

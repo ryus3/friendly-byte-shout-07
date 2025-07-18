@@ -29,26 +29,28 @@ const SidebarContent = ({ onClose }) => {
   const navigate = useNavigate();
 
   const menuItems = [
-    { path: '/', icon: Home, label: 'لوحة التحكم', permission: 'view_dashboard', color: 'text-blue-500' },
-    { path: '/quick-order', icon: Zap, label: 'طلب سريع', permission: 'create_order', color: 'text-yellow-500' },
-    { path: '/my-orders', icon: ShoppingCart, label: 'طلباتي', permission: 'view_orders', color: 'text-green-500' },
-    { path: '/employee-follow-up', icon: Users, label: 'متابعة الموظفين', permission: 'view_all_orders', color: 'text-purple-500' },
-    { path: '/products', icon: Package, label: 'المنتجات', permission: 'view_products', color: 'text-orange-500' },
-    { path: '/manage-products', icon: PackagePlus, label: 'ادارة المنتجات', permission: 'manage_products', color: 'text-cyan-500' },
-    { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', permission: 'view_inventory', color: 'text-pink-500' },
-    { path: '/purchases', icon: TrendingUp, label: 'المشتريات', permission: 'view_purchases', color: 'text-emerald-500' },
-    { path: '/accounting', icon: DollarSign, label: 'المركز المالي', permission: 'view_accounting', color: 'text-indigo-500' },
-    { path: '/notifications', icon: Bell, label: 'الإشعارات', permission: 'view_notifications', color: 'text-red-500' },
-    { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
+    { path: '/', icon: Home, label: 'لوحة التحكم', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-blue-500' },
+    { path: '/quick-order', icon: Zap, label: 'طلب سريع', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'cashier'], color: 'text-yellow-500' },
+    { path: '/my-orders', icon: ShoppingCart, label: 'طلباتي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-green-500' },
+    { path: '/employee-follow-up', icon: Users, label: 'متابعة الموظفين', roles: ['super_admin', 'admin'], color: 'text-purple-500' },
+    { path: '/products', icon: Package, label: 'المنتجات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-orange-500' },
+    { path: '/manage-products', icon: PackagePlus, label: 'ادارة المنتجات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-cyan-500' },
+    { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
+    { path: '/purchases', icon: TrendingUp, label: 'المشتريات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-emerald-500' },
+    { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
+    { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500' },
+    { path: '/settings', icon: Settings, label: 'الاعدادات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-gray-500' }
   ];
   
-  // فلترة القائمة حسب الصلاحيات
+  // فلترة القائمة حسب الأدوار
   const visibleMenuItems = useMemo(() => {
+    if (!user?.roles || user.roles.length === 0) return [];
+    
     return menuItems.filter(item => {
-      // السماح بعرض العنصر إذا كان لدى المستخدم الصلاحية
-      return hasPermission(item.permission);
+      // التحقق من وجود أي دور مسموح في أدوار المستخدم
+      return item.roles.some(role => user.roles.includes(role));
     });
-  }, [menuItems, hasPermission]);
+  }, [menuItems, user?.roles]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
@@ -72,7 +74,7 @@ const SidebarContent = ({ onClose }) => {
   const getRoleDisplayName = () => {
     if (!user?.roles || user.roles.length === 0) return 'مستخدم';
     
-    // الحصول على أعلى دور (أقل hierarchy_level)
+    // الحصول على أعلى دور حسب الأولوية
     const roleMapping = {
       'super_admin': 'المدير العام',
       'admin': 'مدير', 
@@ -82,8 +84,16 @@ const SidebarContent = ({ onClose }) => {
       'cashier': 'أمين صندوق'
     };
     
-    const highestRole = user.roles[0]; // أول دور هو الأعلى
-    return roleMapping[highestRole] || 'موظف';
+    // ترتيب الأولوية للأدوار
+    const rolePriority = ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'];
+    
+    for (const role of rolePriority) {
+      if (user.roles.includes(role)) {
+        return roleMapping[role] || 'موظف';
+      }
+    }
+    
+    return 'موظف';
   };
 
   return (

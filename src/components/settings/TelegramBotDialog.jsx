@@ -165,11 +165,11 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5" />
-                رموز الموظفين
+                <MessageCircle className="w-5 h-5 text-blue-500" />
+                رموز الموظفين للبوت
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {canViewAllData ? 'كل موظف له رمز بسيط مرتبط بحسابه' : 'رمزك الشخصي للاتصال بالبوت'}
+                {canViewAllData ? 'كل موظف له رمز للاتصال بالبوت @Ryusiq_bot' : 'رمزك الشخصي للاتصال بالبوت'}
               </p>
             </CardHeader>
             <CardContent>
