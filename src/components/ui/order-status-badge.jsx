@@ -34,8 +34,13 @@ const ORDER_STATUS_CONFIG = {
     variant: 'returned',
     className: 'status-badge status-returned'
   },
+  return_received: {
+    label: 'تم الإرجاع للمخزن',
+    variant: 'return_received',
+    className: 'status-badge status-return-received'
+  },
   cancelled: {
-    label: 'تم الإرجاع',
+    label: 'ملغي',
     variant: 'cancelled',
     className: 'status-badge status-cancelled'
   }

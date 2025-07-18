@@ -122,19 +122,19 @@ const OrderCard = ({
                   className="mt-1"
                 />
                 <div className="flex flex-col space-y-1">
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                    <h3 className="font-semibold text-lg">{order.tracking_number}</h3>
-                    <Badge className="bg-green-100 text-green-800 border-green-200" variant="outline">
-                      {order.delivery_partner}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="font-semibold text-base">{order.tracking_number}</h3>
+                  <p className="text-xs text-muted-foreground">
                     رقم الطلب: {order.order_number}
                   </p>
                 </div>
               </div>
               
-              <OrderStatusBadge status={order.status} size="sm" />
+              <div className="flex flex-col items-end space-y-1">
+                <OrderStatusBadge status={order.status} size="sm" />
+                <span className={`delivery-badge ${order.delivery_partner === 'محلي' ? 'delivery-local' : 'delivery-company'}`}>
+                  {order.delivery_partner}
+                </span>
+              </div>
             </div>
 
             {/* معلومات الزبون */}
@@ -144,15 +144,9 @@ const OrderCard = ({
               <p className="text-sm text-muted-foreground">{order.customer_address}</p>
             </div>
 
-            {/* المبالغ */}
-            <div className="flex justify-between items-center pt-2 border-t">
-              <div className="text-sm text-muted-foreground">
-                المجموع: {order.total_amount?.toLocaleString()} د.ع
-                {order.delivery_fee > 0 && (
-                  <span className="mx-1">+ توصيل: {order.delivery_fee?.toLocaleString()}</span>
-                )}
-              </div>
-              <div className="font-semibold text-lg">
+            {/* السعر الإجمالي */}
+            <div className="flex justify-center">
+              <div className="font-semibold text-lg text-center">
                 {order.final_amount?.toLocaleString()} د.ع
               </div>
             </div>
@@ -283,13 +277,14 @@ const OrderCard = ({
             </div>
 
             {/* تاريخ الإنشاء */}
-            <div className="text-xs text-muted-foreground pt-1 border-t">
-              تم الإنشاء: {new Date(order.created_at).toLocaleDateString('ar-IQ', {
+            <div className="text-xs text-muted-foreground text-center">
+              {new Date(order.created_at).toLocaleDateString('en-GB', {
                 year: 'numeric',
-                month: 'long',
-                day: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: false
               })}
             </div>
           </div>
