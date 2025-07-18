@@ -227,15 +227,15 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-none md:max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
+      <DialogContent className="w-[95vw] max-w-none md:max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6 bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 border-indigo-600/20">
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-lg sm:text-xl">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-primary to-primary/80 rounded-xl flex items-center justify-center shrink-0">
-              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="text-right">
-              <h3 className="font-bold text-foreground">إدارة بوت التليغرام الذكي</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground font-normal">
+              <h3 className="font-bold text-white">إدارة بوت التليغرام الذكي</h3>
+              <p className="text-xs sm:text-sm text-indigo-200 font-normal">
                 {canViewAllData ? 'إدارة كاملة لرموز جميع الموظفين' : 'عرض رمزك الشخصي'}
               </p>
             </div>
@@ -244,19 +244,19 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
 
         <div className="space-y-6">
           {/* معلومات البوت */}
-          <Card className="bg-accent/50 border-border">
+          <Card className="bg-gradient-to-r from-indigo-900/80 to-purple-900/80 border-indigo-600/30 backdrop-blur-sm">
             <CardContent className="p-4 sm:p-6">
               <div className="text-center space-y-2 sm:space-y-3">
-                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center mx-auto">
-                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-foreground">البوت نشط ويستقبل الطلبات تلقائياً</h3>
+                <h3 className="text-base sm:text-lg font-bold text-white">البوت نشط ويستقبل الطلبات تلقائياً</h3>
                 <div className="flex flex-col items-center gap-2">
-                  <div className="flex items-center gap-2 text-foreground">
+                  <div className="flex items-center gap-2 text-white">
                     <span>🤖</span>
                     <span className="font-semibold text-sm sm:text-base">@Ryusiq_bot</span>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge className="bg-gradient-to-r from-indigo-500/90 to-purple-600/90 text-white border-0 text-xs">
                     نشط ومتصل
                   </Badge>
                 </div>
@@ -265,15 +265,15 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
           </Card>
 
           {/* إدارة الرموز */}
-          <Card>
+          <Card className="bg-gradient-to-r from-slate-800/80 to-indigo-800/80 border-indigo-600/30 backdrop-blur-sm">
             <CardHeader className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
-                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  <CardTitle className="flex items-center gap-2 text-sm sm:text-base text-white">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400" />
                     رموز الموظفين
                   </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm text-indigo-200 mt-1">
                     {canViewAllData ? 'إدارة رموز جميع الموظفين' : 'رمزك الشخصي للاتصال بالبوت'}
                   </p>
                 </div>
@@ -283,7 +283,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                       variant="outline" 
                       size="sm"
                       onClick={() => fetchEmployeeCodes()}
-                      className="flex-1 sm:flex-none"
+                      className="flex-1 sm:flex-none bg-slate-700/50 border-indigo-500/50 text-white hover:bg-slate-600/60"
                     >
                       <RefreshCw className="w-4 h-4 ml-2" />
                       تحديث
@@ -291,7 +291,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                     <Button 
                       onClick={() => setShowAddForm(true)}
                       size="sm"
-                      className="flex-1 sm:flex-none"
+                      className="flex-1 sm:flex-none bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                     >
                       <Plus className="w-4 h-4 ml-2" />
                       إضافة رمز
@@ -366,28 +366,31 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                     
                     return (
                       <div key={employeeCode.id} className={`p-3 sm:p-4 rounded-lg border transition-colors ${
-                        isCurrentUser ? 'bg-accent/50 border-primary/20' : 'bg-card border-border'
+                        isCurrentUser ? 'bg-gradient-to-r from-indigo-800/60 to-purple-800/60 border-indigo-500/40' : 'bg-slate-800/60 border-slate-600/40'
                       }`}>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                           <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-primary-foreground font-bold shrink-0 ${
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-white font-bold shrink-0 shadow-lg ${
                               isCurrentUser 
-                                ? 'bg-gradient-to-r from-primary to-primary/80' 
-                                : 'bg-gradient-to-r from-secondary to-secondary/80'
+                                ? 'bg-gradient-to-r from-indigo-500 to-purple-600' 
+                                : 'bg-gradient-to-r from-slate-600 to-slate-700'
                             }`}>
                               {profile?.full_name?.charAt(0) || 'U'}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-sm sm:text-lg text-foreground truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
+                              <p className="font-semibold text-sm sm:text-lg text-white truncate">{profile?.full_name || 'مستخدم غير معروف'}</p>
                               <div className="flex items-center gap-2 mt-1 flex-wrap">
                                 {isCurrentUser && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge className="bg-gradient-to-r from-indigo-600/80 to-purple-600/80 text-white border-0 text-xs">
                                     {canViewAllData ? 'أنت (مدير)' : 'أنت'}
                                   </Badge>
                                 )}
                                 <Badge 
-                                  variant={isLinked ? "default" : "outline"} 
-                                  className="text-xs"
+                                  className={`text-xs ${
+                                    isLinked 
+                                      ? 'bg-green-600/80 text-white border-0' 
+                                      : 'bg-slate-600/60 text-gray-200 border-slate-500/50'
+                                  }`}
                                 >
                                   {isLinked ? (
                                     <>
@@ -440,21 +443,20 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                               <>
                                 <div className="text-center w-full sm:w-auto">
                                   <Badge 
-                                    variant="outline" 
-                                    className={`font-mono text-sm sm:text-lg px-3 sm:px-4 py-2 w-full sm:w-auto justify-center ${
+                                    className={`font-mono text-sm sm:text-lg px-3 sm:px-4 py-2 w-full sm:w-auto justify-center border-0 shadow-lg ${
                                       isCurrentUser
-                                        ? 'bg-blue-100 text-blue-700 border-blue-300' 
-                                        : 'bg-green-100 text-green-700 border-green-300'
+                                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white' 
+                                        : 'bg-gradient-to-r from-slate-600 to-slate-700 text-white'
                                     }`}
                                   >
                                     {employeeCode.employee_code}
                                   </Badge>
-                                  <p className="text-xs text-muted-foreground mt-1">الرمز</p>
+                                  <p className="text-xs text-indigo-200 mt-1">الرمز</p>
                                 </div>
                                 <div className="flex gap-2 justify-center sm:justify-start">
                                   <Button
                                     size="sm"
-                                    variant="outline"
+                                    className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
                                     onClick={() => copyToClipboard(employeeCode.employee_code)}
                                   >
                                     <Copy className="w-4 h-4" />
@@ -463,7 +465,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                     <>
                                       <Button
                                         size="sm"
-                                        variant="outline"
+                                        className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
                                         onClick={() => {
                                           setEditingCode(employeeCode.id);
                                           setNewCodeValue(employeeCode.employee_code);
@@ -473,9 +475,8 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                       </Button>
                                       <Button
                                         size="sm"
-                                        variant="outline"
                                         onClick={() => deleteEmployeeCode(employeeCode.id)}
-                                        className="text-red-500 hover:text-red-700"
+                                        className="bg-red-600/60 border-red-500/50 text-white hover:bg-red-600/80"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </Button>
@@ -510,10 +511,10 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
           </Card>
 
           {/* تعليمات الاستخدام */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <Card className="bg-gradient-to-r from-slate-800/60 to-indigo-800/60 border-indigo-600/30 backdrop-blur-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-700">
-                <Smartphone className="w-5 h-5" />
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Smartphone className="w-5 h-5 text-indigo-400" />
                 كيفية الربط والاستخدام
               </CardTitle>
             </CardHeader>
@@ -521,22 +522,22 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
-                    <p className="text-sm text-blue-700">ابحث عن البوت في التليغرام: <span className="font-mono">@Ryusiq_bot</span></p>
+                    <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">1</div>
+                    <p className="text-sm text-indigo-200">ابحث عن البوت في التليغرام: <span className="font-mono text-white">@Ryusiq_bot</span></p>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
-                    <p className="text-sm text-blue-700">اضغط على <span className="font-semibold">Start</span> وأرسل رمزك الشخصي</p>
+                    <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">2</div>
+                    <p className="text-sm text-indigo-200">اضغط على <span className="font-semibold text-white">Start</span> وأرسل رمزك الشخصي</p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
-                    <p className="text-sm text-blue-700">ستتلقى رسالة تأكيد ربط الحساب</p>
+                    <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">3</div>
+                    <p className="text-sm text-indigo-200">ستتلقى رسالة تأكيد ربط الحساب</p>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
-                    <p className="text-sm text-blue-700">يمكنك الآن إنشاء طلبات وتلقي إشعارات</p>
+                    <div className="w-6 h-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg">4</div>
+                    <p className="text-sm text-indigo-200">يمكنك الآن إنشاء طلبات وتلقي إشعارات</p>
                   </div>
                 </div>
               </div>
@@ -544,8 +545,11 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
           </Card>
         </div>
 
-        <div className="flex justify-end pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <div className="flex justify-end pt-4 border-t border-indigo-600/30">
+          <Button 
+            className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
+            onClick={() => onOpenChange(false)}
+          >
             إغلاق
           </Button>
         </div>
