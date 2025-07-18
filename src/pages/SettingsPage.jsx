@@ -386,9 +386,9 @@ const SettingsPage = () => {
             </>
           )}
         </div>
-      </div>
+      </>
 
-      <ProfileSecurityDialog 
+      <ProfileSecurityDialog
         open={isEditProfileOpen} 
         onOpenChange={setIsEditProfileOpen} 
       />
