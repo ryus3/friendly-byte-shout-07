@@ -451,7 +451,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                   </Badge>
                                   <p className="text-xs text-muted-foreground mt-1">الرمز</p>
                                 </div>
-                                <div className="flex gap-1 sm:gap-2">
+                                <div className="flex gap-2 justify-center sm:justify-start">
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -485,8 +485,8 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                               </>
                             )}
                           </div>
-                        </div>
-                      </div>
+                         </div>
+                       </div>
                     );
                   })
                 ) : (
