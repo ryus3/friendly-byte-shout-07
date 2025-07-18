@@ -535,6 +535,11 @@ export const UnifiedAuthProvider = ({ children }) => {
       if (!products) return [];
       if (isAdmin) return products;
 
+      // إذا لم تكن هناك صلاحيات محددة، اعرض جميع المنتجات
+      if (!productPermissions || Object.keys(productPermissions).length === 0) {
+        return products;
+      }
+
       return products.filter(product => {
         // فحص التصنيفات عبر product_categories
         const categoryPerm = productPermissions.category;

@@ -15,8 +15,18 @@ import {
   PackageX, Volume2, VolumeX, Clock, AlertTriangle, 
   CheckCircle, BellOff, Settings, RefreshCw 
 } from 'lucide-react';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 
 const StockNotificationSettings = ({ open, onOpenChange }) => {
+  const { isAdmin } = useAuth();
+  const { canManageSettings } = usePermissionBasedData();
+  
+  // منع الوصول للموظفين
+  if (!isAdmin && !canManageSettings) {
+    return null;
+  }
+  
   const [settings, setSettings] = useLocalStorage('inventorySettings', {
     enableLowStockNotifications: true,
     enableOutOfStockNotifications: true,

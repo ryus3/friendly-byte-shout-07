@@ -436,19 +436,19 @@ const Dashboard = () => {
         { 
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
-        {
+        canViewAllData && {
             key: 'netProfit', title: 'صافي الارباح', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         {
             key: 'pendingProfit', 
-            title: 'الأرباح المعلقة', 
+            title: canViewAllData ? 'الأرباح المعلقة' : 'أرباحي المعلقة', 
             value: canViewAllData ? dashboardData.pendingProfit : employeeProfitsData.personalPendingProfit, 
             icon: Hourglass, 
             colors: ['yellow-500', 'amber-500'], 
             format: 'currency', 
             currentPeriod: periods.pendingProfit, 
             onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), 
-            onClick: canViewAllData ? () => setIsPendingProfitsOpen(true) : () => navigate('/my-profits?status=pending')
+            onClick: canViewAllData ? () => setIsPendingProfitsOpen(true) : () => navigate('/profits-summary?status=pending')
         },
         {
             key: 'deliveredSales', 
