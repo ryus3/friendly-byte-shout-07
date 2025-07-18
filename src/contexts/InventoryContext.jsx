@@ -59,7 +59,8 @@ export const InventoryProvider = ({ children }) => {
 
   // Using custom hooks - مع تطبيق فلترة الصلاحيات
   const { products: allProducts, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings, addNotification, user);
-  const filteredProducts = useFilteredProducts(allProducts);
+  // Only apply filtering if auth context is available
+  const filteredProducts = user ? useFilteredProducts(allProducts) : [];
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   
   // الطلبات - بدون hooks مشكوك بها

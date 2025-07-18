@@ -6,27 +6,15 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
-  // استدعاء hooks دائماً في البداية
-  let authContext = null;
-  let hasError = false;
-  
-  try {
-    authContext = useAuth();
-  } catch (error) {
-    console.error('useFilteredProducts: Error accessing AuthContext:', error);
-    hasError = true;
-  }
-  
+  // استدعاء hooks دائماً في البداية - مع التحقق من وجود React context
+  const authContext = useAuth();
   const { user, productPermissions, isAdmin } = authContext || {};
   
   return useMemo(() => {
-    // التحقق من الأخطاء
-    if (hasError || !authContext) {
-      console.error('useFilteredProducts: AuthContext is null or error occurred');
+    // التحقق من الأخطاء والبيانات المطلوبة
+    if (!authContext || !products || !Array.isArray(products)) {
       return [];
     }
-    
-    if (!products || !Array.isArray(products)) return [];
     
     console.log('🔍 useFilteredProducts Debug:', {
       products: products.length,
@@ -115,7 +103,7 @@ export const useFilteredProducts = (products) => {
     });
     
     return filtered;
-  }, [products, isAdmin, productPermissions, hasError, authContext]);
+  }, [products, isAdmin, productPermissions, authContext]);
 };
 
 /**
@@ -123,26 +111,14 @@ export const useFilteredProducts = (products) => {
  */
 export const useFilteredVariants = (variants) => {
   // استدعاء hooks دائماً في البداية
-  let authContext = null;
-  let hasError = false;
-  
-  try {
-    authContext = useAuth();
-  } catch (error) {
-    console.error('useFilteredVariants: Error accessing AuthContext:', error);
-    hasError = true;
-  }
-  
+  const authContext = useAuth();
   const { isAdmin, productPermissions } = authContext || {};
 
   return useMemo(() => {
-    // التحقق من الأخطاء
-    if (hasError || !authContext) {
-      console.error('useFilteredVariants: AuthContext is null or error occurred');
+    // التحقق من الأخطاء والبيانات المطلوبة
+    if (!authContext || !variants || !Array.isArray(variants)) {
       return [];
     }
-    
-    if (!variants || !Array.isArray(variants)) return [];
     
     // المديرون يرون كل المتغيرات
     if (isAdmin) return variants;
@@ -172,7 +148,7 @@ export const useFilteredVariants = (variants) => {
 
       return true;
     });
-  }, [variants, isAdmin, productPermissions, hasError, authContext]);
+  }, [variants, isAdmin, productPermissions, authContext]);
 };
 
 export default useFilteredProducts;
