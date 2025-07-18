@@ -528,28 +528,45 @@ export const UnifiedAuthProvider = ({ children }) => {
       if (!products) return [];
       if (isAdmin) return products;
 
+      console.log('فلترة المنتجات - عدد المنتجات:', products.length);
+      console.log('صلاحيات المنتجات:', productPermissions);
+
       return products.filter(product => {
         // فحص التصنيفات عبر product_categories - أولوية 1
         const categoryPerm = productPermissions.category;
-        if (categoryPerm && !categoryPerm.has_full_access) {
+        if (categoryPerm && !categoryPerm.has_full_access && categoryPerm.allowed_items.length > 0) {
           if (product.product_categories && product.product_categories.length > 0) {
             const hasAllowedCategory = product.product_categories.some(pc => 
               categoryPerm.allowed_items.includes(pc.category_id)
             );
-            if (!hasAllowedCategory) return false;
+            if (!hasAllowedCategory) {
+              console.log('منتج مرفوض - تصنيف:', product.name, 'الصلاحيات:', categoryPerm.allowed_items, 'تصنيفات المنتج:', product.product_categories);
+              return false;
+            }
+          } else {
+            console.log('منتج مرفوض - لا يوجد تصنيفات للمنتج:', product.name);
+            return false;
           }
         }
 
         // فحص الأقسام عبر product_departments - أولوية 2
         const departmentPerm = productPermissions.department;
-        if (departmentPerm && !departmentPerm.has_full_access) {
+        if (departmentPerm && !departmentPerm.has_full_access && departmentPerm.allowed_items.length > 0) {
           if (product.product_departments && product.product_departments.length > 0) {
             const hasAllowedDepartment = product.product_departments.some(pd => 
               departmentPerm.allowed_items.includes(pd.department_id)
             );
-            if (!hasAllowedDepartment) return false;
+            if (!hasAllowedDepartment) {
+              console.log('منتج مرفوض - قسم:', product.name, 'الصلاحيات:', departmentPerm.allowed_items, 'أقسام المنتج:', product.product_departments);
+              return false;
+            }
+          } else {
+            console.log('منتج مرفوض - لا يوجد أقسام للمنتج:', product.name);
+            return false;
           }
         }
+
+        console.log('منتج مقبول:', product.name);
 
         // فحص المواسم عبر product_seasons_occasions - أولوية 3
         const seasonPerm = productPermissions.season_occasion;
