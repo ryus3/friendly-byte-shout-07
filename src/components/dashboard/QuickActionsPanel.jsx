@@ -14,10 +14,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const QuickActionsPanel = ({ userPermissions, navigate }) => {
-  const { user } = useAuth();
   const quickActions = [
     {
       title: "طلب جديد",
@@ -65,7 +63,7 @@ const QuickActionsPanel = ({ userPermissions, navigate }) => {
       icon: Receipt,
       color: "bg-emerald-500 hover:bg-emerald-600",
       action: () => navigate('/profits'),
-      permission: userPermissions.canRequestSettlement && user?.role !== 'super_admin' && user?.role !== 'manager'
+      permission: userPermissions.canRequestSettlement
     },
     {
       title: "إدارة الموظفين",
