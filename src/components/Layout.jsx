@@ -44,8 +44,8 @@ const SidebarContent = ({ onClose }) => {
   
   // فلترة العناصر بناءً على الصلاحيات فوراً بدون تأخير
   const visibleMenuItems = useMemo(() => {
-    if (!hasPermission) return menuItems; // إذا لم تكن الصلاحيات محملة بعد، أظهر كل شيء
-    return menuItems.filter(item => hasPermission(item.permission));
+    // عرض جميع العناصر فوراً، ثم فلترة لاحقاً حسب الصلاحيات
+    return menuItems.filter(item => !hasPermission || hasPermission(item.permission));
   }, [menuItems, hasPermission]);
 
   const handleNavigation = (path) => {
@@ -103,7 +103,7 @@ const SidebarContent = ({ onClose }) => {
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
+              <h3 className="font-semibold text-foreground">{user?.full_name || 'المستخدم'}</h3>
               <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.activeRoles || user?.roles || [])}</p>
             </div>
           </div>

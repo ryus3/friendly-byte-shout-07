@@ -57,7 +57,7 @@ export const UnifiedAuthProvider = ({ children }) => {
         ...supabaseUser, 
         ...profile,
         roles: activeRoles,
-        activeRoles
+        activeRoles: activeRoles // إضافة هذا لحل مشكلة عرض الأدوار
       };
     } catch (error) {
       console.error('Profile fetch failed:', error);
@@ -103,7 +103,8 @@ export const UnifiedAuthProvider = ({ children }) => {
         
         return {
           ...user,
-          roles: activeRoles
+          roles: activeRoles,
+          activeRoles: activeRoles // إضافة هذا أيضاً
         };
       });
       
