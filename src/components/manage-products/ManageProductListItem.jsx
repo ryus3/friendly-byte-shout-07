@@ -4,10 +4,11 @@ import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { Star } from 'lucide-react';
+import { Star, Hash } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { motion } from 'framer-motion';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import Barcode from 'react-barcode';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
   const { updateProduct, settings } = useInventory();
@@ -76,6 +77,12 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
                 {(price || 0).toLocaleString()} د.ع
               </span>
             </div>
+            {product.barcode && (
+              <div className="flex items-center gap-2 mt-2">
+                <Hash className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-mono">{product.barcode}</span>
+              </div>
+            )}
           </div>
         </div>
         

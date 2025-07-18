@@ -246,7 +246,7 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
                           preview = typeof initialImage === 'string' ? initialImage : URL.createObjectURL(initialImage);
                         }
                         return (
-                          <SortableColorCard
+                           <SortableColorCard
                             key={color.id}
                             color={color}
                             allSizesForType={allSizesForType}
@@ -258,6 +258,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
                             handleImageRemove={() => handleColorImageRemove(color.id)}
                             initialImage={preview}
                             isEditMode={true}
+                            showInventoryData={true}
+                            productName={productInfo.name}
                           />
                         );
                       })}

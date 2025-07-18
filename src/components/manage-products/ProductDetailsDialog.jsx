@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
+import Barcode from 'react-barcode';
 
 const DetailItem = ({ icon: Icon, label, value, isBadge = false }) => (
   <div className="flex items-start gap-4">
@@ -144,10 +145,26 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
               </div>
             </div>
 
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t space-y-4">
               <p className="text-2xl font-bold text-primary">
                 {selectedVariant ? ((selectedVariant.price || 0) * quantity).toLocaleString() : (product.base_price || product.price || 0).toLocaleString()} د.ع
               </p>
+              
+              {/* عرض الباركود */}
+              {(selectedVariant?.barcode || product.barcode) && (
+                <div className="space-y-2">
+                  <h5 className="font-medium text-sm">الباركود</h5>
+                  <div className="bg-white p-2 rounded border">
+                    <Barcode 
+                      value={selectedVariant?.barcode || product.barcode} 
+                      width={1.5} 
+                      height={40} 
+                      fontSize={12}
+                      displayValue={true}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

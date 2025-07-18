@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
     import { Button } from '@/components/ui/button';
-    import { Edit, Trash2, Printer } from 'lucide-react';
+    import { Edit, Trash2, Printer, Hash } from 'lucide-react';
     import { motion } from 'framer-motion';
     import { useInventory } from '@/contexts/InventoryContext';
     import { cn } from '@/lib/utils';
@@ -53,6 +53,12 @@ import React, { useMemo } from 'react';
             <div className="p-2 rounded" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}>
               <h3 className="font-bold text-white text-lg truncate">{product.name}</h3>
               <p className="text-sm font-semibold text-white">{(price || 0).toLocaleString()} د.ع</p>
+              {product.barcode && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Hash className="w-3 h-3 text-white/70" />
+                  <span className="text-xs text-white/70 font-mono">{product.barcode}</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
