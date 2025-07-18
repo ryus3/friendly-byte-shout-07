@@ -4,7 +4,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
-export const useProducts = (initialProducts, settings, addNotification, user) => {
+export const useProducts = (initialProducts, settings, addNotification, user, departments = [], allColors = [], sizes = []) => {
   const [products, setProducts] = useState(initialProducts);
 
   const uploadImage = async (file, bucket, path) => {
@@ -153,18 +153,26 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
               imageUrl = imageFiles.colorImages[variant.colorId];
           }
 
-          // توليد باركود فريد لكل متغير باستخدام المكتبة الجديدة
+          // الحصول على أسماء القسم واللون والقياس لتوليد باركود ذكي
+          const departmentName = productData.selectedDepartments?.length > 0 ? 
+            departments.find(d => d.id === productData.selectedDepartments[0])?.name || '' : '';
+          const colorName = allColors.find(c => c.id === variant.colorId)?.name || 'DEFAULT';
+          const sizeName = sizes.find(s => s.id === variant.sizeId)?.name || 'DEFAULT';
+          
+          // توليد باركود ذكي حسب نوع المنتج
           const uniqueBarcode = generateUniqueBarcode(
             productData.name,
-            variant.color || 'DEFAULT',
-            variant.size || 'DEFAULT',
-            newProduct.id
+            colorName,
+            sizeName,
+            newProduct.id,
+            departmentName
           );
           
-          console.log('🏷️ توليد باركود للمتغير:', {
+          console.log('🏷️ توليد باركود ذكي للمتغير:', {
             productName: productData.name,
-            color: variant.color,
-            size: variant.size,
+            department: departmentName,
+            color: colorName,
+            size: sizeName,
             barcode: uniqueBarcode,
             colorId: variant.colorId,
             sizeId: variant.sizeId

@@ -58,8 +58,12 @@ export const InventoryProvider = ({ children }) => {
     Promise.all(stockChanges).catch(err => console.error("Stock update failed:", err));
   }
 
+  // البيانات المطلوبة لتوليد الباركود
+  const [allColors, setAllColors] = useState([]);
+  const [allSizes, setAllSizes] = useState([]);
+
   // Using custom hooks - بدون فلترة هنا (ستتم في الصفحات)
-  const { products: allProducts, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings, addNotification, user);
+  const { products: allProducts, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings, addNotification, user, departments, allColors, allSizes);
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   
   // الطلبات - بدون hooks مشكوك بها
@@ -210,7 +214,7 @@ export const InventoryProvider = ({ children }) => {
     }
     setLoading(true);
     try {
-      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes, profitRulesRes, categoriesRes, departmentsRes] = await Promise.all([
+      const [productsRes, ordersRes, purchasesRes, settingsRes, aiOrdersRes, profitRulesRes, categoriesRes, departmentsRes, colorsRes, sizesRes] = await Promise.all([
         supabase.from('products').select(`
           *,
           product_variants (
@@ -280,7 +284,9 @@ export const InventoryProvider = ({ children }) => {
         supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('employee_profit_rules').select('*'),
         supabase.from('categories').select('*').order('name'),
-        supabase.from('departments').select('*').order('name')
+        supabase.from('departments').select('*').order('name'),
+        supabase.from('colors').select('*').order('name'),
+        supabase.from('sizes').select('*').order('display_order')
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -390,12 +396,18 @@ export const InventoryProvider = ({ children }) => {
         setEmployeeProfitRules(rulesByEmployee);
       }
 
-      // تحميل التصنيفات والأقسام
+      // تحميل التصنيفات والأقسام والألوان والأقياس
       if (categoriesRes.data) {
         setCategories(categoriesRes.data);
       }
       if (departmentsRes.data) {
         setDepartments(departmentsRes.data);
+      }
+      if (colorsRes.data) {
+        setAllColors(colorsRes.data);
+      }
+      if (sizesRes.data) {
+        setAllSizes(sizesRes.data);
       }
     } catch (error) {
       console.error("Error fetching initial data:", error);

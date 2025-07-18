@@ -1,62 +1,122 @@
 /**
- * مكتبة مساعدة لإدارة الباركود في النظام
+ * مكتبة شاملة لإدارة الباركود في النظام
+ * تدعم جميع أنواع المنتجات: ملابس، أحذية، فري سايز، مواد عامة
  */
 
 /**
- * توليد باركود فريد للمتغير
- * @param {string} productName - اسم المنتج
- * @param {string} colorName - اسم اللون
- * @param {string} sizeName - اسم الحجم
- * @param {string} productId - معرف المنتج (اختياري)
- * @returns {string} الباركود الفريد
+ * تحديد نوع المنتج بناءً على الخصائص
  */
-export const generateUniqueBarcode = (productName, colorName, sizeName, productId = null) => {
+export const detectProductType = (colorName, sizeName, departmentName = '') => {
+  const dept = (departmentName || '').toLowerCase();
+  const color = (colorName || '').toLowerCase();
+  const size = (sizeName || '').toLowerCase();
+  
+  // فري سايز
+  if (size.includes('فري') || size.includes('free') || size === 'onesize' || size === 'os') {
+    return 'freesize';
+  }
+  
+  // مواد عامة (بدون لون وقياس)
+  if ((!color || color === 'default' || color === 'بدون') && 
+      (!size || size === 'default' || size === 'بدون')) {
+    return 'general';
+  }
+  
+  // أحذية
+  if (dept.includes('حذاء') || dept.includes('أحذية') || dept.includes('shoes') || 
+      size.match(/^\d+(\.\d+)?$/) || // أرقام القياسات
+      ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45'].includes(size)) {
+    return 'shoes';
+  }
+  
+  // ملابس (الافتراضي)
+  return 'clothing';
+};
+
+/**
+ * توليد باركود ذكي حسب نوع المنتج
+ */
+export const generateSmartBarcode = (productName, colorName = 'DEFAULT', sizeName = 'DEFAULT', productId = null, departmentName = '') => {
   try {
-    console.log('🔧 بدء توليد الباركود:', { productName, colorName, sizeName, productId });
+    console.log('🏗️ بدء توليد الباركود الذكي:', { productName, colorName, sizeName, departmentName });
     
-    // تنظيف النصوص وإزالة المسافات والرموز الخاصة
-    const cleanString = (str) => {
-      if (!str || typeof str !== 'string') return 'DEF';
-      // إزالة المسافات والرموز الخاصة والاحتفاظ بالأحرف والأرقام فقط
+    const productType = detectProductType(colorName, sizeName, departmentName);
+    console.log('🎯 نوع المنتج المكتشف:', productType);
+    
+    // تنظيف النصوص
+    const cleanString = (str, maxLength = 3) => {
+      if (!str || typeof str !== 'string' || str.toLowerCase() === 'default' || str.toLowerCase() === 'بدون') return '';
       const cleaned = str.replace(/\s+/g, '').replace(/[^\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9]/g, '');
-      // أخذ أول 3 أحرف أو "DEF" كافتراضي
-      return cleaned.length > 0 ? cleaned.substring(0, 3).toUpperCase() : 'DEF';
+      return cleaned.length > 0 ? cleaned.substring(0, maxLength).toUpperCase() : '';
     };
     
-    // إنشاء أجزاء الباركود
-    const productCode = cleanString(productName) || 'PRD';
-    const colorCode = cleanString(colorName) || 'CLR';  
-    const sizeCode = cleanString(sizeName) || 'SZ';
+    // بناء الباركود حسب النوع
+    let barcode = '';
+    const timestamp = Date.now().toString().slice(-4);
+    const random = Math.random().toString(36).substring(2, 3).toUpperCase();
     
-    console.log('📝 أجزاء الباركود:', { productCode, colorCode, sizeCode });
+    switch (productType) {
+      case 'freesize':
+        // فري سايز: اسم المنتج + لون + FS + وقت
+        barcode = `${cleanString(productName, 4)}${cleanString(colorName, 2)}FS${timestamp}${random}`;
+        break;
+        
+      case 'general':
+        // مواد عامة: اسم المنتج + GEN + وقت + رقم عشوائي أكبر
+        barcode = `${cleanString(productName, 6)}GEN${timestamp}${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
+        break;
+        
+      case 'shoes':
+        // أحذية: اسم المنتج + لون + قياس + SH + وقت
+        barcode = `${cleanString(productName, 3)}${cleanString(colorName, 2)}${cleanString(sizeName, 2)}SH${timestamp}${random}`;
+        break;
+        
+      case 'clothing':
+      default:
+        // ملابس: النمط التقليدي
+        barcode = `${cleanString(productName, 3)}${cleanString(colorName, 2)}${cleanString(sizeName, 2)}CL${timestamp}${random}`;
+        break;
+    }
     
-    // إضافة جزء فريد لضمان عدم التكرار
-    const timestamp = Date.now().toString().slice(-4); // آخر 4 أرقام من الوقت
-    const randomCode = Math.random().toString(36).substring(2, 4).toUpperCase(); // 2 أحرف عشوائية
-    
-    // تكوين الباركود النهائي
-    const barcode = `${productCode}${colorCode}${sizeCode}${timestamp}${randomCode}`;
-    
-    console.log('✅ الباركود المولد:', barcode);
+    // تأمين حد أدنى من الطول والمحتوى
+    if (barcode.length < 8) {
+      const productCode = cleanString(productName, 4) || 'PROD';
+      barcode = `${productCode}${timestamp}${Math.random().toString(36).substring(2, 3).toUpperCase()}`;
+    }
     
     // التأكد من أن الباركود لا يتجاوز 20 حرف
     const finalBarcode = barcode.length > 20 ? barcode.substring(0, 20) : barcode;
     
-    console.log('🎯 الباركود النهائي:', finalBarcode);
+    console.log('✅ الباركود المولد:', {
+      نوع_المنتج: productType,
+      الباركود_النهائي: finalBarcode,
+      الطول: finalBarcode.length
+    });
+    
     return finalBarcode;
   } catch (error) {
-    console.error('❌ خطأ في توليد الباركود:', error);
-    // إرجاع باركود افتراضي في حالة الخطأ
-    const fallbackBarcode = `PRD${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
-    console.log('🆘 باركود احتياطي:', fallbackBarcode);
-    return fallbackBarcode;
+    console.error('❌ خطأ في توليد الباركود الذكي:', error);
+    return generateFallbackBarcode(productName);
   }
 };
 
 /**
+ * باركود احتياطي في حالة الفشل
+ */
+const generateFallbackBarcode = (productName) => {
+  const cleanName = (productName || 'PRODUCT').replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase() || 'PROD';
+  return `${cleanName}${Date.now().toString().slice(-6)}${Math.random().toString(36).substring(2, 2).toUpperCase()}`;
+};
+
+/**
+ * الدالة المحسنة لتوليد باركود فريد (متوافقة مع الكود القديم)
+ */
+export const generateUniqueBarcode = (productName, colorName, sizeName, productId = null, departmentName = '') => {
+  return generateSmartBarcode(productName, colorName, sizeName, productId, departmentName);
+};
+
+/**
  * التحقق من صحة الباركود
- * @param {string} barcode - الباركود للتحقق منه
- * @returns {boolean} true إذا كان الباركود صالح
  */
 export const validateBarcode = (barcode) => {
   if (!barcode || typeof barcode !== 'string') return false;
@@ -68,14 +128,23 @@ export const validateBarcode = (barcode) => {
 
 /**
  * البحث عن منتج بالباركود
- * @param {string} barcode - الباركود للبحث عنه
- * @param {Array} products - قائمة المنتجات
- * @returns {Object|null} المنتج والمتغير إذا وُجد
  */
 export const findProductByBarcode = (barcode, products) => {
   if (!barcode || !products || !Array.isArray(products)) return null;
   
+  // البحث في باركود المنتج الرئيسي
   for (const product of products) {
+    if (product.barcode === barcode) {
+      return {
+        product,
+        variant: null,
+        productId: product.id,
+        variantId: null,
+        type: 'product'
+      };
+    }
+    
+    // البحث في باركود المتغيرات
     if (product.variants && Array.isArray(product.variants)) {
       for (const variant of product.variants) {
         if (variant.barcode === barcode) {
@@ -83,7 +152,8 @@ export const findProductByBarcode = (barcode, products) => {
             product,
             variant,
             productId: product.id,
-            variantId: variant.id
+            variantId: variant.id,
+            type: 'variant'
           };
         }
       }
@@ -94,52 +164,23 @@ export const findProductByBarcode = (barcode, products) => {
 };
 
 /**
- * استخراج معلومات من الباركود (إذا كان يتبع نمط معين)
- * @param {string} barcode - الباركود لاستخراج المعلومات منه
- * @returns {Object} معلومات مستخرجة من الباركود
+ * تحليل نوع الباركود
  */
-export const parseBarcode = (barcode) => {
+export const analyzeBarcodeType = (barcode) => {
   if (!validateBarcode(barcode)) {
-    return {
-      isValid: false,
-      productCode: null,
-      colorCode: null,
-      sizeCode: null,
-      timestamp: null
-    };
+    return { isValid: false, type: 'unknown' };
   }
   
-  try {
-    // محاولة استخراج المعلومات بناءً على النمط المستخدم
-    const productCode = barcode.substring(0, 3);
-    const colorCode = barcode.substring(3, 5);
-    const sizeCode = barcode.substring(5, 7);
-    const timestamp = barcode.substring(7, 11);
-    
-    return {
-      isValid: true,
-      productCode,
-      colorCode,
-      sizeCode,
-      timestamp,
-      fullBarcode: barcode
-    };
-  } catch (error) {
-    console.error('خطأ في تحليل الباركود:', error);
-    return {
-      isValid: false,
-      productCode: null,
-      colorCode: null,
-      sizeCode: null,
-      timestamp: null
-    };
-  }
+  if (barcode.includes('FS')) return { isValid: true, type: 'freesize' };
+  if (barcode.includes('GEN')) return { isValid: true, type: 'general' };
+  if (barcode.includes('SH')) return { isValid: true, type: 'shoes' };
+  if (barcode.includes('CL')) return { isValid: true, type: 'clothing' };
+  
+  return { isValid: true, type: 'unknown' };
 };
 
 /**
  * تنسيق الباركود للعرض
- * @param {string} barcode - الباركود للتنسيق
- * @returns {string} الباركود منسق للعرض
  */
 export const formatBarcodeForDisplay = (barcode) => {
   if (!barcode) return 'غير محدد';
@@ -149,24 +190,47 @@ export const formatBarcodeForDisplay = (barcode) => {
 };
 
 /**
- * التحقق من فرادة الباركود في قائمة المنتجات
- * @param {string} barcode - الباركود للتحقق من فرادته
- * @param {Array} products - قائمة المنتجات الحالية
- * @param {string} excludeVariantId - معرف المتغير المستثنى (عند التحديث)
- * @returns {boolean} true إذا كان الباركود فريد
+ * التحقق من فرادة الباركود
  */
-export const isBarcodeUnique = (barcode, products, excludeVariantId = null) => {
+export const isBarcodeUnique = (barcode, products, excludeVariantId = null, excludeProductId = null) => {
   if (!barcode || !products || !Array.isArray(products)) return false;
   
   for (const product of products) {
+    // فحص باركود المنتج الرئيسي
+    if (product.id !== excludeProductId && product.barcode === barcode) {
+      return false;
+    }
+    
+    // فحص باركود المتغيرات
     if (product.variants && Array.isArray(product.variants)) {
       for (const variant of product.variants) {
         if (variant.id !== excludeVariantId && variant.barcode === barcode) {
-          return false; // الباركود موجود مسبقاً
+          return false;
         }
       }
     }
   }
   
-  return true; // الباركود فريد
+  return true;
+};
+
+/**
+ * اقتراح باركود بديل إذا كان مكرراً
+ */
+export const suggestAlternativeBarcode = (originalBarcode, products) => {
+  if (isBarcodeUnique(originalBarcode, products)) {
+    return originalBarcode;
+  }
+  
+  let counter = 1;
+  let alternativeBarcode;
+  
+  do {
+    // إضافة رقم متسلسل في النهاية
+    const suffix = counter.toString().padStart(2, '0');
+    alternativeBarcode = originalBarcode.substring(0, 18) + suffix;
+    counter++;
+  } while (!isBarcodeUnique(alternativeBarcode, products) && counter < 100);
+  
+  return alternativeBarcode;
 };
