@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
-import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
-import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast.js';
 import { 
@@ -30,93 +29,56 @@ import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 import RestrictedStockSettings from '@/components/settings/RestrictedStockSettings';
 import { PackageX } from 'lucide-react';
-import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
-import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
-import AppearanceDialog from '@/components/settings/AppearanceDialog';
-import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
-import { Badge } from '@/components/ui/badge';
+import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
+import AppearanceDialog from '@/components/settings/AppearanceDialog';
 
-const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
-  const Icon = icon;
-  const cardClasses = `
-    ${className} 
-    group relative overflow-hidden
-    ${onClick ? 'cursor-pointer hover:shadow-xl hover:shadow-primary/25 hover:-translate-y-1' : ''}
-    bg-card border border-border/50 rounded-xl backdrop-blur-sm
-    transition-all duration-300 ease-out
-    shadow-lg hover:shadow-2xl
-    hover:border-primary/40
-  `;
-  
-  const handleClick = (e) => {
-    if (onClick) {
-      onClick(e);
-    }
-  };
-
-  return (
-    <Card className={cardClasses} onClick={handleClick}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${iconColor} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
-      
-      <CardHeader className="pb-4 relative">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-xl bg-gradient-to-br ${iconColor} shadow-lg group-hover:shadow-xl transition-shadow duration-300`}>
-              <Icon className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-200">
-                {title}
-              </CardTitle>
-              {description && (
-                <CardDescription className="mt-1 text-sm text-muted-foreground">
-                  {description}
-                </CardDescription>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {badge}
-            {onClick && (
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all duration-200" />
-            )}
-          </div>
+// مكون حديث للبطاقات
+const ModernCard = ({ icon: Icon, title, description, iconColor, onClick, children, isDisabled = false }) => (
+  <Card 
+    className={`group relative overflow-hidden transition-all duration-300 transform cursor-pointer hover:scale-[1.02] hover:shadow-xl border-border/50 backdrop-blur-sm ${
+      isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/30'
+    }`}
+    onClick={!isDisabled ? onClick : undefined}
+  >
+    <CardHeader className="relative">
+      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+        <div className={`flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br ${iconColor} flex items-center justify-center shadow-lg`}>
+          <Icon className="w-6 h-6 text-white" />
         </div>
-      </CardHeader>
-      
-      {children && <CardContent className="pt-0 relative">{children}</CardContent>}
-      {footer && <CardFooter className="pt-0 relative">{footer}</CardFooter>}
-      {action && (
-        <div className="absolute top-4 right-4">
-          {action}
-        </div>
-      )}
-    </Card>
-  );
-};
-
-const SectionHeader = ({ icon, title, description }) => {
-  const Icon = icon;
-  return (
-    <div className="mb-8">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
-          <Icon className="w-7 h-7 text-white" />
-        </div>
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">{title}</h2>
-          {description && <p className="text-muted-foreground mt-1">{description}</p>}
+        <div className="flex-1 min-w-0">
+          <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+            {title}
+          </CardTitle>
+          <CardDescription className="text-sm text-muted-foreground leading-relaxed">
+            {description}
+          </CardDescription>
         </div>
       </div>
-      <div className="h-px bg-gradient-to-r from-primary/50 via-primary/20 to-transparent" />
+    </CardHeader>
+    {children && (
+      <CardContent className="pt-0">
+        {children}
+      </CardContent>
+    )}
+  </Card>
+);
+
+// مكون عنوان القسم
+const SectionHeader = ({ icon: Icon, title, description }) => (
+  <div className="flex items-center space-x-4 rtl:space-x-reverse mb-6">
+    <div className="flex-shrink-0 w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+      <Icon className="w-7 h-7 text-white" />
     </div>
-  );
-};
+    <div>
+      <h2 className="text-2xl font-bold text-foreground">{title}</h2>
+      <p className="text-muted-foreground">{description}</p>
+    </div>
+  </div>
+);
 
 const SettingsPage = () => {
-  const { user, updateUser } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { user, handleLogout } = useAuth();
   const { settings, updateSettings } = useInventory();
   const { isLoggedIn: isWaseetLoggedIn, waseetUser, logout: logoutWaseet, setSyncInterval, syncInterval } = useAlWaseet();
   const { theme, setTheme } = useTheme();
@@ -232,7 +194,6 @@ const SettingsPage = () => {
               />
             )}
 
-
             {/* إعدادات العملاء - للجميع */}
             <ModernCard
               icon={User}
@@ -240,6 +201,15 @@ const SettingsPage = () => {
               description="إدارة بيانات العملاء والفئات والعضويات"
               iconColor="from-blue-500 to-blue-600"
               onClick={() => setIsCustomerSettingsOpen(true)}
+            />
+
+            {/* بوت التليغرام الذكي - للجميع */}
+            <ModernCard
+              icon={MessageCircle}
+              title="بوت التليغرام الذكي"
+              description="ربط حسابك مع التليغرام لاستقبال إشعارات ذكية"
+              iconColor="from-blue-500 to-cyan-500"
+              onClick={() => setIsTelegramDialogOpen(true)}
             />
           </div>
 
@@ -258,115 +228,52 @@ const SettingsPage = () => {
                 description="نظام متكامل لإنشاء وطباعة وتصدير التقارير المالية وتقارير المخزون مع إمكانية الإرسال بالإيميل وجدولة التقارير التلقائية"
                 iconColor="from-gradient-start to-gradient-end"
                 onClick={() => setIsReportsOpen(true)}
-            >
-              <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
-                    <div className="text-2xl font-bold text-blue-600">{settings?.todayRevenue?.toLocaleString() || '0'}</div>
-                    <div className="text-xs text-muted-foreground">مبيعات اليوم (د.ع)</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
-                    <div className="text-2xl font-bold text-green-600">{settings?.monthRevenue?.toLocaleString() || '0'}</div>
-                    <div className="text-xs text-muted-foreground">إجمالي الشهر (د.ع)</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30">
-                    <div className="text-2xl font-bold text-purple-600">{settings?.activeProducts || '0'}</div>
-                    <div className="text-xs text-muted-foreground">المنتجات الفعالة</div>
-                  </div>
-                  <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
-                    <div className="text-2xl font-bold text-orange-600">{settings?.avgOrders || '0'}</div>
-                    <div className="text-xs text-muted-foreground">متوسط الطلبات/يوم</div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-border/50">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Printer className="w-4 h-4 text-blue-500" />
-                    <span>طباعة مباشرة</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Download className="w-4 h-4 text-green-500" />
-                    <span>تصدير PDF</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-purple-500" />
-                    <span>إرسال بالإيميل</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <RefreshCw className="w-4 h-4 text-orange-500" />
-                    <span>تقارير تلقائية</span>
-                  </div>
-                </div>
-              </div>
-            </ModernCard>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* إعدادات التوصيل - حسب صلاحية delivery_partner_access */}
-            {canAccessDeliveryPartners && (
-              <ModernCard
-                icon={DollarSign}
-                title="أسعار وإعدادات التوصيل"
-                description="إدارة أسعار التوصيل وشركات الشحن المتكاملة"
-                iconColor="from-green-500 to-emerald-600"
-                onClick={() => setIsDeliverySettingsOpen(true)}
               >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">السعر الأساسي</span>
-                    <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
+                <div className="space-y-4 mt-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                      <div className="text-2xl font-bold text-blue-600">{settings?.todayRevenue?.toLocaleString() || '0'}</div>
+                      <div className="text-xs text-muted-foreground">مبيعات اليوم (د.ع)</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                      <div className="text-2xl font-bold text-green-600">{settings?.monthRevenue?.toLocaleString() || '0'}</div>
+                      <div className="text-xs text-muted-foreground">إجمالي الشهر (د.ع)</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30">
+                      <div className="text-2xl font-bold text-purple-600">{settings?.activeProducts || '0'}</div>
+                      <div className="text-xs text-muted-foreground">المنتجات الفعالة</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30">
+                      <div className="text-2xl font-bold text-orange-600">{settings?.avgOrders || '0'}</div>
+                      <div className="text-xs text-muted-foreground">متوسط الطلبات/يوم</div>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">طلبات اليوم</span>
-                    <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Button className="h-auto py-3 px-4 flex flex-col items-center justify-center space-y-2">
+                      <Download className="w-5 h-5" />
+                      <span className="text-sm">تصدير PDF</span>
+                    </Button>
+                    <Button variant="outline" className="h-auto py-3 px-4 flex flex-col items-center justify-center space-y-2">
+                      <Mail className="w-5 h-5" />
+                      <span className="text-sm">إرسال إيميل</span>
+                    </Button>
+                    <Button variant="outline" className="h-auto py-3 px-4 flex flex-col items-center justify-center space-y-2">
+                      <RefreshCw className="w-5 h-5" />
+                      <span className="text-sm">تحديث تلقائي</span>
+                    </Button>
                   </div>
                 </div>
               </ModernCard>
             )}
-
-            {/* شركات التوصيل - إجباري للجميع حسب صلاحية delivery_partner_access */}
-            {canAccessDeliveryPartners && (
-              <ModernCard
-                icon={Truck}
-                title="شركات التوصيل"
-                description="إدارة الاتصال مع شركات التوصيل المختلفة"
-                iconColor="from-amber-500 to-orange-600"
-                onClick={() => setIsLoginDialogOpen(true)}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">الشركة النشطة</span>
-                    <span className="font-bold text-amber-600">{isWaseetLoggedIn ? 'الوسيط' : 'محلي'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">الحالة</span>
-                    <span className={`font-bold ${isWaseetLoggedIn ? 'text-green-600' : 'text-gray-600'}`}>
-                      {isWaseetLoggedIn ? 'متصل' : 'غير متصل'}
-                    </span>
-                  </div>
-                </div>
-              </ModernCard>
-            )}
-
-            {/* بوت التليغرام - بحسب المستخدم */}
-            <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام الذكي"
-              description="عرض رمزك الشخصي للاتصال بالبوت وإنشاء طلبات الذكاء الاصطناعي"
-              iconColor="from-blue-500 to-blue-600"
-              onClick={() => setIsTelegramDialogOpen(true)}
-            />
           </div>
 
-          </div>
-
-          {/* أدوات النظام - للمدراء فقط */}
-          {isAdmin && (
+          {/* أدوات النظام والنسخ الاحتياطي - للمدراء فقط */}
+          {canManageSettings && (
             <>
               <SectionHeader 
-                icon={SettingsIcon} 
-                title="أدوات النظام"
+                icon={Database} 
+                title="أدوات النظام والنسخ الاحتياطي"
                 description="أدوات النسخ الاحتياطي والذكاء الاصطناعي وإدارة البيانات"
               />
               
@@ -400,27 +307,28 @@ const SettingsPage = () => {
         open={isAppearanceOpen} 
         onOpenChange={setIsAppearanceOpen} 
       />
-      
-      <NotificationSettingsDialog
-        open={isNotificationSettingsOpen}
-        onOpenChange={setIsNotificationSettingsOpen}
+
+      <NotificationSettingsDialog 
+        open={isNotificationSettingsOpen} 
+        onOpenChange={setIsNotificationSettingsOpen} 
       />
 
-      {/* الحوارات - فلترة حسب الصلاحيات */}
-
-      <CustomerSettingsDialog
+      <CustomerSettingsDialog 
         open={isCustomerSettingsOpen}
         onOpenChange={setIsCustomerSettingsOpen}
       />
 
-      {/* التقارير - للمدراء فقط */}
-      {canManageSettings && (
-        <ReportsSettingsDialog
-          open={isReportsOpen}
-          onOpenChange={setIsReportsOpen}
+      <ReportsSettingsDialog 
+        open={isReportsOpen}
+        onOpenChange={setIsReportsOpen}
+      />
+
+      {canManageEmployees && (
+        <EmployeeProfitsManager 
+          open={isProfitsManagerOpen}
+          onOpenChange={setIsProfitsManagerOpen}
         />
       )}
-
 
       {canAccessDeliveryPartners && (
         <DeliveryPartnerDialog
@@ -429,7 +337,7 @@ const SettingsPage = () => {
         />
       )}
 
-      {/* حوار التليغرام - للجميع */}
+      {/* حوار التليغرام الذكي - للجميع */}
       <TelegramBotDialog 
         open={isTelegramDialogOpen} 
         onOpenChange={setIsTelegramDialogOpen} 
@@ -441,11 +349,6 @@ const SettingsPage = () => {
           onOpenChange={setIsDeliverySettingsOpen}
         />
       )}
-
-      <EmployeeProfitsManager 
-        open={isProfitsManagerOpen} 
-        onOpenChange={setIsProfitsManagerOpen} 
-      />
     </>
   );
 };
