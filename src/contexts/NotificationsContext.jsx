@@ -1,7 +1,6 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
-import { usePermissions } from './UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast.js';
 import { Bell, UserPlus, AlertTriangle, ShoppingCart, Bot, CheckCircle } from 'lucide-react';
@@ -19,7 +18,6 @@ export const useNotifications = () => {
 export const NotificationsProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user } = useAuth();
-    const { hasPermission } = usePermissions();
   
     // Cache management for data optimization
     const [lastFetch, setLastFetch] = useState(0);
@@ -40,7 +38,9 @@ export const NotificationsProvider = ({ children }) => {
             .order('created_at', { ascending: false })
             .limit(30); // Reduced limit to save data
 
-        if (!hasPermission('view_all_notifications')) {
+        // فلترة الإشعارات حسب المستخدم
+        const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
+        if (!isAdmin) {
             query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,new_registration,low_stock,order_status_update_admin,new_order))`);
         }
         
@@ -52,7 +52,7 @@ export const NotificationsProvider = ({ children }) => {
             setNotifications(data || []);
             setLastFetch(now);
         }
-    }, [user, hasPermission, lastFetch]);
+    }, [user, lastFetch]);
 
     useEffect(() => {
         fetchNotifications();
@@ -84,7 +84,8 @@ export const NotificationsProvider = ({ children }) => {
             if (isForThisUser) {
                 shouldShow = true;
             } else if (isGlobalAdminNotification) {
-                if (hasPermission('view_all_notifications')) {
+                const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
+                if (isAdmin) {
                     shouldShow = true;
                 } else {
                     const adminOnlyGlobalTypes = ['profit_settlement_request', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order'];
@@ -179,7 +180,7 @@ export const NotificationsProvider = ({ children }) => {
                 supabase.removeChannel(channel);
             }
         };
-    }, [user, hasPermission]);
+    }, [user]);
 
     const addNotification = useCallback(async (notificationData) => {
         if (!supabase) {

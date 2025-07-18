@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { User, Phone, MapPin, Package, Edit, Trash2, ShieldCheck, Loader2, MessageCircle, Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 
 const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {

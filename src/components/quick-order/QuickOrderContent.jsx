@@ -12,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { motion } from 'framer-motion';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 import DeliveryStatusCard from './DeliveryStatusCard';
 import CustomerInfoForm from './CustomerInfoForm';

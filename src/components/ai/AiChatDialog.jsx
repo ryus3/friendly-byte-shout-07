@@ -7,7 +7,7 @@ import { Bot, User, Send, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 
 const AiChatDialog = ({ open, onOpenChange }) => {

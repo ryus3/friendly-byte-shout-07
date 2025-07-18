@@ -28,7 +28,7 @@ import EditProfileDialog from '@/components/settings/EditProfileDialog';
 
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
-import StockNotificationSettings from '@/components/settings/StockNotificationSettings';
+import PermissionBasedStockSettings from '@/components/settings/PermissionBasedStockSettings';
 import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
@@ -351,43 +351,8 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* بوت التليغرام - إجباري للجميع مع رمز شخصي */}
-            <ModernCard
-              icon={MessageCircle}
-              title="بوت التليغرام الذكي"
-              description={isAdmin 
-                ? "نظام إشعارات متقدم وإدارة الطلبات عبر التليغرام" 
-                : "رمزك الشخصي للاتصال مع بوت التليغرام"
-              }
-              iconColor="from-blue-500 to-indigo-600"
-              onClick={() => setIsTelegramOpen(true)}
-            >
-              <div className="space-y-3">
-                {isAdmin ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">الموظفين المرتبطين</span>
-                      <span className="font-bold text-blue-600">{settings?.connectedEmployees || '0'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">الإشعارات اليوم</span>
-                      <span className="font-bold text-green-600">{settings?.todayNotifications || '0'}</span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">رمزك الشخصي</span>
-                      <span className="font-bold text-blue-600">عرض الرمز</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">حالة الاتصال</span>
-                      <span className="font-bold text-green-600">متاح</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </ModernCard>
+            {/* بوت التليغرام - للجميع مع رمز شخصي */}
+            <RestrictedTelegramSettings />
           </div>
 
           {/* أدوات النظام - للمدراء فقط */}
@@ -447,7 +412,7 @@ const SettingsPage = () => {
         onOpenChange={setIsReportsOpen}
       />
 
-      <StockNotificationSettings
+      <PermissionBasedStockSettings
         open={isStockSettingsOpen}
         onOpenChange={setIsStockSettingsOpen}
       />
@@ -459,18 +424,6 @@ const SettingsPage = () => {
         />
       )}
 
-      {/* حوار التليغرام - مختلف حسب الدور */}
-      {isAdmin ? (
-        <TelegramBotDialog 
-          open={isTelegramOpen} 
-          onOpenChange={setIsTelegramOpen} 
-        />
-      ) : (
-        <RestrictedTelegramSettings 
-          open={isTelegramOpen} 
-          onOpenChange={setIsTelegramOpen}
-        />
-      )}
 
       {canAccessDeliveryPartners && (
         <DeliverySettingsDialog

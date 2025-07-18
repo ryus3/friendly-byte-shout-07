@@ -1,23 +1,30 @@
 import React, { useMemo } from 'react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import OrdersStats from './OrdersStats';
 
 const PermissionBasedOrderStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => {
-  const { 
-    filterDataByUser, 
-    canViewAllData,
-    isAdmin,
-    isEmployee 
-  } = usePermissionBasedData();
+  const { user } = useAuth();
+  const { canViewAllData, isSalesEmployee, isAdmin } = usePermissions();
 
   // فلترة البيانات حسب صلاحيات المستخدم
   const filteredOrders = useMemo(() => {
-    return filterDataByUser(orders, 'created_by');
-  }, [orders, filterDataByUser]);
+    if (!orders) return [];
+    if (canViewAllData) return orders;
+    return orders.filter(order => {
+      const orderUserId = order.created_by;
+      return orderUserId === user?.user_id || orderUserId === user?.id;
+    });
+  }, [orders, canViewAllData, user?.id, user?.user_id]);
 
   const filteredAiOrders = useMemo(() => {
-    return filterDataByUser(aiOrders, 'created_by');
-  }, [aiOrders, filterDataByUser]);
+    if (!aiOrders) return [];
+    if (canViewAllData) return aiOrders;
+    return aiOrders.filter(order => {
+      const orderUserId = order.created_by;
+      return orderUserId === user?.user_id || orderUserId === user?.id;
+    });
+  }, [aiOrders, canViewAllData, user?.id, user?.user_id]);
 
   // إخفاء أرباح النظام وإظهار أرباح الموظف فقط لموظفي المبيعات
   const filteredOrdersWithProfits = useMemo(() => {
@@ -27,10 +34,10 @@ const PermissionBasedOrderStats = ({ orders, aiOrders, onAiOrdersClick, onStatCa
     return filteredOrders.map(order => ({
       ...order,
       // إخفاء الأرباح الإجمالية للنظام عن موظفي المبيعات
-      total_profit: isEmployee ? undefined : order.total_profit,
-      system_profit: isEmployee ? undefined : order.system_profit
+      total_profit: isSalesEmployee ? undefined : order.total_profit,
+      system_profit: isSalesEmployee ? undefined : order.system_profit
     }));
-  }, [filteredOrders, canViewAllData, isEmployee]);
+  }, [filteredOrders, canViewAllData, isSalesEmployee]);
 
   return (
     <OrdersStats
