@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -41,7 +41,7 @@ const SidebarContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
   
-  const visibleMenuItems = menuItems.filter(item => hasPermission(item.permission));
+  const visibleMenuItems = useMemo(() => menuItems.filter(item => hasPermission(item.permission)), [menuItems, hasPermission]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
@@ -62,14 +62,29 @@ const SidebarContent = ({ onClose }) => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const getRoleDisplayName = (role) => {
-    switch (role) {
-      case 'admin': return 'مدير';
-      case 'deputy': return 'نائب مدير';
-      case 'employee': return 'موظف';
-      case 'warehouse': return 'مسؤول مخزن';
-      default: return 'مستخدم';
+  const getRoleDisplayName = (userRoles) => {
+    if (!userRoles || userRoles.length === 0) return 'مستخدم';
+    
+    // ترتيب الأدوار حسب الأولوية
+    const roleDisplayMap = {
+      'admin': 'المدير العام',
+      'deputy': 'نائب المدير',
+      'department_manager': 'مدير قسم',
+      'sales_employee': 'موظف مبيعات',
+      'warehouse_employee': 'مسؤول المخزن',
+      'cashier': 'كاشير',
+      'employee': 'موظف'
+    };
+    
+    // البحث عن أعلى دور في التسلسل الهرمي
+    const priority = ['admin', 'deputy', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier', 'employee'];
+    for (const role of priority) {
+      if (userRoles.includes(role)) {
+        return roleDisplayMap[role] || 'مستخدم';
+      }
     }
+    
+    return 'مستخدم';
   };
 
   return (
@@ -82,7 +97,7 @@ const SidebarContent = ({ onClose }) => {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
-              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role)}</p>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.roles)}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -105,15 +120,16 @@ const SidebarContent = ({ onClose }) => {
             const isActive = location.pathname === item.path;
             
             return (
-              <React.Fragment key={item.path}>
-                <div
-                  className={`sidebar-item ${isActive ? 'active' : ''}`}
-                  onClick={() => handleNavigation(item.path)}
-                >
-                  <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
-                  <span className="font-medium">{item.label}</span>
-                </div>
-              </React.Fragment>
+              <div
+                key={item.path}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-150 hover:bg-accent cursor-pointer ${
+                  isActive ? 'bg-gradient-to-r from-primary/20 to-primary/5 border-r-4 border-primary text-primary font-semibold' : ''
+                }`}
+                onClick={() => handleNavigation(item.path)}
+              >
+                <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
+                <span className="font-medium">{item.label}</span>
+              </div>
             );
           })}
         </nav>
@@ -210,7 +226,7 @@ const Layout = ({ children }) => {
             initial={{ x: 300 }}
             animate={{ x: 0 }}
             exit={{ x: 300 }}
-            transition={{ type: "spring", damping: 30, stiffness: 250 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
             dir="rtl"
           >

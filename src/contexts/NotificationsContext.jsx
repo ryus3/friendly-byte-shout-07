@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
 import { useAuth } from './UnifiedAuthContext';
-import { usePermissions } from './UnifiedAuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast.js';
 import { Bell, UserPlus, AlertTriangle, ShoppingCart, Bot, CheckCircle } from 'lucide-react';
@@ -21,9 +21,9 @@ export const NotificationsProvider = ({ children }) => {
     const { user } = useAuth();
     const { hasPermission } = usePermissions();
   
-    // Cache management for data optimization
+    // Cache management for data optimization - Enhanced for better performance
     const [lastFetch, setLastFetch] = useState(0);
-    const CACHE_DURATION = 30000; // 30 seconds cache
+    const CACHE_DURATION = 60000; // Increased to 60 seconds to reduce data usage
     
     const fetchNotifications = useCallback(async (force = false) => {
         if (!user || !supabase) return;
@@ -38,7 +38,7 @@ export const NotificationsProvider = ({ children }) => {
             .from('notifications')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(30); // Reduced limit to save data
+            .limit(20); // Further reduced limit to optimize data usage
 
         if (!hasPermission('view_all_notifications')) {
             query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,new_registration,low_stock,order_status_update_admin,new_order))`);
