@@ -39,14 +39,13 @@ const OrderList = ({
   return (
     <div className="grid grid-cols-1 gap-4">
       {orders.map(order => (
-        <motion.div
-          key={order.id}
-          layout
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="transform-gpu"
-        >
+          <motion.div
+            key={order.id}
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="transform-gpu"
           >
             <MemoizedOrderCard
               order={order}

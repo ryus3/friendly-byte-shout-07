@@ -14,6 +14,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import EmployeeStatsCards from '@/components/dashboard/EmployeeStatsCards';
+import ProfitsSummaryCard from '@/components/dashboard/ProfitsSummaryCard';
 import Loader from '@/components/ui/loader';
 import { ShoppingCart, Package, RefreshCw, Loader2, Search, Printer, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -262,19 +263,37 @@ const MyOrdersPage = () => {
         </Card>
 
         <div className="space-y-6">
-          {/* كارت الأرباح الأساسي */}
-          {employeeStats && (
+          {/* كارت ملخص الأرباح الرئيسي */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.4 }}
+          >
+            <ProfitsSummaryCard 
+              stats={employeeStats}
+              userRole={user?.role || user?.roles?.[0]}
+              user={user}
+              hasPermission={hasPermission}
+            />
+          </motion.div>
+
+          {/* كارت الإحصائيات السريعة */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.4, delay: 0.1 }}
+          >
             <EmployeeStatsCards 
               stats={employeeStats}
               userRole={user?.role || user?.roles?.[0]} 
               canRequestSettlement={hasPermission('request_settlement')}
               user={user}
             />
-          )}
+          </motion.div>
           
           {/* قائمة الطلبات */}
           {loading ? <Loader /> : (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.2 }}>
               <OrderList 
                 orders={filteredOrders}
                 onViewOrder={handleViewOrder}
