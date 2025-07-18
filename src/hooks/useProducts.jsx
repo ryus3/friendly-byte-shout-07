@@ -21,6 +21,12 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
 
   const addProduct = useCallback(async (productData, imageFiles, setUploadProgress) => {
     try {
+      console.log('🏗️ بدء إضافة المنتج:', productData.name);
+      
+      // توليد باركود رئيسي للمنتج
+      const mainBarcode = generateUniqueBarcode(productData.name, 'PRODUCT', 'MAIN', Date.now().toString());
+      console.log('📋 باركود المنتج الرئيسي:', mainBarcode);
+
       // 1. Insert the main product data
       const { data: newProduct, error: productError } = await supabase
         .from('products')
@@ -30,14 +36,19 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
           base_price: productData.price,
           cost_price: productData.costPrice,
           profit_amount: productData.profitAmount || 0,
-          barcode: generateUniqueBarcode(productData.name, 'PRODUCT', 'MAIN', Date.now().toString()),
+          barcode: mainBarcode,
           is_active: productData.isVisible,
           created_by: user?.user_id || user?.id
         })
         .select()
         .single();
 
-      if (productError) throw productError;
+      if (productError) {
+        console.error('❌ خطأ في إدراج المنتج:', productError);
+        throw productError;
+      }
+      
+      console.log('✅ تم إنشاء المنتج بنجاح:', newProduct);
 
       let uploadedImageUrls = [];
       const generalImageFiles = imageFiles.general.filter(img => img && !(typeof img === 'string'));
@@ -150,11 +161,13 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
             newProduct.id
           );
           
-          console.log('📦 Generated barcode for variant:', {
+          console.log('🏷️ توليد باركود للمتغير:', {
             productName: productData.name,
             color: variant.color,
             size: variant.size,
-            barcode: uniqueBarcode
+            barcode: uniqueBarcode,
+            colorId: variant.colorId,
+            sizeId: variant.sizeId
           });
 
           finalVariants.push({
@@ -169,14 +182,19 @@ export const useProducts = (initialProducts, settings, addNotification, user) =>
           });
       }
 
-      console.log("finalVariants:", finalVariants);
+      console.log("🔢 المتغيرات النهائية قبل الإدراج:", finalVariants);
 
       if (finalVariants.length > 0) {
         const { data: insertedVariants, error: variantsError } = await supabase
           .from('product_variants')
           .insert(finalVariants)
           .select();
-        if (variantsError) throw variantsError;
+        if (variantsError) {
+          console.error('❌ خطأ في إدراج المتغيرات:', variantsError);
+          throw variantsError;
+        }
+        
+        console.log('✅ تم إدراج المتغيرات بنجاح:', insertedVariants);
 
         // إنشاء سجلات inventory للمتغيرات الجديدة
         const inventoryRecords = insertedVariants.map((variant, index) => ({

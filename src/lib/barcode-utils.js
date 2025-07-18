@@ -12,30 +12,44 @@
  */
 export const generateUniqueBarcode = (productName, colorName, sizeName, productId = null) => {
   try {
+    console.log('🔧 بدء توليد الباركود:', { productName, colorName, sizeName, productId });
+    
     // تنظيف النصوص وإزالة المسافات والرموز الخاصة
     const cleanString = (str) => {
       if (!str || typeof str !== 'string') return 'DEF';
-      return str.replace(/\s+/g, '').replace(/[^\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9]/g, '').substring(0, 3).toUpperCase();
+      // إزالة المسافات والرموز الخاصة والاحتفاظ بالأحرف والأرقام فقط
+      const cleaned = str.replace(/\s+/g, '').replace(/[^\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9]/g, '');
+      // أخذ أول 3 أحرف أو "DEF" كافتراضي
+      return cleaned.length > 0 ? cleaned.substring(0, 3).toUpperCase() : 'DEF';
     };
     
     // إنشاء أجزاء الباركود
     const productCode = cleanString(productName) || 'PRD';
-    const colorCode = cleanString(colorName) || 'CLR';
+    const colorCode = cleanString(colorName) || 'CLR';  
     const sizeCode = cleanString(sizeName) || 'SZ';
     
+    console.log('📝 أجزاء الباركود:', { productCode, colorCode, sizeCode });
+    
     // إضافة جزء فريد لضمان عدم التكرار
-    const timestamp = Date.now().toString().slice(-4);
-    const randomCode = Math.random().toString(36).substring(2, 4).toUpperCase();
+    const timestamp = Date.now().toString().slice(-4); // آخر 4 أرقام من الوقت
+    const randomCode = Math.random().toString(36).substring(2, 4).toUpperCase(); // 2 أحرف عشوائية
     
     // تكوين الباركود النهائي
     const barcode = `${productCode}${colorCode}${sizeCode}${timestamp}${randomCode}`;
     
+    console.log('✅ الباركود المولد:', barcode);
+    
     // التأكد من أن الباركود لا يتجاوز 20 حرف
-    return barcode.length > 20 ? barcode.substring(0, 20) : barcode;
+    const finalBarcode = barcode.length > 20 ? barcode.substring(0, 20) : barcode;
+    
+    console.log('🎯 الباركود النهائي:', finalBarcode);
+    return finalBarcode;
   } catch (error) {
-    console.error('خطأ في توليد الباركود:', error);
+    console.error('❌ خطأ في توليد الباركود:', error);
     // إرجاع باركود افتراضي في حالة الخطأ
-    return `PRD${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
+    const fallbackBarcode = `PRD${Date.now().toString().slice(-8)}${Math.random().toString(36).substring(2, 4).toUpperCase()}`;
+    console.log('🆘 باركود احتياطي:', fallbackBarcode);
+    return fallbackBarcode;
   }
 };
 
