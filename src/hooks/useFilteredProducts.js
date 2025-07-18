@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 /**
@@ -6,39 +6,34 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
-  let authContext;
+  // استدعاء hooks دائماً في البداية
+  let authContext = null;
+  let hasError = false;
   
   try {
     authContext = useAuth();
   } catch (error) {
     console.error('useFilteredProducts: Error accessing AuthContext:', error);
-    return [];
+    hasError = true;
   }
   
-  // التأكد من وجود السياق
-  if (!authContext) {
-    console.error('useFilteredProducts: AuthContext is null');
-    return [];
-  }
+  const { user, productPermissions, isAdmin } = authContext || {};
   
-  const { user, productPermissions, isAdmin } = authContext;
-  
-  // إضافة تسجيل للتشخيص
-  console.log('🔍 useFilteredProducts Debug:', {
-    products: products?.length || 0,
-    user: user?.full_name,
-    isAdmin,
-    productPermissions,
-    hasPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
-  });
-
-  const filteredProducts = useMemo(() => {
+  return useMemo(() => {
+    // التحقق من الأخطاء
+    if (hasError || !authContext) {
+      console.error('useFilteredProducts: AuthContext is null or error occurred');
+      return [];
+    }
+    
     if (!products || !Array.isArray(products)) return [];
     
-    console.log('🔍 فلترة المنتجات:', {
-      totalProducts: products.length,
+    console.log('🔍 useFilteredProducts Debug:', {
+      products: products.length,
+      user: user?.full_name,
       isAdmin,
-      productPermissions: Object.keys(productPermissions || {}).length
+      productPermissions,
+      hasPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
     });
     
     // المديرون يرون كل المنتجات
@@ -120,33 +115,33 @@ export const useFilteredProducts = (products) => {
     });
     
     return filtered;
-  }, [products, isAdmin, productPermissions]);
-
-  return filteredProducts;
+  }, [products, isAdmin, productPermissions, hasError, authContext]);
 };
 
 /**
  * Hook لفلترة متغيرات منتج واحد
  */
 export const useFilteredVariants = (variants) => {
-  let authContext;
+  // استدعاء hooks دائماً في البداية
+  let authContext = null;
+  let hasError = false;
   
   try {
     authContext = useAuth();
   } catch (error) {
     console.error('useFilteredVariants: Error accessing AuthContext:', error);
-    return [];
+    hasError = true;
   }
   
-  // التأكد من وجود السياق
-  if (!authContext) {
-    console.error('useFilteredVariants: AuthContext is null');
-    return [];
-  }
-  
-  const { isAdmin, productPermissions } = authContext;
+  const { isAdmin, productPermissions } = authContext || {};
 
-  const filteredVariants = useMemo(() => {
+  return useMemo(() => {
+    // التحقق من الأخطاء
+    if (hasError || !authContext) {
+      console.error('useFilteredVariants: AuthContext is null or error occurred');
+      return [];
+    }
+    
     if (!variants || !Array.isArray(variants)) return [];
     
     // المديرون يرون كل المتغيرات
@@ -177,9 +172,7 @@ export const useFilteredVariants = (variants) => {
 
       return true;
     });
-  }, [variants, isAdmin, productPermissions]);
-
-  return filteredVariants;
+  }, [variants, isAdmin, productPermissions, hasError, authContext]);
 };
 
 export default useFilteredProducts;
