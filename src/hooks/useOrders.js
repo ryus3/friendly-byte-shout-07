@@ -125,7 +125,23 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
       }
 
-      // إشعار بالطلب الجديد
+      // إضافة سجل الخصم إذا كان هناك خصم
+      if (discount > 0) {
+        const { error: discountError } = await supabase
+          .from('order_discounts')
+          .insert({
+            order_id: createdOrder.id,
+            discount_amount: discount,
+            applied_by: user?.user_id || user?.id,
+            affects_employee_profit: true,
+            discount_reason: 'خصم من خلال نظام الطلب السريع'
+          });
+
+        if (discountError) {
+          console.error('Error recording discount:', discountError);
+          // نستمر حتى لو فشل تسجيل الخصم
+        }
+      }
       addNotification({
         type: 'new_order',
         title: `طلب ${isLocalOrder ? 'محلي' : 'توصيل'} جديد`,
