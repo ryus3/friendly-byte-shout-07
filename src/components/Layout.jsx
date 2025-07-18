@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
@@ -41,7 +42,13 @@ const SidebarContent = ({ onClose }) => {
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
   
-  const visibleMenuItems = menuItems; // عرض جميع العناصر بدون فحص الصلاحيات
+  // فلترة القائمة حسب الصلاحيات
+  const visibleMenuItems = useMemo(() => {
+    return menuItems.filter(item => {
+      // السماح بعرض العنصر إذا كان لدى المستخدم الصلاحية
+      return hasPermission(item.permission);
+    });
+  }, [menuItems, hasPermission]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
@@ -62,14 +69,21 @@ const SidebarContent = ({ onClose }) => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
 
-  const getRoleDisplayName = (role) => {
-    switch (role) {
-      case 'admin': return 'مدير';
-      case 'deputy': return 'نائب مدير';
-      case 'employee': return 'موظف';
-      case 'warehouse': return 'مسؤول مخزن';
-      default: return 'مستخدم';
-    }
+  const getRoleDisplayName = () => {
+    if (!user?.roles || user.roles.length === 0) return 'مستخدم';
+    
+    // الحصول على أعلى دور (أقل hierarchy_level)
+    const roleMapping = {
+      'super_admin': 'المدير العام',
+      'admin': 'مدير', 
+      'department_manager': 'مدير قسم',
+      'sales_employee': 'موظف مبيعات',
+      'warehouse_employee': 'موظف مخزن',
+      'cashier': 'أمين صندوق'
+    };
+    
+    const highestRole = user.roles[0]; // أول دور هو الأعلى
+    return roleMapping[highestRole] || 'موظف';
   };
 
   return (
@@ -82,7 +96,7 @@ const SidebarContent = ({ onClose }) => {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
-              <p className="text-sm text-muted-foreground">{getRoleDisplayName(user?.role)}</p>
+              <p className="text-sm text-muted-foreground">{getRoleDisplayName()}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

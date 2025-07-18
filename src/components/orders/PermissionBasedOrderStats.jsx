@@ -19,9 +19,22 @@ const PermissionBasedOrderStats = ({ orders, aiOrders, onAiOrdersClick, onStatCa
     return filterDataByUser(aiOrders, 'created_by');
   }, [aiOrders, filterDataByUser]);
 
+  // إخفاء أرباح النظام وإظهار أرباح الموظف فقط لموظفي المبيعات
+  const filteredOrdersWithProfits = useMemo(() => {
+    if (canViewAllData) return filteredOrders;
+    
+    // موظف المبيعات يرى طلباته بأرباحه الشخصية فقط وليس أرباح النظام
+    return filteredOrders.map(order => ({
+      ...order,
+      // إخفاء الأرباح الإجمالية للنظام عن موظفي المبيعات
+      total_profit: isEmployee ? undefined : order.total_profit,
+      system_profit: isEmployee ? undefined : order.system_profit
+    }));
+  }, [filteredOrders, canViewAllData, isEmployee]);
+
   return (
     <OrdersStats
-      orders={filteredOrders}
+      orders={filteredOrdersWithProfits}
       aiOrders={filteredAiOrders}
       onAiOrdersClick={onAiOrdersClick}
       onStatCardClick={onStatCardClick}

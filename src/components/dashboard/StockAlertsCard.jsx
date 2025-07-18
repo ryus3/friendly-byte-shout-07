@@ -5,14 +5,19 @@ import { Package, TriangleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/InventoryContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import StockAlertsWindow from './StockAlertsWindow';
 import DefaultProductImage from '@/components/ui/default-product-image';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
   const { getLowStockProducts, settings } = useInventory();
+  const { canManageFinances, isAdmin } = usePermissions();
   const [alertsWindowOpen, setAlertsWindowOpen] = useState(false);
   const lowStockProducts = getLowStockProducts(settings?.lowStockThreshold || 5);
+  
+  // إخفاء إعدادات المخزون عن موظفي المبيعات
+  const canManageStockSettings = canManageFinances || isAdmin;
 
   const handleViewAll = () => {
     setAlertsWindowOpen(true);
@@ -105,6 +110,7 @@ const StockAlertsCard = () => {
       <StockAlertsWindow 
         open={alertsWindowOpen}
         onOpenChange={setAlertsWindowOpen}
+        canManageSettings={canManageStockSettings}
       />
     </Card>
   );

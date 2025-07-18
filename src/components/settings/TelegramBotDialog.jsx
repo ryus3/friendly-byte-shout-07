@@ -195,8 +195,13 @@ const TelegramBotDialog = ({ open, onOpenChange }) => {
                         <div>
                           <p className="font-semibold">{profile?.full_name || 'مستخدم'}</p>
                           <Badge variant={isCurrentUser ? "outline" : "secondary"} className="text-xs">
-                            {isCurrentUser ? 'أنت' : (canViewAllData ? 'مدير' : 'موظف')}
+                            {isCurrentUser ? 'أنت' : 'موظف'}
                           </Badge>
+                          {profile?.user_id && (
+                            <Badge variant="secondary" className="text-xs mr-1">
+                              📱
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
