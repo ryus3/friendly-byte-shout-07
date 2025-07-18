@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -79,16 +79,17 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 
 const Dashboard = () => {
     const { user, pendingRegistrations } = useAuth();
-    const { hasPermission, loading } = usePermissions();
-    const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
-    const { profits } = useProfits();
+    // استخدام hook واحد فقط للصلاحيات لتجنب التعارض
     const { 
-        filterDataByUser, 
-        canViewAllData, 
+        loading,
         isAdmin,
-        isEmployee,
-        canManageEmployees 
-    } = usePermissionBasedData();
+        canViewAllData,
+        canManageEmployees,
+        hasPermission,
+        filterDataByUser
+    } = usePermissions();
+    const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
+    const { profits: profitsData } = useProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -104,7 +105,8 @@ const Dashboard = () => {
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
     const [isPendingProfitsOpen, setIsPendingProfitsOpen] = useState(false);
     const [isReceiptReceiptOpen, setIsReceiptReceiptOpen] = useState(false);
-    const [profitsData, setProfitsData] = useState({ pending: [], settled: [] });
+    const [profitsLocalData, setProfitsLocalData] = useState({ pending: [], settled: [] });
+    
     const [profitsLoading, setProfitsLoading] = useState(false);
 
     const [dialogs, setDialogs] = useState({
@@ -143,7 +145,7 @@ const Dashboard = () => {
             const pending = profitsData?.filter(p => p.status === 'pending') || [];
             const settled = profitsData?.filter(p => p.status === 'settled') || [];
 
-            setProfitsData({ pending, settled });
+            setProfitsLocalData({ pending, settled });
         } catch (error) {
             console.error('خطأ في fetchProfitsData:', error);
         } finally {
@@ -405,7 +407,7 @@ const Dashboard = () => {
         navigate(`/my-orders?${query.toString()}`);
     }, [navigate, periods.totalOrders]);
 
-    // حساب بيانات الأرباح الشخصية للموظف
+    // استخدام البيانات من Context مباشرة لتحسين الأداء
     const employeeProfitsData = useMemo(() => {
         if (!profitsData) {
             return {
@@ -434,7 +436,7 @@ const Dashboard = () => {
         };
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 
-    // Move the loading check AFTER all hooks are called but add console for debugging
+    // التحقق من اكتمال البيانات الأساسية فقط
     console.log('Dashboard Debug:', { 
         inventoryLoading, 
         orders: orders?.length, 
@@ -444,8 +446,8 @@ const Dashboard = () => {
         isAdmin
     });
     
-    // إظهار loader عند تحميل البيانات الأساسية
-    if (inventoryLoading || loading || !user) {
+    // إظهار loader فقط عند تحميل البيانات الأساسية
+    if (inventoryLoading || loading || !user || isAdmin === undefined) {
         return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
     }
 
