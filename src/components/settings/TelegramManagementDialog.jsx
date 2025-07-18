@@ -230,23 +230,14 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
       <DialogContent className="w-[95vw] max-w-none md:max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
         <DialogHeader className="space-y-2">
           <DialogTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-lg sm:text-xl">
-            <div className="flex items-center gap-3 w-full">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-primary to-primary/80 rounded-xl flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground fill-current">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.02 0 2-.15 2.93-.43.3-.09.49-.36.49-.68v-1.65c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.73c-.63.11-1.29.18-1.98.18-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8c0 1.01-.19 1.97-.53 2.86-.34.89-.82 1.71-1.42 2.43-.6.72-1.3 1.35-2.08 1.87-.78.52-1.63.93-2.53 1.22-.3.1-.49.37-.49.68v1.65c0 .32.19.59.49.68.93.28 1.91.43 2.93.43 5.52 0 10-4.48 10-10S17.52 2 12 2zM9 8.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5S9 9.33 9 8.5zm6 0c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5S15 9.33 15 8.5zm-3 8c-1.66 0-3-1.34-3-3h6c0 1.66-1.34 3-3 3z"/>
-                </svg>
-              </div>
-              <div className="text-right flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-foreground">إدارة بوت التليغرام الذكي</h3>
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 text-primary fill-current">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                  </svg>
-                </div>
-                <p className="text-xs sm:text-sm text-muted-foreground font-normal">
-                  {canViewAllData ? 'إدارة كاملة لرموز جميع الموظفين' : 'عرض رمزك الشخصي'}
-                </p>
-              </div>
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-primary to-primary/80 rounded-xl flex items-center justify-center shrink-0">
+              <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+            </div>
+            <div className="text-right">
+              <h3 className="font-bold text-foreground">إدارة بوت التليغرام الذكي</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground font-normal">
+                {canViewAllData ? 'إدارة كاملة لرموز جميع الموظفين' : 'عرض رمزك الشخصي'}
+              </p>
             </div>
           </DialogTitle>
         </DialogHeader>
@@ -257,9 +248,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
             <CardContent className="p-4 sm:p-6">
               <div className="text-center space-y-2 sm:space-y-3">
                 <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center mx-auto">
-                  <svg viewBox="0 0 24 24" className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground fill-current">
-                    <path d="M20.665 3.717l-17.73 6.837c-1.21.486-1.203 1.161-.222 1.462l4.552 1.42 10.532-6.645c.498-.303.953-.14.579.192l-8.533 7.701h-.002l.002.001-.314 4.692c.46 0 .663-.211.921-.46l2.211-2.15 4.599 3.397c.848.467 1.457.227 1.668-.785L24 5.855c.265-1.133-.4-1.621-1.335-1.138"/>
-                  </svg>
+                  <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
                 </div>
                 <h3 className="text-base sm:text-lg font-bold text-foreground">البوت نشط ويستقبل الطلبات تلقائياً</h3>
                 <div className="flex flex-col items-center gap-2">
@@ -452,51 +441,45 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                 <div className="text-center w-full sm:w-auto">
                                   <Badge 
                                     variant="outline" 
-                                    className="font-mono text-sm sm:text-lg px-3 sm:px-4 py-2 w-full sm:w-auto justify-center"
+                                    className={`font-mono text-sm sm:text-lg px-3 sm:px-4 py-2 w-full sm:w-auto justify-center ${
+                                      isCurrentUser
+                                        ? 'bg-blue-100 text-blue-700 border-blue-300' 
+                                        : 'bg-green-100 text-green-700 border-green-300'
+                                    }`}
                                   >
                                     {employeeCode.employee_code}
                                   </Badge>
                                   <p className="text-xs text-muted-foreground mt-1">الرمز</p>
                                 </div>
-                                <div className="flex items-center gap-1 sm:gap-2 mt-2">
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => copyToClipboard(employeeCode.employee_code)}
-                                    className="h-8 w-8 p-0 hover:bg-accent"
-                                  >
-                                    <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 fill-current">
-                                      <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-                                    </svg>
-                                  </Button>
-                                  {(canViewAllData || isCurrentUser) && (
-                                    <>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => {
-                                          setEditingCode(employeeCode.id);
-                                          setNewCodeValue(employeeCode.employee_code);
-                                        }}
-                                        className="h-8 w-8 p-0 hover:bg-accent"
-                                      >
-                                        <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 fill-current">
-                                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                                        </svg>
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => deleteEmployeeCode(employeeCode.id)}
-                                        className="h-8 w-8 p-0 hover:bg-destructive/10 text-destructive"
-                                      >
-                                        <svg viewBox="0 0 24 24" className="w-3 h-3 sm:w-4 sm:h-4 fill-current">
-                                          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                        </svg>
-                                      </Button>
-                                    </>
-                                  )}
-                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => copyToClipboard(employeeCode.employee_code)}
+                                >
+                                  <Copy className="w-4 h-4" />
+                                </Button>
+                                {canViewAllData && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setEditingCode(employeeCode.id);
+                                        setNewCodeValue(employeeCode.employee_code);
+                                      }}
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => deleteEmployeeCode(employeeCode.id)}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                )}
                               </>
                             )}
                           </div>

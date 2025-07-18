@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
+import TelegramBotDialog from '@/components/settings/TelegramBotDialog';
 import DeliverySettingsDialog from '@/components/settings/DeliverySettingsDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EditProfileDialog from '@/components/settings/EditProfileDialog';
