@@ -1814,6 +1814,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_product_barcode: {
+        Args: {
+          p_product_name: string
+          p_color_name?: string
+          p_size_name?: string
+          p_product_id?: string
+        }
+        Returns: string
+      }
       generate_purchase_number: {
         Args: Record<PropertyKey, never>
         Returns: string
