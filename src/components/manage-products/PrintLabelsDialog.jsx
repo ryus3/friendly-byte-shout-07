@@ -118,18 +118,28 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <p className="label-product-name">{label.name}</p>
               <p className="label-variant-info">{label.color} / {label.size}</p>
               <div className="label-barcode-container">
-                {label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود' ? (
-                  <Barcode 
-                    value={label.barcode} 
-                    height={25} 
-                    width={1.2} 
-                    fontSize={8}
-                    margin={2}
-                    displayValue={true}
-                  />
-                ) : (
-                  <div className="barcode-placeholder">يتم توليد الباركود تلقائياً</div>
-                )}
+                {(() => {
+                  console.log('🏷️ طباعة الملصق:', { 
+                    labelName: label.name, 
+                    barcode: label.barcode,
+                    hasBarcode: label.barcode && label.barcode.trim() !== ''
+                  });
+                  
+                  if (label.barcode && label.barcode.trim() !== '' && label.barcode !== 'لا يوجد باركود') {
+                    return (
+                      <Barcode 
+                        value={label.barcode} 
+                        height={25} 
+                        width={1.2} 
+                        fontSize={8}
+                        margin={2}
+                        displayValue={true}
+                      />
+                    );
+                  } else {
+                    return <div className="barcode-placeholder">يتم توليد الباركود تلقائياً</div>;
+                  }
+                })()}
               </div>
               <p className="label-price">{(label.price || 0).toLocaleString()} د.ع</p>
             </div>

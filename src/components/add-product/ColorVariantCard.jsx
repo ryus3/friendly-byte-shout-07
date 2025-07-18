@@ -119,17 +119,47 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                           <DialogTitle>باركود المتغير</DialogTitle>
                         </DialogHeader>
                         <div className="flex flex-col items-center justify-center p-4">
-                          {(isNewProduct ? variantData.barcode : variantData.barcode) ? (
-                            <>
-                              <Barcode value={isNewProduct ? variantData.barcode : variantData.barcode} />
-                              <p className="mt-2 font-mono">{isNewProduct ? variantData.barcode : variantData.barcode}</p>
-                            </>
-                          ) : (
-                            <div className="text-center text-muted-foreground">
-                              <p>سيتم توليد الباركود عند الحفظ</p>
-                              <p className="text-sm mt-2">المعاينة: {`${color.name}-${isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size)}-${Date.now().toString().slice(-4)}`}</p>
-                            </div>
-                          )}
+                          {(() => {
+                            // الحصول على الباركود من المتغير
+                            const barcodeValue = isNewProduct ? variantData.barcode : variantData.barcode;
+                            console.log('🏷️ عرض الباركود:', { 
+                              isNewProduct, 
+                              barcodeValue, 
+                              variantData: variantData 
+                            });
+                            
+                            if (barcodeValue && barcodeValue.trim() !== '') {
+                              return (
+                                <>
+                                  <Barcode 
+                                    value={barcodeValue} 
+                                    width={2}
+                                    height={50}
+                                    fontSize={12}
+                                    displayValue={true}
+                                  />
+                                  <p className="mt-2 font-mono text-sm">{barcodeValue}</p>
+                                </>
+                              );
+                            } else {
+                              // إنشاء باركود مؤقت للمعاينة
+                              const previewBarcode = `PROD-${color.name}-${isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size)}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+                              return (
+                                <div className="text-center">
+                                  <div className="mb-4">
+                                    <Barcode 
+                                      value={previewBarcode} 
+                                      width={2}
+                                      height={50}
+                                      fontSize={12}
+                                      displayValue={true}
+                                    />
+                                  </div>
+                                  <p className="text-muted-foreground text-sm">معاينة - سيتم توليد باركود حقيقي عند الحفظ</p>
+                                </div>
+                              );
+                            }
+                          })()}
                         </div>
                       </DialogContent>
                     </Dialog>
