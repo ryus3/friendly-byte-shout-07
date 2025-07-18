@@ -240,12 +240,6 @@ export const UnifiedAuthProvider = ({ children }) => {
         setUserRoles(roles || []);
         setUserPermissions(permissions || []);
         setProductPermissions(productPermissionsMap);
-        
-        console.log('صلاحيات المستخدم تم جلبها:', {
-          roles: roles || [],
-          permissions: permissions || [],
-          productPermissions: productPermissionsMap
-        });
       } catch (error) {
         console.error('خطأ في جلب صلاحيات المستخدم:', error);
       }
@@ -532,71 +526,32 @@ export const UnifiedAuthProvider = ({ children }) => {
   const filterProductsByPermissions = useMemo(() => {
     return (products) => {
       if (!products) return [];
-      
-      console.log('🔍 بدء فلترة المنتجات:', {
-        isAdmin,
-        totalProducts: products.length,
-        productPermissions
-      });
-      
-      // المدير يرى كل شيء
-      if (isAdmin) {
-        console.log('✅ المستخدم مدير - إظهار جميع المنتجات');
-        return products;
-      }
-
-      // إذا لم تكن هناك صلاحيات محددة للمنتجات، عرض جميع المنتجات (موظف عادي)
-      if (!productPermissions || Object.keys(productPermissions).length === 0) {
-        console.log('⚠️ لا توجد قيود صلاحيات - إظهار جميع المنتجات');
-        return products;
-      }
+      if (isAdmin) return products;
 
       return products.filter(product => {
-        let shouldShow = true;
-        let filterReason = [];
-
-        // فحص التصنيفات
+        // فحص التصنيفات عبر product_categories
         const categoryPerm = productPermissions.category;
-        if (categoryPerm && !categoryPerm.has_full_access && categoryPerm.allowed_items?.length > 0) {
+        if (categoryPerm && !categoryPerm.has_full_access) {
           if (product.product_categories && product.product_categories.length > 0) {
             const hasAllowedCategory = product.product_categories.some(pc => 
               categoryPerm.allowed_items.includes(pc.category_id)
             );
-            if (!hasAllowedCategory) {
-              shouldShow = false;
-              filterReason.push('تصنيف غير مسموح');
-            }
-          } else {
-            shouldShow = false;
-            filterReason.push('لا يوجد تصنيف للمنتج');
+            if (!hasAllowedCategory) return false;
           }
         }
 
-        // فحص الأقسام
+        // فحص الأقسام عبر product_departments
         const departmentPerm = productPermissions.department;
-        if (departmentPerm && !departmentPerm.has_full_access && departmentPerm.allowed_items?.length > 0) {
+        if (departmentPerm && !departmentPerm.has_full_access) {
           if (product.product_departments && product.product_departments.length > 0) {
             const hasAllowedDepartment = product.product_departments.some(pd => 
               departmentPerm.allowed_items.includes(pd.department_id)
             );
-            if (!hasAllowedDepartment) {
-              shouldShow = false;
-              filterReason.push('قسم غير مسموح');
-            }
-          } else {
-            shouldShow = false;
-            filterReason.push('لا يوجد قسم للمنتج');
+            if (!hasAllowedDepartment) return false;
           }
         }
 
-        if (shouldShow) {
-          console.log('✅ منتج مقبول:', product.name);
-        } else {
-          console.log('❌ منتج مرفوض:', product.name, 'الأسباب:', filterReason);
-        }
-
-        return shouldShow;
-
+        return true;
       });
     };
   }, [isAdmin, productPermissions]);

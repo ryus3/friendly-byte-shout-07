@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useUnifiedPermissions } from '@/hooks/useUnifiedPermissions';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export const usePermissionBasedData = () => {
-  const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
-  const { hasPermission, hasRole, isDepartmentManager, isSalesEmployee, isWarehouseEmployee, isCashier } = useUnifiedPermissions(user);
+  const { user } = useAuth();
+  const { hasPermission, isAdmin, isDepartmentManager, isSalesEmployee, isWarehouseEmployee, isCashier } = usePermissions();
 
   // نستخدم المتغيرات مباشرة من usePermissions دون إعادة تعريفها
   const canViewAllData = useMemo(() => {
@@ -198,16 +198,30 @@ export const usePermissionBasedData = () => {
     };
   }, [isAdmin, user?.season_occasion_permissions]);
 
-  // استخدام فلترة المنتجات من نظام الصلاحيات الموحد
-  const filterProductsByPermissionsLocal = useMemo(() => {
+  // فلترة المنتجات المدمجة حسب كل الصلاحيات
+  const filterProductsByPermissions = useMemo(() => {
     return (products) => {
       if (!products) return [];
       if (isAdmin) return products;
       
-      // استخدام الفلترة الموحدة من UnifiedAuthContext
-      return filterProductsByPermissions(products);
+      // فلترة المنتجات حسب التصنيفات والأقسام والأنواع والمواسم المسموحة
+      return products.filter(product => {
+        // فحص التصنيفات
+        if (product.categories && product.categories.length > 0) {
+          const allowedCategories = filterCategoriesByPermission(product.categories);
+          if (allowedCategories.length === 0) return false;
+        }
+        
+        // فحص الأقسام
+        if (product.departments && product.departments.length > 0) {
+          const allowedDepartments = filterDepartmentsByPermission(product.departments);
+          if (allowedDepartments.length === 0) return false;
+        }
+        
+        return true;
+      });
     };
-  }, [isAdmin, filterProductsByPermissions]);
+  }, [isAdmin, filterCategoriesByPermission, filterDepartmentsByPermission]);
 
   return {
     // بيانات المستخدم والأدوار
@@ -241,7 +255,7 @@ export const usePermissionBasedData = () => {
     filterDepartmentsByPermission,
     filterProductTypesByPermission,
     filterSeasonsOccasionsByPermission,
-    filterProductsByPermissions: filterProductsByPermissionsLocal,
+    filterProductsByPermissions,
     
     // وظائف الصلاحيات
     hasPermission
