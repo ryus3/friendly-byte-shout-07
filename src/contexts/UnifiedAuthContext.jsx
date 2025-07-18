@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast.js';
 import { supabase } from '@/lib/customSupabaseClient.js';
-import { useUnifiedPermissions } from '@/hooks/useUnifiedPermissions.js';
 
 const UnifiedAuthContext = createContext(null);
 
@@ -20,8 +19,10 @@ export const UnifiedAuthProvider = ({ children }) => {
   const [pendingRegistrations, setPendingRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // استخدام hook الصلاحيات
-  const permissions = useUnifiedPermissions(user);
+  // حالات الصلاحيات
+  const [userRoles, setUserRoles] = useState([]);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [productPermissions, setProductPermissions] = useState({});
 
   const fetchUserProfile = useCallback(async (supabaseUser) => {
     if (!supabase || !supabaseUser) return null;
@@ -174,6 +175,60 @@ export const UnifiedAuthProvider = ({ children }) => {
 
     return () => subscription.unsubscribe();
   }, [fetchUserProfile]);
+
+  // جلب صلاحيات المستخدم
+  useEffect(() => {
+    if (!user?.user_id) return;
+
+    const fetchUserPermissions = async () => {
+      try {
+        // جلب أدوار المستخدم
+        const { data: roles, error: rolesError } = await supabase
+          .from('user_roles')
+          .select(`
+            role_id,
+            roles (
+              id,
+              name,
+              display_name,
+              hierarchy_level
+            )
+          `)
+          .eq('user_id', user.user_id)
+          .eq('is_active', true);
+
+        if (rolesError) throw rolesError;
+
+        // جلب صلاحيات المستخدم عبر الأدوار
+        const roleIds = roles?.map(ur => ur.role_id) || [];
+        let permissions = [];
+
+        if (roleIds.length > 0) {
+          const { data: perms, error: permsError } = await supabase
+            .from('role_permissions')
+            .select(`
+              permissions (
+                id,
+                name,
+                display_name,
+                category
+              )
+            `)
+            .in('role_id', roleIds);
+
+          if (permsError) throw permsError;
+          permissions = perms?.map(rp => rp.permissions) || [];
+        }
+
+        setUserRoles(roles || []);
+        setUserPermissions(permissions || []);
+      } catch (error) {
+        console.error('خطأ في جلب صلاحيات المستخدم:', error);
+      }
+    };
+
+    fetchUserPermissions();
+  }, [user?.user_id]);
 
   // Fetch admin data when needed
   useEffect(() => {
@@ -434,6 +489,21 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
   };
 
+  // إنشاء functions الصلاحيات
+  const hasPermission = useMemo(() => {
+    return (permissionName) => {
+      return userPermissions.some(perm => perm.name === permissionName);
+    };
+  }, [userPermissions]);
+
+  const hasRole = useMemo(() => {
+    return (roleName) => {
+      return userRoles.some(ur => ur.roles.name === roleName);
+    };
+  }, [userRoles]);
+
+  const isAdmin = useMemo(() => hasRole('super_admin'), [hasRole]);
+
   const value = {
     user,
     session,
@@ -450,7 +520,11 @@ export const UnifiedAuthProvider = ({ children }) => {
     refetchAdminData: fetchAdminData,
     fetchAdminData,
     // إضافة الصلاحيات
-    ...permissions
+    hasPermission,
+    hasRole,
+    isAdmin,
+    userRoles,
+    userPermissions
   };
 
   return (
@@ -462,6 +536,6 @@ export const UnifiedAuthProvider = ({ children }) => {
 
 // Hook لاستخدام النظام الموحد للصلاحيات
 export const usePermissions = () => {
-  const { user } = useAuth();
-  return useUnifiedPermissions(user);
+  const { user, hasPermission, hasRole, isAdmin, userRoles, userPermissions } = useAuth();
+  return { user, hasPermission, hasRole, isAdmin, userRoles, userPermissions };
 };
