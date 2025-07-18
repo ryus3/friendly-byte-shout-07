@@ -1,15 +1,20 @@
-import React from 'react';
-import { useFilteredProducts } from '@/hooks/useFilteredProducts';
-import { usePermissions } from '@/hooks/usePermissions';
+import React, { useMemo } from 'react';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import ProductGrid from './ProductGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Eye, Package } from 'lucide-react';
 
 const PermissionBasedProductGrid = ({ products, isLoading, ...otherProps }) => {
-  const { isAdmin } = usePermissions();
-  
-  // فلترة المنتجات حسب صلاحيات المستخدم باستخدام useFilteredProducts
-  const filteredProducts = useFilteredProducts(products || []);
+  const { isAdmin, filterProductsByPermissions } = useAuth();
+
+  // فلترة المنتجات حسب صلاحيات المستخدم من UnifiedAuthContext
+  const filteredProducts = useMemo(() => {
+    if (!products || !Array.isArray(products)) return [];
+    if (isAdmin) return products;
+    
+    // استخدام نظام الفلترة من UnifiedAuthContext
+    return filterProductsByPermissions ? filterProductsByPermissions(products) : [];
+  }, [products, isAdmin, filterProductsByPermissions]);
 
   // إذا لم يكن هناك منتجات مسموحة للموظف - عرض رسالة مختصرة
   if (!isAdmin && filteredProducts.length === 0 && !isLoading && products?.length > 0) {

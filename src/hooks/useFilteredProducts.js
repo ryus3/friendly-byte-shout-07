@@ -23,63 +23,57 @@ export const useFilteredProducts = (products) => {
     if (isAdmin) return products;
 
     // فلترة المنتجات حسب صلاحيات الموظف
-    const filtered = products.filter(product => {
-      // فحص التصنيفات (categories) - إذا كان للمنتج تصنيفات
+    return products.filter(product => {
+      // فحص التصنيفات (categories)
       if (product.product_categories && product.product_categories.length > 0) {
         const productCategories = product.product_categories.map(pc => pc.categories).filter(Boolean);
         const allowedCategories = filterCategoriesByPermission(productCategories);
-        if (allowedCategories.length === 0) {
-          return false; // المنتج له تصنيفات لكن المستخدم لا يملك صلاحية عليها
-        }
+        if (allowedCategories.length === 0) return false;
       }
 
-      // فحص الأقسام (departments) - إذا كان للمنتج أقسام
+      // فحص الأقسام (departments)
       if (product.product_departments && product.product_departments.length > 0) {
         const productDepartments = product.product_departments.map(pd => pd.departments).filter(Boolean);
         const allowedDepartments = filterDepartmentsByPermission(productDepartments);
-        if (allowedDepartments.length === 0) return false; // المنتج له أقسام لكن المستخدم لا يملك صلاحية عليها
+        if (allowedDepartments.length === 0) return false;
       }
 
-      // فحص أنواع المنتجات (product_types) - إذا كان للمنتج أنواع
+      // فحص أنواع المنتجات (product_types)
       if (product.product_product_types && product.product_product_types.length > 0) {
         const productTypes = product.product_product_types.map(ppt => ppt.product_types).filter(Boolean);
         const allowedProductTypes = filterProductTypesByPermission(productTypes);
-        if (allowedProductTypes.length === 0) return false; // المنتج له أنواع لكن المستخدم لا يملك صلاحية عليها
+        if (allowedProductTypes.length === 0) return false;
       }
 
-      // فحص المواسم والمناسبات (seasons_occasions) - إذا كان للمنتج مواسم
+      // فحص المواسم والمناسبات (seasons_occasions)
       if (product.product_seasons_occasions && product.product_seasons_occasions.length > 0) {
         const seasonsOccasions = product.product_seasons_occasions.map(pso => pso.seasons_occasions).filter(Boolean);
         const allowedSeasonsOccasions = filterSeasonsOccasionsByPermission(seasonsOccasions);
-        if (allowedSeasonsOccasions.length === 0) return false; // المنتج له مواسم لكن المستخدم لا يملك صلاحية عليها
+        if (allowedSeasonsOccasions.length === 0) return false;
       }
-
-      // إذا وصل إلى هنا، المنتج مسموح له
 
       // فحص المتغيرات (variants) - فلترة حسب الألوان والأحجام
       if (product.variants && product.variants.length > 0) {
         const allowedVariants = product.variants.filter(variant => {
-          let variantHasPermission = true;
-
-          // فحص الألوان - إذا كان للمتغير لون محدد
+          // فحص الألوان
           if (variant.color_id || variant.colors) {
             const variantColors = variant.colors ? [variant.colors] : [];
             if (variantColors.length > 0) {
               const allowedColors = filterColorsByPermission(variantColors);
-              if (allowedColors.length === 0) variantHasPermission = false;
+              if (allowedColors.length === 0) return false;
             }
           }
 
-          // فحص الأحجام - إذا كان للمتغير حجم محدد
+          // فحص الأحجام
           if (variant.size_id || variant.sizes) {
             const variantSizes = variant.sizes ? [variant.sizes] : [];
             if (variantSizes.length > 0) {
               const allowedSizes = filterSizesByPermission(variantSizes);
-              if (allowedSizes.length === 0) variantHasPermission = false;
+              if (allowedSizes.length === 0) return false;
             }
           }
 
-          return variantHasPermission;
+          return true;
         });
 
         // إذا لم تكن هناك متغيرات مسموحة، أخفي المنتج
@@ -92,8 +86,6 @@ export const useFilteredProducts = (products) => {
 
       return true;
     });
-    
-    return filtered;
   }, [
     products, 
     isAdmin, 

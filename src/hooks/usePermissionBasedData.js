@@ -100,64 +100,70 @@ export const usePermissionBasedData = () => {
     };
   }, [user?.id, user?.user_id, isAdmin, isDepartmentManager]);
 
-  // فلترة التصنيفات والمتغيرات حسب الصلاحيات - استخدام صلاحيات المنتجات من السياق
+  // فلترة التصنيفات والمتغيرات حسب الصلاحيات
   const filterCategoriesByPermission = useMemo(() => {
     return (categories) => {
       if (!categories) return [];
       if (isAdmin) return categories;
       
-      // استخدام صلاحيات المنتجات من UnifiedAuthContext
-      const categoryPermissions = user?.productPermissions?.category;
-      if (!categoryPermissions) {
-        return []; // لا توجد صلاحيات = لا يرى شيء
+      try {
+        const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+        if (categoryPermissions.includes('all')) return categories;
+        return categories.filter(cat => categoryPermissions.includes(cat.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات التصنيفات:', e);
+        return []; // أكثر أماناً للموظفين
       }
-      
-      if (categoryPermissions.has_full_access) {
-        return categories;
-      }
-      
-      return categories.filter(cat => categoryPermissions.allowed_items.includes(cat.id));
     };
-  }, [isAdmin, user?.productPermissions]);
+  }, [isAdmin, user?.category_permissions]);
 
   const filterSizesByPermission = useMemo(() => {
     return (sizes) => {
       if (!sizes) return [];
       if (isAdmin) return sizes;
       
-      const sizePermissions = user?.productPermissions?.size;
-      if (!sizePermissions) return [];
-      
-      if (sizePermissions.has_full_access) return sizes;
-      return sizes.filter(size => sizePermissions.allowed_items.includes(size.id));
+      try {
+        const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
+        if (sizePermissions.includes('all')) return sizes;
+        return sizes.filter(size => sizePermissions.includes(size.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات الأحجام:', e);
+        return [];
+      }
     };
-  }, [isAdmin, user?.productPermissions]);
+  }, [isAdmin, user?.size_permissions]);
 
   const filterColorsByPermission = useMemo(() => {
     return (colors) => {
       if (!colors) return [];
       if (isAdmin) return colors;
       
-      const colorPermissions = user?.productPermissions?.color;
-      if (!colorPermissions) return [];
-      
-      if (colorPermissions.has_full_access) return colors;
-      return colors.filter(color => colorPermissions.allowed_items.includes(color.id));
+      try {
+        const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+        if (colorPermissions.includes('all')) return colors;
+        return colors.filter(color => colorPermissions.includes(color.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات الألوان:', e);
+        return [];
+      }
     };
-  }, [isAdmin, user?.productPermissions]);
+  }, [isAdmin, user?.color_permissions]);
 
   const filterDepartmentsByPermission = useMemo(() => {
     return (departments) => {
       if (!departments) return [];
       if (isAdmin) return departments;
       
-      const departmentPermissions = user?.productPermissions?.department;
-      if (!departmentPermissions) return [];
-      
-      if (departmentPermissions.has_full_access) return departments;
-      return departments.filter(dept => departmentPermissions.allowed_items.includes(dept.id));
+      try {
+        const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
+        if (departmentPermissions.includes('all')) return departments;
+        return departments.filter(dept => departmentPermissions.includes(dept.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات الأقسام:', e);
+        return [];
+      }
     };
-  }, [isAdmin, user?.productPermissions]);
+  }, [isAdmin, user?.department_permissions]);
 
   // فلترة أنواع المنتجات والمواسم
   const filterProductTypesByPermission = useMemo(() => {
@@ -165,26 +171,32 @@ export const usePermissionBasedData = () => {
       if (!productTypes) return [];
       if (isAdmin) return productTypes;
       
-      const productTypePermissions = user?.productPermissions?.product_type;
-      if (!productTypePermissions) return [];
-      
-      if (productTypePermissions.has_full_access) return productTypes;
-      return productTypes.filter(type => productTypePermissions.allowed_items.includes(type.id));
+      try {
+        const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
+        if (productTypePermissions.includes('all')) return productTypes;
+        return productTypes.filter(type => productTypePermissions.includes(type.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات أنواع المنتجات:', e);
+        return [];
+      }
     };
-  }, [isAdmin, user?.productPermissions]);
+  }, [isAdmin, user?.product_type_permissions]);
 
   const filterSeasonsOccasionsByPermission = useMemo(() => {
     return (seasonsOccasions) => {
       if (!seasonsOccasions) return [];
       if (isAdmin) return seasonsOccasions;
       
-      const seasonOccasionPermissions = user?.productPermissions?.season_occasion;
-      if (!seasonOccasionPermissions) return [];
-      
-      if (seasonOccasionPermissions.has_full_access) return seasonsOccasions;
-      return seasonsOccasions.filter(item => seasonOccasionPermissions.allowed_items.includes(item.id));
+      try {
+        const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
+        if (seasonOccasionPermissions.includes('all')) return seasonsOccasions;
+        return seasonsOccasions.filter(item => seasonOccasionPermissions.includes(item.id));
+      } catch (e) {
+        console.warn('خطأ في تحليل صلاحيات المواسم والمناسبات:', e);
+        return [];
+      }
     };
-  }, [isAdmin, user?.productPermissions]);
+  }, [isAdmin, user?.season_occasion_permissions]);
 
   // فلترة المنتجات المدمجة حسب كل الصلاحيات
   const filterProductsByPermissions = useMemo(() => {

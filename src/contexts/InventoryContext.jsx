@@ -474,24 +474,24 @@ export const InventoryProvider = ({ children }) => {
 
   // فحص المخزون المنخفض والإشعار - استخدام المنتجات المفلترة
   const checkLowStockNotifications = useCallback(async () => {
-    if (!allProducts || !notifyLowStock) return;
+    if (!filteredProducts || !notifyLowStock) return;
     
     const lowStockProducts = getLowStockProducts(settings.lowStockThreshold || 5, filteredProducts);
     
     lowStockProducts.forEach(async (variant) => {
-      const product = allProducts.find(p => p.variants?.some(v => v.id === variant.id));
+      const product = filteredProducts.find(p => p.variants?.some(v => v.id === variant.id));
       if (product) {
         await notifyLowStock(product, variant);
       }
     });
-  }, [allProducts, filteredProducts, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
+  }, [filteredProducts, getLowStockProducts, settings.lowStockThreshold, notifyLowStock]);
 
   // فحص المخزون كل مرة تتغير فيها المنتجات المفلترة
   useEffect(() => {
-    if (allProducts && allProducts.length > 0) {
+    if (filteredProducts && filteredProducts.length > 0) {
       checkLowStockNotifications();
     }
-  }, [allProducts, checkLowStockNotifications]);
+  }, [filteredProducts, checkLowStockNotifications]);
 
   const getEmployeeProfitRules = useCallback((employeeId) => {
     return employeeProfitRules[employeeId] || [];
@@ -583,7 +583,7 @@ export const InventoryProvider = ({ children }) => {
     const profitRules = employeeProfitRules[employeeId] || [];
     if (!item.price || !item.cost_price || !employeeId) return 0;
   
-    const productInfo = allProducts.find(p => p.id === item.productId);
+    const productInfo = products.find(p => p.id === item.productId);
     if (!productInfo) return 0;
 
     const specificRule = profitRules.find(r => r.rule_type === 'product' && r.target_id === String(item.productId));
@@ -600,7 +600,7 @@ export const InventoryProvider = ({ children }) => {
 
     const defaultProfit = (item.price - item.cost_price) * item.quantity;
     return defaultProfit > 0 ? defaultProfit : 0;
-  }, [employeeProfitRules, allProducts]);
+  }, [employeeProfitRules, products]);
 
   const calculateManagerProfit = useCallback((order) => {
     if (!order || !order.items || !order.created_by) return 0;
