@@ -203,6 +203,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }, [aiOrderData, clearCart, addToCart]);
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
+  
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
   const [packageSizes, setPackageSizes] = useState([]);
@@ -212,6 +213,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [dataFetchError, setDataFetchError] = useState(false);
 
+  // حساب المجاميع
   const subtotal = useMemo(() => Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0, [cart]);
   const deliveryFee = useMemo(() => settings?.deliveryFee || 0, [settings]);
   const total = useMemo(() => subtotal - discount, [subtotal, discount]);
