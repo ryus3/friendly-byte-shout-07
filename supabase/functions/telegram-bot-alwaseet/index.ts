@@ -208,9 +208,12 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       const line = lines[i].trim()
       const lowerLine = line.toLowerCase()
       
-      // Parse customer name
-      if ((lowerLine.includes('اسم') || lowerLine.includes('زبون') || lowerLine.includes('عميل')) && !customerName) {
-        customerName = line.replace(/^(اسم|زبون|عميل)[:\s]*/i, '').trim()
+      // Parse customer name - improved detection
+      if ((lowerLine.includes('اسم') || lowerLine.includes('زبون') || lowerLine.includes('عميل') || lowerLine.includes('الزبون')) && !customerName) {
+        customerName = line.replace(/^(اسم|زبون|عميل|الزبون)[:\s]*/i, '').trim()
+      } else if (i === 0 && !customerName && !line.match(/07[5789]\d{8}/) && !lowerLine.includes('منتج')) {
+        // First line as customer name if no phone number or product keyword
+        customerName = line.trim()
       }
       
       // Parse phone numbers
@@ -249,79 +252,123 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
       }
       
       // Parse products with enhanced price detection
-      if (!phoneFound || !cityFound || lowerLine.includes('منتج') || lowerLine.includes('product')) {
-        const productRegex = /(.+?)(?:\s*(\d+)\s*قطعة?\s*[\-\×x]\s*(\d+\.?\d*)\s*د\.?ع?)?$/i
-        const match = line.match(productRegex)
+      if (lowerLine.includes('منتج') || lowerLine.includes('product') || 
+          (!phoneFound && !cityFound && !lowerLine.includes('عنوان') && !lowerLine.includes('منطقة') && !lowerLine.includes('محافظة'))) {
         
-        if (match) {
-          const productName = match[1].replace(/^(منتج:?\s*)?/, '').trim()
-          const quantity = match[2] ? parseInt(match[2]) : 1
-          let price = match[3] ? parseFloat(match[3]) : 0
+        // Enhanced product parsing
+        let productName = line
+        let quantity = 1
+        let price = 0
+        
+        // Remove product prefix if exists
+        productName = productName.replace(/^(منتج:?\s*)?/, '').trim()
+        
+        // Parse different formats:
+        // "قميص أحمر 2 قطعة x 25000"
+        // "قميص أحمر 2x25000"  
+        // "قميص أحمر - 2 - 25000"
+        const patterns = [
+          /(.+?)\s*[\-\×x]\s*(\d+)\s*[\-\×x]\s*(\d+\.?\d*)/i,           // name - qty - price
+          /(.+?)\s*(\d+)\s*قطعة?\s*[\-\×x]\s*(\d+\.?\d*)/i,              // name qty pieces x price
+          /(.+?)\s*[\-\×x]\s*(\d+\.?\d*)/i,                            // name x price (qty = 1)
+          /(.+?)\s*(\d+)\s*قطعة?\s*$/i,                                 // name qty pieces (no price)
+          /(.+?)\s*(\d+\.?\d*)\s*د\.?ع?$/i                             // name price dinars
+        ]
+        
+        let matched = false
+        for (const pattern of patterns) {
+          const match = productName.match(pattern)
+          if (match) {
+            if (pattern.source.includes('قطعة')) {
+              productName = match[1].trim()
+              if (match[3]) { // has price
+                quantity = parseInt(match[2]) || 1
+                price = parseFloat(match[3]) || 0
+              } else { // only quantity
+                quantity = parseInt(match[2]) || 1
+              }
+            } else if (match[3]) { // has all three parts
+              productName = match[1].trim()
+              quantity = parseInt(match[2]) || 1
+              price = parseFloat(match[3]) || 0
+            } else { // name and price only
+              productName = match[1].trim()
+              price = parseFloat(match[2]) || 0
+            }
+            matched = true
+            break
+          }
+        }
           
-          if (productName && productName.length > 1) {
-            // Enhanced product search with variants and proper pricing
-            let finalPrice = price
-            let productId = null
+        
+        if (!matched && productName && productName.length > 1) {
+          // Default case - just product name
+          matched = true
+        }
+        
+        if (matched && productName && productName.length > 1) {
+          // Enhanced product search with variants and proper pricing
+          let finalPrice = price
+          let productId = null
+          
+          // Search for exact product name first
+          const { data: products } = await supabase
+            .from('products')
+            .select(`
+              id, name, base_price, cost_price,
+              product_variants (
+                id, price, cost_price, color_id, size_id, is_active,
+                colors (name),
+                sizes (name)
+              )
+            `)
+            .or(`name.ilike.%${productName}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
+            .eq('is_active', true)
+            .limit(5)
+          
+          if (products && products.length > 0) {
+            const product = products[0]
+            productId = product.id
             
-            // Search for exact product name first
-            const { data: products } = await supabase
-              .from('products')
-              .select(`
-                id, name, base_price, cost_price,
-                product_variants (
-                  id, price, cost_price, color_id, size_id, is_active,
-                  colors (name),
-                  sizes (name)
-                )
-              `)
-              .or(`name.ilike.%${productName}%,name.ilike.%${productName.replace(/\s+/g, '%')}%`)
-              .eq('is_active', true)
-              .limit(5)
-            
-            if (products && products.length > 0) {
-              const product = products[0]
-              productId = product.id
-              
-              // Try to find price from variants first
-              if (product.product_variants && product.product_variants.length > 0) {
-                const activeVariants = product.product_variants.filter(v => v.is_active)
-                if (activeVariants.length > 0) {
-                  // Use first active variant price
-                  finalPrice = price || activeVariants[0].price || product.base_price || 0
-                } else {
-                  finalPrice = price || product.base_price || 0
-                }
+            // Try to find price from variants first
+            if (product.product_variants && product.product_variants.length > 0) {
+              const activeVariants = product.product_variants.filter(v => v.is_active)
+              if (activeVariants.length > 0) {
+                // Use first active variant price
+                finalPrice = price || activeVariants[0].price || product.base_price || 0
               } else {
-                // Use base price if no variants
                 finalPrice = price || product.base_price || 0
               }
+            } else {
+              // Use base price if no variants
+              finalPrice = price || product.base_price || 0
             }
-            
-            if (finalPrice === 0 && !price) {
-              // Try one more search with relaxed criteria
-              const { data: fallbackProducts } = await supabase
-                .from('products')
-                .select('id, name, base_price')
-                .textSearch('name', productName.split(' ').join(' | '))
-                .eq('is_active', true)
-                .limit(1)
-              
-              if (fallbackProducts && fallbackProducts.length > 0) {
-                productId = fallbackProducts[0].id
-                finalPrice = fallbackProducts[0].base_price || 0
-              }
-            }
-            
-            hasCustomPrice = price > 0
-            totalPrice += finalPrice * quantity
-            
-            items.push({
-              name: productName,
-              quantity,
-              price: finalPrice,
-              product_id: productId
-            })
           }
+          
+          if (finalPrice === 0 && !price) {
+            // Try one more search with relaxed criteria
+            const { data: fallbackProducts } = await supabase
+              .from('products')
+              .select('id, name, base_price')
+              .textSearch('name', productName.split(' ').join(' | '))
+              .eq('is_active', true)
+              .limit(1)
+            
+            if (fallbackProducts && fallbackProducts.length > 0) {
+              productId = fallbackProducts[0].id
+              finalPrice = fallbackProducts[0].base_price || 0
+            }
+          }
+          
+          hasCustomPrice = price > 0
+          totalPrice += finalPrice * quantity
+          
+          items.push({
+            name: productName,
+            quantity,
+            price: finalPrice,
+            product_id: productId
+          })
         }
       }
     }
@@ -336,7 +383,17 @@ async function processOrderWithAlWaseet(text: string, chatId: number, employeeCo
     
     // Validate essential fields
     if (!customerPhone || items.length === 0) {
-      await sendTelegramMessage(chatId, '❌ خطأ في الطلب!\n\nيجب أن يحتوي الطلب على:\n• رقم هاتف صحيح\n• منتج واحد على الأقل\n\nمثال:\nاحمد علي\n07701234567\nبغداد\nشارع الخليج\nقميص أحمر 2 قطعة x 25000 د.ع')
+      const helpMessage = `❌ خطأ في الطلب!\n\n` +
+        `يجب أن يحتوي الطلب على:\n• رقم هاتف صحيح (07xxxxxxxxx)\n• منتج واحد على الأقل\n\n` +
+        `📋 مثال صحيح:\n` +
+        `احمد علي\n` +
+        `07701234567\n` +
+        `بغداد الدورة\n` +
+        `شارع الخليج\n` +
+        `قميص أحمر 2 قطعة x 25000 د.ع\n` +
+        `بنطال أزرق 1 قطعة x 35000 د.ع`
+      
+      await sendTelegramMessage(chatId, helpMessage)
       return false
     }
     
