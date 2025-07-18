@@ -54,11 +54,12 @@
     --notification-error: 0 84% 60%;     /* أحمر للخطأ */
     --notification-stock: 24 95% 53%;    /* برتقالي للمخزون */
     
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+    /* Gradients - Beautiful Welcome Card */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%));
     --gradient-secondary: linear-gradient(135deg, hsl(var(--secondary)), hsl(var(--muted)));
-    --gradient-welcome: linear-gradient(135deg, hsl(var(--primary)), hsl(262 83% 58%));
-    --gradient-glass: linear-gradient(135deg, hsl(var(--background) / 0.9), hsl(var(--background) / 0.7));
+    --gradient-welcome: linear-gradient(135deg, hsl(217 91% 60%), hsl(262 83% 58%), hsl(280 100% 70%));
+    --gradient-glass-light: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.8));
+    --gradient-glass-dark: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8));
   }
  
   .dark {
@@ -219,18 +220,41 @@
     @apply h-1.5 rounded-full transition-all duration-500;
   }
   
-  /* Welcome Header Beautiful Styles */
+  /* Welcome Header Beautiful Styles - Restored Original */
   .glass-effect {
-    background: var(--gradient-glass);
+    background: var(--gradient-glass-light);
     backdrop-filter: blur(20px);
-    border: 1px solid hsl(var(--border) / 0.2);
-    box-shadow: 0 8px 32px hsl(var(--primary) / 0.1);
-    transition: all 0.3s ease;
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+      0 8px 32px rgba(31, 38, 135, 0.15),
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .dark .glass-effect {
+    background: var(--gradient-glass-dark);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   
   .glass-effect:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px hsl(var(--primary) / 0.15);
+    box-shadow: 
+      0 12px 40px rgba(31, 38, 135, 0.2),
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  
+  .dark .glass-effect:hover {
+    box-shadow: 
+      0 12px 40px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
   
   .gradient-text {
@@ -239,7 +263,8 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-size: 200% 200%;
-    animation: gradient-shift 3s ease-in-out infinite;
+    animation: gradient-shift 4s ease-in-out infinite;
+    font-weight: 700;
   }
   
   @keyframes gradient-shift {
