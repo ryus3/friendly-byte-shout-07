@@ -141,35 +141,34 @@ const OrderCard = ({
                     رقم الطلب: {order.order_number}
                   </p>
                   
-                  {/* عنصر التوصيل المطور بأشكال مميزة */}
-                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium transition-all shadow-md w-fit ${
+                  {/* عنصر التوصيل المطور بأشكال مميزة احترافية */}
+                  <div className={`inline-flex items-center gap-3 px-4 py-2 rounded-full border text-xs font-medium transition-all shadow-lg w-fit backdrop-blur-sm ${
                     order.delivery_partner === 'محلي' || !order.delivery_partner 
-                      ? 'bg-gradient-to-r from-emerald-50 via-green-50 to-teal-50 text-emerald-700 border-emerald-300 shadow-emerald-200' 
-                      : 'bg-gradient-to-r from-blue-50 via-cyan-50 to-sky-50 text-blue-700 border-blue-300 shadow-blue-200'
+                      ? 'bg-[hsl(var(--delivery-local)_/_0.15)] text-[hsl(var(--delivery-local))] border-[hsl(var(--delivery-local)_/_0.4)] shadow-[hsl(var(--delivery-local)_/_0.25)]' 
+                      : 'bg-[hsl(var(--delivery-company)_/_0.15)] text-[hsl(var(--delivery-company))] border-[hsl(var(--delivery-company)_/_0.4)] shadow-[hsl(var(--delivery-company)_/_0.25)]'
                   }`}>
                     {order.delivery_partner === 'محلي' || !order.delivery_partner ? (
                       <>
-                        <div className="relative">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                          <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
-                        </div>
-                        <span className="font-semibold">🏠 توصيل محلي</span>
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                        </svg>
+                        <span className="font-semibold tracking-wide">توصيل محلي</span>
                       </>
                     ) : (
                       <>
-                        <div className="relative">
-                          <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                          <div className="absolute -top-0.5 -right-0.5 w-1 h-1 rounded-full bg-blue-300"></div>
-                        </div>
-                        <span className="font-semibold">🚚 {order.delivery_partner.length > 12 ? order.delivery_partner.substring(0, 12) + '...' : order.delivery_partner}</span>
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19 7h-3V6a4 4 0 0 0-8 0v1H5a1 1 0 0 0-1 1v11a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V8a1 1 0 0 0-1-1ZM10 6a2 2 0 0 1 4 0v1h-4V6Zm8 13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V9h2v1a1 1 0 0 0 2 0V9h4v1a1 1 0 0 0 2 0V9h2v10Z"/>
+                          <circle cx="18" cy="4" r="3" fill="currentColor"/>
+                        </svg>
+                        <span className="font-semibold tracking-wide">{order.delivery_partner.length > 10 ? order.delivery_partner.substring(0, 10) + '...' : order.delivery_partner}</span>
                       </>
                     )}
                   </div>
                 </div>
               </div>
               
-              {/* حالة الطلب */}
-              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all shadow-sm backdrop-blur-sm ${statusConfig.color}`}>
+              {/* حالة الطلب مع مسافة مناسبة */}
+              <div className={`flex items-center gap-3 px-4 py-2 rounded-lg border text-sm font-medium transition-all shadow-sm backdrop-blur-sm ${statusConfig.color}`}>
                 <StatusIcon className="h-4 w-4 flex-shrink-0" />
                 <span>{statusConfig.label}</span>
               </div>
