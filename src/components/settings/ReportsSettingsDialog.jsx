@@ -23,21 +23,32 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
 
   // حساب البيانات الحقيقية للنظام
   const calculateRealData = () => {
-    const now = new Date();
     const safeOrders = Array.isArray(orders) ? orders : [];
     const safeProducts = Array.isArray(products) ? products : [];
+    const safePurchases = Array.isArray(purchases) ? purchases : [];
     const deliveredOrders = safeOrders.filter(o => o.status === 'delivered');
     
-    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || 0), 0);
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (parseFloat(o.final_amount) || 0), 0);
     const totalOrders = deliveredOrders.length;
-    const totalProducts = safeProducts.length;
-    const totalExpenses = Array.isArray(accounting?.expenses) 
-      ? accounting.expenses.reduce((sum, e) => sum + (e.amount || 0), 0) 
-      : 0;
+    const totalProducts = safeProducts.filter(p => p.is_active !== false).length;
     
-    const totalVariants = safeProducts.reduce((sum, p) => sum + (p.variants?.length || 0), 0);
-    const totalStock = safeProducts.reduce((sum, p) => 
-      sum + (p.variants?.reduce((vSum, v) => vSum + (v.quantity || 0), 0) || 0), 0
+    // حساب المصاريف من جدول المشتريات والمصاريف
+    const purchasesExpenses = safePurchases.reduce((sum, p) => sum + (parseFloat(p.total_amount) || 0), 0);
+    const otherExpenses = Array.isArray(accounting?.expenses) 
+      ? accounting.expenses.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) 
+      : 0;
+    const totalExpenses = purchasesExpenses + otherExpenses;
+    
+    // حساب المخزون بطريقة أفضل
+    const totalStock = safeProducts.reduce((sum, p) => {
+      if (p.variants && Array.isArray(p.variants)) {
+        return sum + p.variants.reduce((vSum, v) => vSum + (parseInt(v.quantity) || 0), 0);
+      }
+      return sum;
+    }, 0);
+    
+    const totalVariants = safeProducts.reduce((sum, p) => 
+      sum + (p.variants?.length || 0), 0
     );
     
     return {
@@ -47,11 +58,14 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       totalVariants,
       totalStock,
       totalExpenses,
+      purchasesExpenses,
+      otherExpenses,
       netProfit: totalRevenue - totalExpenses,
       averageOrderValue: totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0,
       profitMargin: totalRevenue > 0 ? `${((totalRevenue - totalExpenses) / totalRevenue * 100).toFixed(1)}%` : '0%',
       orders: deliveredOrders,
-      products: safeProducts
+      products: safeProducts,
+      purchases: safePurchases
     };
   };
 
@@ -120,26 +134,35 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
 
   const generatePDFComponent = (reportType) => {
     const summary = {
-      totalRevenue: realData.totalRevenue,
-      totalExpenses: realData.totalExpenses,
-      netProfit: realData.netProfit,
-      cogs: realData.totalExpenses * 0.6, // تقدير تكلفة البضاعة
-      grossProfit: realData.totalRevenue - (realData.totalExpenses * 0.6),
-      generalExpenses: realData.totalExpenses * 0.4,
-      totalProfit: realData.netProfit,
-      inventoryValue: realData.totalStock * 15000, // متوسط سعر تقديري
-      chartData: []
+      totalRevenue: realData.totalRevenue || 0,
+      totalExpenses: realData.totalExpenses || 0,
+      netProfit: realData.netProfit || 0,
+      cogs: realData.purchasesExpenses || 0,
+      grossProfit: (realData.totalRevenue || 0) - (realData.purchasesExpenses || 0),
+      generalExpenses: realData.otherExpenses || 0,
+      totalProfit: realData.netProfit || 0,
+      inventoryValue: (realData.totalStock || 0) * 50000, // متوسط سعر تقديري محدث
+      chartData: [],
+      orders: realData.orders || [],
+      products: realData.products || [],
+      purchases: realData.purchases || []
     };
 
-    switch (reportType) {
-      case 'financial':
-        return <FinancialReportPDF summary={summary} dateRange={dateRanges.monthly} />;
-      case 'inventory':
-        return <InventoryPDF products={realData.products} />;
-      case 'sales':
-      case 'full':
-      default:
-        return <InventoryReportPDF products={realData.products} />;
+    try {
+      switch (reportType) {
+        case 'financial':
+          return <FinancialReportPDF summary={summary} dateRange={dateRanges.monthly} />;
+        case 'inventory':
+          return <InventoryPDF products={realData.products || []} />;
+        case 'sales':
+          return <InventoryReportPDF products={realData.products || []} orders={realData.orders || []} />;
+        case 'full':
+        default:
+          return <InventoryReportPDF products={realData.products || []} orders={realData.orders || []} summary={summary} />;
+      }
+    } catch (error) {
+      console.error('خطأ في إنتاج PDF:', error);
+      return <div>خطأ في إنتاج التقرير</div>;
     }
   };
 

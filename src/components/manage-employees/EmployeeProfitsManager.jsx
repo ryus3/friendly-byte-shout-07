@@ -22,8 +22,12 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
 
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => (u.role === 'employee' || u.role === 'deputy' || u.role === 'manager') && u.is_active)
-      .filter(u => u.full_name && u.full_name.trim() !== ''); // فلترة الموظفين الذين لديهم أسماء صحيحة
+    return allUsers.filter(u => 
+      u.is_active && 
+      u.status === 'active' && 
+      u.full_name && 
+      u.full_name.trim() !== ''
+    );
   }, [allUsers]);
 
   const employeeStats = useMemo(() => {
@@ -135,10 +139,10 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
                                  {emp.full_name ? emp.full_name.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
                                </div>
-                               <div>
-                                 <div className="font-semibold">{emp.full_name || emp.username || 'موظف غير محدد'}</div>
-                                 <div className="text-sm text-muted-foreground">{emp.role}</div>
-                               </div>
+                                <div>
+                                  <div className="font-semibold">{emp.full_name || emp.username || 'موظف غير محدد'}</div>
+                                  <div className="text-sm text-muted-foreground">{emp.email}</div>
+                                </div>
                             </div>
                             <div className="flex items-center gap-4">
                               <div className="text-center">
@@ -179,10 +183,10 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-primary to-primary/80 flex items-center justify-center text-white font-bold">
                                {emp.full_name ? emp.full_name.charAt(0).toUpperCase() : emp.username ? emp.username.charAt(0).toUpperCase() : '?'}
                              </div>
-                             <div className="flex-1">
-                               <div className="font-semibold">{emp.full_name || emp.username || 'موظف غير محدد'}</div>
-                               <div className="text-sm text-muted-foreground">{emp.role}</div>
-                             </div>
+                              <div className="flex-1">
+                                <div className="font-semibold">{emp.full_name || emp.username || 'موظف غير محدد'}</div>
+                                <div className="text-sm text-muted-foreground">{emp.email}</div>
+                              </div>
                           </div>
                           
                           <div className="space-y-2 mb-4">
