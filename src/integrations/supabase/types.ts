@@ -1026,6 +1026,7 @@ export type Database = {
           color_id: string | null
           cost_price: number
           created_at: string
+          hint: string | null
           id: string
           images: string[] | null
           is_active: boolean
@@ -1040,6 +1041,7 @@ export type Database = {
           color_id?: string | null
           cost_price: number
           created_at?: string
+          hint?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
@@ -1054,6 +1056,7 @@ export type Database = {
           color_id?: string | null
           cost_price?: number
           created_at?: string
+          hint?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean

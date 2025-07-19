@@ -273,7 +273,8 @@ const AddProductPage = () => {
         ...v,
         quantity: parseInt(v.quantity) || 0,
         price: parseFloat(v.price) || parseFloat(productInfo.price) || 0,
-        costPrice: parseFloat(v.costPrice) || parseFloat(productInfo.costPrice) || 0
+        costPrice: parseFloat(v.costPrice) || parseFloat(productInfo.costPrice) || 0,
+        hint: v.hint || ''
       })),
       isVisible: true,
     };

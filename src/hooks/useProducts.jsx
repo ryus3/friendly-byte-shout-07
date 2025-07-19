@@ -186,7 +186,8 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
             cost_price: parseFloat(variant.costPrice) || 0,
             profit_amount: parseFloat(variant.profitAmount) || productData.profitAmount || 0,
             barcode: uniqueBarcode, // استخدام الباركود الفريد المولد
-            images: imageUrl ? [imageUrl] : []
+            images: imageUrl ? [imageUrl] : [],
+            hint: variant.hint || ''
           });
       }
 
@@ -461,7 +462,8 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   profit_amount: parseFloat(v.profit_amount || v.profitAmount || productData.profitAmount) || 0,
                   barcode: barcode,
                   images: imageUrl ? [imageUrl] : [],
-                  quantity: parseInt(v.quantity) || 0 // إضافة الكمية للإدراج
+                  quantity: parseInt(v.quantity) || 0, // إضافة الكمية للإدراج
+                  hint: v.hint || ''
                 });
               }
             }
@@ -477,7 +479,8 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: variant.price,
                   cost_price: variant.cost_price,
                   profit_amount: variant.profit_amount,
-                  images: variant.images
+                  images: variant.images,
+                  hint: variant.hint || ''
                 })
                 .eq('id', variant.id);
                 
@@ -519,7 +522,8 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   cost_price: v.cost_price,
                   profit_amount: v.profit_amount,
                   barcode: v.barcode,
-                  images: v.images
+                  images: v.images,
+                  hint: v.hint || ''
                 })))
                 .select();
                 
