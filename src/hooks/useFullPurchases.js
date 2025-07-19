@@ -51,12 +51,15 @@ export const useFullPurchases = () => {
       // تحديث المخزون لكل منتج
       const stockUpdatePromises = purchaseData.items.map(async (item) => {
         try {
-          console.log('Updating stock for:', {
+          console.log('🔄 تحديث المخزون لـ:', {
             sku: item.variantSku,
             quantity: item.quantity,
-            costPrice: item.costPrice
+            costPrice: item.costPrice,
+            productId: item.productId,
+            variantId: item.variantId
           });
           
+          // استخدام الدالة المحسّنة لتحديث المخزون
           const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase', {
             p_sku: item.variantSku,
             p_quantity_change: item.quantity,
@@ -64,13 +67,27 @@ export const useFullPurchases = () => {
           });
           
           if (stockError) {
-            console.error(`خطأ في تحديث مخزون ${item.variantSku}:`, stockError);
+            console.error(`❌ خطأ في تحديث مخزون ${item.variantSku}:`, stockError);
             throw stockError;
           }
           
-          console.log(`تم تحديث مخزون ${item.variantSku} بنجاح`);
+          console.log(`✅ تم تحديث مخزون ${item.variantSku} بنجاح بكمية ${item.quantity}`);
+          
+          // التحقق من أن المخزون تم تحديثه فعلاً
+          const { data: updatedStock } = await supabase
+            .from('inventory')
+            .select('quantity, product_id, variant_id')
+            .or(`product_id.eq.${item.productId},variant_id.eq.${item.variantId}`)
+            .limit(1);
+            
+          if (updatedStock && updatedStock.length > 0) {
+            console.log(`📊 مخزون محدث:`, updatedStock[0]);
+          } else {
+            console.log(`📊 لم يوجد مخزون للمنتج - سيتم إنشاؤه`);
+          }
+          
         } catch (error) {
-          console.error(`فشل تحديث مخزون ${item.variantSku}:`, error);
+          console.error(`💥 فشل تحديث مخزون ${item.variantSku}:`, error);
           throw error;
         }
       });
@@ -121,7 +138,7 @@ export const useFullPurchases = () => {
 
       // إضافة مصروف الشحن إذا كان موجود
       if (purchaseData.shippingCost && purchaseData.shippingCost > 0) {
-        console.log(`إضافة مصروف الشحن: ${purchaseData.shippingCost} د.ع`);
+        console.log(`💰 إضافة مصروف الشحن: ${purchaseData.shippingCost} د.ع`);
         await addExpense({
           category: 'شحن ونقل',
           expense_type: 'operational',
@@ -136,14 +153,14 @@ export const useFullPurchases = () => {
             parent_purchase: newPurchase.purchase_number
           }
         });
-        console.log(`تم إضافة مصروف الشحن بنجاح: ${purchaseData.shippingCost} د.ع`);
+        console.log(`✅ تم إضافة مصروف الشحن بنجاح: ${purchaseData.shippingCost} د.ع`);
       } else {
-        console.log('لا يوجد مصروف شحن لإضافته');
+        console.log('ℹ️ لا يوجد مصروف شحن لإضافته');
       }
 
       // إضافة مصروف التحويل إذا كان موجود
       if (purchaseData.transferCost && purchaseData.transferCost > 0) {
-        console.log(`إضافة مصروف التحويل: ${purchaseData.transferCost} د.ع`);
+        console.log(`💰 إضافة مصروف التحويل: ${purchaseData.transferCost} د.ع`);
         await addExpense({
           category: 'تكاليف التحويل',
           expense_type: 'operational',
@@ -158,9 +175,9 @@ export const useFullPurchases = () => {
             parent_purchase: newPurchase.purchase_number
           }
         });
-        console.log(`تم إضافة مصروف التحويل بنجاح: ${purchaseData.transferCost} د.ع`);
+        console.log(`✅ تم إضافة مصروف التحويل بنجاح: ${purchaseData.transferCost} د.ع`);
       } else {
-        console.log('لا يوجد مصروف تحويل لإضافته');
+        console.log('ℹ️ لا يوجد مصروف تحويل لإضافته');
       }
 
       // تحديث قائمة المشتريات فوراً
