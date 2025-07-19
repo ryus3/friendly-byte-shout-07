@@ -126,13 +126,8 @@ const ManageProductsPage = () => {
   const handleManageVariants = useCallback(() => {
     if (hasPermission('manage_variants')) {
       navigate('/manage-variants');
-    } else {
-      toast({
-        title: "غير مصرح",
-        description: "ليس لديك الصلاحية لإدارة المتغيرات.",
-        variant: "destructive"
-      });
     }
+    // Remove the unauthorized toast message
   }, [hasPermission, navigate]);
 
   const handleEdit = useCallback((product) => {

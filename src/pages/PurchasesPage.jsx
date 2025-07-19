@@ -75,9 +75,8 @@ const PurchasesPage = () => {
   const handleAddPurchase = () => {
     if (hasPermission('add_purchase')) {
       setIsAddOpen(true);
-    } else {
-      toast({ title: 'غير مصرح', description: 'ليس لديك صلاحية لإضافة المشتريات.', variant: 'destructive' });
     }
+    // Remove the unauthorized toast message
   };
 
   const handleStatCardClick = (filter) => {

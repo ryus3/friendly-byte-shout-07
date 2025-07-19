@@ -192,8 +192,7 @@ const OrdersPage = () => {
 
   const handleDeleteSelected = useCallback(async (ordersToDelete) => {
     if(!hasPermission('delete_local_orders')) {
-        toast({title: 'غير مصرح', description: 'ليس لديك صلاحية لحذف الطلبات.', variant: 'destructive'})
-        return;
+        return; // Simply return without showing toast
     }
     const localOrdersToDelete = ordersToDelete.filter(orderId => {
         const order = orders.find(o => o.id === orderId);

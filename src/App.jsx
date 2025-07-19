@@ -52,12 +52,7 @@ function ProtectedRoute({ children, permission }) {
 
   // First check if user has the required permission for this route
   if (permission && !hasPermission(permission)) {
-    // If user doesn't have permission, redirect to default page or dashboard
-    toast({ 
-      title: "غير مصرح", 
-      description: "ليس لديك صلاحية للوصول إلى هذه الصفحة",
-      variant: "destructive" 
-    });
+    // If user doesn't have permission, redirect to default page or dashboard silently
     return <Navigate to={user.defaultPage || '/'} replace />;
   }
   
