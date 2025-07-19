@@ -3,13 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Printer, Hash, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/customSupabaseClient';
     
 const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
   const { settings, updateProduct } = useInventory();
-  const [isVisible, setIsVisible] = useState(product.is_active !== false); // افتراضياً true إلا إذا كانت false صراحة
+  console.log('Product data for card:', { name: product.name, is_active: product.is_active });
+  const [isVisible, setIsVisible] = useState(product.is_active === true || product.is_active == null); // افتراضياً true إذا كانت true أو null
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
@@ -32,6 +33,8 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
   }, [product]);
 
   const handleVisibilityChange = async (checked) => {
+    console.log(`Changing visibility for product "${product.name}" to:`, checked);
+    console.log('Current product.is_active:', product.is_active);
     setIsVisible(checked);
     try {
       const { error } = await supabase
@@ -40,6 +43,8 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
         .eq('id', product.id);
       
       if (error) throw error;
+      
+      console.log('Successfully updated product visibility in database');
       
       toast({
         title: `تم ${checked ? 'إظهار' : 'إخفاء'} المنتج`,

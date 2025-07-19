@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Star, Hash, Eye, EyeOff } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -10,7 +10,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
   const { updateProduct, settings } = useInventory();
-  const [isVisible, setIsVisible] = useState(product.is_active !== false); // افتراضياً true إلا إذا كانت false صراحة
+  const [isVisible, setIsVisible] = useState(product.is_active === true || product.is_active == null); // افتراضياً true إذا كانت true أو null
 
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
