@@ -1,13 +1,28 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
+
+// تسجيل خط عربي جميل
+Font.register({
+  family: 'Amiri',
+  fonts: [
+    {
+      src: '/fonts/Amiri-Regular.ttf',
+      fontWeight: 'normal',
+    },
+    {
+      src: '/fonts/Amiri-Bold.ttf',
+      fontWeight: 'bold',
+    }
+  ]
+});
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
     padding: 40,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Amiri',
     direction: 'rtl',
     fontSize: 12,
   },
@@ -23,11 +38,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1e40af',
     marginBottom: 10,
+    fontFamily: 'Amiri',
   },
   companyName: {
     fontSize: 16,
     color: '#64748b',
     marginBottom: 15,
+    fontFamily: 'Amiri',
   },
   invoiceInfo: {
     flexDirection: 'row',
@@ -48,6 +65,7 @@ const styles = StyleSheet.create({
     borderBottom: 1,
     borderBottomColor: '#e5e7eb',
     paddingBottom: 5,
+    fontFamily: 'Amiri',
   },
   row: {
     flexDirection: 'row',
@@ -58,11 +76,13 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     width: 120,
     fontWeight: 'bold',
+    fontFamily: 'Amiri',
   },
   value: {
     fontSize: 11,
     color: '#111827',
     flex: 1,
+    fontFamily: 'Amiri',
   },
   table: {
     marginTop: 20,
@@ -95,12 +115,14 @@ const styles = StyleSheet.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    fontFamily: 'Amiri',
   },
   tableCellHeader: {
     fontSize: 11,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
+    fontFamily: 'Amiri',
   },
   col1: { width: '8%' },
   col2: { width: '32%' },
@@ -126,11 +148,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#374151',
+    fontFamily: 'Amiri',
   },
   totalValue: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1e40af',
+    fontFamily: 'Amiri',
   },
   grandTotal: {
     fontSize: 16,
@@ -139,6 +163,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTop: 2,
     borderTopColor: '#2563eb',
+    fontFamily: 'Amiri',
   },
   footer: {
     marginTop: 40,
@@ -151,6 +176,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     marginBottom: 5,
+    fontFamily: 'Amiri',
   },
   notes: {
     marginTop: 20,
@@ -165,11 +191,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#92400e',
     marginBottom: 8,
+    fontFamily: 'Amiri',
   },
   notesText: {
     fontSize: 10,
     color: '#a16207',
     lineHeight: 1.4,
+    fontFamily: 'Amiri',
   }
 });
 

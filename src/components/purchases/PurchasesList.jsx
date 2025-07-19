@@ -43,12 +43,12 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
             <TableRow key={purchase.id}>
               <TableCell className="font-mono text-xs">{purchase.purchase_number || purchase.id}</TableCell>
               <TableCell className="font-semibold">{purchase.supplier_name || purchase.supplier || 'غير محدد'}</TableCell>
-              <TableCell>{format(new Date(purchase.created_at), 'd MMM yyyy', { locale: ar })}</TableCell>
+              <TableCell>{format(new Date(purchase.purchase_date || purchase.created_at), 'd MMM yyyy', { locale: ar })}</TableCell>
               <TableCell>
                 <Badge variant="secondary">{purchase.items?.length || 0}</Badge>
               </TableCell>
-              <TableCell>{((purchase.total_amount || 0) - (purchase.paid_amount || 0)).toLocaleString()} د.ع</TableCell>
-              <TableCell className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</TableCell>
+              <TableCell className="text-orange-600 font-medium">{(purchase.shipping_cost || 0).toLocaleString()} د.ع</TableCell>
+              <TableCell className="font-bold text-primary">{((purchase.total_amount || 0) + (purchase.shipping_cost || 0)).toLocaleString()} د.ع</TableCell>
                <TableCell>
                  <div className="flex gap-1">
                    <Button variant="ghost" size="sm" onClick={() => onViewDetails(purchase)} className="text-blue-600 hover:text-blue-700">

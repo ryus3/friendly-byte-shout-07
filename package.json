@@ -37,6 +37,7 @@
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/react-tooltip": "^1.0.7",
+    "@react-pdf/font": "^4.0.2",
     "@react-pdf/renderer": "^3.4.4",
     "@supabase/supabase-js": "2.30.0",
     "@vitejs/plugin-react": "^4.7.0",

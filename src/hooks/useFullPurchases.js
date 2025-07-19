@@ -203,6 +203,44 @@ export const useFullPurchases = () => {
         // لا نتوقف هنا، نكمل الحذف
       }
 
+      // تقليل كمية المخزون للمنتجات المحذوفة
+      if (purchaseData.purchase_items && purchaseData.purchase_items.length > 0) {
+        const stockReductionPromises = purchaseData.purchase_items.map(async (item) => {
+          try {
+            // الحصول على الكمية الحالية أولاً
+            const { data: currentStock } = await supabase
+              .from('inventory')
+              .select('quantity')
+              .eq('product_id', item.product_id)
+              .eq('variant_id', item.variant_id)
+              .single();
+
+            if (currentStock) {
+              const newQuantity = Math.max(0, currentStock.quantity - item.quantity);
+              
+              const { error: stockError } = await supabase
+                .from('inventory')
+                .update({ 
+                  quantity: newQuantity,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('product_id', item.product_id)
+                .eq('variant_id', item.variant_id);
+              
+              if (stockError) {
+                console.error(`خطأ في تقليل مخزون العنصر:`, stockError);
+              } else {
+                console.log(`تم تقليل مخزون العنصر من ${currentStock.quantity} إلى ${newQuantity}`);
+              }
+            }
+          } catch (error) {
+            console.error(`فشل تقليل مخزون العنصر:`, error);
+          }
+        });
+        
+        await Promise.all(stockReductionPromises);
+      }
+
       // حذف عناصر الفاتورة
       const { error: itemsError } = await supabase
         .from('purchase_items')
