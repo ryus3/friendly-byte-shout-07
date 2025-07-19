@@ -206,14 +206,13 @@ const InventoryPage = () => {
       filteredProductsCount: products?.length, 
       settingsLoaded: !!settings,
       userRole: user?.role,
-      firstProduct: products?.[0]?.name,
-      hasVariants: products?.[0]?.variants?.length,
-      userIsAdmin: hasPermission('view_inventory')
+      firstProduct: allProducts?.[0]?.name,
+      hasVariants: allProducts?.[0]?.variants?.length,
+      userIsAdmin: isAdmin
     });
     
-    // إذا لم نكن نحصل على المنتجات، استخدم allProducts مباشرة للمدير
-    const productsToUse = products?.length > 0 ? products : 
-                         hasPermission('view_all_data') ? allProducts : products;
+    // استخدام المنتجات من useProducts دائماً
+    const productsToUse = allProducts;
     
     if (!Array.isArray(productsToUse) || !settings) {
       console.log("❌ بيانات غير مكتملة:", { 
@@ -271,7 +270,7 @@ const InventoryPage = () => {
     
     console.log("✅ تمت معالجة العناصر:", processedItems.length);
     return processedItems;
-  }, [allProducts, products, settings, user, hasPermission]);
+  }, [allProducts, settings, user, isAdmin]);
   
   const reservedOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : [];
