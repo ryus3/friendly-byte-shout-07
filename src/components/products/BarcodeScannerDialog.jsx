@@ -90,17 +90,24 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           let parsedData = null;
           try {
             parsedData = JSON.parse(decodedText);
-            if (parsedData.type === 'product') {
+            if (parsedData && (parsedData.type === 'product' || parsedData.product_id)) {
               console.log("📦 بيانات المنتج:", parsedData);
               toast({
-                title: "✅ تم قراءة QR Code",
-                description: `المنتج: ${parsedData.product_name} - اللون: ${parsedData.color} - المقاس: ${parsedData.size}`,
+                title: "✅ تم قراءة QR Code للمنتج",
+                description: `${parsedData.product_name || 'منتج'} - ${parsedData.color || 'افتراضي'} - ${parsedData.size || 'افتراضي'}`,
                 variant: "success"
               });
+            } else {
+              console.log("📄 QR Code عام:", parsedData);
             }
           } catch (e) {
-            // QR Code عادي (نص)
+            // QR Code نصي عادي
             console.log("📄 QR Code نصي:", decodedText);
+            toast({
+              title: "✅ تم قراءة QR Code",
+              description: `${decodedText.substring(0, 50)}${decodedText.length > 50 ? '...' : ''}`,
+              variant: "success"
+            });
           }
           
           // صوت نجاح خفيف

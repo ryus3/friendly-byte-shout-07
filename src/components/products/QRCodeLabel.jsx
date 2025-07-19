@@ -46,11 +46,11 @@ const QRCodeLabel = ({
             .label { 
               width: 400px; 
               height: 200px; 
-              border: 2px solid #000; 
+              border: 3px solid #000; 
               background: white;
               display: flex;
               align-items: center;
-              padding: 16px;
+              padding: 12px;
               margin: 0 auto;
               font-family: Arial, sans-serif;
             }
@@ -61,9 +61,14 @@ const QRCodeLabel = ({
             .product-info {
               flex: 1;
               text-align: right;
+              direction: rtl;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+              height: 100%;
             }
             .product-name {
-              font-size: 28px;
+              font-size: 26px;
               font-weight: 900;
               color: #000;
               margin-bottom: 4px;
@@ -71,14 +76,14 @@ const QRCodeLabel = ({
               line-height: 1.1;
             }
             .product-details {
-              font-size: 20px;
+              font-size: 18px;
               font-weight: bold;
               color: #000;
-              margin-bottom: 8px;
+              margin-bottom: 12px;
               line-height: 1.1;
             }
             .price {
-              font-size: 32px;
+              font-size: 28px;
               font-weight: 900;
               color: #000;
               line-height: 1.1;
@@ -118,24 +123,25 @@ const QRCodeLabel = ({
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // رسم QR Code على اليسار
-      ctx.drawImage(img, 20, 20, 160, 160);
+      ctx.drawImage(img, 16, 16, 150, 150);
       
       // إضافة النص على اليمين - مطابق للصورة
       ctx.fillStyle = 'black';
       ctx.textAlign = 'right';
+      ctx.direction = 'rtl';
       
       // اسم المنتج
-      ctx.font = '900 28px Arial';
-      ctx.fillText(`${productName} RYUS`, canvas.width - 20, 55);
+      ctx.font = '900 26px Arial';
+      ctx.fillText(`${productName} RYUS`, canvas.width - 16, 50);
       
       // اللون والمقاس
-      ctx.font = 'bold 20px Arial';
-      ctx.fillText(`${size} / ${color}`, canvas.width - 20, 85);
+      ctx.font = 'bold 18px Arial';
+      ctx.fillText(`${size} / ${color}`, canvas.width - 16, 75);
       
       // السعر
       if (price) {
-        ctx.font = '900 32px Arial';
-        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 20, 125);
+        ctx.font = '900 28px Arial';
+        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 16, 110);
       }
       
       // تحميل الصورة
@@ -158,40 +164,59 @@ const QRCodeLabel = ({
     <Card className={`w-fit ${className}`}>
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* معاينة الملصق - تصميم مطابق للصورة */}
+          {/* معاينة الملصق - تصميم مطابق للصورة بالضبط */}
           <div 
             ref={labelRef}
-            className="label w-[400px] h-[200px] border-2 border-black bg-white flex items-center p-4"
-            style={{ fontFamily: 'Arial, sans-serif' }}
+            className="w-[400px] h-[200px] border-[3px] border-black bg-white flex items-center p-3"
+            style={{ 
+              fontFamily: 'Arial, sans-serif',
+              direction: 'ltr' 
+            }}
           >
             {/* QR Code على اليسار */}
             <div className="flex-shrink-0 mr-4">
               <QRCodeSVG
                 value={qrData}
-                size={160}
+                size={150}
                 level="H"
                 includeMargin={true}
                 bgColor="#ffffff"
                 fgColor="#000000"
-                imageSettings={{
-                  src: '',
-                  height: 0,
-                  width: 0,
-                  excavate: false,
-                }}
               />
             </div>
             
             {/* معلومات المنتج على اليمين - مطابق للصورة */}
-            <div className="flex-1 text-right space-y-1">
-              <div className="text-2xl font-black text-black leading-tight" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+            <div className="flex-1 text-right flex flex-col justify-center h-full" style={{ direction: 'rtl' }}>
+              <div 
+                className="text-black font-black mb-1"
+                style={{ 
+                  fontSize: '26px',
+                  fontFamily: 'Arial Black, Arial, sans-serif',
+                  lineHeight: '1.1',
+                  fontWeight: '900'
+                }}
+              >
                 {productName} RYUS
               </div>
-              <div className="text-xl font-bold text-black leading-tight">
+              <div 
+                className="text-black font-bold mb-3"
+                style={{ 
+                  fontSize: '18px',
+                  lineHeight: '1.1',
+                  fontWeight: 'bold'
+                }}
+              >
                 {size} / {color}
               </div>
               {price && (
-                <div className="text-3xl font-black text-black leading-tight mt-2">
+                <div 
+                  className="text-black font-black"
+                  style={{ 
+                    fontSize: '28px',
+                    lineHeight: '1.1',
+                    fontWeight: '900'
+                  }}
+                >
                   {price.toLocaleString()} د.ع
                 </div>
               )}

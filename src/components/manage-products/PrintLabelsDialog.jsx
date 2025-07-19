@@ -137,15 +137,15 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
       id: product.id,
       name: product.name,
       variants: product.variants?.map(variant => {
-        // إنشاء بيانات QR Code
+        // إنشاء بيانات QR Code حقيقية
         const qrData = JSON.stringify({
-          id: variant.barcode || `QR_${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+          id: variant.barcode || variant.id,
           type: 'product',
           product_id: product.id,
           variant_id: variant.id,
           product_name: product.name,
-          color: variant.colors?.name || variant.color || 'غير محدد',
-          size: variant.sizes?.name || variant.size || 'غير محدد',
+          color: variant.colors?.name || variant.color || 'افتراضي',
+          size: variant.sizes?.name || variant.size || 'افتراضي',
           price: variant.price || product.base_price || 0,
           generated_at: Date.now(),
           version: '2.0'
@@ -153,11 +153,11 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
         
         return {
           sku: variant.barcode || `${product.id}-${variant.id}`,
-          color: variant.colors?.name || variant.color || 'غير محدد',
-          size: variant.sizes?.name || variant.size || 'غير محدد',
+          color: variant.colors?.name || variant.color || 'افتراضي',
+          size: variant.sizes?.name || variant.size || 'افتراضي',
           price: variant.price || product.base_price || 0,
           quantity: variant.inventory?.[0]?.quantity || variant.quantity || 0,
-          barcode: variant.barcode || `${product.id}-${variant.id}`,
+          barcode: variant.barcode || variant.id,
           qrData: qrData
         };
       }) || []
@@ -321,96 +321,80 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   .simple-label-grid {
                     display: flex;
                     flex-direction: column;
-                    gap: 15px;
-                    padding: 10px;
+                    gap: 20px;
+                    padding: 15px;
                     align-items: center;
                   }
                   
                   .simple-label-card {
-                    width: 180px;
-                    height: 90px;
-                    border: 2px solid #000000;
-                    padding: 6px;
+                    width: 300px;
+                    height: 150px;
+                    border: 3px solid #000000;
+                    padding: 8px;
                     display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
+                    align-items: center;
                     border-radius: 0;
                     background: #ffffff;
                     font-family: Arial, sans-serif;
+                    direction: ltr;
                   }
                   
-                  .simple-label-content {
-                    text-align: center;
-                    height: 100%;
+                  .simple-qr-section {
+                    flex-shrink: 0;
+                    margin-right: 12px;
+                  }
+                  
+                  .simple-product-info {
+                    flex: 1;
+                    text-align: right;
+                    direction: rtl;
                     display: flex;
                     flex-direction: column;
-                    justify-content: space-between;
-                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
                   }
                   
                   .simple-label-product-name {
-                    font-size: 14px;
+                    font-size: 20px;
                     font-weight: 900;
-                    margin-bottom: 2px;
+                    margin-bottom: 3px;
                     line-height: 1.1;
                     color: #000000;
-                    max-width: 100%;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    white-space: nowrap;
-                    letter-spacing: 0.3px;
+                    font-family: 'Arial Black', Arial, sans-serif;
                   }
                   
                   .simple-label-variant-info {
-                    font-size: 10px;
-                    margin-bottom: 3px;
+                    font-size: 14px;
+                    margin-bottom: 8px;
                     color: #000000;
-                    font-weight: 600;
-                  }
-                  
-                  .simple-label-barcode-container {
-                    margin: 3px 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    flex: 1;
-                    justify-content: center;
-                  }
-                  
-                  .simple-label-barcode-number {
-                    font-size: 8px;
-                    color: #000000;
-                    margin-top: 2px;
-                    font-family: monospace;
-                    font-weight: 600;
+                    font-weight: bold;
+                    line-height: 1.1;
                   }
                   
                   .simple-label-price {
-                    font-size: 12px;
+                    font-size: 21px;
                     font-weight: 900;
                     color: #000000;
-                    direction: rtl;
-                    letter-spacing: 0.5px;
+                    line-height: 1.1;
                   }
                 `}</style>
                 <div className="simple-label-grid">
                   {labelsToPrint.map((label, index) => (
                     <div key={index} className="simple-label-card">
-                      <div className="simple-label-content">
-                        <h3 className="simple-label-product-name">{label.name}</h3>
-                        <p className="simple-label-variant-info">{label.color} / {label.size}</p>
-                        <div className="simple-label-barcode-container">
-                           <QRCodeSVG
-                            value={label.qrData}
-                            size={40}
-                            level="M"
-                            includeMargin={false}
-                            bgColor="#ffffff"
-                            fgColor="#000000"
-                          />
-                          <p className="simple-label-barcode-number">{label.barcode}</p>
-                        </div>
-                        <p className="simple-label-price">د.ع {label.price.toLocaleString()}</p>
+                      <div className="simple-qr-section">
+                        <QRCodeSVG
+                          value={label.qrData}
+                          size={115}
+                          level="H"
+                          includeMargin={true}
+                          bgColor="#ffffff"
+                          fgColor="#000000"
+                        />
+                      </div>
+                      <div className="simple-product-info">
+                        <h3 className="simple-label-product-name">{label.name} RYUS</h3>
+                        <p className="simple-label-variant-info">{label.size} / {label.color}</p>
+                        <p className="simple-label-price">{label.price.toLocaleString()} د.ع</p>
                       </div>
                     </div>
                   ))}
