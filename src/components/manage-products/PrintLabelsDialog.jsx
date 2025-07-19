@@ -239,7 +239,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
               </div>
             </div>
             
-            <ScrollArea className="flex-1 border border-border rounded-xl p-4 bg-card">
+            <ScrollArea className="flex-1 border border-border rounded-xl p-4 bg-card max-h-[450px]">
               <div className="space-y-6">
                 {processedProducts && processedProducts.map(product => (
                   <div key={product.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
@@ -302,40 +302,28 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
             <ScrollArea className="flex-1 border border-border rounded-xl bg-gray-50 max-h-[450px]">
               <div className="p-4">
                 <style>{`
-                  .preview-label-grid {
+                  .simple-label-grid {
                     display: flex;
                     flex-direction: column;
-                    gap: 16px;
-                    padding: 12px;
+                    gap: 12px;
+                    padding: 8px;
                     align-items: center;
                   }
                   
-                  .preview-label-card {
-                    width: 180px;
-                    height: 70px;
-                    border: 2px solid #2563eb;
-                    padding: 6px;
+                  .simple-label-card {
+                    width: 160px;
+                    height: 80px;
+                    border: 1px solid #000000;
+                    padding: 8px;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
-                    border-radius: 4px;
+                    border-radius: 0;
                     background: #ffffff;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     font-family: Arial, sans-serif;
-                    position: relative;
                   }
                   
-                  .preview-label-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 2px;
-                    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #2563eb 100%);
-                  }
-                  
-                  .preview-label-content {
+                  .simple-label-content {
                     text-align: center;
                     height: 100%;
                     display: flex;
@@ -344,105 +332,76 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                     align-items: center;
                   }
                   
-                  .preview-label-product-name {
-                    font-size: 12px;
-                    font-weight: 900;
+                  .simple-label-product-name {
+                    font-size: 11px;
+                    font-weight: bold;
                     margin-bottom: 2px;
                     line-height: 1.1;
-                    color: #1e293b;
-                    text-transform: uppercase;
+                    color: #000000;
                     max-width: 100%;
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
-                    letter-spacing: 0.5px;
                   }
                   
-                  .preview-label-variant-info {
+                  .simple-label-variant-info {
                     font-size: 9px;
                     margin-bottom: 3px;
-                    color: #475569;
-                    font-weight: 700;
-                    background: #f1f5f9;
-                    padding: 2px 8px;
-                    border-radius: 10px;
-                    border: 1px solid #cbd5e1;
-                    text-transform: capitalize;
+                    color: #000000;
+                    font-weight: normal;
                   }
                   
-                  .preview-label-barcode-container {
-                    margin: 3px 0;
+                  .simple-label-barcode-container {
+                    margin: 2px 0;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     flex: 1;
                     justify-content: center;
-                    background: #fefefe;
-                    border-radius: 2px;
-                    padding: 2px;
                   }
                   
-                  .preview-label-barcode-number {
-                    font-size: 8px;
-                    color: #374151;
+                  .simple-label-barcode-number {
+                    font-size: 7px;
+                    color: #000000;
                     margin-top: 1px;
-                    font-family: 'Courier New', monospace;
-                    font-weight: 600;
-                    letter-spacing: 1px;
+                    font-family: monospace;
                   }
                   
-                  .preview-label-price {
-                    font-size: 11px;
-                    font-weight: 900;
+                  .simple-label-price {
+                    font-size: 10px;
+                    font-weight: bold;
                     color: #dc2626;
-                    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-                    padding: 3px 10px;
-                    border-radius: 12px;
-                    border: 2px solid #f87171;
-                    min-width: 70px;
-                    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.2);
-                    text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+                    direction: rtl;
                   }
                 `}</style>
-                <div className="preview-label-grid">
+                <div className="simple-label-grid">
                   {labelsToPrint.map((label, index) => (
-                    <div key={index} className="preview-label-card">
-                      <div className="preview-label-content">
-                        <h3 className="preview-label-product-name">{label.name}</h3>
-                        <p className="preview-label-variant-info">{label.color} • {label.size}</p>
-                        <div className="preview-label-barcode-container">
+                    <div key={index} className="simple-label-card">
+                      <div className="simple-label-content">
+                        <h3 className="simple-label-product-name">{label.name}</h3>
+                        <p className="simple-label-variant-info">{label.color} / {label.size}</p>
+                        <div className="simple-label-barcode-container">
                           <Barcode 
                             value={label.barcode} 
-                            height={15} 
-                            width={1.5} 
+                            height={12} 
+                            width={1.0} 
                             fontSize={0} 
                             margin={0}
                             background="transparent"
-                            lineColor="#1e293b"
+                            lineColor="#000000"
                             displayValue={false}
                           />
-                          <p className="preview-label-barcode-number">{label.barcode}</p>
+                          <p className="simple-label-barcode-number">{label.barcode}</p>
                         </div>
-                        <p className="preview-label-price">{label.price.toLocaleString()} د.ع</p>
+                        <p className="simple-label-price">د.ع {label.price.toLocaleString()}</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 
                 {labelsToPrint.length > 0 && (
-                  <div className="text-center text-muted-foreground mt-6 p-4 bg-white/70 rounded-lg border border-primary/20">
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="font-bold text-lg text-primary">📄 إجمالي الملصقات: {labelsToPrint.length}</span>
-                    </div>
-                    <p className="text-sm font-medium text-blue-600">
-                      ✅ يمكنك التمرير لأعلى وأسفل لمشاهدة جميع الملصقات
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 هذا هو الشكل الحقيقي للملصقات كما ستظهر عند الطباعة
-                    </p>
+                  <div className="text-center text-muted-foreground mt-4 p-3 bg-white rounded-lg border">
+                    <span className="font-medium">إجمالي الملصقات: {labelsToPrint.length}</span>
                   </div>
                 )}
               </div>
