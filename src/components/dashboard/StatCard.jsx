@@ -34,7 +34,9 @@ const gradientMap = {
 
 
 const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, currentPeriod, onClick, periods, onEdit, children }) => {
-  const displayValue = isNaN(Number(value)) ? (format === 'text' ? value : 0) : Number(value);
+  // تحويل القيمة إلى رقم آمن مع التعامل مع null وundefined
+  const safeValue = value == null || value === undefined || value === '' ? 0 : value;
+  const displayValue = isNaN(Number(safeValue)) ? (format === 'text' ? safeValue : 0) : Number(safeValue);
   
   let formattedValue;
   let currencyUnit = null;

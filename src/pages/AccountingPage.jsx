@@ -23,14 +23,17 @@ import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => (
-    <div className={`flex justify-between items-center py-3 border-b border-border/50 ${onClick ? 'cursor-pointer hover:bg-secondary/50 -mx-4 px-4' : ''}`} onClick={onClick}>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className={`font-semibold text-base ${colorClass}`}>
-            {isNegative ? `(${value.toLocaleString()})` : value.toLocaleString()} د.ع
-        </p>
-    </div>
-);
+const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
+    const safeValue = value ?? 0;
+    return (
+        <div className={`flex justify-between items-center py-3 border-b border-border/50 ${onClick ? 'cursor-pointer hover:bg-secondary/50 -mx-4 px-4' : ''}`} onClick={onClick}>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className={`font-semibold text-base ${colorClass}`}>
+                {isNegative ? `(${safeValue.toLocaleString()})` : safeValue.toLocaleString()} د.ع
+            </p>
+        </div>
+    );
+};
 
 const EditCapitalDialog = ({ open, onOpenChange, currentCapital, onSave }) => {
     const [newCapital, setNewCapital] = useState(currentCapital);
@@ -289,12 +292,12 @@ const AccountingPage = () => {
                             <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, settledDues: true}))}>
                                 <CheckCircle className="w-4 h-4 ml-2 text-green-500"/>
                                 <span>المستحقات المدفوعة:</span>
-                                <span className="font-bold mr-2">{financialSummary.employeeSettledDues.toLocaleString()} د.ع</span>
+                                <span className="font-bold mr-2">{(financialSummary.employeeSettledDues || 0).toLocaleString()} د.ع</span>
                             </Button>
                             <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, pendingDues: true}))}>
                                 <Hourglass className="w-4 h-4 ml-2 text-amber-500"/>
                                 <span>المستحقات المعلقة:</span>
-                                <span className="font-bold mr-2">{financialSummary.employeePendingDues.toLocaleString()} د.ع</span>
+                                <span className="font-bold mr-2">{(financialSummary.employeePendingDues || 0).toLocaleString()} د.ع</span>
                             </Button>
                         </CardContent>
                     </Card>
@@ -319,15 +322,15 @@ const AccountingPage = () => {
                                 <CardDescription>ملخص مالي للفترة المحددة</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={financialSummary.totalRevenue} colorClass="text-green-500" />
-                                <StatRow label="رسوم التوصيل" value={financialSummary.deliveryFees} colorClass="text-blue-400" />
-                                <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery} colorClass="text-green-600" />
-                                <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs} colorClass="text-orange-500" isNegative/>
-                                <StatRow label="مجمل الربح" value={financialSummary.grossProfit} colorClass="text-blue-500 font-bold" />
-                                <StatRow label="إجمالي المصاريف" value={financialSummary.totalExpenses} colorClass="text-red-500" isNegative/>
+                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={financialSummary.totalRevenue || 0} colorClass="text-green-500" />
+                                <StatRow label="رسوم التوصيل" value={financialSummary.deliveryFees || 0} colorClass="text-blue-400" />
+                                <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery || 0} colorClass="text-green-600" />
+                                <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs || 0} colorClass="text-orange-500" isNegative/>
+                                <StatRow label="مجمل الربح" value={financialSummary.grossProfit || 0} colorClass="text-blue-500 font-bold" />
+                                <StatRow label="إجمالي المصاريف" value={financialSummary.totalExpenses || 0} colorClass="text-red-500" isNegative/>
                                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
                                     <p className="font-bold text-lg">صافي الربح</p>
-                                    <p className="font-bold text-lg text-primary">{financialSummary.netProfit.toLocaleString()} د.ع</p>
+                                    <p className="font-bold text-lg text-primary">{(financialSummary.netProfit || 0).toLocaleString()} د.ع</p>
                                 </div>
                             </CardContent>
                         </Card>
