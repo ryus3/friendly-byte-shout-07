@@ -88,7 +88,12 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
           <DialogTitle className="gradient-text flex items-center justify-between gap-2">
             <div className="flex items-center gap-2"><ShoppingCart /> سلة التسوق</div>
             <div className='flex gap-2'>
-              <Button variant="outline" size="icon" onClick={() => setIsScannerOpen(true)}><QrCode className="w-4 h-4"/></Button>
+              <Button variant="outline" size="icon" onClick={() => setIsScannerOpen(true)} className="hover:bg-primary/10">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8h18M7 12h10M9 16h6" />
+                </svg>
+              </Button>
             </div>
           </DialogTitle>
         </DialogHeader>

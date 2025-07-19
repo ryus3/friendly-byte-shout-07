@@ -81,9 +81,13 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
               variant="outline"
               size="icon"
               onClick={onBarcodeSearch}
-              className="flex-shrink-0"
+              className="flex-shrink-0 hover:bg-primary/10"
+              title="قراءة الباركود"
             >
-              <QrCode className="w-5 h-5" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
+              </svg>
             </Button>
             
             <Select value={filters.stockFilter} onValueChange={(value) => handleFilterChange('stockFilter', value)}>

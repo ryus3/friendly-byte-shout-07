@@ -165,10 +165,13 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
           variant="outline"
           size="icon"
           onClick={onBarcodeSearch}
-          className="glass-effect border-border/80 hover:bg-accent"
-          title="بحث بالباركود"
+          className="glass-effect border-border/80 hover:bg-primary/10"
+          title="قراءة الباركود"
         >
-          <QrCode className="w-4 h-4" />
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
+          </svg>
         </Button>
         
         {/* قائمة */}
