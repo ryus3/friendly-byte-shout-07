@@ -5,15 +5,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/customSupabaseClient';
 import ProductDetailsDialog from './ProductDetailsDialog';
-import EditProductDialog from './EditProductDialog';
 import PrintLabelsDialog from './PrintLabelsDialog';
 
 const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => {
+  const navigate = useNavigate();
   const { deleteProducts, updateProduct } = useInventory();
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
@@ -57,9 +57,15 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
     setIsDeleteOpen(false);
   };
   
-  const handleSuccess = () => {
-    if(onProductUpdate) onProductUpdate();
-  }
+  const handleEditProduct = () => {
+    // الانتقال لصفحة إضافة المنتج مع بيانات المنتج للتعديل
+    navigate('/add-product', { 
+      state: { 
+        editProduct: product,
+        from: '/manage-products'
+      } 
+    });
+  };
 
   return (
     <>
@@ -97,14 +103,14 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
             </TooltipTrigger>
             <TooltipContent><p>طباعة ملصقات</p></TooltipContent>
           </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-yellow-500" onClick={() => setIsEditOpen(true)}>
-                <Edit className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>تعديل</p></TooltipContent>
-          </Tooltip>
+           <Tooltip>
+             <TooltipTrigger asChild>
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-yellow-500" onClick={handleEditProduct}>
+                 <Edit className="w-4 h-4" />
+               </Button>
+             </TooltipTrigger>
+             <TooltipContent><p>تعديل</p></TooltipContent>
+           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => setIsDeleteOpen(true)}>
@@ -117,7 +123,6 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
       </TooltipProvider>
 
       <ProductDetailsDialog product={product} open={isViewOpen} onOpenChange={setIsViewOpen} />
-      <EditProductDialog product={product} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={handleSuccess} refetchProducts={refetchProducts} />
       <PrintLabelsDialog products={[product]} open={isPrintOpen} onOpenChange={setIsPrintOpen} />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
