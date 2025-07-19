@@ -1,14 +1,23 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
+
+// تسجيل الخطوط العربية
+Font.register({
+  family: 'Amiri',
+  fonts: [
+    { src: '/fonts/Amiri-Regular.ttf' },
+    { src: '/fonts/Amiri-Bold.ttf', fontWeight: 'bold' }
+  ]
+});
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
     padding: 40,
-    fontFamily: 'Helvetica',
-    direction: 'ltr',
+    fontFamily: 'Amiri',
+    direction: 'rtl',
     fontSize: 12,
   },
   header: {
