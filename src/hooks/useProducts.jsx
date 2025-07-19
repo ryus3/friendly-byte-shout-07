@@ -205,18 +205,31 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
         console.log('✅ تم إدراج المتغيرات بنجاح:', insertedVariants);
 
         // إنشاء سجلات inventory للمتغيرات الجديدة
-        const inventoryRecords = insertedVariants.map((variant, index) => ({
-          product_id: newProduct.id,
-          variant_id: variant.id,
-          quantity: productData.variants[index].quantity || 0,
-          min_stock: productData.variants[index].minStock || 5,
-          last_updated_by: user?.user_id || user?.id
-        }));
+        const inventoryRecords = insertedVariants.map((variant, index) => {
+          const variantData = productData.variants[index];
+          console.log(`📦 إنشاء مخزون للمتغير ${variant.id}: الكمية=${variantData.quantity}`);
+          return {
+            product_id: newProduct.id,
+            variant_id: variant.id,
+            quantity: parseInt(variantData.quantity) || 0,
+            min_stock: parseInt(variantData.minStock) || 5,
+            last_updated_by: user?.user_id || user?.id
+          };
+        });
 
-        const { error: inventoryError } = await supabase
+        console.log('📊 سجلات المخزون التي سيتم إدراجها:', inventoryRecords);
+
+        const { data: inventoryData, error: inventoryError } = await supabase
           .from('inventory')
-          .insert(inventoryRecords);
-        if (inventoryError) throw inventoryError;
+          .insert(inventoryRecords)
+          .select();
+        
+        if (inventoryError) {
+          console.error('❌ خطأ في إدراج المخزون:', inventoryError);
+          throw inventoryError;
+        }
+        
+        console.log('✅ تم إدراج المخزون بنجاح:', inventoryData);
       }
       
       if(totalImagesToUpload === 0) setUploadProgress(100);

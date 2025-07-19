@@ -479,9 +479,118 @@ export const InventoryProvider = ({ children }) => {
     initializeData();
   }, [fetchInitialData, user]);
 
-  // Real-time subscriptions for AI orders and regular orders
+  // Real-time subscriptions للمنتجات والطلبات
   useEffect(() => {
     if (!user) return;
+
+    // قناة تحديث المنتجات
+    const productsChannel = supabase
+      .channel('products-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('🆕 منتج جديد تم إضافته:', payload.new);
+          // إعادة تحميل البيانات للحصول على المنتج الكامل
+          fetchInitialData();
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('📝 تم تحديث منتج:', payload.new);
+          setProducts(prev => prev.map(product => 
+            product.id === payload.new.id ? { ...product, ...payload.new } : product
+          ));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'products' },
+        (payload) => {
+          console.log('🗑️ تم حذف منتج:', payload.old);
+          setProducts(prev => prev.filter(product => product.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
+    // قناة تحديث المخزون
+    const inventoryChannel = supabase
+      .channel('inventory-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'inventory' },
+        (payload) => {
+          console.log('📦 تم تحديث المخزون:', payload);
+          // تحديث المخزون في المنتجات المحلية
+          setProducts(prev => prev.map(product => ({
+            ...product,
+            variants: product.variants?.map(variant => {
+              if (variant.inventoryId === payload.new?.id || 
+                  (payload.new?.variant_id && variant.id === payload.new.variant_id)) {
+                return {
+                  ...variant,
+                  quantity: payload.new?.quantity || variant.quantity,
+                  reserved: payload.new?.reserved_quantity || variant.reserved,
+                  min_stock: payload.new?.min_stock || variant.min_stock
+                };
+              }
+              return variant;
+            })
+          })));
+        }
+      )
+      .subscribe();
+
+    // قناة تحديث المتغيرات
+    const variantsChannel = supabase
+      .channel('variants-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'product_variants' },
+        (payload) => {
+          console.log('🎨 تم تحديث متغير:', payload);
+          // إعادة تحميل البيانات للحصول على التحديثات الكاملة
+          fetchInitialData();
+        }
+      )
+      .subscribe();
+
+    // قناة تحديث الألوان
+    const colorsChannel = supabase
+      .channel('colors-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'colors' },
+        (payload) => {
+          console.log('🌈 تم تحديث الألوان:', payload);
+          if (payload.eventType === 'INSERT') {
+            setAllColors(prev => [...prev, payload.new]);
+          } else if (payload.eventType === 'UPDATE') {
+            setAllColors(prev => prev.map(color => 
+              color.id === payload.new.id ? payload.new : color
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setAllColors(prev => prev.filter(color => color.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
+
+    // قناة تحديث الأحجام
+    const sizesChannel = supabase
+      .channel('sizes-changes')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'sizes' },
+        (payload) => {
+          console.log('📏 تم تحديث الأحجام:', payload);
+          if (payload.eventType === 'INSERT') {
+            setAllSizes(prev => [...prev, payload.new]);
+          } else if (payload.eventType === 'UPDATE') {
+            setAllSizes(prev => prev.map(size => 
+              size.id === payload.new.id ? payload.new : size
+            ));
+          } else if (payload.eventType === 'DELETE') {
+            setAllSizes(prev => prev.filter(size => size.id !== payload.old.id));
+          }
+        }
+      )
+      .subscribe();
 
     const ordersChannel = supabase
       .channel('orders-changes')
@@ -532,10 +641,15 @@ export const InventoryProvider = ({ children }) => {
       .subscribe();
 
     return () => {
+      supabase.removeChannel(productsChannel);
+      supabase.removeChannel(inventoryChannel);
+      supabase.removeChannel(variantsChannel);
+      supabase.removeChannel(colorsChannel);
+      supabase.removeChannel(sizesChannel);
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(aiOrdersChannel);
     };
-  }, [user]);
+  }, [user, fetchInitialData]);
 
   // فحص المخزون المنخفض والإشعار - استخدام المنتجات المفلترة
   const checkLowStockNotifications = useCallback(async () => {
