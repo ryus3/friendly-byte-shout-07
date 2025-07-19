@@ -13,7 +13,7 @@ export const useFullPurchases = () => {
   const addPurchase = useCallback(async (purchaseData) => {
     setLoading(true);
     try {
-      // إضافة فاتورة الشراء
+      // إضافة فاتورة الشراء مع تعديل البيانات
       const { data: newPurchase, error } = await supabase
         .from('purchases')
         .insert({
@@ -22,7 +22,8 @@ export const useFullPurchases = () => {
           total_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
           paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
           status: 'completed',
-          notes: `شحن: ${purchaseData.shippingCost || 0} د.ع`,
+          notes: purchaseData.shippingCost > 0 ? `شحن: ${purchaseData.shippingCost} د.ع` : null,
+          items: purchaseData.items, // حفظ العناصر كـ JSON أيضاً
           created_by: user?.user_id
         })
         .select()

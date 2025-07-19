@@ -1,150 +1,184 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, PDFDownloadLink } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
-
-// تسجيل خط عربي - سيتم استخدامه إذا كان متاحاً
-try {
-  Font.register({
-    family: 'Amiri',
-    src: '/fonts/Amiri-Regular.ttf'
-  });
-
-  Font.register({
-    family: 'Amiri-Bold',
-    src: '/fonts/Amiri-Bold.ttf'
-  });
-} catch (error) {
-  console.log('الخطوط العربية غير متاحة، سيتم استخدام الخط الافتراضي');
-}
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
-    padding: 30,
-    fontFamily: 'Helvetica', // استخدام خط افتراضي
-    direction: 'ltr', // تعديل لدعم أفضل
+    padding: 40,
+    fontFamily: 'Helvetica',
+    direction: 'ltr',
+    fontSize: 12,
   },
   header: {
-    marginBottom: 20,
-    borderBottom: 2,
-    borderBottomColor: '#e2e8f0',
-    paddingBottom: 15,
+    marginBottom: 30,
+    borderBottom: 3,
+    borderBottomColor: '#2563eb',
+    paddingBottom: 20,
+    textAlign: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
-    textAlign: 'center',
+    color: '#1e40af',
     marginBottom: 10,
   },
-  invoiceNumber: {
+  companyName: {
     fontSize: 16,
     color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  invoiceDate: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-  },
-  section: {
     marginBottom: 15,
   },
+  invoiceInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 30,
+    padding: 15,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+  },
+  infoSection: {
+    flex: 1,
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#334155',
-    marginBottom: 8,
+    color: '#374151',
+    marginBottom: 10,
     borderBottom: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingBottom: 3,
+    borderBottomColor: '#e5e7eb',
+    paddingBottom: 5,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 5,
-    borderBottom: 1,
-    borderBottomColor: '#f1f5f9',
-  },
-  rowBold: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    backgroundColor: '#f8fafc',
-    fontWeight: 'bold',
-    marginTop: 5,
+    marginBottom: 8,
   },
   label: {
-    fontSize: 12,
-    color: '#475569',
-    width: '40%',
+    fontSize: 11,
+    color: '#6b7280',
+    width: 120,
+    fontWeight: 'bold',
   },
   value: {
-    fontSize: 12,
-    color: '#1e293b',
-    width: '60%',
-    textAlign: 'right',
+    fontSize: 11,
+    color: '#111827',
+    flex: 1,
   },
   table: {
-    marginTop: 10,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
-    padding: 8,
-    borderBottom: 2,
-    borderBottomColor: '#e2e8f0',
+    backgroundColor: '#2563eb',
+    padding: 12,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
   tableRow: {
     flexDirection: 'row',
-    padding: 6,
-    borderBottom: 1,
-    borderBottomColor: '#f1f5f9',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f3f4f6',
+    minHeight: 40,
+  },
+  tableRowAlt: {
+    backgroundColor: '#f9fafb',
   },
   tableCell: {
     fontSize: 10,
     color: '#374151',
     textAlign: 'center',
+    paddingHorizontal: 5,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tableCellHeader: {
     fontSize: 11,
     fontWeight: 'bold',
-    color: '#1f2937',
+    color: '#ffffff',
     textAlign: 'center',
   },
-  col1: { width: '10%' },
-  col2: { width: '25%' },
+  col1: { width: '8%' },
+  col2: { width: '32%' },
   col3: { width: '15%' },
   col4: { width: '15%' },
   col5: { width: '15%' },
-  col6: { width: '20%' },
-  footer: {
+  col6: { width: '15%' },
+  totalSection: {
     marginTop: 30,
-    paddingTop: 15,
+    padding: 20,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    border: 2,
+    borderColor: '#2563eb',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingVertical: 5,
+  },
+  totalLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#374151',
+  },
+  totalValue: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1e40af',
+  },
+  grandTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1e40af',
+    paddingTop: 10,
     borderTop: 2,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: '#2563eb',
+  },
+  footer: {
+    marginTop: 40,
+    paddingTop: 20,
+    borderTop: 1,
+    borderTopColor: '#e5e7eb',
     textAlign: 'center',
   },
   footerText: {
     fontSize: 10,
-    color: '#64748b',
+    color: '#6b7280',
+    marginBottom: 5,
   },
-  total: {
-    fontSize: 14,
+  notes: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#fefce8',
+    borderRadius: 8,
+    borderLeft: 4,
+    borderLeftColor: '#eab308',
+  },
+  notesTitle: {
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#059669',
+    color: '#92400e',
+    marginBottom: 8,
+  },
+  notesText: {
+    fontSize: 10,
+    color: '#a16207',
+    lineHeight: 1.4,
   }
 });
 
 const PurchaseInvoicePDF = ({ purchase }) => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-IQ', {
-      style: 'currency',
-      currency: 'IQD',
       minimumFractionDigits: 0,
-    }).format(amount || 0);
+      maximumFractionDigits: 0,
+    }).format(amount || 0) + ' د.ع';
   };
 
   const formatDate = (date) => {
@@ -155,93 +189,118 @@ const PurchaseInvoicePDF = ({ purchase }) => {
     });
   };
 
+  const getStatusText = (status) => {
+    switch(status) {
+      case 'completed': return 'مكتملة';
+      case 'pending': return 'قيد الانتظار';
+      case 'cancelled': return 'ملغية';
+      default: return 'غير محدد';
+    }
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>فاتورة شراء</Text>
-          <Text style={styles.invoiceNumber}>رقم الفاتورة: {purchase.purchase_number}</Text>
-          <Text style={styles.invoiceDate}>التاريخ: {formatDate(purchase.created_at)}</Text>
+          <Text style={styles.companyName}>نظام إدارة المخزون RYUS</Text>
         </View>
 
-        {/* بيانات المورد */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>بيانات المورد</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>اسم المورد:</Text>
-            <Text style={styles.value}>{purchase.supplier_name}</Text>
-          </View>
-          {purchase.supplier_contact && (
+        {/* Invoice Info */}
+        <View style={styles.invoiceInfo}>
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>معلومات الفاتورة</Text>
             <View style={styles.row}>
-              <Text style={styles.label}>معلومات الاتصال:</Text>
-              <Text style={styles.value}>{purchase.supplier_contact}</Text>
+              <Text style={styles.label}>رقم الفاتورة:</Text>
+              <Text style={styles.value}>{purchase.purchase_number}</Text>
             </View>
-          )}
-        </View>
-
-        {/* تفاصيل الفاتورة */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>تفاصيل الفاتورة</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>حالة الفاتورة:</Text>
-            <Text style={styles.value}>{purchase.status === 'completed' ? 'مكتملة' : 'قيد الانتظار'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>إجمالي المبلغ:</Text>
-            <Text style={styles.value}>{formatCurrency(purchase.total_amount)}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>المبلغ المدفوع:</Text>
-            <Text style={styles.value}>{formatCurrency(purchase.paid_amount)}</Text>
-          </View>
-          {purchase.notes && (
             <View style={styles.row}>
-              <Text style={styles.label}>ملاحظات:</Text>
-              <Text style={styles.value}>{purchase.notes}</Text>
+              <Text style={styles.label}>تاريخ الإنشاء:</Text>
+              <Text style={styles.value}>{formatDate(purchase.created_at)}</Text>
             </View>
-          )}
-        </View>
-
-        {/* جدول المنتجات */}
-        {purchase.items && purchase.items.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>المنتجات المشتراة</Text>
-            <View style={styles.table}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.tableCellHeader, styles.col1]}>#</Text>
-                <Text style={[styles.tableCellHeader, styles.col2]}>المنتج</Text>
-                <Text style={[styles.tableCellHeader, styles.col3]}>اللون</Text>
-                <Text style={[styles.tableCellHeader, styles.col4]}>القياس</Text>
-                <Text style={[styles.tableCellHeader, styles.col5]}>الكمية</Text>
-                <Text style={[styles.tableCellHeader, styles.col6]}>سعر التكلفة</Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>حالة الفاتورة:</Text>
+              <Text style={styles.value}>{getStatusText(purchase.status)}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>بيانات المورد</Text>
+            <View style={styles.row}>
+              <Text style={styles.label}>اسم المورد:</Text>
+              <Text style={styles.value}>{purchase.supplier_name || 'غير محدد'}</Text>
+            </View>
+            {purchase.supplier_contact && (
+              <View style={styles.row}>
+                <Text style={styles.label}>جهة الاتصال:</Text>
+                <Text style={styles.value}>{purchase.supplier_contact}</Text>
               </View>
-              {purchase.items.map((item, index) => (
-                <View key={index} style={styles.tableRow}>
-                  <Text style={[styles.tableCell, styles.col1]}>{index + 1}</Text>
-                  <Text style={[styles.tableCell, styles.col2]}>{item.productName || 'غير محدد'}</Text>
-                  <Text style={[styles.tableCell, styles.col3]}>{item.color || 'افتراضي'}</Text>
-                  <Text style={[styles.tableCell, styles.col4]}>{item.size || 'افتراضي'}</Text>
-                  <Text style={[styles.tableCell, styles.col5]}>{item.quantity}</Text>
-                  <Text style={[styles.tableCell, styles.col6]}>{formatCurrency(item.costPrice)}</Text>
-                </View>
-              ))}
+            )}
+          </View>
+        </View>
+
+        {/* Items Table */}
+        {purchase.items && purchase.items.length > 0 && (
+          <View style={styles.table}>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableCellHeader, styles.col1]}>#</Text>
+              <Text style={[styles.tableCellHeader, styles.col2]}>اسم المنتج</Text>
+              <Text style={[styles.tableCellHeader, styles.col3]}>اللون</Text>
+              <Text style={[styles.tableCellHeader, styles.col4]}>القياس</Text>
+              <Text style={[styles.tableCellHeader, styles.col5]}>الكمية</Text>
+              <Text style={[styles.tableCellHeader, styles.col6]}>سعر التكلفة</Text>
             </View>
+            {purchase.items.map((item, index) => (
+              <View key={index} style={[styles.tableRow, index % 2 === 1 && styles.tableRowAlt]}>
+                <Text style={[styles.tableCell, styles.col1]}>{index + 1}</Text>
+                <Text style={[styles.tableCell, styles.col2]}>{item.productName || 'غير محدد'}</Text>
+                <Text style={[styles.tableCell, styles.col3]}>{item.color || 'افتراضي'}</Text>
+                <Text style={[styles.tableCell, styles.col4]}>{item.size || 'افتراضي'}</Text>
+                <Text style={[styles.tableCell, styles.col5]}>{item.quantity}</Text>
+                <Text style={[styles.tableCell, styles.col6]}>{formatCurrency(item.costPrice)}</Text>
+              </View>
+            ))}
           </View>
         )}
 
-        {/* الإجماليات */}
-        <View style={styles.section}>
-          <View style={styles.rowBold}>
-            <Text style={styles.label}>إجمالي قيمة الفاتورة:</Text>
-            <Text style={[styles.value, styles.total]}>{formatCurrency(purchase.total_amount)}</Text>
+        {/* Totals */}
+        <View style={styles.totalSection}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>إجمالي قيمة المنتجات:</Text>
+            <Text style={styles.totalValue}>
+              {formatCurrency((purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}
+            </Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>مصاريف الشحن:</Text>
+            <Text style={styles.totalValue}>
+              {formatCurrency((purchase.total_amount || 0) - (purchase.paid_amount || 0))}
+            </Text>
+          </View>
+          <View style={[styles.totalRow, { borderTop: 2, borderTopColor: '#2563eb', paddingTop: 10 }]}>
+            <Text style={styles.grandTotal}>إجمالي الفاتورة:</Text>
+            <Text style={styles.grandTotal}>{formatCurrency(purchase.total_amount)}</Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>المبلغ المدفوع:</Text>
+            <Text style={styles.totalValue}>{formatCurrency(purchase.paid_amount)}</Text>
           </View>
         </View>
 
+        {/* Notes */}
+        {purchase.notes && (
+          <View style={styles.notes}>
+            <Text style={styles.notesTitle}>ملاحظات:</Text>
+            <Text style={styles.notesText}>{purchase.notes}</Text>
+          </View>
+        )}
+
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>تم إنشاء هذه الفاتورة بواسطة نظام RYUS</Text>
+          <Text style={styles.footerText}>تم إنشاء هذه الفاتورة بواسطة نظام إدارة المخزون RYUS</Text>
           <Text style={styles.footerText}>تاريخ الطباعة: {formatDate(new Date())}</Text>
+          <Text style={styles.footerText}>هذه وثيقة رسمية - يرجى الاحتفاظ بها للمراجعة</Text>
         </View>
       </Page>
     </Document>
@@ -249,7 +308,7 @@ const PurchaseInvoicePDF = ({ purchase }) => {
 };
 
 const PurchaseInvoicePDFButton = ({ purchase }) => {
-  const fileName = `فاتورة_شراء_${purchase.purchase_number}.pdf`;
+  const fileName = `فاتورة_شراء_${purchase.purchase_number || purchase.id}.pdf`;
   
   return (
     <PDFDownloadLink 
@@ -261,7 +320,7 @@ const PurchaseInvoicePDFButton = ({ purchase }) => {
           variant="outline" 
           size="sm" 
           disabled={loading}
-          className="gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
+          className="gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300 hover:bg-green-50"
         >
           {loading ? (
             <>

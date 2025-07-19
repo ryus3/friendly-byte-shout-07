@@ -22,14 +22,48 @@ const PurchasesStats = ({ purchases, onCardClick }) => {
       totalYearCost,
       totalItems,
       totalInvoices: purchases.length,
+      monthPurchases,
+      yearPurchases,
     };
   }, [purchases]);
 
   const statCards = [
-    { title: 'إجمالي تكلفة المشتريات', value: stats.totalCost, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', onClick: () => onCardClick('all') },
-    { title: 'تكلفة مشتريات الشهر', value: stats.totalMonthCost, icon: Calendar, colors: ['blue-500', 'sky-500'], format: 'currency', onClick: () => onCardClick('this_month') },
-    { title: 'تكلفة مشتريات السنة', value: stats.totalYearCost, icon: Calendar, colors: ['purple-500', 'violet-500'], format: 'currency', onClick: () => onCardClick('this_year') },
-    { title: 'إجمالي الفواتير', value: stats.totalInvoices, icon: ShoppingCart, colors: ['yellow-500', 'amber-500'], format: 'number', onClick: () => onCardClick('all') },
+    { 
+      title: 'إجمالي تكلفة المشتريات', 
+      value: stats.totalCost, 
+      icon: DollarSign, 
+      colors: ['green-500', 'emerald-500'], 
+      format: 'currency', 
+      onClick: () => onCardClick('all'),
+      subtitle: `${stats.totalInvoices} فاتورة`
+    },
+    { 
+      title: 'تكلفة مشتريات الشهر', 
+      value: stats.totalMonthCost, 
+      icon: Calendar, 
+      colors: ['blue-500', 'sky-500'], 
+      format: 'currency', 
+      onClick: () => onCardClick('this_month'),
+      subtitle: `${stats.monthPurchases.length} فاتورة هذا الشهر`
+    },
+    { 
+      title: 'تكلفة مشتريات السنة', 
+      value: stats.totalYearCost, 
+      icon: Calendar, 
+      colors: ['purple-500', 'violet-500'], 
+      format: 'currency', 
+      onClick: () => onCardClick('this_year'),
+      subtitle: `${stats.yearPurchases.length} فاتورة هذه السنة`
+    },
+    { 
+      title: 'إجمالي الأصناف', 
+      value: stats.totalItems, 
+      icon: Package, 
+      colors: ['orange-500', 'amber-500'], 
+      format: 'number', 
+      onClick: () => onCardClick('all'),
+      subtitle: `في ${stats.totalInvoices} فاتورة`
+    },
   ];
 
   return (

@@ -95,6 +95,8 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                 });
                 resetForm();
                 onOpenChange(false);
+                // إعادة تحميل المشتريات فوراً
+                window.location.reload();
             } else {
                 throw new Error(result.error || 'فشل في إضافة الفاتورة');
             }
