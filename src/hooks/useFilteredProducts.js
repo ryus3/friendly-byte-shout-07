@@ -1,20 +1,20 @@
 import { useMemo } from 'react';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useUnifiedPermissions } from './useUnifiedPermissions';
 
 /**
  * Hook موحد لفلترة المنتجات حسب صلاحيات المستخدم
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
-  const auth = useAuth();
+  const permissions = useUnifiedPermissions();
   
-  // التحقق من وجود Auth context أولاً
-  if (!auth) {
-    console.warn('useAuth context is null');
+  // التحقق من وجود permissions
+  if (!permissions) {
+    console.warn('useUnifiedPermissions returned null');
     return products || [];
   }
   
-  const { user, productPermissions, isAdmin } = auth;
+  const { user, productPermissions, isAdmin, loading } = permissions;
   
   // إضافة تسجيل للتشخيص
   console.log('🔍 useFilteredProducts Debug:', {
@@ -22,7 +22,8 @@ export const useFilteredProducts = (products) => {
     user: user?.full_name,
     isAdmin,
     productPermissions,
-    hasPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
+    hasPermissions: !!productPermissions && Object.keys(productPermissions).length > 0,
+    loading
   });
 
   const filteredProducts = useMemo(() => {
@@ -122,15 +123,15 @@ export const useFilteredProducts = (products) => {
  * Hook لفلترة متغيرات منتج واحد
  */
 export const useFilteredVariants = (variants) => {
-  const auth = useAuth();
+  const permissions = useUnifiedPermissions();
   
-  // التحقق من وجود Auth context أولاً
-  if (!auth) {
-    console.warn('useAuth context is null in useFilteredVariants');
+  // التحقق من وجود permissions
+  if (!permissions) {
+    console.warn('useUnifiedPermissions is null in useFilteredVariants');
     return variants || [];
   }
   
-  const { isAdmin, productPermissions } = auth;
+  const { isAdmin, productPermissions } = permissions;
 
   const filteredVariants = useMemo(() => {
     if (!variants || !Array.isArray(variants)) return [];
