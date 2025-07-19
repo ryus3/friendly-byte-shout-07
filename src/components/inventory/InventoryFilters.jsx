@@ -23,22 +23,30 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
       };
     }
 
-    // للموظفين - استخدام صلاحيات المنتجات الجديدة
-    const categoryPerm = user?.productPermissions?.category;
-    const colorPerm = user?.productPermissions?.color;
-    const sizePerm = user?.productPermissions?.size;
+    try {
+      const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
+      const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
+      const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
 
-    return {
-      allowedCategories: categoryPerm?.has_full_access
-        ? categories
-        : allCategories.filter(c => categoryPerm?.allowed_items?.includes(c.id)).map(c => c.name) || [],
-      allowedColors: colorPerm?.has_full_access
-        ? colors
-        : colors.filter(c => colorPerm?.allowed_items?.includes(c.id)) || [],
-      allowedSizes: sizePerm?.has_full_access
-        ? sizes
-        : sizes.filter(s => sizePerm?.allowed_items?.includes(s.id)) || []
-    };
+      return {
+        allowedCategories: categoryPermissions.includes('all') 
+          ? categories
+          : allCategories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
+        allowedColors: colorPermissions.includes('all')
+          ? colors
+          : colors.filter(c => colorPermissions.includes(c.id)),
+        allowedSizes: sizePermissions.includes('all')
+          ? sizes
+          : sizes.filter(s => sizePermissions.includes(s.id))
+      };
+    } catch (e) {
+      console.error('Error parsing permissions:', e);
+      return {
+        allowedCategories: [],
+        allowedColors: [],
+        allowedSizes: []
+      };
+    }
   }, [categories, colors, sizes, user, allCategories]);
   
   const handleFilterChange = (key, value) => {
