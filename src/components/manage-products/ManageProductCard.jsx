@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
     
     const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
       const { settings, updateProduct } = useInventory();
-      const [isVisible, setIsVisible] = useState(product.is_active !== false);
+      const [isVisible, setIsVisible] = useState(product.is_active !== false); // افتراضياً true إلا إذا كانت false صراحة
       const totalStock = useMemo(() => {
         if (!product.variants || product.variants.length === 0) return 0;
         return product.variants.reduce((sum, v) => {
@@ -42,8 +42,8 @@ import { cn } from '@/lib/utils';
       if (error) throw error;
       
       toast({
-        title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
-        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
+        title: `تم ${checked ? 'إظهار' : 'إخفاء'} المنتج`,
+        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين في صفحة المنتجات.`,
       });
       
       // تحديث البيانات في الذاكرة

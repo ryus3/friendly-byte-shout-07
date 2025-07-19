@@ -10,7 +10,7 @@ import Barcode from 'react-barcode';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
   const { updateProduct, settings } = useInventory();
-  const [isVisible, setIsVisible] = useState(product.is_active !== false);
+  const [isVisible, setIsVisible] = useState(product.is_active !== false); // افتراضياً true إلا إذا كانت false صراحة
 
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
@@ -33,8 +33,8 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
       if (error) throw error;
       
       toast({
-        title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
-        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
+        title: `تم ${checked ? 'إظهار' : 'إخفاء'} المنتج`,
+        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين في صفحة المنتجات.`,
       });
       
       // تحديث البيانات في الذاكرة
