@@ -1,23 +1,12 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Printer, Hash, Eye, EyeOff } from 'lucide-react';
+import { Edit, Trash2, Printer, Hash } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/customSupabaseClient';
     
 const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
-  const { settings, updateProduct } = useInventory();
-  console.log('Product data for card:', { name: product.name, is_active: product.is_active });
-  const [isVisible, setIsVisible] = useState(true); // ابدأ بـ true دائماً
-  
-  // مراقبة تغيير product.is_active وتحديث الحالة المحلية
-  useEffect(() => {
-    const actualState = product.is_active === true || product.is_active === null || product.is_active === undefined;
-    console.log('Effect triggered - setting isVisible to:', actualState);
-    setIsVisible(actualState);
-  }, [product.is_active]);
+  const { settings } = useInventory();
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
@@ -39,36 +28,6 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
     return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
   }, [product]);
 
-  const handleVisibilityChange = async (checked) => {
-    console.log(`Changing visibility for product "${product.name}" to:`, checked);
-    console.log('Current product.is_active:', product.is_active);
-    setIsVisible(checked);
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update({ is_active: checked })
-        .eq('id', product.id);
-      
-      if (error) throw error;
-      
-      console.log('Successfully updated product visibility in database');
-      
-      toast({
-        title: `تم ${checked ? 'إظهار' : 'إخفاء'} المنتج`,
-        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين في صفحة المنتجات.`,
-      });
-      
-      // تحديث البيانات في الذاكرة
-      if (updateProduct) {
-        updateProduct(product.id, { is_active: checked });
-      }
-    } catch (error) {
-      console.error('Error updating product visibility:', error);
-      setIsVisible(!checked);
-      toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
-    }
-  };
-
   return (
     <motion.div
       layout
@@ -81,23 +40,12 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
         <div className={cn("text-xs font-bold text-white rounded-full px-2 py-1", getStockLevelClass())}>
           {totalStock} قطعة
         </div>
-        {/* زر تبديل الرؤية الجديد */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleVisibilityChange(!isVisible);
-          }}
-          className={cn(
-            "group flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 border-2",
-            "hover:scale-110 active:scale-95 shadow-lg backdrop-blur-sm",
-            isVisible 
-              ? "bg-green-500/90 border-green-400 text-white hover:bg-green-600/90" 
-              : "bg-red-500/90 border-red-400 text-white hover:bg-red-600/90"
-          )}
-          title={isVisible ? 'إخفاء المنتج' : 'إظهار المنتج'}
-        >
-          {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-        </button>
+        {/* إضافة شارة للمنتجات المخفية */}
+        {product.is_active === false && (
+          <div className="bg-red-500/90 text-white text-xs px-2 py-1 rounded-full">
+            مخفي
+          </div>
+        )}
       </div>
       <div className="aspect-square w-full overflow-hidden relative" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
         <img

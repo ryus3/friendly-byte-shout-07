@@ -1,22 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
-import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { Star, Hash, Eye, EyeOff } from 'lucide-react';
+import { Star, Hash } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/customSupabaseClient';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
-  const { updateProduct, settings } = useInventory();
-  const [isVisible, setIsVisible] = useState(true); // ابدأ بـ true دائماً
-  
-  // مراقبة تغيير product.is_active وتحديث الحالة المحلية
-  useEffect(() => {
-    const actualState = product.is_active === true || product.is_active === null || product.is_active === undefined;
-    setIsVisible(actualState);
-  }, [product.is_active]);
+  const { settings } = useInventory();
 
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
@@ -26,33 +17,6 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
     }, 0);
   }, [product.variants]);
   const hasActiveDiscount = useMemo(() => product.discount_price && new Date(product.discount_end_date) > new Date(), [product.discount_price, product.discount_end_date]);
-
-  const handleVisibilityChange = async (checked) => {
-    setIsVisible(checked);
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update({ is_active: checked })
-        .eq('id', product.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: `تم ${checked ? 'إظهار' : 'إخفاء'} المنتج`,
-        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين في صفحة المنتجات.`,
-      });
-      
-      // تحديث البيانات في الذاكرة
-      if (updateProduct) {
-        updateProduct(product.id, { is_active: checked });
-      }
-      if (onProductUpdate) onProductUpdate();
-    } catch (error) {
-      console.error('Error updating product visibility:', error);
-      setIsVisible(!checked);
-      toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
-    }
-  };
 
   const getStockLevelClass = () => {
     if (!settings) return 'text-gray-500';
@@ -73,7 +37,8 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         "bg-card rounded-xl p-3 border transition-all duration-300 group",
         "shadow-md shadow-black/5 dark:shadow-black/20",
         "hover:shadow-lg hover:shadow-primary/10 dark:hover:shadow-primary/15",
-        isSelected && "ring-2 ring-primary border-primary"
+        isSelected && "ring-2 ring-primary border-primary",
+        product.is_active === false && "opacity-60 bg-muted/50" // إضافة تأثير بصري للمنتجات المخفية
       )}
     >
       <div className="space-y-3">
@@ -84,6 +49,12 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
             <div className="flex items-center gap-2 mb-1">
               {product.is_featured && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
               <p className="font-semibold text-foreground truncate">{product.name}</p>
+              {/* إضافة شارة للمنتجات المخفية */}
+              {product.is_active === false && (
+                <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full dark:bg-red-900/20 dark:text-red-400">
+                  مخفي
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className={cn("font-bold", getStockLevelClass())}>
@@ -104,27 +75,13 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleVisibilityChange(!isVisible);
-              }}
-              className={cn(
-                "group flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 border-2",
-                "hover:scale-110 active:scale-95 shadow-md",
-                isVisible 
-                  ? "bg-green-50 border-green-300 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-600 dark:text-green-400" 
-                  : "bg-red-50 border-red-300 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-600 dark:text-red-400"
-              )}
-              title={isVisible ? 'إخفاء المنتج' : 'إظهار المنتج'}
-            >
-              {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            </button>
-            <div className="flex flex-col">
-              <span className="text-xs text-muted-foreground font-medium">
-                {isVisible ? 'مرئي' : 'مخفي'}
-              </span>
-            </div>
+            {product.is_active === false && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-medium">
+                  هذا المنتج مخفي عن العملاء
+                </span>
+              </div>
+            )}
           </div>
           <ManageProductActions product={product} onProductUpdate={onProductUpdate} />
         </div>

@@ -1,20 +1,53 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Eye, Edit, Trash2, Printer } from 'lucide-react';
+import { Eye, Edit, Trash2, Printer, EyeOff } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
+import { supabase } from '@/lib/customSupabaseClient';
 import ProductDetailsDialog from './ProductDetailsDialog';
 import EditProductDialog from './EditProductDialog';
 import PrintLabelsDialog from './PrintLabelsDialog';
 
 const ManageProductActions = ({ product, onProductUpdate }) => {
-  const { deleteProducts } = useInventory();
+  const { deleteProducts, updateProduct } = useInventory();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [isUpdatingVisibility, setIsUpdatingVisibility] = useState(false);
+
+  const handleToggleVisibility = async () => {
+    setIsUpdatingVisibility(true);
+    const newState = product.is_active === false ? true : false;
+    
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: newState })
+        .eq('id', product.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: `تم ${newState ? 'إظهار' : 'إخفاء'} المنتج`,
+        description: `"${product.name}" الآن ${newState ? 'مرئي للعملاء' : 'مخفي عن العملاء'}.`,
+      });
+      
+      // تحديث البيانات في الذاكرة
+      if (updateProduct) {
+        updateProduct(product.id, { is_active: newState });
+      }
+      if (onProductUpdate) onProductUpdate();
+      
+    } catch (error) {
+      console.error('Error updating product visibility:', error);
+      toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
+    } finally {
+      setIsUpdatingVisibility(false);
+    }
+  };
 
   const handleDelete = async () => {
     const { success } = await deleteProducts([product.id]);
@@ -42,6 +75,22 @@ const ManageProductActions = ({ product, onProductUpdate }) => {
               </Button>
             </TooltipTrigger>
             <TooltipContent><p>مشاهدة</p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className={`h-8 w-8 text-muted-foreground ${product.is_active === false ? 'hover:text-green-500' : 'hover:text-orange-500'}`}
+                onClick={handleToggleVisibility}
+                disabled={isUpdatingVisibility}
+              >
+                {product.is_active === false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{product.is_active === false ? 'إظهار المنتج للعملاء' : 'إخفاء المنتج عن العملاء'}</p>
+            </TooltipContent>
           </Tooltip>
            <Tooltip>
             <TooltipTrigger asChild>

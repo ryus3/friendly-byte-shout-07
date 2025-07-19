@@ -212,7 +212,8 @@ const InventoryPage = () => {
     });
     
     // استخدام المنتجات المفلترة حسب صلاحيات المستخدم
-    const productsToUse = products;
+    // للمدير: يرى كل المنتجات، للموظفين: فقط المنتجات المرئية
+    const productsToUse = isAdmin ? products : products.filter(p => p.is_active !== false);
     
     if (!Array.isArray(productsToUse) || !settings) {
       console.log("❌ بيانات غير مكتملة:", { 
