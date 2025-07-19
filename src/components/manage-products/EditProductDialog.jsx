@@ -182,21 +182,11 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
     setUploadProgress(0);
 
     try {
-      // التحقق من وجود البيانات الأساسية
-      if (!productInfo.name?.trim()) {
-        toast({ 
-          title: 'خطأ في البيانات', 
-          description: 'اسم المنتج مطلوب',
-          variant: 'destructive' 
-        });
-        return;
-      }
-
       const dataToUpdate = {
-        name: productInfo.name.trim(),
-        description: productInfo.description?.trim() || '',
-        base_price: parseFloat(productInfo.price) || 0,
-        cost_price: parseFloat(productInfo.costPrice) || 0,
+        name: productInfo.name?.trim() || product.name,
+        description: productInfo.description?.trim() || product.description || '',
+        base_price: parseFloat(productInfo.price) || product.base_price || 0,
+        cost_price: parseFloat(productInfo.costPrice) || product.cost_price || 0,
         selectedCategories: selectedCategories || [],
         selectedProductTypes: selectedProductTypes || [],
         selectedSeasonsOccasions: selectedSeasonsOccasions || [],
@@ -209,47 +199,34 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         colorImages: colorImages || {},
       };
       
-      console.log('🔄 بدء عملية التحديث...', { productId: product.id, dataToUpdate });
-      
       const result = await updateProduct(product.id, dataToUpdate, imageFiles, setUploadProgress);
 
-      if (result && result.success) {
+      if (result?.success) {
         toast({ 
           title: 'تم بنجاح! ✅', 
-          description: 'تم حفظ تعديلات المنتج بنجاح وتحديث جميع البيانات.',
-          duration: 3000
+          description: 'تم حفظ تعديلات المنتج بنجاح.',
+          duration: 2000
         });
         
-        // إعادة تحميل المنتجات
         if (typeof refetchProducts === 'function') {
-          try {
-            await refetchProducts();
-          } catch (error) {
-            console.error('Error refetching products:', error);
-          }
+          await refetchProducts();
         }
         
         if (onSuccess && typeof onSuccess === 'function') {
           onSuccess();
         }
         
-        // إغلاق النافذة تلقائياً بعد ثانية واحدة
         setTimeout(() => {
           onOpenChange(false);
-        }, 1000);
+        }, 500);
       } else {
-        const errorMessage = result?.error || 'فشل تحديث المنتج. يرجى المحاولة مرة أخرى.';
-        toast({ 
-          title: 'خطأ في التحديث', 
-          description: errorMessage, 
-          variant: 'destructive' 
-        });
+        throw new Error(result?.error || 'فشل التحديث');
       }
     } catch (error) {
-      console.error('Error in handleSave:', error);
+      console.error('Save error:', error);
       toast({ 
-        title: 'خطأ غير متوقع', 
-        description: 'حدث خطأ أثناء حفظ التعديلات. يرجى المحاولة مرة أخرى.',
+        title: 'خطأ', 
+        description: 'فشل حفظ التعديلات. تحقق من البيانات.',
         variant: 'destructive' 
       });
     } finally {
