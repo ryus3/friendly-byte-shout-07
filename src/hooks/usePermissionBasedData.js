@@ -3,8 +3,30 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 
 export const usePermissionBasedData = () => {
-  const { user } = useAuth();
-  const { hasPermission, isAdmin, isDepartmentManager, isSalesEmployee, isWarehouseEmployee, isCashier } = usePermissions();
+  // Add safety check for context availability
+  let user, hasPermission, isAdmin, isDepartmentManager, isSalesEmployee, isWarehouseEmployee, isCashier;
+  
+  try {
+    const authContext = useAuth();
+    user = authContext.user;
+    const permissionsContext = usePermissions();
+    hasPermission = permissionsContext.hasPermission;
+    isAdmin = permissionsContext.isAdmin;
+    isDepartmentManager = permissionsContext.isDepartmentManager;
+    isSalesEmployee = permissionsContext.isSalesEmployee;
+    isWarehouseEmployee = permissionsContext.isWarehouseEmployee;
+    isCashier = permissionsContext.isCashier;
+  } catch (error) {
+    console.warn('usePermissionBasedData: Auth context not available, using fallback values');
+    // Fallback values when context is not available
+    user = null;
+    hasPermission = () => false;
+    isAdmin = false;
+    isDepartmentManager = false;
+    isSalesEmployee = false;
+    isWarehouseEmployee = false;
+    isCashier = false;
+  }
 
   // نستخدم المتغيرات مباشرة من usePermissions دون إعادة تعريفها
   const canViewAllData = useMemo(() => {
