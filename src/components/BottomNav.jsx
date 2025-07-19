@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 
 const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
   <motion.button
@@ -113,12 +114,17 @@ const MenuContent = ({ onClose }) => {
 
 const SearchSheet = ({ children, open, onOpenChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
   const navigate = useNavigate();
 
   const filteredProducts = products.filter(product =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.variants?.some(variant => 
+      variant.barcode?.includes(searchQuery) ||
+      variant.sku?.includes(searchQuery)
+    )
   ).slice(0, 6);
 
   const handleSearch = () => {
@@ -131,6 +137,42 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
     } else {
       navigate('/products');
       onOpenChange(false);
+    }
+  };
+
+  const handleBarcodeSearch = (barcode) => {
+    // البحث عن المنتج بالباركود
+    const foundProduct = products.find(product => 
+      product.variants?.some(variant => 
+        variant.barcode === barcode || variant.sku === barcode
+      )
+    );
+
+    if (foundProduct) {
+      const foundVariant = foundProduct.variants.find(variant => 
+        variant.barcode === barcode || variant.sku === barcode
+      );
+      
+      toast({
+        title: "✅ تم العثور على المنتج!",
+        description: `${foundProduct.name} - ${foundVariant?.colors?.name || foundVariant?.color} / ${foundVariant?.sizes?.name || foundVariant?.size}`,
+        variant: "success"
+      });
+
+      navigate('/products', { 
+        state: { 
+          selectedProduct: foundProduct,
+          selectedVariant: foundVariant 
+        }
+      });
+      onOpenChange(false);
+      setShowBarcodeScanner(false);
+    } else {
+      toast({
+        title: "❌ لم يتم العثور على المنتج",
+        description: `الباركود: ${barcode} غير موجود في النظام`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -149,11 +191,21 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن منتج..."
+              placeholder="ابحث عن منتج أو ادخل الباركود..."
               className="flex-1"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <Button onClick={handleSearch}>بحث</Button>
+            <Button onClick={handleSearch} variant="outline">بحث</Button>
+            <Button 
+              onClick={() => setShowBarcodeScanner(true)}
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4z"/>
+                <path d="M13 13h1.5v1.5H13V13zm0 3h1.5v1.5H13V16zm3 0h1.5v1.5H16V16zm1.5-3H19v1.5h-1.5V13zm0 3H19v1.5h-1.5V16zm3-3H22v1.5h-1.5V13z"/>
+              </svg>
+              مسح الباركود
+            </Button>
           </div>
 
           {searchQuery && (
@@ -189,6 +241,15 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
             </div>
           )}
         </div>
+        
+        {/* قارئ الباركود */}
+        {showBarcodeScanner && (
+          <BarcodeScannerDialog 
+            open={showBarcodeScanner} 
+            onOpenChange={setShowBarcodeScanner}
+            onScanSuccess={handleBarcodeSearch}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
