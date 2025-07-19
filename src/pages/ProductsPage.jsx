@@ -28,6 +28,14 @@ const ProductsPage = () => {
   const { products, loading, addToCart, clearCart } = useInventory();
   const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
   const { hasPermission } = usePermissions();
+  
+  console.log('📦 صفحة المنتجات:', {
+    products: products?.length || 0,
+    loading,
+    user: user?.full_name,
+    isAdmin,
+    hasProductPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
+  });
   const { colors, categories: allCategories, departments: allDepartments } = useVariants();
   
   // فلتر خاص بالصلاحيات - محفوظ محلياً
