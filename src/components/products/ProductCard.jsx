@@ -23,6 +23,14 @@ const ProductCard = React.memo(({ product, onSelect }) => {
     }, 0);
   }, [product.variants]);
 
+  const reservedStock = useMemo(() => {
+    if (!product.variants || product.variants.length === 0) return 0;
+    return product.variants.reduce((sum, v) => {
+      const reserved = v.inventory?.[0]?.reserved_stock || v.inventory?.[0]?.reserved_quantity || v.reserved || 0;
+      return sum + reserved;
+    }, 0);
+  }, [product.variants]);
+
   const uniqueColorsWithHex = useMemo(() => {
     if (!product || !product.variants) return [];
     const uniqueVariantColors = [...new Set(product.variants.map(item => item.color?.name || item.color))];
@@ -50,10 +58,15 @@ const ProductCard = React.memo(({ product, onSelect }) => {
                  dark:hover:shadow-2xl dark:hover:shadow-primary/30"
       whileHover={{ y: -5 }}
     >
-      <div className="absolute top-2 right-2 z-10">
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-1 items-end">
         <Badge className={cn("shadow-md", getStockLevelClass())}>
           {totalStock} قطعة
         </Badge>
+        {reservedStock > 0 && (
+          <Badge variant="secondary" className="shadow-md bg-amber-500/80 text-white">
+            محجوز: {reservedStock}
+          </Badge>
+        )}
       </div>
       <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden relative">
         {inView ? (

@@ -58,7 +58,6 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
       <div className="space-y-3">
         <div className="flex items-center gap-3">
           <Checkbox checked={isSelected} onCheckedChange={() => onSelect(product.id)} />
-          <img src={product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
           <div className="flex-1 min-w-0" onClick={handleEditProduct}>
             <div className="flex items-center gap-2 mb-1">
               {product.is_featured && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
