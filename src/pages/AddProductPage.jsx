@@ -91,81 +91,96 @@ const AddProductPage = () => {
     if (isEditMode && editProductData) {
       console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
       
-      // تحميل البيانات الأساسية
-      setProductInfo({
-        name: editProductData.name || '',
-        price: editProductData.base_price || editProductData.price || '',
-        costPrice: editProductData.cost_price || '',
-        description: editProductData.description || '',
-        profitAmount: editProductData.profit_amount || '',
-        profitPercentage: ''
-      });
-
-      // تحميل الصور العامة
-      if (editProductData.images && editProductData.images.length > 0) {
-        const images = Array(4).fill(null);
-        editProductData.images.forEach((img, index) => {
-          if (index < 4 && img) images[index] = img;
+      try {
+        // تحميل البيانات الأساسية
+        setProductInfo({
+          name: editProductData.name || '',
+          price: editProductData.base_price || editProductData.price || '',
+          costPrice: editProductData.cost_price || '',
+          description: editProductData.description || '',
+          profitAmount: editProductData.profit_amount || '',
+          profitPercentage: ''
         });
-        setGeneralImages(images);
-      }
 
-      // تحميل التصنيفات
-      if (editProductData.product_categories) {
-        setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
-      }
-      if (editProductData.product_product_types) {
-        setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
-      }
-      if (editProductData.product_seasons_occasions) {
-        setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
-      }
-      if (editProductData.product_departments) {
-        setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
-      }
+        // تحميل الصور العامة
+        if (editProductData.images && editProductData.images.length > 0) {
+          const images = Array(4).fill(null);
+          editProductData.images.forEach((img, index) => {
+            if (index < 4 && img) images[index] = img;
+          });
+          setGeneralImages(images);
+        }
 
-      // تحميل الألوان والمتغيرات
-      if (editProductData.variants && editProductData.variants.length > 0) {
-        // استخراج الألوان الفريدة
-        const uniqueColors = [];
-        const colorImages = {};
-        
-        editProductData.variants.forEach(variant => {
-          const colorExists = uniqueColors.find(c => c.id === variant.color_id);
-          if (!colorExists && variant.colors) {
-            uniqueColors.push({
-              id: variant.colors.id,
-              name: variant.colors.name,
-              hex_code: variant.colors.hex_code
-            });
-          }
+        // تحميل التصنيفات
+        if (editProductData.product_categories) {
+          setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
+        }
+        if (editProductData.product_product_types) {
+          setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
+        }
+        if (editProductData.product_seasons_occasions) {
+          setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
+        }
+        if (editProductData.product_departments) {
+          setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
+        }
+
+        // تحميل الألوان والمتغيرات
+        if (editProductData.variants && editProductData.variants.length > 0) {
+          // استخراج الألوان الفريدة
+          const uniqueColors = [];
+          const colorImages = {};
           
-          // تحميل صور الألوان إذا وجدت
-          if (variant.images && variant.images.length > 0) {
-            colorImages[variant.color_id] = variant.images[0];
-          }
+          editProductData.variants.forEach(variant => {
+            if (variant.colors) {
+              const colorExists = uniqueColors.find(c => c.id === variant.colors.id);
+              if (!colorExists) {
+                uniqueColors.push({
+                  id: variant.colors.id,
+                  name: variant.colors.name,
+                  hex_code: variant.colors.hex_code
+                });
+              }
+              
+              // تحميل صور الألوان إذا وجدت
+              if (variant.images && variant.images.length > 0) {
+                colorImages[variant.colors.id] = variant.images[0];
+              }
+            }
+          });
+          
+          setSelectedColors(uniqueColors);
+          setColorImages(colorImages);
+          
+          // تحويل المتغيرات للتنسيق المطلوب
+          const formattedVariants = editProductData.variants.map(variant => ({
+            ...variant,
+            colorId: variant.color_id,
+            sizeId: variant.size_id,
+            color: variant.colors?.name || 'Unknown',
+            color_hex: variant.colors?.hex_code || '#000000',
+            size: variant.sizes?.name || 'Unknown',
+            quantity: variant.quantity || 0,
+            costPrice: variant.cost_price || editProductData.cost_price || 0,
+            hint: variant.hint || ''
+          }));
+          
+          console.log('📊 المتغيرات المحولة:', formattedVariants);
+          setVariants(formattedVariants);
+        }
+        
+        console.log('✅ تم تحميل بيانات المنتج بنجاح للتعديل');
+      } catch (error) {
+        console.error('❌ خطأ في تحميل بيانات المنتج للتعديل:', error);
+        toast({
+          title: 'خطأ',
+          description: 'حدث خطأ في تحميل بيانات المنتج. يرجى المحاولة مرة أخرى.',
+          variant: 'destructive'
         });
-        
-        setSelectedColors(uniqueColors);
-        setColorImages(colorImages);
-        
-        // تحويل المتغيرات للتنسيق المطلوب
-        const formattedVariants = editProductData.variants.map(variant => ({
-          ...variant,
-          colorId: variant.color_id,
-          sizeId: variant.size_id,
-          color: variant.colors?.name || 'Unknown',
-          color_hex: variant.colors?.hex_code || '#000000',
-          size: variant.sizes?.name || 'Unknown',
-          quantity: variant.inventory?.quantity || variant.quantity || 0,
-          costPrice: variant.cost_price || editProductData.cost_price || 0,
-          hint: variant.hint || ''
-        }));
-        
-        setVariants(formattedVariants);
+        navigate('/manage-products');
       }
     }
-  }, [isEditMode, editProductData]);
+  }, [isEditMode, editProductData, navigate]);
 
   useEffect(() => {
     // لا نولد متغيرات جديدة في وضع التعديل

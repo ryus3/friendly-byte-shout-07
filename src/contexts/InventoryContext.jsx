@@ -348,16 +348,23 @@ export const InventoryProvider = ({ children }) => {
         let dbCapital = null;
         
         settingsRes.data.forEach(setting => {
+          // البحث عن رأس المال في إعداد app_settings
           if (setting.key === 'app_settings' && setting.value?.capital) {
-            dbCapital = setting.value.capital;
+            dbCapital = parseFloat(setting.value.capital);
           }
+          // البحث عن رأس المال في الإعدادات الأخرى (للتوافق مع البيانات القديمة)
+          else if (setting.value && typeof setting.value === 'object' && setting.value.capital) {
+            dbCapital = parseFloat(setting.value.capital);
+          }
+          
           dbSettings[setting.key] = setting.value;
         });
         
         setSettings(prev => ({ ...prev, ...dbSettings }));
         
         // تحديث البيانات المحاسبية مع رأس المال من قاعدة البيانات
-        if (dbCapital !== null) {
+        if (dbCapital && !isNaN(dbCapital)) {
+          console.log('💰 تم تحميل رأس المال من قاعدة البيانات:', dbCapital);
           setAccounting(prev => ({ ...prev, capital: dbCapital }));
         }
       }
@@ -886,39 +893,71 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const updateCapital = async (newCapital) => {
-    // البحث عن أول إعداد متاح أو إنشاء واحد جديد
-    const { data: existingSettings } = await supabase
+    try {
+      console.log('💰 تحديث رأس المال إلى:', newCapital);
+      
+      // البحث عن إعداد رأس المال الموجود
+      const { data: existingSettings, error: fetchError } = await supabase
         .from('settings')
         .select('*')
-        .limit(1)
+        .eq('key', 'app_settings')
         .maybeSingle();
 
-    let error;
-    if (existingSettings) {
-        // تحديث الإعدادات الموجودة
-        const result = await supabase
-            .from('settings')
-            .update({ value: { ...existingSettings.value, capital: newCapital } })
-            .eq('id', existingSettings.id);
-        error = result.error;
-    } else {
-        // إنشاء إعدادات جديدة
-        const result = await supabase
-            .from('settings')
-            .insert({ 
-                key: 'app_settings', 
-                value: { capital: newCapital },
-                description: 'إعدادات التطبيق الأساسية'
-            });
-        error = result.error;
-    }
+      if (fetchError) {
+        console.error('خطأ في جلب الإعدادات:', fetchError);
+        throw fetchError;
+      }
 
-    if (error) {
-        toast({ title: "خطأ", description: "فشل تحديث رأس المال.", variant: "destructive" });
-    } else {
-        setAccounting(prev => ({ ...prev, capital: newCapital }));
-        setSettings(prev => ({ ...prev, capital: newCapital }));
-        toast({ title: "نجاح", description: "تم تحديث رأس المال بنجاح.", variant: "success" });
+      let updateError;
+      if (existingSettings) {
+        // تحديث الإعدادات الموجودة
+        console.log('📝 تحديث الإعدادات الموجودة');
+        const { error } = await supabase
+          .from('settings')
+          .update({ 
+            value: { 
+              ...existingSettings.value, 
+              capital: parseFloat(newCapital) 
+            } 
+          })
+          .eq('id', existingSettings.id);
+        updateError = error;
+      } else {
+        // إنشاء إعدادات جديدة
+        console.log('➕ إنشاء إعدادات جديدة');
+        const { error } = await supabase
+          .from('settings')
+          .insert({ 
+            key: 'app_settings', 
+            value: { capital: parseFloat(newCapital) },
+            description: 'إعدادات التطبيق الأساسية'
+          });
+        updateError = error;
+      }
+
+      if (updateError) {
+        console.error('خطأ في تحديث رأس المال:', updateError);
+        throw updateError;
+      }
+
+      // تحديث البيانات المحلية
+      setAccounting(prev => ({ ...prev, capital: parseFloat(newCapital) }));
+      setSettings(prev => ({ ...prev, capital: parseFloat(newCapital) }));
+      
+      console.log('✅ تم تحديث رأس المال بنجاح');
+      toast({ 
+        title: "نجاح", 
+        description: `تم تحديث رأس المال إلى ${parseFloat(newCapital).toLocaleString()} د.ع`, 
+        variant: "success" 
+      });
+      
+    } catch (error) {
+      console.error('❌ فشل تحديث رأس المال:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "فشل تحديث رأس المال. يرجى المحاولة مرة أخرى.", 
+        variant: "destructive" 
+      });
     }
   };
 
