@@ -202,22 +202,32 @@ const InventoryPage = () => {
 
   const inventoryItems = useMemo(() => {
     console.log("🔍 إنشاء عناصر الجرد:", { 
-      productsCount: products?.length, 
+      allProductsCount: allProducts?.length,
+      filteredProductsCount: products?.length, 
       settingsLoaded: !!settings,
       userRole: user?.role,
       firstProduct: products?.[0]?.name,
-      hasVariants: products?.[0]?.variants?.length
+      hasVariants: products?.[0]?.variants?.length,
+      userIsAdmin: hasPermission('view_inventory')
     });
     
-    if (!Array.isArray(products) || !settings) {
-      console.log("❌ بيانات غير مكتملة:", { products: !!products, settings: !!settings });
+    // إذا لم نكن نحصل على المنتجات، استخدم allProducts مباشرة للمدير
+    const productsToUse = products?.length > 0 ? products : 
+                         hasPermission('view_all_data') ? allProducts : products;
+    
+    if (!Array.isArray(productsToUse) || !settings) {
+      console.log("❌ بيانات غير مكتملة:", { 
+        productsToUse: !!productsToUse, 
+        productsToUseLength: productsToUse?.length,
+        settings: !!settings 
+      });
       return [];
     }
     
     const { lowStockThreshold = 5, mediumStockThreshold = 10 } = settings;
 
     // معالجة المنتجات مع التفاصيل
-    const processedItems = products.map(product => {
+    const processedItems = productsToUse.map(product => {
         if (!product) {
           console.log("❌ منتج فارغ");
           return null;
@@ -261,7 +271,7 @@ const InventoryPage = () => {
     
     console.log("✅ تمت معالجة العناصر:", processedItems.length);
     return processedItems;
-  }, [products, settings, user]);
+  }, [allProducts, products, settings, user, hasPermission]);
   
   const reservedOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : [];
