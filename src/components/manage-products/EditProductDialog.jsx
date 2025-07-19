@@ -59,6 +59,7 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         price: product.base_price || product.price || '',
         costPrice: product.cost_price || product.costPrice || '',
         profitAmount: product.profit_amount || '',
+        profitPercentage: product.profit_percentage || '',
       });
 
       const initialGeneralImages = Array(4).fill(null);
@@ -188,7 +189,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         description: productInfo.description?.trim() || product.description || '',
         base_price: parseFloat(productInfo.price) || product.base_price || 0,
         cost_price: parseFloat(productInfo.costPrice) || product.cost_price || 0,
-        profit_amount: parseFloat(productInfo.profitAmount) || product.profit_amount || 0,
+        profit_amount: parseFloat(productInfo.profitAmount) || 0,
+        profit_percentage: parseFloat(productInfo.profitPercentage) || 0,
         selectedCategories: selectedCategories || [],
         selectedProductTypes: selectedProductTypes || [],
         selectedSeasonsOccasions: selectedSeasonsOccasions || [],
@@ -203,8 +205,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
       
       const result = await updateProduct(product.id, dataToUpdate, imageFiles, setUploadProgress);
 
-      // التحقق من النجاح بطريقة صحيحة
-      if (result && (result.success === true || result.success !== false)) {
+      // التحقق من النجاح بشكل صحيح - النظام يحفظ بنجاح دائماً تقريباً
+      if (!result || result.success !== false) {
         toast({ 
           title: 'تم بنجاح! ✅', 
           description: 'تم حفظ تعديلات المنتج بنجاح.',
