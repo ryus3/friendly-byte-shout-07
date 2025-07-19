@@ -128,8 +128,8 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
   const filteredProducts = useMemo(() => {
     return permissionFilteredProducts.filter(p => 
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      p.variants && p.variants.length > 0 &&
-      p.is_active !== false // فقط المنتجات النشطة
+      p.variants && p.variants.length > 0
+      // لا نقوم بفلترة is_active هنا لأنها تؤثر على الطلبات الموجودة
     );
   }, [permissionFilteredProducts, searchTerm]);
 
