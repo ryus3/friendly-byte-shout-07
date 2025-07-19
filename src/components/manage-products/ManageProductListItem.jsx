@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { Star, Hash, Eye, EyeOff } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { motion } from 'framer-motion';
-import Barcode from 'react-barcode';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
   const { updateProduct, settings } = useInventory();
@@ -24,7 +24,6 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const handleVisibilityChange = async (checked) => {
     setIsVisible(checked);
     try {
-      const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
       const { error } = await supabase
         .from('products')
         .update({ is_active: checked })
