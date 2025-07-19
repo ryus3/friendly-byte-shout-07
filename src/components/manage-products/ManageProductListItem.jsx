@@ -24,7 +24,8 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const handleVisibilityChange = async (checked) => {
     setIsVisible(checked);
     try {
-      const { supabase } = await import('@/integrations/supabase/client');
+      const module = await import('@/lib/customSupabaseClient');
+      const supabase = module.supabase;
       const { error } = await supabase
         .from('products')
         .update({ is_active: checked })
