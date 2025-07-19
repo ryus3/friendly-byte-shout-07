@@ -71,13 +71,17 @@ const QuickAddPurchaseCard = ({ onPurchaseAdded }) => {
 
   if (!isExpanded) {
     return (
-      <Card className="border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer" 
-            onClick={() => setIsExpanded(true)}>
-        <CardContent className="flex flex-col items-center justify-center p-6">
-          <Zap className="h-8 w-8 text-muted-foreground mb-2" />
-          <h3 className="font-semibold text-lg">إضافة سريعة</h3>
-          <p className="text-sm text-muted-foreground text-center">
-            إضافة فاتورة شراء بسيطة بسرعة
+      <Card className="group cursor-pointer border-dashed border-2 border-muted-foreground/20 hover:border-primary/50 hover:shadow-md transition-all duration-200 bg-gradient-to-br from-card to-card/50 hover:from-primary/5 hover:to-primary/10">
+        <CardContent className="flex flex-col items-center justify-center p-8 text-center" onClick={() => setIsExpanded(true)}>
+          <div className="mb-4 p-3 rounded-full bg-primary/10 group-hover:bg-primary/20 transition-colors">
+            <Zap className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="font-bold text-xl mb-2 text-foreground group-hover:text-primary transition-colors">
+            إضافة سريعة
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            إضافة فاتورة شراء بسيطة وسريعة<br />
+            <span className="text-xs opacity-75">انقر للبدء</span>
           </p>
         </CardContent>
       </Card>
@@ -85,14 +89,16 @@ const QuickAddPurchaseCard = ({ onPurchaseAdded }) => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Zap className="h-5 w-5" />
+    <Card className="shadow-md">
+      <CardHeader className="bg-gradient-to-r from-primary/10 to-primary/5 border-b">
+        <CardTitle className="flex items-center gap-3 text-primary">
+          <div className="p-2 rounded-lg bg-primary/20">
+            <Zap className="h-5 w-5" />
+          </div>
           إضافة فاتورة سريعة
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5 p-6">
         <div>
           <Label htmlFor="quickSupplier">اسم المورد</Label>
           <Input 
