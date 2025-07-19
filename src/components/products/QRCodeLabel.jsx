@@ -44,55 +44,41 @@ const QRCodeLabel = ({
               background: white;
             }
             .label { 
-              width: 300px; 
-              height: 400px; 
-              border: 2px solid #333; 
-              border-radius: 12px;
-              padding: 16px;
+              width: 400px; 
+              height: 200px; 
+              border: 2px solid #000; 
               background: white;
               display: flex;
-              flex-direction: column;
-              justify-content: space-between;
+              align-items: center;
+              padding: 16px;
               margin: 0 auto;
+              font-family: Arial, sans-serif;
             }
             .qr-section {
-              text-align: center;
-              flex: 1;
-              display: flex;
-              flex-direction: column;
-              justify-content: center;
-              align-items: center;
+              flex-shrink: 0;
+              margin-right: 16px;
             }
             .product-info {
-              text-align: center;
-              margin-top: 12px;
+              flex: 1;
+              text-align: right;
             }
             .product-name {
-              font-size: 16px;
-              font-weight: bold;
-              color: #333;
+              font-size: 32px;
+              font-weight: 900;
+              color: #000;
               margin-bottom: 8px;
-              line-height: 1.2;
+              font-family: 'Arial Black', Arial, sans-serif;
             }
             .product-details {
-              font-size: 12px;
-              color: #666;
-              margin-bottom: 4px;
+              font-size: 24px;
+              font-weight: bold;
+              color: #000;
+              margin-bottom: 16px;
             }
             .price {
-              font-size: 18px;
-              font-weight: bold;
-              color: #2563eb;
-              margin-top: 8px;
-            }
-            .logo {
-              text-align: center;
-              font-size: 14px;
-              font-weight: bold;
-              color: #4f46e5;
-              margin-top: 12px;
-              border-top: 1px solid #e5e7eb;
-              padding-top: 8px;
+              font-size: 40px;
+              font-weight: 900;
+              color: #000;
             }
             @media print {
               body { margin: 0; padding: 0; }
@@ -121,30 +107,32 @@ const QRCodeLabel = ({
     const svgUrl = URL.createObjectURL(svgBlob);
     
     img.onload = () => {
-      canvas.width = 300;
-      canvas.height = 400;
+      canvas.width = 400;
+      canvas.height = 200;
       
       // رسم خلفية بيضاء
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
-      // رسم QR Code
-      ctx.drawImage(img, 50, 50, 200, 200);
+      // رسم QR Code على اليسار
+      ctx.drawImage(img, 20, 20, 160, 160);
       
-      // إضافة النص
+      // إضافة النص على اليمين
       ctx.fillStyle = 'black';
-      ctx.font = 'bold 16px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(productName, canvas.width/2, 280);
+      ctx.textAlign = 'right';
       
-      ctx.font = '12px Arial';
-      ctx.fillText(`اللون: ${color}`, canvas.width/2, 300);
-      ctx.fillText(`المقاس: ${size}`, canvas.width/2, 320);
+      // اسم المنتج
+      ctx.font = '900 32px Arial';
+      ctx.fillText(`${productName} RYUS`, canvas.width - 20, 60);
       
+      // اللون والمقاس
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText(`${size} / ${color}`, canvas.width - 20, 100);
+      
+      // السعر
       if (price) {
-        ctx.fillStyle = '#2563eb';
-        ctx.font = 'bold 18px Arial';
-        ctx.fillText(`${price} د.ع`, canvas.width/2, 350);
+        ctx.font = '900 40px Arial';
+        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 20, 150);
       }
       
       // تحميل الصورة
@@ -167,41 +155,37 @@ const QRCodeLabel = ({
     <Card className={`w-fit ${className}`}>
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* معاينة الملصق */}
+          {/* معاينة الملصق - تصميم مطابق للصورة */}
           <div 
             ref={labelRef}
-            className="label w-[300px] h-[400px] border-2 border-gray-300 rounded-lg p-4 bg-white flex flex-col justify-between"
+            className="label w-[400px] h-[200px] border-2 border-black bg-white flex items-center p-4"
+            style={{ fontFamily: 'Arial, sans-serif' }}
           >
-            <div className="qr-section text-center flex-1 flex flex-col justify-center items-center">
+            {/* QR Code على اليسار */}
+            <div className="flex-shrink-0 mr-4">
               <QRCodeSVG
                 value={qrData}
-                size={200}
+                size={160}
                 level="M"
-                includeMargin={true}
+                includeMargin={false}
                 bgColor="#ffffff"
                 fgColor="#000000"
               />
             </div>
             
-            <div className="product-info text-center mt-3">
-              <div className="product-name text-lg font-bold text-gray-800 mb-2 leading-tight">
-                {productName}
+            {/* معلومات المنتج على اليمين */}
+            <div className="flex-1 text-right">
+              <div className="text-4xl font-black text-black mb-2" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+                {productName} RYUS
               </div>
-              <div className="product-details text-sm text-gray-600 mb-1">
-                اللون: {color}
-              </div>
-              <div className="product-details text-sm text-gray-600 mb-1">
-                المقاس: {size}
+              <div className="text-3xl font-bold text-black mb-4">
+                {size} / {color}
               </div>
               {price && (
-                <div className="price text-xl font-bold text-blue-600 mt-2">
+                <div className="text-5xl font-black text-black">
                   {price.toLocaleString()} د.ع
                 </div>
               )}
-            </div>
-            
-            <div className="logo text-center text-sm font-bold text-indigo-600 mt-3 border-t border-gray-200 pt-2">
-              نظام إدارة المخزون الذكي
             </div>
           </div>
 
