@@ -45,17 +45,11 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
         [allowedProducts, searchTerm]
     );
 
-    const productColors = useMemo(() => {
-        if (!selectedProduct || !selectedProduct.variants) return [];
-        const colorIds = new Set(selectedProduct.variants.map(v => v.color_id || v.colorId));
-        return colors.filter(c => colorIds.has(c.id));
-    }, [selectedProduct, colors]);
+    // استخدام جميع الألوان المتاحة في الموقع بدلاً من ألوان المنتج فقط
+    const availableColors = useMemo(() => colors, [colors]);
 
-    const productSizesForColor = useMemo(() => {
-        if (!selectedProduct || !selectedColor || !selectedProduct.variants) return [];
-        const sizeIds = new Set(selectedProduct.variants.filter(v => (v.color_id || v.colorId) === selectedColor.id).map(v => v.size_id || v.sizeId));
-        return sizes.filter(s => sizeIds.has(s.id));
-    }, [selectedProduct, selectedColor, sizes]);
+    // استخدام جميع الأحجام المتاحة في الموقع
+    const availableSizes = useMemo(() => sizes, [sizes]);
 
     useEffect(() => {
         if (selectedProduct) {
@@ -65,8 +59,8 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     }, [selectedProduct]);
 
     const handleConfirm = () => {
-        if (!selectedProduct || !selectedColor || !selectedSize || quantity <= 0) {
-            toast({ title: "خطأ", description: "يرجى اختيار المنتج واللون والقياس وإدخال كمية صالحة.", variant: "destructive" });
+        if (!selectedProduct || !selectedColor || !selectedSize || quantity <= 0 || !costPrice || costPrice <= 0) {
+            toast({ title: "خطأ", description: "يرجى اختيار المنتج واللون والقياس وإدخال كمية وسعر تكلفة صالحين.", variant: "destructive" });
             return;
         }
 
@@ -200,31 +194,31 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                                     <div className="grid grid-cols-2 gap-4">
                                         <Command className="rounded-lg border shadow-md">
                                             <CommandList>
-                                                <CommandGroup heading="الألوان المتاحة">
-                                                    <ScrollArea className="h-40">
-                                                        {productColors.map((color) => (
-                                                            <div key={color.id} onClick={() => setSelectedColor(color)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                <Check className={`ml-2 h-4 w-4 ${selectedColor?.id === color.id ? "opacity-100" : "opacity-0"}`} />
-                                                                {color.name}
-                                                            </div>
-                                                        ))}
-                                                    </ScrollArea>
-                                                </CommandGroup>
+                                                 <CommandGroup heading="جميع الألوان المتاحة">
+                                                     <ScrollArea className="h-40">
+                                                         {availableColors.map((color) => (
+                                                             <div key={color.id} onClick={() => setSelectedColor(color)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                 <Check className={`ml-2 h-4 w-4 ${selectedColor?.id === color.id ? "opacity-100" : "opacity-0"}`} />
+                                                                 {color.name}
+                                                             </div>
+                                                         ))}
+                                                     </ScrollArea>
+                                                 </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsColorDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة لون جديد</Button>
                                             </CommandList>
                                         </Command>
                                         <Command className="rounded-lg border shadow-md">
                                             <CommandList>
-                                                <CommandGroup heading="القياسات المتاحة">
-                                                    <ScrollArea className="h-40">
-                                                         {selectedColor ? productSizesForColor.map((size) => (
-                                                             <div key={size.id} onClick={() => setSelectedSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                 <Check className={`ml-2 h-4 w-4 ${selectedSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
-                                                                 {size.name || size.value}
-                                                             </div>
-                                                         )) : <div className="p-2 text-sm text-muted-foreground">اختر لوناً أولاً</div>}
-                                                    </ScrollArea>
-                                                </CommandGroup>
+                                                 <CommandGroup heading="جميع القياسات المتاحة">
+                                                     <ScrollArea className="h-40">
+                                                          {availableSizes.map((size) => (
+                                                              <div key={size.id} onClick={() => setSelectedSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                  <Check className={`ml-2 h-4 w-4 ${selectedSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
+                                                                  {size.name || size.value}
+                                                              </div>
+                                                          ))}
+                                                     </ScrollArea>
+                                                 </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsSizeDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة قياس جديد</Button>
                                             </CommandList>
                                         </Command>
