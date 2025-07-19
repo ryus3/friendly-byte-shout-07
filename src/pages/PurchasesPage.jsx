@@ -11,6 +11,7 @@ import { toast } from '@/components/ui/use-toast';
 import PurchasesStats from '@/components/purchases/PurchasesStats';
 import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';
+import PurchasesGrid from '@/components/purchases/PurchasesGrid';
 
 import AddPurchaseDialog from '@/components/purchases/AddPurchaseDialog';
 import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog';
@@ -27,6 +28,7 @@ const PurchasesPage = () => {
   const navigate = useNavigate();
   
   const [filters, setFilters] = useState({ searchTerm: '', dateFilter: 'all' });
+  const [viewMode, setViewMode] = useState('grid'); // grid أو table
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -135,16 +137,38 @@ const PurchasesPage = () => {
         {/* الإحصائيات */}
         <PurchasesStats purchases={purchases || []} onCardClick={handleStatCardClick} />
         
-        <PurchasesToolbar filters={filters} onFiltersChange={setFilters} />
-        <PurchasesList 
-          purchases={filteredPurchases} 
-          isLoading={loading}
-          onViewDetails={handleViewDetails}
-          onDelete={handleDeletePurchase}
+        <PurchasesToolbar 
+          filters={filters} 
+          onFiltersChange={setFilters}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
+        
+        {viewMode === 'table' ? (
+          <PurchasesList 
+            purchases={filteredPurchases} 
+            isLoading={loading}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDeletePurchase}
+          />
+        ) : (
+          <PurchasesGrid 
+            purchases={filteredPurchases} 
+            isLoading={loading}
+            onViewDetails={handleViewDetails}
+            onDelete={handleDeletePurchase}
+          />
+        )}
       </div>
 
-      <AddPurchaseDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
+      <AddPurchaseDialog 
+        open={isAddOpen} 
+        onOpenChange={setIsAddOpen}
+        onPurchaseAdded={() => {
+          // تحديث قائمة المشتريات بعد الإضافة
+          fetchPurchases();
+        }}
+      />
       <PurchaseDetailsDialog purchase={selectedPurchase} open={isDetailsOpen} onOpenChange={setIsDetailsOpen} />
       
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>

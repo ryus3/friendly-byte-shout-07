@@ -8,12 +8,12 @@ const PurchasesStats = ({ purchases, onCardClick }) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear = new Date(now.getFullYear(), 0, 1);
 
-    const totalCost = purchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
-    const monthPurchases = purchases.filter(p => new Date(p.created_at) >= startOfMonth);
-    const yearPurchases = purchases.filter(p => new Date(p.created_at) >= startOfYear);
+    const totalCost = purchases.reduce((sum, p) => sum + ((p.total_amount || 0) + (p.shipping_cost || 0) + (p.transfer_cost || 0)), 0);
+    const monthPurchases = purchases.filter(p => new Date(p.purchase_date || p.created_at) >= startOfMonth);
+    const yearPurchases = purchases.filter(p => new Date(p.purchase_date || p.created_at) >= startOfYear);
     
-    const totalMonthCost = monthPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
-    const totalYearCost = yearPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
+    const totalMonthCost = monthPurchases.reduce((sum, p) => sum + ((p.total_amount || 0) + (p.shipping_cost || 0) + (p.transfer_cost || 0)), 0);
+    const totalYearCost = yearPurchases.reduce((sum, p) => sum + ((p.total_amount || 0) + (p.shipping_cost || 0) + (p.transfer_cost || 0)), 0);
     const totalItems = purchases.reduce((sum, p) => sum + (p.items?.length || 0), 0);
 
     return {

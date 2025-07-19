@@ -11,7 +11,7 @@ import SelectProductForPurchaseDialog from './SelectProductForPurchaseDialog';
 import PurchaseItemsPreview from './PurchaseItemsPreview';
 import { useLocation } from 'react-router-dom';
 
-const AddPurchaseDialog = ({ open, onOpenChange }) => {
+const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const { addPurchase } = useFullPurchases();
     const location = useLocation();
     const [supplier, setSupplier] = useState('');
@@ -100,8 +100,8 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                 });
                 resetForm();
                 onOpenChange(false);
-                // لا حاجة لإعادة تحميل الصفحة - البيانات ستتحدث تلقائياً
-                // window.location.reload(); // محذوف
+                // استدعاء callback للتحديث
+                onPurchaseAdded?.();
             } else {
                 throw new Error(result.error || 'فشل في إضافة الفاتورة');
             }

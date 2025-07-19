@@ -309,9 +309,18 @@ const PurchaseInvoicePDF = ({ purchase }) => {
               </Text>
             </View>
           )}
+          {/* عرض تكاليف التحويل */}
+          {(purchase.transfer_cost || 0) > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>تكاليف التحويل:</Text>
+              <Text style={styles.totalValue}>
+                {formatCurrency(purchase.transfer_cost)}
+              </Text>
+            </View>
+          )}
           <View style={[styles.totalRow, { borderTop: 2, borderTopColor: '#2563eb', paddingTop: 10 }]}>
             <Text style={styles.grandTotal}>إجمالي الفاتورة:</Text>
-            <Text style={styles.grandTotal}>{formatCurrency((purchase.total_amount || 0) + (purchase.shipping_cost || 0))}</Text>
+            <Text style={styles.grandTotal}>{formatCurrency((purchase.total_amount || 0) + (purchase.shipping_cost || 0) + (purchase.transfer_cost || 0))}</Text>
           </View>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>المبلغ المدفوع:</Text>

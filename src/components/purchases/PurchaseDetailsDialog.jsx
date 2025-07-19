@@ -8,7 +8,8 @@ const PurchaseDetailsDialog = ({ purchase, open, onOpenChange }) => {
   
   const totalItemsCost = (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
   const shippingCost = purchase.shipping_cost || 0; // من العمود المنفصل
-  const totalCost = totalItemsCost + shippingCost;
+  const transferCost = purchase.transfer_cost || 0; // تكاليف التحويل
+  const totalCost = totalItemsCost + shippingCost + transferCost;
 
   // استخدام تاريخ الشراء الفعلي
   const purchaseDate = purchase.purchase_date || purchase.created_at || new Date();
@@ -66,6 +67,10 @@ const PurchaseDetailsDialog = ({ purchase, open, onOpenChange }) => {
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">مصاريف الشحن</span>
                 <span>{shippingCost.toLocaleString()} د.ع</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">تكاليف التحويل</span>
+                <span>{transferCost.toLocaleString()} د.ع</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t">
                 <span className="text-lg font-semibold">التكلفة الإجمالية</span>

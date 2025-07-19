@@ -20,8 +20,9 @@ export const useFullPurchases = () => {
           supplier_name: purchaseData.supplier,
           supplier_contact: purchaseData.supplierContact || null,
           total_amount: purchaseData.totalCost, // إجمالي المنتجات فقط
-          paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0), // المبلغ المدفوع
+          paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0) + (purchaseData.transferCost || 0), // المبلغ المدفوع
           shipping_cost: purchaseData.shippingCost || 0, // تكلفة الشحن منفصلة
+          transfer_cost: purchaseData.transferCost || 0, // تكاليف التحويل منفصلة
           purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate) : new Date(), // تاريخ الشراء الفعلي
           status: 'completed',
           notes: null, // إزالة الملاحظات
@@ -105,6 +106,23 @@ export const useFullPurchases = () => {
         console.log(`تم إضافة مصروف الشحن بنجاح: ${purchaseData.shippingCost} د.ع`);
       } else {
         console.log('لا يوجد مصروف شحن لإضافته');
+      }
+
+      // إضافة مصروف التحويل إذا كان موجود
+      if (purchaseData.transferCost && purchaseData.transferCost > 0) {
+        console.log(`إضافة مصروف التحويل: ${purchaseData.transferCost} د.ع`);
+        await addExpense({
+          category: 'تحويل مالي',
+          expense_type: 'operational',
+          description: `تكلفة تحويل مالي فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
+          amount: purchaseData.transferCost,
+          vendor_name: purchaseData.supplier,
+          receipt_number: newPurchase.purchase_number + '-TRANSFER',
+          status: 'approved'
+        });
+        console.log(`تم إضافة مصروف التحويل بنجاح: ${purchaseData.transferCost} د.ع`);
+      } else {
+        console.log('لا يوجد مصروف تحويل لإضافته');
       }
 
       // تحديث قائمة المشتريات
