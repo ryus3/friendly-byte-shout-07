@@ -20,7 +20,7 @@ const ManageProductActions = ({ product, onProductUpdate }) => {
 
   const handleToggleVisibility = async () => {
     setIsUpdatingVisibility(true);
-    const newState = product.is_active === false ? true : false;
+    const newState = !product.is_active; // تبديل بسيط
     
     try {
       const { error } = await supabase
@@ -35,11 +35,8 @@ const ManageProductActions = ({ product, onProductUpdate }) => {
         description: `"${product.name}" الآن ${newState ? 'مرئي للعملاء' : 'مخفي عن العملاء'}.`,
       });
       
-      // تحديث البيانات في الذاكرة
-      if (updateProduct) {
-        updateProduct(product.id, { is_active: newState });
-      }
-      if (onProductUpdate) onProductUpdate();
+      // إعادة تحميل الصفحة لضمان التحديث
+      window.location.reload();
       
     } catch (error) {
       console.error('Error updating product visibility:', error);
@@ -81,15 +78,15 @@ const ManageProductActions = ({ product, onProductUpdate }) => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className={`h-8 w-8 text-muted-foreground ${product.is_active === false ? 'hover:text-green-500' : 'hover:text-orange-500'}`}
+                className={`h-8 w-8 ${product.is_active ? 'text-green-500 hover:text-green-600' : 'text-red-500 hover:text-red-600'}`}
                 onClick={handleToggleVisibility}
                 disabled={isUpdatingVisibility}
               >
-                {product.is_active === false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                {product.is_active ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{product.is_active === false ? 'إظهار المنتج للعملاء' : 'إخفاء المنتج عن العملاء'}</p>
+              <p>{product.is_active ? 'إخفاء المنتج عن العملاء' : 'إظهار المنتج للعملاء'}</p>
             </TooltipContent>
           </Tooltip>
            <Tooltip>
