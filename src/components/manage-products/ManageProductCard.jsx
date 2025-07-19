@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
   const handleVisibilityChange = async (checked) => {
     setIsVisible(checked);
     try {
-      const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
+      const { supabase } = await import('@/integrations/supabase/client');
       const { error } = await supabase
         .from('products')
         .update({ is_active: checked })
