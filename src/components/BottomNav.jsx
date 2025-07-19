@@ -118,10 +118,13 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
   const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
   const navigate = useNavigate();
 
-  const filteredProducts = (products || []).filter(product =>
-    product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product?.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  ).slice(0, 6);
+  const filteredProducts = React.useMemo(() => {
+    if (!products || !Array.isArray(products)) return [];
+    return products.filter(product =>
+      product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product?.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    ).slice(0, 6);
+  }, [products, searchQuery]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -148,10 +151,20 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
     }
 
     // البحث عن المنتج بالباركود
-    const foundProduct = products.find(product => 
-      product?.variants?.some(variant => variant?.barcode === barcode) ||
-      product?.barcode === barcode
-    );
+    const foundProduct = products.find(product => {
+      if (!product) return false;
+      
+      // البحث في متغيرات المنتج
+      if (product.variants && Array.isArray(product.variants)) {
+        const hasVariantBarcode = product.variants.some(variant => 
+          variant && variant.barcode === barcode
+        );
+        if (hasVariantBarcode) return true;
+      }
+      
+      // البحث في باركود المنتج الرئيسي
+      return product.barcode === barcode;
+    });
 
     if (foundProduct) {
       navigate('/products', { 

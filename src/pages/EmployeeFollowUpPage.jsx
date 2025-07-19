@@ -38,7 +38,7 @@ const EmployeeFollowUpPage = () => {
 
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy' || u.role === 'admin');
+    return allUsers.filter(u => u && (u.role === 'employee' || u.role === 'deputy' || u.role === 'admin'));
   }, [allUsers]);
 
   const usersMap = useMemo(() => {
@@ -50,8 +50,9 @@ const EmployeeFollowUpPage = () => {
   }, [allUsers]);
 
   const filteredOrders = useMemo(() => {
-    if (!orders) return [];
+    if (!orders || !Array.isArray(orders)) return [];
     return orders.filter(order => {
+      if (!order) return false;
       const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;
       const statusMatch = filters.status === 'all' || order.status === filters.status;
       const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
