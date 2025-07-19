@@ -141,7 +141,8 @@ const ProductsPage = () => {
       filters: filters
     });
     
-    let tempProducts = permissionFilteredProducts.filter(p => p.is_active !== false);
+    // للمدير: لا نطبق فلتر is_active، للموظفين نطبقه
+    let tempProducts = isAdmin ? permissionFilteredProducts : permissionFilteredProducts.filter(p => p.is_active !== false);
     
     console.log('🔍 بعد فلتر is_active:', {
       beforeActive: permissionFilteredProducts?.length || 0,
