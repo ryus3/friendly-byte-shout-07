@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
@@ -152,7 +152,51 @@ export const useFullPurchases = () => {
     try {
       setLoading(true);
       
-      // حذف عناصر الفاتورة أولاً
+      // الحصول على تفاصيل الفاتورة قبل الحذف
+      const { data: purchaseData, error: fetchError } = await supabase
+        .from('purchases')
+        .select(`
+          *,
+          purchase_items (
+            id,
+            product_id,
+            variant_id,
+            quantity,
+            unit_cost
+          )
+        `)
+        .eq('id', purchaseId)
+        .single();
+
+      if (fetchError) {
+        console.error('خطأ في جلب بيانات الفاتورة:', fetchError);
+        throw fetchError;
+      }
+
+      // حذف المصاريف المرتبطة بالفاتورة
+      const { error: expensesError } = await supabase
+        .from('expenses')
+        .delete()
+        .or(`receipt_number.eq.${purchaseData.purchase_number},receipt_number.eq.${purchaseData.purchase_number}-SHIP`);
+
+      if (expensesError) {
+        console.error('خطأ في حذف المصاريف:', expensesError);
+        // لا نتوقف هنا، نكمل الحذف
+      }
+
+      // حذف المعاملات المالية المرتبطة بالفاتورة
+      const { error: transactionsError } = await supabase
+        .from('financial_transactions')
+        .delete()
+        .eq('reference_type', 'purchase')
+        .eq('reference_id', purchaseId);
+
+      if (transactionsError) {
+        console.error('خطأ في حذف المعاملات المالية:', transactionsError);
+        // لا نتوقف هنا، نكمل الحذف
+      }
+
+      // حذف عناصر الفاتورة
       const { error: itemsError } = await supabase
         .from('purchase_items')
         .delete()
@@ -163,7 +207,7 @@ export const useFullPurchases = () => {
         throw itemsError;
       }
 
-      // حذف الفاتورة
+      // حذف الفاتورة نفسها
       const { error: purchaseError } = await supabase
         .from('purchases')
         .delete()
@@ -182,7 +226,7 @@ export const useFullPurchases = () => {
       
       toast({ 
         title: 'تم', 
-        description: 'تم حذف فاتورة الشراء وجميع عناصرها بنجاح',
+        description: 'تم حذف فاتورة الشراء وجميع عناصرها والمصاريف المرتبطة بها بنجاح',
         variant: 'success'
       });
       

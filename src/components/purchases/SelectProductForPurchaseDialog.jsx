@@ -10,7 +10,7 @@ import { Check, PlusCircle, Barcode as BarcodeIcon, ScanLine } from 'lucide-reac
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import AddEditColorDialog from '@/components/manage-variants/AddEditColorDialog';
 import AddEditSizeDialog from '@/components/manage-variants/AddEditSizeDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';

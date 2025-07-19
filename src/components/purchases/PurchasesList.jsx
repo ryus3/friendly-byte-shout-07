@@ -7,6 +7,7 @@ import { Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import Loader from '@/components/ui/loader';
+import PurchaseInvoicePDFButton from './PurchaseInvoicePDF';
 
 const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
   if (isLoading) {
@@ -53,6 +54,7 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
                   <Button variant="ghost" size="icon" onClick={() => onViewDetails(purchase)}>
                     <Eye className="w-4 h-4" />
                   </Button>
+                  <PurchaseInvoicePDFButton purchase={purchase} />
                   <Button variant="ghost" size="icon" onClick={() => onDelete?.(purchase)} className="text-destructive hover:text-destructive">
                     <Trash2 className="w-4 h-4" />
                   </Button>
