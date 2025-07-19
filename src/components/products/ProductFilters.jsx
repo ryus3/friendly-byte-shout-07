@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, SlidersHorizontal, LayoutGrid, List, X } from 'lucide-react';
@@ -10,12 +10,29 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBarcodeSearch, onAdvancedFilters, viewMode, setViewMode, onProductSelect }) => {
   const { products } = useInventory();
   const { user } = useAuth();
   const { categories: allCategories, colors: allColors, sizes: allSizes, departments: allDepartments, productTypes: allProductTypes, seasonsOccasions: allSeasonsOccasions } = useVariants();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  
+  // حفظ إعدادات العرض والفلاتر
+  const [savedViewMode, setSavedViewMode] = useLocalStorage('productViewMode', 'grid');
+  const [savedFilters, setSavedFilters] = useLocalStorage('productFilters', {});
+
+  // تحديث وضع العرض عند التغيير
+  useEffect(() => {
+    if (viewMode !== savedViewMode) {
+      setSavedViewMode(viewMode);
+    }
+  }, [viewMode, savedViewMode, setSavedViewMode]);
+
+  // تحديث الفلاتر المحفوظة عند التغيير
+  useEffect(() => {
+    setSavedFilters(filters);
+  }, [filters, setSavedFilters]);
 
   // استخراج المتغيرات المسموحة للمستخدم
   const allowedData = useMemo(() => {

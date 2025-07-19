@@ -7,7 +7,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Plus, Minus, Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, Plus, Minus, Search, X, ChevronDown, ChevronUp, ShoppingCart } from 'lucide-react';
 
 const VariantSelector = ({ variants, onSelect, selectedVariantId }) => {
   return (
@@ -175,24 +175,26 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>اختر المنتجات</DialogTitle>
-          <DialogDescription>ابحث واختر المنتجات لإضافتها إلى الطلب.</DialogDescription>
+      <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0 sm:max-w-[95vw] w-full mx-2">
+        <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
+          <DialogTitle className="text-lg sm:text-xl">اختر المنتجات</DialogTitle>
+          <DialogDescription className="text-sm">ابحث واختر المنتجات لإضافتها إلى الطلب.</DialogDescription>
         </DialogHeader>
-        <div className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 overflow-hidden p-6">
-          <div className="md:col-span-2 flex flex-col gap-4">
+        
+        <div className="flex-grow flex flex-col lg:grid lg:grid-cols-3 gap-4 overflow-hidden p-4 sm:p-6">
+          {/* قسم البحث والمنتجات */}
+          <div className="lg:col-span-2 flex flex-col gap-4 flex-grow lg:flex-grow-0">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="ابحث عن منتج..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-12"
               />
             </div>
-            <ScrollArea className="flex-grow border rounded-lg">
-              <div className="p-4 space-y-4">
+            <ScrollArea className="flex-grow border rounded-lg min-h-0">
+              <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map(p => <ProductItem key={p.id} product={p} onSelect={handleSelectProduct} />)
                 ) : (
@@ -201,29 +203,48 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
               </div>
             </ScrollArea>
           </div>
-          <div className="flex flex-col gap-4 border rounded-lg p-4 bg-secondary/50">
-            <h3 className="font-semibold text-lg">المنتجات المختارة</h3>
-            <ScrollArea className="flex-grow">
-              <div className="space-y-3">
+          
+          {/* قسم السلة المختارة */}
+          <div className="flex flex-col gap-4 border rounded-lg p-3 sm:p-4 bg-secondary/30 min-h-0 max-h-[40vh] lg:max-h-none">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-base sm:text-lg">السلة</h3>
+              <div className="text-sm text-muted-foreground">
+                {selectedItems.length} منتج
+              </div>
+            </div>
+            
+            <ScrollArea className="flex-grow min-h-0">
+              <div className="space-y-2 sm:space-y-3 pr-2">
                 {selectedItems.length > 0 ? (
                   selectedItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-3 p-2 bg-background rounded-md shadow-sm">
-                      <img src={item.image} alt={item.productName} className="w-12 h-12 object-cover rounded" />
-                      <div className="flex-grow">
-                        <p className="text-sm font-medium">{item.productName}</p>
-                        <p className="text-xs text-muted-foreground">{item.size}, {item.color} - {item.quantity}x - {item.total.toLocaleString()} د.ع</p>
+                    <div key={item.id} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-background rounded-lg shadow-sm border">
+                      <img src={item.image} alt={item.productName} className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded" />
+                      <div className="flex-grow min-w-0">
+                        <p className="text-xs sm:text-sm font-medium truncate">{item.productName}</p>
+                        <p className="text-xs text-muted-foreground">{item.size}, {item.color}</p>
+                        <p className="text-xs text-primary font-semibold">{item.quantity}x - {item.total.toLocaleString()} د.ع</p>
                       </div>
-                      <Button variant="ghost" size="icon" className="w-7 h-7" onClick={() => handleRemoveItem(item.id)}>
-                        <X className="w-4 h-4 text-destructive" />
+                      <Button variant="ghost" size="icon" className="w-6 h-6 sm:w-7 sm:h-7 flex-shrink-0" onClick={() => handleRemoveItem(item.id)}>
+                        <X className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
                       </Button>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">لم يتم اختيار منتجات بعد.</p>
+                  <div className="text-center text-muted-foreground py-8 text-sm">
+                    <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <p>لم يتم اختيار منتجات بعد</p>
+                  </div>
                 )}
               </div>
             </ScrollArea>
-            <Button onClick={handleConfirm} disabled={selectedItems.length === 0}>
+            
+            <Button 
+              onClick={handleConfirm} 
+              disabled={selectedItems.length === 0}
+              className="w-full h-12 text-base font-semibold"
+              size="lg"
+            >
+              <Check className="w-5 h-5 ml-2" />
               تأكيد الاختيار ({selectedItems.length})
             </Button>
           </div>
