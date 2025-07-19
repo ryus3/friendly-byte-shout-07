@@ -10,13 +10,17 @@ const PurchaseDetailsDialog = ({ purchase, open, onOpenChange }) => {
   const shippingCost = purchase.shippingCost || 0;
   const totalCost = totalItemsCost + shippingCost;
 
+  // التحقق من صحة التاريخ
+  const purchaseDate = purchase.purchaseDate || purchase.createdAt || new Date();
+  const formattedDate = purchaseDate ? format(new Date(purchaseDate), 'd MMMM yyyy', { locale: ar }) : 'غير محدد';
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="gradient-text">تفاصيل فاتورة الشراء</DialogTitle>
           <DialogDescription>
-            فاتورة رقم #{purchase.id} بتاريخ {format(new Date(purchase.purchaseDate || purchase.createdAt), 'd MMMM yyyy', { locale: ar })}
+            فاتورة رقم #{purchase.id} بتاريخ {formattedDate}
           </DialogDescription>
         </DialogHeader>
         
