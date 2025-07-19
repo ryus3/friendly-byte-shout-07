@@ -82,7 +82,10 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
 
               {/* صفوف المتغيرات */}
               {(allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).map((variant, index) => {
-                if (!variant || (allSizesForType.length > 0 && variant.colorId !== color.id)) return null;
+                if (!variant) return null;
+                
+                // التحقق من الفلترة حسب اللون في حالة وجود متغيرات فعلية
+                if (allSizesForType.length === 0 && variant.color_id !== color.id && variant.colorId !== color.id) return null;
                 
                 const isNewProduct = allSizesForType && allSizesForType.length > 0;
                 const variantData = isNewProduct ? variant : variant;

@@ -13,24 +13,25 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
     <div ref={ref} className="print-area">
       <style>{`
         .label-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 4mm;
-          padding: 6mm;
-          justify-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 3mm;
+          padding: 5mm;
+          align-items: center;
         }
         
         .label-card {
-          width: 45mm;
-          height: 30mm;
+          width: 50mm;
+          height: 25mm;
           border: 1px solid #64748b;
-          padding: 1.5mm;
+          padding: 1mm;
           page-break-inside: avoid;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           background: white;
-          border-radius: 2mm;
+          border-radius: 1.5mm;
+          margin: 0 auto;
         }
         
         .label-content {
@@ -58,11 +59,12 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
         
         .label-barcode-container {
-          margin: 1mm 0;
+          margin: 0.5mm 0;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
+          flex: 1;
         }
         
         .label-barcode-number {
@@ -97,8 +99,8 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <div className="label-barcode-container">
                 <Barcode 
                   value={label.barcode} 
-                  height={15} 
-                  width={1.2} 
+                  height={10} 
+                  width={0.8} 
                   fontSize={0} 
                   margin={0}
                   background="transparent"
@@ -122,7 +124,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
 
   const handlePrint = useReactToPrint({
     content: () => printComponentRef.current,
-    pageStyle: `@page { size: A4; margin: 10mm; } @media print { body { -webkit-print-color-adjust: exact; } }`
+    pageStyle: `@page { size: A4 portrait; margin: 8mm; } @media print { body { -webkit-print-color-adjust: exact; } .label-grid { align-items: center !important; } }`
   });
 
   const handleQuantityChange = (sku, value) => {
