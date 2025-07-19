@@ -31,28 +31,29 @@ import React, { useMemo, useState } from 'react';
         return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
       }, [product]);
 
-      const handleVisibilityChange = async (checked) => {
-        setIsVisible(checked);
-        try {
-          // استخدام InventoryContext بدلاً من useProducts
-          const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
-          const { error } = await supabase
-            .from('products')
-            .update({ is_active: checked })
-            .eq('id', product.id);
-          
-          if (error) throw error;
-          
-          toast({
-            title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
-            description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
-          });
-        } catch (error) {
-          console.error('Error updating product visibility:', error);
-          setIsVisible(!checked);
-          toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
-        }
-      };
+  const handleVisibilityChange = async (checked) => {
+    try {
+      const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: checked })
+        .eq('id', product.id);
+      
+      if (error) throw error;
+      
+      setIsVisible(checked);
+      toast({
+        title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
+        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
+      });
+      
+      // إعادة تحميل البيانات
+      if (updateProduct) updateProduct();
+    } catch (error) {
+      console.error('Error updating product visibility:', error);
+      toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
+    }
+  };
 
       return (
         <motion.div

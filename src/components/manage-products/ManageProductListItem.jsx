@@ -24,9 +24,7 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const hasActiveDiscount = useMemo(() => product.discount_price && new Date(product.discount_end_date) > new Date(), [product.discount_price, product.discount_end_date]);
 
   const handleVisibilityChange = async (checked) => {
-    setIsVisible(checked);
     try {
-      // استخدام supabase مباشرة
       const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
       const { error } = await supabase
         .from('products')
@@ -35,14 +33,17 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
       
       if (error) throw error;
       
+      setIsVisible(checked);
       toast({
         title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
         description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
       });
+      
+      // إعادة تحميل البيانات
       if (onProductUpdate) onProductUpdate();
+      if (updateProduct) updateProduct();
     } catch (error) {
       console.error('Error updating product visibility:', error);
-      setIsVisible(!checked);
       toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
     }
   };
