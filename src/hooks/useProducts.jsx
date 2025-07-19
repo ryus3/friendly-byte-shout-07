@@ -641,24 +641,14 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
           setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
           console.log('✅ تم تحديث القائمة المحلية بنجاح');
         }
-            product_product_types(product_type_id, product_types(name)),
-            product_seasons_occasions(season_occasion_id, seasons_occasions(name, type))
-          `)
-          .eq('id', productId)
-          .single();
-
-        if (updatedProduct) {
-          setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
-          console.log('✅ تم تحديث القائمة المحلية بنجاح');
-        }
 
         // إضافة إشعار النجاح
         if (addNotification) {
-          addNotification({
-            title: '✅ تم تحديث المنتج بنجاح',
-            message: `تم تحديث المنتج "${productData.name}" مع جميع متغيراته وكمياته`,
-            type: 'success'
-          });
+            addNotification({
+              title: '✅ تم تحديث المنتج بنجاح',
+              message: `تم تحديث المنتج "${productData.name}" مع جميع متغيراته وكمياته`,
+              type: 'success'
+            });
         }
         
         if(totalImagesToUpload === 0) setUploadProgress(100);
