@@ -3,22 +3,14 @@ import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
 
-// استخدام خط Arabic Sans من رسائل الويب
-Font.register({
-  family: 'Arabic',
-  fonts: [
-    {
-      src: 'https://fonts.gstatic.com/s/nototamal/v27/Dm6hZhCfJI2VjwJKAoLALgzi.woff2',
-      fontWeight: 'normal',
-    }
-  ]
-});
+// استخدام خط افتراضي مدعوم
+// لا حاجة لتسجيل خط خارجي
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
     padding: 40,
-    fontFamily: 'Arabic',
+    fontFamily: 'Times-Roman',
     direction: 'rtl',
     fontSize: 12,
   },

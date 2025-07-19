@@ -187,10 +187,7 @@ const PurchasesPage = () => {
       <AddPurchaseDialog 
         open={isAddOpen} 
         onOpenChange={setIsAddOpen}
-        onPurchaseAdded={() => {
-          // تحديث قائمة المشتريات بعد الإضافة
-          fetchPurchases();
-        }}
+        onPurchaseAdded={handlePurchaseAdded}
       />
       <PurchaseDetailsDialog purchase={selectedPurchase} open={isDetailsOpen} onOpenChange={setIsDetailsOpen} />
       
