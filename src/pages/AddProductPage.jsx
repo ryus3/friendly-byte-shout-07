@@ -40,8 +40,10 @@ const AddProductPage = () => {
   const location = useLocation();
   const fromPurchases = location.state?.from;
   const selectedDepartment = location.state?.selectedDepartment;
+  const editProductData = location.state?.editProduct; // للتحديد إذا كنا في وضع التعديل
+  const isEditMode = !!editProductData;
 
-  const { addProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
+  const { addProduct, updateProduct, settings, loading: inventoryLoading, refetchProducts } = useInventory();
   const { sizes, colors: allColors, loading: variantsLoading } = useVariants();
   
   const [productInfo, setProductInfo] = useState({
@@ -84,7 +86,91 @@ const AddProductPage = () => {
     fetchDepartments();
   }, []);
 
+  // تحميل بيانات المنتج في وضع التعديل
   useEffect(() => {
+    if (isEditMode && editProductData) {
+      console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
+      
+      // تحميل البيانات الأساسية
+      setProductInfo({
+        name: editProductData.name || '',
+        price: editProductData.base_price || editProductData.price || '',
+        costPrice: editProductData.cost_price || '',
+        description: editProductData.description || '',
+        profitAmount: editProductData.profit_amount || '',
+        profitPercentage: ''
+      });
+
+      // تحميل الصور العامة
+      if (editProductData.images && editProductData.images.length > 0) {
+        const images = Array(4).fill(null);
+        editProductData.images.forEach((img, index) => {
+          if (index < 4 && img) images[index] = img;
+        });
+        setGeneralImages(images);
+      }
+
+      // تحميل التصنيفات
+      if (editProductData.product_categories) {
+        setSelectedCategories(editProductData.product_categories.map(pc => pc.category_id));
+      }
+      if (editProductData.product_product_types) {
+        setSelectedProductTypes(editProductData.product_product_types.map(pt => pt.product_type_id));
+      }
+      if (editProductData.product_seasons_occasions) {
+        setSelectedSeasonsOccasions(editProductData.product_seasons_occasions.map(so => so.season_occasion_id));
+      }
+      if (editProductData.product_departments) {
+        setSelectedDepartments(editProductData.product_departments.map(pd => pd.department_id));
+      }
+
+      // تحميل الألوان والمتغيرات
+      if (editProductData.variants && editProductData.variants.length > 0) {
+        // استخراج الألوان الفريدة
+        const uniqueColors = [];
+        const colorImages = {};
+        
+        editProductData.variants.forEach(variant => {
+          const colorExists = uniqueColors.find(c => c.id === variant.color_id);
+          if (!colorExists && variant.colors) {
+            uniqueColors.push({
+              id: variant.colors.id,
+              name: variant.colors.name,
+              hex_code: variant.colors.hex_code
+            });
+          }
+          
+          // تحميل صور الألوان إذا وجدت
+          if (variant.images && variant.images.length > 0) {
+            colorImages[variant.color_id] = variant.images[0];
+          }
+        });
+        
+        setSelectedColors(uniqueColors);
+        setColorImages(colorImages);
+        
+        // تحويل المتغيرات للتنسيق المطلوب
+        const formattedVariants = editProductData.variants.map(variant => ({
+          ...variant,
+          colorId: variant.color_id,
+          sizeId: variant.size_id,
+          color: variant.colors?.name || 'Unknown',
+          color_hex: variant.colors?.hex_code || '#000000',
+          size: variant.sizes?.name || 'Unknown',
+          quantity: variant.inventory?.quantity || variant.quantity || 0,
+          costPrice: variant.cost_price || editProductData.cost_price || 0,
+          hint: variant.hint || ''
+        }));
+        
+        setVariants(formattedVariants);
+      }
+    }
+  }, [isEditMode, editProductData]);
+
+  useEffect(() => {
+    // لا نولد متغيرات جديدة في وضع التعديل
+    if (isEditMode) return;
+    
     const generateVariants = () => {
       if (selectedColors.length === 0) {
         setVariants([]);
@@ -126,10 +212,11 @@ const AddProductPage = () => {
       });
       setVariants(newVariants);
     };
+    
     if (settings && sizes.length > 0) {
         generateVariants();
     }
-  }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings]);
+  }, [selectedColors, sizeType, colorSizeTypes, sizes, productInfo.price, productInfo.costPrice, settings, isEditMode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -183,10 +270,18 @@ const AddProductPage = () => {
       colorImages: colorImages,
     };
     
-    const result = await addProduct(productData, imageFiles, setUploadProgress);
+    let result;
+    if (isEditMode) {
+      result = await updateProduct(editProductData.id, productData, imageFiles, setUploadProgress);
+    } else {
+      result = await addProduct(productData, imageFiles, setUploadProgress);
+    }
 
     if (result.success) {
-      toast({ title: 'نجاح', description: 'تمت إضافة المنتج بنجاح!' });
+      toast({ 
+        title: 'نجاح', 
+        description: isEditMode ? 'تم تحديث المنتج بنجاح!' : 'تمت إضافة المنتج بنجاح!' 
+      });
       if (fromPurchases) {
         navigate(fromPurchases, { state: { productJustAdded: true } });
       } else {
@@ -243,7 +338,7 @@ const AddProductPage = () => {
 
   return (
     <>
-      <Helmet><title>إضافة منتج جديد - RYUS</title></Helmet>
+      <Helmet><title>{isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'} - RYUS</title></Helmet>
       
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
         <div className="container mx-auto p-2 md:p-6 space-y-3 md:space-y-6">
@@ -258,15 +353,17 @@ const AddProductPage = () => {
                   <ArrowRight className="h-4 w-4" />
                   <span className="hidden sm:inline ml-2">رجوع</span>
                 </Button>
-                <Button 
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || isUploading || !settings}
-                  className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
-                  size="sm"
-                >
-                   {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
-                   <span className="hidden sm:inline mr-2">{isSubmitting || isUploading ? "جاري الحفظ..." : "حفظ المنتج"}</span>
-                </Button>
+                 <Button 
+                   onClick={handleSubmit}
+                   disabled={isSubmitting || isUploading || !settings}
+                   className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                   size="sm"
+                 >
+                    {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
+                    <span className="hidden sm:inline mr-2">
+                      {isSubmitting || isUploading ? "جاري الحفظ..." : isEditMode ? "حفظ التحديثات" : "حفظ المنتج"}
+                    </span>
+                 </Button>
               </div>
               
               {/* العنوان والأزرار للشاشات الكبيرة */}
@@ -283,9 +380,9 @@ const AddProductPage = () => {
                      </Button>
                    </div>
                    <div>
-                     <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                       إضافة منتج جديد
-                     </h1>
+                      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                        {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+                      </h1>
                      {selectedDepartment && (
                        <div className="flex items-center gap-2 mt-2">
                          <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -303,9 +400,9 @@ const AddProductPage = () => {
               
               {/* العنوان للهاتف */}
               <div className="md:hidden text-center">
-                <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                  إضافة منتج جديد
-                </h1>
+                 <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                   {isEditMode ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+                 </h1>
                 {selectedDepartment && (
                   <div className="flex items-center justify-center gap-2 mt-1">
                     <Building2 className="h-3 w-3 text-muted-foreground" />
@@ -414,22 +511,25 @@ const AddProductPage = () => {
                   <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                     <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-3 md:space-y-4">
-                        {selectedColors.map((color) => (
-                          <SortableColorCard
-                            key={color.id}
-                            id={color.id}
-                            color={color}
-                            allSizesForType={variants.filter(v => v.colorId === color.id)}
-                            variants={variants}
-                            setVariants={setVariants}
-                            price={productInfo.price}
-                            costPrice={productInfo.costPrice}
-                            handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
-                            handleImageRemove={() => handleColorImageRemove(color.id)}
-                            initialImage={colorImages[color.id] || null}
-                            colorSizeTypes={colorSizeTypes[color.id] || [sizeType]}
-                          />
-                        ))}
+                         {selectedColors.map((color) => (
+                           <SortableColorCard
+                             key={color.id}
+                             id={color.id}
+                             color={color}
+                             allSizesForType={isEditMode ? [] : variants.filter(v => v.colorId === color.id)}
+                             variants={variants}
+                             setVariants={setVariants}
+                             price={productInfo.price}
+                             costPrice={productInfo.costPrice}
+                             handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
+                             handleImageRemove={() => handleColorImageRemove(color.id)}
+                             initialImage={colorImages[color.id] || null}
+                             colorSizeTypes={colorSizeTypes[color.id] || [sizeType]}
+                             isEditMode={isEditMode}
+                             showInventoryData={isEditMode}
+                             productName={productInfo.name}
+                           />
+                         ))}
                       </div>
                     </SortableContext>
                   </DndContext>

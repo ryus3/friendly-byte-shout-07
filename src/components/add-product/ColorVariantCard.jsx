@@ -280,15 +280,15 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Input 
-                                  type="text" 
-                                  placeholder="ملاحظة..." 
-                                  className="text-center text-xs"
-                                  defaultValue={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
-                                  onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
-                                />
+                                 <Input 
+                                   type="text" 
+                                   placeholder="مثال: مناسب لوزن 50-60 كغ" 
+                                   className="text-center text-xs"
+                                   value={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
+                                   onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
+                                 />
                               </TooltipTrigger>
-                              <TooltipContent><p>ملاحظة خاصة بهذا القياس</p></TooltipContent>
+                              <TooltipContent><p>تلميح ذكي للزبائن عن هذا القياس</p></TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         </div>

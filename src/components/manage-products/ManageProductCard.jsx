@@ -3,9 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Printer, Hash } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
     
 const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
+  const navigate = useNavigate();
   const { settings } = useInventory();
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
@@ -27,6 +29,16 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
     const p = hasActiveDiscount ? product.discountPrice : (product.base_price || product.price);
     return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
   }, [product]);
+  
+  const handleEditProduct = () => {
+    // الانتقال لصفحة إضافة المنتج مع بيانات المنتج للتعديل
+    navigate('/add-product', { 
+      state: { 
+        editProduct: product,
+        from: '/manage-products'
+      } 
+    });
+  };
 
   return (
     <motion.div
@@ -47,7 +59,7 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
           </div>
         )}
       </div>
-      <div className="aspect-square w-full overflow-hidden relative" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
+      <div className="aspect-square w-full overflow-hidden relative" onClick={handleEditProduct}>
         <img
           src={product.image || product.images?.[0] || "/api/placeholder/300/300"}
           alt={product.name}
@@ -55,7 +67,7 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
       </div>
-      <div className="absolute bottom-0 left-0 right-0 p-4" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
+      <div className="absolute bottom-0 left-0 right-0 p-4" onClick={handleEditProduct}>
         <div className="p-2 rounded" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}>
           <h3 className="font-bold text-white text-lg truncate">{product.name}</h3>
           <p className="text-sm font-semibold text-white">{(price || 0).toLocaleString()} د.ع</p>
@@ -71,7 +83,7 @@ const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
           <Button size="icon" variant="outline" className="h-9 w-9 bg-background/70 backdrop-blur" onClick={(e) => { e.stopPropagation(); onPrint(product); }}>
             <Printer className="w-4 h-4" />
           </Button>
-          <Button size="icon" variant="outline" className="h-9 w-9 bg-background/70 backdrop-blur" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
+          <Button size="icon" variant="outline" className="h-9 w-9 bg-background/70 backdrop-blur" onClick={handleEditProduct}>
             <Edit className="w-4 h-4" />
           </Button>
           <Button size="icon" variant="destructive" className="h-9 w-9" onClick={(e) => { e.stopPropagation(); onDelete(product); }}>
