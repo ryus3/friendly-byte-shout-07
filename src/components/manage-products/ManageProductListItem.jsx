@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
 import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
-import { Star, Hash } from 'lucide-react';
+import { Star, Hash, Eye, EyeOff } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { motion } from 'framer-motion';
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import Barcode from 'react-barcode';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
@@ -100,20 +98,28 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">مرئي</span>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Switch id={`visibility-list-${product.id}`} checked={isVisible} onCheckedChange={handleVisibilityChange} />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{isVisible ? 'إخفاء المنتج' : 'إظهار المنتج'}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleVisibilityChange(!isVisible);
+              }}
+              className={cn(
+                "group flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 border-2",
+                "hover:scale-110 active:scale-95 shadow-md",
+                isVisible 
+                  ? "bg-green-50 border-green-300 text-green-600 hover:bg-green-100 dark:bg-green-900/20 dark:border-green-600 dark:text-green-400" 
+                  : "bg-red-50 border-red-300 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:border-red-600 dark:text-red-400"
+              )}
+              title={isVisible ? 'إخفاء المنتج' : 'إظهار المنتج'}
+            >
+              {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+            </button>
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground font-medium">
+                {isVisible ? 'مرئي' : 'مخفي'}
+              </span>
+            </div>
           </div>
           <ManageProductActions product={product} onProductUpdate={onProductUpdate} />
         </div>
