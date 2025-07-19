@@ -187,8 +187,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
       const dataToUpdate = {
         name: productInfo.name?.trim() || product.name,
         description: productInfo.description?.trim() || product.description || '',
-        base_price: parseFloat(productInfo.price) || product.base_price || 0,
-        cost_price: parseFloat(productInfo.costPrice) || product.cost_price || 0,
+        price: parseFloat(productInfo.price) || product.base_price || 0,
+        costPrice: parseFloat(productInfo.costPrice) || product.cost_price || 0,
         profit_amount: parseFloat(productInfo.profitAmount) || 0,
         profit_percentage: parseFloat(productInfo.profitPercentage) || 0,
         selectedCategories: selectedCategories || [],
@@ -196,6 +196,7 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         selectedSeasonsOccasions: selectedSeasonsOccasions || [],
         selectedDepartments: selectedDepartments || [],
         variants: variants || [],
+        isVisible: product.is_active !== false,
       };
       
       const imageFiles = {
