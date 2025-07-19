@@ -18,21 +18,34 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       
       const startScanner = async () => {
         try {
+          // طلب أذونات الكاميرا بشكل صريح
+          await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" } 
+          }).then(stream => {
+            stream.getTracks().forEach(track => track.stop());
+          });
+
           const cameras = await Html5Qrcode.getCameras();
           if (cameras && cameras.length) {
             const html5QrCode = new Html5Qrcode("reader");
             readerRef.current = html5QrCode;
 
+            // تحسين إعدادات المسح للايفون
+            const config = {
+              fps: 10,
+              qrbox: { width: 200, height: 120 },
+              aspectRatio: 1.0,
+              disableFlip: false,
+              experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+              }
+            };
+
             await html5QrCode.start(
               { facingMode: "environment" },
-              { 
-                fps: 10, 
-                qrbox: { width: 250, height: 150 },
-                aspectRatio: 1.777778
-              },
+              config,
               (decodedText, decodedResult) => {
-                // مسح ناجح
-                console.log("Barcode scanned successfully:", decodedText);
+                console.log("✅ Scan successful:", decodedText);
                 onScanSuccess(decodedText);
               },
               (errorMessage) => {
@@ -42,8 +55,8 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             setIsScanning(true);
           }
         } catch (err) {
-          console.error("Camera error:", err);
-          setError("فشل في تشغيل الكاميرا. تأكد من منح الإذن للوصول إلى الكاميرا.");
+          console.error("❌ Camera error:", err);
+          setError("فشل في تشغيل الكاميرا. في الايفون: انتقل لإعدادات Safari > الكاميرا > اسمح");
           setIsScanning(false);
         }
       };
@@ -66,16 +79,14 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       <DialogContent className="max-w-lg w-[95vw] p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary text-lg">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <rect x="3" y="5" width="18" height="14" stroke="currentColor" strokeWidth="2" fill="none" rx="2"/>
-              <path d="M5 8h1M5 10h1M5 12h1M5 14h1M5 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M8 8h2M8 10h1M8 12h2M8 14h1M8 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M12 8h1M12 10h2M12 12h1M12 14h2M12 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M16 8h2M16 10h1M16 12h2M16 14h1M16 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4z"/>
+              <path d="M13 13h1.5v1.5H13V13zm0 3h1.5v1.5H13V16zm3 0h1.5v1.5H16V16zm1.5-3H19v1.5h-1.5V13zm0 3H19v1.5h-1.5V16zm3-3H22v1.5h-1.5V13z"/>
             </svg>
             قارئ الباركود السريع
           </DialogTitle>
           <DialogDescription className="text-sm">
+            📱 <strong>للايفون:</strong> تأكد من السماح لـ Safari بالوصول للكاميرا في الإعدادات<br/>
             🎯 <strong>وجه الكاميرا للباركود</strong> - سيتم إضافة المنتجات تلقائياً للسلة
           </DialogDescription>
         </DialogHeader>
