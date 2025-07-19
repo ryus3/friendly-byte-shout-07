@@ -34,20 +34,23 @@ export const useFilteredProducts = (products) => {
       productPermissions: Object.keys(productPermissions || {}).length
     });
     
-    // المديرون يرون كل المنتجات
+    // المديرون يرون كل المنتجات (بما في ذلك غير النشطة)
     if (isAdmin) {
       console.log('✅ المدير - عرض جميع المنتجات');
       return products;
     }
 
-    // إذا لم تكن هناك صلاحيات محددة، عرض جميع المنتجات (للموظفين الجدد)
+    // الموظفون يرون فقط المنتجات النشطة
+    const activeProducts = products.filter(p => p.is_active !== false);
+
+    // إذا لم تكن هناك صلاحيات محددة، عرض المنتجات النشطة فقط (للموظفين الجدد)
     if (!productPermissions || Object.keys(productPermissions).length === 0) {
-      console.log('⚠️ لا توجد صلاحيات محددة - عرض جميع المنتجات');
-      return products;
+      console.log('⚠️ لا توجد صلاحيات محددة - عرض المنتجات النشطة فقط');
+      return activeProducts;
     }
 
-    // فلترة المنتجات حسب صلاحيات الموظف بناءً على productPermissions
-    const filtered = products.filter(product => {
+    // فلترة المنتجات حسب صلاحيات الموظف بناءً على productPermissions من المنتجات النشطة فقط
+    const filtered = activeProducts.filter(product => {
       let hasPermission = true;
 
       // فحص التصنيفات (categories)

@@ -91,10 +91,10 @@ const ProductsPage = () => {
   }, [permissionFilteredProducts]);
   
   const [viewMode, setViewMode] = useLocalStorage('productsViewMode', 'list');
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useLocalStorage('productsFilters', {
     searchTerm: '',
-    category: 'all',
     department: 'all',
+    category: 'all',
     seasonOccasion: 'all',
     productType: 'all',
     brand: 'all',

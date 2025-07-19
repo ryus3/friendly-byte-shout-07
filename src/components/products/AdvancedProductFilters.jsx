@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogPortal } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,11 +9,20 @@ import { SlidersHorizontal, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => {
   const { isAdmin, productPermissions } = useAuth();
   const { categories, departments, seasonsOccasions, productTypes, colors, sizes } = useVariants();
   const { products } = useInventory();
+  
+  // حفظ إعدادات الفلاتر
+  const [savedFilters, setSavedFilters] = useLocalStorage('advancedProductFilters', {});
+
+  // تحديث الفلاتر المحفوظة عند التغيير
+  useEffect(() => {
+    setSavedFilters(filters);
+  }, [filters, setSavedFilters]);
 
   // الحصول على البيانات المسموحة بناءً على الصلاحيات
   const allowedData = useMemo(() => {
