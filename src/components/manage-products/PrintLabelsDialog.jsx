@@ -21,14 +21,15 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         
         .label-card {
           width: 60mm;
-          height: 40mm;
-          border: 1px solid #000;
-          padding: 2mm;
+          height: 45mm;
+          border: 2px solid #000;
+          padding: 3mm;
           page-break-inside: avoid;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           background: white;
+          border-radius: 3mm;
         }
         
         .label-content {
@@ -36,27 +37,32 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
         
         .label-product-name {
-          font-size: 10px;
+          font-size: 14px;
           font-weight: bold;
           margin-bottom: 2mm;
-          line-height: 1.2;
+          line-height: 1.1;
+          color: #000;
         }
         
         .label-variant-info {
-          font-size: 8px;
-          margin-bottom: 2mm;
+          font-size: 11px;
+          margin-bottom: 3mm;
+          color: #333;
+          font-weight: 500;
         }
         
         .label-barcode-container {
-          margin: 2mm 0;
+          margin: 3mm 0;
           display: flex;
           justify-content: center;
+          align-items: center;
         }
         
         .label-price {
-          font-size: 9px;
+          font-size: 12px;
           font-weight: bold;
-          margin-top: 1mm;
+          margin-top: 2mm;
+          color: #000;
         }
         
         @media print {
@@ -75,7 +81,18 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <p className="label-product-name">{label.name}</p>
               <p className="label-variant-info">{label.color} / {label.size}</p>
               <div className="label-barcode-container">
-                <Barcode value={label.barcode} height={25} width={1.2} fontSize={8} margin={2} displayValue={true} />
+                <Barcode 
+                  value={label.barcode} 
+                  height={40} 
+                  width={1.8} 
+                  fontSize={10} 
+                  margin={3}
+                  background="#ffffff"
+                  lineColor="#000000"
+                  displayValue={true}
+                  textAlign="center"
+                  textPosition="bottom"
+                />
               </div>
               <p className="label-price">{label.price.toLocaleString()} د.ع</p>
             </div>
@@ -211,13 +228,14 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .label-card {
-                    width: 120px;
-                    height: 80px;
-                    border: 1px solid #000;
-                    padding: 4px;
+                    width: 140px;
+                    height: 100px;
+                    border: 2px solid #000;
+                    padding: 6px;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
+                    border-radius: 4px;
                   }
                   
                   .label-content {
@@ -225,15 +243,18 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .label-product-name {
-                    font-size: 8px;
+                    font-size: 10px;
                     font-weight: bold;
-                    margin-bottom: 2px;
+                    margin-bottom: 3px;
                     line-height: 1.1;
+                    color: #000;
                   }
                   
                   .label-variant-info {
-                    font-size: 6px;
-                    margin-bottom: 2px;
+                    font-size: 8px;
+                    margin-bottom: 3px;
+                    color: #333;
+                    font-weight: 500;
                   }
                   
                   .label-barcode-container {
@@ -243,9 +264,10 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .label-price {
-                    font-size: 7px;
+                    font-size: 9px;
                     font-weight: bold;
-                    margin-top: 1px;
+                    margin-top: 2px;
+                    color: #000;
                   }
                 `}</style>
                 <div className="label-grid">
@@ -254,9 +276,19 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                       <div className="label-content">
                         <p className="label-product-name">{label.name}</p>
                         <p className="label-variant-info">{label.color} / {label.size}</p>
-                        <div className="label-barcode-container">
-                          <Barcode value={label.barcode} height={15} width={1} fontSize={6} margin={1} displayValue={true} />
-                        </div>
+                         <div className="label-barcode-container">
+                           <Barcode 
+                             value={label.barcode} 
+                             height={25} 
+                             width={1.2} 
+                             fontSize={8} 
+                             margin={2}
+                             background="#ffffff"
+                             lineColor="#000000"
+                             displayValue={true}
+                             textAlign="center"
+                           />
+                         </div>
                         <p className="label-price">{label.price.toLocaleString()} د.ع</p>
                       </div>
                     </div>
