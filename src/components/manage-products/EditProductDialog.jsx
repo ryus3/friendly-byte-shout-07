@@ -96,14 +96,18 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         const inventoryItem = productInventory.find(inv => inv.variant_id === variant.id);
         const variantWithFullData = {
           ...variant,
+          id: variant.id,
           colorId: variant.color_id,
           sizeId: variant.size_id,
+          color_id: variant.color_id,
+          size_id: variant.size_id,
           // جلب اسم اللون والحجم من البيانات المرتبطة
           color: variant.colors?.name || allColors.find(c => c.id === variant.color_id)?.name || 'غير محدد',
           size: variant.sizes?.name || sizes.find(s => s.id === variant.size_id)?.name || 'غير محدد',
           // ضمان وجود بيانات المخزون الصحيحة
           quantity: inventoryItem?.quantity || variant.quantity || 0,
           costPrice: variant.cost_price || variant.costPrice || 0,
+          cost_price: variant.cost_price || variant.costPrice || 0,
           price: variant.price,
           profitAmount: variant.profit_amount || product.profit_amount || 0,
           barcode: variant.barcode,
@@ -197,7 +201,11 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
       const result = await updateProduct(product.id, dataToUpdate, imageFiles, setUploadProgress);
 
       if (result.success) {
-        toast({ title: 'نجاح', description: 'تم تحديث المنتج بنجاح!' });
+        toast({ 
+          title: 'تم بنجاح! ✅', 
+          description: 'تم حفظ تعديلات المنتج بنجاح وتحديث جميع البيانات.',
+          duration: 3000
+        });
         
         // إعادة تحميل المنتجات
         if (refetchProducts) {
@@ -205,7 +213,11 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         }
         
         if(onSuccess) onSuccess();
-        onOpenChange(false);
+        
+        // إغلاق النافذة تلقائياً بعد ثانية واحدة
+        setTimeout(() => {
+          onOpenChange(false);
+        }, 1000);
       } else {
         toast({ title: 'خطأ', description: result.error || 'فشل تحديث المنتج.', variant: 'destructive' });
       }
@@ -233,12 +245,12 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>تعديل المنتج: {product.name}</DialogTitle>
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-lg">تعديل المنتج: {product.name}</DialogTitle>
           <DialogDescription>قم بتحديث تفاصيل المنتج والمتغيرات والمخزون من هنا.</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto p-4 space-y-6">
+        <div className="max-h-[75vh] overflow-y-auto px-1 space-y-4">
           <ProductPrimaryInfo 
             productInfo={productInfo} 
             setProductInfo={setProductInfo}
@@ -284,8 +296,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
                            <SortableColorCard
                             key={color.id}
                             color={color}
-                            allSizesForType={allSizesForType}
-                            variants={variants.filter(v => v.color_id === color.id)}
+                            allSizesForType={[]}
+                            variants={variants.filter(v => v.color_id === color.id || v.colorId === color.id)}
                             setVariants={setVariants}
                             price={productInfo.price}
                             costPrice={productInfo.costPrice}
