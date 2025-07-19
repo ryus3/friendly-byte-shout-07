@@ -135,7 +135,30 @@ const PurchasesPage = () => {
         </div>
         
         {/* الإحصائيات */}
-        <PurchasesStats purchases={purchases || []} onCardClick={handleStatCardClick} />
+        <PurchasesStats 
+          purchases={purchases || []} 
+          onCardClick={handleStatCardClick}
+          onFilterChange={(filters) => {
+            if (filters.dateRange) {
+              const { from, to } = filters.dateRange;
+              const now = new Date();
+              
+              if (from && to) {
+                // تحديد نوع الفلتر بناءً على التواريخ
+                const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const startOfYear = new Date(now.getFullYear(), 0, 1);
+                
+                if (from.getTime() === startOfMonth.getTime()) {
+                  setFilters(prev => ({ ...prev, dateFilter: 'this_month' }));
+                } else if (from.getTime() === startOfYear.getTime()) {
+                  setFilters(prev => ({ ...prev, dateFilter: 'this_year' }));
+                } else {
+                  setFilters(prev => ({ ...prev, dateFilter: 'custom' }));
+                }
+              }
+            }
+          }}
+        />
         
         <PurchasesToolbar 
           filters={filters} 

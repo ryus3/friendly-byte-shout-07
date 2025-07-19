@@ -112,7 +112,7 @@ export const useFullPurchases = () => {
       if (purchaseData.transferCost && purchaseData.transferCost > 0) {
         console.log(`إضافة مصروف التحويل: ${purchaseData.transferCost} د.ع`);
         await addExpense({
-          category: 'تحويل مالي',
+          category: 'تكاليف التحويل',
           expense_type: 'operational',
           description: `تكلفة تحويل مالي فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
           amount: purchaseData.transferCost,

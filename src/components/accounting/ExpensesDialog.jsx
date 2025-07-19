@@ -25,7 +25,10 @@ import React, { useState, useEffect } from 'react';
         dateRange: { from: undefined, to: undefined }
       });
     
-      const expenseCategories = ['تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن', 'أخرى'];
+  const [expenseCategories, setExpenseCategories] = useState([
+    'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'أخرى'
+  ]);
+  const [newCategory, setNewCategory] = useState('');
     
       const filteredExpenses = expenses.filter(expense => {
         const categoryMatch = filters.category === 'all' || expense.related_data?.category === filters.category;
@@ -57,6 +60,14 @@ import React, { useState, useEffect } from 'react';
           description: '',
           amount: '',
         });
+      };
+
+      const handleAddCategory = () => {
+        if (newCategory.trim() && !expenseCategories.includes(newCategory.trim())) {
+          setExpenseCategories(prev => [...prev, newCategory.trim()]);
+          setNewCategory('');
+          toast({ title: 'تم إضافة الفئة بنجاح', variant: 'success' });
+        }
       };
     
       return (
@@ -94,6 +105,20 @@ import React, { useState, useEffect } from 'react';
                     <Input id="exp-amount" type="number" name="amount" value={newExpense.amount} onChange={handleInputChange} placeholder="50,000" />
                   </div>
                   <Button onClick={handleAddExpense} className="w-full">إضافة المصروف</Button>
+                  
+                  {/* إضافة فئة جديدة */}
+                  <div className="pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-2">إضافة فئة جديدة</h4>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="اسم الفئة الجديدة"
+                        className="flex-1"
+                      />
+                      <Button onClick={handleAddCategory} size="sm">إضافة</Button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="md:col-span-2 space-y-4">

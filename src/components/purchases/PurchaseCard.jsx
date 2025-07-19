@@ -43,7 +43,8 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
                  hover:shadow-xl hover:shadow-primary/20 
                  hover:border-primary/30 
                  transition-all duration-300 ease-out
-                 dark:bg-card dark:shadow-white/5 dark:hover:shadow-primary/10"
+                 dark:bg-card dark:shadow-white/5 dark:hover:shadow-primary/10
+                 w-full max-w-full"
     >
       {/* خلفية متدرجة */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -81,45 +82,45 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
         </div>
 
         {/* الإحصائيات */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {/* عدد الأصناف */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 group-hover:bg-primary/5 transition-colors">
-            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600">
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
               <Package className="h-4 w-4" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">عدد الأصناف</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-muted-foreground truncate">عدد الأصناف</p>
               <p className="font-semibold">{purchase.items?.length || 0}</p>
             </div>
           </div>
 
           {/* الإجمالي */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 group-hover:bg-primary/5 transition-colors">
-            <div className="p-2 rounded-lg bg-green-500/10 text-green-600">
+            <div className="p-2 rounded-lg bg-green-500/10 text-green-600 flex-shrink-0">
               <DollarSign className="h-4 w-4" />
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">الإجمالي</p>
-              <p className="font-semibold">{totalCost.toLocaleString()} د.ع</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm text-muted-foreground truncate">الإجمالي</p>
+              <p className="font-semibold text-sm sm:text-base">{totalCost.toLocaleString()} د.ع</p>
             </div>
           </div>
         </div>
 
         {/* التكاليف الإضافية */}
         {(hasShipping || hasTransfer) && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {hasShipping && (
               <div className="flex items-center justify-between p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20">
-                <span className="text-xs text-orange-700 dark:text-orange-300">شحن</span>
-                <span className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                <span className="text-xs text-orange-700 dark:text-orange-300 truncate">شحن</span>
+                <span className="text-xs font-medium text-orange-800 dark:text-orange-200 flex-shrink-0">
                   {(purchase.shipping_cost || 0).toLocaleString()} د.ع
                 </span>
               </div>
             )}
             {hasTransfer && (
               <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-900/20">
-                <span className="text-xs text-purple-700 dark:text-purple-300">تحويل</span>
-                <span className="text-xs font-medium text-purple-800 dark:text-purple-200">
+                <span className="text-xs text-purple-700 dark:text-purple-300 truncate">تحويل</span>
+                <span className="text-xs font-medium text-purple-800 dark:text-purple-200 flex-shrink-0">
                   {(purchase.transfer_cost || 0).toLocaleString()} د.ع
                 </span>
               </div>
@@ -128,13 +129,13 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
         )}
 
         {/* الأزرار */}
-        <div className="flex items-center justify-between pt-2 border-t border-border/50">
-          <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 border-t border-border/50 gap-3 sm:gap-2">
+          <div className="flex gap-1 sm:gap-2 flex-wrap">
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => onViewDetails(purchase)}
-              className="h-8 px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+              className="h-8 px-2 sm:px-3 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
             >
               <Eye className="w-3.5 h-3.5 ml-1" />
               <span className="text-xs">عرض</span>
@@ -146,7 +147,7 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
               variant="ghost" 
               size="sm" 
               onClick={() => onDelete?.(purchase)}
-              className="h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+              className="h-8 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
             >
               <Trash2 className="w-3.5 h-3.5 ml-1" />
               <span className="text-xs">حذف</span>
@@ -154,7 +155,7 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
           </div>
           
           {/* مبلغ المنتجات */}
-          <div className="text-right">
+          <div className="text-right w-full sm:w-auto">
             <p className="text-xs text-muted-foreground">قيمة المنتجات</p>
             <p className="text-sm font-medium">{(purchase.total_amount || 0).toLocaleString()} د.ع</p>
           </div>

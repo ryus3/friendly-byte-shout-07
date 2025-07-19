@@ -2,7 +2,32 @@ import React, { useMemo } from 'react';
 import StatCard from '@/components/dashboard/StatCard';
 import { DollarSign, ShoppingCart, Calendar, Package } from 'lucide-react';
 
-const PurchasesStats = ({ purchases, onCardClick }) => {
+const PurchasesStats = ({ purchases, onCardClick, onFilterChange }) => {
+  
+  const handleCardClick = (period) => {
+    const today = new Date();
+    let startDate, endDate;
+    
+    if (period === 'this_month') {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    } else if (period === 'this_year') {
+      startDate = new Date(today.getFullYear(), 0, 1);
+      endDate = new Date(today.getFullYear(), 11, 31);
+    }
+    
+    // تطبيق الفلتر عبر callback للمكون الأب
+    if (startDate && endDate && onFilterChange) {
+      onFilterChange({
+        dateRange: { from: startDate, to: endDate }
+      });
+    }
+    
+    // استدعاء الدالة الأصلية إذا كانت موجودة
+    if (onCardClick) {
+      onCardClick(period);
+    }
+  };
   const stats = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -34,7 +59,7 @@ const PurchasesStats = ({ purchases, onCardClick }) => {
       icon: DollarSign, 
       colors: ['green-500', 'emerald-500'], 
       format: 'currency', 
-      onClick: () => onCardClick('all'),
+      onClick: () => handleCardClick('all'),
       subtitle: `${stats.totalInvoices} فاتورة`
     },
     { 
@@ -43,7 +68,7 @@ const PurchasesStats = ({ purchases, onCardClick }) => {
       icon: Calendar, 
       colors: ['blue-500', 'sky-500'], 
       format: 'currency', 
-      onClick: () => onCardClick('this_month'),
+      onClick: () => handleCardClick('this_month'),
       subtitle: `${stats.monthPurchases.length} فاتورة هذا الشهر`
     },
     { 
@@ -52,7 +77,7 @@ const PurchasesStats = ({ purchases, onCardClick }) => {
       icon: Calendar, 
       colors: ['purple-500', 'violet-500'], 
       format: 'currency', 
-      onClick: () => onCardClick('this_year'),
+      onClick: () => handleCardClick('this_year'),
       subtitle: `${stats.yearPurchases.length} فاتورة هذه السنة`
     },
     { 
@@ -61,7 +86,7 @@ const PurchasesStats = ({ purchases, onCardClick }) => {
       icon: Package, 
       colors: ['orange-500', 'amber-500'], 
       format: 'number', 
-      onClick: () => onCardClick('all'),
+      onClick: () => handleCardClick('all'),
       subtitle: `في ${stats.totalInvoices} فاتورة`
     },
   ];
