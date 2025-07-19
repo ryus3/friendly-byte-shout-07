@@ -1,12 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
     import { Button } from '@/components/ui/button';
-    import { Edit, Trash2, Printer, Hash } from 'lucide-react';
+    import { Edit, Trash2, Printer, Hash, Eye, EyeOff } from 'lucide-react';
+    import { Switch } from '@/components/ui/switch';
     import { motion } from 'framer-motion';
     import { useInventory } from '@/contexts/InventoryContext';
+    import { toast } from '@/components/ui/use-toast';
     import { cn } from '@/lib/utils';
     
     const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
-      const { settings } = useInventory();
+      const { settings, updateProduct } = useInventory();
+      const [isVisible, setIsVisible] = useState(product.is_visible ?? true);
       const totalStock = useMemo(() => {
         if (!product.variants || product.variants.length === 0) return 0;
         return product.variants.reduce((sum, v) => {
@@ -28,6 +31,20 @@ import React, { useMemo } from 'react';
         return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
       }, [product]);
 
+      const handleVisibilityChange = async (checked) => {
+        setIsVisible(checked);
+        const { success } = await updateProduct(product.id, { isVisible: checked });
+        if (success) {
+          toast({
+            title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
+            description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
+          });
+        } else {
+          setIsVisible(!checked);
+          toast({ title: "خطأ", description: "فشل تحديث ظهور المنتج.", variant: "destructive" });
+        }
+      };
+
       return (
         <motion.div
           layout
@@ -39,6 +56,13 @@ import React, { useMemo } from 'react';
           <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
             <div className={cn("text-xs font-bold text-white rounded-full px-2 py-1", getStockLevelClass())}>
               {totalStock} قطعة
+            </div>
+            {/* مؤشر الرؤية */}
+            <div className={cn(
+              "rounded-full p-1 backdrop-blur-sm border",
+              isVisible ? "bg-green-500/80 text-white border-green-400" : "bg-red-500/80 text-white border-red-400"
+            )}>
+              {isVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
             </div>
           </div>
           <div className="aspect-square w-full overflow-hidden relative" onClick={(e) => { e.stopPropagation(); onEdit(product); }}>
@@ -59,6 +83,15 @@ import React, { useMemo } from 'react';
                    <span className="text-xs text-white/70 font-mono">QR: {product.barcode}</span>
                 </div>
               )}
+              {/* زر تبديل الرؤية */}
+              <div className="flex items-center gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                <span className="text-xs text-white/80">مرئي</span>
+                <Switch 
+                  checked={isVisible} 
+                  onCheckedChange={handleVisibilityChange}
+                  size="sm"
+                />
+              </div>
             </div>
           </div>
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">

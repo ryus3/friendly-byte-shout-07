@@ -178,15 +178,30 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
       
       {/* الأزرار المتجاورة والمتناسقة */}
       <div className="flex items-center gap-2">
-        {/* QR Code Scanner */}
-        <QRButton
+        {/* QR Code Scanner مع أيقونة جميلة */}
+        <Button
           variant="outline"
           size="sm"
           onClick={onBarcodeSearch}
-          className="glass-effect border-border/80 hover:bg-primary/10"
+          className="glass-effect border-border/80 hover:bg-primary/10 relative"
+          title="مسح QR Code"
         >
-          <span className="hidden sm:inline">مسح</span>
-        </QRButton>
+          <div className="flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+              <rect width="5" height="5" x="3" y="3" rx="1"/>
+              <rect width="5" height="5" x="16" y="3" rx="1"/>
+              <rect width="5" height="5" x="3" y="16" rx="1"/>
+              <path d="m21 16-3.5-3.5"/>
+              <path d="m21 21-3.5-3.5"/>
+              <path d="M3.5 8.5 7 12"/>
+              <path d="m7 8 .5-.5"/>
+              <path d="M8.5 16.5 12 13"/>
+              <path d="M8 21h8"/>
+              <path d="M16 8h8"/>
+            </svg>
+            <span className="hidden sm:inline text-sm font-medium">مسح</span>
+          </div>
+        </Button>
         
         {/* قائمة */}
         <Button 
