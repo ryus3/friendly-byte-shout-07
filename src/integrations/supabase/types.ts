@@ -1867,6 +1867,10 @@ export type Database = {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
       }
+      fix_existing_purchase_shipping: {
+        Args: { p_purchase_id: string; p_shipping_cost: number }
+        Returns: undefined
+      }
       generate_employee_telegram_code: {
         Args: { p_user_id: string }
         Returns: string
