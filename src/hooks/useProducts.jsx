@@ -276,7 +276,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                 description: productData.description,
                 base_price: parseFloat(productData.price) || 0,
                 cost_price: parseFloat(productData.costPrice) || 0,
-                profit_amount: parseFloat(productData.profit_amount) || 0,
+                profit_amount: parseFloat(productData.profitAmount) || 0,
                 is_active: productData.isVisible !== false,
             })
             .eq('id', productId);
@@ -609,15 +609,38 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
             console.log('✅ تم تحديث جميع المتغيرات والمخزون بنجاح');
         }
 
-        // تحديث قائمة المنتجات المحلية فوراً
+        // تحديث قائمة المنتجات المحلية فوراً مع بيانات شاملة
         const { data: updatedProduct } = await supabase
           .from('products')
           .select(`
             *,
-            variants:product_variants(*),
-            inventory(*),
-            product_categories(category_id, categories(name)),
-            product_departments(department_id, departments(name, color, icon)),
+            variants:product_variants!inner(
+              *,
+              colors(id, name, hex_code),
+              sizes(id, name, display_order),
+              inventory(quantity, min_stock, reserved_quantity)
+            ),
+            categories:product_categories(
+              category:categories(id, name)
+            ),
+            departments:product_departments(
+              department:departments(id, name)
+            ),
+            product_types:product_product_types(
+              product_type:product_types(id, name)
+            ),
+            seasons_occasions:product_seasons_occasions(
+              season_occasion:seasons_occasions(id, name)
+            )
+          `)
+          .eq('id', productId)
+          .single();
+          
+        if (updatedProduct) {
+          // تحديث قائمة المنتجات المحلية
+          setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
+          console.log('✅ تم تحديث القائمة المحلية بنجاح');
+        }
             product_product_types(product_type_id, product_types(name)),
             product_seasons_occasions(season_occasion_id, seasons_occasions(name, type))
           `)
