@@ -13,10 +13,11 @@ import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';
 import AddPurchaseDialog from '@/components/purchases/AddPurchaseDialog';
 import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const PurchasesPage = () => {
   const { purchases: inventoryPurchases, loading: inventoryLoading } = useInventory();
-  const { purchases: hookPurchases, loading: hookLoading, fetchPurchases } = useFullPurchases();
+  const { purchases: hookPurchases, loading: hookLoading, fetchPurchases, deletePurchase } = useFullPurchases();
   const { hasPermission } = usePermissions();
 
   // استخدام البيانات من الهوك إذا كانت متوفرة، وإلا استخدام بيانات الإنفنتوري
@@ -28,6 +29,8 @@ const PurchasesPage = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [purchaseToDelete, setPurchaseToDelete] = useState(null);
 
   // جلب المشتريات عند تحميل الصفحة
   React.useEffect(() => {
@@ -83,6 +86,26 @@ const PurchasesPage = () => {
     setFilters(prev => ({ ...prev, dateFilter: filter }));
   };
 
+  const handleDeletePurchase = (purchase) => {
+    setPurchaseToDelete(purchase);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const confirmDeletePurchase = async () => {
+    if (purchaseToDelete) {
+      const result = await deletePurchase(purchaseToDelete.id);
+      if (result.success) {
+        toast({
+          title: "تم الحذف",
+          description: "تم حذف فاتورة الشراء بنجاح.",
+          variant: 'success'
+        });
+      }
+    }
+    setIsDeleteAlertOpen(false);
+    setPurchaseToDelete(null);
+  };
+
   return (
     <>
       <Helmet>
@@ -114,11 +137,30 @@ const PurchasesPage = () => {
           purchases={filteredPurchases} 
           isLoading={loading}
           onViewDetails={handleViewDetails}
+          onDelete={handleDeletePurchase}
         />
       </div>
 
       <AddPurchaseDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
       <PurchaseDetailsDialog purchase={selectedPurchase} open={isDetailsOpen} onOpenChange={setIsDetailsOpen} />
+      
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف فاتورة الشراء؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              هل أنت متأكد من حذف فاتورة الشراء رقم {purchaseToDelete?.purchase_number || purchaseToDelete?.id}؟ 
+              سيتم حذف جميع عناصر الفاتورة ولا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletePurchase} className="bg-destructive hover:bg-destructive/90">
+              نعم، قم بالحذف
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

@@ -3,12 +3,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import Loader from '@/components/ui/loader';
 
-const PurchasesList = ({ purchases, isLoading, onViewDetails }) => {
+const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader /></div>;
   }
@@ -49,9 +49,14 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails }) => {
               <TableCell>{((purchase.total_amount || 0) - (purchase.paid_amount || 0)).toLocaleString()} د.ع</TableCell>
               <TableCell className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</TableCell>
               <TableCell>
-                <Button variant="ghost" size="icon" onClick={() => onViewDetails(purchase)}>
-                  <Eye className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => onViewDetails(purchase)}>
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => onDelete?.(purchase)} className="text-destructive hover:text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}

@@ -46,21 +46,21 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     );
 
     const productColors = useMemo(() => {
-        if (!selectedProduct) return [];
-        const colorIds = new Set(selectedProduct.variants.map(v => v.colorId));
+        if (!selectedProduct || !selectedProduct.variants) return [];
+        const colorIds = new Set(selectedProduct.variants.map(v => v.color_id || v.colorId));
         return colors.filter(c => colorIds.has(c.id));
     }, [selectedProduct, colors]);
 
     const productSizesForColor = useMemo(() => {
-        if (!selectedProduct || !selectedColor) return [];
-        const sizeIds = new Set(selectedProduct.variants.filter(v => v.colorId === selectedColor.id).map(v => v.sizeId));
+        if (!selectedProduct || !selectedColor || !selectedProduct.variants) return [];
+        const sizeIds = new Set(selectedProduct.variants.filter(v => (v.color_id || v.colorId) === selectedColor.id).map(v => v.size_id || v.sizeId));
         return sizes.filter(s => sizeIds.has(s.id));
     }, [selectedProduct, selectedColor, sizes]);
 
     useEffect(() => {
         if (selectedProduct) {
-            setCostPrice(selectedProduct.costPrice || 0);
-            setSalePrice(selectedProduct.price || 0);
+            setCostPrice(selectedProduct.cost_price || selectedProduct.costPrice || 0);
+            setSalePrice(selectedProduct.base_price || selectedProduct.price || 0);
         }
     }, [selectedProduct]);
 
@@ -70,23 +70,24 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
             return;
         }
 
-        const existingVariant = selectedProduct.variants.find(v => v.colorId === selectedColor.id && v.sizeId === selectedSize.id);
-        const sku = existingVariant?.sku || `${settings?.sku_prefix || 'PROD'}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase();
+        const existingVariant = selectedProduct.variants?.find(v => (v.color_id || v.colorId) === selectedColor.id && (v.size_id || v.sizeId) === selectedSize.id);
+        const sku = existingVariant?.sku || existingVariant?.barcode || `${settings?.sku_prefix || 'PROD'}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase();
 
         const itemToAdd = {
             productId: selectedProduct.id,
             productName: selectedProduct.name,
             variantSku: sku,
+            variantId: existingVariant?.id,
             color: selectedColor.name,
-            size: selectedSize.value,
+            size: selectedSize.name || selectedSize.value,
             quantity: parseInt(quantity),
             costPrice: parseFloat(costPrice),
             salePrice: parseFloat(salePrice),
-            image: existingVariant?.image || selectedProduct.images?.[0] || null,
+            image: existingVariant?.images?.[0] || selectedProduct.images?.[0] || null,
             isNewVariant: !existingVariant,
             colorId: selectedColor.id,
             sizeId: selectedSize.id,
-            color_hex: selectedColor.hex_code,
+            color_hex: selectedColor.hex_code || selectedColor.hex_color,
         };
 
         onItemsAdd([itemToAdd]);
@@ -104,8 +105,8 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
         setSelectedColor(null);
         setSelectedSize(null);
         setQuantity(1);
-        setCostPrice(selectedProduct?.costPrice || 0);
-        setSalePrice(selectedProduct?.price || 0);
+        setCostPrice(selectedProduct?.cost_price || selectedProduct?.costPrice || 0);
+        setSalePrice(selectedProduct?.base_price || selectedProduct?.price || 0);
     };
     
     const handleDialogStateChange = (isOpen) => {
@@ -138,16 +139,18 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
 
     const handleBarcodeScan = (decodedText) => {
         setIsScannerOpen(false);
-        const foundProduct = allowedProducts.find(p => p.variants.some(v => v.sku === decodedText));
+        const foundProduct = allowedProducts.find(p => 
+            p.variants?.some(v => v.sku === decodedText || v.barcode === decodedText)
+        );
         if (foundProduct) {
-            const variant = foundProduct.variants.find(v => v.sku === decodedText);
-            const color = colors.find(c => c.id === variant.colorId);
-            const size = sizes.find(s => s.id === variant.sizeId);
+            const variant = foundProduct.variants.find(v => v.sku === decodedText || v.barcode === decodedText);
+            const color = colors.find(c => c.id === (variant.color_id || variant.colorId));
+            const size = sizes.find(s => s.id === (variant.size_id || variant.sizeId));
             
             setSelectedProduct(foundProduct);
             setSelectedColor(color);
             setSelectedSize(size);
-            toast({ title: "تم العثور على المنتج", description: `${foundProduct.name} (${color.name}, ${size.value})` });
+            toast({ title: "تم العثور على المنتج", description: `${foundProduct.name} (${color?.name}, ${size?.name || size?.value})` });
         } else {
             toast({ title: "خطأ", description: "لم يتم العثور على منتج بهذا الباركود.", variant: "destructive" });
         }
@@ -214,12 +217,12 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                                             <CommandList>
                                                 <CommandGroup heading="القياسات المتاحة">
                                                     <ScrollArea className="h-40">
-                                                        {selectedColor ? productSizesForColor.map((size) => (
-                                                            <div key={size.id} onClick={() => setSelectedSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                <Check className={`ml-2 h-4 w-4 ${selectedSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
-                                                                {size.value}
-                                                            </div>
-                                                        )) : <div className="p-2 text-sm text-muted-foreground">اختر لوناً أولاً</div>}
+                                                         {selectedColor ? productSizesForColor.map((size) => (
+                                                             <div key={size.id} onClick={() => setSelectedSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                 <Check className={`ml-2 h-4 w-4 ${selectedSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
+                                                                 {size.name || size.value}
+                                                             </div>
+                                                         )) : <div className="p-2 text-sm text-muted-foreground">اختر لوناً أولاً</div>}
                                                     </ScrollArea>
                                                 </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsSizeDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة قياس جديد</Button>
@@ -235,9 +238,11 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                                             </div>
                                             <div className="flex items-center justify-center">
                                                 <BarcodeIcon className="w-5 h-5 text-muted-foreground mr-2" />
-                                                <p className="font-mono text-sm">
-                                                    {selectedProduct.variants.find(v => v.colorId === selectedColor.id && v.sizeId === selectedSize.id)?.sku || "سيتم توليد باركود جديد"}
-                                                </p>
+                                                 <p className="font-mono text-sm">
+                                                     {selectedProduct.variants?.find(v => (v.color_id || v.colorId) === selectedColor.id && (v.size_id || v.sizeId) === selectedSize.id)?.sku || 
+                                                      selectedProduct.variants?.find(v => (v.color_id || v.colorId) === selectedColor.id && (v.size_id || v.sizeId) === selectedSize.id)?.barcode || 
+                                                      "سيتم توليد باركود جديد"}
+                                                 </p>
                                             </div>
                                         </div>
                                     )}

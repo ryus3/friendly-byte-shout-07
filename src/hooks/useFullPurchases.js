@@ -142,27 +142,55 @@ export const useFullPurchases = () => {
 
   const deletePurchase = useCallback(async (purchaseId) => {
     try {
-      const { error } = await supabase
+      setLoading(true);
+      
+      // حذف عناصر الفاتورة أولاً
+      const { error: itemsError } = await supabase
+        .from('purchase_items')
+        .delete()
+        .eq('purchase_id', purchaseId);
+
+      if (itemsError) {
+        console.error('خطأ في حذف عناصر الفاتورة:', itemsError);
+        throw itemsError;
+      }
+
+      // حذف الفاتورة
+      const { error: purchaseError } = await supabase
         .from('purchases')
         .delete()
         .eq('id', purchaseId);
 
-      if (error) throw error;
+      if (purchaseError) {
+        console.error('خطأ في حذف الفاتورة:', purchaseError);
+        throw purchaseError;
+      }
 
+      // تحديث القائمة المحلية
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
-      toast({ title: 'تم', description: 'تم حذف فاتورة الشراء بنجاح' });
+      
+      // إعادة تحميل البيانات
+      await refetchData();
+      
+      toast({ 
+        title: 'تم', 
+        description: 'تم حذف فاتورة الشراء وجميع عناصرها بنجاح',
+        variant: 'success'
+      });
       
       return { success: true };
     } catch (error) {
       console.error("خطأ في حذف فاتورة الشراء:", error);
       toast({ 
         title: 'خطأ', 
-        description: 'فشل حذف فاتورة الشراء', 
+        description: `فشل حذف فاتورة الشراء: ${error.message}`, 
         variant: 'destructive' 
       });
       return { success: false };
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [refetchData]);
 
   const updatePurchase = useCallback(async (purchaseId, updates) => {
     try {
