@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { Star, Hash, Eye, EyeOff } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';

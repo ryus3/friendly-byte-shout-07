@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Printer, Hash, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/customSupabaseClient';
     
