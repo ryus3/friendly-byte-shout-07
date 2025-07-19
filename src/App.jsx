@@ -90,6 +90,7 @@ function AppContent() {
           <Route path="/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPage)}</ProtectedRoute>} />
           <Route path="/manage-products" element={<ProtectedRoute permission="manage_products">{childrenWithProps(ManageProductsPage)}</ProtectedRoute>} />
           <Route path="/products/add" element={<ProtectedRoute permission="manage_products">{childrenWithProps(AddProductPage)}</ProtectedRoute>} />
+          <Route path="/add-product" element={<ProtectedRoute permission="manage_products">{childrenWithProps(AddProductPage)}</ProtectedRoute>} />
           <Route path="/manage-variants" element={<ProtectedRoute permission="manage_variants">{childrenWithProps(ManageVariantsPage)}</ProtectedRoute>} />
           <Route path="/inventory" element={<ProtectedRoute permission="view_inventory">{childrenWithProps(InventoryPage)}</ProtectedRoute>} />
           
