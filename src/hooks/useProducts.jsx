@@ -355,13 +355,40 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
             });
         }
         
-        // 4. Handle variants
-        await supabase.from('product_variants').delete().eq('product_id', productId);
+        // 4. Handle variants - تحديث بدلاً من حذف وإعادة إنشاء
+        const existingVariants = await supabase
+          .from('product_variants')
+          .select('id, barcode, color_id, size_id')
+          .eq('product_id', productId);
         
-        const finalVariants = productData.variants.map(v => {
-            let imageUrl = uploadedColorUrls[v.colorId] || existingColorImageUrls[v.colorId] || v.image || null;
-            
-            // توليد باركود فريد إذا لم يكن موجود
+        const existingVariantsMap = new Map();
+        existingVariants.data?.forEach(v => {
+          const key = `${v.color_id}-${v.size_id}`;
+          existingVariantsMap.set(key, v);
+        });
+        
+        const variantsToUpdate = [];
+        const variantsToInsert = [];
+        const variantIdsToKeep = new Set();
+        
+        productData.variants.forEach(v => {
+          const key = `${v.colorId}-${v.sizeId}`;
+          const existing = existingVariantsMap.get(key);
+          
+          let imageUrl = uploadedColorUrls[v.colorId] || existingColorImageUrls[v.colorId] || v.image || null;
+          
+          if (existing) {
+            // تحديث المتغير الموجود
+            variantsToUpdate.push({
+              id: existing.id,
+              price: v.price,
+              cost_price: v.costPrice,
+              profit_amount: v.profitAmount || productData.profitAmount || 0,
+              images: imageUrl ? [imageUrl] : (existing.images || [])
+            });
+            variantIdsToKeep.add(existing.id);
+          } else {
+            // إنشاء متغير جديد
             let barcode = v.barcode;
             if (!barcode || barcode.trim() === '') {
               barcode = generateUniqueBarcode(
@@ -372,22 +399,89 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
               );
             }
             
-            return {
-                product_id: productId,
-                color_id: v.colorId,
-                size_id: v.sizeId,
-                price: v.price,
-                cost_price: v.costPrice,
-                profit_amount: v.profitAmount || productData.profitAmount || 0,
-                barcode: barcode,
-                images: imageUrl ? [imageUrl] : []
-            };
+            variantsToInsert.push({
+              product_id: productId,
+              color_id: v.colorId,
+              size_id: v.sizeId,
+              price: v.price,
+              cost_price: v.costPrice,
+              profit_amount: v.profitAmount || productData.profitAmount || 0,
+              barcode: barcode,
+              images: imageUrl ? [imageUrl] : []
+            });
+          }
         });
-
-        if (finalVariants.length > 0) {
-            await supabase.from('product_variants').insert(finalVariants);
+        
+        // تحديث المتغيرات الموجودة
+        for (const variant of variantsToUpdate) {
+          await supabase
+            .from('product_variants')
+            .update({
+              price: variant.price,
+              cost_price: variant.cost_price,
+              profit_amount: variant.profit_amount,
+              images: variant.images
+            })
+            .eq('id', variant.id);
+        }
+        
+        // إدراج المتغيرات الجديدة
+        if (variantsToInsert.length > 0) {
+          await supabase.from('product_variants').insert(variantsToInsert);
+        }
+        
+        // حذف المتغيرات التي لم تعد موجودة (فقط التي لا تحتوي على order_items)
+        const variantsToDelete = existingVariants.data?.filter(v => !variantIdsToKeep.has(v.id));
+        if (variantsToDelete?.length > 0) {
+          // فحص إذا كانت المتغيرات مرتبطة بطلبات
+          const { data: orderItems } = await supabase
+            .from('order_items')
+            .select('variant_id')
+            .in('variant_id', variantsToDelete.map(v => v.id));
+          
+          const safeToDelete = variantsToDelete.filter(v => 
+            !orderItems?.some(oi => oi.variant_id === v.id)
+          );
+          
+          if (safeToDelete.length > 0) {
+            await supabase
+              .from('product_variants')
+              .delete()
+              .in('id', safeToDelete.map(v => v.id));
+          }
         }
 
+        // 5. تحديث بيانات المخزون
+        for (const variant of productData.variants) {
+          const variantKey = `${variant.colorId}-${variant.sizeId}`;
+          const existingVariant = existingVariantsMap.get(variantKey);
+          
+          if (existingVariant || variantsToInsert.find(v => v.color_id === variant.colorId && v.size_id === variant.sizeId)) {
+            // تحديث أو إنشاء سجل المخزون
+            const { data: existingInventory } = await supabase
+              .from('inventory')
+              .select('id')
+              .eq('product_id', productId)
+              .eq('variant_id', existingVariant?.id)
+              .maybeSingle();
+            
+            if (existingInventory) {
+              // تحديث المخزون الموجود
+              await supabase
+                .from('inventory')
+                .update({
+                  quantity: variant.quantity || 0,
+                  updated_at: new Date().toISOString(),
+                  last_updated_by: user?.user_id || user?.id
+                })
+                .eq('id', existingInventory.id);
+            } else if (!existingVariant) {
+              // إنشاء سجل مخزون جديد للمتغيرات الجديدة (سيتم ربطه بعد إنشاء المتغير)
+              // هذا سيحدث تلقائياً عبر trigger في قاعدة البيانات
+            }
+          }
+        }
+        
         if(totalImagesToUpload === 0) setUploadProgress(100);
 
         toast({ title: 'نجاح', description: 'تم تحديث المنتج بنجاح!' });

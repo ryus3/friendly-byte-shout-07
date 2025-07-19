@@ -109,7 +109,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         type="number" 
                         placeholder="0" 
                         className="text-center font-medium"
-                        defaultValue={currentQuantity} 
+                        value={currentQuantity || ''} 
                         onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', parseInt(e.target.value) || 0)} 
                         required 
                       />
@@ -127,7 +127,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         type="number" 
                         placeholder="0"
                         className="text-center"
-                        defaultValue={isNewProduct ? (variantData.costPrice || costPrice || 0) : (variantData.cost_price || costPrice || 0)} 
+                        value={isNewProduct ? (variantData.costPrice || costPrice || '') : (variantData.cost_price || costPrice || '')} 
                         onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', parseFloat(e.target.value) || 0)} 
                       />
                     </div>
@@ -138,7 +138,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         type="number" 
                         placeholder="0"
                         className="text-center font-medium"
-                        defaultValue={isNewProduct ? (variantData.price || price || 0) : (variantData.price || price || 0)} 
+                        value={isNewProduct ? (variantData.price || price || '') : (variantData.price || price || '')} 
                         onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', parseFloat(e.target.value) || 0)} 
                       />
                     </div>
