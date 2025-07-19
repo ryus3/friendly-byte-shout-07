@@ -20,19 +20,24 @@ const QRCodeLabel = ({
 
   const handlePrint = () => {
     const printContent = labelRef.current;
-    const newWindow = window.open('', '_blank');
-    newWindow.document.write(`
+    
+    // استخدام CSS للطباعة المباشرة من DOM
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
       <html>
         <head>
           <title>طباعة ملصق QR Code</title>
           <style>
             body { 
               margin: 0; 
-              padding: 20px; 
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              padding: 0; 
+              font-family: Arial, sans-serif;
               background: white;
+              direction: ltr;
             }
-            .label { 
+            
+            /* نسخ نفس الستايل الخاص بالمعاينة */
+            .print-container {
               width: 400px; 
               height: 200px; 
               border: 3px solid #000; 
@@ -40,86 +45,119 @@ const QRCodeLabel = ({
               display: flex;
               align-items: center;
               padding: 12px;
-              margin: 0 auto;
+              margin: 20px auto;
               font-family: Arial, sans-serif;
+              direction: ltr;
             }
+            
             .qr-section {
               flex-shrink: 0;
               margin-right: 16px;
             }
+            
             .product-info {
               flex: 1;
-              text-align: right;
-              direction: rtl;
+              height: 100%;
               display: flex;
               flex-direction: column;
               justify-content: center;
-              height: 100%;
+              align-items: center;
+              text-align: center;
             }
+            
             .product-name {
               font-size: 26px;
+              font-family: 'Arial Black', Arial, sans-serif;
+              line-height: 1.1;
               font-weight: 900;
               color: #000;
               margin-bottom: 4px;
-              font-family: 'Arial Black', Arial, sans-serif;
-              line-height: 1.1;
+              text-align: center;
             }
+            
             .product-details {
               font-size: 18px;
+              line-height: 1.1;
               font-weight: bold;
               color: #000;
               margin-bottom: 12px;
-              line-height: 1.1;
+              text-align: center;
             }
+            
             .price {
               font-size: 28px;
+              line-height: 1.1;
               font-weight: 900;
               color: #000;
-              line-height: 1.1;
+              text-align: center;
             }
+            
             @media print {
-              body { margin: 0; padding: 0; }
-              .label { margin: 0; page-break-after: always; }
+              body { 
+                margin: 0; 
+                padding: 0; 
+              }
+              .print-container { 
+                margin: 0; 
+                page-break-after: always; 
+              }
             }
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          <div class="print-container">
+            <div class="qr-section">
+              ${printContent.querySelector('div:first-child').innerHTML}
+            </div>
+            <div class="product-info">
+              <div class="product-name">${productName} RYUS</div>
+              <div class="product-details">${size} / ${color}</div>
+              ${price ? `<div class="price">${price.toLocaleString()} د.ع</div>` : ''}
+            </div>
+          </div>
         </body>
       </html>
     `);
-    newWindow.document.close();
-    newWindow.print();
+    
+    printWindow.document.close();
+    
+    // تأخير بسيط للتأكد من تحميل المحتوى
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
   };
 
   const handleDownload = () => {
-    // تحويل SVG إلى Canvas ثم إلى صورة
-    const svg = labelRef.current.querySelector('svg');
+    // إنشاء canvas للتحميل
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    const img = new Image();
+    const svg = labelRef.current.querySelector('svg');
     
+    if (!svg) return;
+    
+    canvas.width = 400;
+    canvas.height = 200;
+    
+    // رسم خلفية بيضاء
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // رسم حدود سوداء
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
+    
+    // تحويل SVG إلى Image للرسم
     const svgData = new XMLSerializer().serializeToString(svg);
     const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
     const svgUrl = URL.createObjectURL(svgBlob);
     
+    const img = new Image();
     img.onload = () => {
-      canvas.width = 400;
-      canvas.height = 200;
-      
-      // رسم خلفية بيضاء
-      ctx.fillStyle = 'white';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // حدود سوداء
-      ctx.strokeStyle = 'black';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(0, 0, canvas.width, canvas.height);
-      
       // رسم QR Code على اليسار
       ctx.drawImage(img, 16, 16, 150, 150);
       
-      // إضافة النص على اليمين - محاذاة وسط
+      // إضافة النص - محاذاة وسط مطابقة للمعاينة
       ctx.fillStyle = 'black';
       ctx.textAlign = 'center';
       
@@ -129,12 +167,12 @@ const QRCodeLabel = ({
       
       // اللون والمقاس
       ctx.font = 'bold 18px Arial';
-      ctx.fillText(`${size} / ${color}`, canvas.width - 120, 75);
+      ctx.fillText(`${size} / ${color}`, canvas.width - 120, 80);
       
       // السعر
       if (price) {
         ctx.font = '900 28px Arial';
-        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 120, 110);
+        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 120, 120);
       }
       
       // تحميل الصورة
@@ -143,7 +181,9 @@ const QRCodeLabel = ({
         const a = document.createElement('a');
         a.href = url;
         a.download = `qr-label-${productName.replace(/\s+/g, '-')}.png`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
       });
       

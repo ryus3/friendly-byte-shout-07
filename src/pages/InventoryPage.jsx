@@ -106,6 +106,14 @@ const InventoryPage = () => {
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
   const { hasPermission } = usePermissions();
+  
+  console.log("📊 صفحة الجرد:", { 
+    allProducts: allProducts?.length, 
+    filteredProducts: products?.length, 
+    loading, 
+    user: user?.full_name,
+    hasPermission: hasPermission('view_inventory')
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -193,27 +201,44 @@ const InventoryPage = () => {
   }, [products]);
 
   const inventoryItems = useMemo(() => {
-    if (!Array.isArray(products) || !settings) return [];
+    console.log("🔍 إنشاء عناصر الجرد:", { 
+      productsCount: products?.length, 
+      settingsLoaded: !!settings,
+      userRole: user?.role 
+    });
+    
+    if (!Array.isArray(products) || !settings) {
+      console.log("❌ بيانات غير مكتملة:", { products: !!products, settings: !!settings });
+      return [];
+    }
+    
     const { lowStockThreshold = 5, mediumStockThreshold = 10 } = settings;
 
-    // المنتجات مفلترة تلقائياً من useFilteredProducts
-    return products.map(product => {
-        if (!product) return null;
+    // معالجة المنتجات مع التفاصيل
+    const processedItems = products.map(product => {
+        if (!product) {
+          console.log("❌ منتج فارغ");
+          return null;
+        }
+        
+        console.log("📦 معالجة منتج:", product.name, "متغيرات:", product.variants?.length);
         
         const variantsWithLevels = Array.isArray(product.variants) 
           ? product.variants.map(variant => {
               if (!variant) return null;
               let stockLevel = 'high';
               const quantity = variant.quantity || 0;
-              if (quantity > 0 && quantity <= lowStockThreshold) stockLevel = 'low';
+              if (quantity === 0) stockLevel = 'out-of-stock';
+              else if (quantity > 0 && quantity <= lowStockThreshold) stockLevel = 'low';
               else if (quantity > 0 && quantity <= mediumStockThreshold) stockLevel = 'medium';
+              
               const stockPercentage = Math.min((quantity / (mediumStockThreshold + 5)) * 100, 100);
               return { ...variant, stockLevel, stockPercentage };
             }).filter(v => v !== null)
           : [];
 
         const totalStock = variantsWithLevels.reduce((acc, v) => acc + (v?.quantity || 0), 0);
-        const totalReserved = variantsWithLevels.reduce((acc, v) => acc + (v?.reserved || 0), 0);
+        const totalReserved = variantsWithLevels.reduce((acc, v) => acc + (v?.reserved_quantity || 0), 0);
       
         const hasLowStockVariant = variantsWithLevels.some(v => v?.stockLevel === 'low');
         const hasMediumStockVariant = variantsWithLevels.some(v => v?.stockLevel === 'medium');
@@ -221,7 +246,7 @@ const InventoryPage = () => {
         let overallStockLevel = 'high';
         if (hasLowStockVariant) overallStockLevel = 'low';
         else if (hasMediumStockVariant) overallStockLevel = 'medium';
-        
+        else if (totalStock === 0) overallStockLevel = 'out-of-stock';
 
         return {
           ...product,
@@ -231,6 +256,9 @@ const InventoryPage = () => {
           variants: variantsWithLevels,
         };
     }).filter(item => item !== null);
+    
+    console.log("✅ تمت معالجة العناصر:", processedItems.length);
+    return processedItems;
   }, [products, settings, user]);
   
   const reservedOrders = useMemo(() => {
@@ -414,8 +442,15 @@ const InventoryPage = () => {
   };
 
   if (loading) {
+    console.log("⏳ جاري التحميل...");
     return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
   }
+
+  console.log("✅ عرض صفحة الجرد مع:", { 
+    inventoryItemsCount: inventoryItems?.length,
+    filteredItemsCount: filteredItems?.length,
+    statsReady: !!inventoryStats
+  });
 
   return (
     <>
