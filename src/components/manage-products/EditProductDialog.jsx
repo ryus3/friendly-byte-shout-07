@@ -245,12 +245,12 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl sm:max-w-5xl h-[90vh] sm:h-[85vh] flex flex-col p-3 sm:p-6">
+      <DialogContent className="w-full max-w-4xl sm:max-w-5xl h-[95vh] sm:h-[85vh] flex flex-col p-3 sm:p-6">
         <DialogHeader className="pb-2 sm:pb-4 flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg font-semibold">تعديل المنتج: {product.name}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">قم بتحديث تفاصيل المنتج والمتغيرات والمخزون من هنا.</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 pr-1 pb-20">
           <ProductPrimaryInfo 
             productInfo={productInfo} 
             setProductInfo={setProductInfo}
@@ -317,26 +317,27 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
             </Card>
           )}
         </div>
-        <DialogFooter className="flex-shrink-0 flex flex-col-reverse sm:flex-row sm:justify-between gap-2 p-3 sm:p-4 border-t">
-            {isUploading && (
-              <div className='flex items-center gap-2 text-xs sm:text-sm'>
-                <Progress value={uploadProgress} className="w-24 sm:w-32 h-2" />
-                <span className='text-muted-foreground'>{Math.round(uploadProgress)}%</span>
+        <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background/95 backdrop-blur border-t z-50 p-3 sm:p-4">
+            <div className="flex flex-col gap-3 w-full">
+              {isUploading && (
+                <div className='flex items-center gap-2 text-xs sm:text-sm justify-center'>
+                  <Progress value={uploadProgress} className="w-32 sm:w-40 h-2" />
+                  <span className='text-muted-foreground'>{Math.round(uploadProgress)}%</span>
+                </div>
+              )}
+              <div className="flex gap-2 w-full">
+                  <DialogClose asChild>
+                      <Button variant="outline" className="flex-1 text-sm py-3 font-medium">إلغاء</Button>
+                  </DialogClose>
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={isSubmitting || isUploading}
+                    className="flex-1 text-sm py-3 font-medium bg-primary hover:bg-primary/90"
+                  >
+                      {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
+                      {isSubmitting || isUploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                  </Button>
               </div>
-            )}
-            {!isUploading && <div></div>}
-            <div className="flex gap-2 w-full sm:w-auto">
-                <DialogClose asChild>
-                    <Button variant="outline" className="flex-1 sm:flex-none text-sm sm:text-base py-2">إلغاء</Button>
-                </DialogClose>
-                <Button 
-                  onClick={handleSave} 
-                  disabled={isSubmitting || isUploading}
-                  className="flex-1 sm:flex-none text-sm sm:text-base py-2"
-                >
-                    {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
-                    {isSubmitting || isUploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-                </Button>
             </div>
         </DialogFooter>
       </DialogContent>
