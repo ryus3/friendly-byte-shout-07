@@ -9,7 +9,7 @@ import React, { useMemo, useState } from 'react';
     
     const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
       const { settings, updateProduct } = useInventory();
-      const [isVisible, setIsVisible] = useState(product.is_visible ?? true);
+      const [isVisible, setIsVisible] = useState(product.is_active !== false);
       const totalStock = useMemo(() => {
         if (!product.variants || product.variants.length === 0) return 0;
         return product.variants.reduce((sum, v) => {
@@ -33,15 +33,21 @@ import React, { useMemo, useState } from 'react';
 
       const handleVisibilityChange = async (checked) => {
         setIsVisible(checked);
-        const { success } = await updateProduct(product.id, { isVisible: checked });
-        if (success) {
-          toast({
-            title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
-            description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
-          });
-        } else {
+        try {
+          const { success } = await updateProduct(product.id, { is_active: checked });
+          if (success) {
+            toast({
+              title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
+              description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
+            });
+          } else {
+            setIsVisible(!checked);
+            toast({ title: "خطأ", description: "فشل تحديث ظهور المنتج.", variant: "destructive" });
+          }
+        } catch (error) {
+          console.error('Error updating product visibility:', error);
           setIsVisible(!checked);
-          toast({ title: "خطأ", description: "فشل تحديث ظهور المنتج.", variant: "destructive" });
+          toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
         }
       };
 

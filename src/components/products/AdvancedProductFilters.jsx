@@ -119,7 +119,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="اختر القسم" />
                 </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover border">
+                <SelectContent className="z-[80] bg-popover border shadow-lg">
                   <SelectItem value="all">جميع الأقسام</SelectItem>
                   {allowedData.departments.map(dept => (
                     <SelectItem key={dept.id} value={dept.id}>
@@ -139,7 +139,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="اختر التصنيف" />
                 </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover border">
+                <SelectContent className="z-[80] bg-popover border shadow-lg">
                   <SelectItem value="all">جميع التصنيفات</SelectItem>
                   {allowedData.categories.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
@@ -159,7 +159,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="اختر الموسم أو المناسبة" />
                 </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover border">
+                <SelectContent className="z-[80] bg-popover border shadow-lg">
                   <SelectItem value="all">جميع المواسم والمناسبات</SelectItem>
                   {allowedData.seasonsOccasions.map(season => (
                     <SelectItem key={season.id} value={season.id}>
@@ -179,7 +179,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="اختر نوع المنتج" />
                 </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover border">
+                <SelectContent className="z-[80] bg-popover border shadow-lg">
                   <SelectItem value="all">جميع أنواع المنتجات</SelectItem>
                   {allowedData.productTypes.map(type => (
                     <SelectItem key={type.id} value={type.id}>
@@ -200,7 +200,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="اختر اللون" />
                   </SelectTrigger>
-                  <SelectContent className="z-[100] bg-popover border">
+                  <SelectContent className="z-[80] bg-popover border shadow-lg">
                     <SelectItem value="all">جميع الألوان</SelectItem>
                     {allowedData.colors.map(color => (
                       <SelectItem key={color.id} value={color.id}>
@@ -226,7 +226,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                   <SelectTrigger className="h-11">
                     <SelectValue placeholder="اختر الحجم" />
                   </SelectTrigger>
-                  <SelectContent className="z-[100] bg-popover border">
+                  <SelectContent className="z-[80] bg-popover border shadow-lg">
                     <SelectItem value="all">جميع الأحجام</SelectItem>
                     {allowedData.sizes.map(size => (
                       <SelectItem key={size.id} value={size.id}>
@@ -247,7 +247,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="اختر العلامة التجارية" />
                 </SelectTrigger>
-                <SelectContent className="z-[100] bg-popover border">
+                <SelectContent className="z-[80] bg-popover border shadow-lg">
                   <SelectItem value="all">جميع العلامات التجارية</SelectItem>
                   {availableBrands.map(brand => (
                     <SelectItem key={brand} value={brand}>
