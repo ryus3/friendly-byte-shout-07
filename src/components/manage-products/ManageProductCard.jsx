@@ -6,7 +6,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
     
-const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
+const ManageProductCard = ({ product, onDelete, onPrint }) => {
   const navigate = useNavigate();
   const { settings } = useInventory();
   const totalStock = useMemo(() => {

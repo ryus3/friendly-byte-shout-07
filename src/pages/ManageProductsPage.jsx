@@ -16,7 +16,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import EditProductDialog from '@/components/manage-products/EditProductDialog';
+
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
@@ -33,7 +33,7 @@ const ManageProductsPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  
 
   // استخدام hook الفلترة المحسن
   const filteredProducts = useFilteredProducts(products);
@@ -130,9 +130,6 @@ const ManageProductsPage = () => {
     // Remove the unauthorized toast message
   }, [hasPermission, navigate]);
 
-  const handleEdit = useCallback((product) => {
-    setEditingProduct(product);
-  }, []);
 
   const handleQuickPrintLabels = useCallback(() => {
     if (products.length === 0) {
@@ -167,13 +164,6 @@ const ManageProductsPage = () => {
           onScanSuccess={handleScanSuccess}
         />
         
-        <EditProductDialog
-            product={editingProduct}
-            open={!!editingProduct}
-            onOpenChange={() => setEditingProduct(null)}
-            onSuccess={onProductUpdate}
-            refetchProducts={refetchProducts}
-        />
 
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -217,14 +207,13 @@ const ManageProductsPage = () => {
             <motion.div layout className="space-y-3">
               {searchFilteredProducts && searchFilteredProducts.length > 0 && searchFilteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
-                  <ManageProductListItem 
-                    product={product} 
-                    isSelected={selectedProductIds.includes(product.id)} 
-                    onSelect={handleSelectProduct}
-                    onProductUpdate={onProductUpdate}
-                    onEdit={handleEdit}
-                    refetchProducts={refetchProducts}
-                  />
+                   <ManageProductListItem 
+                     product={product} 
+                     isSelected={selectedProductIds.includes(product.id)} 
+                     onSelect={handleSelectProduct}
+                     onProductUpdate={onProductUpdate}
+                     refetchProducts={refetchProducts}
+                   />
                 </motion.div>
               ))}
             </motion.div>
@@ -233,11 +222,10 @@ const ManageProductsPage = () => {
               {searchFilteredProducts && searchFilteredProducts.length > 0 && searchFilteredProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductCard
-                    product={product}
-                    onEdit={handleEdit}
-                    onDelete={handleDeleteSingle}
-                    onPrint={handlePrintSingle}
-                  />
+                     product={product}
+                     onDelete={handleDeleteSingle}
+                     onPrint={handlePrintSingle}
+                   />
                 </motion.div>
               ))}
             </motion.div>

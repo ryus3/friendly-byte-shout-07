@@ -4,9 +4,11 @@ import ManageProductActions from './ManageProductActions';
 import { cn } from '@/lib/utils';
 import { Star, Hash } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit, refetchProducts }) => {
+const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, refetchProducts }) => {
+  const navigate = useNavigate();
   const { settings } = useInventory();
 
   const totalStock = useMemo(() => {
@@ -30,6 +32,16 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
     return isNaN(parseFloat(p)) ? 0 : parseFloat(p);
   }, [product, hasActiveDiscount]);
 
+  const handleEditProduct = () => {
+    // الانتقال لصفحة إضافة المنتج مع بيانات المنتج للتعديل
+    navigate('/add-product', { 
+      state: { 
+        editProduct: product,
+        from: '/manage-products'
+      } 
+    });
+  };
+
   return (
     <motion.div
       layout
@@ -45,7 +57,7 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         <div className="flex items-center gap-3">
           <Checkbox checked={isSelected} onCheckedChange={() => onSelect(product.id)} />
           <img src={product.images?.[0] || '/api/placeholder/150/150'} alt={product.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
-          <div className="flex-1 min-w-0" onClick={() => onEdit(product)}>
+          <div className="flex-1 min-w-0" onClick={handleEditProduct}>
             <div className="flex items-center gap-2 mb-1">
               {product.is_featured && <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />}
               <p className="font-semibold text-foreground truncate">{product.name}</p>
