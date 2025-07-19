@@ -31,7 +31,7 @@ const SortableColorCard = (props) => {
   );
 };
 
-const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
+const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProducts }) => {
   const { updateProduct } = useInventory();
   const { sizes, colors: allColors, addColor } = useVariants();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,8 +98,8 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
           // جلب اسم اللون والحجم من البيانات المرتبطة
           color: variant.colors?.name || allColors.find(c => c.id === variant.color_id)?.name || 'غير محدد',
           size: variant.sizes?.name || sizes.find(s => s.id === variant.size_id)?.name || 'غير محدد',
-          // ضمان وجود بيانات المخزون
-          quantity: variant.inventory?.[0]?.quantity || variant.quantity || 0,
+          // ضمان وجود بيانات المخزون الصحيحة
+          quantity: variant.inventory?.quantity || variant.inventory?.[0]?.quantity || variant.quantity || 0,
           costPrice: variant.cost_price || variant.costPrice || 0,
         };
         
@@ -169,33 +169,45 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
     setIsSubmitting(true);
     setUploadProgress(0);
 
-    const dataToUpdate = {
-      ...productInfo,
-      price: parseFloat(productInfo.price) || 0,
-      costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
-      selectedCategories,
-      selectedProductTypes,
-      selectedSeasonsOccasions,
-      selectedDepartments,
-      variants,
-    };
-    
-    const imageFiles = {
-      general: generalImages,
-      colorImages: colorImages,
-    };
-    
-    const result = await updateProduct(product.id, dataToUpdate, imageFiles, setUploadProgress);
+    try {
+      const dataToUpdate = {
+        ...productInfo,
+        price: parseFloat(productInfo.price) || 0,
+        costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
+        selectedCategories,
+        selectedProductTypes,
+        selectedSeasonsOccasions,
+        selectedDepartments,
+        variants,
+      };
+      
+      const imageFiles = {
+        general: generalImages,
+        colorImages: colorImages,
+      };
+      
+      const result = await updateProduct(product.id, dataToUpdate, imageFiles, setUploadProgress);
 
-    if (result.success) {
-      toast({ title: 'نجاح', description: 'تم تحديث المنتج بنجاح!' });
-      if(onSuccess) onSuccess();
-      onOpenChange(false);
-    } else {
-      toast({ title: 'خطأ', description: result.error || 'فشل تحديث المنتج.', variant: 'destructive' });
+      if (result.success) {
+        toast({ title: 'نجاح', description: 'تم تحديث المنتج بنجاح!' });
+        
+        // إعادة تحميل المنتجات
+        if (refetchProducts) {
+          await refetchProducts();
+        }
+        
+        if(onSuccess) onSuccess();
+        onOpenChange(false);
+      } else {
+        toast({ title: 'خطأ', description: result.error || 'فشل تحديث المنتج.', variant: 'destructive' });
+      }
+    } catch (error) {
+      console.error('Error in handleSave:', error);
+      toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+      setUploadProgress(0);
     }
-    setIsSubmitting(false);
-    setUploadProgress(0);
   };
 
   const onDragEnd = (event) => {

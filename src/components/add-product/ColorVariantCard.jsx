@@ -90,7 +90,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                 const isNewProduct = allSizesForType && allSizesForType.length > 0;
                 const variantData = isNewProduct ? variant : variant;
                 const sizeName = isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size || 'غير محدد');
-                const currentQuantity = isNewProduct ? (variantData.quantity || 0) : (variantData.inventory?.[0]?.quantity || variantData.quantity || 0);
+                const currentQuantity = isNewProduct ? (variantData.quantity || 0) : (variantData.inventory?.quantity || variantData.quantity || 0);
                 
                 return (
                   <div key={isNewProduct ? variant.sizeId : variant.id || index} 
