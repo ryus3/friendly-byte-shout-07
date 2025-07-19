@@ -24,8 +24,9 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [selectedColor, setSelectedColor] = useState(null);
-    const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedItems, setSelectedItems] = useState([]); // لحفظ عدة ألوان وقياسات
+    const [currentColor, setCurrentColor] = useState(null);
+    const [currentSize, setCurrentSize] = useState(null);
     
     const [quantity, setQuantity] = useState(1);
     const [costPrice, setCostPrice] = useState(0);
@@ -58,46 +59,68 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
         }
     }, [selectedProduct]);
 
-    const handleConfirm = () => {
-        if (!selectedProduct || !selectedColor || !selectedSize || quantity <= 0 || !costPrice || costPrice <= 0) {
+    const addCurrentSelection = () => {
+        if (!selectedProduct || !currentColor || !currentSize || quantity <= 0 || !costPrice || costPrice <= 0) {
             toast({ title: "خطأ", description: "يرجى اختيار المنتج واللون والقياس وإدخال كمية وسعر تكلفة صالحين.", variant: "destructive" });
             return;
         }
 
-        const existingVariant = selectedProduct.variants?.find(v => (v.color_id || v.colorId) === selectedColor.id && (v.size_id || v.sizeId) === selectedSize.id);
+        const existingVariant = selectedProduct.variants?.find(v => (v.color_id || v.colorId) === currentColor.id && (v.size_id || v.sizeId) === currentSize.id);
         const sku = existingVariant?.sku || existingVariant?.barcode || `${settings?.sku_prefix || 'PROD'}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`.toUpperCase();
 
-        const itemToAdd = {
+        const newItem = {
             productId: selectedProduct.id,
             productName: selectedProduct.name,
             variantSku: sku,
             variantId: existingVariant?.id,
-            color: selectedColor.name,
-            size: selectedSize.name || selectedSize.value,
+            color: currentColor.name,
+            size: currentSize.name || currentSize.value,
             quantity: parseInt(quantity),
             costPrice: parseFloat(costPrice),
             salePrice: parseFloat(salePrice),
             image: existingVariant?.images?.[0] || selectedProduct.images?.[0] || null,
             isNewVariant: !existingVariant,
-            colorId: selectedColor.id,
-            sizeId: selectedSize.id,
-            color_hex: selectedColor.hex_code || selectedColor.hex_color,
+            colorId: currentColor.id,
+            sizeId: currentSize.id,
+            color_hex: currentColor.hex_code || currentColor.hex_color,
         };
 
-        onItemsAdd([itemToAdd]);
-        toast({ title: "تمت الإضافة", description: `${itemToAdd.productName} (${itemToAdd.color}, ${itemToAdd.size})` });
-        resetSelection();
+        setSelectedItems(prev => [...prev, newItem]);
+        toast({ title: "تمت الإضافة", description: `${newItem.productName} (${newItem.color}, ${newItem.size})` });
+        
+        // إعادة تعيين الاختيار الحالي
+        setCurrentColor(null);
+        setCurrentSize(null);
+        setQuantity(1);
+        setCostPrice(selectedProduct?.cost_price || selectedProduct?.costPrice || 0);
+        setSalePrice(selectedProduct?.base_price || selectedProduct?.price || 0);
+    };
+
+    const removeSelectedItem = (index) => {
+        setSelectedItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleConfirm = () => {
+        if (selectedItems.length === 0) {
+            toast({ title: "خطأ", description: "يرجى إضافة عنصر واحد على الأقل.", variant: "destructive" });
+            return;
+        }
+
+        onItemsAdd(selectedItems);
+        toast({ title: "تمت الإضافة", description: `تمت إضافة ${selectedItems.length} عنصر للفاتورة` });
+        resetState();
     };
     
     const resetState = () => {
         setSearchTerm('');
         setSelectedProduct(null);
+        setSelectedItems([]);
         resetSelection();
     };
 
     const resetSelection = () => {
-        setSelectedColor(null);
-        setSelectedSize(null);
+        setCurrentColor(null);
+        setCurrentSize(null);
         setQuantity(1);
         setCostPrice(selectedProduct?.cost_price || selectedProduct?.costPrice || 0);
         setSalePrice(selectedProduct?.base_price || selectedProduct?.price || 0);
@@ -116,7 +139,7 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     const handleCreateColor = async (newColorData) => {
         const result = await addColor(newColorData);
         if (result.success && result.data) {
-            setSelectedColor(result.data);
+            setCurrentColor(result.data);
             return true;
         }
         return false;
@@ -125,7 +148,7 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     const handleCreateSize = async (newSizeData) => {
         const result = await addSize(newSizeData);
         if (result.success && result.data) {
-            setSelectedSize(result.data);
+            setCurrentSize(result.data);
             return true;
         }
         return false;
@@ -142,8 +165,8 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
             const size = sizes.find(s => s.id === (variant.size_id || variant.sizeId));
             
             setSelectedProduct(foundProduct);
-            setSelectedColor(color);
-            setSelectedSize(size);
+            setCurrentColor(color);
+            setCurrentSize(size);
             toast({ title: "تم العثور على المنتج", description: `${foundProduct.name} (${color?.name}, ${size?.name || size?.value})` });
         } else {
             toast({ title: "خطأ", description: "لم يتم العثور على منتج بهذا الباركود.", variant: "destructive" });
@@ -191,52 +214,75 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                         <div className="md:col-span-2 space-y-4">
                             {selectedProduct ? (
                                 <>
+                                    {/* العناصر المختارة */}
+                                    {selectedItems.length > 0 && (
+                                        <div className="border rounded-lg p-4 bg-muted/30">
+                                            <h4 className="font-medium mb-2">العناصر المختارة ({selectedItems.length})</h4>
+                                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                                                {selectedItems.map((item, index) => (
+                                                    <div key={index} className="flex items-center justify-between text-sm bg-background p-2 rounded">
+                                                        <span>{item.productName} - {item.color} - {item.size} (كمية: {item.quantity})</span>
+                                                        <Button variant="ghost" size="sm" onClick={() => removeSelectedItem(index)}>
+                                                            حذف
+                                                        </Button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-2 gap-4">
                                         <Command className="rounded-lg border shadow-md">
                                             <CommandList>
-                                                 <CommandGroup heading="جميع الألوان المتاحة">
-                                                     <ScrollArea className="h-40">
-                                                         {availableColors.map((color) => (
-                                                             <div key={color.id} onClick={() => setSelectedColor(color)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                 <Check className={`ml-2 h-4 w-4 ${selectedColor?.id === color.id ? "opacity-100" : "opacity-0"}`} />
-                                                                 {color.name}
-                                                             </div>
-                                                         ))}
-                                                     </ScrollArea>
-                                                 </CommandGroup>
+                                                <CommandGroup heading="جميع الألوان المتاحة">
+                                                    <ScrollArea className="h-40">
+                                                        {availableColors.map((color) => (
+                                                            <div key={color.id} onClick={() => setCurrentColor(color)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                <Check className={`ml-2 h-4 w-4 ${currentColor?.id === color.id ? "opacity-100" : "opacity-0"}`} />
+                                                                {color.name}
+                                                            </div>
+                                                        ))}
+                                                    </ScrollArea>
+                                                </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsColorDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة لون جديد</Button>
                                             </CommandList>
                                         </Command>
                                         <Command className="rounded-lg border shadow-md">
                                             <CommandList>
-                                                 <CommandGroup heading="جميع القياسات المتاحة">
-                                                     <ScrollArea className="h-40">
-                                                          {availableSizes.map((size) => (
-                                                              <div key={size.id} onClick={() => setSelectedSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                  <Check className={`ml-2 h-4 w-4 ${selectedSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
-                                                                  {size.name || size.value}
-                                                              </div>
-                                                          ))}
-                                                     </ScrollArea>
-                                                 </CommandGroup>
+                                                <CommandGroup heading="جميع القياسات المتاحة">
+                                                    <ScrollArea className="h-40">
+                                                         {availableSizes.map((size) => (
+                                                             <div key={size.id} onClick={() => setCurrentSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                 <Check className={`ml-2 h-4 w-4 ${currentSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
+                                                                 {size.name || size.value}
+                                                             </div>
+                                                         ))}
+                                                    </ScrollArea>
+                                                </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsSizeDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة قياس جديد</Button>
                                             </CommandList>
                                         </Command>
                                     </div>
-                                    {selectedColor && selectedSize && (
+                                    {currentColor && currentSize && (
                                         <div className="p-4 border rounded-lg space-y-3 bg-muted/50">
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div><Label>الكمية</Label><Input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} /></div>
                                                 <div><Label>سعر التكلفة</Label><Input type="number" value={costPrice} onChange={e => setCostPrice(e.target.value)} /></div>
                                                 <div><Label>سعر البيع</Label><Input type="number" value={salePrice} onChange={e => setSalePrice(e.target.value)} /></div>
                                             </div>
-                                            <div className="flex items-center justify-center">
-                                                <BarcodeIcon className="w-5 h-5 text-muted-foreground mr-2" />
-                                                 <p className="font-mono text-sm">
-                                                     {selectedProduct.variants?.find(v => (v.color_id || v.colorId) === selectedColor.id && (v.size_id || v.sizeId) === selectedSize.id)?.sku || 
-                                                      selectedProduct.variants?.find(v => (v.color_id || v.colorId) === selectedColor.id && (v.size_id || v.sizeId) === selectedSize.id)?.barcode || 
-                                                      "سيتم توليد باركود جديد"}
-                                                 </p>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center">
+                                                    <BarcodeIcon className="w-5 h-5 text-muted-foreground mr-2" />
+                                                    <p className="font-mono text-sm">
+                                                        {selectedProduct.variants?.find(v => (v.color_id || v.colorId) === currentColor.id && (v.size_id || v.sizeId) === currentSize.id)?.sku || 
+                                                         selectedProduct.variants?.find(v => (v.color_id || v.colorId) === currentColor.id && (v.size_id || v.sizeId) === currentSize.id)?.barcode || 
+                                                         "سيتم توليد باركود جديد"}
+                                                    </p>
+                                                </div>
+                                                <Button onClick={addCurrentSelection} size="sm">
+                                                    <Plus className="w-4 h-4 ml-1" />
+                                                    إضافة للقائمة
+                                                </Button>
                                             </div>
                                         </div>
                                     )}
@@ -248,7 +294,9 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                     </div>
                     <DialogFooter className="flex justify-between pt-4">
                         <Button variant="ghost" onClick={() => handleDialogStateChange(false)}>إغلاق</Button>
-                        <Button onClick={handleConfirm} disabled={!selectedProduct || !selectedColor || !selectedSize}>إضافة الصنف للفاتورة</Button>
+                        <Button onClick={handleConfirm} disabled={selectedItems.length === 0}>
+                            إضافة العناصر للفاتورة ({selectedItems.length})
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

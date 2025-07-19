@@ -1034,6 +1034,7 @@ export type Database = {
           product_id: string
           profit_amount: number | null
           size_id: string | null
+          sku: string | null
           updated_at: string
         }
         Insert: {
@@ -1049,6 +1050,7 @@ export type Database = {
           product_id: string
           profit_amount?: number | null
           size_id?: string | null
+          sku?: string | null
           updated_at?: string
         }
         Update: {
@@ -1064,6 +1066,7 @@ export type Database = {
           product_id?: string
           profit_amount?: number | null
           size_id?: string | null
+          sku?: string | null
           updated_at?: string
         }
         Relationships: [
