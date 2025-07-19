@@ -38,7 +38,17 @@ const NewCreatableMultiSelect = ({ items, selectedItems, onSelect, title, itemLa
         <Button variant="outline" className="w-full justify-between text-right h-auto min-h-10">
           <div className="flex flex-wrap gap-1 flex-1 justify-start">
             {selectedItems.length > 0 ? (
-              selectedItems.map(item => <Badge key={item.id} variant="secondary">{item[itemLabel]}</Badge>)
+              selectedItems.map(item => (
+                <Badge key={item.id} variant="secondary" className="flex items-center gap-1">
+                  {item.hex_code && (
+                    <div 
+                      className="w-3 h-3 rounded-full border"
+                      style={{ backgroundColor: item.hex_code }}
+                    />
+                  )}
+                  {item[itemLabel]}
+                </Badge>
+              ))
             ) : (
               <span className="text-muted-foreground">اختر {title}...</span>
             )}
@@ -46,14 +56,14 @@ const NewCreatableMultiSelect = ({ items, selectedItems, onSelect, title, itemLa
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 max-h-64 overflow-auto" align="start">
         <Command>
           <CommandInput placeholder={`بحث عن ${title}...`} value={search} onValueChange={setSearch} />
           <CommandList>
             <CommandEmpty className="p-2 text-sm text-center">
               <p>لا توجد نتائج.</p>
-              {onCreateNew && (
-                <Button variant="link" onClick={handleCreate}>
+              {onCreateNew && search.trim() && (
+                <Button variant="link" onClick={handleCreate} className="text-primary">
                   <PlusCircle className="w-4 h-4 ml-2" />
                   إضافة "{search}"
                 </Button>
@@ -63,14 +73,23 @@ const NewCreatableMultiSelect = ({ items, selectedItems, onSelect, title, itemLa
               {filteredItems.map(item => {
                 const isSelected = selectedItems.some(s => s.id === item.id);
                 return (
-                  <div
+                  <CommandItem
                     key={item.id}
-                    onClick={() => handleSelect(item)}
-                    className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                    value={item[itemLabel]}
+                    onSelect={() => handleSelect(item)}
+                    className="cursor-pointer"
                   >
-                    <span>{item[itemLabel]}</span>
-                    <Check className={cn("ml-auto h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                  </div>
+                    <Check className={cn("ml-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
+                    <div className="flex items-center gap-2">
+                      {item.hex_code && (
+                        <div 
+                          className="w-4 h-4 rounded-full border"
+                          style={{ backgroundColor: item.hex_code }}
+                        />
+                      )}
+                      <span>{item[itemLabel]}</span>
+                    </div>
+                  </CommandItem>
                 );
               })}
             </CommandGroup>

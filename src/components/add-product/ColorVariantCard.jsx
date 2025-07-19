@@ -166,17 +166,20 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                           />
                         </div>
                         
-                        {/* الربح */}
-                        <div className="col-span-2 space-y-1 text-center">
-                          <div className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
-                            {(() => {
-                              const currentPrice = variant.price || price || 0;
-                              const currentCost = variant.cost_price || variant.costPrice || costPrice || 0;
-                              const profit = currentPrice - currentCost;
-                              const profitPercentage = currentCost > 0 ? ((profit / currentCost) * 100).toFixed(1) : 0;
-                              return `${profit.toLocaleString()} د.ع (${profitPercentage}%)`;
-                            })()}
-                          </div>
+                        {/* التلميحات الذكية */}
+                        <div className="col-span-2 space-y-1">
+                          <Input 
+                            type="text" 
+                            placeholder="مثال: مناسب لوزن 50-60 كغ"
+                            className="text-center text-xs"
+                            value={variant.hint || ''} 
+                            onChange={e => {
+                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'hint', e.target.value);
+                            }} 
+                          />
+                          <p className="text-xs text-muted-foreground text-center">
+                            تلميح ذكي للزبائن
+                          </p>
                         </div>
                         
                         {/* الباركود */}
