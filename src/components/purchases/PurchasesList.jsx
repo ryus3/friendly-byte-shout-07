@@ -40,14 +40,14 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails }) => {
         <TableBody>
           {purchases.map((purchase) => (
             <TableRow key={purchase.id}>
-              <TableCell className="font-mono text-xs">{purchase.id}</TableCell>
-              <TableCell className="font-semibold">{purchase.supplier}</TableCell>
-              <TableCell>{format(new Date(purchase.purchaseDate || purchase.createdAt), 'd MMM yyyy', { locale: ar })}</TableCell>
+              <TableCell className="font-mono text-xs">{purchase.purchase_number || purchase.id}</TableCell>
+              <TableCell className="font-semibold">{purchase.supplier_name || purchase.supplier || 'غير محدد'}</TableCell>
+              <TableCell>{format(new Date(purchase.created_at), 'd MMM yyyy', { locale: ar })}</TableCell>
               <TableCell>
-                <Badge variant="secondary">{purchase.items.length}</Badge>
+                <Badge variant="secondary">{purchase.items?.length || 0}</Badge>
               </TableCell>
-              <TableCell>{(purchase.shippingCost || 0).toLocaleString()} د.ع</TableCell>
-              <TableCell className="font-bold text-primary">{(purchase.totalCost + (purchase.shippingCost || 0)).toLocaleString()} د.ع</TableCell>
+              <TableCell>{((purchase.total_amount || 0) - (purchase.paid_amount || 0)).toLocaleString()} د.ع</TableCell>
+              <TableCell className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</TableCell>
               <TableCell>
                 <Button variant="ghost" size="icon" onClick={() => onViewDetails(purchase)}>
                   <Eye className="w-4 h-4" />

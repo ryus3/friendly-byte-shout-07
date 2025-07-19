@@ -1026,6 +1026,7 @@ export type Database = {
           color_id: string | null
           cost_price: number
           created_at: string
+          hint: string | null
           id: string
           images: string[] | null
           is_active: boolean
@@ -1040,6 +1041,7 @@ export type Database = {
           color_id?: string | null
           cost_price: number
           created_at?: string
+          hint?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
@@ -1054,6 +1056,7 @@ export type Database = {
           color_id?: string | null
           cost_price?: number
           created_at?: string
+          hint?: string | null
           id?: string
           images?: string[] | null
           is_active?: boolean
@@ -1318,10 +1321,12 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          items: Json | null
           notes: string | null
           paid_amount: number
           purchase_number: string
           status: string
+          supplier: string | null
           supplier_contact: string | null
           supplier_name: string
           total_amount: number
@@ -1331,10 +1336,12 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          items?: Json | null
           notes?: string | null
           paid_amount?: number
           purchase_number: string
           status?: string
+          supplier?: string | null
           supplier_contact?: string | null
           supplier_name: string
           total_amount?: number
@@ -1344,10 +1351,12 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          items?: Json | null
           notes?: string | null
           paid_amount?: number
           purchase_number?: string
           status?: string
+          supplier?: string | null
           supplier_contact?: string | null
           supplier_name?: string
           total_amount?: number
@@ -1956,6 +1965,10 @@ export type Database = {
           p_approved_amount?: number
         }
         Returns: boolean
+      }
+      update_variant_stock_from_purchase: {
+        Args: { p_sku: string; p_quantity_change: number; p_cost_price: number }
+        Returns: undefined
       }
       username_exists: {
         Args: { p_username: string }

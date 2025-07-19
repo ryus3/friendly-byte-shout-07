@@ -2,11 +2,13 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 export const useFullPurchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
   const { updateVariantStock, addExpense, refetchData } = useInventory();
+  const { user } = useAuth();
 
   const addPurchase = useCallback(async (purchaseData) => {
     setLoading(true);
@@ -15,17 +17,32 @@ export const useFullPurchases = () => {
       const { data: newPurchase, error } = await supabase
         .from('purchases')
         .insert({
-          supplier: purchaseData.supplier,
-          purchase_date: purchaseData.purchaseDate,
-          total_cost: purchaseData.totalCost,
-          shipping_cost: purchaseData.shippingCost || 0,
+          supplier_name: purchaseData.supplier,
+          supplier_contact: purchaseData.supplierContact || null,
+          total_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
+          paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
           status: 'completed',
-          items: purchaseData.items
+          notes: `شحن: ${purchaseData.shippingCost || 0} د.ع`,
+          created_by: user?.user_id
         })
         .select()
         .single();
 
       if (error) throw error;
+
+      // إضافة عناصر الفاتورة لجدول purchase_items
+      const purchaseItemsPromises = purchaseData.items.map(item => 
+        supabase.from('purchase_items').insert({
+          purchase_id: newPurchase.id,
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_cost: item.costPrice,
+          total_cost: item.costPrice * item.quantity
+        })
+      );
+      
+      await Promise.all(purchaseItemsPromises);
 
       // تحديث المخزون لكل منتج
       const stockUpdatePromises = purchaseData.items.map(async (item) => {
@@ -53,19 +70,25 @@ export const useFullPurchases = () => {
       
       // إضافة مصروف البضاعة
       await addExpense({
-        date: new Date(),
         category: 'شراء بضاعة',
-        description: `فاتورة شراء رقم #${newPurchase.id} - ${purchaseData.supplier}`,
+        expense_type: 'operational',
+        description: `فاتورة شراء رقم ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
         amount: totalCost,
+        vendor_name: purchaseData.supplier,
+        receipt_number: newPurchase.purchase_number,
+        status: 'approved'
       });
 
       // إضافة مصروف الشحن إذا كان موجود
       if (purchaseData.shippingCost > 0) {
         await addExpense({
-          date: new Date(),
           category: 'شحن',
-          description: `تكلفة شحن فاتورة شراء #${newPurchase.id} - ${purchaseData.supplier}`,
+          expense_type: 'operational',
+          description: `تكلفة شحن فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
           amount: purchaseData.shippingCost,
+          vendor_name: purchaseData.supplier,
+          receipt_number: newPurchase.purchase_number + '-SHIP',
+          status: 'approved'
         });
       }
 
@@ -77,7 +100,8 @@ export const useFullPurchases = () => {
 
       toast({ 
         title: 'نجح', 
-        description: `تمت إضافة فاتورة الشراء رقم #${newPurchase.id} بنجاح وتم تحديث المخزون والمحاسبة.` 
+        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح وتم تحديث المخزون والمحاسبة.`,
+        variant: 'success'
       });
 
       return { success: true, purchase: newPurchase };
@@ -92,7 +116,7 @@ export const useFullPurchases = () => {
     } finally {
       setLoading(false);
     }
-  }, [addExpense, refetchData]);
+  }, [addExpense, refetchData, user]);
 
   const fetchPurchases = useCallback(async () => {
     setLoading(true);
