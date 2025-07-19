@@ -118,9 +118,9 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
   const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
   const navigate = useNavigate();
 
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = (products || []).filter(product =>
+    product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product?.description?.toLowerCase().includes(searchQuery.toLowerCase())
   ).slice(0, 6);
 
   const handleSearch = () => {
@@ -137,10 +137,20 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
   };
 
   const handleBarcodeScan = (barcode) => {
+    // التأكد من وجود البيانات قبل البحث
+    if (!products || !Array.isArray(products)) {
+      toast({
+        title: "❌ خطأ في البيانات",
+        description: "لا يمكن البحث في المنتجات حالياً",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // البحث عن المنتج بالباركود
     const foundProduct = products.find(product => 
-      product.variants?.some(variant => variant.barcode === barcode) ||
-      product.barcode === barcode
+      product?.variants?.some(variant => variant?.barcode === barcode) ||
+      product?.barcode === barcode
     );
 
     if (foundProduct) {
@@ -149,7 +159,7 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
       });
       toast({
         title: "✅ تم العثور على المنتج!",
-        description: foundProduct.name,
+        description: foundProduct?.name || "منتج غير معروف",
         variant: "success"
       });
     } else {
@@ -204,27 +214,29 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
               <h3 className="font-medium text-sm text-muted-foreground">نتائج البحث:</h3>
               {filteredProducts.length > 0 ? (
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {filteredProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
-                      onClick={() => {
-                        navigate('/products', { 
-                          state: { selectedProduct: product }
-                        });
-                        onOpenChange(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                        <Package className="w-6 h-6 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.price?.toLocaleString()} د.ع</p>
-                      </div>
-                    </div>
-                  ))}
+                   {filteredProducts.map((product) => (
+                     product?.id ? (
+                       <div
+                         key={product.id}
+                         className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-secondary/30 cursor-pointer transition-colors"
+                         onClick={() => {
+                           navigate('/products', { 
+                             state: { selectedProduct: product }
+                           });
+                           onOpenChange(false);
+                           setSearchQuery('');
+                         }}
+                       >
+                         <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                           <Package className="w-6 h-6 text-primary" />
+                         </div>
+                         <div className="flex-1">
+                           <p className="font-medium text-sm">{product?.name || "منتج غير معروف"}</p>
+                           <p className="text-xs text-muted-foreground">{product?.price?.toLocaleString() || "0"} د.ع</p>
+                         </div>
+                       </div>
+                     ) : null
+                   ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-4">لم يتم العثور على نتائج</p>
@@ -253,7 +265,7 @@ const BottomNav = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const itemCount = (cart || []).reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
   const handleHomeClick = () => {
     navigate(user?.default_page || '/');
