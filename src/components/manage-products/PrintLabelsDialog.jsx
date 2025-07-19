@@ -299,147 +299,154 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
               </svg>
               معاينة الطباعة
             </h4>
-            <div className="flex-1 border border-border rounded-xl p-4 overflow-auto bg-muted/5 max-h-[400px]">
-              <style>{`
-                .preview-label-grid {
-                  display: flex;
-                  flex-direction: column;
-                  gap: 12px;
-                  padding: 8px;
-                  align-items: center;
-                }
-                
-                .preview-label-card {
-                  width: 200px;
-                  height: 80px;
-                  border: 2px solid hsl(var(--primary));
-                  padding: 8px;
-                  display: flex;
-                  flex-direction: column;
-                  justify-content: space-between;
-                  border-radius: 8px;
-                  background: white;
-                  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                  transition: transform 0.2s ease;
-                  position: relative;
-                }
-                
-                .preview-label-card:hover {
-                  transform: scale(1.02);
-                  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-                }
-                
-                .preview-label-content {
-                  text-align: center;
-                  height: 100%;
-                  display: flex;
-                  flex-direction: column;
-                  justify-content: space-between;
-                  align-items: center;
-                }
-                
-                .preview-label-product-name {
-                  font-size: 11px;
-                  font-weight: 800;
-                  margin-bottom: 3px;
-                  line-height: 1.2;
-                  color: hsl(var(--primary));
-                  text-transform: uppercase;
-                  max-width: 100%;
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                }
-                
-                .preview-label-variant-info {
-                  font-size: 9px;
-                  margin-bottom: 4px;
-                  color: #64748b;
-                  font-weight: 600;
-                  background: #f1f5f9;
-                  padding: 2px 6px;
-                  border-radius: 4px;
-                  border: 1px solid #e2e8f0;
-                }
-                
-                .preview-label-barcode-container {
-                  margin: 4px 0;
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  flex: 1;
-                  justify-content: center;
-                  min-height: 25px;
-                }
-                
-                .preview-label-barcode-number {
-                  font-size: 7px;
-                  color: #475569;
-                  margin-top: 2px;
-                  font-family: 'Courier New', monospace;
-                  font-weight: bold;
-                }
-                
-                .preview-label-price {
-                  font-size: 10px;
-                  font-weight: 800;
-                  color: #dc2626;
-                  background: #fee2e2;
-                  padding: 3px 8px;
-                  border-radius: 6px;
-                  border: 1px solid #fca5a5;
-                  min-width: 60px;
-                }
-                
-                .preview-label-card::before {
-                  content: '';
-                  position: absolute;
-                  top: -1px;
-                  left: -1px;
-                  right: -1px;
-                  bottom: -1px;
-                  background: linear-gradient(45deg, hsl(var(--primary)) 0%, hsl(var(--primary))/0.7 100%);
-                  border-radius: 8px;
-                  z-index: -1;
-                  opacity: 0.1;
-                }
-              `}</style>
-              <div className="preview-label-grid">
-                {labelsToPrint.slice(0, 20).map((label, index) => (
-                  <div key={index} className="preview-label-card">
-                    <div className="preview-label-content">
-                      <h3 className="preview-label-product-name">{label.name}</h3>
-                      <p className="preview-label-variant-info">{label.color} • {label.size}</p>
-                      <div className="preview-label-barcode-container">
-                        <Barcode 
-                          value={label.barcode} 
-                          height={12} 
-                          width={1.2} 
-                          fontSize={0} 
-                          margin={0}
-                          background="transparent"
-                          lineColor="hsl(var(--primary))"
-                          displayValue={false}
-                        />
-                        <p className="preview-label-barcode-number">{label.barcode}</p>
+            <ScrollArea className="flex-1 border border-border rounded-xl bg-gray-50 max-h-[450px]">
+              <div className="p-4">
+                <style>{`
+                  .preview-label-grid {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                    padding: 12px;
+                    align-items: center;
+                  }
+                  
+                  .preview-label-card {
+                    width: 180px;
+                    height: 70px;
+                    border: 2px solid #2563eb;
+                    padding: 6px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    border-radius: 4px;
+                    background: #ffffff;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    font-family: Arial, sans-serif;
+                    position: relative;
+                  }
+                  
+                  .preview-label-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 2px;
+                    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 50%, #2563eb 100%);
+                  }
+                  
+                  .preview-label-content {
+                    text-align: center;
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    align-items: center;
+                  }
+                  
+                  .preview-label-product-name {
+                    font-size: 12px;
+                    font-weight: 900;
+                    margin-bottom: 2px;
+                    line-height: 1.1;
+                    color: #1e293b;
+                    text-transform: uppercase;
+                    max-width: 100%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    letter-spacing: 0.5px;
+                  }
+                  
+                  .preview-label-variant-info {
+                    font-size: 9px;
+                    margin-bottom: 3px;
+                    color: #475569;
+                    font-weight: 700;
+                    background: #f1f5f9;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    border: 1px solid #cbd5e1;
+                    text-transform: capitalize;
+                  }
+                  
+                  .preview-label-barcode-container {
+                    margin: 3px 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    flex: 1;
+                    justify-content: center;
+                    background: #fefefe;
+                    border-radius: 2px;
+                    padding: 2px;
+                  }
+                  
+                  .preview-label-barcode-number {
+                    font-size: 8px;
+                    color: #374151;
+                    margin-top: 1px;
+                    font-family: 'Courier New', monospace;
+                    font-weight: 600;
+                    letter-spacing: 1px;
+                  }
+                  
+                  .preview-label-price {
+                    font-size: 11px;
+                    font-weight: 900;
+                    color: #dc2626;
+                    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+                    padding: 3px 10px;
+                    border-radius: 12px;
+                    border: 2px solid #f87171;
+                    min-width: 70px;
+                    box-shadow: 0 1px 3px rgba(220, 38, 38, 0.2);
+                    text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+                  }
+                `}</style>
+                <div className="preview-label-grid">
+                  {labelsToPrint.map((label, index) => (
+                    <div key={index} className="preview-label-card">
+                      <div className="preview-label-content">
+                        <h3 className="preview-label-product-name">{label.name}</h3>
+                        <p className="preview-label-variant-info">{label.color} • {label.size}</p>
+                        <div className="preview-label-barcode-container">
+                          <Barcode 
+                            value={label.barcode} 
+                            height={15} 
+                            width={1.5} 
+                            fontSize={0} 
+                            margin={0}
+                            background="transparent"
+                            lineColor="#1e293b"
+                            displayValue={false}
+                          />
+                          <p className="preview-label-barcode-number">{label.barcode}</p>
+                        </div>
+                        <p className="preview-label-price">{label.price.toLocaleString()} د.ع</p>
                       </div>
-                      <p className="preview-label-price">{label.price.toLocaleString()} د.ع</p>
                     </div>
-                  </div>
-                ))}
-              </div>
-              {labelsToPrint.length > 20 && (
-                <div className="text-center text-muted-foreground mt-4 p-3 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span className="font-medium">عرض أول 20 ملصق من إجمالي {labelsToPrint.length} ملصق</span>
-                  </div>
-                  <p className="text-xs mt-1">قم بالتمرير لأعلى وأسفل لمشاهدة جميع الملصقات</p>
+                  ))}
                 </div>
-              )}
-            </div>
+                
+                {labelsToPrint.length > 0 && (
+                  <div className="text-center text-muted-foreground mt-6 p-4 bg-white/70 rounded-lg border border-primary/20">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="font-bold text-lg text-primary">📄 إجمالي الملصقات: {labelsToPrint.length}</span>
+                    </div>
+                    <p className="text-sm font-medium text-blue-600">
+                      ✅ يمكنك التمرير لأعلى وأسفل لمشاهدة جميع الملصقات
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 هذا هو الشكل الحقيقي للملصقات كما ستظهر عند الطباعة
+                    </p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </div>
         </div>
 
