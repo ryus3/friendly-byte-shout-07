@@ -480,11 +480,9 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   product_id: productId,
                   quantity: variant.quantity,
                   min_stock: 5,
-                  last_updated_by: user?.user_id || user?.id,
-                  updated_at: new Date().toISOString()
+                  last_updated_by: user?.user_id || user?.id
                 }, { 
-                  onConflict: 'variant_id',
-                  ignoreDuplicates: false 
+                  onConflict: 'variant_id'
                 });
                 
               if (inventoryError) {
