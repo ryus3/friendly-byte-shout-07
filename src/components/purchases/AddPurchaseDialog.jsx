@@ -18,7 +18,6 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
     const [shippingCost, setShippingCost] = useState('');
     const [transferCost, setTransferCost] = useState(''); // تكاليف التحويل الجديدة
-    const [paymentSource, setPaymentSource] = useState('capital'); // مصدر الدفع: capital/cash/loan
     const [items, setItems] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
@@ -87,7 +86,6 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                 totalCost,
                 shippingCost: finalShippingCost,
                 transferCost: finalTransferCost, // تكاليف التحويل
-                paymentSource, // مصدر الدفع
                 status: 'completed'
             };
             
@@ -124,7 +122,6 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
         setPurchaseDate(new Date().toISOString().split('T')[0]);
         setShippingCost('');
         setTransferCost(''); // إعادة تعيين تكاليف التحويل
-        setPaymentSource('capital'); // إعادة تعيين مصدر الدفع
         setItems([]);
     };
 
@@ -143,7 +140,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                         <DialogTitle>إضافة فاتورة شراء جديدة</DialogTitle>
                         <DialogDescription>أدخل تفاصيل الفاتورة والمنتجات المشتراة.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4">
                         <div>
                             <Label htmlFor="supplier">اسم المورد</Label>
                             <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} />
@@ -175,20 +172,6 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                 value={transferCost} 
                                 onChange={e => setTransferCost(e.target.value)} 
                             />
-                        </div>
-                        <div>
-                            <Label htmlFor="paymentSource">مصدر الدفع</Label>
-                            <select 
-                                id="paymentSource" 
-                                value={paymentSource} 
-                                onChange={e => setPaymentSource(e.target.value)}
-                                className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm"
-                            >
-                                <option value="capital">رأس المال</option>
-                                <option value="cash">القاصة (النقدية)</option>
-                                <option value="loan">قرض/تمويل خارجي</option>
-                                <option value="other">مصدر آخر</option>
-                            </select>
                         </div>
                     </div>
 

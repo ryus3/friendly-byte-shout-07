@@ -21,8 +21,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
-import CapitalManagementCard from '@/components/accounting/CapitalManagementCard';
-import ComprehensiveFinancialCenter from '@/components/accounting/ComprehensiveFinancialCenter';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
@@ -399,11 +397,7 @@ const AccountingPage = () => {
                         </Card>
                     </div>
                 </div>
-
-                {/* المركز المالي الشامل */}
-                <ComprehensiveFinancialCenter />
             </div>
-
             <ExpensesDialog
                 open={dialogs.expenses}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, expenses: open }))}

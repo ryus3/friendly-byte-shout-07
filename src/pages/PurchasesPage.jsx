@@ -12,7 +12,6 @@ import PurchasesStats from '@/components/purchases/PurchasesStats';
 import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';
 import PurchasesGrid from '@/components/purchases/PurchasesGrid';
-import PaymentSourceSummary from '@/components/purchases/PaymentSourceSummary';
 
 import AddPurchaseDialog from '@/components/purchases/AddPurchaseDialog';
 import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog';
@@ -110,11 +109,6 @@ const PurchasesPage = () => {
     setPurchaseToDelete(null);
   };
 
-  const handlePurchaseAdded = () => {
-    setIsAddOpen(false);
-    fetchPurchases(); // إعادة تحديث قائمة المشتريات
-  };
-
   return (
     <>
       <Helmet>
@@ -166,20 +160,12 @@ const PurchasesPage = () => {
           }}
         />
         
-        {/* ملخص مصادر التمويل */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <PurchasesToolbar 
-              filters={filters} 
-              onFiltersChange={setFilters}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-            />
-          </div>
-          <div>
-            <PaymentSourceSummary purchases={filteredPurchases} />
-          </div>
-        </div>
+        <PurchasesToolbar 
+          filters={filters} 
+          onFiltersChange={setFilters}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
         
         {viewMode === 'table' ? (
           <PurchasesList 
