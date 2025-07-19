@@ -182,25 +182,38 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
     setUploadProgress(0);
 
     try {
+      // التحقق من وجود البيانات الأساسية
+      if (!productInfo.name?.trim()) {
+        toast({ 
+          title: 'خطأ في البيانات', 
+          description: 'اسم المنتج مطلوب',
+          variant: 'destructive' 
+        });
+        return;
+      }
+
       const dataToUpdate = {
-        ...productInfo,
-        price: parseFloat(productInfo.price) || 0,
-        costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
-        selectedCategories,
-        selectedProductTypes,
-        selectedSeasonsOccasions,
-        selectedDepartments,
-        variants,
+        name: productInfo.name.trim(),
+        description: productInfo.description?.trim() || '',
+        base_price: parseFloat(productInfo.price) || 0,
+        cost_price: parseFloat(productInfo.costPrice) || 0,
+        selectedCategories: selectedCategories || [],
+        selectedProductTypes: selectedProductTypes || [],
+        selectedSeasonsOccasions: selectedSeasonsOccasions || [],
+        selectedDepartments: selectedDepartments || [],
+        variants: variants || [],
       };
       
       const imageFiles = {
-        general: generalImages,
-        colorImages: colorImages,
+        general: generalImages || [],
+        colorImages: colorImages || {},
       };
+      
+      console.log('🔄 بدء عملية التحديث...', { productId: product.id, dataToUpdate });
       
       const result = await updateProduct(product.id, dataToUpdate, imageFiles, setUploadProgress);
 
-      if (result.success) {
+      if (result && result.success) {
         toast({ 
           title: 'تم بنجاح! ✅', 
           description: 'تم حفظ تعديلات المنتج بنجاح وتحديث جميع البيانات.',
@@ -208,22 +221,37 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         });
         
         // إعادة تحميل المنتجات
-        if (refetchProducts) {
-          await refetchProducts();
+        if (typeof refetchProducts === 'function') {
+          try {
+            await refetchProducts();
+          } catch (error) {
+            console.error('Error refetching products:', error);
+          }
         }
         
-        if(onSuccess) onSuccess();
+        if (onSuccess && typeof onSuccess === 'function') {
+          onSuccess();
+        }
         
         // إغلاق النافذة تلقائياً بعد ثانية واحدة
         setTimeout(() => {
           onOpenChange(false);
         }, 1000);
       } else {
-        toast({ title: 'خطأ', description: result.error || 'فشل تحديث المنتج.', variant: 'destructive' });
+        const errorMessage = result?.error || 'فشل تحديث المنتج. يرجى المحاولة مرة أخرى.';
+        toast({ 
+          title: 'خطأ في التحديث', 
+          description: errorMessage, 
+          variant: 'destructive' 
+        });
       }
     } catch (error) {
       console.error('Error in handleSave:', error);
-      toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
+      toast({ 
+        title: 'خطأ غير متوقع', 
+        description: 'حدث خطأ أثناء حفظ التعديلات. يرجى المحاولة مرة أخرى.',
+        variant: 'destructive' 
+      });
     } finally {
       setIsSubmitting(false);
       setUploadProgress(0);
@@ -245,12 +273,12 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-4xl sm:max-w-5xl h-[95vh] sm:h-[85vh] flex flex-col p-3 sm:p-6">
-        <DialogHeader className="pb-2 sm:pb-4 flex-shrink-0">
-          <DialogTitle className="text-base sm:text-lg font-semibold">تعديل المنتج: {product.name}</DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">قم بتحديث تفاصيل المنتج والمتغيرات والمخزون من هنا.</DialogDescription>
+      <DialogContent className="w-full max-w-7xl h-[95vh] sm:h-[90vh] flex flex-col p-2 sm:p-4 md:p-6">
+        <DialogHeader className="pb-2 sm:pb-4 flex-shrink-0 border-b">
+          <DialogTitle className="text-lg sm:text-xl font-bold text-right">تعديل المنتج: {product.name}</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base text-right">قم بتحديث تفاصيل المنتج والمتغيرات والمخزون من هنا.</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto space-y-3 sm:space-y-4 pr-1 pb-20">
+        <div className="flex-1 overflow-y-auto space-y-4 sm:space-y-6 pr-1 pb-20">
           <ProductPrimaryInfo 
             productInfo={productInfo} 
             setProductInfo={setProductInfo}
@@ -317,25 +345,36 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
             </Card>
           )}
         </div>
-        <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background/95 backdrop-blur border-t z-50 p-3 sm:p-4">
+        <DialogFooter className="flex-shrink-0 sticky bottom-0 bg-background/95 backdrop-blur-sm border-t z-50 p-2 sm:p-4">
             <div className="flex flex-col gap-3 w-full">
               {isUploading && (
                 <div className='flex items-center gap-2 text-xs sm:text-sm justify-center'>
-                  <Progress value={uploadProgress} className="w-32 sm:w-40 h-2" />
-                  <span className='text-muted-foreground'>{Math.round(uploadProgress)}%</span>
+                  <Progress value={uploadProgress} className="w-32 sm:w-48 h-2" />
+                  <span className='text-muted-foreground font-medium'>{Math.round(uploadProgress)}%</span>
                 </div>
               )}
               <div className="flex gap-2 w-full">
                   <DialogClose asChild>
-                      <Button variant="outline" className="flex-1 text-sm py-3 font-medium">إلغاء</Button>
+                      <Button variant="outline" className="flex-1 text-sm py-3 font-medium border-2">
+                        إلغاء
+                      </Button>
                   </DialogClose>
                   <Button 
                     onClick={handleSave} 
                     disabled={isSubmitting || isUploading}
-                    className="flex-1 text-sm py-3 font-medium bg-primary hover:bg-primary/90"
+                    className="flex-1 text-sm py-3 font-medium bg-primary hover:bg-primary/90 text-primary-foreground"
                   >
-                      {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
-                      {isSubmitting || isUploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                      {isSubmitting || isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                          جاري الحفظ...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 ml-2" />
+                          حفظ التغييرات
+                        </>
+                      )}
                   </Button>
               </div>
             </div>

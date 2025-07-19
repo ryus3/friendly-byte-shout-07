@@ -9,12 +9,19 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import ImageUploader from '@/components/manage-products/ImageUploader';
 
-const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price, costPrice, handleImageSelect, handleImageRemove, initialImage, dragHandleProps }) => {
+const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price, costPrice, handleImageSelect, handleImageRemove, initialImage, dragHandleProps, isEditMode = false, showInventoryData = false, productName = '' }) => {
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
-    setVariants(prev => prev.map(v => 
-      (v.colorId === colorId && v.sizeId === sizeId) ? { ...v, [field]: value } : v
-    ));
+    setVariants(prev => prev.map(v => {
+      // في وضع التعديل، نتحقق من color_id و colorId و size_id و sizeId
+      const isMatchingVariant = (v.colorId === colorId || v.color_id === colorId) && 
+                               (v.sizeId === sizeId || v.size_id === sizeId);
+      
+      if (isMatchingVariant) {
+        return { ...v, [field]: value };
+      }
+      return v;
+    }));
   };
 
   const handleRemoveSizeFromColor = (sizeId) => {
@@ -81,187 +88,303 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
               </div>
 
               {/* صفوف المتغيرات */}
-              {(allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).map((variant, index) => {
-                if (!variant) return null;
-                
-                // التحقق من الفلترة حسب اللون في حالة وجود متغيرات فعلية
-                if (allSizesForType.length === 0 && variant.color_id !== color.id && variant.colorId !== color.id) return null;
-                
-                const isNewProduct = allSizesForType && allSizesForType.length > 0;
-                const variantData = isNewProduct ? variant : variant;
-                const sizeName = isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size || 'غير محدد');
-                const currentQuantity = isNewProduct ? (variantData.quantity || 0) : (variantData.inventory?.quantity || variantData.quantity || 0);
-                
-                return (
-                  <div key={isNewProduct ? variant.sizeId : variant.id || index} 
-                       className="grid grid-cols-12 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+              {(() => {
+                // في وضع التعديل، نستخدم المتغيرات الموجودة فعلياً المفلترة حسب اللون
+                if (isEditMode && showInventoryData) {
+                  const colorVariants = variants.filter(v => 
+                    v.color_id === color.id || v.colorId === color.id
+                  );
+                  
+                  console.log(`🎨 عرض متغيرات اللون ${color.name}:`, colorVariants);
+                  
+                  return colorVariants.map((variant, index) => {
+                    const sizeName = variant.sizes?.name || variant.size || 'غير محدد';
+                    const currentQuantity = variant.inventory?.quantity || variant.quantity || 0;
                     
-                    {/* القياس */}
-                    <div className="col-span-2 text-center">
-                      <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
-                        {sizeName}
-                      </div>
-                    </div>
-                    
-                    {/* الكمية */}
-                    <div className="col-span-2 space-y-1">
-                      <Input 
-                        type="number" 
-                        placeholder="0" 
-                        className="text-center font-medium"
-                        value={currentQuantity || ''} 
-                        onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', parseInt(e.target.value) || 0)} 
-                        required 
-                      />
-                      {currentQuantity < 5 && currentQuantity > 0 && (
-                        <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
-                      )}
-                      {currentQuantity === 0 && (
-                        <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
-                      )}
-                    </div>
-                    
-                    {/* التكلفة */}
-                    <div className="col-span-2 space-y-1">
-                      <Input 
-                        type="number" 
-                        placeholder="0"
-                        className="text-center"
-                        value={isNewProduct ? (variantData.costPrice || costPrice || '') : (variantData.cost_price || costPrice || '')} 
-                        onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', parseFloat(e.target.value) || 0)} 
-                      />
-                    </div>
-                    
-                    {/* سعر البيع */}
-                    <div className="col-span-2 space-y-1">
-                      <Input 
-                        type="number" 
-                        placeholder="0"
-                        className="text-center font-medium"
-                        value={isNewProduct ? (variantData.price || price || '') : (variantData.price || price || '')} 
-                        onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', parseFloat(e.target.value) || 0)} 
-                      />
-                    </div>
-                    
-                    {/* الملاحظة */}
-                    <div className="col-span-2 space-y-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Input 
-                              type="text" 
-                              placeholder="ملاحظة..." 
-                              className="text-center text-xs"
-                              defaultValue={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
-                              onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
-                            />
-                          </TooltipTrigger>
-                          <TooltipContent><p>ملاحظة خاصة بهذا القياس</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    
-                    {/* الإجراءات */}
-                    <div className="col-span-2 flex justify-center gap-1">
-                      {/* زر الباركود */}
-                      <Dialog>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
-                                  <BarcodeIcon className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent><p>عرض الباركود</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle className="text-center">🏷️ باركود المتغير</DialogTitle>
-                            <p className="text-center text-muted-foreground text-sm">
-                              {color.name} • {sizeName}
-                            </p>
-                          </DialogHeader>
-                          <div className="flex flex-col items-center justify-center p-6 space-y-4">
+                    return (
+                      <div key={variant.id || index} 
+                           className="grid grid-cols-12 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                        
+                        {/* القياس */}
+                        <div className="col-span-2 text-center">
+                          <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
+                            {sizeName}
+                          </div>
+                        </div>
+                        
+                        {/* الكمية */}
+                        <div className="col-span-2 space-y-1">
+                          <Input 
+                            type="number" 
+                            placeholder="0" 
+                            className="text-center font-medium"
+                            value={currentQuantity || ''} 
+                            onChange={e => {
+                              const newQuantity = parseInt(e.target.value) || 0;
+                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'quantity', newQuantity);
+                            }} 
+                            min="0"
+                          />
+                          {currentQuantity < 5 && currentQuantity > 0 && (
+                            <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
+                          )}
+                          {currentQuantity === 0 && (
+                            <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
+                          )}
+                        </div>
+                        
+                        {/* التكلفة */}
+                        <div className="col-span-2 space-y-1">
+                          <Input 
+                            type="number" 
+                            placeholder="0"
+                            className="text-center"
+                            value={variant.cost_price || variant.costPrice || costPrice || ''} 
+                            onChange={e => {
+                              const newCost = parseFloat(e.target.value) || 0;
+                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'costPrice', newCost);
+                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'cost_price', newCost);
+                            }} 
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        
+                        {/* سعر البيع */}
+                        <div className="col-span-2 space-y-1">
+                          <Input 
+                            type="number" 
+                            placeholder="0"
+                            className="text-center font-medium"
+                            value={variant.price || price || ''} 
+                            onChange={e => {
+                              const newPrice = parseFloat(e.target.value) || 0;
+                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'price', newPrice);
+                            }} 
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        
+                        {/* الربح */}
+                        <div className="col-span-2 space-y-1 text-center">
+                          <div className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
                             {(() => {
-                              const barcodeValue = isNewProduct ? variantData.barcode : variantData.barcode;
-                              
-                              if (barcodeValue && barcodeValue.trim() !== '') {
-                                return (
-                                  <div className="text-center space-y-3">
-                                    <div className="p-4 bg-white rounded-lg border">
-                                      <Barcode 
-                                        value={barcodeValue} 
-                                        width={1.5}
-                                        height={40}
-                                        fontSize={10}
-                                        displayValue={true}
-                                        background="#ffffff"
-                                        lineColor="#000000"
-                                      />
-                                    </div>
-                                    <p className="font-mono text-sm bg-muted px-3 py-1 rounded">
-                                      {barcodeValue}
-                                    </p>
-                                  </div>
-                                );
-                              } else {
-                                const previewBarcode = `PROD${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
-                                return (
-                                  <div className="text-center space-y-3">
-                                    <div className="p-4 bg-white rounded-lg border">
-                                      <Barcode 
-                                        value={previewBarcode} 
-                                        width={1.5}
-                                        height={40}
-                                        fontSize={10}
-                                        displayValue={true}
-                                        background="#ffffff"
-                                        lineColor="#000000"
-                                      />
-                                    </div>
-                                    <p className="text-muted-foreground text-xs bg-orange-50 text-orange-700 px-3 py-1 rounded">
-                                      ⚠️ معاينة - سيتم توليد باركود حقيقي عند الحفظ
-                                    </p>
-                                  </div>
-                                );
-                              }
+                              const currentPrice = variant.price || price || 0;
+                              const currentCost = variant.cost_price || variant.costPrice || costPrice || 0;
+                              const profit = currentPrice - currentCost;
+                              const profitPercentage = currentCost > 0 ? ((profit / currentCost) * 100).toFixed(1) : 0;
+                              return `${profit.toLocaleString()} د.ع (${profitPercentage}%)`;
                             })()}
                           </div>
-                        </DialogContent>
-                      </Dialog>
+                        </div>
+                        
+                        {/* الباركود */}
+                        <div className="col-span-2 text-center">
+                          <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                            {variant.barcode || 'سيتم إنشاؤه تلقائياً'}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  });
+                }
+                
+                // الكود الأصلي للمنتجات الجديدة
+                const itemsToRender = allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants;
+                
+                return itemsToRender.map((variant, index) => {
+                  if (!variant) return null;
+                  
+                  // التحقق من الفلترة حسب اللون في حالة وجود متغيرات فعلية
+                  if (allSizesForType.length === 0 && variant.color_id !== color.id && variant.colorId !== color.id) return null;
+                  
+                  const isNewProduct = allSizesForType && allSizesForType.length > 0;
+                  const variantData = isNewProduct ? variant : variant;
+                  const sizeName = isNewProduct ? variantData.size : (variantData.sizes?.name || variantData.size || 'غير محدد');
+                  const currentQuantity = isNewProduct ? (variantData.quantity || 0) : (variantData.inventory?.quantity || variantData.quantity || 0);
+                  
+                  return (
+                    <div key={isNewProduct ? variant.sizeId : variant.id || index} 
+                         className="grid grid-cols-12 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                       
-                      {/* زر الحذف */}
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10" 
-                              onClick={() => handleRemoveSizeFromColor(isNewProduct ? variantData.sizeId : variantData.size_id)}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p>حذف هذا القياس</p></TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-                );
-              })}
-              
-              {((allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).filter(v => 
-                allSizesForType.length > 0 ? true : v.colorId === color.id || v.color_id === color.id
-              ).length === 0) && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">🔍 لا توجد متغيرات لهذا اللون</p>
-                  <p className="text-xs">قم بإضافة قياسات من القسم أعلاه</p>
-                </div>
-              )}
+                      {/* القياس */}
+                      <div className="col-span-2 text-center">
+                        <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
+                          {sizeName}
+                        </div>
+                      </div>
+                      
+                      {/* الكمية */}
+                      <div className="col-span-2 space-y-1">
+                        <Input 
+                          type="number" 
+                          placeholder="0" 
+                          className="text-center font-medium"
+                          value={currentQuantity || ''} 
+                          onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', parseInt(e.target.value) || 0)} 
+                          required 
+                        />
+                        {currentQuantity < 5 && currentQuantity > 0 && (
+                          <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
+                        )}
+                        {currentQuantity === 0 && (
+                          <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
+                        )}
+                      </div>
+                      
+                      {/* التكلفة */}
+                      <div className="col-span-2 space-y-1">
+                        <Input 
+                          type="number" 
+                          placeholder="0"
+                          className="text-center"
+                          value={isNewProduct ? (variantData.costPrice || costPrice || '') : (variantData.cost_price || costPrice || '')} 
+                          onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', parseFloat(e.target.value) || 0)} 
+                        />
+                        </div>
+                        
+                        {/* سعر البيع */}
+                        <div className="col-span-2 space-y-1">
+                          <Input 
+                            type="number" 
+                            placeholder="0"
+                            className="text-center font-medium"
+                            value={isNewProduct ? (variantData.price || price || '') : (variantData.price || price || '')} 
+                            onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', parseFloat(e.target.value) || 0)} 
+                          />
+                        </div>
+                        
+                        {/* الملاحظة */}
+                        <div className="col-span-2 space-y-1">
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Input 
+                                  type="text" 
+                                  placeholder="ملاحظة..." 
+                                  className="text-center text-xs"
+                                  defaultValue={isNewProduct ? (variantData.hint || '') : (variantData.hint || '')} 
+                                  onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'hint', e.target.value)} 
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent><p>ملاحظة خاصة بهذا القياس</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        
+                        {/* الإجراءات */}
+                        <div className="col-span-2 flex justify-center gap-1">
+                          {/* زر الباركود */}
+                          <Dialog>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10">
+                                      <BarcodeIcon className="w-4 h-4" />
+                                    </Button>
+                                  </DialogTrigger>
+                                </TooltipTrigger>
+                                <TooltipContent><p>عرض الباركود</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="text-center">🏷️ باركود المتغير</DialogTitle>
+                                <p className="text-center text-muted-foreground text-sm">
+                                  {color.name} • {sizeName}
+                                </p>
+                              </DialogHeader>
+                              <div className="flex flex-col items-center justify-center p-6 space-y-4">
+                                {(() => {
+                                  const barcodeValue = isNewProduct ? variantData.barcode : variantData.barcode;
+                                  
+                                  if (barcodeValue && barcodeValue.trim() !== '') {
+                                    return (
+                                      <div className="text-center space-y-3">
+                                        <div className="p-4 bg-white rounded-lg border">
+                                          <Barcode 
+                                            value={barcodeValue} 
+                                            width={1.5}
+                                            height={40}
+                                            fontSize={10}
+                                            displayValue={true}
+                                            background="#ffffff"
+                                            lineColor="#000000"
+                                          />
+                                        </div>
+                                        <p className="font-mono text-sm bg-muted px-3 py-1 rounded">
+                                          {barcodeValue}
+                                        </p>
+                                      </div>
+                                    );
+                                  } else {
+                                    const previewBarcode = `PROD${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+                                    return (
+                                      <div className="text-center space-y-3">
+                                        <div className="p-4 bg-white rounded-lg border">
+                                          <Barcode 
+                                            value={previewBarcode} 
+                                            width={1.5}
+                                            height={40}
+                                            fontSize={10}
+                                            displayValue={true}
+                                            background="#ffffff"
+                                            lineColor="#000000"
+                                          />
+                                        </div>
+                                        <p className="text-muted-foreground text-xs bg-orange-50 text-orange-700 px-3 py-1 rounded">
+                                          ⚠️ معاينة - سيتم توليد باركود حقيقي عند الحفظ
+                                        </p>
+                                      </div>
+                                    );
+                                  }
+                                })()}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                          
+                          {/* زر الحذف */}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10" 
+                                  onClick={() => handleRemoveSizeFromColor(isNewProduct ? variantData.sizeId : variantData.size_id)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>حذف هذا القياس</p></TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
+                    );
+                  });
+                 })()}
+                 
+                 {/* رسالة عدم وجود متغيرات */}
+                 {(() => {
+                   const relevantVariants = isEditMode && showInventoryData
+                     ? variants.filter(v => v.color_id === color.id || v.colorId === color.id)
+                     : (allSizesForType && allSizesForType.length > 0 ? allSizesForType : variants).filter(v => 
+                         allSizesForType.length > 0 ? true : v.colorId === color.id || v.color_id === color.id
+                       );
+                   
+                   if (relevantVariants.length === 0) {
+                     return (
+                       <div className="text-center py-8 text-muted-foreground">
+                         <p className="text-sm">🔍 لا توجد متغيرات لهذا اللون</p>
+                         <p className="text-xs">قم بإضافة قياسات من القسم أعلاه</p>
+                       </div>
+                     );
+                   }
+                   return null;
+                 })()}
             </div>
           </div>
         </div>
