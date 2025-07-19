@@ -152,18 +152,28 @@ const AddProductPage = () => {
           setSelectedColors(uniqueColors);
           setColorImages(colorImages);
           
-          // تحويل المتغيرات للتنسيق المطلوب
-          const formattedVariants = editProductData.variants.map(variant => ({
-            ...variant,
-            colorId: variant.color_id,
-            sizeId: variant.size_id,
-            color: variant.colors?.name || 'Unknown',
-            color_hex: variant.colors?.hex_code || '#000000',
-            size: variant.sizes?.name || 'Unknown',
-            quantity: variant.quantity || 0,
-            costPrice: variant.cost_price || editProductData.cost_price || 0,
-            hint: variant.hint || ''
-          }));
+          // تحويل المتغيرات للتنسيق المطلوب مع تحميل الكمية من المخزون
+          const formattedVariants = editProductData.variants.map(variant => {
+            // العثور على كمية المخزون للمتغير
+            let inventoryQuantity = 0;
+            if (editProductData.inventory) {
+              const variantInventory = editProductData.inventory.find(inv => inv.variant_id === variant.id);
+              inventoryQuantity = variantInventory?.quantity || 0;
+            }
+            
+            return {
+              ...variant,
+              colorId: variant.color_id,
+              sizeId: variant.size_id,
+              color: variant.colors?.name || 'لون غير محدد',
+              color_hex: variant.colors?.hex_code || '#000000',
+              size: variant.sizes?.name || 'قياس غير محدد',
+              quantity: inventoryQuantity, // استخدام الكمية من المخزون
+              costPrice: variant.cost_price || editProductData.cost_price || 0,
+              profitAmount: variant.profit_amount || editProductData.profit_amount || 0,
+              hint: variant.hint || ''
+            };
+          });
           
           console.log('📊 المتغيرات المحولة:', formattedVariants);
           setVariants(formattedVariants);

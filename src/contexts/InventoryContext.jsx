@@ -223,6 +223,8 @@ export const InventoryProvider = ({ children }) => {
             size_id,
             price,
             cost_price,
+            profit_amount,
+            hint,
             barcode,
             images,
             is_active,
