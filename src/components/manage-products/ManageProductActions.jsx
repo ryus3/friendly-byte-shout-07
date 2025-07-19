@@ -7,7 +7,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import ProductDetailsDialog from './ProductDetailsDialog';
-import EditProductDialog from './EditProductDialog';
+import EditProductFullDialog from './EditProductFullDialog';
 import PrintLabelsDialog from './PrintLabelsDialog';
 
 const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => {
@@ -117,7 +117,7 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
       </TooltipProvider>
 
       <ProductDetailsDialog product={product} open={isViewOpen} onOpenChange={setIsViewOpen} />
-      <EditProductDialog product={product} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={handleSuccess} refetchProducts={refetchProducts} />
+      <EditProductFullDialog product={product} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={handleSuccess} refetchProducts={refetchProducts} />
       <PrintLabelsDialog products={[product]} open={isPrintOpen} onOpenChange={setIsPrintOpen} />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>

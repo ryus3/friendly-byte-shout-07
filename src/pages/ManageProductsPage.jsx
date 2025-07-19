@@ -16,7 +16,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import EditProductDialog from '@/components/manage-products/EditProductDialog';
+import EditProductFullDialog from '@/components/manage-products/EditProductFullDialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
@@ -167,7 +167,7 @@ const ManageProductsPage = () => {
           onScanSuccess={handleScanSuccess}
         />
         
-        <EditProductDialog
+        <EditProductFullDialog
             product={editingProduct}
             open={!!editingProduct}
             onOpenChange={() => setEditingProduct(null)}
