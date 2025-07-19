@@ -127,7 +127,6 @@ const ProductSelectionDialog = ({ open, onOpenChange, onConfirm, initialCart = [
 
   const filteredProducts = useMemo(() => {
     return permissionFilteredProducts.filter(p => 
-      p.is_active &&
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
       p.variants && p.variants.length > 0
     );
