@@ -119,22 +119,22 @@ const QRCodeLabel = ({
       // رسم QR Code على اليسار
       ctx.drawImage(img, 16, 16, 150, 150);
       
-      // إضافة النص على اليمين - محاذاة جانبية
+      // إضافة النص على اليمين - محاذاة وسط
       ctx.fillStyle = 'black';
-      ctx.textAlign = 'right';
+      ctx.textAlign = 'center';
       
       // اسم المنتج
       ctx.font = '900 26px Arial';
-      ctx.fillText(`${productName} RYUS`, canvas.width - 16, 50);
+      ctx.fillText(`${productName} RYUS`, canvas.width - 120, 50);
       
       // اللون والمقاس
       ctx.font = 'bold 18px Arial';
-      ctx.fillText(`${size} / ${color}`, canvas.width - 16, 75);
+      ctx.fillText(`${size} / ${color}`, canvas.width - 120, 75);
       
       // السعر
       if (price) {
         ctx.font = '900 28px Arial';
-        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 16, 110);
+        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 120, 110);
       }
       
       // تحميل الصورة
@@ -178,8 +178,8 @@ const QRCodeLabel = ({
               />
             </div>
             
-            {/* معلومات المنتج على اليمين - محاذاة جانبية */}
-            <div className="flex-1 h-full flex flex-col justify-center" style={{ direction: 'rtl', textAlign: 'right' }}>
+            {/* معلومات المنتج على اليمين - محاذاة وسط */}
+            <div className="flex-1 h-full flex flex-col justify-center items-center text-center">
               <div 
                 className="text-black font-black mb-1"
                 style={{ 

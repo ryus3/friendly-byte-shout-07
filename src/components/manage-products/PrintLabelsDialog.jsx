@@ -41,12 +41,12 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         
         .product-info {
           flex: 1;
-          text-align: right;
-          direction: rtl;
+          text-align: center;
           display: flex;
           flex-direction: column;
           justify-content: center;
           height: 100%;
+          align-items: center;
         }
         
         .label-product-name {
@@ -88,7 +88,7 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             <div className="qr-section">
               <QRCodeSVG
                 value={label.qrData}
-                size={35}
+                size={38}
                 level="M"
                 includeMargin={false}
                 bgColor="#ffffff"
@@ -326,12 +326,12 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   
                   .simple-product-info {
                     flex: 1;
-                    text-align: right;
-                    direction: rtl;
+                    text-align: center;
                     display: flex;
                     flex-direction: column;
                     justify-content: center;
                     height: 100%;
+                    align-items: center;
                   }
                   
                   .simple-label-product-name {
@@ -364,7 +364,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                       <div className="simple-qr-section">
                         <QRCodeSVG
                           value={label.qrData}
-                          size={115}
+                          size={120}
                           level="M"
                           includeMargin={false}
                           bgColor="#ffffff"
