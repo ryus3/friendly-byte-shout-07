@@ -270,10 +270,35 @@ const ColorsManager = () => {
 
       {/* Dialog */}
       <AddEditColorDialog 
-        isOpen={isDialogOpen}
-        onClose={handleDialogClose}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
         color={editingColor}
-        onSuccess={handleSuccess}
+        onSuccess={async (colorData) => {
+          try {
+            if (editingColor) {
+              // تحديث اللون الموجود
+              const { error } = await supabase
+                .from('colors')
+                .update(colorData)
+                .eq('id', editingColor.id);
+              
+              if (error) throw error;
+            } else {
+              // إضافة لون جديد
+              const { error } = await supabase
+                .from('colors')
+                .insert(colorData);
+              
+              if (error) throw error;
+            }
+            
+            await fetchColors();
+            return true;
+          } catch (error) {
+            console.error('خطأ في حفظ اللون:', error);
+            return false;
+          }
+        }}
       />
     </div>
   );

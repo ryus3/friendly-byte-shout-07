@@ -77,15 +77,41 @@ const SortableSize = ({ size, onEdit, onDelete }) => {
   );
 };
 
-const SizesManagerNew = ({ sizes, onRefetch }) => {
+const SizesManagerNew = () => {
   const [isAddingSize, setIsAddingSize] = useState(false);
   const [editingSize, setEditingSize] = useState(null);
   const [sizeForm, setSizeForm] = useState({ name: '', type: 'letter' });
-  const [sortedSizes, setSortedSizes] = useState(sizes);
+  const [sizes, setSizes] = useState([]);
+  const [sortedSizes, setSortedSizes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSizes = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('sizes')
+        .select('*')
+        .order('display_order', { ascending: true });
+      
+      if (error) throw error;
+      
+      setSizes(data || []);
+      setSortedSizes(data || []);
+    } catch (error) {
+      console.error('خطأ في جلب القياسات:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في جلب القياسات',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   React.useEffect(() => {
-    setSortedSizes(sizes);
-  }, [sizes]);
+    fetchSizes();
+  }, []);
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
@@ -103,7 +129,7 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
           supabase.from('sizes').update({ display_order: index }).eq('id', size.id)
         );
         await Promise.all(updatePromises);
-        onRefetch();
+        await fetchSizes();
       } catch (error) {
         console.error('خطأ في تحديث ترتيب القياسات:', error);
         toast({
@@ -135,7 +161,7 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
       setSizeForm({ name: '', type: 'letter' });
       setIsAddingSize(false);
       setEditingSize(null);
-      onRefetch();
+      await fetchSizes();
     } catch (error) {
       console.error('خطأ في حفظ القياس:', error);
       toast({
@@ -156,7 +182,7 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
     try {
       await supabase.from('sizes').delete().eq('id', sizeId);
       toast({ title: 'تم الحذف', description: 'تم حذف القياس بنجاح' });
-      onRefetch();
+      await fetchSizes();
     } catch (error) {
       console.error('خطأ في حذف القياس:', error);
       toast({
@@ -172,6 +198,14 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
     setIsAddingSize(false);
     setEditingSize(null);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <Card>
