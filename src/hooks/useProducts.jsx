@@ -250,7 +250,6 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                 base_price: parseFloat(productData.price) || 0,
                 cost_price: parseFloat(productData.costPrice) || 0,
                 profit_amount: parseFloat(productData.profit_amount) || 0,
-                profit_percentage: parseFloat(productData.profit_percentage) || 0,
                 is_active: productData.isVisible !== false,
             })
             .eq('id', productId);

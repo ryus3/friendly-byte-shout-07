@@ -190,7 +190,6 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
         price: parseFloat(productInfo.price) || product.base_price || 0,
         costPrice: parseFloat(productInfo.costPrice) || product.cost_price || 0,
         profit_amount: parseFloat(productInfo.profitAmount) || 0,
-        profit_percentage: parseFloat(productInfo.profitPercentage) || 0,
         selectedCategories: selectedCategories || [],
         selectedProductTypes: selectedProductTypes || [],
         selectedSeasonsOccasions: selectedSeasonsOccasions || [],
@@ -309,11 +308,18 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
                         if (initialImage) {
                           preview = typeof initialImage === 'string' ? initialImage : URL.createObjectURL(initialImage);
                         }
+                        
+                        // الحصول على الأحجام المناسبة لهذا اللون
+                        const colorSizeType = colorSizeTypes[color.id] || [sizeType];
+                        const sizesForColor = allSizesForType.filter(size => 
+                          colorSizeType.includes(size.type)
+                        );
+                        
                         return (
                            <SortableColorCard
                             key={color.id}
                             color={color}
-                            allSizesForType={[]}
+                            allSizesForType={sizesForColor}
                             variants={variants.filter(v => v.color_id === color.id || v.colorId === color.id)}
                             setVariants={setVariants}
                             price={productInfo.price}

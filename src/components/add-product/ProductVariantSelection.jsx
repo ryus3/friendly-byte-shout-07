@@ -6,8 +6,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus } from 'lucide-react';
-import NewCreatableMultiSelect from './NewCreatableMultiSelect';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList } from '@/components/ui/command';
+import { Check, ChevronDown, Plus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import AddEditColorDialog from '@/components/manage-variants/AddEditColorDialog';
 
 const ProductVariantSelection = ({
@@ -66,13 +69,20 @@ const ProductVariantSelection = ({
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label>الألوان</Label>
-          <NewCreatableMultiSelect
+          <MultiSelectDropdownColors
             items={colors}
             selectedItems={selectedColors}
-            onSelect={setSelectedColors}
-            title="لون"
-            itemLabel="name"
-            onCreateNew={(name) => setColorDialogOpen(true)}
+            onToggle={(color) => {
+              const isSelected = selectedColors.some(c => c.id === color.id);
+              if (isSelected) {
+                setSelectedColors(prev => prev.filter(c => c.id !== color.id));
+              } else {
+                setSelectedColors(prev => [...prev, color]);
+              }
+            }}
+            placeholder="اختر الألوان..."
+            onAddNew={() => setColorDialogOpen(true)}
+            addNewText="إضافة لون جديد"
           />
         </div>
 
@@ -167,6 +177,109 @@ const ProductVariantSelection = ({
         onSuccess={handleCreateColor}
       />
     </Card>
+  );
+};
+
+// MultiSelect Component for Colors
+const MultiSelectDropdownColors = ({ items, selectedItems, onToggle, placeholder, onAddNew, addNewText }) => {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filteredItems = items.filter(item => 
+    item.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          className="w-full justify-between h-auto min-h-[2.5rem] py-2"
+        >
+          <div className="flex flex-wrap gap-1 max-w-full">
+            {selectedItems.length === 0 ? (
+              <span className="text-muted-foreground">{placeholder}</span>
+            ) : (
+              selectedItems.map((item) => (
+                <Badge key={item.id} variant="secondary" className="gap-1 flex items-center">
+                  {item.hex_code && (
+                    <div 
+                      className="w-3 h-3 rounded-full border"
+                      style={{ backgroundColor: item.hex_code }}
+                    />
+                  )}
+                  {item.name}
+                </Badge>
+              ))
+            )}
+          </div>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0 bg-background/95 backdrop-blur-sm border shadow-lg z-[9999]" align="start">
+        <Command>
+          <CommandInput 
+            placeholder="البحث..." 
+            value={search} 
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty className="p-4 text-center">
+              <p className="text-sm text-muted-foreground mb-2">لا توجد نتائج.</p>
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  onAddNew();
+                  setOpen(false);
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                {addNewText}
+              </Button>
+            </CommandEmpty>
+            <CommandGroup className="max-h-64 overflow-auto bg-background">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => onToggle(item)}
+                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent/80 hover:text-accent-foreground transition-colors bg-background"
+                >
+                  <div className="flex items-center gap-2 flex-1">
+                    {item.hex_code && (
+                      <div 
+                        className="w-4 h-4 rounded-full border"
+                        style={{ backgroundColor: item.hex_code }}
+                      />
+                    )}
+                    <span>{item.name}</span>
+                  </div>
+                  <Check
+                    className={cn(
+                      "h-4 w-4",
+                      selectedItems.some(c => c.id === item.id) ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                </div>
+              ))}
+              {filteredItems.length > 0 && (
+                <div
+                  onClick={() => {
+                    onAddNew();
+                    setOpen(false);
+                  }}
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted/80 border-t px-2 py-1.5 text-sm bg-background transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>{addNewText}</span>
+                </div>
+              )}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 };
 
