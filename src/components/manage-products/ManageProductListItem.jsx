@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
 import { toast } from '@/components/ui/use-toast';
@@ -10,7 +10,13 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
   const { updateProduct, settings } = useInventory();
-  const [isVisible, setIsVisible] = useState(product.is_active === true || product.is_active == null); // افتراضياً true إذا كانت true أو null
+  const [isVisible, setIsVisible] = useState(true); // ابدأ بـ true دائماً
+  
+  // مراقبة تغيير product.is_active وتحديث الحالة المحلية
+  useEffect(() => {
+    const actualState = product.is_active === true || product.is_active === null || product.is_active === undefined;
+    setIsVisible(actualState);
+  }, [product.is_active]);
 
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;

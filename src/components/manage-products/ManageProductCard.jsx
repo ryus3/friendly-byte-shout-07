@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, Printer, Hash, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,7 +10,14 @@ import { supabase } from '@/lib/customSupabaseClient';
 const ManageProductCard = ({ product, onEdit, onDelete, onPrint }) => {
   const { settings, updateProduct } = useInventory();
   console.log('Product data for card:', { name: product.name, is_active: product.is_active });
-  const [isVisible, setIsVisible] = useState(product.is_active === true || product.is_active == null); // افتراضياً true إذا كانت true أو null
+  const [isVisible, setIsVisible] = useState(true); // ابدأ بـ true دائماً
+  
+  // مراقبة تغيير product.is_active وتحديث الحالة المحلية
+  useEffect(() => {
+    const actualState = product.is_active === true || product.is_active === null || product.is_active === undefined;
+    console.log('Effect triggered - setting isVisible to:', actualState);
+    setIsVisible(actualState);
+  }, [product.is_active]);
   const totalStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
