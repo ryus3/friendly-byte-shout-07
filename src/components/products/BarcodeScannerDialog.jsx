@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, AlertTriangle, Flashlight, FlashlightOff } from 'lucide-react';
@@ -44,24 +44,44 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-      // إعدادات محسنة للقراءة السريعة
-      const config = {
-        fps: 30, // سرعة عالية للمسح السريع
-        qrbox: function(viewfinderWidth, viewfinderHeight) {
-          // منطقة أكبر لالتقاط أكثر من ملصق
-          const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minEdge * 0.95);
-          return {
-            width: size,
-            height: Math.floor(size * 0.8)
-          };
-        },
-        aspectRatio: 1.0,
-        disableFlip: false,
-        experimentalFeatures: {
-          useBarCodeDetectorIfSupported: true
-        }
-      };
+        // إعدادات محسنة للقراءة السريعة - تركيز على الباركود
+        const config = {
+          fps: 30, // سرعة عالية للمسح السريع
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            // منطقة مُحسنة للباركود (أوسع وأقصر)
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const size = Math.floor(minEdge * 0.9);
+            return {
+              width: size,
+              height: Math.floor(size * 0.4) // نسبة أقل للباركود
+            };
+          },
+          aspectRatio: 1.0,
+          disableFlip: false,
+          // تفعيل قراءة جميع أنواع الباركود
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.AZTEC,
+            Html5QrcodeSupportedFormats.CODABAR,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.CODE_93,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.DATA_MATRIX,
+            Html5QrcodeSupportedFormats.MAXICODE,
+            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.PDF_417,
+            Html5QrcodeSupportedFormats.RSS_14,
+            Html5QrcodeSupportedFormats.RSS_EXPANDED,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION
+          ],
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        };
 
       await html5QrCode.start(
         { facingMode: "environment" },
@@ -160,8 +180,13 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary text-lg">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4z"/>
-              <path d="M13 13h1.5v1.5H13V13zm0 3h1.5v1.5H13V16zm3 0h1.5v1.5H16V16zm1.5-3H19v1.5h-1.5V13zm0 3H19v1.5h-1.5V16zm3-3H22v1.5h-1.5V13z"/>
+              <rect x="2" y="6" width="20" height="12" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2"/>
+              <rect x="4" y="8" width="2" height="8" fill="currentColor"/>
+              <rect x="7" y="8" width="1" height="8" fill="currentColor"/>
+              <rect x="9" y="8" width="3" height="8" fill="currentColor"/>
+              <rect x="13" y="8" width="1" height="8" fill="currentColor"/>
+              <rect x="15" y="8" width="2" height="8" fill="currentColor"/>
+              <rect x="18" y="8" width="2" height="8" fill="currentColor"/>
             </svg>
             قارئ الباركود المحترف
           </DialogTitle>

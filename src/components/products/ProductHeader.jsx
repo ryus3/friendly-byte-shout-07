@@ -48,7 +48,15 @@ const ProductHeader = ({
           size={barcodeIconOnly ? "icon" : "default"}
           className="glass-effect border-border/80 hover:bg-accent"
         >
-          <QrCode className={`w-4 h-4 ${!barcodeIconOnly ? 'ml-2' : ''}`} />
+          <svg className={`w-4 h-4 ${!barcodeIconOnly ? 'ml-2' : ''}`} viewBox="0 0 24 24" fill="currentColor">
+            <rect x="2" y="6" width="20" height="12" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2"/>
+            <rect x="4" y="8" width="2" height="8" fill="currentColor"/>
+            <rect x="7" y="8" width="1" height="8" fill="currentColor"/>
+            <rect x="9" y="8" width="3" height="8" fill="currentColor"/>
+            <rect x="13" y="8" width="1" height="8" fill="currentColor"/>
+            <rect x="15" y="8" width="2" height="8" fill="currentColor"/>
+            <rect x="18" y="8" width="2" height="8" fill="currentColor"/>
+          </svg>
           {!barcodeIconOnly && 'إضافة بالباركود'}
         </Button>
       )}
