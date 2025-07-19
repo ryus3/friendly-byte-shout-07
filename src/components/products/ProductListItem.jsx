@@ -42,7 +42,7 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
 
   return (
     <div
-      className="product-list-item p-4 cursor-pointer hover:bg-accent/50 transition-colors rounded-lg border border-border/30
+      className="product-list-item p-3 cursor-pointer hover:bg-accent/50 transition-colors rounded-lg border border-border/30
                   shadow-lg shadow-black/10 
                   dark:shadow-lg dark:shadow-primary/20
                   hover:shadow-xl hover:shadow-primary/20
@@ -50,20 +50,20 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
       onClick={onSelect}
     >
       <div className="flex items-center gap-4 w-full">
-        {/* إزالة الصورة لتوفير البيانات وتحسين الأداء */}
         <div className="flex-1 text-right">
-          <h3 className="font-semibold text-foreground text-lg">{product.name}</h3>
-          <p className="font-bold text-primary text-xl">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold text-foreground text-lg truncate">{product.name}</h3>
+            <p className="font-bold text-primary text-lg">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
+          </div>
           
-          {/* معلومات المخزون والألوان في سطر واحد */}
-          <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* الألوان المتوفرة */}
               <div className="flex items-center gap-1">
                 {availableColorsWithHex.slice(0, 3).map((color, idx) => (
                   <div
                     key={idx}
-                    className="w-4 h-4 rounded-full border border-border"
+                    className="w-3 h-3 rounded-full border border-border"
                     style={{ backgroundColor: color.hex || '#ccc' }}
                   />
                 ))}
@@ -72,11 +72,11 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
                 )}
               </div>
               
-              {/* القياسات - عرض جميع القياسات */}
+              {/* القياسات - عرض جميع القياسات بشكل مضغوط */}
               {availableSizes.length > 0 && (
                 <div className="flex items-center gap-1 flex-wrap">
                   {availableSizes.map((size, idx) => (
-                    <span key={idx} className="text-xs bg-secondary px-1.5 py-0.5 rounded">
+                    <span key={idx} className="text-xs bg-secondary px-1 py-0.5 rounded text-xs">
                       {size}
                     </span>
                   ))}
@@ -84,17 +84,15 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
               )}
             </div>
             
-            {/* معلومات المخزون - المتوفر والمحجوز */}
-            <div className="text-left text-sm mt-2">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-green-600 font-medium">المتوفر:</span>
-                  <span className="text-green-600 font-bold">{(totalStock || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-amber-600 font-medium">المحجوز:</span>
-                  <span className="text-amber-600 font-bold">{(reservedStock || 0).toLocaleString()}</span>
-                </div>
+            {/* معلومات المخزون - المتوفر والمحجوز بشكل مضغوط */}
+            <div className="text-left text-sm">
+              <div className="flex items-center gap-3">
+                <span className="text-green-600 font-medium">
+                  متوفر: <span className="font-bold">{(totalStock || 0).toLocaleString()}</span>
+                </span>
+                <span className="text-amber-600 font-medium">
+                  محجوز: <span className="font-bold">{(reservedStock || 0).toLocaleString()}</span>
+                </span>
               </div>
             </div>
           </div>
