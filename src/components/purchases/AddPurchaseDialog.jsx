@@ -71,6 +71,8 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
         setIsSubmitting(true);
         try {
             const totalCost = items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0);
+            const finalShippingCost = Number(shippingCost) || 0;
+            
             const purchaseData = {
                 supplier,
                 purchaseDate: new Date(purchaseDate),
@@ -80,11 +82,11 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                     quantity: Number(item.quantity)
                 })),
                 totalCost,
-                shippingCost: Number(shippingCost) || 0,
+                shippingCost: finalShippingCost,
                 status: 'completed'
             };
             
-            console.log('Purchase data:', purchaseData);
+            console.log('Purchase data with shipping:', purchaseData);
             const result = await addPurchase(purchaseData);
             
             if (result.success) {
@@ -145,7 +147,15 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                         </div>
                         <div>
                             <Label htmlFor="shippingCost">مصاريف الشحن (د.ع)</Label>
-                            <Input id="shippingCost" type="number" value={shippingCost} onChange={e => setShippingCost(e.target.value)} />
+                            <Input 
+                                id="shippingCost" 
+                                type="number" 
+                                min="0"
+                                step="0.01"
+                                placeholder="0"
+                                value={shippingCost || ''} 
+                                onChange={e => setShippingCost(Number(e.target.value) || 0)} 
+                            />
                         </div>
                     </div>
 

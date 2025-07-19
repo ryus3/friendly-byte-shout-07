@@ -281,12 +281,15 @@ const PurchaseInvoicePDF = ({ purchase }) => {
               {formatCurrency((purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}
             </Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>مصاريف الشحن:</Text>
-            <Text style={styles.totalValue}>
-              {formatCurrency((purchase.total_amount || 0) - (purchase.paid_amount || 0))}
-            </Text>
-          </View>
+          {/* حساب الشحن من إجمالي الفاتورة - قيمة المنتجات */}
+          {((purchase.total_amount || 0) - (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0)) > 0 && (
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>مصاريف الشحن:</Text>
+              <Text style={styles.totalValue}>
+                {formatCurrency((purchase.total_amount || 0) - (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}
+              </Text>
+            </View>
+          )}
           <View style={[styles.totalRow, { borderTop: 2, borderTopColor: '#2563eb', paddingTop: 10 }]}>
             <Text style={styles.grandTotal}>إجمالي الفاتورة:</Text>
             <Text style={styles.grandTotal}>{formatCurrency(purchase.total_amount)}</Text>

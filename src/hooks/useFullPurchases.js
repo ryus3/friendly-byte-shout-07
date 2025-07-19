@@ -22,7 +22,7 @@ export const useFullPurchases = () => {
           total_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
           paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
           status: 'completed',
-          notes: purchaseData.shippingCost > 0 ? `شحن: ${purchaseData.shippingCost} د.ع` : null,
+          notes: purchaseData.shippingCost > 0 ? `شحن: ${purchaseData.shippingCost} د.ع | تاريخ: ${purchaseData.purchaseDate || 'اليوم'}` : `تاريخ: ${purchaseData.purchaseDate || 'اليوم'}`,
           items: purchaseData.items, // حفظ العناصر كـ JSON أيضاً
           created_by: user?.user_id
         })
@@ -89,9 +89,10 @@ export const useFullPurchases = () => {
       });
 
       // إضافة مصروف الشحن إذا كان موجود
-      if (purchaseData.shippingCost > 0) {
+      if (purchaseData.shippingCost && purchaseData.shippingCost > 0) {
+        console.log(`إضافة مصروف الشحن: ${purchaseData.shippingCost} د.ع`);
         await addExpense({
-          category: 'شحن',
+          category: 'شحن ونقل',
           expense_type: 'operational',
           description: `تكلفة شحن فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
           amount: purchaseData.shippingCost,
@@ -99,6 +100,9 @@ export const useFullPurchases = () => {
           receipt_number: newPurchase.purchase_number + '-SHIP',
           status: 'approved'
         });
+        console.log(`تم إضافة مصروف الشحن بنجاح: ${purchaseData.shippingCost} د.ع`);
+      } else {
+        console.log('لا يوجد مصروف شحن لإضافته');
       }
 
       // تحديث قائمة المشتريات
