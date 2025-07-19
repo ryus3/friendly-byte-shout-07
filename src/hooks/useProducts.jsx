@@ -186,8 +186,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
             cost_price: parseFloat(variant.costPrice) || 0,
             profit_amount: parseFloat(variant.profitAmount) || productData.profitAmount || 0,
             barcode: uniqueBarcode, // استخدام الباركود الفريد المولد
-            images: imageUrl ? [imageUrl] : [],
-            hint: variant.hint || ''
+            images: imageUrl ? [imageUrl] : []
           });
       }
 
@@ -432,8 +431,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: parseFloat(v.price) || parseFloat(productData.price) || 0,
                   cost_price: parseFloat(v.cost_price || v.costPrice) || parseFloat(productData.costPrice) || 0,
                   profit_amount: parseFloat(v.profit_amount || v.profitAmount || productData.profitAmount) || 0,
-                  images: imageUrl ? [imageUrl] : (existing.images || []),
-                  hint: v.hint || ''
+                  images: imageUrl ? [imageUrl] : (existing.images || [])
                 };
                 
                 variantsToUpdate.push({
@@ -462,8 +460,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   profit_amount: parseFloat(v.profit_amount || v.profitAmount || productData.profitAmount) || 0,
                   barcode: barcode,
                   images: imageUrl ? [imageUrl] : [],
-                  quantity: parseInt(v.quantity) || 0, // إضافة الكمية للإدراج
-                  hint: v.hint || ''
+                  quantity: parseInt(v.quantity) || 0 // إضافة الكمية للإدراج
                 });
               }
             }
@@ -479,8 +476,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: variant.price,
                   cost_price: variant.cost_price,
                   profit_amount: variant.profit_amount,
-                  images: variant.images,
-                  hint: variant.hint || ''
+                  images: variant.images
                 })
                 .eq('id', variant.id);
                 
@@ -522,8 +518,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   cost_price: v.cost_price,
                   profit_amount: v.profit_amount,
                   barcode: v.barcode,
-                  images: v.images,
-                  hint: v.hint || ''
+                  images: v.images
                 })))
                 .select();
                 
