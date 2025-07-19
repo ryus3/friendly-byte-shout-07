@@ -23,29 +23,41 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             const html5QrCode = new Html5Qrcode("reader");
             readerRef.current = html5QrCode;
 
-            // استخدام الكاميرا الخلفية مع إعدادات محسنة للسرعة
-            const cameraId = cameras.find(camera => 
+            // البحث عن الكاميرا الخلفية أولاً
+            const backCamera = cameras.find(camera => 
               camera.label.toLowerCase().includes('back') || 
-              camera.label.toLowerCase().includes('rear')
-            )?.id || cameras[0].id;
+              camera.label.toLowerCase().includes('rear') ||
+              camera.label.toLowerCase().includes('environment')
+            );
+            
+            const cameraConfig = backCamera ? backCamera.id : { facingMode: "environment" };
 
             await html5QrCode.start(
-              cameraId,
+              cameraConfig,
               {
-                fps: 30, // زيادة معدل الإطارات للمسح السريع
-                qrbox: { width: 300, height: 200 }, // منطقة مسح أكبر
-                aspectRatio: 1.0,
-                disableFlip: false, // تمكين قلب الصورة
+                fps: 20, // تقليل معدل الإطارات قليلاً للاستقرار
+                qrbox: function(viewfinderWidth, viewfinderHeight) {
+                  // صندوق مسح متجاوب
+                  const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                  const qrboxSize = Math.floor(minEdge * 0.7);
+                  return {
+                    width: qrboxSize,
+                    height: qrboxSize * 0.7
+                  };
+                },
+                aspectRatio: 1.777778, // 16:9
+                disableFlip: false,
+                videoConstraints: {
+                  facingMode: "environment" // فرض استخدام الكاميرا الخلفية
+                }
               },
               (decodedText, decodedResult) => {
-                // مسح ناجح - إضافة فورية
-                console.log("Barcode scanned:", decodedText);
+                // مسح ناجح
+                console.log("Barcode scanned successfully:", decodedText);
                 onScanSuccess(decodedText);
-                // عدم إغلاق النافذة للمسح المستمر
-                // onOpenChange(false);
               },
               (errorMessage) => {
-                // تجاهل أخطاء المسح العادية للحصول على أداء أفضل
+                // تجاهل أخطاء المسح العادية
               }
             );
             setIsScanning(true);
@@ -76,39 +88,42 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary text-lg">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
+              <rect x="3" y="5" width="18" height="14" stroke="currentColor" strokeWidth="2" fill="none" rx="2"/>
+              <path d="M5 8h1M5 10h1M5 12h1M5 14h1M5 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M8 8h2M8 10h1M8 12h2M8 14h1M8 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M12 8h1M12 10h2M12 12h1M12 14h2M12 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M16 8h2M16 10h1M16 12h2M16 14h1M16 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            مسح الباركود السريع
+            قارئ الباركود السريع
           </DialogTitle>
           <DialogDescription className="text-sm">
-            🔥 <strong>مسح سريع مستمر!</strong> وجّه الكاميرا نحو الباركود وسيتم إضافة المنتجات تلقائياً
+            🎯 <strong>وجه الكاميرا للباركود</strong> - سيتم إضافة المنتجات تلقائياً للسلة
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           <div 
             id="reader" 
-            className="w-full rounded-xl overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10"
-            style={{ minHeight: '280px', maxHeight: '350px' }}
+            className="w-full rounded-xl overflow-hidden border-2 border-primary/30 bg-gray-900"
+            style={{ minHeight: '300px', maxHeight: '400px' }}
           />
           
           {isScanning && (
-            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
+            <div className="text-center p-4 bg-green-50 rounded-xl border-2 border-green-200">
               <div className="flex items-center justify-center gap-3 text-green-700">
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-bold text-lg">📱 الكاميرا جاهزة للمسح!</span>
+                <span className="font-bold">📱 الكاميرا الخلفية نشطة!</span>
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
               <div className="mt-2 space-y-1">
                 <p className="text-sm font-medium text-green-600">
-                  ✅ يعمل على الهاتف والحاسوب
+                  ✅ وجه الهاتف للباركود على الملصق
                 </p>
                 <p className="text-xs text-green-500">
-                  🚀 مرر الكاميرا فوق أي باركود - ستتم الإضافة فوراً!
+                  🚀 المنتجات ستضاف للسلة فوراً عند القراءة
                 </p>
                 <p className="text-xs text-blue-600 font-medium">
-                  💡 نصيحة: اتركها مفتوحة لمسح عشرات المنتجات بسرعة
+                  💡 اتركها مفتوحة لمسح عدة منتجات متتالية
                 </p>
               </div>
             </div>
@@ -117,7 +132,7 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           {!isScanning && !error && (
             <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="text-blue-600">
-                <span className="font-medium">🔄 جاري تشغيل الكاميرا...</span>
+                <span className="font-medium">🔄 جاري تشغيل الكاميرا الخلفية...</span>
               </div>
             </div>
           )}
@@ -130,7 +145,7 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             <AlertDescription>
               {error}
               <br />
-              <strong>💡 للهاتف:</strong> تأكد من تمكين الكاميرا في إعدادات المتصفح
+              <strong>💡 للهاتف:</strong> تأكد من تمكين الكاميرا وأغلق التطبيقات الأخرى التي تستخدمها
             </AlertDescription>
           </Alert>
         )}

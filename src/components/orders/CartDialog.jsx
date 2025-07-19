@@ -107,10 +107,19 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
           <DialogTitle className="gradient-text flex items-center justify-between gap-2">
             <div className="flex items-center gap-2"><ShoppingCart /> سلة التسوق</div>
             <div className='flex gap-2'>
-              <Button variant="outline" size="icon" onClick={() => setIsScannerOpen(true)} className="hover:bg-primary/10" title="مسح الباركود">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => setIsScannerOpen(true)} 
+                className="hover:bg-primary/10 border-primary/30" 
+                title="مسح الباركود لإضافة المنتجات"
+              >
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <rect x="3" y="5" width="18" height="14" stroke="currentColor" strokeWidth="2" fill="none" rx="2"/>
+                  <path d="M5 8h1M5 10h1M5 12h1M5 14h1M5 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M8 8h2M8 10h1M8 12h2M8 14h1M8 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M12 8h1M12 10h2M12 12h1M12 14h2M12 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M16 8h2M16 10h1M16 12h2M16 14h1M16 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </Button>
             </div>
