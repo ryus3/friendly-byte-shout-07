@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -83,14 +82,10 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
   const [editingSize, setEditingSize] = useState(null);
   const [sizeForm, setSizeForm] = useState({ name: '', type: 'letter' });
   const [sortedSizes, setSortedSizes] = useState(sizes);
-  const { filterSizesByPermission } = usePermissionBasedData();
 
   React.useEffect(() => {
     setSortedSizes(sizes);
   }, [sizes]);
-
-  // فلترة الأحجام حسب الصلاحيات
-  const filteredSizes = filterSizesByPermission(sortedSizes);
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
@@ -237,9 +232,9 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
         )}
 
         <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={filteredSizes.map(s => s.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={sortedSizes.map(s => s.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {filteredSizes.map((size) => (
+              {sortedSizes.map((size) => (
                 <SortableSize
                   key={size.id}
                   size={size}
@@ -251,9 +246,9 @@ const SizesManagerNew = ({ sizes, onRefetch }) => {
           </SortableContext>
         </DndContext>
 
-        {filteredSizes.length === 0 && (
+        {sizes.length === 0 && (
           <div className="text-center py-8 text-muted-foreground">
-            لا توجد قياسات مسموحة أو مضافة بعد
+            لا توجد قياسات مضافة بعد
           </div>
         )}
         

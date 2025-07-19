@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import AddEditDepartmentDialog from './AddEditDepartmentDialog';
 
 const DepartmentsManager = () => {
@@ -19,7 +18,6 @@ const DepartmentsManager = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
-  const { filterDepartmentsByPermission } = usePermissionBasedData();
   const { toast } = useToast();
 
   // جميع الأيقونات المتاحة
@@ -145,9 +143,7 @@ const DepartmentsManager = () => {
 
       {/* Departments Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {(() => {
-          const filteredDepartments = filterDepartmentsByPermission(departments);
-          return filteredDepartments.map((dept) => {
+        {departments.map((dept) => {
           const IconComponent = iconOptions[dept.icon] || Package;
           
           return (
@@ -231,20 +227,20 @@ const DepartmentsManager = () => {
               </CardContent>
             </Card>
           );
-          });
-        })()}
+        })}
       </div>
 
-      {(() => {
-        const filteredDepartments = filterDepartmentsByPermission(departments);
-        return filteredDepartments.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-muted-foreground mb-2">لا توجد أقسام مسموحة</h3>
-            <p className="text-muted-foreground mb-4">لا يمكنك رؤية أي أقسام بناء على صلاحياتك</p>
-          </div>
-        );
-      })()}
+      {departments.length === 0 && (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-muted-foreground mb-2">لا توجد أقسام</h3>
+          <p className="text-muted-foreground mb-4">ابدأ بإضافة أول قسم رئيسي</p>
+          <Button onClick={handleAdd} className="gap-2">
+            <Plus className="h-4 w-4" />
+            إضافة قسم جديد
+          </Button>
+        </div>
+      )}
 
       {/* Dialog */}
       <AddEditDepartmentDialog 

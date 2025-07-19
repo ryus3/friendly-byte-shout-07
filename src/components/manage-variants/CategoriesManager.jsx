@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useVariants } from '@/contexts/VariantsContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import Loader from '@/components/ui/loader';
@@ -41,14 +40,13 @@ const SortableCategoryItem = ({ item, onEdit, onDelete }) => {
 
 const CategoryList = React.memo(({ categoryType, title }) => {
   const { categories, loading, deleteCategory, updateCategoryOrder } = useVariants();
-  const { filterCategoriesByPermission } = usePermissionBasedData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
 
-  const filteredCategories = useMemo(() => {
-    const categoriesByType = categories.filter(c => c.type === categoryType).sort((a, b) => a.order - b.order);
-    return filterCategoriesByPermission(categoriesByType);
-  }, [categories, categoryType, filterCategoriesByPermission]);
+  const filteredCategories = useMemo(() => 
+    categories.filter(c => c.type === categoryType).sort((a, b) => a.order - b.order),
+    [categories, categoryType]
+  );
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
