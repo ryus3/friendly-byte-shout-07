@@ -105,7 +105,7 @@ const InventoryPage = () => {
   const { allProducts, orders, loading, settings, updateVariantStock } = useInventory();
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   
   console.log("📊 صفحة الجرد:", { 
     allProducts: allProducts?.length, 
@@ -211,8 +211,8 @@ const InventoryPage = () => {
       userIsAdmin: isAdmin
     });
     
-    // استخدام المنتجات من useProducts دائماً
-    const productsToUse = allProducts;
+    // استخدام المنتجات المفلترة حسب صلاحيات المستخدم
+    const productsToUse = products;
     
     if (!Array.isArray(productsToUse) || !settings) {
       console.log("❌ بيانات غير مكتملة:", { 
@@ -270,7 +270,7 @@ const InventoryPage = () => {
     
     console.log("✅ تمت معالجة العناصر:", processedItems.length);
     return processedItems;
-  }, [allProducts, settings, user, isAdmin]);
+  }, [products, settings, user, isAdmin]);
   
   const reservedOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : [];
