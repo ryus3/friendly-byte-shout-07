@@ -44,30 +44,37 @@ const PurchasesPage = () => {
 
   const filteredPurchases = useMemo(() => {
     if (!purchases) return [];
-    let filtered = [...purchases].sort((a, b) => new Date(b.purchaseDate || b.createdAt) - new Date(a.purchaseDate || a.createdAt));
+    let filtered = [...purchases].sort((a, b) => 
+      new Date(b.purchase_date || b.created_at) - new Date(a.purchase_date || a.created_at)
+    );
 
+    // فلترة البحث
     if (filters.searchTerm) {
-        const term = filters.searchTerm.toLowerCase();
-        filtered = filtered.filter(p => 
-            (p.supplier?.toLowerCase() || '').includes(term) ||
-            (p.id?.toString().toLowerCase() || '').includes(term)
-        );
+      const term = filters.searchTerm.toLowerCase();
+      filtered = filtered.filter(p => 
+        (p.supplier_name?.toLowerCase() || '').includes(term) ||
+        (p.purchase_number?.toString().toLowerCase() || '').includes(term) ||
+        (p.id?.toString().toLowerCase() || '').includes(term)
+      );
     }
 
+    // فلترة التاريخ
     if (filters.dateFilter !== 'all') {
-        const now = new Date();
-        let startDate;
-        if (filters.dateFilter === 'this_month') {
-            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-        } else if (filters.dateFilter === 'this_year') {
-            startDate = new Date(now.getFullYear(), 0, 1);
-        }
-        if(startDate) {
-            filtered = filtered.filter(p => {
-                const purchaseDate = p.purchaseDate ? new Date(p.purchaseDate) : new Date(p.createdAt);
-                return purchaseDate >= startDate;
-            });
-        }
+      const now = new Date();
+      let startDate;
+      
+      if (filters.dateFilter === 'this_month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (filters.dateFilter === 'this_year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+      }
+      
+      if (startDate) {
+        filtered = filtered.filter(p => {
+          const purchaseDate = p.purchase_date ? new Date(p.purchase_date) : new Date(p.created_at);
+          return purchaseDate >= startDate;
+        });
+      }
     }
 
     return filtered;
