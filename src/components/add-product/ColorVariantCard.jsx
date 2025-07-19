@@ -12,13 +12,18 @@ import ImageUploader from '@/components/manage-products/ImageUploader';
 const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price, costPrice, profitAmount, handleImageSelect, handleImageRemove, initialImage, dragHandleProps, isEditMode = false, showInventoryData = false, productName = '' }) => {
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
+    console.log(`🔧 تحديث المتغير: ${colorId}-${sizeId}, ${field} = ${value}`);
     setVariants(prev => prev.map(v => {
-      // في وضع التعديل، نتحقق من color_id و colorId و size_id و sizeId
-      const isMatchingVariant = (v.colorId === colorId || v.color_id === colorId) && 
-                               (v.sizeId === sizeId || v.size_id === sizeId);
+      // التحقق من جميع التطابقات الممكنة
+      const isMatching = (
+        (v.colorId === colorId || v.color_id === colorId) && 
+        (v.sizeId === sizeId || v.size_id === sizeId)
+      );
       
-      if (isMatchingVariant) {
-        return { ...v, [field]: value };
+      if (isMatching) {
+        const updated = { ...v, [field]: value };
+        console.log(`✅ تم تحديث المتغير:`, updated);
+        return updated;
       }
       return v;
     }));
