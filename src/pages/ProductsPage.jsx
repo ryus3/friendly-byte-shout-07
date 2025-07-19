@@ -72,18 +72,8 @@ const ProductsPage = () => {
 
   // فلترة المنتجات أولاً بالصلاحيات ثم بالفلاتر الإضافية
   const permissionFilteredProducts = useMemo(() => {
-    console.log('🔍 فلترة المنتجات بالصلاحيات:', { 
-      originalProducts: products?.length,
-      isAdmin,
-      hasFilterFunction: !!filterProductsByPermissions
-    });
-    
-    let filtered = filterProductsByPermissions(products);
-    
-    console.log('🔍 النتيجة بعد فلترة الصلاحيات:', {
-      filteredCount: filtered?.length,
-      originalCount: products?.length
-    });
+    // المدير يرى كل المنتجات مباشرة
+    let filtered = isAdmin ? products : filterProductsByPermissions(products);
     
     // تطبيق فلاتر إضافية للمستخدمين الذين لديهم صلاحيات متعددة
     if (permissionFilters.department !== 'all') {
@@ -93,7 +83,7 @@ const ProductsPage = () => {
     }
 
     if (permissionFilters.category !== 'all') {
-      filtered = filtered.filter(product => 
+      filtered = filtered.filter(product =>
         product.product_categories?.some(pc => pc.category_id === permissionFilters.category)
       );
     }
