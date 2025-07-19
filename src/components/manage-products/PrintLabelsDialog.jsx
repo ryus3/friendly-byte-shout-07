@@ -21,18 +21,17 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
         
         .label-card {
-          width: 50mm;
-          height: 30mm;
-          border: 2px solid #000000;
-          padding: 2mm;
+          width: 45mm;
+          height: 25mm;
+          border: 1px solid #64748b;
+          padding: 1mm;
           page-break-inside: avoid;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           background: white;
-          border-radius: 0;
+          border-radius: 1.5mm;
           margin: 0 auto;
-          font-family: 'Arial', sans-serif;
         }
         
         .label-content {
@@ -41,55 +40,45 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          align-items: center;
         }
         
         .label-product-name {
-          font-size: 14px;
-          font-weight: 900;
+          font-size: 9px;
+          font-weight: 700;
           margin-bottom: 1mm;
-          line-height: 1.2;
-          color: #000000;
-          text-transform: none;
-          width: 100%;
-          direction: rtl;
-          unicode-bidi: plaintext;
+          line-height: 1.1;
+          color: #1e293b;
+          text-transform: uppercase;
         }
         
         .label-variant-info {
-          font-size: 11px;
-          margin-bottom: 2mm;
-          color: #000000;
-          font-weight: 600;
-          direction: rtl;
-          unicode-bidi: plaintext;
+          font-size: 7px;
+          margin-bottom: 1mm;
+          color: #64748b;
+          font-weight: 500;
         }
         
         .label-barcode-container {
-          margin: 1mm 0;
+          margin: 0.5mm 0;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
           flex: 1;
-          width: 100%;
         }
         
         .label-barcode-number {
-          font-size: 8px;
-          color: #000000;
-          margin-top: 1mm;
-          font-family: 'Courier New', monospace;
-          font-weight: 500;
+          font-size: 5px;
+          color: #475569;
+          margin-top: 0.5mm;
+          font-family: monospace;
         }
         
         .label-price {
-          font-size: 13px;
-          font-weight: 900;
-          color: #000000;
-          margin-top: 1mm;
-          direction: rtl;
-          unicode-bidi: plaintext;
+          font-size: 8px;
+          font-weight: 700;
+          color: #dc2626;
+          margin-top: 0.5mm;
         }
         
         @media print {
@@ -106,21 +95,21 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           <div key={index} className="label-card">
             <div className="label-content">
               <h3 className="label-product-name">{label.name}</h3>
-              <p className="label-variant-info">{label.size} / {label.color}</p>
+              <p className="label-variant-info">{label.color} • {label.size}</p>
               <div className="label-barcode-container">
                 <Barcode 
                   value={label.barcode} 
-                  height={20} 
-                  width={1.5} 
+                  height={8} 
+                  width={0.7} 
                   fontSize={0} 
                   margin={0}
                   background="transparent"
-                  lineColor="#000000"
+                  lineColor="#1e293b"
                   displayValue={false}
                 />
                 <p className="label-barcode-number">{label.barcode}</p>
               </div>
-              <p className="label-price">د.ع {label.price.toLocaleString()}</p>
+              <p className="label-price">{label.price.toLocaleString()} د.ع</p>
             </div>
           </div>
         ))}
@@ -322,16 +311,16 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .simple-label-card {
-                    width: 180px;
-                    height: 110px;
-                    border: 2px solid #000000;
+                    width: 160px;
+                    height: 80px;
+                    border: 1px solid #000000;
                     padding: 8px;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
                     border-radius: 0;
                     background: #ffffff;
-                    font-family: 'Arial', sans-serif;
+                    font-family: Arial, sans-serif;
                   }
                   
                   .simple-label-content {
@@ -344,50 +333,45 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .simple-label-product-name {
-                    font-size: 16px;
-                    font-weight: 900;
-                    margin-bottom: 3px;
-                    line-height: 1.2;
+                    font-size: 11px;
+                    font-weight: bold;
+                    margin-bottom: 2px;
+                    line-height: 1.1;
                     color: #000000;
                     max-width: 100%;
-                    direction: rtl;
-                    unicode-bidi: plaintext;
-                    text-align: center;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
                   }
                   
                   .simple-label-variant-info {
-                    font-size: 12px;
-                    margin-bottom: 4px;
+                    font-size: 9px;
+                    margin-bottom: 3px;
                     color: #000000;
-                    font-weight: 600;
-                    direction: rtl;
-                    unicode-bidi: plaintext;
+                    font-weight: normal;
                   }
                   
                   .simple-label-barcode-container {
-                    margin: 3px 0;
+                    margin: 2px 0;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     flex: 1;
                     justify-content: center;
-                    width: 100%;
                   }
                   
                   .simple-label-barcode-number {
-                    font-size: 9px;
+                    font-size: 7px;
                     color: #000000;
-                    margin-top: 2px;
-                    font-family: 'Courier New', monospace;
-                    font-weight: 500;
+                    margin-top: 1px;
+                    font-family: monospace;
                   }
                   
                   .simple-label-price {
-                    font-size: 14px;
-                    font-weight: 900;
-                    color: #000000;
+                    font-size: 10px;
+                    font-weight: bold;
+                    color: #dc2626;
                     direction: rtl;
-                    unicode-bidi: plaintext;
                   }
                 `}</style>
                 <div className="simple-label-grid">
@@ -395,12 +379,12 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                     <div key={index} className="simple-label-card">
                       <div className="simple-label-content">
                         <h3 className="simple-label-product-name">{label.name}</h3>
-                        <p className="simple-label-variant-info">{label.size} / {label.color}</p>
+                        <p className="simple-label-variant-info">{label.color} / {label.size}</p>
                         <div className="simple-label-barcode-container">
                           <Barcode 
                             value={label.barcode} 
-                            height={24} 
-                            width={1.8} 
+                            height={12} 
+                            width={1.0} 
                             fontSize={0} 
                             margin={0}
                             background="transparent"
