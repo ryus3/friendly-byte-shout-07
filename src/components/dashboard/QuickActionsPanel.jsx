@@ -50,7 +50,7 @@ const QuickActionsPanel = ({ userPermissions, navigate }) => {
       permission: userPermissions.canViewInventory
     },
     {
-      title: "قارئ الباركود",
+      title: "قارئ QR Code",
       description: "مسح المنتجات",
       icon: QrCode,
       color: "bg-cyan-500 hover:bg-cyan-600",

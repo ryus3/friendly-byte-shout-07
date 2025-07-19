@@ -56,7 +56,7 @@ import React, { useMemo } from 'react';
               {product.barcode && (
                 <div className="flex items-center gap-1 mt-1">
                   <Hash className="w-3 h-3 text-white/70" />
-                  <span className="text-xs text-white/70 font-mono">{product.barcode}</span>
+                   <span className="text-xs text-white/70 font-mono">QR: {product.barcode}</span>
                 </div>
               )}
             </div>

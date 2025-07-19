@@ -114,7 +114,7 @@ const MenuContent = ({ onClose }) => {
 
 const SearchSheet = ({ children, open, onOpenChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
+  const [isQRCodeOpen, setIsQRCodeOpen] = useState(false);
   const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
   const navigate = useNavigate();
 
@@ -139,7 +139,7 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
     }
   };
 
-  const handleBarcodeScan = (barcode) => {
+  const handleQRCodeScan = (qrCode) => {
     // التأكد من وجود البيانات قبل البحث
     if (!products || !Array.isArray(products)) {
       toast({
@@ -150,40 +150,70 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
       return;
     }
 
-    // البحث عن المنتج بالباركود
-    const foundProduct = products.find(product => {
-      if (!product) return false;
-      
-      // البحث في متغيرات المنتج
-      if (product.variants && Array.isArray(product.variants)) {
-        const hasVariantBarcode = product.variants.some(variant => 
-          variant && variant.barcode === barcode
-        );
-        if (hasVariantBarcode) return true;
+    try {
+      // محاولة تحليل QR code كـ JSON
+      const qrData = JSON.parse(qrCode);
+      if (qrData.type === 'product') {
+        // QR code ذكي
+        const foundProduct = products.find(product => {
+          if (product.id === qrData.product_id) return true;
+          if (qrData.variant_id && product.variants.some(v => v.id === qrData.variant_id)) return true;
+          return false;
+        });
+        
+        if (foundProduct) {
+          navigate('/products', { 
+            state: { selectedProduct: foundProduct, searchTerm: qrData.product_name }
+          });
+          toast({
+            title: "✅ تم العثور على المنتج!",
+            description: `المنتج: ${qrData.product_name} - ${qrData.color} - ${qrData.size}`,
+          });
+        } else {
+          toast({
+            title: "❌ QR code غير معروف",
+            description: `QR Code: ${qrData.id}`,
+            variant: "destructive"
+          });
+        }
+      } else {
+        throw new Error('QR code غير صالح');
       }
+    } catch (error) {
+      // QR code عادي أو خطأ في التحليل
+      const foundProduct = products.find(product => {
+        if (!product) return false;
+        
+        // البحث في QR codes المتغيرات
+        if (product.variants && Array.isArray(product.variants)) {
+          const hasVariantQRCode = product.variants.some(variant => 
+            variant && variant.barcode === qrCode
+          );
+          if (hasVariantQRCode) return true;
+        }
+        
+        // البحث في QR code المنتج الرئيسي
+        return product.barcode === qrCode;
+      });
       
-      // البحث في باركود المنتج الرئيسي
-      return product.barcode === barcode;
-    });
-
-    if (foundProduct) {
-      navigate('/products', { 
-        state: { selectedProduct: foundProduct, searchTerm: barcode }
-      });
-      toast({
-        title: "✅ تم العثور على المنتج!",
-        description: foundProduct?.name || "منتج غير معروف",
-        variant: "success"
-      });
-    } else {
-      toast({
-        title: "❌ لم يتم العثور على المنتج",
-        description: `الباركود: ${barcode}`,
-        variant: "destructive"
-      });
+      if (foundProduct) {
+        navigate('/products', { 
+          state: { selectedProduct: foundProduct, searchTerm: qrCode }
+        });
+        toast({
+          title: "✅ تم العثور على المنتج!",
+          description: foundProduct?.name || "منتج غير معروف",
+        });
+      } else {
+        toast({
+          title: "❌ QR code غير معروف",
+          description: `QR Code: ${qrCode}`,
+          variant: "destructive"
+        });
+      }
     }
     
-    setIsBarcodeOpen(false);
+    setIsQRCodeOpen(false);
     onOpenChange(false);
   };
 
@@ -209,7 +239,7 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
             <Button 
               variant="outline"
               size="icon"
-              onClick={() => setIsBarcodeOpen(true)}
+              onClick={() => setIsQRCodeOpen(true)}
               className="shrink-0"
             >
               <div className="w-5 h-5">
@@ -259,9 +289,9 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
         </div>
       </SheetContent>
       <BarcodeScannerDialog
-        open={isBarcodeOpen}
-        onOpenChange={setIsBarcodeOpen}
-        onScanSuccess={handleBarcodeScan}
+        open={isQRCodeOpen}
+        onOpenChange={setIsQRCodeOpen}
+        onScanSuccess={handleQRCodeScan}
       />
     </Sheet>
   );

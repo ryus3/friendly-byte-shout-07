@@ -18,13 +18,13 @@ const BarcodeInventoryCard = () => {
         <>
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><QrCode /> الجرد بالباركود</CardTitle>
-                    <CardDescription>جرد المخزون بسرعة ودقة باستخدام قارئ الباركود.</CardDescription>
+                    <CardTitle className="flex items-center gap-2"><QrCode /> الجرد بـ QR Code</CardTitle>
+                    <CardDescription>جرد المخزون بسرعة ودقة باستخدام قارئ QR Code.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={() => setIsModalOpen(true)}>
                         <Play className="w-4 h-4 ml-2" />
-                        بدء الجرد بالباركود
+                        بدء الجرد بـ QR Code
                     </Button>
                 </CardContent>
             </Card>
@@ -77,7 +77,7 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
             }));
             audioRef.current?.play();
         } else {
-            toast({ title: "باركود غير معروف", variant: 'destructive' });
+            toast({ title: "QR code غير معروف", variant: 'destructive' });
         }
     };
 
@@ -124,7 +124,7 @@ const BarcodeInventoryDialog = ({ open, onOpenChange }) => {
         <Dialog open={open} onOpenChange={handleClose}>
             <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>الجرد بالباركود</DialogTitle>
+                    <DialogTitle>الجرد بـ QR Code</DialogTitle>
                     <DialogDescription>امسح المنتجات ضوئياً لمقارنتها بالمخزون المسجل.</DialogDescription>
                 </DialogHeader>
                 

@@ -82,7 +82,7 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
               size="icon"
               onClick={onBarcodeSearch}
               className="flex-shrink-0 hover:bg-primary/10"
-              title="قراءة الباركود"
+              title="قراءة QR Code"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />

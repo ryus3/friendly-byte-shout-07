@@ -80,7 +80,7 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
             {product.barcode && (
               <div className="flex items-center gap-2 mt-2">
                 <Hash className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-mono">{product.barcode}</span>
+                <span className="text-xs text-muted-foreground font-mono">QR: {product.barcode}</span>
               </div>
             )}
           </div>
