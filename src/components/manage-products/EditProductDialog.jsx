@@ -87,10 +87,13 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
       
       // تحديث المتغيرات مع ضمان الحصول على البيانات الصحيحة
       const productVariants = product.product_variants || product.variants || [];
+      const productInventory = product.inventory || [];
       console.log('🔍 Product variants loaded:', productVariants);
+      console.log('🔍 Product inventory loaded:', productInventory);
       
       const updatedVariants = productVariants.map(variant => {
         // إضافة البيانات المفقودة من العلاقات
+        const inventoryItem = productInventory.find(inv => inv.variant_id === variant.id);
         const variantWithFullData = {
           ...variant,
           colorId: variant.color_id,
@@ -99,8 +102,13 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
           color: variant.colors?.name || allColors.find(c => c.id === variant.color_id)?.name || 'غير محدد',
           size: variant.sizes?.name || sizes.find(s => s.id === variant.size_id)?.name || 'غير محدد',
           // ضمان وجود بيانات المخزون الصحيحة
-          quantity: variant.inventory?.quantity || variant.inventory?.[0]?.quantity || variant.quantity || 0,
+          quantity: inventoryItem?.quantity || variant.quantity || 0,
           costPrice: variant.cost_price || variant.costPrice || 0,
+          price: variant.price,
+          profitAmount: variant.profit_amount || product.profit_amount || 0,
+          barcode: variant.barcode,
+          images: variant.images || [],
+          inventory: inventoryItem // إضافة بيانات المخزون للمتغير
         };
         
         // توليد باركود إذا لم يكن موجود
