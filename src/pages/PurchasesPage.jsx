@@ -109,6 +109,11 @@ const PurchasesPage = () => {
     setPurchaseToDelete(null);
   };
 
+  const handlePurchaseAdded = () => {
+    setIsAddOpen(false);
+    fetchPurchases(); // إعادة تحميل المشتريات
+  };
+
   return (
     <>
       <Helmet>
