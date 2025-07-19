@@ -1849,6 +1849,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      cleanup_deleted_purchases: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_auto_settlement_request: {
         Args: { p_employee_id: string; p_order_ids: string[] }
         Returns: string
