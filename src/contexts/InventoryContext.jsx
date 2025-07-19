@@ -63,7 +63,7 @@ export const InventoryProvider = ({ children }) => {
   const [allSizes, setAllSizes] = useState([]);
 
   // Using custom hooks - بدون فلترة هنا (ستتم في الصفحات)
-  const { products: allProducts, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts } = useProducts([], settings, addNotification, user, departments, allColors, allSizes);
+  const { products: allProducts, setProducts, addProduct, updateProduct, deleteProducts, updateVariantStock, getLowStockProducts, refreshProducts } = useProducts([], settings, addNotification, user, departments, allColors, allSizes);
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   
   // الطلبات - بدون hooks مشكوك بها
@@ -828,7 +828,10 @@ export const InventoryProvider = ({ children }) => {
       employeeProfitRules,
     
     // العمليات
-    addProduct, updateProduct, deleteProducts, 
+    addProduct, 
+    updateProduct, 
+    deleteProducts, 
+    refreshProducts,
     addPurchase: () => {}, deletePurchase: () => {}, deletePurchases: () => {},
     createOrder: (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => createOrder(customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData),
     updateOrder, deleteOrders, updateSettings, addToCart, removeFromCart, updateCartItemQuantity,

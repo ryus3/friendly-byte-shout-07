@@ -229,10 +229,14 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
 
       if (finalProductError) throw finalProductError;
 
+      // تحديث قائمة المنتجات المحلية فوراً
+      setProducts(prev => [finalProduct, ...prev]);
+      
+      console.log('✅ تم إضافة المنتج وتحديث القائمة بنجاح:', finalProduct.name);
+      
       return { success: true, data: finalProduct };
     } catch (error) {
       console.error("Error adding product:", error);
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     }
   }, [settings, user]);
@@ -672,6 +676,34 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
     
     return lowStockVariants.sort((a, b) => a.quantity - b.quantity).slice(0, limit);
   }, [products, settings]);
+  const refreshProducts = useCallback(async () => {
+    try {
+      console.log('🔄 إعادة تحديث قائمة المنتجات...');
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          variants:product_variants(*),
+          inventory(*),
+          product_categories(category_id, categories(name)),
+          product_departments(department_id, departments(name, color, icon)),
+          product_product_types(product_type_id, product_types(name)),
+          product_seasons_occasions(season_occasion_id, seasons_occasions(name, type))
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ خطأ في تحديث المنتجات:', error);
+        return;
+      }
+
+      console.log('✅ تم تحديث المنتجات بنجاح:', data?.length || 0);
+      setProducts(data || []);
+    } catch (error) {
+      console.error('❌ خطأ في refreshProducts:', error);
+    }
+  }, []);
+
   return {
     products,
     setProducts,
@@ -681,5 +713,6 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
     deleteProducts,
     updateVariantStock,
     getLowStockProducts,
+    refreshProducts
   };
 };
