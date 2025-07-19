@@ -77,9 +77,33 @@ export const useFullPurchases = () => {
 
       await Promise.all(stockUpdatePromises);
 
-      // إضافة المصاريف
+      // حساب التكاليف
       const totalCost = purchaseData.items.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
+      const totalShipping = purchaseData.shippingCost || 0;
+      const totalTransfer = purchaseData.transferCost || 0;
+      const grandTotal = totalCost + totalShipping + totalTransfer;
       
+      // إضافة المعاملة المالية الرئيسية (خصم من مصدر التمويل)
+      await supabase.from('financial_transactions').insert({
+        transaction_type: 'expense',
+        reference_type: 'purchase',
+        reference_id: newPurchase.id,
+        amount: grandTotal,
+        description: `دفع فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
+        created_by: user?.user_id,
+        status: 'completed',
+        metadata: {
+          payment_source: purchaseData.paymentSource,
+          purchase_number: newPurchase.purchase_number,
+          supplier: purchaseData.supplier,
+          breakdown: {
+            products: totalCost,
+            shipping: totalShipping,
+            transfer: totalTransfer
+          }
+        }
+      });
+
       // إضافة مصروف البضاعة
       await addExpense({
         category: 'شراء بضاعة',
@@ -88,7 +112,11 @@ export const useFullPurchases = () => {
         amount: totalCost,
         vendor_name: purchaseData.supplier,
         receipt_number: newPurchase.purchase_number,
-        status: 'approved'
+        status: 'approved',
+        metadata: {
+          payment_source: purchaseData.paymentSource,
+          transaction_type: 'products_purchase'
+        }
       });
 
       // إضافة مصروف الشحن إذا كان موجود
@@ -101,7 +129,12 @@ export const useFullPurchases = () => {
           amount: purchaseData.shippingCost,
           vendor_name: purchaseData.supplier,
           receipt_number: newPurchase.purchase_number + '-SHIP',
-          status: 'approved'
+          status: 'approved',
+          metadata: {
+            payment_source: purchaseData.paymentSource,
+            transaction_type: 'shipping_cost',
+            parent_purchase: newPurchase.purchase_number
+          }
         });
         console.log(`تم إضافة مصروف الشحن بنجاح: ${purchaseData.shippingCost} د.ع`);
       } else {
@@ -118,7 +151,12 @@ export const useFullPurchases = () => {
           amount: purchaseData.transferCost,
           vendor_name: purchaseData.supplier,
           receipt_number: newPurchase.purchase_number + '-TRANSFER',
-          status: 'approved'
+          status: 'approved',
+          metadata: {
+            payment_source: purchaseData.paymentSource,
+            transaction_type: 'transfer_cost',
+            parent_purchase: newPurchase.purchase_number
+          }
         });
         console.log(`تم إضافة مصروف التحويل بنجاح: ${purchaseData.transferCost} د.ع`);
       } else {
@@ -135,10 +173,11 @@ export const useFullPurchases = () => {
       }, 100);
 
       console.log('✅ تمت إضافة الفاتورة بنجاح:', newPurchase);
+      console.log('💰 إجمالي التكلفة:', grandTotal, 'من مصدر:', purchaseData.paymentSource);
       
       toast({ 
         title: 'نجح', 
-        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح وتم تحديث المخزون والمحاسبة.`,
+        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح\nالإجمالي: ${grandTotal.toLocaleString()} د.ع من ${purchaseData.paymentSource === 'capital' ? 'رأس المال' : purchaseData.paymentSource === 'cash' ? 'القاصة' : 'مصدر آخر'}`,
         variant: 'success'
       });
 

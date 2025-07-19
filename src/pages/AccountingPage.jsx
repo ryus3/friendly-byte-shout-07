@@ -21,6 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
+import CapitalManagementCard from '@/components/accounting/CapitalManagementCard';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
@@ -397,6 +398,26 @@ const AccountingPage = () => {
                         </Card>
                     </div>
                 </div>
+
+                {/* إدارة رأس المال */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <CapitalManagementCard />
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>مصادر التمويل المستخدمة</CardTitle>
+                            <CardDescription>تفصيل كيفية تمويل المشتريات والمصاريف</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-center text-muted-foreground">
+                                <p>يتم عرض تفصيل مصادر التمويل في صفحة المشتريات</p>
+                                <Button variant="outline" onClick={() => navigate('/purchases')} className="mt-2">
+                                    عرض صفحة المشتريات
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
             </div>
             <ExpensesDialog
                 open={dialogs.expenses}
