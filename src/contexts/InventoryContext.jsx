@@ -345,10 +345,47 @@ export const InventoryProvider = ({ children }) => {
       // تحميل الإعدادات من قاعدة البيانات
       if (settingsRes.data && settingsRes.data.length > 0) {
         const dbSettings = {};
+        let dbCapital = null;
+        
         settingsRes.data.forEach(setting => {
+          if (setting.key === 'app_settings' && setting.value?.capital) {
+            dbCapital = setting.value.capital;
+          }
           dbSettings[setting.key] = setting.value;
         });
+        
         setSettings(prev => ({ ...prev, ...dbSettings }));
+        
+        // تحديث البيانات المحاسبية مع رأس المال من قاعدة البيانات
+        if (dbCapital !== null) {
+          setAccounting(prev => ({ ...prev, capital: dbCapital }));
+        }
+      }
+
+      // تحميل المصاريف من قاعدة البيانات
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (expensesData) {
+        const formattedExpenses = expensesData.map(expense => ({
+          id: expense.id,
+          date: expense.created_at,
+          transaction_date: expense.created_at,
+          category: expense.category,
+          description: expense.description,
+          amount: expense.amount,
+          vendor_name: expense.vendor_name,
+          receipt_number: expense.receipt_number,
+          status: expense.status,
+          related_data: {
+            category: expense.category,
+            vendor: expense.vendor_name
+          }
+        }));
+        
+        setAccounting(prev => ({ ...prev, expenses: formattedExpenses }));
       }
 
       // معالجة وتحويل بيانات الطلبات

@@ -106,7 +106,7 @@ const AccountingPage = () => {
         
         // تحقق من وجود البيانات الأساسية
         if (!orders || !Array.isArray(orders)) {
-            console.warn('⚠️ لا توجد بيانات طلبات');
+            console.warn('⚠️ لا توجد بيانات طلبات، orders:', orders);
             return {
                 totalRevenue: 0, cogs: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0,
                 inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, 
@@ -118,7 +118,15 @@ const AccountingPage = () => {
         const safeOrders = Array.isArray(orders) ? orders : [];
         const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
         
+        console.log('🔥 === تشخيص البيانات المالية ===');
         console.log('📊 إجمالي الطلبات:', safeOrders.length);
+        console.log('📊 حالة البيانات:', { 
+            orders: !!orders, 
+            ordersLength: orders?.length,
+            accounting: !!accounting,
+            expensesLength: accounting?.expenses?.length,
+            capital: accounting?.capital
+        });
         console.log('📊 الطلبات مع البيانات:', safeOrders.slice(0, 2));
         
         const filterByDate = (itemDateStr) => {
