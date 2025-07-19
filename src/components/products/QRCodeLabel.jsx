@@ -15,9 +15,9 @@ const QRCodeLabel = ({
 }) => {
   const labelRef = useRef(null);
 
-  // إنشاء بيانات QR Code
+  // إنشاء بيانات QR Code فريدة ومحسنة للقراءة السريعة
   const qrData = JSON.stringify({
-    id: `QR_${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+    id: variantId || productId || `QR_${Date.now().toString(36).toUpperCase()}`,
     type: 'product',
     product_id: productId,
     variant_id: variantId,
@@ -63,22 +63,25 @@ const QRCodeLabel = ({
               text-align: right;
             }
             .product-name {
+              font-size: 28px;
+              font-weight: 900;
+              color: #000;
+              margin-bottom: 4px;
+              font-family: 'Arial Black', Arial, sans-serif;
+              line-height: 1.1;
+            }
+            .product-details {
+              font-size: 20px;
+              font-weight: bold;
+              color: #000;
+              margin-bottom: 8px;
+              line-height: 1.1;
+            }
+            .price {
               font-size: 32px;
               font-weight: 900;
               color: #000;
-              margin-bottom: 8px;
-              font-family: 'Arial Black', Arial, sans-serif;
-            }
-            .product-details {
-              font-size: 24px;
-              font-weight: bold;
-              color: #000;
-              margin-bottom: 16px;
-            }
-            .price {
-              font-size: 40px;
-              font-weight: 900;
-              color: #000;
+              line-height: 1.1;
             }
             @media print {
               body { margin: 0; padding: 0; }
@@ -117,22 +120,22 @@ const QRCodeLabel = ({
       // رسم QR Code على اليسار
       ctx.drawImage(img, 20, 20, 160, 160);
       
-      // إضافة النص على اليمين
+      // إضافة النص على اليمين - مطابق للصورة
       ctx.fillStyle = 'black';
       ctx.textAlign = 'right';
       
       // اسم المنتج
-      ctx.font = '900 32px Arial';
-      ctx.fillText(`${productName} RYUS`, canvas.width - 20, 60);
+      ctx.font = '900 28px Arial';
+      ctx.fillText(`${productName} RYUS`, canvas.width - 20, 55);
       
       // اللون والمقاس
-      ctx.font = 'bold 24px Arial';
-      ctx.fillText(`${size} / ${color}`, canvas.width - 20, 100);
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText(`${size} / ${color}`, canvas.width - 20, 85);
       
       // السعر
       if (price) {
-        ctx.font = '900 40px Arial';
-        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 20, 150);
+        ctx.font = '900 32px Arial';
+        ctx.fillText(`${price.toLocaleString()} د.ع`, canvas.width - 20, 125);
       }
       
       // تحميل الصورة
@@ -166,23 +169,29 @@ const QRCodeLabel = ({
               <QRCodeSVG
                 value={qrData}
                 size={160}
-                level="M"
-                includeMargin={false}
+                level="H"
+                includeMargin={true}
                 bgColor="#ffffff"
                 fgColor="#000000"
+                imageSettings={{
+                  src: '',
+                  height: 0,
+                  width: 0,
+                  excavate: false,
+                }}
               />
             </div>
             
-            {/* معلومات المنتج على اليمين */}
-            <div className="flex-1 text-right">
-              <div className="text-4xl font-black text-black mb-2" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
+            {/* معلومات المنتج على اليمين - مطابق للصورة */}
+            <div className="flex-1 text-right space-y-1">
+              <div className="text-2xl font-black text-black leading-tight" style={{ fontFamily: 'Arial Black, Arial, sans-serif' }}>
                 {productName} RYUS
               </div>
-              <div className="text-3xl font-bold text-black mb-4">
+              <div className="text-xl font-bold text-black leading-tight">
                 {size} / {color}
               </div>
               {price && (
-                <div className="text-5xl font-black text-black">
+                <div className="text-3xl font-black text-black leading-tight mt-2">
                   {price.toLocaleString()} د.ع
                 </div>
               )}
