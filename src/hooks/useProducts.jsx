@@ -229,10 +229,19 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
 
       if (finalProductError) throw finalProductError;
 
-      // تحديث قائمة المنتجات المحلية فوراً
+      // تحديث قائمة المنتجات المحلية فوراً بالمنتج الكامل مع المتغيرات
       setProducts(prev => [finalProduct, ...prev]);
       
-      console.log('✅ تم إضافة المنتج وتحديث القائمة بنجاح:', finalProduct.name);
+      // إضافة إشعار النجاح
+      if (addNotification) {
+        addNotification({
+          title: '✅ تم إضافة المنتج بنجاح',
+          message: `تم إضافة المنتج "${finalProduct.name}" بنجاح مع ${finalProduct.variants?.length || 0} متغير`,
+          type: 'success'
+        });
+      }
+      
+      console.log('✅ تم إضافة المنتج وتحديث القائمة بنجاح:', finalProduct.name, 'المتغيرات:', finalProduct.variants?.length);
       
       return { success: true, data: finalProduct };
     } catch (error) {

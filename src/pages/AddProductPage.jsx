@@ -142,6 +142,18 @@ const AddProductPage = () => {
       return;
     }
 
+    // التحقق من أن جميع المتغيرات لها كميات محددة
+    const variantsWithoutQuantity = variants.filter(v => !v.quantity || v.quantity === 0);
+    if (variantsWithoutQuantity.length > 0) {
+      toast({ 
+        title: "تحذير", 
+        description: `يوجد ${variantsWithoutQuantity.length} متغير بدون كمية محددة. تأكد من إدخال الكميات للجميع.`,
+        variant: "destructive"
+      });
+    }
+
+    console.log('📊 بيانات المتغيرات قبل الحفظ:', variants);
+
     setIsSubmitting(true);
     setUploadProgress(0);
     
@@ -155,9 +167,16 @@ const AddProductPage = () => {
       selectedProductTypes,
       selectedSeasonsOccasions,
       selectedDepartments,
-      variants,
+      variants: variants.map(v => ({
+        ...v,
+        quantity: parseInt(v.quantity) || 0,
+        price: parseFloat(v.price) || parseFloat(productInfo.price) || 0,
+        costPrice: parseFloat(v.costPrice) || parseFloat(productInfo.costPrice) || 0
+      })),
       isVisible: true,
     };
+    
+    console.log('📦 بيانات المنتج النهائية للحفظ:', productData);
     
     const imageFiles = {
       general: generalImages.filter(Boolean),
@@ -168,7 +187,6 @@ const AddProductPage = () => {
 
     if (result.success) {
       toast({ title: 'نجاح', description: 'تمت إضافة المنتج بنجاح!' });
-      await refetchProducts();
       if (fromPurchases) {
         navigate(fromPurchases, { state: { productJustAdded: true } });
       } else {

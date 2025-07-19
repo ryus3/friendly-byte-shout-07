@@ -220,14 +220,19 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                       
                       {/* الكمية */}
                       <div className="col-span-2 space-y-1">
-                        <Input 
-                          type="number" 
-                          placeholder="0" 
-                          className="text-center font-medium"
-                          value={currentQuantity || ''} 
-                          onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', parseInt(e.target.value) || 0)} 
-                          required 
-                        />
+                         <Input 
+                           type="number" 
+                           placeholder="0" 
+                           className="text-center font-medium"
+                           value={currentQuantity || ''} 
+                           onChange={e => {
+                             const newQuantity = parseInt(e.target.value) || 0;
+                             console.log(`🔢 تحديث الكمية للون ${color.name} قياس ${sizeName}:`, newQuantity);
+                             handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'quantity', newQuantity);
+                           }} 
+                           min="0"
+                           step="1"
+                         />
                         {currentQuantity < 5 && currentQuantity > 0 && (
                           <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
                         )}
@@ -238,24 +243,36 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                       
                       {/* التكلفة */}
                       <div className="col-span-2 space-y-1">
-                        <Input 
-                          type="number" 
-                          placeholder="0"
-                          className="text-center"
-                          value={isNewProduct ? (variantData.costPrice || costPrice || '') : (variantData.cost_price || costPrice || '')} 
-                          onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', parseFloat(e.target.value) || 0)} 
-                        />
+                         <Input 
+                           type="number" 
+                           placeholder="0"
+                           className="text-center"
+                           value={isNewProduct ? (variantData.costPrice || costPrice || '') : (variantData.cost_price || costPrice || '')} 
+                           onChange={e => {
+                             const newCost = parseFloat(e.target.value) || 0;
+                             console.log(`💰 تحديث التكلفة للون ${color.name} قياس ${sizeName}:`, newCost);
+                             handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'costPrice', newCost);
+                           }} 
+                           min="0"
+                           step="0.01"
+                         />
                         </div>
                         
                         {/* سعر البيع */}
                         <div className="col-span-2 space-y-1">
-                          <Input 
-                            type="number" 
-                            placeholder="0"
-                            className="text-center font-medium"
-                            value={isNewProduct ? (variantData.price || price || '') : (variantData.price || price || '')} 
-                            onChange={e => handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', parseFloat(e.target.value) || 0)} 
-                          />
+                           <Input 
+                             type="number" 
+                             placeholder="0"
+                             className="text-center font-medium"
+                             value={isNewProduct ? (variantData.price || price || '') : (variantData.price || price || '')} 
+                             onChange={e => {
+                               const newPrice = parseFloat(e.target.value) || 0;
+                               console.log(`🏷️ تحديث السعر للون ${color.name} قياس ${sizeName}:`, newPrice);
+                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'price', newPrice);
+                             }} 
+                             min="0"
+                             step="0.01"
+                           />
                         </div>
                         
                         {/* الملاحظة */}
