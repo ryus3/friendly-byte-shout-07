@@ -450,7 +450,6 @@ const InventoryPage = () => {
         
         <InventoryStats 
           inventoryItems={inventoryItems}
-          inventoryStats={inventoryStats}
           lowStockCount={inventoryStats.lowStockCount}
           reservedStockCount={inventoryStats.reservedStockCount}
           onFilterChange={handleFilterChange}
