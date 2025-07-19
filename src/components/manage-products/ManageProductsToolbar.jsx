@@ -1,7 +1,8 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, List, LayoutGrid, Trash2, Printer, QrCode } from 'lucide-react';
+import { Search, Plus, List, LayoutGrid, Trash2, Printer } from 'lucide-react';
+import { QRButton } from '@/components/ui/qr-button';
 import { cn } from '@/lib/utils';
 
 const ManageProductsToolbar = ({
@@ -49,12 +50,9 @@ const ManageProductsToolbar = ({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
             <div className="flex gap-1 col-span-1">
-              <Button variant="outline" size="icon" onClick={onBarcodeSearch} className="flex-shrink-0 hover:bg-primary/10" title="قراءة الباركود">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
-                </svg>
-              </Button>
+              <QRButton variant="outline" size="sm" onClick={onBarcodeSearch} className="hover:bg-primary/10">
+                <span className="sr-only">مسح</span>
+              </QRButton>
               <Button variant="outline" size="icon" onClick={onQuickPrintLabels} className="flex-shrink-0" title="طباعة ملصقات">
                 <Printer className="w-4 h-4" />
               </Button>

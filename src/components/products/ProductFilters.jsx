@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, QrCode, SlidersHorizontal, LayoutGrid, List, X } from 'lucide-react';
+import { Search, SlidersHorizontal, LayoutGrid, List, X } from 'lucide-react';
+import { QRButton } from '@/components/ui/qr-button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -160,19 +161,15 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
       
       {/* الأزرار المتجاورة والمتناسقة */}
       <div className="flex items-center gap-2">
-        {/* باركود */}
-        <Button
+        {/* QR Code Scanner */}
+        <QRButton
           variant="outline"
-          size="icon"
+          size="sm"
           onClick={onBarcodeSearch}
           className="glass-effect border-border/80 hover:bg-primary/10"
-          title="قراءة الباركود"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
-          </svg>
-        </Button>
+          <span className="hidden sm:inline">مسح</span>
+        </QRButton>
         
         {/* قائمة */}
         <Button 

@@ -86,7 +86,7 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           console.log("🎯 تم قراءة QR Code:", decodedText);
           setScanCount(prev => prev + 1);
           
-          // محاولة تحليل QR Code
+          // محاولة تحليل QR Code مع دعم أفضل للمنتجات
           let parsedData = decodedText;
           let productInfo = null;
           
@@ -94,7 +94,11 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             // محاولة تحليل JSON أولاً
             const jsonData = JSON.parse(decodedText);
             if (jsonData && (jsonData.type === 'product' || jsonData.product_id)) {
-              productInfo = jsonData;
+              productInfo = {
+                ...jsonData,
+                qr_id: jsonData.id,
+                barcode: decodedText
+              };
               console.log("📦 بيانات المنتج JSON:", productInfo);
               toast({
                 title: "✅ تم قراءة QR Code للمنتج",
@@ -105,9 +109,15 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           } catch (e) {
             // QR Code بسيط - معرف المنتج مباشرة
             console.log("📄 QR Code بسيط:", decodedText);
+            
+            // التحقق من نوع QR Code
+            const displayText = decodedText.startsWith('QR_') 
+              ? `كود QR: ${decodedText}` 
+              : `معرف: ${decodedText.substring(0, 20)}${decodedText.length > 20 ? '...' : ''}`;
+              
             toast({
               title: "✅ تم قراءة QR Code",
-              description: `معرف المنتج: ${decodedText.substring(0, 20)}${decodedText.length > 20 ? '...' : ''}`,
+              description: displayText,
               variant: "success"
             });
           }

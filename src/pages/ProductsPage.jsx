@@ -214,13 +214,64 @@ const ProductsPage = () => {
     setDialogs(prev => ({ ...prev, productVariant: true }));
   };
 
-  const handleBarcodeScan = (barcode) => {
-    setFilters(prev => ({ ...prev, searchTerm: barcode }));
-    const foundProduct = permissionFilteredProducts.find(p => p.variants.some(v => v.barcode === barcode));
-    if (foundProduct) {
-      handleProductSelect(foundProduct);
+  const handleBarcodeScan = (scanData) => {
+    console.log("🔍 بيانات المسح في صفحة المنتجات:", scanData);
+    
+    let searchTerm = '';
+    let foundProduct = null;
+    let foundVariant = null;
+    
+    // التعامل مع QR Code محلل (JSON)
+    if (typeof scanData === 'object' && scanData !== null) {
+      const { product_id, variant_id, product_name, color, size } = scanData;
+      
+      // البحث بمعرف المنتج أو المتغير
+      if (product_id) {
+        foundProduct = permissionFilteredProducts.find(p => p.id === product_id);
+        if (foundProduct && variant_id) {
+          foundVariant = foundProduct.variants.find(v => v.id === variant_id);
+        }
+      }
+      
+      searchTerm = product_name || scanData.qr_id || scanData.barcode || '';
     } else {
-      toast({ title: "لم يتم العثور على المنتج", description: "لا يوجد منتج بهذا الباركود.", variant: "destructive" });
+      // التعامل مع نص عادي
+      searchTerm = scanData;
+      
+      // البحث بالباركود أو المعرف
+      foundProduct = permissionFilteredProducts.find(p => 
+        p.id === scanData ||
+        p.barcode === scanData ||
+        p.variants.some(v => v.barcode === scanData || v.id === scanData)
+      );
+      
+      if (foundProduct) {
+        foundVariant = foundProduct.variants.find(v => v.barcode === scanData || v.id === scanData);
+      }
+    }
+    
+    // تحديث فلتر البحث
+    setFilters(prev => ({ ...prev, searchTerm }));
+    
+    // إذا تم العثور على المنتج، فتحه مباشرة
+    if (foundProduct) {
+      console.log("📦 تم العثور على المنتج:", foundProduct.name, foundVariant ? `- ${foundVariant.color} ${foundVariant.size}` : '');
+      
+      // إظهار تفاصيل المنتج
+      handleProductSelect(foundProduct);
+      
+      toast({ 
+        title: "✅ تم العثور على المنتج", 
+        description: `${foundProduct.name}${foundVariant ? ` - ${foundVariant.color} ${foundVariant.size}` : ''}`,
+        variant: "success"
+      });
+    } else {
+      // البحث النصي
+      toast({ 
+        title: "🔍 تم البحث", 
+        description: `البحث عن: ${searchTerm}`,
+        variant: "default"
+      });
     }
   };
 

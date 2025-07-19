@@ -431,6 +431,23 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
+            <Button
+              onClick={() => setIsBarcodeScannerOpen(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="3" width="5" height="5" fill="currentColor"/>
+                <rect x="3" y="16" width="5" height="5" fill="currentColor"/>
+                <rect x="16" y="3" width="5" height="5" fill="currentColor"/>
+                <rect x="9" y="9" width="6" height="6" fill="currentColor"/>
+                <rect x="5" y="5" width="1" height="1" fill="white"/>
+                <rect x="5" y="18" width="1" height="1" fill="white"/>
+                <rect x="18" y="5" width="1" height="1" fill="white"/>
+              </svg>
+              مسح QR
+            </Button>
+            
             <PDFDownloadLink
               document={<InventoryPDF products={selectedItemsForExport.length > 0 
                 ? inventoryItems.filter(item => selectedItemsForExport.includes(item.id))
@@ -448,21 +465,13 @@ const InventoryPage = () => {
           </div>
         </div>
         
-        <InventoryStats 
-          totalVariants={inventoryStats.totalVariants}
+        <InventoryStats
+          inventoryItems={inventoryItems}
           lowStockCount={inventoryStats.lowStockCount}
-          mediumStockCount={inventoryStats.mediumStockCount}
-          highStockCount={inventoryStats.highStockCount}
           reservedStockCount={inventoryStats.reservedStockCount}
           onFilterChange={handleFilterChange}
-          inventoryItems={inventoryItems}
           onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
-          onRestoreProduct={() => {
-            toast({
-              title: "استعادة منتج",
-              description: "يمكنك استعادة المنتجات من خلال إضافة مخزون جديد في صفحة إدارة المنتجات"
-            });
-          }}
+          onRestoreProduct={() => console.log('restore product')}
         />
 
         <InventoryFilters

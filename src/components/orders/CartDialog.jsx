@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart, Trash2, Tag, QrCode, PackagePlus } from 'lucide-react';
+import { ShoppingCart, Trash2, Tag, PackagePlus } from 'lucide-react';
+import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -105,23 +106,14 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
           <DialogTitle className="gradient-text flex items-center justify-between gap-2">
             <div className="flex items-center gap-2"><ShoppingCart /> سلة التسوق</div>
             <div className='flex gap-2'>
-              <Button 
+              <QRButton 
                 variant="outline" 
-                size="icon" 
+                size="sm" 
                 onClick={() => setIsScannerOpen(true)} 
                 className="hover:bg-primary/10 border-primary/30" 
-                title="مسح الباركود لإضافة المنتجات"
               >
-                <svg className="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="2" y="6" width="20" height="12" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2"/>
-                  <rect x="4" y="8" width="2" height="8" fill="currentColor"/>
-                  <rect x="7" y="8" width="1" height="8" fill="currentColor"/>
-                  <rect x="9" y="8" width="3" height="8" fill="currentColor"/>
-                  <rect x="13" y="8" width="1" height="8" fill="currentColor"/>
-                  <rect x="15" y="8" width="2" height="8" fill="currentColor"/>
-                  <rect x="18" y="8" width="2" height="8" fill="currentColor"/>
-                </svg>
-              </Button>
+                <span className="sr-only">مسح</span>
+              </QRButton>
             </div>
           </DialogTitle>
         </DialogHeader>

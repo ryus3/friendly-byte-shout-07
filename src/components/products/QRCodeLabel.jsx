@@ -157,7 +157,7 @@ const QRCodeLabel = ({
     <Card className={`w-fit ${className}`}>
       <CardContent className="p-4">
         <div className="flex gap-4">
-          {/* معاينة الملصق - تصميم مطابق للصورة بالضبط */}
+          {/* معاينة الملصق - تصميم مطابق للطبع بالضبط */}
           <div 
             ref={labelRef}
             className="w-[400px] h-[200px] border-[3px] border-black bg-white flex items-center p-3"
@@ -178,7 +178,7 @@ const QRCodeLabel = ({
               />
             </div>
             
-            {/* معلومات المنتج على اليمين - محاذاة وسط */}
+            {/* معلومات المنتج على اليمين - محاذاة وسط مطابقة للطبع */}
             <div className="flex-1 h-full flex flex-col justify-center items-center text-center">
               <div 
                 className="text-black font-black mb-1"
@@ -186,7 +186,8 @@ const QRCodeLabel = ({
                   fontSize: '26px',
                   fontFamily: 'Arial Black, Arial, sans-serif',
                   lineHeight: '1.1',
-                  fontWeight: '900'
+                  fontWeight: '900',
+                  textAlign: 'center'
                 }}
               >
                 {productName} RYUS
@@ -196,7 +197,8 @@ const QRCodeLabel = ({
                 style={{ 
                   fontSize: '18px',
                   lineHeight: '1.1',
-                  fontWeight: 'bold'
+                  fontWeight: 'bold',
+                  textAlign: 'center'
                 }}
               >
                 {size} / {color}
@@ -207,7 +209,8 @@ const QRCodeLabel = ({
                   style={{ 
                     fontSize: '28px',
                     lineHeight: '1.1',
-                    fontWeight: '900'
+                    fontWeight: '900',
+                    textAlign: 'center'
                   }}
                 >
                   {price.toLocaleString()} د.ع
