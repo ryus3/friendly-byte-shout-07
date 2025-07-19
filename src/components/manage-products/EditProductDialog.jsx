@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useVariants } from '@/contexts/VariantsContext';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Save, Plus, Settings } from 'lucide-react';
+import { Loader2, Save, Plus } from 'lucide-react';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -233,13 +233,12 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="pb-4 border-b">
-          <DialogTitle className="text-xl font-bold">تعديل المنتج: {product.name}</DialogTitle>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>تعديل المنتج: {product.name}</DialogTitle>
           <DialogDescription>قم بتحديث تفاصيل المنتج والمتغيرات والمخزون من هنا.</DialogDescription>
         </DialogHeader>
-        
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <div className="max-h-[70vh] overflow-y-auto p-4 space-y-6">
           <ProductPrimaryInfo 
             productInfo={productInfo} 
             setProductInfo={setProductInfo}
@@ -247,7 +246,6 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
             onImageSelect={handleGeneralImageSelect}
             onImageRemove={removeGeneralImage}
           />
-          
           <MultiSelectCategorization 
             selectedCategories={selectedCategories}
             setSelectedCategories={setSelectedCategories}
@@ -258,7 +256,6 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
             selectedDepartments={selectedDepartments}
             setSelectedDepartments={setSelectedDepartments}
           />
-          
           <ProductVariantSelection 
             selectedColors={selectedColors}
             setSelectedColors={setSelectedColors}
@@ -267,91 +264,10 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
             colorSizeTypes={colorSizeTypes}
             setColorSizeTypes={setColorSizeTypes}
           />
-          
-          {/* عرض القياسات لكل لون */}
           {selectedColors.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-primary" />
-                  إعداد القياسات لكل لون
-                </CardTitle>
-                <CardDescription>اختر القياسات المتاحة لكل لون من الألوان المحددة.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedColors.map(color => {
-                  const colorSizes = allSizesForType;
-                  return (
-                    <div key={color.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                          style={{ backgroundColor: color.hex_code || color.hex || '#ccc' }}
-                        />
-                        <h4 className="font-medium">{color.name}</h4>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                        {colorSizes.map(size => {
-                          const variantForSize = variants.find(v => v.color_id === color.id && v.size_id === size.id);
-                          const isSelected = !!variantForSize;
-                          
-                          return (
-                            <div
-                              key={size.id}
-                              className={`p-2 rounded-md border cursor-pointer transition-colors ${
-                                isSelected 
-                                  ? 'bg-primary text-primary-foreground border-primary' 
-                                  : 'bg-muted/50 hover:bg-muted border-border'
-                              }`}
-                              onClick={() => {
-                                if (isSelected) {
-                                  // إزالة المتغير
-                                  setVariants(prev => prev.filter(v => !(v.color_id === color.id && v.size_id === size.id)));
-                                } else {
-                                  // إضافة متغير جديد
-                                  const newVariant = {
-                                    id: `new-${color.id}-${size.id}`,
-                                    color_id: color.id,
-                                    size_id: size.id,
-                                    colorId: color.id,
-                                    sizeId: size.id,
-                                    color: color.name,
-                                    size: size.name,
-                                    quantity: 0,
-                                    price: parseFloat(productInfo.price) || 0,
-                                    costPrice: parseFloat(productInfo.costPrice) || 0,
-                                    profitAmount: parseFloat(productInfo.price || 0) - parseFloat(productInfo.costPrice || 0),
-                                    barcode: generateUniqueBarcode(productInfo.name, color.name, size.name, product.id),
-                                    images: [],
-                                    is_new: true
-                                  };
-                                  setVariants(prev => [...prev, newVariant]);
-                                }
-                              }}
-                            >
-                              <div className="text-center text-sm font-medium">{size.name}</div>
-                              {isSelected && (
-                                <div className="text-xs text-center mt-1 opacity-75">
-                                  {variantForSize.quantity || 0} قطعة
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* إدارة متغيرات المنتج */}
-          {selectedColors.length > 0 && variants.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>إدارة المتغيرات والكميات</CardTitle>
+                <CardTitle>إدارة المتغيرات النهائية</CardTitle>
                 <CardDescription>هنا يمكنك التحكم في كل متغير من متغيرات المنتج، بما في ذلك السعر والمخزون.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -359,21 +275,17 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
                   <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
                     <div className="space-y-4">
                       {selectedColors.map((color) => {
-                        const colorVariants = variants.filter(v => v.color_id === color.id);
-                        if (colorVariants.length === 0) return null;
-                        
                         const initialImage = colorImages[color.id];
                         let preview = null;
                         if (initialImage) {
                           preview = typeof initialImage === 'string' ? initialImage : URL.createObjectURL(initialImage);
                         }
-                        
                         return (
                            <SortableColorCard
                             key={color.id}
                             color={color}
                             allSizesForType={allSizesForType}
-                            variants={colorVariants}
+                            variants={variants.filter(v => v.color_id === color.id)}
                             setVariants={setVariants}
                             price={productInfo.price}
                             costPrice={productInfo.costPrice}
@@ -393,25 +305,22 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess, refetchProd
             </Card>
           )}
         </div>
-        
-        <DialogFooter className="pt-4 border-t bg-background">
-            <div className="flex items-center justify-between w-full">
-              {isUploading && (
-                <div className='flex items-center gap-2'>
-                  <Progress value={uploadProgress} className="w-32" />
-                  <span className='text-sm text-muted-foreground'>{Math.round(uploadProgress)}%</span>
-                </div>
-              )}
-              {!isUploading && <div></div>}
-              <div className="flex gap-2">
-                  <DialogClose asChild>
-                      <Button variant="outline">إلغاء</Button>
-                  </DialogClose>
-                  <Button onClick={handleSave} disabled={isSubmitting || isUploading}>
-                      {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
-                      {isSubmitting || isUploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-                  </Button>
+        <DialogFooter className="sm:justify-between items-center">
+            {isUploading && (
+              <div className='flex items-center gap-2'>
+                <Progress value={uploadProgress} className="w-32" />
+                <span className='text-sm text-muted-foreground'>{Math.round(uploadProgress)}%</span>
               </div>
+            )}
+            {!isUploading && <div></div>}
+            <div className="flex gap-2">
+                <DialogClose asChild>
+                    <Button variant="outline">إلغاء</Button>
+                </DialogClose>
+                <Button onClick={handleSave} disabled={isSubmitting || isUploading}>
+                    {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
+                    {isSubmitting || isUploading ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+                </Button>
             </div>
         </DialogFooter>
       </DialogContent>
