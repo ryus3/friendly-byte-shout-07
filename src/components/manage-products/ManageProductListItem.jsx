@@ -26,17 +26,20 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const handleVisibilityChange = async (checked) => {
     setIsVisible(checked);
     try {
-      const { success } = await updateProduct(product.id, { is_active: checked });
-      if (success) {
-        toast({
-          title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
-          description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
-        });
-        if (onProductUpdate) onProductUpdate();
-      } else {
-        setIsVisible(!checked);
-        toast({ title: "خطأ", description: "فشل تحديث ظهور المنتج.", variant: "destructive" });
-      }
+      // استخدام supabase مباشرة
+      const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: checked })
+        .eq('id', product.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
+        description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
+      });
+      if (onProductUpdate) onProductUpdate();
     } catch (error) {
       console.error('Error updating product visibility:', error);
       setIsVisible(!checked);

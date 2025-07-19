@@ -50,9 +50,27 @@ const ManageProductsToolbar = ({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
             <div className="flex gap-1 col-span-1">
-              <QRButton variant="outline" size="sm" onClick={onBarcodeSearch} className="hover:bg-primary/10">
-                <span className="sr-only">مسح</span>
-              </QRButton>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={onBarcodeSearch}
+                className="glass-effect border-border/80 hover:bg-primary/10 relative w-10 h-10 rounded-lg bg-background/80 backdrop-blur-sm border"
+                title="مسح QR Code"
+              >
+                <div className="w-6 h-6 flex items-center justify-center">
+                  <div className="grid grid-cols-3 gap-[1px] w-5 h-5">
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                    <div className="bg-current w-[3px] h-[3px] rounded-[0.5px]"></div>
+                  </div>
+                </div>
+              </Button>
               <Button variant="outline" size="icon" onClick={onQuickPrintLabels} className="flex-shrink-0" title="طباعة ملصقات">
                 <Printer className="w-4 h-4" />
               </Button>
