@@ -62,25 +62,37 @@ const EmployeeFollowUpPage = () => {
   }, [orders, filters]);
 
   const stats = useMemo(() => {
-    const relevantOrders = filteredOrders.filter(o => o.status === 'delivered');
-    const totalSales = relevantOrders.reduce((sum, order) => sum + order.total, 0);
+    if (!filteredOrders || !Array.isArray(filteredOrders)) {
+      return {
+        totalOrders: 0,
+        totalSales: 0,
+        totalManagerProfits: 0,
+        pendingDues: 0,
+        paidDues: 0
+      };
+    }
+
+    const relevantOrders = filteredOrders.filter(o => o && o.status === 'delivered');
+    const totalSales = relevantOrders.reduce((sum, order) => sum + (order?.total || 0), 0);
     
     const profitsData = relevantOrders.map(order => ({
         ...order,
-        managerProfit: calculateManagerProfit(order) || 0,
+        managerProfit: calculateManagerProfit && typeof calculateManagerProfit === 'function' 
+          ? (calculateManagerProfit(order) || 0) 
+          : 0,
     }));
 
-    const totalManagerProfits = profitsData.reduce((sum, order) => sum + order.managerProfit, 0);
+    const totalManagerProfits = profitsData.reduce((sum, order) => sum + (order?.managerProfit || 0), 0);
     
     const paidDues = settlementInvoices && Array.isArray(settlementInvoices)
         ? settlementInvoices
             .filter(inv => {
                 const employee = allUsers && Array.isArray(allUsers) 
-                  ? allUsers.find(u => u.id === inv.employee_id)
+                  ? allUsers.find(u => u && u.id === inv?.employee_id)
                   : null;
                 return employee && (employee.role === 'employee' || employee.role === 'deputy');
             })
-            .reduce((sum, inv) => sum + inv.total_amount, 0)
+            .reduce((sum, inv) => sum + (inv?.total_amount || 0), 0)
         : 0;
 
     return {
