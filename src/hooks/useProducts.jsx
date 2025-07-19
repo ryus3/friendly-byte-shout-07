@@ -239,26 +239,18 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
 
   const updateProduct = useCallback(async (productId, productData, imageFiles, setUploadProgress) => {
     try {
-        console.log('🔄 بدء تحديث المنتج:', { productId, productData });
-
         // 1. Update product basic info
-        const { error: productUpdateError } = await supabase
+        await supabase
             .from('products')
             .update({
                 name: productData.name,
-                description: productData.description || '',
-                base_price: parseFloat(productData.base_price) || parseFloat(productData.price) || 0,
-                cost_price: parseFloat(productData.cost_price) || parseFloat(productData.costPrice) || 0,
-                profit_amount: parseFloat(productData.profit_amount) || parseFloat(productData.profitAmount) || 0,
-                profit_percentage: parseFloat(productData.profit_percentage) || parseFloat(productData.profitPercentage) || 0,
-                is_active: productData.isVisible !== undefined ? productData.isVisible : true,
+                description: productData.description,
+                base_price: productData.price,
+                cost_price: productData.costPrice,
+                profit_amount: productData.profitAmount || 0,
+                is_active: productData.isVisible,
             })
             .eq('id', productId);
-
-        if (productUpdateError) {
-            console.error('❌ خطأ في تحديث المنتج:', productUpdateError);
-            throw productUpdateError;
-        }
 
         // 2. Update categorization relationships
         // Delete existing relationships
@@ -485,23 +477,21 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                 .eq('id', existingInventory.id);
             } else if (!existingVariant) {
               // إنشاء سجل مخزون جديد للمتغيرات الجديدة (سيتم ربطه بعد إنشاء المتغير)
-               // هذا سيحدث تلقائياً عبر trigger في قاعدة البيانات
+              // هذا سيحدث تلقائياً عبر trigger في قاعدة البيانات
             }
           }
         }
-
-        console.log('✅ تم تحديث المنتج بنجاح');
-        return { success: true, message: 'تم تحديث المنتج بنجاح' };
         
+        if(totalImagesToUpload === 0) setUploadProgress(100);
+
+        toast({ title: 'نجاح', description: 'تم تحديث المنتج بنجاح!' });
+        return { success: true };
     } catch (error) {
-        console.error('❌ خطأ في تحديث المنتج:', error);
-        return { 
-            success: false, 
-            error: error.message || 'حدث خطأ أثناء تحديث المنتج',
-            details: error
-        };
+        console.error("Error updating product:", error);
+        toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+        return { success: false, error: error.message };
     }
-  }, [user, settings]);
+  }, []);
 
   const deleteProduct = useCallback(async (productId) => {
     toast({ title: 'تنبيه', description: 'حذف المنتج لم يتم تنفيذه بعد.' });
