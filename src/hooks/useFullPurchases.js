@@ -182,131 +182,55 @@ export const useFullPurchases = () => {
     try {
       setLoading(true);
       
-      // الحصول على تفاصيل الفاتورة قبل الحذف
-      const { data: purchaseData, error: fetchError } = await supabase
-        .from('purchases')
-        .select(`
-          *,
-          purchase_items (
-            id,
-            product_id,
-            variant_id,
-            quantity,
-            unit_cost
-          )
-        `)
-        .eq('id', purchaseId)
-        .single();
+      console.log('🚀 بدء حذف الفاتورة بشكل شامل:', purchaseId);
+      
+      // استخدام الدالة المحسنة لحذف الفاتورة بشكل شامل
+      const { data: result, error } = await supabase.rpc('delete_purchase_completely', {
+        p_purchase_id: purchaseId
+      });
 
-      if (fetchError) {
-        console.error('خطأ في جلب بيانات الفاتورة:', fetchError);
-        throw fetchError;
+      if (error) {
+        console.error('خطأ في تنفيذ دالة الحذف الشامل:', error);
+        throw error;
       }
 
-      // حذف المصاريف المرتبطة بالفاتورة (البضاعة والشحن والتحويل)
-      const { error: expensesError } = await supabase
-        .from('expenses')
-        .delete()
-        .or(`receipt_number.eq.${purchaseData.purchase_number},receipt_number.eq.${purchaseData.purchase_number}-SHIP,receipt_number.eq.${purchaseData.purchase_number}-TRANSFER`);
+      console.log('📊 نتائج عملية الحذف الشامل:', result);
 
-      if (expensesError) {
-        console.error('خطأ في حذف المصاريف:', expensesError);
-        // لا نتوقف هنا، نكمل الحذف
-      }
-
-      // حذف المعاملات المالية المرتبطة بالفاتورة
-      const { error: transactionsError } = await supabase
-        .from('financial_transactions')
-        .delete()
-        .eq('reference_type', 'purchase')
-        .eq('reference_id', purchaseId);
-
-      if (transactionsError) {
-        console.error('خطأ في حذف المعاملات المالية:', transactionsError);
-        // لا نتوقف هنا، نكمل الحذف
-      }
-
-      // تقليل كمية المخزون للمنتجات المحذوفة
-      if (purchaseData.purchase_items && purchaseData.purchase_items.length > 0) {
-        const stockReductionPromises = purchaseData.purchase_items.map(async (item) => {
-          try {
-            // الحصول على الكمية الحالية أولاً
-            const { data: currentStock } = await supabase
-              .from('inventory')
-              .select('quantity')
-              .eq('product_id', item.product_id)
-              .eq('variant_id', item.variant_id)
-              .single();
-
-            if (currentStock) {
-              const newQuantity = Math.max(0, currentStock.quantity - item.quantity);
-              
-              const { error: stockError } = await supabase
-                .from('inventory')
-                .update({ 
-                  quantity: newQuantity,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('product_id', item.product_id)
-                .eq('variant_id', item.variant_id);
-              
-              if (stockError) {
-                console.error(`خطأ في تقليل مخزون العنصر:`, stockError);
-              } else {
-                console.log(`تم تقليل مخزون العنصر من ${currentStock.quantity} إلى ${newQuantity}`);
-              }
-            }
-          } catch (error) {
-            console.error(`فشل تقليل مخزون العنصر:`, error);
-          }
-        });
-        
-        await Promise.all(stockReductionPromises);
-      }
-
-      // حذف عناصر الفاتورة
-      const { error: itemsError } = await supabase
-        .from('purchase_items')
-        .delete()
-        .eq('purchase_id', purchaseId);
-
-      if (itemsError) {
-        console.error('خطأ في حذف عناصر الفاتورة:', itemsError);
-        throw itemsError;
-      }
-
-      // حذف الفاتورة نفسها
-      const { error: purchaseError } = await supabase
-        .from('purchases')
-        .delete()
-        .eq('id', purchaseId);
-
-      if (purchaseError) {
-        console.error('خطأ في حذف الفاتورة:', purchaseError);
-        throw purchaseError;
+      if (!result.success) {
+        throw new Error(result.error || 'فشل في حذف الفاتورة');
       }
 
       // تحديث القائمة المحلية
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
       
-      // إعادة تحميل البيانات
-      await refetchData();
+      // إعادة تحميل البيانات لضمان التحديث الكامل
+      if (refetchData) {
+        await refetchData();
+      }
+      
+      console.log('✅ تم حذف الفاتورة بشكل شامل:', {
+        purchase: result.deleted_purchase,
+        inventory_updated: result.inventory_updated,
+        expenses_deleted: result.expenses_deleted,
+        transactions_deleted: result.transactions_deleted,
+        items_deleted: result.items_deleted
+      });
       
       toast({ 
-        title: 'تم', 
-        description: 'تم حذف فاتورة الشراء وجميع عناصرها والمصاريف المرتبطة بها بنجاح',
+        title: 'تم الحذف بنجاح', 
+        description: `تم حذف فاتورة رقم ${result.deleted_purchase} وجميع البيانات المرتبطة بها (${result.expenses_deleted} مصروف، ${result.items_deleted} عنصر، تحديث ${result.inventory_updated} مخزون)`,
         variant: 'success'
       });
       
-      return { success: true };
+      return { success: true, result };
     } catch (error) {
-      console.error("خطأ في حذف فاتورة الشراء:", error);
+      console.error("❌ خطأ في حذف فاتورة الشراء:", error);
       toast({ 
-        title: 'خطأ', 
-        description: `فشل حذف فاتورة الشراء: ${error.message}`, 
+        title: 'خطأ في الحذف', 
+        description: `فشل حذف الفاتورة: ${error.message}`, 
         variant: 'destructive' 
       });
-      return { success: false };
+      return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }

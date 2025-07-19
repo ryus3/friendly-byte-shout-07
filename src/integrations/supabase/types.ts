@@ -1866,6 +1866,10 @@ export type Database = {
         Args: { p_employee_id: string; p_order_ids: string[] }
         Returns: string
       }
+      delete_purchase_completely: {
+        Args: { p_purchase_id: string }
+        Returns: Json
+      }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
         Returns: {
