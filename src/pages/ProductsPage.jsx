@@ -71,40 +71,16 @@ const ProductsPage = () => {
     };
   }, [isAdmin, allCategories, allDepartments, productPermissions]);
 
-  // فلترة المنتجات أولاً بالصلاحيات ثم بالفلاتر الإضافية
+  // فلترة المنتجات - بسيط ومباشر
   const permissionFilteredProducts = useMemo(() => {
-    // تأكد من وجود المنتجات وأنها array
-    if (!products || !Array.isArray(products)) {
-      console.log('❌ لا توجد منتجات أو ليست array:', products);
-      return [];
-    }
+    if (!products || !Array.isArray(products)) return [];
     
-    // للمدير: إرجاع كل المنتجات مباشرة بدون فلترة
-    if (isAdmin) {
-      console.log('✅ مدير - عرض كل المنتجات:', products.length);
-      return products;
-    }
+    // المدير يرى كل المنتجات
+    if (isAdmin) return products;
     
-    // للموظفين: استخدام الفلترة
-    const filtered = filterProductsByPermissions ? filterProductsByPermissions(products) : products;
-    console.log('👤 موظف - منتجات مفلترة:', filtered?.length || 0);
-    return filtered || [];
-    
-    // تطبيق فلاتر إضافية للمستخدمين الذين لديهم صلاحيات متعددة
-    if (permissionFilters.department !== 'all') {
-      filtered = filtered.filter(product => 
-        product.product_departments?.some(pd => pd.department_id === permissionFilters.department)
-      );
-    }
-
-    if (permissionFilters.category !== 'all') {
-      filtered = filtered.filter(product =>
-        product.product_categories?.some(pc => pc.category_id === permissionFilters.category)
-      );
-    }
-    
-    return filtered;
-  }, [products, isAdmin, filterProductsByPermissions, permissionFilters]);
+    // الموظفين حسب الصلاحيات
+    return filterProductsByPermissions ? filterProductsByPermissions(products) : products;
+  }, [products, isAdmin, filterProductsByPermissions]);
   
   const { categories, brands } = useMemo(() => {
     // استخراج التصنيفات والعلامات التجارية من المنتجات المفلترة
