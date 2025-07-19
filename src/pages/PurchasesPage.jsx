@@ -13,6 +13,8 @@ import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';
 import AddPurchaseDialog from '@/components/purchases/AddPurchaseDialog';
 import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog';
+import PurchaseAnalyticsCard from '@/components/purchases/PurchaseAnalyticsCard';
+import QuickAddPurchaseCard from '@/components/purchases/QuickAddPurchaseCard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const PurchasesPage = () => {
@@ -131,7 +133,19 @@ const PurchasesPage = () => {
             </Button>
         </div>
         
-        <PurchasesStats purchases={purchases || []} onCardClick={handleStatCardClick} />
+        {/* تحليلات ذكية */}
+        <PurchaseAnalyticsCard purchases={purchases || []} />
+        
+        {/* إضافة سريعة وإحصائيات */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-1">
+            <QuickAddPurchaseCard onPurchaseAdded={fetchPurchases} />
+          </div>
+          <div className="lg:col-span-3">
+            <PurchasesStats purchases={purchases || []} onCardClick={handleStatCardClick} />
+          </div>
+        </div>
+        
         <PurchasesToolbar filters={filters} onFiltersChange={setFilters} />
         <PurchasesList 
           purchases={filteredPurchases} 

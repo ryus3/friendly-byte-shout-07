@@ -47,6 +47,12 @@ export const useFullPurchases = () => {
       // تحديث المخزون لكل منتج
       const stockUpdatePromises = purchaseData.items.map(async (item) => {
         try {
+          console.log('Updating stock for:', {
+            sku: item.variantSku,
+            quantity: item.quantity,
+            costPrice: item.costPrice
+          });
+          
           const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase', {
             p_sku: item.variantSku,
             p_quantity_change: item.quantity,
@@ -57,6 +63,8 @@ export const useFullPurchases = () => {
             console.error(`خطأ في تحديث مخزون ${item.variantSku}:`, stockError);
             throw stockError;
           }
+          
+          console.log(`تم تحديث مخزون ${item.variantSku} بنجاح`);
         } catch (error) {
           console.error(`فشل تحديث مخزون ${item.variantSku}:`, error);
           throw error;

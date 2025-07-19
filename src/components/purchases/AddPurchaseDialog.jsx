@@ -56,25 +56,58 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
             toast({ title: "خطأ", description: "يرجى إدخال اسم المورد وإضافة منتج واحد على الأقل.", variant: "destructive" });
             return;
         }
-        setIsSubmitting(true);
-        const totalCost = items.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
-        const purchaseData = {
-            supplier,
-            purchaseDate: new Date(purchaseDate),
-            items,
-            totalCost,
-            shippingCost: Number(shippingCost) || 0,
-            status: 'completed'
-        };
-        const result = await addPurchase(purchaseData);
-        if (result.success) {
-            toast({ title: "نجاح", description: "تمت إضافة فاتورة الشراء بنجاح." });
-            resetForm();
-            onOpenChange(false);
-        } else {
-            toast({ title: "خطأ", description: result.error, variant: "destructive" });
+
+        // التحقق من صحة البيانات
+        const invalidItems = items.filter(item => !item.costPrice || item.costPrice <= 0 || !item.quantity || item.quantity <= 0);
+        if (invalidItems.length > 0) {
+            toast({ 
+                title: "خطأ في البيانات", 
+                description: "يرجى التأكد من إدخال سعر التكلفة والكمية بشكل صحيح لجميع المنتجات.", 
+                variant: "destructive" 
+            });
+            return;
         }
-        setIsSubmitting(false);
+
+        setIsSubmitting(true);
+        try {
+            const totalCost = items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0);
+            const purchaseData = {
+                supplier,
+                purchaseDate: new Date(purchaseDate),
+                items: items.map(item => ({
+                    ...item,
+                    costPrice: Number(item.costPrice),
+                    quantity: Number(item.quantity)
+                })),
+                totalCost,
+                shippingCost: Number(shippingCost) || 0,
+                status: 'completed'
+            };
+            
+            console.log('Purchase data:', purchaseData);
+            const result = await addPurchase(purchaseData);
+            
+            if (result.success) {
+                toast({ 
+                    title: "نجاح", 
+                    description: `تمت إضافة فاتورة الشراء رقم ${result.purchase?.purchase_number} بنجاح.`,
+                    variant: "success"
+                });
+                resetForm();
+                onOpenChange(false);
+            } else {
+                throw new Error(result.error || 'فشل في إضافة الفاتورة');
+            }
+        } catch (error) {
+            console.error('Purchase submission error:', error);
+            toast({ 
+                title: "خطأ", 
+                description: error.message || "فشل في إضافة فاتورة الشراء", 
+                variant: "destructive" 
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const resetForm = () => {
