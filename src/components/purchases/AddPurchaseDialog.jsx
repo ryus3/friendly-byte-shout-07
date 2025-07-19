@@ -17,6 +17,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
     const [supplier, setSupplier] = useState('');
     const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
     const [shippingCost, setShippingCost] = useState('');
+    const [transferCost, setTransferCost] = useState(''); // تكاليف التحويل الجديدة
     const [items, setItems] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
@@ -72,6 +73,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
         try {
             const totalCost = items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0);
             const finalShippingCost = Number(shippingCost) || 0;
+            const finalTransferCost = Number(transferCost) || 0;
             
             const purchaseData = {
                 supplier,
@@ -83,6 +85,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                 })),
                 totalCost,
                 shippingCost: finalShippingCost,
+                transferCost: finalTransferCost, // تكاليف التحويل
                 status: 'completed'
             };
             
@@ -97,8 +100,8 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                 });
                 resetForm();
                 onOpenChange(false);
-                // إعادة تحميل المشتريات فوراً
-                window.location.reload();
+                // لا حاجة لإعادة تحميل الصفحة - البيانات ستتحدث تلقائياً
+                // window.location.reload(); // محذوف
             } else {
                 throw new Error(result.error || 'فشل في إضافة الفاتورة');
             }
@@ -118,6 +121,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
         setSupplier('');
         setPurchaseDate(new Date().toISOString().split('T')[0]);
         setShippingCost('');
+        setTransferCost(''); // إعادة تعيين تكاليف التحويل
         setItems([]);
     };
 
@@ -136,7 +140,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                         <DialogTitle>إضافة فاتورة شراء جديدة</DialogTitle>
                         <DialogDescription>أدخل تفاصيل الفاتورة والمنتجات المشتراة.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4">
                         <div>
                             <Label htmlFor="supplier">اسم المورد</Label>
                             <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} />
@@ -155,6 +159,18 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                                 placeholder="أدخل تكلفة الشحن"
                                 value={shippingCost} 
                                 onChange={e => setShippingCost(e.target.value)} 
+                            />
+                        </div>
+                        <div>
+                            <Label htmlFor="transferCost">تكاليف التحويل (د.ع)</Label>
+                            <Input 
+                                id="transferCost" 
+                                type="number" 
+                                min="0"
+                                step="1"
+                                placeholder="أدخل تكلفة التحويل المالي"
+                                value={transferCost} 
+                                onChange={e => setTransferCost(e.target.value)} 
                             />
                         </div>
                     </div>
