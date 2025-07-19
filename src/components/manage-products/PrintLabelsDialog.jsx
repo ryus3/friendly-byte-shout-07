@@ -299,20 +299,21 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
               </svg>
               معاينة الطباعة
             </h4>
-        <div className="flex-1 border border-border rounded-xl p-3 overflow-auto bg-muted/10">
+            <div className="flex-1 border border-border rounded-xl p-3 overflow-auto bg-muted/10">
               <style>{`
                 .preview-label-grid {
-                  display: grid;
-                  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-                  gap: 6px;
-                  padding: 6px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 8px;
+                  padding: 8px;
+                  align-items: center;
                 }
                 
                 .preview-label-card {
-                  width: 80px;
-                  height: 45mm;
+                  width: 120px;
+                  height: 50px;
                   border: 1px solid hsl(var(--primary));
-                  padding: 2mm;
+                  padding: 3px;
                   display: flex;
                   flex-direction: column;
                   justify-content: space-between;
@@ -335,26 +336,26 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                 }
                 
                 .preview-label-product-name {
-                  font-size: 7px;
+                  font-size: 8px;
                   font-weight: 800;
-                  margin-bottom: 1mm;
-                  line-height: 1.1;
+                  margin-bottom: 1px;
+                  line-height: 1;
                   color: hsl(var(--primary));
                   text-transform: uppercase;
                 }
                 
                 .preview-label-variant-info {
                   font-size: 6px;
-                  margin-bottom: 1mm;
+                  margin-bottom: 2px;
                   color: #64748b;
                   font-weight: 600;
                   background: #f1f5f9;
-                  padding: 0.5mm 1mm;
-                  border-radius: 2mm;
+                  padding: 1px 3px;
+                  border-radius: 2px;
                 }
                 
                 .preview-label-barcode-container {
-                  margin: 1mm 0;
+                  margin: 1px 0;
                   display: flex;
                   flex-direction: column;
                   align-items: center;
@@ -365,17 +366,17 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                 .preview-label-barcode-number {
                   font-size: 4px;
                   color: #475569;
-                  margin-top: 0.5mm;
+                  margin-top: 1px;
                   font-family: monospace;
                 }
                 
                 .preview-label-price {
-                  font-size: 6px;
+                  font-size: 7px;
                   font-weight: 800;
                   color: #dc2626;
                   background: #fee2e2;
-                  padding: 0.5mm 1mm;
-                  border-radius: 2mm;
+                  padding: 1px 3px;
+                  border-radius: 2px;
                   border: 1px solid #fca5a5;
                 }
               `}</style>
@@ -388,8 +389,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                       <div className="preview-label-barcode-container">
                         <Barcode 
                           value={label.barcode} 
-                          height={6} 
-                          width={0.6} 
+                          height={5} 
+                          width={0.5} 
                           fontSize={0} 
                           margin={0}
                           background="transparent"

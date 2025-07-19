@@ -355,9 +355,48 @@ const InventoryPage = () => {
 
 
   const handleBarcodeScan = (decodedText) => {
-    setFilters(prev => ({ ...prev, searchTerm: decodedText }));
-    setIsBarcodeScannerOpen(false);
-    toast({ title: "تم البحث", description: `تم البحث عن الباركود: ${decodedText}` });
+    // البحث السريع في المنتجات
+    const foundProduct = products.find(p => 
+      p.variants?.some(v => 
+        v.sku === decodedText || 
+        v.barcode === decodedText ||
+        v.id?.toString() === decodedText
+      )
+    );
+    
+    if (foundProduct) {
+      const foundVariant = foundProduct.variants.find(v => 
+        v.sku === decodedText || 
+        v.barcode === decodedText ||
+        v.id?.toString() === decodedText
+      );
+      
+      // تحديد المنتج الموجود في القائمة
+      setSelectedItemsForExport(prev => {
+        const currentItems = Array.isArray(prev) ? [...prev] : [];
+        if (!currentItems.includes(foundProduct.id)) {
+          return [...currentItems, foundProduct.id];
+        }
+        return currentItems;
+      });
+      
+      // عرض تفاصيل المنتج
+      toast({ 
+        title: "✅ تم العثور على المنتج", 
+        description: `${foundProduct.name} - ${foundVariant?.color} ${foundVariant?.size} (المخزون: ${foundVariant?.quantity || 0})`,
+        variant: "success"
+      });
+    } else {
+      // البحث بالنص العادي
+      setFilters(prev => ({ ...prev, searchTerm: decodedText }));
+      toast({ 
+        title: "🔍 تم البحث", 
+        description: `البحث عن: ${decodedText}` 
+      });
+    }
+    
+    // عدم إغلاق المسح للمسح المستمر
+    // setIsBarcodeScannerOpen(false);
   };
 
   const handleSelectionChange = (productId, isSelected) => {

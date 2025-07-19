@@ -34,12 +34,19 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
   };
   
   const handleScanSuccess = useCallback((decodedText) => {
-    setIsScannerOpen(false);
+    // عدم إغلاق المسح للمسح المستمر
+    // setIsScannerOpen(false);
+    
     let foundVariant = null;
     let foundProduct = null;
 
+    // البحث في جميع المنتجات والمتغيرات
     for (const p of products) {
-        foundVariant = p.variants.find(v => v.sku === decodedText || v.barcode === decodedText);
+        foundVariant = p.variants.find(v => 
+          v.sku === decodedText || 
+          v.barcode === decodedText ||
+          v.id?.toString() === decodedText
+        );
         if (foundVariant) {
             foundProduct = p;
             break;
@@ -49,12 +56,24 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
     if (foundProduct && foundVariant) {
       if(foundVariant.quantity > 0) {
         addToCart(foundProduct, foundVariant, 1);
-        toast({ title: "تمت الإضافة للسلة", description: foundProduct.name });
+        toast({ 
+          title: "✅ تمت الإضافة", 
+          description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`,
+          variant: "success"
+        });
       } else {
-        toast({ title: "نفذت الكمية", description: "هذا المنتج غير متوفر حالياً.", variant: "destructive" });
+        toast({ 
+          title: "⚠️ نفذت الكمية", 
+          description: "هذا المنتج غير متوفر حالياً.", 
+          variant: "destructive" 
+        });
       }
     } else {
-      toast({ title: "لم يتم العثور على المنتج", description: "الباركود غير مرتبط بأي منتج.", variant: "destructive" });
+      toast({ 
+        title: "❌ منتج غير موجود", 
+        description: `الباركود: ${decodedText}`, 
+        variant: "destructive" 
+      });
     }
   }, [products, addToCart]);
   
@@ -88,10 +107,10 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
           <DialogTitle className="gradient-text flex items-center justify-between gap-2">
             <div className="flex items-center gap-2"><ShoppingCart /> سلة التسوق</div>
             <div className='flex gap-2'>
-              <Button variant="outline" size="icon" onClick={() => setIsScannerOpen(true)} className="hover:bg-primary/10">
+              <Button variant="outline" size="icon" onClick={() => setIsScannerOpen(true)} className="hover:bg-primary/10" title="مسح الباركود">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8h18M7 12h10M9 16h6" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
                 </svg>
               </Button>
             </div>
