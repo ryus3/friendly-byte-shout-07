@@ -191,7 +191,12 @@ const ManageProductsPage = () => {
         />
 
         {searchFilteredProducts.length > 0 && viewMode === 'list' && (
-          <div className="flex items-center gap-4 p-3 bg-card border rounded-lg">
+          <div className="flex items-center gap-4 p-3 bg-card border rounded-lg
+                       shadow-lg shadow-black/10 
+                       dark:shadow-lg dark:shadow-primary/20
+                       transition-all duration-300 
+                       hover:shadow-xl hover:shadow-primary/20
+                       dark:hover:shadow-2xl dark:hover:shadow-primary/30">
             <Checkbox 
               id="select-all"
               checked={selectedProductIds.length === searchFilteredProducts.length && searchFilteredProducts.length > 0}

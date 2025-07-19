@@ -21,7 +21,12 @@ const ManageProductsToolbar = ({
   isMobile
 }) => {
   return (
-    <div className="p-4 bg-card rounded-lg shadow-sm">
+    <div className="p-4 bg-card rounded-lg 
+                 shadow-lg shadow-black/10 
+                 dark:shadow-lg dark:shadow-primary/20
+                 transition-all duration-300 
+                 hover:shadow-xl hover:shadow-primary/20
+                 dark:hover:shadow-2xl dark:hover:shadow-primary/30">
       {selectedCount > 0 ? (
         <div className="space-y-3">
           <div className="text-sm font-medium text-center">{selectedCount} منتج(ات) محددة</div>

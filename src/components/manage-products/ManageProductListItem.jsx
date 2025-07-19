@@ -47,8 +47,10 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
       layout
       className={cn(
         "bg-card rounded-xl p-3 border transition-all duration-300 group",
-        "shadow-md shadow-black/5 dark:shadow-black/20",
-        "hover:shadow-lg hover:shadow-primary/10 dark:hover:shadow-primary/15",
+        "shadow-lg shadow-black/10",
+        "dark:shadow-lg dark:shadow-primary/20",
+        "hover:shadow-xl hover:shadow-primary/20",
+        "dark:hover:shadow-2xl dark:hover:shadow-primary/30",
         isSelected && "ring-2 ring-primary border-primary",
         product.is_active === false && "opacity-60 bg-muted/50" // إضافة تأثير بصري للمنتجات المخفية
       )}

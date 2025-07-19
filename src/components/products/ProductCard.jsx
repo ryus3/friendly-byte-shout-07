@@ -42,7 +42,12 @@ const ProductCard = React.memo(({ product, onSelect }) => {
     <motion.div
       ref={ref}
       onClick={onSelect}
-      className="group product-card cursor-pointer"
+      className="group product-card cursor-pointer
+                 shadow-lg shadow-black/10 
+                 dark:shadow-lg dark:shadow-primary/20
+                 transition-all duration-300 
+                 hover:shadow-xl hover:shadow-primary/20
+                 dark:hover:shadow-2xl dark:hover:shadow-primary/30"
       whileHover={{ y: -5 }}
     >
       <div className="absolute top-2 right-2 z-10">

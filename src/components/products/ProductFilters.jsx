@@ -121,7 +121,12 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
   }, [filters.searchTerm, products]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 p-4 bg-card rounded-lg
+                 shadow-lg shadow-black/10 
+                 dark:shadow-lg dark:shadow-primary/20
+                 transition-all duration-300 
+                 hover:shadow-xl hover:shadow-primary/20
+                 dark:hover:shadow-2xl dark:hover:shadow-primary/30">
       {/* البحث */}
       <Popover open={isSearchOpen} onOpenChange={setIsSearchOpen}>
         <PopoverTrigger asChild>
