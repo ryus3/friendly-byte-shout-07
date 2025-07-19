@@ -49,17 +49,19 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
               </TableCell>
               <TableCell>{((purchase.total_amount || 0) - (purchase.paid_amount || 0)).toLocaleString()} د.ع</TableCell>
               <TableCell className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => onViewDetails(purchase)}>
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <PurchaseInvoicePDFButton purchase={purchase} />
-                  <Button variant="ghost" size="icon" onClick={() => onDelete?.(purchase)} className="text-destructive hover:text-destructive">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
+               <TableCell>
+                 <div className="flex gap-1">
+                   <Button variant="ghost" size="sm" onClick={() => onViewDetails(purchase)} className="text-blue-600 hover:text-blue-700">
+                     <Eye className="w-4 h-4" />
+                     <span className="sr-only">عرض التفاصيل</span>
+                   </Button>
+                   <PurchaseInvoicePDFButton purchase={purchase} />
+                   <Button variant="ghost" size="sm" onClick={() => onDelete?.(purchase)} className="text-red-600 hover:text-red-700">
+                     <Trash2 className="w-4 h-4" />
+                     <span className="sr-only">حذف</span>
+                   </Button>
+                 </div>
+               </TableCell>
             </TableRow>
           ))}
         </TableBody>

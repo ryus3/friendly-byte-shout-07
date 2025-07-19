@@ -261,17 +261,17 @@ const PurchaseInvoicePDFButton = ({ purchase }) => {
           variant="outline" 
           size="sm" 
           disabled={loading}
-          className="gap-2"
+          className="gap-1 text-green-600 hover:text-green-700 border-green-200 hover:border-green-300"
         >
           {loading ? (
             <>
               <FileText className="h-4 w-4" />
-              جاري التحضير...
+              تحضير...
             </>
           ) : (
             <>
               <Download className="h-4 w-4" />
-              تحميل PDF
+              PDF
             </>
           )}
         </Button>

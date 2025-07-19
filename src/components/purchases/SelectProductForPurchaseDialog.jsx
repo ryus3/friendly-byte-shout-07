@@ -235,14 +235,14 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                                         <Command className="rounded-lg border shadow-md">
                                             <CommandList>
                                                 <CommandGroup heading="جميع الألوان المتاحة">
-                                                    <ScrollArea className="h-40">
-                                                        {availableColors.map((color) => (
-                                                            <div key={color.id} onClick={() => setCurrentColor(color)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                <Check className={`ml-2 h-4 w-4 ${currentColor?.id === color.id ? "opacity-100" : "opacity-0"}`} />
-                                                                {color.name}
-                                                            </div>
-                                                        ))}
-                                                    </ScrollArea>
+                                                     <ScrollArea className="h-40">
+                                                         {(availableColors || []).map((color) => (
+                                                             <div key={color.id} onClick={() => setCurrentColor(color)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                 <Check className={`ml-2 h-4 w-4 ${currentColor?.id === color.id ? "opacity-100" : "opacity-0"}`} />
+                                                                 {color.name}
+                                                             </div>
+                                                         ))}
+                                                     </ScrollArea>
                                                 </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsColorDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة لون جديد</Button>
                                             </CommandList>
@@ -251,12 +251,12 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
                                             <CommandList>
                                                 <CommandGroup heading="جميع القياسات المتاحة">
                                                     <ScrollArea className="h-40">
-                                                         {availableSizes.map((size) => (
-                                                             <div key={size.id} onClick={() => setCurrentSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
-                                                                 <Check className={`ml-2 h-4 w-4 ${currentSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
-                                                                 {size.name || size.value}
-                                                             </div>
-                                                         ))}
+                                                          {(availableSizes || []).map((size) => (
+                                                              <div key={size.id} onClick={() => setCurrentSize(size)} className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground">
+                                                                  <Check className={`ml-2 h-4 w-4 ${currentSize?.id === size.id ? "opacity-100" : "opacity-0"}`} />
+                                                                  {size.name || size.value}
+                                                              </div>
+                                                          ))}
                                                     </ScrollArea>
                                                 </CommandGroup>
                                                 <Button variant="link" size="sm" onClick={() => setIsSizeDialogOpen(true)}><PlusCircle className="w-4 h-4 ml-1" />إضافة قياس جديد</Button>
