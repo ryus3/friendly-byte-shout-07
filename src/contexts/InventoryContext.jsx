@@ -187,21 +187,45 @@ export const InventoryProvider = ({ children }) => {
   }, []);
   
   async function addExpense(expense) {
-    // هذه الميزة غير متاحة حالياً - سيتم تطويرها لاحقاً  
-    // يمكن استخدام نظام الإشعارات لتسجيل المصاريف مؤقتاً
-    const newExpense = {
-      id: Date.now(),
-      ...expense,
-      date: expense.date || new Date().toISOString()
-    };
-    
-    setAccounting(prev => ({ 
-      ...prev, 
-      expenses: [...prev.expenses, newExpense] 
-    }));
+    try {
+      console.log('إضافة مصروف جديد:', expense);
+      
+      const { data: newExpense, error } = await supabase
+        .from('expenses')
+        .insert({
+          category: expense.category,
+          expense_type: expense.expense_type || 'operational',
+          description: expense.description,
+          amount: expense.amount,
+          vendor_name: expense.vendor_name || null,
+          receipt_number: expense.receipt_number || null,
+          status: expense.status || 'approved',
+          created_by: user?.user_id
+        })
+        .select()
+        .single();
 
-    if (expense.category !== 'شراء بضاعة' && expense.category !== 'شحن' && expense.category !== 'مستحقات الموظفين') {
-      toast({ title: "تمت إضافة المصروف", variant: "success" });
+      if (error) {
+        console.error('خطأ في إضافة المصروف:', error);
+        throw error;
+      }
+
+      console.log('تم إضافة المصروف بنجاح:', newExpense);
+      
+      // تحديث الحالة المحلية
+      setAccounting(prev => ({ 
+        ...prev, 
+        expenses: [...prev.expenses, newExpense]
+      }));
+
+      if (expense.category !== 'شراء بضاعة' && expense.category !== 'شحن ونقل' && expense.category !== 'تكاليف التحويل' && expense.category !== 'مستحقات الموظفين') {
+        toast({ title: "تمت إضافة المصروف", variant: "success" });
+      }
+      
+      return newExpense;
+    } catch (error) {
+      console.error('فشل إضافة المصروف:', error);
+      throw error;
     }
   }
 

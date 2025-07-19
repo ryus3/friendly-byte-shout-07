@@ -203,11 +203,11 @@ export const useFullPurchases = () => {
         throw fetchError;
       }
 
-      // حذف المصاريف المرتبطة بالفاتورة
+      // حذف المصاريف المرتبطة بالفاتورة (البضاعة والشحن والتحويل)
       const { error: expensesError } = await supabase
         .from('expenses')
         .delete()
-        .or(`receipt_number.eq.${purchaseData.purchase_number},receipt_number.eq.${purchaseData.purchase_number}-SHIP`);
+        .or(`receipt_number.eq.${purchaseData.purchase_number},receipt_number.eq.${purchaseData.purchase_number}-SHIP,receipt_number.eq.${purchaseData.purchase_number}-TRANSFER`);
 
       if (expensesError) {
         console.error('خطأ في حذف المصاريف:', expensesError);
