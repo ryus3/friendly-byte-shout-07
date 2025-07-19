@@ -72,7 +72,18 @@ const ProductsPage = () => {
 
   // فلترة المنتجات أولاً بالصلاحيات ثم بالفلاتر الإضافية
   const permissionFilteredProducts = useMemo(() => {
+    console.log('🔍 فلترة المنتجات بالصلاحيات:', { 
+      originalProducts: products?.length,
+      isAdmin,
+      hasFilterFunction: !!filterProductsByPermissions
+    });
+    
     let filtered = filterProductsByPermissions(products);
+    
+    console.log('🔍 النتيجة بعد فلترة الصلاحيات:', {
+      filteredCount: filtered?.length,
+      originalCount: products?.length
+    });
     
     // تطبيق فلاتر إضافية للمستخدمين الذين لديهم صلاحيات متعددة
     if (permissionFilters.department !== 'all') {
