@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 export const useFullPurchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { updateVariantStock, addExpense, refetchData } = useInventory();
+  const { updateVariantStock, addExpense } = useInventory();
   const { user } = useAuth();
 
   const addPurchase = useCallback(async (purchaseData) => {
@@ -130,7 +130,7 @@ export const useFullPurchases = () => {
 
       // إعادة تحميل البيانات للتأكد من التحديث الكامل
       setTimeout(async () => {
-        await refetchData();
+        await fetchPurchases();
         console.log('🔄 تم إعادة تحميل البيانات بعد إضافة الفاتورة');
       }, 100);
 
@@ -154,7 +154,7 @@ export const useFullPurchases = () => {
     } finally {
       setLoading(false);
     }
-  }, [addExpense, refetchData, user]);
+  }, [addExpense, fetchPurchases, user]);
 
   const fetchPurchases = useCallback(async () => {
     setLoading(true);
