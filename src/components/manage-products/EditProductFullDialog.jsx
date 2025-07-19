@@ -63,14 +63,25 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
 
     console.log('🔄 Reset state for product:', product);
 
-    // تعيين المعلومات الأساسية
+    // حساب نسبة الربح المئوية
+    const calculateProfitPercentage = (price, costPrice) => {
+      if (!price || !costPrice || costPrice === 0) return '';
+      const profitPercentage = ((parseFloat(price) - parseFloat(costPrice)) / parseFloat(costPrice)) * 100;
+      return profitPercentage.toFixed(2);
+    };
+
+    const basePrice = product.base_price || product.price || 0;
+    const costPrice = product.cost_price || 0;
+    const profitPercentage = calculateProfitPercentage(basePrice, costPrice);
+
+    // تعيين المعلومات الأساسية مع نسبة الربح
     setProductInfo({
       name: product.name || '',
       description: product.description || '',
-      price: product.base_price?.toString() || product.price?.toString() || '',
-      costPrice: product.cost_price?.toString() || '',
-      profitAmount: product.profit_amount?.toString() || '',
-      profitPercentage: '',
+      price: basePrice.toString(),
+      costPrice: costPrice.toString(),
+      profitAmount: (product.profit_amount || 0).toString(),
+      profitPercentage: profitPercentage,
     });
 
     // تعيين الصور العامة
@@ -201,6 +212,8 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
         ...productInfo,
         price: parseFloat(productInfo.price) || 0,
         costPrice: productInfo.costPrice ? parseFloat(productInfo.costPrice) : 0,
+        profitAmount: productInfo.profitAmount ? parseFloat(productInfo.profitAmount) : 0,
+        profitPercentage: productInfo.profitPercentage ? parseFloat(productInfo.profitPercentage) : 0,
         selectedCategories,
         selectedProductTypes,
         selectedSeasonsOccasions,
@@ -253,15 +266,15 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Save className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col" style={{ zIndex: 50 }}>
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Save className="w-5 h-5 text-primary" />
             تعديل المنتج: {product.name}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-4 p-1">
           {/* المعلومات الأساسية */}
           <ProductPrimaryInfo
             productInfo={productInfo}
@@ -297,12 +310,12 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
           {selectedColors.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>إدارة متغيرات المنتج</CardTitle>
+                <CardTitle className="text-base">إدارة متغيرات المنتج</CardTitle>
               </CardHeader>
               <CardContent>
                 <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                   <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {selectedColors.map((color) => (
                         <SortableColorCard
                           key={color.id}
@@ -334,22 +347,22 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
               <Progress value={uploadProgress} />
             </div>
           )}
+        </div>
 
-          {/* أزرار الحفظ والإلغاء */}
-          <div className="flex gap-3 pt-4 border-t">
-            <Button onClick={onOpenChange} variant="outline" className="flex-1">
-              <X className="w-4 h-4 mr-2" />
-              إلغاء
-            </Button>
-            <Button onClick={handleSave} disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4 mr-2" />
-              )}
-              {isSubmitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
-            </Button>
-          </div>
+        {/* أزرار الحفظ والإلغاء */}
+        <div className="flex gap-3 pt-4 border-t flex-shrink-0">
+          <Button onClick={() => onOpenChange(false)} variant="outline" className="flex-1">
+            <X className="w-4 h-4 mr-2" />
+            إلغاء
+          </Button>
+          <Button onClick={handleSave} disabled={isSubmitting} className="flex-1">
+            {isSubmitting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            {isSubmitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
