@@ -34,13 +34,10 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
   };
   
   const handleScanSuccess = useCallback((decodedText) => {
-    // عدم إغلاق المسح للمسح المستمر
-    // setIsScannerOpen(false);
-    
+    // البحث في المنتجات
     let foundVariant = null;
     let foundProduct = null;
 
-    // البحث في جميع المنتجات والمتغيرات
     for (const p of products) {
         foundVariant = p.variants.find(v => 
           v.sku === decodedText || 
@@ -57,21 +54,22 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
       if(foundVariant.quantity > 0) {
         addToCart(foundProduct, foundVariant, 1);
         toast({ 
-          title: "✅ تمت الإضافة", 
+          title: "✅ تمت إضافة المنتج!", 
           description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`,
           variant: "success"
         });
       } else {
         toast({ 
           title: "⚠️ نفذت الكمية", 
-          description: "هذا المنتج غير متوفر حالياً.", 
+          description: `${foundProduct.name} - ${foundVariant.color} ${foundVariant.size}`, 
           variant: "destructive" 
         });
       }
     } else {
+      // رسالة عدم العثور على المنتج
       toast({ 
-        title: "❌ منتج غير موجود", 
-        description: `الباركود: ${decodedText}`, 
+        title: "❌ لم يتم العثور على المنتج", 
+        description: `الكود المقروء: ${decodedText}\n\nهذا المنتج غير موجود في النظام أو تم حذفه.`, 
         variant: "destructive" 
       });
     }
