@@ -42,20 +42,24 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-      // إعدادات محسنة للقراءة
+      // إعدادات محسنة للقراءة - تدعم جميع أنواع الباركود
       const config = {
-        fps: 20,
+        fps: 10,
         qrbox: function(viewfinderWidth, viewfinderHeight) {
           // حجم كبير للتحديد
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minEdge * 0.9);
+          const size = Math.floor(minEdge * 0.7);
           return {
             width: size,
-            height: Math.floor(size * 0.7)
+            height: Math.floor(size * 0.5) // مستطيل عريض للباركود
           };
         },
         aspectRatio: 1.0,
-        disableFlip: false
+        disableFlip: false,
+        // تحسين دعم الباركود التقليدي
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
       };
 
       await html5QrCode.start(
@@ -150,101 +154,81 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg w-[95vw] p-4">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-primary text-lg">
-            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+      <DialogContent className="max-w-md w-[95vw] h-[85vh] p-3 flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-primary text-base">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4z"/>
               <path d="M13 13h1.5v1.5H13V13zm0 3h1.5v1.5H13V16zm3 0h1.5v1.5H16V16zm1.5-3H19v1.5h-1.5V13zm0 3H19v1.5h-1.5V16zm3-3H22v1.5h-1.5V13z"/>
             </svg>
-            قارئ الباركود المحترف
+            قارئ الباركود
           </DialogTitle>
-          <DialogDescription className="text-sm">
-            📱 <strong>يقرأ:</strong> جميع أنواع الباركود والـ QR Code<br/>
-            🎯 <strong>وجه الكاميرا للكود</strong> وانتظر لثانية واحدة
-          </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="flex-1 flex flex-col gap-3">
           {/* أزرار التحكم */}
-          {isScanning && (
-            <div className="flex justify-center gap-3">
-              {hasFlash && (
-                <Button
-                  variant={flashEnabled ? "default" : "outline"}
-                  size="sm"
-                  onClick={toggleFlash}
-                  className="flex items-center gap-2"
-                >
-                  {flashEnabled ? <FlashlightOff className="w-4 h-4" /> : <Flashlight className="w-4 h-4" />}
-                  {flashEnabled ? "إطفاء الفلاش" : "تشغيل الفلاش"}
-                </Button>
-              )}
-            </div>
-          )}
+          <div className="flex justify-center gap-2">
+            {hasFlash && (
+              <Button
+                variant={flashEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={toggleFlash}
+                className="flex items-center gap-1 text-xs px-3 py-1"
+              >
+                {flashEnabled ? <FlashlightOff className="w-3 h-3" /> : <Flashlight className="w-3 h-3" />}
+                {flashEnabled ? "إطفاء" : "فلاش"}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+              className="text-xs px-3 py-1"
+            >
+              إغلاق
+            </Button>
+          </div>
 
           {/* منطقة المسح */}
-          <div 
-            id="reader" 
-            className="w-full rounded-xl overflow-hidden border-4 border-primary/50 bg-black shadow-2xl"
-            style={{ minHeight: '400px', maxHeight: '500px' }}
-          />
+          <div className="flex-1 relative">
+            <div 
+              id="reader" 
+              className="w-full h-full rounded-lg overflow-hidden border-2 border-primary/30 bg-black"
+            />
+          </div>
           
           {/* رسائل الحالة */}
           {isScanning && (
-            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
-              <div className="flex items-center justify-center gap-3 text-green-700 mb-2">
-                <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-bold text-lg">🔍 قارئ نشط ومحسن!</span>
-                <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
+            <div className="text-center p-2 bg-green-50 rounded-lg border border-green-200 flex-shrink-0">
+              <div className="flex items-center justify-center gap-2 text-green-700 text-sm">
+                <div className="animate-pulse w-2 h-2 bg-green-500 rounded-full"></div>
+                <span className="font-medium">🔍 قارئ نشط</span>
               </div>
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-green-600">
-                  ✅ يقرأ جميع أنواع الباركود والـ QR بحساسية عالية
-                </p>
-                <p className="text-xs text-blue-600 font-medium">
-                  💡 ضع الكود في وسط المربع الأخضر وانتظر
-                </p>
-                {hasFlash && (
-                  <p className="text-xs text-purple-600 font-medium">
-                    💡 استخدم الفلاش في الإضاءة المنخفضة
-                  </p>
-                )}
-              </div>
+              <p className="text-xs text-green-600 mt-1">
+                وجه الكاميرا للباركود أو QR وانتظر
+              </p>
             </div>
           )}
           
           {!isScanning && !error && (
-            <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
-              <div className="text-blue-600">
-                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                <span className="font-medium">🔄 جاري تشغيل قارئ الباركود المحسن...</span>
+            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200 flex-shrink-0">
+              <div className="text-blue-600 text-sm">
+                <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-1"></div>
+                <span>جاري التشغيل...</span>
               </div>
             </div>
           )}
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>خطأ في القارئ</AlertTitle>
-            <AlertDescription>
+          <Alert variant="destructive" className="flex-shrink-0">
+            <AlertTriangle className="h-3 w-3" />
+            <AlertTitle className="text-sm">خطأ</AlertTitle>
+            <AlertDescription className="text-xs">
               {error}
-              <br />
-              <strong>💡 للحل:</strong> تأكد من السماح للكاميرا وأعد تحميل الصفحة
             </AlertDescription>
           </Alert>
         )}
-        
-        <div className="flex justify-center pt-2">
-          <Button 
-            onClick={() => onOpenChange(false)} 
-            variant="outline" 
-            className="w-full hover:bg-muted/80"
-          >
-            إغلاق القارئ
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
