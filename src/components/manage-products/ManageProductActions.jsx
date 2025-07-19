@@ -10,7 +10,7 @@ import ProductDetailsDialog from './ProductDetailsDialog';
 import EditProductDialog from './EditProductDialog';
 import PrintLabelsDialog from './PrintLabelsDialog';
 
-const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => {
+const ManageProductActions = ({ product, onProductUpdate }) => {
   const { deleteProducts, updateProduct } = useInventory();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -117,7 +117,7 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
       </TooltipProvider>
 
       <ProductDetailsDialog product={product} open={isViewOpen} onOpenChange={setIsViewOpen} />
-      <EditProductDialog product={product} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={handleSuccess} refetchProducts={refetchProducts} />
+      <EditProductDialog product={product} open={isEditOpen} onOpenChange={setIsEditOpen} onSuccess={handleSuccess} />
       <PrintLabelsDialog products={[product]} open={isPrintOpen} onOpenChange={setIsPrintOpen} />
 
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>

@@ -172,7 +172,6 @@ const ManageProductsPage = () => {
             open={!!editingProduct}
             onOpenChange={() => setEditingProduct(null)}
             onSuccess={onProductUpdate}
-            refetchProducts={refetchProducts}
         />
 
       <div className="space-y-6">
@@ -223,7 +222,6 @@ const ManageProductsPage = () => {
                     onSelect={handleSelectProduct}
                     onProductUpdate={onProductUpdate}
                     onEdit={handleEdit}
-                    refetchProducts={refetchProducts}
                   />
                 </motion.div>
               ))}
