@@ -27,6 +27,7 @@ const ProductVariantConfiguration = ({
   setVariants,
   price,
   costPrice,
+  profitAmount,
   imageFiles,
   setImageFiles,
 }) => {
@@ -66,6 +67,7 @@ const ProductVariantConfiguration = ({
                 setVariants={setVariants}
                 price={price}
                 costPrice={costPrice}
+                profitAmount={profitAmount}
                 handleImageSelect={(blob) => handleImageSelect(color.id, blob)}
                 initialImage={imageFiles[color.id]?.preview}
               />

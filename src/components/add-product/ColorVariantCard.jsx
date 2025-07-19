@@ -9,7 +9,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import ImageUploader from '@/components/manage-products/ImageUploader';
 
-const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price, costPrice, handleImageSelect, handleImageRemove, initialImage, dragHandleProps, isEditMode = false, showInventoryData = false, productName = '' }) => {
+const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price, costPrice, profitAmount, handleImageSelect, handleImageRemove, initialImage, dragHandleProps, isEditMode = false, showInventoryData = false, productName = '' }) => {
   
   const handleVariantChange = (colorId, sizeId, field, value) => {
     setVariants(prev => prev.map(v => {
@@ -78,14 +78,15 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
             
             <div className="space-y-3">
               {/* رؤوس الأعمدة */}
-              <div className="grid grid-cols-12 gap-2 p-3 bg-muted/20 rounded-lg border text-sm font-medium text-muted-foreground">
-                <div className="col-span-2 text-center">القياس</div>
-                <div className="col-span-2 text-center">الكمية</div>
-                <div className="col-span-2 text-center">التكلفة</div>
-                <div className="col-span-2 text-center">سعر البيع</div>
-                <div className="col-span-2 text-center">ملاحظة</div>
-                <div className="col-span-2 text-center">إجراءات</div>
-              </div>
+               <div className="grid grid-cols-7 gap-2 p-3 bg-muted/20 rounded-lg border text-sm font-medium text-muted-foreground">
+                 <div className="text-center">القياس</div>
+                 <div className="text-center">الكمية</div>
+                 <div className="text-center">التكلفة</div>
+                 <div className="text-center">سعر البيع</div>
+                 <div className="text-center">ربح الموظف</div>
+                 <div className="text-center">ملاحظة</div>
+                 <div className="text-center">إجراءات</div>
+               </div>
 
               {/* صفوف المتغيرات */}
               {(() => {
@@ -103,91 +104,108 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                     
                     return (
                       <div key={variant.id || index} 
-                           className="grid grid-cols-12 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                           className="grid grid-cols-7 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                         
-                        {/* القياس */}
-                        <div className="col-span-2 text-center">
-                          <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
-                            {sizeName}
-                          </div>
-                        </div>
-                        
-                        {/* الكمية */}
-                        <div className="col-span-2 space-y-1">
-                          <Input 
-                            type="number" 
-                            placeholder="0" 
-                            className="text-center font-medium"
-                            value={currentQuantity || ''} 
-                            onChange={e => {
-                              const newQuantity = parseInt(e.target.value) || 0;
-                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'quantity', newQuantity);
-                            }} 
-                            min="0"
-                          />
-                          {currentQuantity < 5 && currentQuantity > 0 && (
-                            <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
-                          )}
-                          {currentQuantity === 0 && (
-                            <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
-                          )}
-                        </div>
-                        
-                        {/* التكلفة */}
-                        <div className="col-span-2 space-y-1">
-                          <Input 
-                            type="number" 
-                            placeholder="0"
-                            className="text-center"
-                            value={variant.cost_price || variant.costPrice || costPrice || ''} 
-                            onChange={e => {
-                              const newCost = parseFloat(e.target.value) || 0;
-                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'costPrice', newCost);
-                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'cost_price', newCost);
-                            }} 
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        
-                        {/* سعر البيع */}
-                        <div className="col-span-2 space-y-1">
-                          <Input 
-                            type="number" 
-                            placeholder="0"
-                            className="text-center font-medium"
-                            value={variant.price || price || ''} 
-                            onChange={e => {
-                              const newPrice = parseFloat(e.target.value) || 0;
-                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'price', newPrice);
-                            }} 
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        
-                        {/* التلميحات الذكية */}
-                        <div className="col-span-2 space-y-1">
-                          <Input 
-                            type="text" 
-                            placeholder="مثال: مناسب لوزن 50-60 كغ"
-                            className="text-center text-xs"
-                            value={variant.hint || ''} 
-                            onChange={e => {
-                              handleVariantChange(color.id, variant.size_id || variant.sizeId, 'hint', e.target.value);
-                            }} 
-                          />
-                          <p className="text-xs text-muted-foreground text-center">
-                            تلميح ذكي للزبائن
-                          </p>
-                        </div>
-                        
-                        {/* الباركود */}
-                        <div className="col-span-2 text-center">
-                          <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
-                            {variant.barcode || 'سيتم إنشاؤه تلقائياً'}
-                          </div>
-                        </div>
+                         {/* القياس */}
+                         <div className="text-center">
+                           <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
+                             {sizeName}
+                           </div>
+                         </div>
+                         
+                         {/* الكمية */}
+                         <div className="space-y-1">
+                           <Input 
+                             type="number" 
+                             placeholder="0" 
+                             className="text-center font-medium"
+                             value={currentQuantity || ''} 
+                             onChange={e => {
+                               const newQuantity = parseInt(e.target.value) || 0;
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'quantity', newQuantity);
+                             }} 
+                             min="0"
+                           />
+                           {currentQuantity < 5 && currentQuantity > 0 && (
+                             <p className="text-xs text-orange-600 text-center">⚠️ مخزون منخفض</p>
+                           )}
+                           {currentQuantity === 0 && (
+                             <p className="text-xs text-red-600 text-center">❌ نفذ المخزون</p>
+                           )}
+                         </div>
+                         
+                         {/* التكلفة */}
+                         <div className="space-y-1">
+                           <Input 
+                             type="number" 
+                             placeholder="0"
+                             className="text-center"
+                             value={variant.cost_price || variant.costPrice || costPrice || ''} 
+                             onChange={e => {
+                               const newCost = parseFloat(e.target.value) || 0;
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'costPrice', newCost);
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'cost_price', newCost);
+                             }} 
+                             min="0"
+                             step="0.01"
+                           />
+                         </div>
+                         
+                         {/* سعر البيع */}
+                         <div className="space-y-1">
+                           <Input 
+                             type="number" 
+                             placeholder="0"
+                             className="text-center font-medium"
+                             value={variant.price || price || ''} 
+                             onChange={e => {
+                               const newPrice = parseFloat(e.target.value) || 0;
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'price', newPrice);
+                             }} 
+                             min="0"
+                             step="0.01"
+                           />
+                         </div>
+                         
+                         {/* ربح الموظف */}
+                         <div className="space-y-1">
+                           <Input 
+                             type="number" 
+                             placeholder="0"
+                             className="text-center"
+                             value={variant.profit_amount || variant.profitAmount || profitAmount || ''} 
+                             onChange={e => {
+                               const newProfitAmount = parseFloat(e.target.value) || 0;
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'profitAmount', newProfitAmount);
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'profit_amount', newProfitAmount);
+                             }} 
+                             min="0"
+                             step="100"
+                           />
+                         </div>
+                         
+                         {/* التلميحات الذكية */}
+                         <div className="space-y-1">
+                           <Input 
+                             type="text" 
+                             placeholder="مثال: مناسب لوزن 50-60 كغ"
+                             className="text-center text-xs"
+                             value={variant.hint || ''} 
+                             onChange={e => {
+                               handleVariantChange(color.id, variant.size_id || variant.sizeId, 'hint', e.target.value);
+                             }} 
+                           />
+                           <p className="text-xs text-muted-foreground text-center">
+                             تلميح ذكي للزبائن
+                           </p>
+                         </div>
+                         
+                         {/* الإجراءات */}
+                         <div className="text-center">
+                           <div className="text-xs font-mono text-muted-foreground bg-muted px-2 py-1 rounded">
+                             {variant.barcode || 'سيتم إنشاؤه تلقائياً'}
+                           </div>
+                         </div>
                       </div>
                     );
                   });
@@ -209,17 +227,17 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                   
                   return (
                     <div key={isNewProduct ? variant.sizeId : variant.id || index} 
-                         className="grid grid-cols-12 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
+                         className="grid grid-cols-7 items-center gap-2 p-3 border border-border/50 rounded-lg bg-card/50 hover:bg-muted/30 transition-colors">
                       
                       {/* القياس */}
-                      <div className="col-span-2 text-center">
+                      <div className="text-center">
                         <div className="font-medium text-primary bg-primary/10 px-2 py-1 rounded-md text-sm">
                           {sizeName}
                         </div>
                       </div>
                       
                       {/* الكمية */}
-                      <div className="col-span-2 space-y-1">
+                      <div className="space-y-1">
                          <Input 
                            type="number" 
                            placeholder="0" 
@@ -242,7 +260,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                       </div>
                       
                       {/* التكلفة */}
-                      <div className="col-span-2 space-y-1">
+                      <div className="space-y-1">
                          <Input 
                            type="number" 
                            placeholder="0"
@@ -259,7 +277,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         </div>
                         
                         {/* سعر البيع */}
-                        <div className="col-span-2 space-y-1">
+                        <div className="space-y-1">
                            <Input 
                              type="number" 
                              placeholder="0"
@@ -275,8 +293,25 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                            />
                         </div>
                         
+                        {/* ربح الموظف */}
+                        <div className="space-y-1">
+                           <Input 
+                             type="number" 
+                             placeholder="0"
+                             className="text-center"
+                             value={isNewProduct ? (variantData.profitAmount || profitAmount || '') : (variantData.profit_amount || profitAmount || '')} 
+                             onChange={e => {
+                               const newProfitAmount = parseFloat(e.target.value) || 0;
+                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'profitAmount', newProfitAmount);
+                               handleVariantChange(color.id, isNewProduct ? variantData.sizeId : variantData.size_id, 'profit_amount', newProfitAmount);
+                             }} 
+                             min="0"
+                             step="100"
+                           />
+                        </div>
+                        
                         {/* الملاحظة */}
-                        <div className="col-span-2 space-y-1">
+                        <div className="space-y-1">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -294,7 +329,7 @@ const ColorVariantCard = ({ color, allSizesForType, variants, setVariants, price
                         </div>
                         
                         {/* الإجراءات */}
-                        <div className="col-span-2 flex justify-center gap-1">
+                        <div className="flex justify-center gap-1">
                           {/* زر الباركود */}
                           <Dialog>
                             <TooltipProvider>

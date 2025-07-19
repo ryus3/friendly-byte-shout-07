@@ -537,23 +537,24 @@ const AddProductPage = () => {
                     <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
                       <div className="space-y-3 md:space-y-4">
                          {selectedColors.map((color) => (
-                           <SortableColorCard
-                             key={color.id}
-                             id={color.id}
-                             color={color}
-                             allSizesForType={isEditMode ? [] : variants.filter(v => v.colorId === color.id)}
-                             variants={variants}
-                             setVariants={setVariants}
-                             price={productInfo.price}
-                             costPrice={productInfo.costPrice}
-                             handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
-                             handleImageRemove={() => handleColorImageRemove(color.id)}
-                             initialImage={colorImages[color.id] || null}
-                             colorSizeTypes={colorSizeTypes[color.id] || [sizeType]}
-                             isEditMode={isEditMode}
-                             showInventoryData={isEditMode}
-                             productName={productInfo.name}
-                           />
+                            <SortableColorCard
+                              key={color.id}
+                              id={color.id}
+                              color={color}
+                              allSizesForType={isEditMode ? [] : variants.filter(v => v.colorId === color.id)}
+                              variants={variants}
+                              setVariants={setVariants}
+                              price={productInfo.price}
+                              costPrice={productInfo.costPrice}
+                              profitAmount={productInfo.profitAmount}
+                              handleImageSelect={(file) => handleColorImageSelect(color.id, file)}
+                              handleImageRemove={() => handleColorImageRemove(color.id)}
+                              initialImage={colorImages[color.id] || null}
+                              colorSizeTypes={colorSizeTypes[color.id] || [sizeType]}
+                              isEditMode={isEditMode}
+                              showInventoryData={isEditMode}
+                              productName={productInfo.name}
+                            />
                          ))}
                       </div>
                     </SortableContext>
