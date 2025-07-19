@@ -85,22 +85,37 @@ const EditProductDialog = ({ product, open, onOpenChange, onSuccess }) => {
         if (size) setSizeType(size.type);
       }
       
-      // تحديث المتغيرات مع توليد باركود إذا لم يكن موجود
+      // تحديث المتغيرات مع ضمان الحصول على البيانات الصحيحة
       const productVariants = product.product_variants || product.variants || [];
+      console.log('🔍 Product variants loaded:', productVariants);
+      
       const updatedVariants = productVariants.map(variant => {
-        let barcode = variant.barcode;
-        if (!barcode || barcode.trim() === '') {
-          // توليد باركود جديد للمتغيرات التي لا تحتوي على باركود
+        // إضافة البيانات المفقودة من العلاقات
+        const variantWithFullData = {
+          ...variant,
+          colorId: variant.color_id,
+          sizeId: variant.size_id,
+          // جلب اسم اللون والحجم من البيانات المرتبطة
+          color: variant.colors?.name || allColors.find(c => c.id === variant.color_id)?.name || 'غير محدد',
+          size: variant.sizes?.name || sizes.find(s => s.id === variant.size_id)?.name || 'غير محدد',
+          // ضمان وجود بيانات المخزون
+          quantity: variant.inventory?.[0]?.quantity || variant.quantity || 0,
+          costPrice: variant.cost_price || variant.costPrice || 0,
+        };
+        
+        // توليد باركود إذا لم يكن موجود
+        if (!variantWithFullData.barcode || variantWithFullData.barcode.trim() === '') {
           const color = allColors.find(c => c.id === variant.color_id);
           const size = sizes.find(s => s.id === variant.size_id);
-          barcode = generateUniqueBarcode(
+          variantWithFullData.barcode = generateUniqueBarcode(
             product.name,
             color?.name || 'DEFAULT',
             size?.name || 'DEFAULT',
             product.id
           );
         }
-        return { ...variant, barcode };
+        
+        return variantWithFullData;
       });
       
       setVariants(updatedVariants);

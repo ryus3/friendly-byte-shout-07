@@ -15,23 +15,22 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         .label-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          gap: 6mm;
-          padding: 8mm;
+          gap: 4mm;
+          padding: 6mm;
           justify-items: center;
         }
         
         .label-card {
-          width: 50mm;
-          height: 35mm;
-          border: 1.5px solid #2563eb;
-          padding: 2mm;
+          width: 45mm;
+          height: 30mm;
+          border: 1px solid #64748b;
+          padding: 1.5mm;
           page-break-inside: avoid;
           display: flex;
           flex-direction: column;
           justify-content: space-between;
           background: white;
-          border-radius: 4mm;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border-radius: 2mm;
         }
         
         .label-content {
@@ -43,23 +42,19 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
         
         .label-product-name {
-          font-size: 11px;
-          font-weight: 800;
+          font-size: 9px;
+          font-weight: 700;
           margin-bottom: 1mm;
           line-height: 1.1;
-          color: #1e40af;
+          color: #1e293b;
           text-transform: uppercase;
-          letter-spacing: 0.3px;
         }
         
         .label-variant-info {
-          font-size: 9px;
-          margin-bottom: 2mm;
+          font-size: 7px;
+          margin-bottom: 1mm;
           color: #64748b;
-          font-weight: 600;
-          background: #f1f5f9;
-          padding: 1mm;
-          border-radius: 2mm;
+          font-weight: 500;
         }
         
         .label-barcode-container {
@@ -71,22 +66,17 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
         
         .label-barcode-number {
-          font-size: 6px;
+          font-size: 5px;
           color: #475569;
-          margin-top: 1mm;
+          margin-top: 0.5mm;
           font-family: monospace;
-          letter-spacing: 0.5px;
         }
         
         .label-price {
-          font-size: 10px;
-          font-weight: 800;
-          margin-top: 1mm;
+          font-size: 8px;
+          font-weight: 700;
           color: #dc2626;
-          background: #fee2e2;
-          padding: 1mm;
-          border-radius: 2mm;
-          border: 1px solid #fca5a5;
+          margin-top: 0.5mm;
         }
         
         @media print {
@@ -107,12 +97,12 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <div className="label-barcode-container">
                 <Barcode 
                   value={label.barcode} 
-                  height={20} 
-                  width={1.5} 
+                  height={15} 
+                  width={1.2} 
                   fontSize={0} 
                   margin={0}
                   background="transparent"
-                  lineColor="#1e40af"
+                  lineColor="#1e293b"
                   displayValue={false}
                 />
                 <p className="label-barcode-number">{label.barcode}</p>
@@ -198,8 +188,11 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0 border-b pb-4">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            🏷️ طباعة ملصقات الباركود
+          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent flex items-center gap-2">
+            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            طباعة ملصقات الباركود
           </DialogTitle>
           <DialogDescription className="text-base text-muted-foreground">
             حدد كمية الملصقات لكل متغير واحصل على ملصقات احترافية قابلة للقراءة
@@ -210,23 +203,34 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
           {/* قسم تحديد الكميات */}
           <div className="flex flex-col space-y-4">
             <div className="flex justify-between items-center">
-              <h4 className="text-lg font-semibold text-foreground">📊 تحديد الكميات</h4>
+              <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                تحديد الكميات
+              </h4>
               <div className="flex gap-2">
                 <Button 
                   onClick={setAllQuantitiesToStock} 
                   variant="outline" 
                   size="sm"
-                  className="hover:bg-primary/10 transition-colors"
+                  className="hover:bg-primary/10 transition-colors flex items-center gap-1"
                 >
-                  📦 حسب المخزون
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
+                  </svg>
+                  حسب المخزون
                 </Button>
                 <Button 
                   onClick={clearAllQuantities} 
                   variant="destructive" 
                   size="sm"
-                  className="hover:bg-destructive/90 transition-colors"
+                  className="hover:bg-destructive/90 transition-colors flex items-center gap-1"
                 >
-                  🗑️ تصفير الكل
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  تصفير الكل
                 </Button>
               </div>
             </div>
@@ -284,21 +288,27 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
 
           {/* قسم معاينة الطباعة */}
           <div className="flex flex-col space-y-4">
-            <h4 className="text-lg font-semibold text-foreground">👀 معاينة الطباعة</h4>
+            <h4 className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              معاينة الطباعة
+            </h4>
             <div className="flex-1 border border-border rounded-xl p-4 overflow-auto bg-muted/10">
               <style>{`
                 .preview-label-grid {
                   display: grid;
-                  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-                  gap: 12px;
-                  padding: 12px;
+                  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                  gap: 8px;
+                  padding: 8px;
                 }
                 
                 .preview-label-card {
-                  width: 120px;
-                  height: 85px;
-                  border: 2px solid hsl(var(--primary));
-                  padding: 6px;
+                  width: 100px;
+                  height: 65px;
+                  border: 1px solid hsl(var(--primary));
+                  padding: 4px;
                   display: flex;
                   flex-direction: column;
                   justify-content: space-between;
@@ -372,8 +382,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                       <div className="preview-label-barcode-container">
                         <Barcode 
                           value={label.barcode} 
-                          height={12} 
-                          width={1.2} 
+                          height={8} 
+                          width={0.8} 
                           fontSize={0} 
                           margin={0}
                           background="transparent"
@@ -400,23 +410,32 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
           <div className="w-full flex justify-between items-center">
             <div className="flex items-center gap-2 text-lg font-semibold">
               <span className="text-muted-foreground">إجمالي الملصقات:</span>
-              <span className="text-primary bg-primary/10 px-3 py-1 rounded-full">
+              <span className="text-primary bg-primary/10 px-3 py-1 rounded-full flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
                 {labelsToPrint.length}
               </span>
             </div>
             <div className="flex gap-3">
               <DialogClose asChild>
-                <Button variant="outline" className="hover:bg-muted/80">
-                  ❌ إلغاء
+                <Button variant="outline" className="hover:bg-muted/80 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  إلغاء
                 </Button>
               </DialogClose>
               <Button 
                 onClick={handlePrint} 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium flex items-center gap-2"
                 disabled={labelsToPrint.length === 0}
               >
-                <Printer className="w-4 h-4 ml-2" />
-                🖨️ طباعة ({labelsToPrint.length})
+                <Printer className="w-4 h-4" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                طباعة ({labelsToPrint.length})
               </Button>
             </div>
           </div>
