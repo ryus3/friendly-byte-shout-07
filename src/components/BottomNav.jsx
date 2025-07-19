@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
+import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 
 const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
   <motion.button
@@ -113,6 +114,7 @@ const MenuContent = ({ onClose }) => {
 
 const SearchSheet = ({ children, open, onOpenChange }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBarcodeOpen, setIsBarcodeOpen] = useState(false);
   const { products } = useInventory(); // المنتجات مفلترة تلقائياً حسب الصلاحيات
   const navigate = useNavigate();
 
@@ -134,6 +136,34 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
     }
   };
 
+  const handleBarcodeScan = (barcode) => {
+    // البحث عن المنتج بالباركود
+    const foundProduct = products.find(product => 
+      product.variants?.some(variant => variant.barcode === barcode) ||
+      product.barcode === barcode
+    );
+
+    if (foundProduct) {
+      navigate('/products', { 
+        state: { selectedProduct: foundProduct, searchTerm: barcode }
+      });
+      toast({
+        title: "✅ تم العثور على المنتج!",
+        description: foundProduct.name,
+        variant: "success"
+      });
+    } else {
+      toast({
+        title: "❌ لم يتم العثور على المنتج",
+        description: `الباركود: ${barcode}`,
+        variant: "destructive"
+      });
+    }
+    
+    setIsBarcodeOpen(false);
+    onOpenChange(false);
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
@@ -153,6 +183,19 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
               className="flex-1"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
+            <Button 
+              variant="outline"
+              size="icon"
+              onClick={() => setIsBarcodeOpen(true)}
+              className="shrink-0"
+            >
+              <div className="w-5 h-5">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4z"/>
+                  <path d="M13 13h1.5v1.5H13V13zm0 3h1.5v1.5H13V16zm3 0h1.5v1.5H16V16zm1.5-3H19v1.5h-1.5V13zm0 3H19v1.5h-1.5V16zm3-3H22v1.5h-1.5V13z"/>
+                </svg>
+              </div>
+            </Button>
             <Button onClick={handleSearch}>بحث</Button>
           </div>
 
@@ -190,6 +233,11 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
           )}
         </div>
       </SheetContent>
+      <BarcodeScannerDialog
+        open={isBarcodeOpen}
+        onOpenChange={setIsBarcodeOpen}
+        onScanSuccess={handleBarcodeScan}
+      />
     </Sheet>
   );
 };

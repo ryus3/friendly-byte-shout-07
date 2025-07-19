@@ -9,10 +9,12 @@ import { Camera, AlertTriangle, Flashlight, FlashlightOff } from 'lucide-react';
 const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
   const readerRef = useRef(null);
   const videoTrackRef = useRef(null);
+  const lastScanTimeRef = useRef(0);
   const [error, setError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [hasFlash, setHasFlash] = useState(false);
+  const [scanCount, setScanCount] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -42,43 +44,47 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-      // إعدادات محسنة للقراءة
+      // إعدادات محسنة للقراءة السريعة
       const config = {
-        fps: 20,
+        fps: 30, // سرعة عالية للمسح السريع
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          // حجم كبير للتحديد
+          // منطقة أكبر لالتقاط أكثر من ملصق
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minEdge * 0.9);
+          const size = Math.floor(minEdge * 0.95);
           return {
             width: size,
-            height: Math.floor(size * 0.7)
+            height: Math.floor(size * 0.8)
           };
         },
         aspectRatio: 1.0,
-        disableFlip: false
+        disableFlip: false,
+        experimentalFeatures: {
+          useBarCodeDetectorIfSupported: true
+        }
       };
 
       await html5QrCode.start(
         { facingMode: "environment" },
         config,
         async (decodedText, decodedResult) => {
-          console.log("🎯 تم قراءة الكود:", decodedText);
+          // منع المسح المتكرر للكود نفسه
+          const now = Date.now();
+          if (now - lastScanTimeRef.current < 100) {
+            return;
+          }
+          lastScanTimeRef.current = now;
           
-          // صوت نجاح
+          console.log("🎯 تم قراءة الكود:", decodedText);
+          setScanCount(prev => prev + 1);
+          
+          // صوت نجاح خفيف
           try {
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwgBSmEyvLZhj8IFWm98OyfUgwOUarm0nQgBSl+y/LVey0GO2q+8N2bSDsBJXfH89mTRAsVWLPn7q1cEgBHmN/nynkiBjR+zfP');
-            audio.volume = 0.3;
+            audio.volume = 0.15;
             audio.play();
           } catch (e) {}
 
-          // إشعار المسح
-          toast({
-            title: "✅ تم المسح بنجاح!",
-            description: `الكود: ${decodedText}`,
-            variant: "success"
-          });
-
-          // إرسال النتيجة
+          // إرسال النتيجة بدون إغلاق المسح
           onScanSuccess(decodedText);
         },
         (errorMessage) => {
@@ -195,16 +201,21 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
               <div className="flex items-center justify-center gap-3 text-green-700 mb-2">
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-bold text-lg">🔍 قارئ نشط ومحسن!</span>
+                <span className="font-bold text-lg">🚀 مسح سريع نشط!</span>
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-600">
-                  ✅ يقرأ جميع أنواع الباركود والـ QR بحساسية عالية
+                  ⚡ يقرأ عشرات الملصقات بسرعة فائقة
                 </p>
                 <p className="text-xs text-blue-600 font-medium">
-                  💡 ضع الكود في وسط المربع الأخضر وانتظر
+                  📱 مرر الكاميرا على الملصقات بسرعة
                 </p>
+                {scanCount > 0 && (
+                  <p className="text-xs text-primary font-bold">
+                    📊 تم قراءة {scanCount} كود
+                  </p>
+                )}
                 {hasFlash && (
                   <p className="text-xs text-purple-600 font-medium">
                     💡 استخدم الفلاش في الإضاءة المنخفضة

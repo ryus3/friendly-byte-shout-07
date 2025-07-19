@@ -305,16 +305,16 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   .simple-label-grid {
                     display: flex;
                     flex-direction: column;
-                    gap: 12px;
-                    padding: 8px;
+                    gap: 15px;
+                    padding: 10px;
                     align-items: center;
                   }
                   
                   .simple-label-card {
-                    width: 160px;
-                    height: 80px;
-                    border: 1px solid #000000;
-                    padding: 8px;
+                    width: 180px;
+                    height: 90px;
+                    border: 2px solid #000000;
+                    padding: 6px;
                     display: flex;
                     flex-direction: column;
                     justify-content: space-between;
@@ -333,8 +333,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .simple-label-product-name {
-                    font-size: 11px;
-                    font-weight: bold;
+                    font-size: 14px;
+                    font-weight: 900;
                     margin-bottom: 2px;
                     line-height: 1.1;
                     color: #000000;
@@ -342,17 +342,18 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                     overflow: hidden;
                     text-overflow: ellipsis;
                     white-space: nowrap;
+                    letter-spacing: 0.3px;
                   }
                   
                   .simple-label-variant-info {
-                    font-size: 9px;
+                    font-size: 10px;
                     margin-bottom: 3px;
                     color: #000000;
-                    font-weight: normal;
+                    font-weight: 600;
                   }
                   
                   .simple-label-barcode-container {
-                    margin: 2px 0;
+                    margin: 3px 0;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -361,17 +362,19 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   }
                   
                   .simple-label-barcode-number {
-                    font-size: 7px;
+                    font-size: 8px;
                     color: #000000;
-                    margin-top: 1px;
+                    margin-top: 2px;
                     font-family: monospace;
+                    font-weight: 600;
                   }
                   
                   .simple-label-price {
-                    font-size: 10px;
-                    font-weight: bold;
-                    color: #dc2626;
+                    font-size: 12px;
+                    font-weight: 900;
+                    color: #000000;
                     direction: rtl;
+                    letter-spacing: 0.5px;
                   }
                 `}</style>
                 <div className="simple-label-grid">
@@ -381,10 +384,10 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                         <h3 className="simple-label-product-name">{label.name}</h3>
                         <p className="simple-label-variant-info">{label.color} / {label.size}</p>
                         <div className="simple-label-barcode-container">
-                          <Barcode 
+                           <Barcode 
                             value={label.barcode} 
-                            height={12} 
-                            width={1.0} 
+                            height={18} 
+                            width={1.2} 
                             fontSize={0} 
                             margin={0}
                             background="transparent"
