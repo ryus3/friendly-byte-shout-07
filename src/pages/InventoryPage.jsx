@@ -102,7 +102,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
 
 const InventoryPage = () => {
-  const { allProducts, orders, loading, settings, updateVariantStock } = useInventory();
+  const { products: allProducts, orders, loading, settings, updateVariantStock } = useInventory();
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
