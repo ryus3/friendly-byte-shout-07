@@ -29,12 +29,13 @@ const ProductsPage = () => {
   const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
   const { hasPermission } = usePermissions();
   
-  console.log('📦 صفحة المنتجات:', {
+  console.log('🚀 تشخيص صفحة المنتجات:', {
+    step: 'البيانات الأساسية',
     products: products?.length || 0,
+    productsArray: Array.isArray(products),
     loading,
-    user: user?.full_name,
     isAdmin,
-    hasProductPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
+    userRole: user?.role || user?.full_name
   });
   const { colors, categories: allCategories, departments: allDepartments } = useVariants();
   
@@ -74,6 +75,14 @@ const ProductsPage = () => {
   const permissionFilteredProducts = useMemo(() => {
     // المدير يرى كل المنتجات مباشرة
     let filtered = isAdmin ? products : filterProductsByPermissions(products);
+    
+    console.log('🔍 بعد فلترة الصلاحيات:', {
+      step: 'فلترة الصلاحيات',
+      originalCount: products?.length || 0,
+      filteredCount: filtered?.length || 0,
+      isAdmin,
+      isArray: Array.isArray(filtered)
+    });
     
     // تطبيق فلاتر إضافية للمستخدمين الذين لديهم صلاحيات متعددة
     if (permissionFilters.department !== 'all') {
