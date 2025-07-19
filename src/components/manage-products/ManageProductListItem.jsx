@@ -55,8 +55,8 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         product.is_active === false && "opacity-60 bg-muted/50" // إضافة تأثير بصري للمنتجات المخفية
       )}
     >
-      <div className="space-y-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 flex-1">
           <Checkbox checked={isSelected} onCheckedChange={() => onSelect(product.id)} />
           <div className="flex-1 min-w-0" onClick={handleEditProduct}>
             <div className="flex items-center gap-2 mb-1">
@@ -78,24 +78,22 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
               </span>
             </div>
             {product.barcode && (
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-1">
                 <Hash className="w-3 h-3 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground font-mono">QR: {product.barcode}</span>
               </div>
             )}
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
             {product.is_active === false && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-muted-foreground font-medium">
                   هذا المنتج مخفي عن العملاء
                 </span>
               </div>
             )}
           </div>
+        </div>
+        
+        <div className="flex-shrink-0">
           <ManageProductActions product={product} onProductUpdate={onProductUpdate} refetchProducts={refetchProducts} />
         </div>
       </div>

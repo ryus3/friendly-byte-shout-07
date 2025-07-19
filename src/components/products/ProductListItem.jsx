@@ -13,10 +13,11 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
       return sum + quantity;
     }, 0);
   }, [product.variants]);
+  
   const reservedStock = useMemo(() => {
     if (!product.variants || product.variants.length === 0) return 0;
     return product.variants.reduce((sum, v) => {
-      const reserved = v.inventory?.[0]?.reserved_quantity || v.reserved || 0;
+      const reserved = v.inventory?.[0]?.reserved_stock || v.inventory?.[0]?.reserved_quantity || v.reserved || 0;
       return sum + reserved;
     }, 0);
   }, [product.variants]);
@@ -37,6 +38,7 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
     const sizeValues = new Set(availableVariants.map(v => v.size?.name || v.size));
     return [...sizeValues].filter(s => s);
   }, [product.variants]);
+
 
   return (
     <div
@@ -70,27 +72,30 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
                 )}
               </div>
               
-              {/* القياسات */}
+              {/* القياسات - عرض جميع القياسات */}
               {availableSizes.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {availableSizes.slice(0, 3).map((size, idx) => (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {availableSizes.map((size, idx) => (
                     <span key={idx} className="text-xs bg-secondary px-1.5 py-0.5 rounded">
                       {size}
                     </span>
                   ))}
-                  {availableSizes.length > 3 && (
-                    <span className="text-xs text-muted-foreground">+{availableSizes.length - 3}</span>
-                  )}
                 </div>
               )}
             </div>
             
-            {/* معلومات المخزون */}
-            <div className="text-left font-medium text-sm">
-              <span className="text-green-600">متوفر: {(totalStock || 0).toLocaleString()}</span>
-              {reservedStock > 0 && (
-                <span className="text-amber-600 mr-2">محجوز: {reservedStock.toLocaleString()}</span>
-              )}
+            {/* معلومات المخزون - المتوفر والمحجوز */}
+            <div className="text-left text-sm mt-2">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600 font-medium">المتوفر:</span>
+                  <span className="text-green-600 font-bold">{(totalStock || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-amber-600 font-medium">المحجوز:</span>
+                  <span className="text-amber-600 font-bold">{(reservedStock || 0).toLocaleString()}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
