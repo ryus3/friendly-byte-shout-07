@@ -216,8 +216,8 @@ const PurchaseInvoicePDF = ({ purchase }) => {
               <Text style={styles.value}>{purchase.purchase_number}</Text>
             </View>
             <View style={styles.row}>
-              <Text style={styles.label}>تاريخ الإنشاء:</Text>
-              <Text style={styles.value}>{formatDate(purchase.created_at)}</Text>
+              <Text style={styles.label}>تاريخ الشراء:</Text>
+              <Text style={styles.value}>{formatDate(purchase.purchase_date || purchase.created_at)}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>حالة الفاتورة:</Text>
@@ -272,18 +272,18 @@ const PurchaseInvoicePDF = ({ purchase }) => {
               {formatCurrency((purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}
             </Text>
           </View>
-          {/* حساب الشحن من إجمالي الفاتورة - قيمة المنتجات */}
-          {((purchase.total_amount || 0) - (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0)) > 0 && (
+          {/* عرض تكلفة الشحن من العمود المنفصل */}
+          {(purchase.shipping_cost || 0) > 0 && (
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>مصاريف الشحن:</Text>
               <Text style={styles.totalValue}>
-                {formatCurrency((purchase.total_amount || 0) - (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}
+                {formatCurrency(purchase.shipping_cost)}
               </Text>
             </View>
           )}
           <View style={[styles.totalRow, { borderTop: 2, borderTopColor: '#2563eb', paddingTop: 10 }]}>
             <Text style={styles.grandTotal}>إجمالي الفاتورة:</Text>
-            <Text style={styles.grandTotal}>{formatCurrency(purchase.total_amount)}</Text>
+            <Text style={styles.grandTotal}>{formatCurrency((purchase.total_amount || 0) + (purchase.shipping_cost || 0))}</Text>
           </View>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>المبلغ المدفوع:</Text>

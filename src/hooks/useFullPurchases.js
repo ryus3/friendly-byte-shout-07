@@ -19,10 +19,12 @@ export const useFullPurchases = () => {
         .insert({
           supplier_name: purchaseData.supplier,
           supplier_contact: purchaseData.supplierContact || null,
-          total_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
-          paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0),
+          total_amount: purchaseData.totalCost, // إجمالي المنتجات فقط
+          paid_amount: purchaseData.totalCost + (purchaseData.shippingCost || 0), // المبلغ المدفوع
+          shipping_cost: purchaseData.shippingCost || 0, // تكلفة الشحن منفصلة
+          purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate) : new Date(), // تاريخ الشراء الفعلي
           status: 'completed',
-          notes: purchaseData.shippingCost > 0 ? `شحن: ${purchaseData.shippingCost} د.ع | تاريخ: ${purchaseData.purchaseDate || 'اليوم'}` : `تاريخ: ${purchaseData.purchaseDate || 'اليوم'}`,
+          notes: null, // إزالة الملاحظات
           items: purchaseData.items, // حفظ العناصر كـ JSON أيضاً
           created_by: user?.user_id
         })

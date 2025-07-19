@@ -7,11 +7,11 @@ const PurchaseDetailsDialog = ({ purchase, open, onOpenChange }) => {
   if (!purchase) return null;
   
   const totalItemsCost = (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
-  const shippingCost = purchase.shippingCost || 0;
+  const shippingCost = purchase.shipping_cost || 0; // من العمود المنفصل
   const totalCost = totalItemsCost + shippingCost;
 
-  // التحقق من صحة التاريخ
-  const purchaseDate = purchase.purchaseDate || purchase.createdAt || new Date();
+  // استخدام تاريخ الشراء الفعلي
+  const purchaseDate = purchase.purchase_date || purchase.created_at || new Date();
   const formattedDate = purchaseDate ? format(new Date(purchaseDate), 'd MMMM yyyy', { locale: ar }) : 'غير محدد';
 
   return (
@@ -20,7 +20,7 @@ const PurchaseDetailsDialog = ({ purchase, open, onOpenChange }) => {
         <DialogHeader>
           <DialogTitle className="gradient-text">تفاصيل فاتورة الشراء</DialogTitle>
           <DialogDescription>
-            فاتورة رقم #{purchase.id} بتاريخ {formattedDate}
+            فاتورة رقم #{purchase.purchase_number} بتاريخ {formattedDate}
           </DialogDescription>
         </DialogHeader>
         

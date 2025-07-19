@@ -1327,7 +1327,9 @@ export type Database = {
           items: Json | null
           notes: string | null
           paid_amount: number
+          purchase_date: string | null
           purchase_number: string
+          shipping_cost: number | null
           status: string
           supplier: string | null
           supplier_contact: string | null
@@ -1342,7 +1344,9 @@ export type Database = {
           items?: Json | null
           notes?: string | null
           paid_amount?: number
+          purchase_date?: string | null
           purchase_number: string
+          shipping_cost?: number | null
           status?: string
           supplier?: string | null
           supplier_contact?: string | null
@@ -1357,7 +1361,9 @@ export type Database = {
           items?: Json | null
           notes?: string | null
           paid_amount?: number
+          purchase_date?: string | null
           purchase_number?: string
+          shipping_cost?: number | null
           status?: string
           supplier?: string | null
           supplier_contact?: string | null
