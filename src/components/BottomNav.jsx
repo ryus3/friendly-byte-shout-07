@@ -153,25 +153,32 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
         variant.barcode === barcode || variant.sku === barcode
       );
       
+      // إشعار سريع فقط
       toast({
-        title: "✅ تم العثور على المنتج!",
-        description: `${foundProduct.name} - ${foundVariant?.colors?.name || foundVariant?.color} / ${foundVariant?.sizes?.name || foundVariant?.size}`,
-        variant: "success"
+        title: "✅ منتج موجود",
+        description: `${foundProduct.name}`,
+        variant: "success",
+        duration: 1500 // إشعار سريع
       });
 
+      // الانتقال للمنتج مباشرة
       navigate('/products', { 
         state: { 
           selectedProduct: foundProduct,
           selectedVariant: foundVariant 
         }
       });
-      onOpenChange(false);
-      setShowBarcodeScanner(false);
+      
+      // لا نغلق القارئ - يستمر في القراءة
+      // onOpenChange(false);
+      // setShowBarcodeScanner(false);
     } else {
+      // إشعار سريع للمنتجات غير الموجودة
       toast({
-        title: "❌ لم يتم العثور على المنتج",
-        description: `الباركود: ${barcode} غير موجود في النظام`,
-        variant: "destructive"
+        title: "❌ غير موجود",
+        description: `${barcode}`,
+        variant: "destructive",
+        duration: 1000 // إشعار أسرع
       });
     }
   };

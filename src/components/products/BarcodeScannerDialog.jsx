@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScanType } from 'html5-qrcode';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, AlertTriangle, Flashlight, FlashlightOff } from 'lucide-react';
@@ -42,47 +42,63 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-      // إعدادات محسنة للقراءة
+      // إعدادات فائقة السرعة للقراءة المتتالية
       const config = {
-        fps: 20,
+        fps: 30, // 30 إطار بالثانية لسرعة فائقة
         qrbox: function(viewfinderWidth, viewfinderHeight) {
-          // حجم كبير للتحديد
+          // منطقة كبيرة لالتقاط متعدد
           const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-          const size = Math.floor(minEdge * 0.9);
+          const size = Math.floor(minEdge * 0.95);
           return {
             width: size,
-            height: Math.floor(size * 0.7)
+            height: Math.floor(size * 0.8)
           };
         },
         aspectRatio: 1.0,
-        disableFlip: false
+        disableFlip: false,
+        // إعدادات تحسين الأداء
+        willReadFrequently: true,
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
       };
 
+      let lastScannedCode = '';
+      let lastScanTime = 0;
+      const SCAN_COOLDOWN = 100; // 100ms فقط بين كل مسح
+
       await html5QrCode.start(
-        { facingMode: "environment" },
+        { 
+          facingMode: "environment",
+          // تحسينات الكاميرا للسرعة
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 }
+        },
         config,
         async (decodedText, decodedResult) => {
-          console.log("🎯 تم قراءة الكود:", decodedText);
+          const currentTime = Date.now();
           
-          // صوت نجاح
+          // منع القراءة المتكررة للكود نفسه بسرعة
+          if (decodedText === lastScannedCode && (currentTime - lastScanTime) < SCAN_COOLDOWN) {
+            return;
+          }
+          
+          lastScannedCode = decodedText;
+          lastScanTime = currentTime;
+          
+          console.log("🚀 مسح سريع:", decodedText);
+          
+          // صوت نجاح خفيف وسريع
           try {
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwgBSmEyvLZhj8IFWm98OyfUgwOUarm0nQgBSl+y/LVey0GO2q+8N2bSDsBJXfH89mTRAsVWLPn7q1cEgBHmN/nynkiBjR+zfP');
-            audio.volume = 0.3;
+            audio.volume = 0.2; // صوت أخف
             audio.play();
           } catch (e) {}
 
-          // إشعار المسح
-          toast({
-            title: "✅ تم المسح بنجاح!",
-            description: `الكود: ${decodedText}`,
-            variant: "success"
-          });
-
-          // إرسال النتيجة
+          // إرسال النتيجة مباشرة بدون إشعارات طويلة
           onScanSuccess(decodedText);
         },
         (errorMessage) => {
-          // تجاهل أخطاء عدم وجود كود
+          // تجاهل جميع الأخطاء للسرعة القصوى
         }
       );
 
@@ -195,18 +211,21 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
               <div className="flex items-center justify-center gap-3 text-green-700 mb-2">
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-bold text-lg">🔍 قارئ نشط ومحسن!</span>
+                <span className="font-bold text-lg">⚡ قارئ سريع نشط!</span>
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-600">
-                  ✅ يقرأ جميع أنواع الباركود والـ QR بحساسية عالية
+                  🚀 قارئ فائق السرعة - يقرأ عشرات الأكواد بثوانٍ
                 </p>
                 <p className="text-xs text-blue-600 font-medium">
-                  💡 ضع الكود في وسط المربع الأخضر وانتظر
+                  💡 مرر الكاميرا على الملصقات بسرعة - سيقرأ كل واحد منها
+                </p>
+                <p className="text-xs text-purple-600 font-medium">
+                  ⚡ مُحسن للقراءة المتتالية السريعة
                 </p>
                 {hasFlash && (
-                  <p className="text-xs text-purple-600 font-medium">
+                  <p className="text-xs text-orange-600 font-medium">
                     💡 استخدم الفلاش في الإضاءة المنخفضة
                   </p>
                 )}
@@ -218,7 +237,7 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="text-blue-600">
                 <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
-                <span className="font-medium">🔄 جاري تشغيل قارئ الباركود المحسن...</span>
+                <span className="font-medium">🚀 جاري تشغيل القارئ السريع...</span>
               </div>
             </div>
           )}
