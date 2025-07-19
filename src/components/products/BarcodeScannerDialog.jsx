@@ -44,39 +44,28 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       const html5QrCode = new Html5Qrcode("reader");
       readerRef.current = html5QrCode;
 
-        // إعدادات محسنة للقراءة السريعة - تركيز على الباركود
+        // إعدادات محسنة لقراءة QR Codes
         const config = {
-          fps: 30, // سرعة عالية للمسح السريع
+          fps: 30,
           qrbox: function(viewfinderWidth, viewfinderHeight) {
-            // منطقة مُحسنة للباركود (أوسع وأقصر)
+            // منطقة مربعة مُحسنة للـ QR Code
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const size = Math.floor(minEdge * 0.9);
+            const size = Math.floor(minEdge * 0.8);
             return {
               width: size,
-              height: Math.floor(size * 0.4) // نسبة أقل للباركود
+              height: size // مربع للـ QR Code
             };
           },
           aspectRatio: 1.0,
           disableFlip: false,
-          // تفعيل قراءة جميع أنواع الباركود
+          // تركيز على QR Codes بشكل أساسي
           formatsToSupport: [
             Html5QrcodeSupportedFormats.QR_CODE,
-            Html5QrcodeSupportedFormats.AZTEC,
-            Html5QrcodeSupportedFormats.CODABAR,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.CODE_93,
-            Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.DATA_MATRIX,
-            Html5QrcodeSupportedFormats.MAXICODE,
-            Html5QrcodeSupportedFormats.ITF,
+            Html5QrcodeSupportedFormats.AZTEC,
+            Html5QrcodeSupportedFormats.CODE_128,
             Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.PDF_417,
-            Html5QrcodeSupportedFormats.RSS_14,
-            Html5QrcodeSupportedFormats.RSS_EXPANDED,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-            Html5QrcodeSupportedFormats.UPC_EAN_EXTENSION
+            Html5QrcodeSupportedFormats.UPC_A
           ],
           experimentalFeatures: {
             useBarCodeDetectorIfSupported: true
@@ -89,13 +78,30 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
         async (decodedText, decodedResult) => {
           // منع المسح المتكرر للكود نفسه
           const now = Date.now();
-          if (now - lastScanTimeRef.current < 100) {
+          if (now - lastScanTimeRef.current < 500) {
             return;
           }
           lastScanTimeRef.current = now;
           
-          console.log("🎯 تم قراءة الكود:", decodedText);
+          console.log("🎯 تم قراءة QR Code:", decodedText);
           setScanCount(prev => prev + 1);
+          
+          // محاولة تحليل JSON للـ QR Codes المتقدمة
+          let parsedData = null;
+          try {
+            parsedData = JSON.parse(decodedText);
+            if (parsedData.type === 'product') {
+              console.log("📦 بيانات المنتج:", parsedData);
+              toast({
+                title: "✅ تم قراءة QR Code",
+                description: `المنتج: ${parsedData.product_name} - اللون: ${parsedData.color} - المقاس: ${parsedData.size}`,
+                variant: "success"
+              });
+            }
+          } catch (e) {
+            // QR Code عادي (نص)
+            console.log("📄 QR Code نصي:", decodedText);
+          }
           
           // صوت نجاح خفيف
           try {
@@ -104,8 +110,8 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             audio.play();
           } catch (e) {}
 
-          // إرسال النتيجة بدون إغلاق المسح
-          onScanSuccess(decodedText);
+          // إرسال النتيجة
+          onScanSuccess(parsedData || decodedText);
         },
         (errorMessage) => {
           // تجاهل أخطاء عدم وجود كود
@@ -180,19 +186,19 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-primary text-lg">
             <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-              <rect x="2" y="6" width="20" height="12" rx="2" ry="2" fill="none" stroke="currentColor" strokeWidth="2"/>
-              <rect x="4" y="8" width="2" height="8" fill="currentColor"/>
-              <rect x="7" y="8" width="1" height="8" fill="currentColor"/>
-              <rect x="9" y="8" width="3" height="8" fill="currentColor"/>
-              <rect x="13" y="8" width="1" height="8" fill="currentColor"/>
-              <rect x="15" y="8" width="2" height="8" fill="currentColor"/>
-              <rect x="18" y="8" width="2" height="8" fill="currentColor"/>
+              <rect x="3" y="3" width="5" height="5" fill="currentColor"/>
+              <rect x="3" y="16" width="5" height="5" fill="currentColor"/>
+              <rect x="16" y="3" width="5" height="5" fill="currentColor"/>
+              <rect x="9" y="9" width="6" height="6" fill="currentColor"/>
+              <rect x="5" y="5" width="1" height="1" fill="white"/>
+              <rect x="5" y="18" width="1" height="1" fill="white"/>
+              <rect x="18" y="5" width="1" height="1" fill="white"/>
             </svg>
-            قارئ الباركود المحترف
+            قارئ الـ QR Code الذكي
           </DialogTitle>
           <DialogDescription className="text-sm">
-            📱 <strong>يقرأ:</strong> جميع أنواع الباركود والـ QR Code<br/>
-            🎯 <strong>وجه الكاميرا للكود</strong> وانتظر لثانية واحدة
+            📱 <strong>يقرأ:</strong> QR Codes التفاصيلية للمنتجات<br/>
+            🎯 <strong>وجه الكاميرا للكود</strong> للحصول على تفاصيل كاملة
           </DialogDescription>
         </DialogHeader>
         
@@ -226,15 +232,15 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
               <div className="flex items-center justify-center gap-3 text-green-700 mb-2">
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-bold text-lg">🚀 مسح سريع نشط!</span>
+                <span className="font-bold text-lg">🚀 قراءة QR Code نشطة!</span>
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-600">
-                  ⚡ يقرأ عشرات الملصقات بسرعة فائقة
+                  ⚡ يقرأ QR Codes مع التفاصيل الكاملة للمنتجات
                 </p>
                 <p className="text-xs text-blue-600 font-medium">
-                  📱 مرر الكاميرا على الملصقات بسرعة
+                  📱 وجه الكاميرا نحو QR Code المنتج
                 </p>
                 {scanCount > 0 && (
                   <p className="text-xs text-primary font-bold">

@@ -244,9 +244,9 @@ const AddProductPage = () => {
                       <Building2 className="h-4 w-4 ml-2" />
                       إدارة المتغيرات
                    </Button>
-                   <Button type="button" variant="outline" onClick={() => navigate('/manage-labels')}>
+                   <Button type="button" variant="outline" onClick={() => navigate('/qr-labels')}>
                       <QrCode className="h-4 w-4 ml-2" />
-                      طباعة الملصقات
+                      طباعة ملصقات QR
                    </Button>
                    <div>
                      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">

@@ -1363,6 +1363,51 @@ export type Database = {
           },
         ]
       }
+      qr_codes: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string | null
+          qr_data: Json
+          qr_id: string
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          qr_data: Json
+          qr_id: string
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          qr_data?: Json
+          qr_id?: string
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qr_codes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_codes_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           granted_at: string
@@ -1822,6 +1867,16 @@ export type Database = {
           p_product_id?: string
         }
         Returns: string
+      }
+      generate_product_qrcode: {
+        Args: {
+          p_product_name: string
+          p_color_name?: string
+          p_size_name?: string
+          p_product_id?: string
+          p_variant_id?: string
+        }
+        Returns: Json
       }
       generate_purchase_number: {
         Args: Record<PropertyKey, never>
