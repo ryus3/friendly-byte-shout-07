@@ -136,7 +136,18 @@ const ProductsPage = () => {
   }, [location]);
 
   const filteredProducts = useMemo(() => {
+    console.log('🔍 فلترة المنتجات النهائية:', {
+      permissionFiltered: permissionFilteredProducts?.length || 0,
+      filters: filters
+    });
+    
     let tempProducts = permissionFilteredProducts.filter(p => p.is_active !== false);
+    
+    console.log('🔍 بعد فلتر is_active:', {
+      beforeActive: permissionFilteredProducts?.length || 0,
+      afterActive: tempProducts?.length || 0,
+      sampleProduct: tempProducts[0]?.name
+    });
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
