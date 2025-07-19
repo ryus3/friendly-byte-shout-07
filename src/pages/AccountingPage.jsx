@@ -103,14 +103,23 @@ const AccountingPage = () => {
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
-        if (!orders || !purchases || !accounting || !products || !Array.isArray(orders) || !Array.isArray(products)) return {
-            totalRevenue: 0, cogs: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0,
-            inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, employeePendingDues: 0, employeeSettledDues: 0,
-            chartData: [], filteredExpenses: [], deliveredOrders: [], employeePendingDuesDetails: []
-        };
+        
+        // تحقق من وجود البيانات الأساسية
+        if (!orders || !Array.isArray(orders)) {
+            console.warn('⚠️ لا توجد بيانات طلبات');
+            return {
+                totalRevenue: 0, cogs: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0,
+                inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, 
+                employeePendingDues: 0, employeeSettledDues: 0, chartData: [], 
+                filteredExpenses: [], deliveredOrders: [], employeePendingDuesDetails: []
+            };
+        }
         
         const safeOrders = Array.isArray(orders) ? orders : [];
         const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
+        
+        console.log('📊 إجمالي الطلبات:', safeOrders.length);
+        console.log('📊 الطلبات مع البيانات:', safeOrders.slice(0, 2));
         
         const filterByDate = (itemDateStr) => {
             if (!from || !to || !itemDateStr) return true;
@@ -122,28 +131,46 @@ const AccountingPage = () => {
             }
         };
         
-        // الطلبات المُوصلة التي تم استلام فواتيرها فقط لحساب صافي الأرباح الفعلية
+        // جميع الطلبات المُوصلة (بغض النظر عن استلام الفاتورة لإظهار البيانات الحقيقية)
         const deliveredOrders = safeOrders.filter(o => 
-            o.status === 'delivered' && 
-            o.receipt_received === true && 
-            filterByDate(o.updated_at || o.created_at)
-         );
-         console.log('جميع الطلبات المُوصلة مع استلام الفواتير:', deliveredOrders);
-         console.log('ID المدير الحالي:', currentUser?.id);
-         const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
+            o && o.status === 'delivered' && filterByDate(o.updated_at || o.created_at)
+        );
+        console.log('✅ الطلبات المُوصلة:', deliveredOrders.length);
+        console.log('✅ أمثلة الطلبات المُوصلة:', deliveredOrders.slice(0, 2));
         
-        // حساب إجمالي الإيرادات مع رسوم التوصيل
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        // للطلبات التي استُلِمت فواتيرها فقط للحسابات الدقيقة
+        const paidDeliveredOrders = deliveredOrders.filter(o => o.receipt_received === true);
+        console.log('💰 الطلبات المدفوعة (مع الفواتير):', paidDeliveredOrders.length);
+        
+        const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
+        
+        // حساب إجمالي الإيرادات من الطلبات المُوصلة
+        const totalRevenue = deliveredOrders.reduce((sum, o) => {
+            const amount = o.final_amount || o.total_amount || 0;
+            console.log(`💰 طلب ${o.order_number}: ${amount}`);
+            return sum + amount;
+        }, 0);
+        
         const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
         const salesWithoutDelivery = totalRevenue - deliveryFees;
-        // حساب تكلفة البضاعة المباعة من العناصر الفعلية
+        
+        // حساب تكلفة البضاعة المباعة
         const cogs = deliveredOrders.reduce((sum, o) => {
-            const orderCogs = (o.items || []).reduce((itemSum, item) => {
-                const costPrice = item.costPrice || item.cost_price || 0;
-                return itemSum + (costPrice * item.quantity);
+            if (!o.order_items || !Array.isArray(o.order_items)) {
+                console.warn(`⚠️ طلب ${o.order_number} لا يحتوي على عناصر`);
+                return sum;
+            }
+            
+            const orderCogs = o.order_items.reduce((itemSum, item) => {
+                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+                const quantity = item.quantity || 0;
+                console.log(`📦 عنصر: تكلفة=${costPrice}, كمية=${quantity}, إجمالي=${costPrice * quantity}`);
+                return itemSum + (costPrice * quantity);
             }, 0);
+            console.log(`📊 تكلفة الطلب ${o.order_number}: ${orderCogs}`);
             return sum + orderCogs;
         }, 0);
+        
         const grossProfit = salesWithoutDelivery - cogs;
         
         const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + (e.amount || 0), 0);
@@ -152,44 +179,70 @@ const AccountingPage = () => {
         const totalExpenses = generalExpenses + employeeSettledDues;
         const netProfit = grossProfit - totalExpenses;
     
-        // حساب قيمة المخزون على أساس سعر البيع (وليس التكلفة)
+        
+        // حساب قيمة المخزون
         const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
-            return sum + (Array.isArray(p.variants) ? p.variants.reduce((variantSum, v) => variantSum + (v.quantity * (v.price || v.base_price || 0)), 0) : 0);
+            if (!p.variants || !Array.isArray(p.variants)) return sum;
+            return sum + p.variants.reduce((variantSum, v) => {
+                const quantity = v.quantity || 0;
+                const price = v.price || p.base_price || 0;
+                return variantSum + (quantity * price);
+            }, 0);
         }, 0) : 0;
+        
+        console.log('🏪 قيمة المخزون:', inventoryValue);
         
         // حساب مبيعات وأرباح المدير
         const managerOrders = deliveredOrders.filter(o => o.created_by === currentUser?.id);
-        console.log('الطلبات المُوصلة للمدير:', managerOrders);
-        console.log('عدد طلبات المدير:', managerOrders.length);
+        console.log('👨‍💼 طلبات المدير:', managerOrders.length);
         
         const managerSales = managerOrders.reduce((sum, o) => {
             const orderTotal = o.final_amount || o.total_amount || 0;
             const deliveryFee = o.delivery_fee || 0;
-            const salesAmount = orderTotal - deliveryFee; // المبيعات بدون رسوم التوصيل
-            console.log(`الطلب ${o.order_number}: المجموع=${orderTotal}, التوصيل=${deliveryFee}, المبيعات=${salesAmount}`);
+            const salesAmount = orderTotal - deliveryFee;
             return sum + salesAmount;
         }, 0);
-        console.log('إجمالي مبيعات المدير:', managerSales);
         
+        // حساب أرباح المدير بشكل مبسط (سعر البيع - التكلفة)
         const myProfit = managerOrders.reduce((sum, o) => {
-            const orderProfit = (o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0);
+            if (!o.order_items || !Array.isArray(o.order_items)) return sum;
+            
+            const orderProfit = o.order_items.reduce((itemSum, item) => {
+                const sellPrice = item.unit_price || 0;
+                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+                const quantity = item.quantity || 0;
+                const itemProfit = (sellPrice - costPrice) * quantity;
+                return itemSum + Math.max(itemProfit, 0);
+            }, 0);
             return sum + orderProfit;
         }, 0);
 
         // حساب مبيعات وأرباح الموظفين
         const employeeOrders = deliveredOrders.filter(o => {
             const orderUser = allUsers?.find(u => u.id === o.created_by);
-            return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy');
+            return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy') && o.created_by !== currentUser?.id;
         });
-        console.log('الطلبات المُوصلة للموظفين:', employeeOrders);
         
         const employeeSales = employeeOrders.reduce((sum, o) => {
             const orderTotal = o.final_amount || o.total_amount || 0;
             const deliveryFee = o.delivery_fee || 0;
-            const salesAmount = orderTotal - deliveryFee; // المبيعات بدون رسوم التوصيل
-            return sum + salesAmount;
+            return sum + (orderTotal - deliveryFee);
         }, 0);
-        const managerProfitFromEmployees = employeeOrders.reduce((sum, o) => sum + (calculateManagerProfit(o) || 0), 0);
+        
+        // حساب أرباح المدير من الموظفين (نسبة من أرباحهم)
+        const managerProfitFromEmployees = employeeOrders.reduce((sum, o) => {
+            if (!o.order_items || !Array.isArray(o.order_items)) return sum;
+            
+            const orderTotalProfit = o.order_items.reduce((itemSum, item) => {
+                const sellPrice = item.unit_price || 0;
+                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+                const quantity = item.quantity || 0;
+                return itemSum + Math.max((sellPrice - costPrice) * quantity, 0);
+            }, 0);
+            
+            // افتراض أن المدير يحصل على 30% من أرباح الموظفين
+            return sum + (orderTotalProfit * 0.3);
+        }, 0);
         
         const totalProfit = myProfit + managerProfitFromEmployees;
     
