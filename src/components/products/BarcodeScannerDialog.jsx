@@ -10,6 +10,8 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
   const readerRef = useRef(null);
   const [error, setError] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [flashEnabled, setFlashEnabled] = useState(false);
+  const [capabilities, setCapabilities] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -18,45 +20,71 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       
       const startScanner = async () => {
         try {
-          // طلب أذونات الكاميرا بشكل صريح
-          await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-          }).then(stream => {
-            stream.getTracks().forEach(track => track.stop());
+          // طلب أذونات الكاميرا مع الفلاش
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+              facingMode: "environment",
+              width: { ideal: 1920 },
+              height: { ideal: 1080 }
+            } 
           });
+          
+          // حفظ إمكانيات الكاميرا للفلاش
+          const track = stream.getVideoTracks()[0];
+          setCapabilities(track.getCapabilities());
+          stream.getTracks().forEach(track => track.stop());
 
           const cameras = await Html5Qrcode.getCameras();
           if (cameras && cameras.length) {
             const html5QrCode = new Html5Qrcode("reader");
             readerRef.current = html5QrCode;
 
-            // تحسين إعدادات المسح للايفون
+            // إعدادات مثالية لقراءة الباركود والـ QR
             const config = {
-              fps: 10,
-              qrbox: { width: 200, height: 120 },
+              fps: 30, // زيادة معدل الإطارات للحساسية العالية
+              qrbox: function(viewfinderWidth, viewfinderHeight) {
+                const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+                return {
+                  width: Math.floor(minEdge * 0.8),
+                  height: Math.floor(minEdge * 0.6)
+                };
+              },
               aspectRatio: 1.0,
               disableFlip: false,
+              // تحسينات متقدمة للقراءة
               experimentalFeatures: {
                 useBarCodeDetectorIfSupported: true
-              }
+              },
+              // إعدادات الفيديو المحسنة
+              videoConstraints: {
+                facingMode: "environment",
+                focusMode: "continuous",
+                exposureMode: "continuous",
+                whiteBalanceMode: "continuous"
+              },
+              // تحسين دقة القراءة
+              rememberLastUsedCamera: true
             };
 
             await html5QrCode.start(
               { facingMode: "environment" },
               config,
               (decodedText, decodedResult) => {
-                console.log("✅ Scan successful:", decodedText);
+                console.log("✅ تم المسح بنجاح:", decodedText);
+                // صوت نجاح المسح
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwgBSmEyvLZhj8IFWm98OyfUgwOUarm0nQgBSl+y/LVey0GO2q+8N2bSDsBJXfH89mTRAsVWLPn7q1cEgBHmN/nynkiBjR+zfP');
+                audio.play().catch(() => {});
                 onScanSuccess(decodedText);
               },
               (errorMessage) => {
-                // تجاهل أخطاء المسح العادية
+                // تجاهل أخطاء المسح العادية (عدم وجود كود)
               }
             );
             setIsScanning(true);
           }
         } catch (err) {
-          console.error("❌ Camera error:", err);
-          setError("فشل في تشغيل الكاميرا. في الايفون: انتقل لإعدادات Safari > الكاميرا > اسمح");
+          console.error("❌ خطأ في الكاميرا:", err);
+          setError("خطأ في تشغيل الكاميرا. تأكد من منح الأذونات والتأكد من عدم استخدام كاميرا من تطبيق آخر");
           setIsScanning(false);
         }
       };
@@ -73,6 +101,25 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
       }
     };
   }, [open, onScanSuccess]);
+
+  // وظيفة تشغيل/إطفاء الفلاش
+  const toggleFlash = async () => {
+    if (readerRef.current && capabilities?.torch) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }
+        });
+        const track = stream.getVideoTracks()[0];
+        await track.applyConstraints({
+          advanced: [{ torch: !flashEnabled }]
+        });
+        setFlashEnabled(!flashEnabled);
+        stream.getTracks().forEach(track => track.stop());
+      } catch (err) {
+        console.error("Flash error:", err);
+      }
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -92,28 +139,55 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
         </DialogHeader>
         
         <div className="space-y-4">
+          {/* أزرار التحكم */}
+          {isScanning && (
+            <div className="flex justify-center gap-2 mb-4">
+              {capabilities?.torch && (
+                <Button
+                  variant={flashEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleFlash}
+                  className="flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  {flashEnabled ? "إطفاء الفلاش" : "تشغيل الفلاش"}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+                className="flex items-center gap-2"
+              >
+                إغلاق المسح
+              </Button>
+            </div>
+          )}
+
           <div 
             id="reader" 
-            className="w-full rounded-xl overflow-hidden border-2 border-primary/30 bg-gray-900"
-            style={{ minHeight: '300px', maxHeight: '400px' }}
+            className="w-full rounded-xl overflow-hidden border-4 border-primary/50 bg-gray-900 shadow-2xl"
+            style={{ minHeight: '350px', maxHeight: '450px' }}
           />
           
           {isScanning && (
-            <div className="text-center p-4 bg-green-50 rounded-xl border-2 border-green-200">
-              <div className="flex items-center justify-center gap-3 text-green-700">
+            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
+              <div className="flex items-center justify-center gap-3 text-green-700 mb-2">
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="font-bold">📱 الكاميرا الخلفية نشطة!</span>
+                <span className="font-bold text-lg">🔍 قارئ نشط ومحسن!</span>
                 <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
-              <div className="mt-2 space-y-1">
+              <div className="space-y-2">
                 <p className="text-sm font-medium text-green-600">
-                  ✅ وجه الهاتف للباركود على الملصق
-                </p>
-                <p className="text-xs text-green-500">
-                  🚀 المنتجات ستضاف للسلة فوراً عند القراءة
+                  ✅ يقرأ جميع أنواع الباركود والـ QR بحساسية عالية
                 </p>
                 <p className="text-xs text-blue-600 font-medium">
-                  💡 اتركها مفتوحة لمسح عدة منتجات متتالية
+                  💡 وجه الكاميرا نحو الكود على مسافة 10-30 سم
+                </p>
+                <p className="text-xs text-purple-600 font-medium">
+                  🚀 يعمل مع الإضاءة المنخفضة - استخدم الفلاش عند الحاجة
                 </p>
               </div>
             </div>
@@ -122,7 +196,8 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           {!isScanning && !error && (
             <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
               <div className="text-blue-600">
-                <span className="font-medium">🔄 جاري تشغيل الكاميرا الخلفية...</span>
+                <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                <span className="font-medium">🔄 جاري تشغيل قارئ الباركود المحسن...</span>
               </div>
             </div>
           )}
@@ -146,7 +221,7 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             variant="outline" 
             className="w-full hover:bg-muted/80"
           >
-            إغلاق المسح
+            إغلاق القارئ
           </Button>
         </div>
       </DialogContent>
