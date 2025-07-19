@@ -299,32 +299,34 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
               </svg>
               معاينة الطباعة
             </h4>
-            <div className="flex-1 border border-border rounded-xl p-3 overflow-auto bg-muted/10">
+            <div className="flex-1 border border-border rounded-xl p-4 overflow-auto bg-muted/5 max-h-[400px]">
               <style>{`
                 .preview-label-grid {
                   display: flex;
                   flex-direction: column;
-                  gap: 8px;
+                  gap: 12px;
                   padding: 8px;
                   align-items: center;
                 }
                 
                 .preview-label-card {
-                  width: 120px;
-                  height: 50px;
-                  border: 1px solid hsl(var(--primary));
-                  padding: 3px;
+                  width: 200px;
+                  height: 80px;
+                  border: 2px solid hsl(var(--primary));
+                  padding: 8px;
                   display: flex;
                   flex-direction: column;
                   justify-content: space-between;
-                  border-radius: 6px;
+                  border-radius: 8px;
                   background: white;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                   transition: transform 0.2s ease;
+                  position: relative;
                 }
                 
                 .preview-label-card:hover {
-                  transform: scale(1.05);
+                  transform: scale(1.02);
+                  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
                 }
                 
                 .preview-label-content {
@@ -333,55 +335,77 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   display: flex;
                   flex-direction: column;
                   justify-content: space-between;
+                  align-items: center;
                 }
                 
                 .preview-label-product-name {
-                  font-size: 8px;
+                  font-size: 11px;
                   font-weight: 800;
-                  margin-bottom: 1px;
-                  line-height: 1;
+                  margin-bottom: 3px;
+                  line-height: 1.2;
                   color: hsl(var(--primary));
                   text-transform: uppercase;
+                  max-width: 100%;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
                 }
                 
                 .preview-label-variant-info {
-                  font-size: 6px;
-                  margin-bottom: 2px;
+                  font-size: 9px;
+                  margin-bottom: 4px;
                   color: #64748b;
                   font-weight: 600;
                   background: #f1f5f9;
-                  padding: 1px 3px;
-                  border-radius: 2px;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  border: 1px solid #e2e8f0;
                 }
                 
                 .preview-label-barcode-container {
-                  margin: 1px 0;
+                  margin: 4px 0;
                   display: flex;
                   flex-direction: column;
                   align-items: center;
                   flex: 1;
                   justify-content: center;
+                  min-height: 25px;
                 }
                 
                 .preview-label-barcode-number {
-                  font-size: 4px;
+                  font-size: 7px;
                   color: #475569;
-                  margin-top: 1px;
-                  font-family: monospace;
+                  margin-top: 2px;
+                  font-family: 'Courier New', monospace;
+                  font-weight: bold;
                 }
                 
                 .preview-label-price {
-                  font-size: 7px;
+                  font-size: 10px;
                   font-weight: 800;
                   color: #dc2626;
                   background: #fee2e2;
-                  padding: 1px 3px;
-                  border-radius: 2px;
+                  padding: 3px 8px;
+                  border-radius: 6px;
                   border: 1px solid #fca5a5;
+                  min-width: 60px;
+                }
+                
+                .preview-label-card::before {
+                  content: '';
+                  position: absolute;
+                  top: -1px;
+                  left: -1px;
+                  right: -1px;
+                  bottom: -1px;
+                  background: linear-gradient(45deg, hsl(var(--primary)) 0%, hsl(var(--primary))/0.7 100%);
+                  border-radius: 8px;
+                  z-index: -1;
+                  opacity: 0.1;
                 }
               `}</style>
               <div className="preview-label-grid">
-                {labelsToPrint.slice(0, 50).map((label, index) => (
+                {labelsToPrint.slice(0, 20).map((label, index) => (
                   <div key={index} className="preview-label-card">
                     <div className="preview-label-content">
                       <h3 className="preview-label-product-name">{label.name}</h3>
@@ -389,8 +413,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                       <div className="preview-label-barcode-container">
                         <Barcode 
                           value={label.barcode} 
-                          height={5} 
-                          width={0.5} 
+                          height={12} 
+                          width={1.2} 
                           fontSize={0} 
                           margin={0}
                           background="transparent"
@@ -404,10 +428,16 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   </div>
                 ))}
               </div>
-              {labelsToPrint.length > 50 && (
-                <p className="text-center text-muted-foreground mt-4 p-4 bg-muted/50 rounded-lg">
-                  📄 عرض أول 50 ملصق من إجمالي {labelsToPrint.length} ملصق
-                </p>
+              {labelsToPrint.length > 20 && (
+                <div className="text-center text-muted-foreground mt-4 p-3 bg-muted/50 rounded-lg border">
+                  <div className="flex items-center justify-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="font-medium">عرض أول 20 ملصق من إجمالي {labelsToPrint.length} ملصق</span>
+                  </div>
+                  <p className="text-xs mt-1">قم بالتمرير لأعلى وأسفل لمشاهدة جميع الملصقات</p>
+                </div>
               )}
             </div>
           </div>

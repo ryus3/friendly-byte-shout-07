@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Html5Qrcode } from 'html5-qrcode';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -71,37 +72,53 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg w-[95vw] p-4">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-primary">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <DialogTitle className="flex items-center gap-2 text-primary text-lg">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
             </svg>
             مسح الباركود السريع
           </DialogTitle>
-          <DialogDescription>
-            وجّه الكاميرا نحو الباركود. سيتم إضافة المنتجات تلقائياً عند المسح.
+          <DialogDescription className="text-sm">
+            🔥 <strong>مسح سريع مستمر!</strong> وجّه الكاميرا نحو الباركود وسيتم إضافة المنتجات تلقائياً
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           <div 
             id="reader" 
-            className="w-full rounded-lg overflow-hidden border-2 border-primary/20"
-            style={{ minHeight: '300px' }}
+            className="w-full rounded-xl overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10"
+            style={{ minHeight: '280px', maxHeight: '350px' }}
           />
           
           {isScanning && (
-            <div className="text-center p-4 bg-primary/10 rounded-lg">
-              <div className="flex items-center justify-center gap-2 text-primary">
-                <div className="animate-pulse w-2 h-2 bg-primary rounded-full"></div>
-                <span className="font-medium">جاهز للمسح...</span>
-                <div className="animate-pulse w-2 h-2 bg-primary rounded-full"></div>
+            <div className="text-center p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border-2 border-green-200">
+              <div className="flex items-center justify-center gap-3 text-green-700">
+                <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="font-bold text-lg">📱 الكاميرا جاهزة للمسح!</span>
+                <div className="animate-pulse w-3 h-3 bg-green-500 rounded-full"></div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                مرر الكاميرا فوق الباركود لإضافة المنتج فوراً
-              </p>
+              <div className="mt-2 space-y-1">
+                <p className="text-sm font-medium text-green-600">
+                  ✅ يعمل على الهاتف والحاسوب
+                </p>
+                <p className="text-xs text-green-500">
+                  🚀 مرر الكاميرا فوق أي باركود - ستتم الإضافة فوراً!
+                </p>
+                <p className="text-xs text-blue-600 font-medium">
+                  💡 نصيحة: اتركها مفتوحة لمسح عشرات المنتجات بسرعة
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {!isScanning && !error && (
+            <div className="text-center p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="text-blue-600">
+                <span className="font-medium">🔄 جاري تشغيل الكاميرا...</span>
+              </div>
             </div>
           )}
         </div>
@@ -110,9 +127,23 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>خطأ في الكاميرا</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              <br />
+              <strong>💡 للهاتف:</strong> تأكد من تمكين الكاميرا في إعدادات المتصفح
+            </AlertDescription>
           </Alert>
         )}
+        
+        <div className="flex justify-center pt-2">
+          <Button 
+            onClick={() => onOpenChange(false)} 
+            variant="outline" 
+            className="w-full hover:bg-muted/80"
+          >
+            إغلاق المسح
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
