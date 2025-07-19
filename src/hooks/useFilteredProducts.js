@@ -51,61 +51,84 @@ export const useFilteredProducts = (products) => {
 
     // فلترة المنتجات حسب صلاحيات الموظف بناءً على productPermissions من المنتجات النشطة فقط
     const filtered = activeProducts.filter(product => {
-      let hasPermission = true;
-
-      // فحص التصنيفات (categories)
+      // فحص التصنيفات (categories) - صارم
       const categoryPerm = productPermissions.category;
-      if (categoryPerm && !categoryPerm.has_full_access && product.product_categories?.length > 0) {
+      if (categoryPerm && !categoryPerm.has_full_access) {
+        // إذا لم يكن للمنتج تصنيفات، فهو مرفوض
+        if (!product.product_categories || product.product_categories.length === 0) {
+          console.log('❌ منتج مرفوض - لا يحتوي على تصنيفات:', product.name);
+          return false;
+        }
+        
+        // التحقق من وجود تصنيف مسموح
         const hasAllowedCategory = product.product_categories.some(pc => 
           categoryPerm.allowed_items.includes(pc.category_id)
         );
         if (!hasAllowedCategory) {
           console.log('❌ منتج مرفوض بسبب التصنيف:', product.name);
-          hasPermission = false;
+          return false;
         }
       }
 
-      // فحص الأقسام (departments)
+      // فحص الأقسام (departments) - صارم
       const departmentPerm = productPermissions.department;
-      if (departmentPerm && !departmentPerm.has_full_access && product.product_departments?.length > 0) {
+      if (departmentPerm && !departmentPerm.has_full_access) {
+        // إذا لم يكن للمنتج أقسام، فهو مرفوض
+        if (!product.product_departments || product.product_departments.length === 0) {
+          console.log('❌ منتج مرفوض - لا يحتوي على أقسام:', product.name);
+          return false;
+        }
+        
+        // التحقق من وجود قسم مسموح
         const hasAllowedDepartment = product.product_departments.some(pd => 
           departmentPerm.allowed_items.includes(pd.department_id)
         );
         if (!hasAllowedDepartment) {
           console.log('❌ منتج مرفوض بسبب القسم:', product.name);
-          hasPermission = false;
+          return false;
         }
       }
 
-      // فحص أنواع المنتجات (product_types)
+      // فحص أنواع المنتجات (product_types) - صارم
       const productTypePerm = productPermissions.product_type;
-      if (productTypePerm && !productTypePerm.has_full_access && product.product_product_types?.length > 0) {
+      if (productTypePerm && !productTypePerm.has_full_access) {
+        // إذا لم يكن للمنتج أنواع، فهو مرفوض
+        if (!product.product_product_types || product.product_product_types.length === 0) {
+          console.log('❌ منتج مرفوض - لا يحتوي على أنواع منتجات:', product.name);
+          return false;
+        }
+        
+        // التحقق من وجود نوع مسموح
         const hasAllowedProductType = product.product_product_types.some(ppt => 
           productTypePerm.allowed_items.includes(ppt.product_type_id)
         );
         if (!hasAllowedProductType) {
           console.log('❌ منتج مرفوض بسبب نوع المنتج:', product.name);
-          hasPermission = false;
+          return false;
         }
       }
 
-      // فحص المواسم والمناسبات (seasons_occasions)
+      // فحص المواسم والمناسبات (seasons_occasions) - صارم
       const seasonPerm = productPermissions.season_occasion;
-      if (seasonPerm && !seasonPerm.has_full_access && product.product_seasons_occasions?.length > 0) {
+      if (seasonPerm && !seasonPerm.has_full_access) {
+        // إذا لم يكن للمنتج مواسم، فهو مرفوض
+        if (!product.product_seasons_occasions || product.product_seasons_occasions.length === 0) {
+          console.log('❌ منتج مرفوض - لا يحتوي على مواسم:', product.name);
+          return false;
+        }
+        
+        // التحقق من وجود موسم مسموح
         const hasAllowedSeason = product.product_seasons_occasions.some(pso => 
           seasonPerm.allowed_items.includes(pso.season_occasion_id)
         );
         if (!hasAllowedSeason) {
           console.log('❌ منتج مرفوض بسبب الموسم:', product.name);
-          hasPermission = false;
+          return false;
         }
       }
 
-      if (hasPermission) {
-        console.log('✅ منتج مقبول:', product.name);
-      }
-
-      return hasPermission;
+      console.log('✅ منتج مقبول:', product.name);
+      return true;
     });
     
     console.log('🔍 نتيجة الفلترة:', {
