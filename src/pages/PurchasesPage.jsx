@@ -7,7 +7,7 @@ import { PlusCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import PurchasesStats from '@/components/purchases/PurchasesStats';
 import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';

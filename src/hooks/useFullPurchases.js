@@ -1,13 +1,13 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 export const useFullPurchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { updateVariantStock, addExpense } = useInventory();
+  const { updateVariantStock, addExpense, refetchData } = useInventory();
   const { user } = useAuth();
 
   const addPurchase = useCallback(async (purchaseData) => {
@@ -130,7 +130,7 @@ export const useFullPurchases = () => {
 
       // إعادة تحميل البيانات للتأكد من التحديث الكامل
       setTimeout(async () => {
-        await fetchPurchases();
+        await refetchData();
         console.log('🔄 تم إعادة تحميل البيانات بعد إضافة الفاتورة');
       }, 100);
 
@@ -154,7 +154,7 @@ export const useFullPurchases = () => {
     } finally {
       setLoading(false);
     }
-  }, [addExpense, fetchPurchases, user]);
+  }, [addExpense, refetchData, user]);
 
   const fetchPurchases = useCallback(async () => {
     setLoading(true);
@@ -181,7 +181,6 @@ export const useFullPurchases = () => {
   const deletePurchase = useCallback(async (purchaseId) => {
     try {
       setLoading(true);
-      console.log('🗑️ بدء عملية حذف الفاتورة:', purchaseId);
       
       // الحصول على تفاصيل الفاتورة قبل الحذف
       const { data: purchaseData, error: fetchError } = await supabase
@@ -200,27 +199,22 @@ export const useFullPurchases = () => {
         .single();
 
       if (fetchError) {
-        console.error('❌ خطأ في جلب بيانات الفاتورة:', fetchError);
+        console.error('خطأ في جلب بيانات الفاتورة:', fetchError);
         throw fetchError;
       }
 
-      console.log('📋 بيانات الفاتورة المراد حذفها:', purchaseData);
-
-      // 1. حذف المصاريف المرتبطة بالفاتورة (البضاعة والشحن والتحويل)
-      console.log('🧾 حذف المصاريف المرتبطة...');
+      // حذف المصاريف المرتبطة بالفاتورة (البضاعة والشحن والتحويل)
       const { error: expensesError } = await supabase
         .from('expenses')
         .delete()
         .or(`receipt_number.eq.${purchaseData.purchase_number},receipt_number.eq.${purchaseData.purchase_number}-SHIP,receipt_number.eq.${purchaseData.purchase_number}-TRANSFER`);
 
       if (expensesError) {
-        console.error('❌ خطأ في حذف المصاريف:', expensesError);
-      } else {
-        console.log('✅ تم حذف المصاريف بنجاح');
+        console.error('خطأ في حذف المصاريف:', expensesError);
+        // لا نتوقف هنا، نكمل الحذف
       }
 
-      // 2. حذف المعاملات المالية المرتبطة بالفاتورة
-      console.log('💰 حذف المعاملات المالية...');
+      // حذف المعاملات المالية المرتبطة بالفاتورة
       const { error: transactionsError } = await supabase
         .from('financial_transactions')
         .delete()
@@ -228,18 +222,14 @@ export const useFullPurchases = () => {
         .eq('reference_id', purchaseId);
 
       if (transactionsError) {
-        console.error('❌ خطأ في حذف المعاملات المالية:', transactionsError);
-      } else {
-        console.log('✅ تم حذف المعاملات المالية بنجاح');
+        console.error('خطأ في حذف المعاملات المالية:', transactionsError);
+        // لا نتوقف هنا، نكمل الحذف
       }
 
-      // 3. تقليل كمية المخزون للمنتجات المحذوفة
+      // تقليل كمية المخزون للمنتجات المحذوفة
       if (purchaseData.purchase_items && purchaseData.purchase_items.length > 0) {
-        console.log('📦 تقليل كمية المخزون...');
         const stockReductionPromises = purchaseData.purchase_items.map(async (item) => {
           try {
-            console.log(`📉 تقليل مخزون المنتج ${item.product_id}/${item.variant_id}`);
-            
             // الحصول على الكمية الحالية أولاً
             const { data: currentStock } = await supabase
               .from('inventory')
@@ -261,68 +251,58 @@ export const useFullPurchases = () => {
                 .eq('variant_id', item.variant_id);
               
               if (stockError) {
-                console.error(`❌ خطأ في تقليل مخزون العنصر:`, stockError);
+                console.error(`خطأ في تقليل مخزون العنصر:`, stockError);
               } else {
-                console.log(`✅ تم تقليل مخزون العنصر من ${currentStock.quantity} إلى ${newQuantity}`);
+                console.log(`تم تقليل مخزون العنصر من ${currentStock.quantity} إلى ${newQuantity}`);
               }
-            } else {
-              console.log(`⚠️ لم يتم العثور على مخزون للمنتج ${item.product_id}/${item.variant_id}`);
             }
           } catch (error) {
-            console.error(`❌ فشل تقليل مخزون العنصر:`, error);
+            console.error(`فشل تقليل مخزون العنصر:`, error);
           }
         });
         
         await Promise.all(stockReductionPromises);
-        console.log('✅ تم تقليل كمية المخزون بنجاح');
       }
 
-      // 4. حذف عناصر الفاتورة
-      console.log('🗑️ حذف عناصر الفاتورة...');
+      // حذف عناصر الفاتورة
       const { error: itemsError } = await supabase
         .from('purchase_items')
         .delete()
         .eq('purchase_id', purchaseId);
 
       if (itemsError) {
-        console.error('❌ خطأ في حذف عناصر الفاتورة:', itemsError);
+        console.error('خطأ في حذف عناصر الفاتورة:', itemsError);
         throw itemsError;
       }
-      console.log('✅ تم حذف عناصر الفاتورة بنجاح');
 
-      // 5. حذف الفاتورة نفسها
-      console.log('🗑️ حذف الفاتورة الأساسية...');
+      // حذف الفاتورة نفسها
       const { error: purchaseError } = await supabase
         .from('purchases')
         .delete()
         .eq('id', purchaseId);
 
       if (purchaseError) {
-        console.error('❌ خطأ في حذف الفاتورة:', purchaseError);
+        console.error('خطأ في حذف الفاتورة:', purchaseError);
         throw purchaseError;
       }
-      console.log('✅ تم حذف الفاتورة الأساسية بنجاح');
 
-      // 6. تحديث القائمة المحلية
+      // تحديث القائمة المحلية
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
       
-      // 7. إعادة تحميل البيانات من قاعدة البيانات
-      console.log('🔄 إعادة تحميل قائمة المشتريات...');
-      await fetchPurchases();
-      
-      console.log('🎉 تمت عملية الحذف بالكامل بنجاح!');
+      // إعادة تحميل البيانات
+      await refetchData();
       
       toast({ 
-        title: '✅ تم الحذف بنجاح', 
-        description: 'تم حذف فاتورة الشراء وجميع عناصرها والمصاريف والمعاملات المرتبطة بها نهائياً',
+        title: 'تم', 
+        description: 'تم حذف فاتورة الشراء وجميع عناصرها والمصاريف المرتبطة بها بنجاح',
         variant: 'success'
       });
       
       return { success: true };
     } catch (error) {
-      console.error("❌ خطأ في حذف فاتورة الشراء:", error);
+      console.error("خطأ في حذف فاتورة الشراء:", error);
       toast({ 
-        title: '❌ خطأ في الحذف', 
+        title: 'خطأ', 
         description: `فشل حذف فاتورة الشراء: ${error.message}`, 
         variant: 'destructive' 
       });
@@ -330,7 +310,7 @@ export const useFullPurchases = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchPurchases]);
+  }, [refetchData]);
 
   const updatePurchase = useCallback(async (purchaseId, updates) => {
     try {
