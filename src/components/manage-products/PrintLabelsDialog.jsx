@@ -29,10 +29,9 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           display: flex;
           align-items: center;
           background: white;
-          margin: 0 auto 5mm auto;
+          margin: 0 auto;
           font-family: Arial, sans-serif;
           direction: ltr;
-          box-sizing: border-box;
         }
         
         .qr-section {
@@ -114,7 +113,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
 
   const handlePrint = useReactToPrint({
     content: () => printComponentRef.current,
-    pageStyle: `@page { size: A4 portrait; margin: 8mm; } @media print { body { -webkit-print-color-adjust: exact; } }`
+    pageStyle: `@page { size: A4 portrait; margin: 8mm; } @media print { body { -webkit-print-color-adjust: exact; } .label-grid { align-items: center !important; } }`
   });
 
   const handleQuantityChange = (sku, value) => {
@@ -297,7 +296,96 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
               معاينة الطباعة
             </h4>
             <ScrollArea className="flex-1 border border-border rounded-xl bg-gray-50 max-h-[450px]">
-              <LabelPreview labelsToPrint={labelsToPrint} />
+              <div className="p-4">
+                <style>{`
+                  .simple-label-grid {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 20px;
+                    padding: 15px;
+                    align-items: center;
+                  }
+                  
+                  .simple-label-card {
+                    width: 300px;
+                    height: 150px;
+                    border: 3px solid #000000;
+                    padding: 8px;
+                    display: flex;
+                    align-items: center;
+                    border-radius: 0;
+                    background: #ffffff;
+                    font-family: Arial, sans-serif;
+                    direction: ltr;
+                  }
+                  
+                  .simple-qr-section {
+                    flex-shrink: 0;
+                    margin-right: 12px;
+                  }
+                  
+                  .simple-product-info {
+                    flex: 1;
+                    text-align: center;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    height: 100%;
+                    align-items: center;
+                  }
+                  
+                  .simple-label-product-name {
+                    font-size: 20px;
+                    font-weight: 900;
+                    margin-bottom: 3px;
+                    line-height: 1.1;
+                    color: #000000;
+                    font-family: 'Arial Black', Arial, sans-serif;
+                  }
+                  
+                  .simple-label-variant-info {
+                    font-size: 14px;
+                    margin-bottom: 8px;
+                    color: #000000;
+                    font-weight: bold;
+                    line-height: 1.1;
+                  }
+                  
+                  .simple-label-price {
+                    font-size: 21px;
+                    font-weight: 900;
+                    color: #000000;
+                    line-height: 1.1;
+                  }
+                `}</style>
+                <div className="simple-label-grid">
+                  {labelsToPrint.map((label, index) => (
+                    <div key={index} className="simple-label-card">
+                      <div className="simple-qr-section">
+                        <QRCodeSVG
+                          value={label.qrData}
+                          size={120}
+                          level="M"
+                          includeMargin={false}
+                          bgColor="#ffffff"
+                          fgColor="#000000"
+                        />
+                      </div>
+                      <div className="simple-product-info">
+                        <h3 className="simple-label-product-name">{label.name} RYUS</h3>
+                        <p className="simple-label-variant-info">{label.size} / {label.color}</p>
+                        <p className="simple-label-price">{label.price.toLocaleString()} د.ع</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {labelsToPrint.length > 0 && (
+                  <div className="text-center text-muted-foreground mt-4 p-3 bg-white rounded-lg border">
+                    <span className="font-medium">إجمالي الملصقات: {labelsToPrint.length}</span>
+                  </div>
+                )}
+              </div>
             </ScrollArea>
           </div>
         </div>

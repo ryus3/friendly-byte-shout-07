@@ -1,13 +1,22 @@
 import { useState, useEffect } from 'react';
 
 export const useMediaQuery = (query) => {
-  const [matches, setMatches] = useState(() => {
-    // التحقق من وجود window و matchMedia
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      return window.matchMedia(query).matches;
-    }
+  // التحقق من وجود React context قبل استدعاء useState
+  let matches;
+  let setMatches;
+  
+  try {
+    [matches, setMatches] = useState(() => {
+      // التحقق من وجود window و matchMedia
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia(query).matches;
+      }
+      return false;
+    });
+  } catch (error) {
+    console.warn('useMediaQuery hook called outside React context, using fallback');
     return false;
-  });
+  }
 
   useEffect(() => {
     // التحقق من وجود window و matchMedia
@@ -22,14 +31,18 @@ export const useMediaQuery = (query) => {
       setMatches(media.matches);
     }
     
-    const listener = () => setMatches(media.matches);
+    const listener = () => {
+      if (setMatches) {
+        setMatches(media.matches);
+      }
+    };
     
     media.addEventListener('change', listener);
     
     return () => {
       media.removeEventListener('change', listener);
     };
-  }, [matches, query]);
+  }, [matches, query, setMatches]);
 
-  return matches;
+  return matches || false;
 };
