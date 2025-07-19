@@ -185,6 +185,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
             price: parseFloat(variant.price) || 0,
             cost_price: parseFloat(variant.costPrice) || 0,
             profit_amount: parseFloat(variant.profitAmount) || productData.profitAmount || 0,
+            hint: variant.hint || '',
             barcode: uniqueBarcode, // استخدام الباركود الفريد المولد
             images: imageUrl ? [imageUrl] : []
           });
@@ -431,6 +432,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: parseFloat(v.price) || parseFloat(productData.price) || 0,
                   cost_price: parseFloat(v.cost_price || v.costPrice) || parseFloat(productData.costPrice) || 0,
                   profit_amount: parseFloat(v.profit_amount || v.profitAmount || productData.profitAmount) || 0,
+                  hint: v.hint || '',
                   images: imageUrl ? [imageUrl] : (existing.images || [])
                 };
                 
@@ -458,6 +460,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: parseFloat(v.price) || parseFloat(productData.price) || 0,
                   cost_price: parseFloat(v.cost_price || v.costPrice) || parseFloat(productData.costPrice) || 0,
                   profit_amount: parseFloat(v.profit_amount || v.profitAmount || productData.profitAmount) || 0,
+                  hint: v.hint || '',
                   barcode: barcode,
                   images: imageUrl ? [imageUrl] : [],
                   quantity: parseInt(v.quantity) || 0 // إضافة الكمية للإدراج
@@ -476,6 +479,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: variant.price,
                   cost_price: variant.cost_price,
                   profit_amount: variant.profit_amount,
+                  hint: variant.hint || '',
                   images: variant.images
                 })
                 .eq('id', variant.id);
@@ -485,22 +489,43 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                 throw variantUpdateError;
               }
               
-              // تحديث المخزون مباشرة
-              const { error: inventoryError } = await supabase
+              // تحديث المخزون - إزالة upsert واستخدام update/insert منفصلين
+              const { data: existingInventory } = await supabase
                 .from('inventory')
-                .upsert({
-                  variant_id: variant.id,
-                  product_id: productId,
-                  quantity: variant.quantity,
-                  min_stock: 5,
-                  last_updated_by: user?.user_id || user?.id
-                }, { 
-                  onConflict: 'variant_id'
-                });
+                .select('id')
+                .eq('variant_id', variant.id)
+                .eq('product_id', productId)
+                .single();
                 
-              if (inventoryError) {
-                console.error('❌ خطأ في تحديث المخزون:', inventoryError);
-                throw inventoryError;
+              if (existingInventory) {
+                // تحديث المخزون الموجود
+                const { error: updateInventoryError } = await supabase
+                  .from('inventory')
+                  .update({
+                    quantity: variant.quantity,
+                    min_stock: 5,
+                    last_updated_by: user?.user_id || user?.id
+                  })
+                  .eq('id', existingInventory.id);
+                  
+                if (updateInventoryError) {
+                  console.error('❌ خطأ في تحديث المخزون:', updateInventoryError);
+                }
+              } else {
+                // إدراج مخزون جديد
+                const { error: insertInventoryError } = await supabase
+                  .from('inventory')
+                  .insert({
+                    variant_id: variant.id,
+                    product_id: productId,
+                    quantity: variant.quantity,
+                    min_stock: 5,
+                    last_updated_by: user?.user_id || user?.id
+                  });
+                  
+                if (insertInventoryError) {
+                  console.error('❌ خطأ في إدراج المخزون:', insertInventoryError);
+                }
               }
               
               console.log(`✅ تم تحديث المتغير ${variant.id} بكمية ${variant.quantity}`);
@@ -517,6 +542,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: v.price,
                   cost_price: v.cost_price,
                   profit_amount: v.profit_amount,
+                  hint: v.hint || '', // إضافة التلميح الذكي
                   barcode: v.barcode,
                   images: v.images
                 })))
