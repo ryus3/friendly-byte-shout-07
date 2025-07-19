@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
+import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import AddEditColorDialog from './AddEditColorDialog';
 
 // مكون قابل للسحب للون واحد
@@ -115,6 +116,7 @@ const ColorsManager = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingColor, setEditingColor] = useState(null);
+  const { filterColorsByPermission } = usePermissionBasedData();
   const { toast } = useToast();
 
   const fetchColors = async () => {
@@ -239,32 +241,31 @@ const ColorsManager = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {colors.length > 0 ? (
-            <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={colors.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                <div className="space-y-3">
-                  {colors.map((color) => (
-                    <SortableColorItem
-                      key={color.id}
-                      color={color}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <div className="text-center py-12">
-              <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">لا توجد ألوان</h3>
-              <p className="text-muted-foreground mb-4">ابدأ بإضافة أول لون</p>
-              <Button onClick={handleAdd} className="gap-2">
-                <Plus className="h-4 w-4" />
-                إضافة لون جديد
-              </Button>
-            </div>
-          )}
+          {(() => {
+            const filteredColors = filterColorsByPermission(colors);
+            return filteredColors.length > 0 ? (
+              <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={filteredColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-3">
+                    {filteredColors.map((color) => (
+                      <SortableColorItem
+                        key={color.id}
+                        color={color}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
+            ) : (
+              <div className="text-center py-12">
+                <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-2">لا توجد ألوان مسموحة</h3>
+                <p className="text-muted-foreground mb-4">لا يمكنك رؤية أي ألوان بناء على صلاحياتك</p>
+              </div>
+            );
+          })()}
         </CardContent>
       </Card>
 

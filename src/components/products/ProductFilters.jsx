@@ -49,48 +49,35 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
       };
     }
 
-    // للموظفين - فقط ما هو مسموح
-    try {
-      const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
-      const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
-      const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
-      const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
-      const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
-      const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
+    // للموظفين - استخدام صلاحيات المنتجات الجديدة
+    const categoryPerm = user?.productPermissions?.category;
+    const colorPerm = user?.productPermissions?.color;
+    const sizePerm = user?.productPermissions?.size;
+    const departmentPerm = user?.productPermissions?.department;
+    const productTypePerm = user?.productPermissions?.product_type;
+    const seasonOccasionPerm = user?.productPermissions?.season_occasion;
 
-      return {
-        allowedCategories: categoryPermissions.includes('all') 
-          ? allCategories.map(c => c.name)
-          : allCategories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
-        allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
-        allowedColors: colorPermissions.includes('all')
-          ? allColors.map(c => c.name)
-          : allColors.filter(c => colorPermissions.includes(c.id)).map(c => c.name),
-        allowedSizes: sizePermissions.includes('all')
-          ? allSizes.map(s => s.name)
-          : allSizes.filter(s => sizePermissions.includes(s.id)).map(s => s.name),
-        allowedDepartments: departmentPermissions.includes('all')
-          ? allDepartments.map(d => d.name)
-          : allDepartments.filter(d => departmentPermissions.includes(d.id)).map(d => d.name),
-        allowedProductTypes: productTypePermissions.includes('all')
-          ? allProductTypes.map(pt => pt.name)
-          : allProductTypes.filter(pt => productTypePermissions.includes(pt.id)).map(pt => pt.name),
-        allowedSeasonsOccasions: seasonOccasionPermissions.includes('all')
-          ? allSeasonsOccasions.map(so => so.name)
-          : allSeasonsOccasions.filter(so => seasonOccasionPermissions.includes(so.id)).map(so => so.name)
-      };
-    } catch (e) {
-      console.error('Error parsing permissions:', e);
-      return {
-        allowedCategories: [],
-        allowedBrands: [],
-        allowedColors: [],
-        allowedSizes: [],
-        allowedDepartments: [],
-        allowedProductTypes: [],
-        allowedSeasonsOccasions: []
-      };
-    }
+    return {
+      allowedCategories: categoryPerm?.has_full_access
+        ? allCategories.map(c => c.name)
+        : allCategories.filter(c => categoryPerm?.allowed_items?.includes(c.id)).map(c => c.name) || [],
+      allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
+      allowedColors: colorPerm?.has_full_access
+        ? allColors.map(c => c.name)
+        : allColors.filter(c => colorPerm?.allowed_items?.includes(c.id)).map(c => c.name) || [],
+      allowedSizes: sizePerm?.has_full_access
+        ? allSizes.map(s => s.name)
+        : allSizes.filter(s => sizePerm?.allowed_items?.includes(s.id)).map(s => s.name) || [],
+      allowedDepartments: departmentPerm?.has_full_access
+        ? allDepartments.map(d => d.name)
+        : allDepartments.filter(d => departmentPerm?.allowed_items?.includes(d.id)).map(d => d.name) || [],
+      allowedProductTypes: productTypePerm?.has_full_access
+        ? allProductTypes.map(pt => pt.name)
+        : allProductTypes.filter(pt => productTypePerm?.allowed_items?.includes(pt.id)).map(pt => pt.name) || [],
+      allowedSeasonsOccasions: seasonOccasionPerm?.has_full_access
+        ? allSeasonsOccasions.map(so => so.name)
+        : allSeasonsOccasions.filter(so => seasonOccasionPerm?.allowed_items?.includes(so.id)).map(so => so.name) || []
+    };
   }, [products, user, allCategories, allColors, allSizes, allDepartments, allProductTypes, allSeasonsOccasions]);
 
   const handleFilterChange = (key, value) => {
