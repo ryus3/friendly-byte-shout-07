@@ -6,7 +6,7 @@ import { Star, Hash } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { motion } from 'framer-motion';
 
-const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit }) => {
+const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate, onEdit, refetchProducts }) => {
   const { settings } = useInventory();
 
   const totalStock = useMemo(() => {
@@ -83,7 +83,7 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
               </div>
             )}
           </div>
-          <ManageProductActions product={product} onProductUpdate={onProductUpdate} />
+          <ManageProductActions product={product} onProductUpdate={onProductUpdate} refetchProducts={refetchProducts} />
         </div>
       </div>
     </motion.div>
