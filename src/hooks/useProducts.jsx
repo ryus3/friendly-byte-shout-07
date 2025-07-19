@@ -431,7 +431,8 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
                   price: parseFloat(v.price) || parseFloat(productData.price) || 0,
                   cost_price: parseFloat(v.cost_price || v.costPrice) || parseFloat(productData.costPrice) || 0,
                   profit_amount: parseFloat(v.profit_amount || v.profitAmount || productData.profitAmount) || 0,
-                  images: imageUrl ? [imageUrl] : (existing.images || [])
+                  images: imageUrl ? [imageUrl] : (existing.images || []),
+                  hint: v.hint || ''
                 };
                 
                 variantsToUpdate.push({
