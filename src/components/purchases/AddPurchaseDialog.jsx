@@ -16,7 +16,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
     const location = useLocation();
     const [supplier, setSupplier] = useState('');
     const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
-    const [shippingCost, setShippingCost] = useState('');
+    const [shippingCost, setShippingCost] = useState(0);
     const [items, setItems] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
@@ -117,7 +117,7 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
     const resetForm = () => {
         setSupplier('');
         setPurchaseDate(new Date().toISOString().split('T')[0]);
-        setShippingCost('');
+        setShippingCost(0);
         setItems([]);
     };
 
@@ -151,10 +151,10 @@ const AddPurchaseDialog = ({ open, onOpenChange }) => {
                                 id="shippingCost" 
                                 type="number" 
                                 min="0"
-                                step="1"
-                                placeholder="أدخل تكلفة الشحن"
-                                value={shippingCost} 
-                                onChange={e => setShippingCost(e.target.value)} 
+                                step="0.01"
+                                placeholder="0"
+                                value={shippingCost || ''} 
+                                onChange={e => setShippingCost(Number(e.target.value) || 0)} 
                             />
                         </div>
                     </div>

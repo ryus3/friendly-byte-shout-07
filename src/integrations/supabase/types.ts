@@ -1849,10 +1849,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      cleanup_deleted_purchases: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       create_auto_settlement_request: {
         Args: { p_employee_id: string; p_order_ids: string[] }
         Returns: string
@@ -1865,10 +1861,6 @@ export type Database = {
       }
       finalize_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
-        Returns: undefined
-      }
-      fix_existing_purchase_shipping: {
-        Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
       }
       generate_employee_telegram_code: {
