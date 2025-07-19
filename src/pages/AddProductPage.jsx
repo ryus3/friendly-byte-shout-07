@@ -228,26 +228,42 @@ const AddProductPage = () => {
       <Helmet><title>إضافة منتج جديد - RYUS</title></Helmet>
       
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800">
-        <div className="container mx-auto p-6 space-y-6">
+        <div className="container mx-auto p-2 md:p-6 space-y-3 md:space-y-6">
           
-          {/* Header قسم محسن */}
-          <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-2xl border shadow-lg">
+          {/* Header محسن للهاتف */}
+          <div className="relative overflow-hidden bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl border shadow-lg">
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 to-blue-600/10" />
-            <div className="relative p-6">
-              <div className="flex justify-between items-center">
+            <div className="relative p-3 md:p-6">
+              {/* سطر علوي للهاتف */}
+              <div className="flex justify-between items-center mb-3 md:mb-0">
+                <Button type="button" variant="outline" size="sm" onClick={() => navigate(fromPurchases || '/add-product')}>
+                  <ArrowRight className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-2">رجوع</span>
+                </Button>
+                <Button 
+                  onClick={handleSubmit}
+                  disabled={isSubmitting || isUploading || !settings}
+                  className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
+                  size="sm"
+                >
+                   {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <PackagePlus className="w-4 h-4" />}
+                   <span className="hidden sm:inline mr-2">{isSubmitting || isUploading ? "جاري الحفظ..." : "حفظ المنتج"}</span>
+                </Button>
+              </div>
+              
+              {/* العنوان والأزرار للشاشات الكبيرة */}
+              <div className="hidden md:flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                   <Button type="button" variant="outline" onClick={() => navigate(fromPurchases || '/add-product')}>
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                      رجوع
-                   </Button>
-                   <Button type="button" variant="outline" onClick={() => navigate('/manage-variants')}>
-                      <Building2 className="h-4 w-4 ml-2" />
-                      إدارة المتغيرات
-                   </Button>
-                   <Button type="button" variant="outline" onClick={() => navigate('/qr-labels')}>
-                      <QrCode className="h-4 w-4 ml-2" />
-                      طباعة ملصقات QR
-                   </Button>
+                   <div className="flex gap-2">
+                     <Button type="button" variant="outline" onClick={() => navigate('/manage-variants')}>
+                        <Building2 className="h-4 w-4 ml-2" />
+                        إدارة المتغيرات
+                     </Button>
+                     <Button type="button" variant="outline" onClick={() => navigate('/qr-labels')}>
+                        <QrCode className="h-4 w-4 ml-2" />
+                        طباعة ملصقات QR
+                     </Button>
+                   </div>
                    <div>
                      <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
                        إضافة منتج جديد
@@ -264,23 +280,47 @@ const AddProductPage = () => {
                 </div>
                 <div className="flex items-center gap-4">
                    {isUploading && <Progress value={uploadProgress} className="w-32" />}
-                   <Button 
-                     onClick={handleSubmit}
-                     disabled={isSubmitting || isUploading || !settings}
-                     className="bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700"
-                   >
-                      {isSubmitting || isUploading ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <PackagePlus className="w-4 h-4 ml-2" />}
-                      {isSubmitting || isUploading ? "جاري الحفظ..." : "حفظ المنتج"}
-                   </Button>
                 </div>
+              </div>
+              
+              {/* العنوان للهاتف */}
+              <div className="md:hidden text-center">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                  إضافة منتج جديد
+                </h1>
+                {selectedDepartment && (
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <Building2 className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      القسم: <span className="font-semibold text-primary">{selectedDepartment.name}</span>
+                    </span>
+                  </div>
+                )}
+                {isUploading && (
+                  <div className="mt-2">
+                    <Progress value={uploadProgress} className="w-full h-2" />
+                  </div>
+                )}
+              </div>
+              
+              {/* أزرار إضافية للهاتف */}
+              <div className="md:hidden flex justify-center gap-2 mt-3">
+                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/manage-variants')}>
+                   <Building2 className="h-4 w-4" />
+                   <span className="text-xs mr-1">المتغيرات</span>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => navigate('/qr-labels')}>
+                   <QrCode className="h-4 w-4" />
+                   <span className="text-xs mr-1">طباعة QR</span>
+                </Button>
               </div>
             </div>
           </div>
 
-          {/* نموذج الإضافة */}
-          <form onSubmit={handleSubmit} className="space-y-6 pb-20">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+          {/* نموذج الإضافة محسن للهاتف */}
+          <form onSubmit={handleSubmit} className="space-y-3 md:space-y-6 pb-20">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
+              <div className="lg:col-span-2 space-y-3 md:space-y-6">
                 <ProductPrimaryInfo 
                   productInfo={productInfo} 
                   setProductInfo={setProductInfo}
@@ -309,24 +349,24 @@ const AddProductPage = () => {
               </div>
               
               {/* معلومات إضافية في الشريط الجانبي */}
-              <div className="space-y-6">
+              <div className="space-y-3 md:space-y-6 order-first lg:order-last">
                 {selectedDepartment && (
                   <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-primary">
-                        <Sparkles className="h-5 w-5" />
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2 text-primary text-sm md:text-base">
+                        <Sparkles className="h-4 w-4 md:h-5 md:w-5" />
                         القسم المحدد
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-lg bg-gradient-to-r ${selectedDepartment.color}`}>
-                            <Building2 className="h-4 w-4 text-white" />
+                    <CardContent className="pt-0">
+                      <div className="space-y-2 md:space-y-3">
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <div className={`p-1.5 md:p-2 rounded-lg bg-gradient-to-r ${selectedDepartment.color}`}>
+                            <Building2 className="h-3 w-3 md:h-4 md:w-4 text-white" />
                           </div>
                           <div>
-                            <p className="font-semibold">{selectedDepartment.name}</p>
-                            <p className="text-sm text-muted-foreground">{selectedDepartment.description}</p>
+                            <p className="font-semibold text-sm md:text-base">{selectedDepartment.name}</p>
+                            <p className="text-xs md:text-sm text-muted-foreground">{selectedDepartment.description}</p>
                           </div>
                         </div>
                       </div>
@@ -334,8 +374,8 @@ const AddProductPage = () => {
                   </Card>
                 )}
                 
-                {/* نصائح سريعة */}
-                <Card>
+                {/* نصائح سريعة - مخفية على الهاتف */}
+                <Card className="hidden lg:block">
                   <CardHeader>
                     <CardTitle className="text-sm">نصائح سريعة</CardTitle>
                   </CardHeader>
@@ -351,11 +391,11 @@ const AddProductPage = () => {
             
             {variants.length > 0 && (
               <Card>
-                <CardHeader><CardTitle>إدارة المتغيرات النهائية</CardTitle></CardHeader>
-                <CardContent>
+                <CardHeader><CardTitle className="text-lg md:text-xl">إدارة المتغيرات النهائية</CardTitle></CardHeader>
+                <CardContent className="p-3 md:p-6">
                   <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                     <SortableContext items={selectedColors.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-4">
+                      <div className="space-y-3 md:space-y-4">
                         {selectedColors.map((color) => (
                           <SortableColorCard
                             key={color.id}

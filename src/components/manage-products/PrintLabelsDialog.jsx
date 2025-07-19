@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,15 +97,13 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
               <h3 className="label-product-name">{label.name}</h3>
               <p className="label-variant-info">{label.color} • {label.size}</p>
               <div className="label-barcode-container">
-                <Barcode 
-                  value={label.barcode} 
-                  height={8} 
-                  width={0.7} 
-                  fontSize={0} 
-                  margin={0}
-                  background="transparent"
-                  lineColor="#1e293b"
-                  displayValue={false}
+                <QRCodeSVG
+                  value={label.qrData}
+                  size={20}
+                  level="M"
+                  includeMargin={false}
+                  bgColor="#ffffff"
+                  fgColor="#1e293b"
                 />
                 <p className="label-barcode-number">{label.barcode}</p>
               </div>
@@ -138,14 +136,31 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
     return products.map(product => ({
       id: product.id,
       name: product.name,
-      variants: product.variants?.map(variant => ({
-        sku: variant.barcode || `${product.id}-${variant.id}`,
-        color: variant.colors?.name || variant.color || 'غير محدد',
-        size: variant.sizes?.name || variant.size || 'غير محدد',
-        price: variant.price || product.base_price || 0,
-        quantity: variant.inventory?.[0]?.quantity || variant.quantity || 0,
-        barcode: variant.barcode || `${product.id}-${variant.id}`
-      })) || []
+      variants: product.variants?.map(variant => {
+        // إنشاء بيانات QR Code
+        const qrData = JSON.stringify({
+          id: variant.barcode || `QR_${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+          type: 'product',
+          product_id: product.id,
+          variant_id: variant.id,
+          product_name: product.name,
+          color: variant.colors?.name || variant.color || 'غير محدد',
+          size: variant.sizes?.name || variant.size || 'غير محدد',
+          price: variant.price || product.base_price || 0,
+          generated_at: Date.now(),
+          version: '2.0'
+        });
+        
+        return {
+          sku: variant.barcode || `${product.id}-${variant.id}`,
+          color: variant.colors?.name || variant.color || 'غير محدد',
+          size: variant.sizes?.name || variant.size || 'غير محدد',
+          price: variant.price || product.base_price || 0,
+          quantity: variant.inventory?.[0]?.quantity || variant.quantity || 0,
+          barcode: variant.barcode || `${product.id}-${variant.id}`,
+          qrData: qrData
+        };
+      }) || []
     }));
   }, [products]);
   
@@ -162,7 +177,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                             color: variant.color,
                             size: variant.size,
                             price: variant.price,
-                            barcode: variant.barcode || variant.sku
+                            barcode: variant.barcode || variant.sku,
+                            qrData: variant.qrData
                         });
                     }
                 });
@@ -195,10 +211,10 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
-              طباعة ملصقات الباركود
+              طباعة ملصقات QR
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              حدد كمية الملصقات لكل متغير واحصل على ملصقات احترافية قابلة للقراءة
+              حدد كمية الملصقات لكل متغير واحصل على ملصقات QR احترافية قابلة للقراءة
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -384,15 +400,13 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                         <h3 className="simple-label-product-name">{label.name}</h3>
                         <p className="simple-label-variant-info">{label.color} / {label.size}</p>
                         <div className="simple-label-barcode-container">
-                           <Barcode 
-                            value={label.barcode} 
-                            height={18} 
-                            width={1.2} 
-                            fontSize={0} 
-                            margin={0}
-                            background="transparent"
-                            lineColor="#000000"
-                            displayValue={false}
+                           <QRCodeSVG
+                            value={label.qrData}
+                            size={40}
+                            level="M"
+                            includeMargin={false}
+                            bgColor="#ffffff"
+                            fgColor="#000000"
                           />
                           <p className="simple-label-barcode-number">{label.barcode}</p>
                         </div>
