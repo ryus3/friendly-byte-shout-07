@@ -243,8 +243,33 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
 
       if (finalProductError) throw finalProductError;
 
-      // تحديث قائمة المنتجات المحلية فوراً بالمنتج الكامل مع المتغيرات
-      setProducts(prev => [finalProduct, ...prev]);
+      // جلب المنتج الكامل مع كافة بياناته
+      const { data: completeProduct, error: completeError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          variants:product_variants(
+            *,
+            color:colors(id, name, hex_color),
+            size:sizes(id, name),
+            inventory(quantity, min_stock, reserved_stock)
+          ),
+          categories:product_categories(category_id, categories(name)),
+          product_types:product_product_types(product_type_id, product_types(name)),
+          seasons_occasions:product_seasons_occasions(season_occasion_id, seasons_occasions(name, type)),
+          departments:product_departments(department_id, departments(name))
+        `)
+        .eq('id', newProduct.id)
+        .single();
+
+      if (completeError) {
+        console.error('❌ خطأ في جلب المنتج الكامل:', completeError);
+        throw completeError;
+      }
+
+      // تحديث قائمة المنتجات المحلية فوراً بالمنتج الكامل مع كافة البيانات
+      setProducts(prev => [completeProduct, ...prev]);
+      console.log('✅ تم تحديث القائمة المحلية بالمنتج الكامل:', completeProduct);
       
       // إضافة إشعار النجاح
       if (addNotification) {

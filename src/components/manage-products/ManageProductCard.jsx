@@ -46,7 +46,13 @@ const ManageProductCard = ({ product, onDelete, onPrint }) => {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      className="group relative overflow-hidden rounded-xl border bg-card shadow-md transition-all duration-300 hover:shadow-lg hover:shadow-primary/10"
+      className="group relative overflow-hidden rounded-xl border bg-card 
+                 shadow-lg shadow-black/10 
+                 dark:shadow-lg dark:shadow-primary/20
+                 transition-all duration-300 
+                 hover:shadow-xl hover:shadow-primary/20
+                 dark:hover:shadow-2xl dark:hover:shadow-primary/30
+                 hover:-translate-y-1"
     >
       <div className="absolute top-2 right-2 z-10 flex flex-col gap-2 items-end">
         <div className={cn("text-xs font-bold text-white rounded-full px-2 py-1", getStockLevelClass())}>
