@@ -63,6 +63,7 @@ export const useProductsDB = () => {
         category_id: mainCategoryId,
         base_price: productData.price || 0,
         cost_price: productData.costPrice || 0,
+        profit_amount: productData.profitAmount || 0,
         barcode: productData.barcode,
         images: uploadedGeneralImages,
         is_active: true,
@@ -137,6 +138,8 @@ export const useProductsDB = () => {
             size_id: variant.sizeId,
             price: variant.price || newProduct.base_price,
             cost_price: variant.costPrice || newProduct.cost_price,
+            profit_amount: variant.profitAmount || productData.profitAmount || 0,
+            hint: variant.hint || '',
             barcode: variant.barcode,
             images: variantImageUrl ? [variantImageUrl] : []
           });
@@ -205,9 +208,28 @@ export const useProductsDB = () => {
         category_id: productData.categoryId,
         base_price: productData.price || 0,
         cost_price: productData.costPrice || 0,
+        profit_amount: productData.profitAmount || 0,
         barcode: productData.barcode,
         images: updatedGeneralImages
       });
+
+      // Update variants if provided
+      if (productData.variants && productData.variants.length > 0) {
+        const variantUpdatePromises = productData.variants.map(async (variant) => {
+          if (variant.id) {
+            // Update existing variant
+            return await db.variants.update(variant.id, {
+              price: variant.price || productData.price || 0,
+              cost_price: variant.costPrice || productData.costPrice || 0,
+              profit_amount: variant.profitAmount || productData.profitAmount || 0,
+              hint: variant.hint || '',
+              barcode: variant.barcode
+            });
+          }
+        });
+        
+        await Promise.all(variantUpdatePromises.filter(Boolean));
+      }
 
       await fetchProducts();
       
