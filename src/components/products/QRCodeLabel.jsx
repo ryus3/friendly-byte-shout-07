@@ -15,19 +15,8 @@ const QRCodeLabel = ({
 }) => {
   const labelRef = useRef(null);
 
-  // إنشاء بيانات QR Code فريدة ومحسنة للقراءة السريعة
-  const qrData = JSON.stringify({
-    id: variantId || productId || `QR_${Date.now().toString(36).toUpperCase()}`,
-    type: 'product',
-    product_id: productId,
-    variant_id: variantId,
-    product_name: productName,
-    color: color,
-    size: size,
-    price: price,
-    generated_at: Date.now(),
-    version: '2.0'
-  });
+  // إنشاء QR Code بسيط وحقيقي
+  const qrData = variantId || productId || `PROD_${Date.now().toString(36).toUpperCase()}`;
 
   const handlePrint = () => {
     const printContent = labelRef.current;
@@ -122,13 +111,17 @@ const QRCodeLabel = ({
       ctx.fillStyle = 'white';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
+      // حدود سوداء
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(0, 0, canvas.width, canvas.height);
+      
       // رسم QR Code على اليسار
       ctx.drawImage(img, 16, 16, 150, 150);
       
-      // إضافة النص على اليمين - مطابق للصورة
+      // إضافة النص على اليمين - محاذاة جانبية
       ctx.fillStyle = 'black';
       ctx.textAlign = 'right';
-      ctx.direction = 'rtl';
       
       // اسم المنتج
       ctx.font = '900 26px Arial';
@@ -173,20 +166,20 @@ const QRCodeLabel = ({
               direction: 'ltr' 
             }}
           >
-            {/* QR Code على اليسار */}
+            {/* QR Code بسيط على اليسار */}
             <div className="flex-shrink-0 mr-4">
               <QRCodeSVG
                 value={qrData}
                 size={150}
-                level="H"
-                includeMargin={true}
+                level="M"
+                includeMargin={false}
                 bgColor="#ffffff"
                 fgColor="#000000"
               />
             </div>
             
-            {/* معلومات المنتج على اليمين - مطابق للصورة */}
-            <div className="flex-1 text-right flex flex-col justify-center h-full" style={{ direction: 'rtl' }}>
+            {/* معلومات المنتج على اليمين - محاذاة جانبية */}
+            <div className="flex-1 h-full flex flex-col justify-center" style={{ direction: 'rtl', textAlign: 'right' }}>
               <div 
                 className="text-black font-black mb-1"
                 style={{ 

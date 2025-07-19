@@ -15,70 +15,62 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         .label-grid {
           display: flex;
           flex-direction: column;
-          gap: 3mm;
+          gap: 5mm;
           padding: 5mm;
           align-items: center;
         }
         
         .label-card {
-          width: 45mm;
-          height: 25mm;
-          border: 1px solid #64748b;
-          padding: 1mm;
+          width: 100mm;
+          height: 50mm;
+          border: 3px solid #000000;
+          padding: 3mm;
           page-break-inside: avoid;
           display: flex;
-          flex-direction: column;
-          justify-content: space-between;
+          align-items: center;
           background: white;
-          border-radius: 1.5mm;
           margin: 0 auto;
+          font-family: Arial, sans-serif;
+          direction: ltr;
         }
         
-        .label-content {
-          text-align: center;
-          height: 100%;
+        .qr-section {
+          flex-shrink: 0;
+          margin-right: 4mm;
+        }
+        
+        .product-info {
+          flex: 1;
+          text-align: right;
+          direction: rtl;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
+          justify-content: center;
+          height: 100%;
         }
         
         .label-product-name {
-          font-size: 9px;
-          font-weight: 700;
+          font-size: 6mm;
+          font-weight: 900;
           margin-bottom: 1mm;
           line-height: 1.1;
-          color: #1e293b;
-          text-transform: uppercase;
+          color: #000000;
+          font-family: 'Arial Black', Arial, sans-serif;
         }
         
         .label-variant-info {
-          font-size: 7px;
-          margin-bottom: 1mm;
-          color: #64748b;
-          font-weight: 500;
-        }
-        
-        .label-barcode-container {
-          margin: 0.5mm 0;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          flex: 1;
-        }
-        
-        .label-barcode-number {
-          font-size: 5px;
-          color: #475569;
-          margin-top: 0.5mm;
-          font-family: monospace;
+          font-size: 4.5mm;
+          margin-bottom: 2mm;
+          color: #000000;
+          font-weight: bold;
+          line-height: 1.1;
         }
         
         .label-price {
-          font-size: 8px;
-          font-weight: 700;
-          color: #dc2626;
-          margin-top: 0.5mm;
+          font-size: 7mm;
+          font-weight: 900;
+          color: #000000;
+          line-height: 1.1;
         }
         
         @media print {
@@ -93,20 +85,19 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
       <div className="label-grid">
         {labelsToPrint.map((label, index) => (
           <div key={index} className="label-card">
-            <div className="label-content">
-              <h3 className="label-product-name">{label.name}</h3>
-              <p className="label-variant-info">{label.color} • {label.size}</p>
-              <div className="label-barcode-container">
-                <QRCodeSVG
-                  value={label.qrData}
-                  size={20}
-                  level="M"
-                  includeMargin={false}
-                  bgColor="#ffffff"
-                  fgColor="#1e293b"
-                />
-                <p className="label-barcode-number">{label.barcode}</p>
-              </div>
+            <div className="qr-section">
+              <QRCodeSVG
+                value={label.qrData}
+                size={35}
+                level="M"
+                includeMargin={false}
+                bgColor="#ffffff"
+                fgColor="#000000"
+              />
+            </div>
+            <div className="product-info">
+              <h3 className="label-product-name">{label.name} RYUS</h3>
+              <p className="label-variant-info">{label.size} / {label.color}</p>
               <p className="label-price">{label.price.toLocaleString()} د.ع</p>
             </div>
           </div>
@@ -137,19 +128,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
       id: product.id,
       name: product.name,
       variants: product.variants?.map(variant => {
-        // إنشاء بيانات QR Code حقيقية
-        const qrData = JSON.stringify({
-          id: variant.barcode || variant.id,
-          type: 'product',
-          product_id: product.id,
-          variant_id: variant.id,
-          product_name: product.name,
-          color: variant.colors?.name || variant.color || 'افتراضي',
-          size: variant.sizes?.name || variant.size || 'افتراضي',
-          price: variant.price || product.base_price || 0,
-          generated_at: Date.now(),
-          version: '2.0'
-        });
+        // إنشاء QR Code بسيط وحقيقي
+        const qrData = variant.barcode || variant.id;
         
         return {
           sku: variant.barcode || `${product.id}-${variant.id}`,
@@ -385,8 +365,8 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                         <QRCodeSVG
                           value={label.qrData}
                           size={115}
-                          level="H"
-                          includeMargin={true}
+                          level="M"
+                          includeMargin={false}
                           bgColor="#ffffff"
                           fgColor="#000000"
                         />

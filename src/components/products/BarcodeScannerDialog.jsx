@@ -86,39 +86,41 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
           console.log("🎯 تم قراءة QR Code:", decodedText);
           setScanCount(prev => prev + 1);
           
-          // محاولة تحليل JSON للـ QR Codes المتقدمة
-          let parsedData = null;
+          // محاولة تحليل QR Code
+          let parsedData = decodedText;
+          let productInfo = null;
+          
           try {
-            parsedData = JSON.parse(decodedText);
-            if (parsedData && (parsedData.type === 'product' || parsedData.product_id)) {
-              console.log("📦 بيانات المنتج:", parsedData);
+            // محاولة تحليل JSON أولاً
+            const jsonData = JSON.parse(decodedText);
+            if (jsonData && (jsonData.type === 'product' || jsonData.product_id)) {
+              productInfo = jsonData;
+              console.log("📦 بيانات المنتج JSON:", productInfo);
               toast({
                 title: "✅ تم قراءة QR Code للمنتج",
-                description: `${parsedData.product_name || 'منتج'} - ${parsedData.color || 'افتراضي'} - ${parsedData.size || 'افتراضي'}`,
+                description: `${productInfo.product_name || 'منتج'} - ${productInfo.color || 'افتراضي'} - ${productInfo.size || 'افتراضي'}`,
                 variant: "success"
               });
-            } else {
-              console.log("📄 QR Code عام:", parsedData);
             }
           } catch (e) {
-            // QR Code نصي عادي
-            console.log("📄 QR Code نصي:", decodedText);
+            // QR Code بسيط - معرف المنتج مباشرة
+            console.log("📄 QR Code بسيط:", decodedText);
             toast({
               title: "✅ تم قراءة QR Code",
-              description: `${decodedText.substring(0, 50)}${decodedText.length > 50 ? '...' : ''}`,
+              description: `معرف المنتج: ${decodedText.substring(0, 20)}${decodedText.length > 20 ? '...' : ''}`,
               variant: "success"
             });
           }
           
-          // صوت نجاح خفيف
+          // صوت نجاح
           try {
             const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwgBSmEyvLZhj8IFWm98OyfUgwOUarm0nQgBSl+y/LVey0GO2q+8N2bSDsBJXfH89mTRAsVWLPn7q1cEgBHmN/nynkiBjR+zfP');
             audio.volume = 0.15;
             audio.play();
           } catch (e) {}
 
-          // إرسال النتيجة
-          onScanSuccess(parsedData || decodedText);
+          // إرسال النتيجة - إما البيانات المحللة أو النص الخام
+          onScanSuccess(productInfo || parsedData);
         },
         (errorMessage) => {
           // تجاهل أخطاء عدم وجود كود
