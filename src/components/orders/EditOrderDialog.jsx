@@ -92,94 +92,184 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="gradient-text">تعديل الطلب #{order.trackingnumber}</DialogTitle>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="gradient-text">تعديل الطلب #{order.trackingnumber || order.tracking_number}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="client_name">اسم العميل</Label>
-              <Input id="client_name" name="client_name" value={formData.client_name || ''} onChange={handleChange} required />
+        
+        <div className="flex-1 overflow-y-auto p-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="client_name">اسم العميل</Label>
+                <Input 
+                  id="client_name" 
+                  name="client_name" 
+                  value={formData.client_name || ''} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="client_mobile">رقم الهاتف</Label>
+                <Input 
+                  id="client_mobile" 
+                  name="client_mobile" 
+                  value={formData.client_mobile || ''} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="client_mobile2">رقم هاتف ثاني (اختياري)</Label>
+                <Input 
+                  id="client_mobile2" 
+                  name="client_mobile2" 
+                  value={formData.client_mobile2 || ''} 
+                  onChange={handleChange} 
+                />
+              </div>
+              <div>
+                <Label htmlFor="price">السعر الإجمالي (مع التوصيل)</Label>
+                <Input 
+                  id="price" 
+                  name="price" 
+                  type="number" 
+                  value={formData.price || ''} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="city_id">المدينة</Label>
+                <Select 
+                  name="city_id" 
+                  value={String(formData.city_id || '')} 
+                  onValueChange={(value) => handleSelectChange('city_id', value)} 
+                  required
+                >
+                  <SelectTrigger><SelectValue placeholder="اختر مدينة" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-background border shadow-lg">
+                    {safeCities.map(city => (
+                      <SelectItem key={city.id} value={String(city.id)}>
+                        {city.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="region_id">المنطقة</Label>
+                <Select 
+                  name="region_id" 
+                  value={String(formData.region_id || '')} 
+                  onValueChange={(value) => handleSelectChange('region_id', value)} 
+                  required 
+                  disabled={!formData.city_id || safeRegions.length === 0}
+                >
+                  <SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-background border shadow-lg">
+                    {safeRegions.map(region => (
+                      <SelectItem key={region.id} value={String(region.id)}>
+                        {region.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            
             <div>
-              <Label htmlFor="client_mobile">رقم الهاتف</Label>
-              <Input id="client_mobile" name="client_mobile" value={formData.client_mobile || ''} onChange={handleChange} required />
+              <Label htmlFor="location">العنوان التفصيلي</Label>
+              <Textarea 
+                id="location" 
+                name="location" 
+                value={formData.location || ''} 
+                onChange={handleChange} 
+                required 
+              />
             </div>
+            
             <div>
-              <Label htmlFor="client_mobile2">رقم هاتف ثاني (اختياري)</Label>
-              <Input id="client_mobile2" name="client_mobile2" value={formData.client_mobile2 || ''} onChange={handleChange} />
+              <Label htmlFor="type_name">نوع البضاعة</Label>
+              <Input 
+                id="type_name" 
+                name="type_name" 
+                value={formData.type_name || ''} 
+                onChange={handleChange} 
+                required 
+              />
             </div>
-            <div>
-              <Label htmlFor="price">السعر الإجمالي (مع التوصيل)</Label>
-              <Input id="price" name="price" type="number" value={formData.price || ''} onChange={handleChange} required />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="items_number">عدد القطع</Label>
+                <Input 
+                  id="items_number" 
+                  name="items_number" 
+                  type="number" 
+                  value={formData.items_number || ''} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div>
+                <Label htmlFor="package_size">حجم الطلب</Label>
+                <Select 
+                  name="package_size" 
+                  value={String(formData.package_size || '')} 
+                  onValueChange={(value) => handleSelectChange('package_size', value)} 
+                  required
+                >
+                  <SelectTrigger><SelectValue placeholder="اختر الحجم" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-background border shadow-lg">
+                    {safePackageSizes.map(size => (
+                      <SelectItem key={size.id} value={String(size.id)}>
+                        {size.size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            
             <div>
-              <Label htmlFor="city_id">المدينة</Label>
-              <Select name="city_id" value={String(formData.city_id || '')} onValueChange={(value) => handleSelectChange('city_id', value)} required>
-                <SelectTrigger><SelectValue placeholder="اختر مدينة" /></SelectTrigger>
-                <SelectContent>
-                  {safeCities.map(city => <SelectItem key={city.id} value={String(city.id)}>{city.name}</SelectItem>)}
+              <Label htmlFor="merchant_notes">ملاحظات التاجر (اختياري)</Label>
+              <Textarea 
+                id="merchant_notes" 
+                name="merchant_notes" 
+                value={formData.merchant_notes || ''} 
+                onChange={handleChange} 
+              />
+            </div>
+            
+            <div>
+              <Label>هل الطلب استبدال؟</Label>
+              <Select 
+                name="replacement" 
+                value={String(formData.replacement || '0')} 
+                onValueChange={(value) => handleSelectChange('replacement', value)} 
+                required
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="z-50 bg-background border shadow-lg">
+                  <SelectItem value="0">لا</SelectItem>
+                  <SelectItem value="1">نعم</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label htmlFor="region_id">المنطقة</Label>
-              <Select name="region_id" value={String(formData.region_id || '')} onValueChange={(value) => handleSelectChange('region_id', value)} required disabled={!formData.city_id || safeRegions.length === 0}>
-                <SelectTrigger><SelectValue placeholder="اختر منطقة" /></SelectTrigger>
-                <SelectContent>
-                  {safeRegions.map(region => <SelectItem key={region.id} value={String(region.id)}>{region.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="location">العنوان التفصيلي</Label>
-            <Textarea id="location" name="location" value={formData.location || ''} onChange={handleChange} required />
-          </div>
-          <div>
-            <Label htmlFor="type_name">نوع البضاعة</Label>
-            <Input id="type_name" name="type_name" value={formData.type_name || ''} onChange={handleChange} required />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="items_number">عدد القطع</Label>
-              <Input id="items_number" name="items_number" type="number" value={formData.items_number || ''} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label htmlFor="package_size">حجم الطلب</Label>
-              <Select name="package_size" value={String(formData.package_size || '')} onValueChange={(value) => handleSelectChange('package_size', value)} required>
-                <SelectTrigger><SelectValue placeholder="اختر الحجم" /></SelectTrigger>
-                <SelectContent>
-                  {safePackageSizes.map(size => <SelectItem key={size.id} value={String(size.id)}>{size.size}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div>
-            <Label htmlFor="merchant_notes">ملاحظات التاجر (اختياري)</Label>
-            <Textarea id="merchant_notes" name="merchant_notes" value={formData.merchant_notes || ''} onChange={handleChange} />
-          </div>
-          <div>
-            <Label>هل الطلب استبدال؟</Label>
-            <Select name="replacement" value={String(formData.replacement || '0')} onValueChange={(value) => handleSelectChange('replacement', value)} required>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">لا</SelectItem>
-                <SelectItem value="1">نعم</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              حفظ التعديلات
-            </Button>
-          </DialogFooter>
-        </form>
+          </form>
+        </div>
+        
+        <DialogFooter className="pt-4 border-t bg-background">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            إلغاء
+          </Button>
+          <Button type="submit" disabled={isLoading} onClick={handleSubmit}>
+            {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+            حفظ التعديلات
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
