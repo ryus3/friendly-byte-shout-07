@@ -47,6 +47,7 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
   const [colorImages, setColorImages] = useState({});
   const [variants, setVariants] = useState([]);
   const [sizeType, setSizeType] = useState('letter');
+  const [colorSizeTypes, setColorSizeTypes] = useState({});
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -288,10 +289,8 @@ const EditProductFullDialog = ({ product, open, onOpenChange, onSuccess, refetch
             setSelectedColors={setSelectedColors}
             sizeType={sizeType}
             setSizeType={setSizeType}
-            variants={variants}
-            setVariants={setVariants}
-            allColors={allColors}
-            addColor={addColor}
+            colorSizeTypes={colorSizeTypes}
+            setColorSizeTypes={setColorSizeTypes}
           />
 
           {/* كروت الألوان والمتغيرات */}
