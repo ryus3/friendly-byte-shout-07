@@ -15,28 +15,28 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         .label-grid {
           display: flex;
           flex-direction: column;
-          gap: 5mm;
-          padding: 5mm;
+          gap: 20px;
+          padding: 15px;
           align-items: center;
         }
         
         .label-card {
-          width: 100mm;
-          height: 50mm;
+          width: 300px;
+          height: 150px;
           border: 3px solid #000000;
-          padding: 3mm;
+          padding: 8px;
           page-break-inside: avoid;
           display: flex;
           align-items: center;
-          background: white;
-          margin: 0 auto;
+          border-radius: 0;
+          background: #ffffff;
           font-family: Arial, sans-serif;
           direction: ltr;
         }
         
         .qr-section {
           flex-shrink: 0;
-          margin-right: 4mm;
+          margin-right: 12px;
         }
         
         .product-info {
@@ -50,24 +50,24 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
         }
         
         .label-product-name {
-          font-size: 6mm;
+          font-size: 20px;
           font-weight: 900;
-          margin-bottom: 1mm;
+          margin-bottom: 3px;
           line-height: 1.1;
           color: #000000;
           font-family: 'Arial Black', Arial, sans-serif;
         }
         
         .label-variant-info {
-          font-size: 4.5mm;
-          margin-bottom: 2mm;
+          font-size: 14px;
+          margin-bottom: 8px;
           color: #000000;
           font-weight: bold;
           line-height: 1.1;
         }
         
         .label-price {
-          font-size: 7mm;
+          font-size: 21px;
           font-weight: 900;
           color: #000000;
           line-height: 1.1;
@@ -80,6 +80,9 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
           body {
             -webkit-print-color-adjust: exact;
           }
+          .label-grid {
+            align-items: center !important;
+          }
         }
       `}</style>
       <div className="label-grid">
@@ -88,7 +91,7 @@ const LabelPreview = React.forwardRef(({ labelsToPrint }, ref) => {
             <div className="qr-section">
               <QRCodeSVG
                 value={label.qrData}
-                size={38}
+                size={120}
                 level="M"
                 includeMargin={false}
                 bgColor="#ffffff"

@@ -26,7 +26,6 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
   const handleVisibilityChange = async (checked) => {
     setIsVisible(checked);
     try {
-      // استخدام supabase مباشرة
       const supabase = await import('@/lib/customSupabaseClient').then(m => m.default);
       const { error } = await supabase
         .from('products')
@@ -39,6 +38,11 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
         title: `تم ${checked ? 'تفعيل' : 'إلغاء تفعيل'} ظهور المنتج`,
         description: `"${product.name}" الآن ${checked ? 'مرئي' : 'مخفي'} للموظفين.`,
       });
+      
+      // تحديث البيانات في الذاكرة
+      if (updateProduct) {
+        updateProduct(product.id, { is_active: checked });
+      }
       if (onProductUpdate) onProductUpdate();
     } catch (error) {
       console.error('Error updating product visibility:', error);
