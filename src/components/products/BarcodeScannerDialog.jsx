@@ -23,33 +23,12 @@ const BarcodeScannerDialog = ({ open, onOpenChange, onScanSuccess }) => {
             const html5QrCode = new Html5Qrcode("reader");
             readerRef.current = html5QrCode;
 
-            // البحث عن الكاميرا الخلفية أولاً
-            const backCamera = cameras.find(camera => 
-              camera.label.toLowerCase().includes('back') || 
-              camera.label.toLowerCase().includes('rear') ||
-              camera.label.toLowerCase().includes('environment')
-            );
-            
-            const cameraConfig = backCamera ? backCamera.id : { facingMode: "environment" };
-
             await html5QrCode.start(
-              cameraConfig,
-              {
-                fps: 20, // تقليل معدل الإطارات قليلاً للاستقرار
-                qrbox: function(viewfinderWidth, viewfinderHeight) {
-                  // صندوق مسح متجاوب
-                  const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-                  const qrboxSize = Math.floor(minEdge * 0.7);
-                  return {
-                    width: qrboxSize,
-                    height: qrboxSize * 0.7
-                  };
-                },
-                aspectRatio: 1.777778, // 16:9
-                disableFlip: false,
-                videoConstraints: {
-                  facingMode: "environment" // فرض استخدام الكاميرا الخلفية
-                }
+              { facingMode: "environment" },
+              { 
+                fps: 10, 
+                qrbox: { width: 250, height: 150 },
+                aspectRatio: 1.777778
               },
               (decodedText, decodedResult) => {
                 // مسح ناجح

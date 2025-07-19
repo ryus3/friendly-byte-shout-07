@@ -114,13 +114,7 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
                 className="hover:bg-primary/10 border-primary/30" 
                 title="مسح الباركود لإضافة المنتجات"
               >
-                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <rect x="3" y="5" width="18" height="14" stroke="currentColor" strokeWidth="2" fill="none" rx="2"/>
-                  <path d="M5 8h1M5 10h1M5 12h1M5 14h1M5 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M8 8h2M8 10h1M8 12h2M8 14h1M8 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M12 8h1M12 10h2M12 12h1M12 14h2M12 16h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M16 8h2M16 10h1M16 12h2M16 14h1M16 16h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+                <QrCode className="w-5 h-5 text-primary" />
               </Button>
             </div>
           </DialogTitle>
