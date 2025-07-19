@@ -449,13 +449,11 @@ const InventoryPage = () => {
         </div>
         
         <InventoryStats 
-          totalVariants={inventoryStats.totalVariants}
+          inventoryItems={inventoryItems}
+          inventoryStats={inventoryStats}
           lowStockCount={inventoryStats.lowStockCount}
-          mediumStockCount={inventoryStats.mediumStockCount}
-          highStockCount={inventoryStats.highStockCount}
           reservedStockCount={inventoryStats.reservedStockCount}
           onFilterChange={handleFilterChange}
-          inventoryItems={inventoryItems}
           onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
           onRestoreProduct={() => {
             toast({

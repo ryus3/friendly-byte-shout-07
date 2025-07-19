@@ -35,14 +35,21 @@ const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
   </div>
 );
 
-const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onFilterChange, onViewArchive, onRestoreProduct }) => {
-  if (!inventoryItems) {
+const InventoryStats = ({ inventoryItems, inventoryStats, lowStockCount, reservedStockCount, onFilterChange, onViewArchive, onRestoreProduct }) => {
+  if (!inventoryItems || !inventoryStats) {
     return null; // or a loader/skeleton component
   }
-  const totalVariants = inventoryItems.reduce((acc, item) => acc + (item.variants?.length || 0), 0);
+  
+  // استخدام البيانات المحسوبة مسبقاً من الصفحة الرئيسية
+  const {
+    totalVariants,
+    lowStockCount: lowStock,
+    mediumStockCount: mediumStock, 
+    highStockCount: highStock,
+    reservedStockCount: reservedStock
+  } = inventoryStats;
+
   const allVariants = inventoryItems.flatMap(i => i.variants || []);
-  const highStockCount = allVariants.filter(v => v.stockLevel === 'high').length;
-  const mediumStockCount = allVariants.filter(v => v.stockLevel === 'medium').length;
   const outOfStockCount = allVariants.filter(v => (v.quantity || 0) === 0).length;
   
   // حساب المنتجات المؤرشفة (المنتجات التي جميع مقاساتها نافذة)
@@ -53,28 +60,38 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
 
   const stats = [
     { title: 'إجمالي الأصناف', value: totalVariants, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
-    { title: 'مخزون محجوز', value: reservedStockCount, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
-    { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
-    { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-yellow-500 to-orange-400', delay: 0.3, onClick: () => onFilterChange('medium') },
-    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-rose-400', delay: 0.4, onClick: () => onFilterChange('low') },
+    { title: 'مخزون محجوز', value: reservedStock, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
+    { title: 'مخزون جيد', value: highStock, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
+    { title: 'مخزون متوسط', value: mediumStock, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-yellow-500 to-orange-400', delay: 0.3, onClick: () => onFilterChange('medium') },
+    { title: 'مخزون منخفض', value: lowStock, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-rose-400', delay: 0.4, onClick: () => onFilterChange('low') },
     { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-gray-500 to-gray-600', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {stats.map(stat => (
+      {/* تخطيط 3+3 كما طلب المستخدم */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {stats.slice(0, 3).map(stat => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
       
-      {/* كارت الأرشيف */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <ArchivedProductsCard
-          archivedCount={archivedProductsCount}
-          onViewArchive={onViewArchive}
-          onRestoreProduct={onRestoreProduct}
-        />
+        {/* السطر الثاني من الكروت */}
+        <div className="md:col-span-2 lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {stats.slice(3, 6).map(stat => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
+        </div>
+        
+        {/* كارت الأرشيف في الجهة الأخرى */}
+        <div className="md:col-span-2 lg:col-span-1">
+          <ArchivedProductsCard
+            archivedCount={archivedProductsCount}
+            onViewArchive={onViewArchive}
+            onRestoreProduct={onRestoreProduct}
+          />
+        </div>
       </div>
     </div>
   );
