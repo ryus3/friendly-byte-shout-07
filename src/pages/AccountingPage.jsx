@@ -23,6 +23,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
+import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formatCurrency = (amount) => {
@@ -124,7 +125,7 @@ const AccountingPage = () => {
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
-    const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false });
+    const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false });
     const [realCashBalance, setRealCashBalance] = useState(0);
     const [initialCapital, setInitialCapital] = useState(0);
 
@@ -381,8 +382,7 @@ const AccountingPage = () => {
             icon: Banknote, 
             colors: ['slate-500', 'gray-600'], 
             format: "currency", 
-            onEdit: () => setDialogs(d => ({ ...d, capital: true })),
-            subtitle: `نقدي: ${formatCurrency(initialCapital)} + مخزون: ${formatCurrency(financialSummary.inventoryValue)}`
+            onClick: () => setDialogs(d => ({ ...d, capitalDetails: true }))
         },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
@@ -432,8 +432,8 @@ const AccountingPage = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard 
-                        title="صافي الربح" 
-                        value={financialSummary.netProfit} 
+                        title="صافي أرباح المبيعات" 
+                        value={financialSummary.grossProfit} 
                         icon={PieChart} 
                         colors={['blue-500', 'sky-500']} 
                         format="currency" 
@@ -523,6 +523,14 @@ const AccountingPage = () => {
                 summary={financialSummary}
                 datePeriod={datePeriod}
                 onDatePeriodChange={setDatePeriod}
+            />
+            <CapitalDetailsDialog
+                open={dialogs.capitalDetails}
+                onOpenChange={(open) => setDialogs(d => ({ ...d, capitalDetails: open }))}
+                initialCapital={initialCapital}
+                inventoryValue={financialSummary.inventoryValue}
+                cashBalance={realCashBalance}
+                onCapitalUpdate={(newCapital) => setInitialCapital(newCapital)}
             />
         </>
     );
