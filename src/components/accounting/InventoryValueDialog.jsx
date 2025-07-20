@@ -119,7 +119,77 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
   const fetchInventoryDetails = async () => {
     setLoading(true);
     try {
-      // بناء query الفلترة
+      // بناء subqueries للفلترة
+      let productIds = null;
+      
+      // إذا كان هناك فلاتر، جلب معرفات المنتجات التي تطابق الفلاتر
+      if (filters.department || filters.category || filters.productType || filters.season) {
+        let productQuery = supabase
+          .from('products')
+          .select('id');
+
+        // تطبيق فلتر القسم
+        if (filters.department) {
+          const { data: deptProducts } = await supabase
+            .from('product_departments')
+            .select('product_id')
+            .eq('department_id', filters.department);
+          
+          if (deptProducts) {
+            const deptProductIds = deptProducts.map(p => p.product_id);
+            productQuery = productQuery.in('id', deptProductIds);
+          }
+        }
+
+        // تطبيق فلتر التصنيف
+        if (filters.category) {
+          const { data: catProducts } = await supabase
+            .from('product_categories')
+            .select('product_id')
+            .eq('category_id', filters.category);
+          
+          if (catProducts) {
+            const catProductIds = catProducts.map(p => p.product_id);
+            if (productIds) {
+              // تقاطع النتائج السابقة مع النتائج الجديدة
+              productQuery = productQuery.in('id', catProductIds);
+            } else {
+              productQuery = productQuery.in('id', catProductIds);
+            }
+          }
+        }
+
+        // تطبيق فلتر نوع المنتج
+        if (filters.productType) {
+          const { data: typeProducts } = await supabase
+            .from('product_product_types')
+            .select('product_id')
+            .eq('product_type_id', filters.productType);
+          
+          if (typeProducts) {
+            const typeProductIds = typeProducts.map(p => p.product_id);
+            productQuery = productQuery.in('id', typeProductIds);
+          }
+        }
+
+        // تطبيق فلتر الموسم
+        if (filters.season) {
+          const { data: seasonProducts } = await supabase
+            .from('product_seasons_occasions')
+            .select('product_id')
+            .eq('season_occasion_id', filters.season);
+          
+          if (seasonProducts) {
+            const seasonProductIds = seasonProducts.map(p => p.product_id);
+            productQuery = productQuery.in('id', seasonProductIds);
+          }
+        }
+
+        const { data: filteredProducts } = await productQuery;
+        productIds = filteredProducts ? filteredProducts.map(p => p.id) : [];
+      }
+
+      // بناء query المخزون
       let query = supabase
         .from('inventory')
         .select(`
@@ -152,18 +222,26 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         `)
         .gt('quantity', 0);
 
-      // تطبيق فلاتر قاعدة البيانات
-      if (filters.department) {
-        query = query.filter('products.product_departments.departments.id', 'eq', filters.department);
-      }
-      if (filters.category) {
-        query = query.filter('products.product_categories.categories.id', 'eq', filters.category);
-      }
-      if (filters.productType) {
-        query = query.filter('products.product_product_types.product_types.id', 'eq', filters.productType);
-      }
-      if (filters.season) {
-        query = query.filter('products.product_seasons_occasions.seasons_occasions.id', 'eq', filters.season);
+      // تطبيق فلتر معرفات المنتجات إذا كانت متوفرة
+      if (productIds && productIds.length > 0) {
+        query = query.in('product_id', productIds);
+      } else if (productIds && productIds.length === 0) {
+        // إذا لم توجد منتجات تطابق الفلاتر، إرجاع مصفوفة فارغة
+        setInventoryData({
+          departments: [],
+          categories: [],
+          productTypes: [],
+          seasons: [],
+          products: [],
+          filterOptions: {
+            departments: [],
+            categories: [],
+            productTypes: [],
+            seasons: []
+          }
+        });
+        setLoading(false);
+        return;
       }
 
       const { data: inventoryItems, error } = await query;
@@ -654,7 +732,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   </Button>
                 </div>
 
-                {/* فلاتر متقدمة */}
+                {/* فلاتر متقدمة - ترتيب جديد: القسم، التصنيف، الموسم، نوع المنتج */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <Label className="text-xs">القسم</Label>
@@ -687,21 +765,6 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   </div>
 
                   <div>
-                    <Label className="text-xs">نوع المنتج</Label>
-                    <Select value={filters.productType || "all"} onValueChange={(value) => setFilters({...filters, productType: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="اختر النوع" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">جميع الأنواع</SelectItem>
-                        {inventoryData.filterOptions.productTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
                     <Label className="text-xs">الموسم</Label>
                     <Select value={filters.season || "all"} onValueChange={(value) => setFilters({...filters, season: value === "all" ? "" : value})}>
                       <SelectTrigger className="h-8">
@@ -711,6 +774,21 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                         <SelectItem value="all">جميع المواسم</SelectItem>
                         {inventoryData.filterOptions.seasons.map((season) => (
                           <SelectItem key={season.id} value={season.id}>{season.name} ({season.type === 'season' ? 'موسم' : 'مناسبة'})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">نوع المنتج</Label>
+                    <Select value={filters.productType || "all"} onValueChange={(value) => setFilters({...filters, productType: value === "all" ? "" : value})}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="اختر النوع" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الأنواع</SelectItem>
+                        {inventoryData.filterOptions.productTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
