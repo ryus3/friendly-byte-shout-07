@@ -24,41 +24,53 @@ const formatNumber = (num) => {
 };
 
 const ItemCard = ({ item, showProductDetails = false }) => (
-  <Card className="bg-card/50 hover:bg-card/80 transition-colors border-border/50">
-    <CardContent className="p-4">
-      <div className="flex justify-between items-start mb-3">
+  <Card className="group bg-gradient-to-br from-card via-card to-muted/20 hover:from-primary/5 hover:via-card hover:to-primary/10 transition-all duration-300 border-border/40 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10">
+    <CardContent className="p-5">
+      <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <h4 className="font-semibold text-foreground mb-1">{item.name}</h4>
+          <h4 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+            {item.name}
+          </h4>
           {showProductDetails && item.variants && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-md inline-block">
               {item.variants} متغير متوفر
             </p>
           )}
         </div>
-        <Badge variant="outline" className="text-xs shrink-0">
+        <Badge variant="outline" className="text-sm font-bold bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 text-primary shrink-0">
           {formatCurrency(item.value)}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div className="text-center p-2 bg-muted/50 rounded">
-          <div className="font-semibold text-primary">{formatNumber(item.quantity)}</div>
-          <div className="text-muted-foreground">إجمالي</div>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="text-center p-3 bg-gradient-to-br from-muted/80 to-muted/40 rounded-lg border border-border/50">
+          <div className="font-bold text-lg text-primary mb-1">{formatNumber(item.quantity)}</div>
+          <div className="text-xs text-muted-foreground font-medium">إجمالي</div>
         </div>
-        <div className="text-center p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded">
-          <div className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(item.available)}</div>
-          <div className="text-muted-foreground">متوفر</div>
+        <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/50 dark:to-emerald-900/30 rounded-lg border border-emerald-200/50 dark:border-emerald-800/50">
+          <div className="font-bold text-lg text-emerald-600 dark:text-emerald-400 mb-1">{formatNumber(item.available)}</div>
+          <div className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">متوفر</div>
         </div>
-        <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/30 rounded">
-          <div className="font-semibold text-orange-600 dark:text-orange-400">{formatNumber(item.reserved)}</div>
-          <div className="text-muted-foreground">محجوز</div>
+        <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/50 dark:to-orange-900/30 rounded-lg border border-orange-200/50 dark:border-orange-800/50">
+          <div className="font-bold text-lg text-orange-600 dark:text-orange-400 mb-1">{formatNumber(item.reserved)}</div>
+          <div className="text-xs text-orange-700 dark:text-orange-300 font-medium">محجوز</div>
         </div>
       </div>
 
-      <div className="mt-3 pt-2 border-t border-border/50">
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">المتوفر: {formatCurrency(item.available_value)}</span>
-          <span className="text-muted-foreground">المحجوز: {formatCurrency(item.reserved_value)}</span>
+      <div className="pt-3 border-t border-border/30">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="text-center p-2 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-md">
+            <div className="text-xs text-muted-foreground mb-1">المتوفر</div>
+            <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(item.available_value)}
+            </div>
+          </div>
+          <div className="text-center p-2 bg-orange-50/50 dark:bg-orange-950/30 rounded-md">
+            <div className="text-xs text-muted-foreground mb-1">المحجوز</div>
+            <div className="font-semibold text-orange-600 dark:text-orange-400">
+              {formatCurrency(item.reserved_value)}
+            </div>
+          </div>
         </div>
       </div>
     </CardContent>
@@ -469,124 +481,163 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Box className="w-5 h-5 text-primary" />
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden bg-gradient-to-br from-background via-background to-muted/20 border-primary/20">
+        <DialogHeader className="pb-6 border-b border-primary/10">
+          <DialogTitle className="flex items-center gap-3 text-xl bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            <div className="p-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg">
+              <Box className="w-6 h-6 text-primary" />
+            </div>
             تفاصيل قيمة المخزون
+            <div className="flex-1"></div>
+            <div className="text-sm font-normal text-muted-foreground">
+              {inventoryData.products.length} منتج
+            </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* الملخص */}
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                 <div>
-                   <div className="text-2xl font-bold text-primary">
-                     {formatCurrency(filteredTotalValue)}
-                   </div>
-                   <p className="text-sm text-muted-foreground">
-                     {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
-                   </p>
-                 </div>
-                 <div>
-                   <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                     {formatCurrency(filteredTotalAvailable)}
-                   </div>
-                   <p className="text-sm text-muted-foreground">المتوفر للبيع</p>
-                 </div>
-                 <div>
-                   <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                     {formatCurrency(filteredTotalReserved)}
-                   </div>
-                   <p className="text-sm text-muted-foreground">المحجوز</p>
-                 </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          {/* الملخص المحسن */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+              <CardContent className="relative p-6 text-center">
+                <div className="mb-2">
+                  <BarChart3 className="w-8 h-8 text-primary mx-auto mb-3" />
+                </div>
+                <div className="text-3xl font-bold text-primary mb-1">
+                  {formatCurrency(filteredTotalValue)}
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
+                </p>
+              </CardContent>
+            </Card>
 
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/5 via-emerald-500/3 to-transparent">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-50"></div>
+              <CardContent className="relative p-6 text-center">
+                <div className="mb-2">
+                  <Warehouse className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto mb-3" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+                  {formatCurrency(filteredTotalAvailable)}
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">المتوفر للبيع</p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-orange-500/5 via-orange-500/3 to-transparent">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-transparent opacity-50"></div>
+              <CardContent className="relative p-6 text-center">
+                <div className="mb-2">
+                  <Package className="w-8 h-8 text-orange-600 dark:text-orange-400 mx-auto mb-3" />
+                </div>
+                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                  {formatCurrency(filteredTotalReserved)}
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">المحجوز</p>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* نظام الفلترة المتقدم */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-4">
+          <Card className="border-primary/10 bg-gradient-to-r from-muted/30 to-background shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Filter className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-semibold text-foreground">أدوات البحث والفلترة</h3>
+                </div>
+                
                 {/* البحث */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-4">
                   <div className="flex-1 relative">
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
                     <Input
                       placeholder="البحث في المنتجات..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pr-10"
+                      className="pr-12 h-11 border-primary/20 focus:border-primary/40 bg-background/80"
                     />
                   </div>
                   <Button 
                     variant="outline" 
-                    size="sm" 
+                    size="lg"
                     onClick={clearFilters}
                     disabled={!hasActiveFilters}
+                    className="border-primary/20 hover:border-primary/40 hover:bg-primary/5"
                   >
-                    <X className="w-4 h-4 mr-1" />
+                    <X className="w-4 h-4 mr-2" />
                     مسح الفلاتر
                   </Button>
                 </div>
 
                 {/* فلاتر متقدمة */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div>
-                    <Label className="text-xs">القسم</Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Box className="w-4 h-4 text-primary" />
+                      القسم
+                    </Label>
                     <Select value={filters.department || "all"} onValueChange={(value) => setFilters({...filters, department: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
+                      <SelectTrigger className="h-10 border-primary/20 focus:border-primary/40">
                         <SelectValue placeholder="اختر القسم" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-50">
                         <SelectItem value="all">جميع الأقسام</SelectItem>
                         {inventoryData.filterOptions.departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                          <SelectItem key={dept.id} value={dept.id.toString()}>{dept.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div>
-                    <Label className="text-xs">التصنيف</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-primary" />
+                      التصنيف
+                    </Label>
                     <Select value={filters.category || "all"} onValueChange={(value) => setFilters({...filters, category: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
+                      <SelectTrigger className="h-10 border-primary/20 focus:border-primary/40">
                         <SelectValue placeholder="اختر التصنيف" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-50">
                         <SelectItem value="all">جميع التصنيفات</SelectItem>
                         {inventoryData.filterOptions.categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                          <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div>
-                    <Label className="text-xs">نوع المنتج</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Package className="w-4 h-4 text-primary" />
+                      نوع المنتج
+                    </Label>
                     <Select value={filters.productType || "all"} onValueChange={(value) => setFilters({...filters, productType: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
+                      <SelectTrigger className="h-10 border-primary/20 focus:border-primary/40">
                         <SelectValue placeholder="اختر النوع" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-50">
                         <SelectItem value="all">جميع الأنواع</SelectItem>
                         {inventoryData.filterOptions.productTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                          <SelectItem key={type.id} value={type.id.toString()}>{type.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div>
-                    <Label className="text-xs">الموسم</Label>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-primary" />
+                      الموسم
+                    </Label>
                     <Select value={filters.season || "all"} onValueChange={(value) => setFilters({...filters, season: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
+                      <SelectTrigger className="h-10 border-primary/20 focus:border-primary/40">
                         <SelectValue placeholder="اختر الموسم" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-50">
                         <SelectItem value="all">جميع المواسم</SelectItem>
                         {inventoryData.filterOptions.seasons.map((season) => (
                           <SelectItem key={season.id} value={season.id}>{season.name} ({season.type === 'season' ? 'موسم' : 'مناسبة'})</SelectItem>
