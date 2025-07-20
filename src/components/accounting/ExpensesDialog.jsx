@@ -57,11 +57,17 @@ import React, { useState, useEffect } from 'react';
         }
       }, [open]);
     
+      // فلترة المصاريف لإظهار المصاريف الفعلية فقط (ليس الفئات النظامية)
       const filteredExpenses = expenses.filter(expense => {
-        const categoryMatch = filters.category === 'all' || expense.related_data?.category === filters.category;
+        // استبعاد الفئات النظامية وإظهار المصاريف التشغيلية الفعلية فقط
+        if (expense.expense_type === 'system' || expense.category === 'فئات_المصاريف') {
+          return false;
+        }
+        
+        const categoryMatch = filters.category === 'all' || expense.category === filters.category || expense.related_data?.category === filters.category;
         const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
-        // إزالة فلترة المشتريات والمستحقات لأنها مصاريف عامة
-        return categoryMatch && dateMatch && expense.related_data?.category !== 'مستحقات الموظفين';
+        
+        return categoryMatch && dateMatch;
       });
     
       const handleInputChange = (e) => {
@@ -78,16 +84,27 @@ import React, { useState, useEffect } from 'react';
           toast({ title: 'خطأ', description: 'الرجاء ملء جميع الحقول.', variant: 'destructive' });
           return;
         }
-        await addExpense({
-          ...newExpense,
-          amount: parseFloat(newExpense.amount),
-        });
-        setNewExpense({
-          date: new Date().toISOString().slice(0, 16),
-          category: 'تسويق',
-          description: '',
-          amount: '',
-        });
+        
+        try {
+          await addExpense({
+            ...newExpense,
+            amount: parseFloat(newExpense.amount),
+            expense_type: 'operational' // تأكيد أنه مصروف تشغيلي وليس نظامي
+          });
+          
+          // إعادة تعيين النموذج
+          setNewExpense({
+            date: new Date().toISOString().slice(0, 16),
+            category: expenseCategories[0] || 'تسويق',
+            description: '',
+            amount: '',
+          });
+          
+          toast({ title: 'نجح', description: 'تم إضافة المصروف بنجاح', variant: 'success' });
+        } catch (error) {
+          console.error('خطأ في إضافة المصروف:', error);
+          toast({ title: 'خطأ', description: 'فشل في إضافة المصروف', variant: 'destructive' });
+        }
       };
 
       const handleAddCategory = () => {
@@ -190,7 +207,7 @@ import React, { useState, useEffect } from 'react';
                           <TableCell>
                             <p className="font-medium">{expense.description}</p>
                             <p className="text-xs text-muted-foreground">
-                              {expense.related_data?.category} - {
+                              {expense.category || 'غير محدد'} - {
                                 expense.transaction_date 
                                   ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
                                   : 'تاريخ غير محدد'
