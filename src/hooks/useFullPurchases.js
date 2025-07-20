@@ -117,15 +117,17 @@ export const useFullPurchases = () => {
       }
 
       // إضافة المصاريف
+      // إضافة مصروف الشراء (تكلفة المنتجات)
       await addExpense({
-        category: 'شراء بضاعة',
+        category: 'مشتريات',
         expense_type: 'operational',
-        description: `فاتورة شراء رقم ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
+        description: `شراء بضاعة - فاتورة ${newPurchase.purchase_number} من ${purchaseData.supplier}`,
         amount: itemsTotal,
         vendor_name: purchaseData.supplier,
         receipt_number: newPurchase.purchase_number,
         status: 'approved'
       });
+      console.log(`✅ تم إضافة مصروف الشراء: ${itemsTotal} د.ع`);
 
       // إضافة مصروف الشحن إذا كان موجود
       if (purchaseData.shippingCost && purchaseData.shippingCost > 0) {

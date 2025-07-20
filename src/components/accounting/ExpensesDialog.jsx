@@ -12,6 +12,7 @@ import React, { useState, useEffect } from 'react';
     import { toast } from '@/hooks/use-toast';
     import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
     import { DateRangePicker } from '@/components/ui/date-range-picker';
+    import { supabase } from '@/lib/customSupabaseClient';
     
     const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
       const [newExpense, setNewExpense] = useState({
@@ -25,15 +26,41 @@ import React, { useState, useEffect } from 'react';
         dateRange: { from: undefined, to: undefined }
       });
     
-  const [expenseCategories, setExpenseCategories] = useState([
-    'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'أخرى'
-  ]);
-  const [newCategory, setNewCategory] = useState('');
+      const [expenseCategories, setExpenseCategories] = useState([
+        'مشتريات', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'أخرى'
+      ]);
+      const [newCategory, setNewCategory] = useState('');
+
+      // تحميل فئات المصاريف من قاعدة البيانات
+      useEffect(() => {
+        const loadExpenseCategories = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('expenses')
+              .select('description')
+              .eq('category', 'فئات_المصاريف')
+              .eq('expense_type', 'system');
+            
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+              const categories = data.map(item => item.description).filter(Boolean);
+              setExpenseCategories(categories);
+            }
+          } catch (error) {
+            console.warn('تعذر تحميل فئات المصاريف من قاعدة البيانات:', error);
+          }
+        };
+
+        if (open) {
+          loadExpenseCategories();
+        }
+      }, [open]);
     
       const filteredExpenses = expenses.filter(expense => {
         const categoryMatch = filters.category === 'all' || expense.related_data?.category === filters.category;
         const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
-        return categoryMatch && dateMatch && expense.related_data?.category !== 'شراء بضاعة' && expense.related_data?.category !== 'مستحقات الموظفين';
+        return categoryMatch && dateMatch && expense.related_data?.category !== 'مشتريات' && expense.related_data?.category !== 'مستحقات الموظفين';
       });
     
       const handleInputChange = (e) => {

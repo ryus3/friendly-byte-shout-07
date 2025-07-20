@@ -218,7 +218,7 @@ export const InventoryProvider = ({ children }) => {
         expenses: [...prev.expenses, newExpense]
       }));
 
-      if (expense.category !== 'شراء بضاعة' && expense.category !== 'شحن ونقل' && expense.category !== 'تكاليف التحويل' && expense.category !== 'مستحقات الموظفين') {
+      if (expense.category !== 'مشتريات' && expense.category !== 'شحن ونقل' && expense.category !== 'تكاليف التحويل' && expense.category !== 'مستحقات الموظفين') {
         toast({ title: "تمت إضافة المصروف", variant: "success" });
       }
       
