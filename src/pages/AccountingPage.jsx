@@ -295,8 +295,8 @@ const AccountingPage = () => {
           e.related_data?.category === 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        const totalExpenses = generalExpenses + employeeSettledDues;
-        const netProfit = grossProfit - totalExpenses;
+        // صافي الربح = ربح المبيعات فقط (بدون حذف المصاريف العامة)
+        const netProfit = grossProfit;
     
         
         // حساب قيمة المخزون
