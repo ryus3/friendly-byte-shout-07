@@ -186,68 +186,28 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الرئيسية (رأس المال + صافي الأرباح)
+  // الحصول على رصيد القاصة الرئيسية الفعلي من قاعدة البيانات
   const getMainCashBalance = async () => {
     try {
-      // جلب رأس المال من الإعدادات
-      const { data: appSettings, error: settingsError } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'app_settings')
+      const { data: mainCashSource, error } = await supabase
+        .from('cash_sources')
+        .select('current_balance')
+        .eq('name', 'القاصة الرئيسية')
         .single();
 
-      if (settingsError) {
-        console.error('خطأ في جلب رأس المال:', settingsError);
+      if (error) {
+        console.error('خطأ في جلب رصيد القاصة الرئيسية:', error);
+        return 0;
       }
 
-      const capital = appSettings?.value?.capital || 0;
-
-      // حساب الأرباح المحققة من الطلبات المستلمة الفواتير
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          final_amount,
-          total_amount,
-          delivery_fee,
-          order_items!inner (
-            unit_price,
-            quantity,
-            product_variants (cost_price),
-            products (cost_price)
-          )
-        `)
-        .eq('status', 'delivered')
-        .eq('receipt_received', true);
+      const realBalance = Number(mainCashSource?.current_balance || 0);
       
-      if (ordersError) {
-        console.error('خطأ في جلب بيانات الطلبات:', ordersError);
-      }
-
-      // حساب صافي الأرباح من الطلبات المحققة
-      const realizedProfits = ordersData?.reduce((totalProfit, order) => {
-        if (!order.order_items) return totalProfit;
-        
-        const orderProfit = order.order_items.reduce((itemSum, item) => {
-          const sellPrice = item.unit_price || 0;
-          const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-          const quantity = item.quantity || 0;
-          const itemProfit = (sellPrice - costPrice) * quantity;
-          return itemSum + Math.max(itemProfit, 0);
-        }, 0);
-        
-        return totalProfit + orderProfit;
-      }, 0) || 0;
-
-      // رصيد القاصة الرئيسية = رأس المال + صافي الأرباح المحققة
-      const mainCashBalance = capital + realizedProfits;
-
-      console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
-        baseCapital: capital,
-        realizedProfits,
-        totalMainCashBalance: mainCashBalance
+      console.log('💰 رصيد القاصة الرئيسية الفعلي:', {
+        realBalance,
+        formatted: realBalance.toLocaleString()
       });
 
-      return mainCashBalance;
+      return realBalance;
     } catch (error) {
       console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
       return 0;
