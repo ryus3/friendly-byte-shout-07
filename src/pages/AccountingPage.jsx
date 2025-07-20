@@ -1,6 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNetProfitCalculator } from '@/components/financial/NetProfitCalculator';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -18,66 +17,143 @@ import { useNavigate } from 'react-router-dom';
 import ExpensesDialog from '@/components/accounting/ExpensesDialog';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import EditCapitalDialog from '@/components/accounting/EditCapitalDialog';
 
-const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
-    const safeValue = value ?? 0;
-    return (
-        <div className={`flex justify-between items-center py-3 border-b border-border/50 ${onClick ? 'cursor-pointer hover:bg-secondary/50 -mx-4 px-4' : ''}`} onClick={onClick}>
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className={`font-semibold text-base ${colorClass}`}>
-                {isNegative ? `(${safeValue.toLocaleString()})` : safeValue.toLocaleString()} د.ع
-            </p>
-        </div>
+// حساب صافي الأرباح الموحد
+const useNetProfitCalculator = (orders, accounting, products, period = 'month') => {
+  return useMemo(() => {
+    const now = new Date();
+    let from, to;
+    
+    switch (period) {
+      case 'today': 
+        from = subDays(now, 1); 
+        to = now; 
+        break;
+      case 'week': 
+        from = startOfWeek(now, { weekStartsOn: 1 }); 
+        to = now; 
+        break;
+      case 'year': 
+        from = startOfYear(now); 
+        to = now; 
+        break;
+      default: 
+        from = startOfMonth(now); 
+        to = endOfMonth(now); 
+        break;
+    }
+
+    if (!orders || !accounting || !products) {
+      return { 
+        netProfit: 0, 
+        totalRevenue: 0, 
+        totalExpenses: 0, 
+        grossProfit: 0, 
+        deliveredOrders: [],
+        salesWithoutDelivery: 0,
+        cogs: 0,
+        generalExpenses: 0,
+        employeeSettledDues: 0,
+        deliveryFees: 0
+      };
+    }
+    
+    const filterByDate = (itemDateStr) => {
+      if (!from || !to || !itemDateStr) return true;
+      const itemDate = parseISO(itemDateStr);
+      return isValid(itemDate) && itemDate >= from && itemDate <= to;
+    };
+    
+    // الطلبات المُوصلة والمُستلمة الفواتير فقط (الحساب الدقيق)
+    const deliveredOrders = (orders || []).filter(o => 
+      o.status === 'delivered' && 
+      o.receipt_received === true && 
+      filterByDate(o.updated_at || o.created_at)
     );
+    
+    const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
+    
+    // حساب الإيرادات
+    const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+    const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+    const salesWithoutDelivery = totalRevenue - deliveryFees;
+    
+    // حساب تكلفة البضاعة المُباعة
+    const cogs = deliveredOrders.reduce((sum, o) => {
+      const orderCogs = (o.items || []).reduce((itemSum, item) => {
+        const costPrice = item.costPrice || item.cost_price || 0;
+        return itemSum + (costPrice * item.quantity);
+      }, 0);
+      return sum + orderCogs;
+    }, 0);
+    
+    const grossProfit = salesWithoutDelivery - cogs;
+    
+    // حساب المصاريف
+    const generalExpenses = expensesInRange
+      .filter(e => e.related_data?.category !== 'مستحقات الموظفين')
+      .reduce((sum, e) => sum + e.amount, 0);
+    const employeeSettledDues = expensesInRange
+      .filter(e => e.related_data?.category === 'مستحقات الموظفين')
+      .reduce((sum, e) => sum + e.amount, 0);
+    const totalExpenses = generalExpenses + employeeSettledDues;
+    
+    // صافي الأرباح
+    const netProfit = grossProfit - totalExpenses;
+    
+    return { 
+      netProfit, 
+      totalRevenue, 
+      totalExpenses, 
+      grossProfit, 
+      deliveredOrders,
+      salesWithoutDelivery,
+      cogs,
+      generalExpenses,
+      employeeSettledDues,
+      deliveryFees
+    };
+  }, [orders, accounting, products, period]);
 };
 
-const EditCapitalDialog = ({ open, onOpenChange, currentCapital, onSave }) => {
-    const [newCapital, setNewCapital] = useState(currentCapital);
+// مكونات فرعية
+const StatRow = ({ label, value, colorClass = "text-green-600", isNegative = false, onClick }) => (
+    <div className="flex justify-between items-center p-3 hover:bg-accent/50 rounded-lg transition-colors cursor-pointer" onClick={onClick}>
+        <span className="text-sm font-medium text-foreground">{label}</span>
+        <span className={`text-sm font-semibold ${isNegative ? 'text-red-600' : colorClass}`}>
+            {isNegative && value > 0 ? '-' : ''}{Math.abs(value).toLocaleString()} د.ع
+        </span>
+    </div>
+);
 
-    useEffect(() => {
-        setNewCapital(currentCapital);
-    }, [currentCapital, open]);
+const EditCapitalDialog = ({ open, onOpenChange, currentCapital, onSave }) => {
+    const [capital, setCapital] = useState(currentCapital);
 
     const handleSave = () => {
-        const capitalValue = parseFloat(newCapital);
-        if (isNaN(capitalValue)) {
-            toast({ title: "خطأ", description: "الرجاء إدخال مبلغ صحيح.", variant: "destructive" });
-            return;
-        }
-        onSave(capitalValue);
+        onSave(Number(capital));
         onOpenChange(false);
     };
 
     return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>تعديل رأس المال</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        أدخل القيمة الجديدة لرأس المال. سيؤثر هذا على حسابات "المبلغ في القاصة".
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="py-4">
-                    <Label htmlFor="capital-input">رأس المال (د.ع)</Label>
-                    <Input
-                        id="capital-input"
-                        type="number"
-                        value={newCapital}
-                        onChange={(e) => setNewCapital(e.target.value)}
-                        placeholder="أدخل رأس المال"
-                    />
+        <div className={`fixed inset-0 z-50 ${open ? 'block' : 'hidden'}`}>
+            <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
+            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-96">
+                <h3 className="text-lg font-semibold mb-4">تعديل رأس المال</h3>
+                <input
+                    type="number"
+                    value={capital}
+                    onChange={(e) => setCapital(e.target.value)}
+                    className="w-full p-2 border rounded-lg mb-4"
+                    placeholder="أدخل رأس المال الجديد"
+                />
+                <div className="flex gap-2">
+                    <Button onClick={handleSave}>حفظ</Button>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>إلغاء</Button>
                 </div>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleSave}>حفظ التغييرات</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+            </div>
+        </div>
     );
 };
 
@@ -258,7 +334,7 @@ const AccountingPage = () => {
         { key: 'cash', title: "الرصيد الحقيقي", value: financialSummary.cashOnHand, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
     ];
-    
+
     const profitCards = [
         { key: 'myProfit', title: "أرباحي", value: financialSummary.myProfit, icon: User, colors: ['rose-500', 'red-500'], format: 'currency', onClick: () => navigate('/profits-summary') },
         { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.managerProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
@@ -268,125 +344,83 @@ const AccountingPage = () => {
 
     return (
         <>
-            <Helmet>
-                <title>المركز المالي - نظام RYUS</title>
-                <meta name="description" content="نظرة شاملة على الوضع المالي للمتجر." />
-            </Helmet>
-            <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <h1 className="text-3xl font-bold gradient-text">المركز المالي</h1>
-                    <div className="flex gap-2 flex-wrap">
+            <Helmet><title>المركز المالي - RYUS</title></Helmet>
+            <div className="container mx-auto px-4 py-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-3xl font-bold">المركز المالي</h1>
+                    <div className="flex items-center gap-4">
                         <PDFDownloadLink
                             document={<FinancialReportPDF summary={financialSummary} dateRange={dateRange} />}
-                            fileName={`financial-report-${new Date().toISOString().slice(0, 10)}.pdf`}
+                            fileName={`financial-report-${format(new Date(), 'yyyy-MM-dd')}.pdf`}
                         >
-                            {({ loading: pdfLoading }) => (
-                                <Button variant="outline" disabled={pdfLoading}>
-                                    <FileText className="w-4 h-4 ml-2" />
-                                    {pdfLoading ? 'جاري التجهيز...' : 'تصدير تقرير'}
-                                </Button>
-                            )}
+                            <Button size="sm" className="gap-2">
+                                <FileText className="w-4 h-4" />
+                                تحميل التقرير
+                            </Button>
                         </PDFDownloadLink>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                     {topRowCards.map((card, index) => (
                         <StatCard key={index} {...card} />
                     ))}
                 </div>
-                
+
                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {profitCards.map((card, index) => (
                         <StatCard key={index} {...card} />
                     ))}
                 </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <Card className="h-full">
                         <CardHeader>
-                            <CardTitle>مستحقات الموظفين</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <HandCoins className="w-5 h-5 text-blue-500" />
+                                مستحقات الموظفين
+                            </CardTitle>
                         </CardHeader>
-                        <CardContent className="flex flex-col justify-center gap-4">
-                            <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, settledDues: true}))}>
-                                <CheckCircle className="w-4 h-4 ml-2 text-green-500"/>
-                                <span>المستحقات المدفوعة:</span>
-                                <span className="font-bold mr-2">{(financialSummary.employeeSettledDues || 0).toLocaleString()} د.ع</span>
-                            </Button>
-                            <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, pendingDues: true}))}>
-                                <Hourglass className="w-4 h-4 ml-2 text-amber-500"/>
-                                <span>المستحقات المعلقة:</span>
-                                <span className="font-bold mr-2">{(financialSummary.employeePendingDues || 0).toLocaleString()} د.ع</span>
-                            </Button>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-3">
+                                <StatRow
+                                    label="المستحقات المدفوعة"
+                                    value={financialSummary.employeeSettledDues || 0}
+                                    colorClass="text-green-600"
+                                    onClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
+                                />
+                                <StatRow
+                                    label="المستحقات المعلقة"
+                                    value={financialSummary.employeePendingDues || 0}
+                                    colorClass="text-orange-600"
+                                    onClick={() => setDialogs(d => ({ ...d, pendingDues: true }))}
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="h-full">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <BarChart className="w-5 h-5 text-blue-500" />
+                                الأداء المالي
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="h-64">
+                                <MiniChart data={financialSummary.chartData} type="bar" colors={['#3b82f6', '#ef4444']} />
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2"><BarChart/> ملخص الأداء المالي</CardTitle>
-                                <CardDescription>نظرة بيانية على الإيرادات، المصاريف، والأرباح الصافية</CardDescription>
-                            </CardHeader>
-                            <CardContent className="h-72">
-                                <MiniChart data={financialSummary.chartData} type="bar" colors={['#3b82f6', '#ef4444']} />
-                            </CardContent>
-                        </Card>
-                    </div>
-                    <div className="lg:col-span-1">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>تقرير الأرباح والخسائر</CardTitle>
-                                <CardDescription>ملخص مالي للفترة المحددة</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={financialSummary.totalRevenue || 0} colorClass="text-green-500" />
-                                <StatRow label="رسوم التوصيل" value={financialSummary.deliveryFees || 0} colorClass="text-blue-400" />
-                                <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery || 0} colorClass="text-green-600" />
-                                <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs || 0} colorClass="text-orange-500" isNegative/>
-                                <StatRow label="مجمل الربح" value={financialSummary.grossProfit || 0} colorClass="text-blue-500 font-bold" />
-                                <StatRow label="إجمالي المصاريف" value={financialSummary.totalExpenses || 0} colorClass="text-red-500" isNegative/>
-                                <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
-                                    <p className="font-bold text-lg">صافي الربح</p>
-                                    <p className="font-bold text-lg text-primary">{(financialSummary.netProfit || 0).toLocaleString()} د.ع</p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
+                {/* Dialogs */}
+                <ExpensesDialog open={dialogs.expenses} onOpenChange={(open) => setDialogs(d => ({...d, expenses: open}))} />
+                <EditCapitalDialog open={dialogs.capital} onOpenChange={(open) => setDialogs(d => ({...d, capital: open}))} currentCapital={accounting?.capital || 0} onSave={updateCapital} />
+                <SettledDuesDialog open={dialogs.settledDues} onOpenChange={(open) => setDialogs(d => ({...d, settledDues: open}))} />
+                <PendingDuesDialog open={dialogs.pendingDues} onOpenChange={(open) => setDialogs(d => ({...d, pendingDues: open}))} orders={financialSummary.employeePendingDuesDetails} />
+                <ProfitLossDialog open={dialogs.profitLoss} onOpenChange={(open) => setDialogs(d => ({...d, profitLoss: open}))} summary={financialSummary} />
             </div>
-            <ExpensesDialog
-                open={dialogs.expenses}
-                onOpenChange={(open) => setDialogs(d => ({ ...d, expenses: open }))}
-                expenses={accounting?.expenses || []}
-                addExpense={addExpense}
-                deleteExpense={deleteExpense}
-            />
-            <EditCapitalDialog
-                open={dialogs.capital}
-                onOpenChange={(open) => setDialogs(d => ({ ...d, capital: open }))}
-                currentCapital={accounting?.capital || 0}
-                onSave={updateCapital}
-            />
-            <SettledDuesDialog
-                open={dialogs.settledDues}
-                onOpenChange={(open) => setDialogs(d => ({...d, settledDues: open}))}
-                invoices={settlementInvoices}
-                allUsers={allUsers}
-            />
-            <PendingDuesDialog
-                open={dialogs.pendingDues}
-                onOpenChange={(open) => setDialogs(d => ({...d, pendingDues: open}))}
-                orders={financialSummary.employeePendingDuesDetails}
-                allUsers={allUsers}
-            />
-            <ProfitLossDialog
-                open={dialogs.profitLoss}
-                onOpenChange={(open) => setDialogs(d => ({ ...d, profitLoss: open }))}
-                summary={financialSummary}
-                datePeriod={datePeriod}
-                onDatePeriodChange={setDatePeriod}
-            />
         </>
     );
 };
