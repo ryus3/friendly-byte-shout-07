@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * هوك موحد لجلب بيانات الأرباح - يستخدم في لوحة التحكم والمركز المالي
