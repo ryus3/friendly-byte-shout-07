@@ -54,9 +54,12 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
       'order': 'بيع طلب',
       'expense': 'مصروف',
       'capital_injection': 'إضافة أموال',
-      'withdrawal': 'سحب أموال'
+      'capital_withdrawal': 'سحب أموال',
+      'withdrawal': 'سحب أموال',
+      'profit_settlement': 'تحاسب أرباح',
+      'salary': 'راتب موظف'
     };
-    return labels[referenceType] || referenceType;
+    return labels[referenceType] || 'حركة مالية';
   };
 
   const getMovementColor = (movementType) => {

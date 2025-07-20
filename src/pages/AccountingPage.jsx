@@ -85,7 +85,7 @@ const AccountingPage = () => {
     const { orders, purchases, accounting, products, addExpense, deleteExpense, updateCapital, settlementInvoices, calculateManagerProfit, calculateProfit } = useInventory();
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
-    const { getRealCashBalance } = useCashSources();
+    const { getTotalSourcesBalance } = useCashSources();
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -104,16 +104,16 @@ const AccountingPage = () => {
         }
     }, [datePeriod]);
 
-    // جلب رصيد القاصة الحقيقي
+    // جلب الرصيد النقدي الفعلي
     useEffect(() => {
-        const fetchRealBalance = async () => {
-            if (getRealCashBalance) {
-                const balance = await getRealCashBalance();
+        const fetchRealBalance = () => {
+            if (getTotalSourcesBalance) {
+                const balance = getTotalSourcesBalance();
                 setRealCashBalance(balance);
             }
         };
         fetchRealBalance();
-    }, [getRealCashBalance, accounting?.capital]);
+    }, [getTotalSourcesBalance]);
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
@@ -303,7 +303,7 @@ const AccountingPage = () => {
 
     const topRowCards = [
         { key: 'capital', title: "رأس المال", value: accounting?.capital || 0, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
-        { key: 'cash', title: "الرصيد النقدي الفعلي", value: financialSummary.cashOnHand, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
+        { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
     ];
     

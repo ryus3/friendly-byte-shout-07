@@ -186,8 +186,8 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد قاصة المنزل (رأس المال + صافي الأرباح المحققة)
-  const getHomeCashBalance = async () => {
+  // الحصول على رصيد القاصة الرئيسية (رأس المال + صافي الأرباح)
+  const getMainCashBalance = async () => {
     try {
       // جلب رأس المال من الإعدادات
       const { data: appSettings, error: settingsError } = await supabase
@@ -238,34 +238,32 @@ export const useCashSources = () => {
         return totalProfit + orderProfit;
       }, 0) || 0;
 
-      // رصيد قاصة المنزل = رأس المال الأساسي + صافي الأرباح المحققة فقط
-      const homeCashBalance = capital + realizedProfits;
+      // رصيد القاصة الرئيسية = رأس المال + صافي الأرباح المحققة
+      const mainCashBalance = capital + realizedProfits;
 
-      console.log('🏠 تفاصيل رصيد قاصة المنزل:', {
+      console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
         baseCapital: capital,
         realizedProfits,
-        totalHomeCashBalance: homeCashBalance
+        totalMainCashBalance: mainCashBalance
       });
 
-      return homeCashBalance;
+      return mainCashBalance;
     } catch (error) {
-      console.error('خطأ في حساب رصيد قاصة المنزل:', error);
+      console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
       return 0;
     }
   };
 
-  // الحصول على رصيد القاصة الرئيسية (مجموع جميع المصادر)
-  const getMainCashBalance = () => {
-    return cashSources.reduce((total, source) => {
-      // استثناء قاصة المنزل من الحساب لتجنب التكرار
-      if (source.name === 'قاصة المنزل') return total;
-      return total + (source.current_balance || 0);
-    }, 0);
+  // الحصول على مجموع أرصدة المصادر الفعلية (بدون القاصة الرئيسية)
+  const getTotalSourcesBalance = () => {
+    return cashSources
+      .filter(source => source.name !== 'القاصة الرئيسية')
+      .reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الحقيقي (deprecated - للتوافق مع النسخة السابقة)
-  const getRealCashBalance = async () => {
-    return getMainCashBalance();
+  // دالة للتوافق مع النسخة السابقة - تعيد مجموع المصادر
+  const getRealCashBalance = () => {
+    return getTotalSourcesBalance();
   };
 
   // الحصول على القاصة الرئيسية
@@ -319,8 +317,8 @@ export const useCashSources = () => {
     fetchCashMovements,
     getTotalBalance,
     getRealCashBalance,
-    getHomeCashBalance,
     getMainCashBalance,
+    getTotalSourcesBalance,
     getMainCashSource
   };
 };

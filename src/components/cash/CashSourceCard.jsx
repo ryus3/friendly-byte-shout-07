@@ -128,12 +128,12 @@ const CashSourceCard = ({
           </p>
           {cashSource.name === 'القاصة الرئيسية' && (
             <p className="text-xs text-muted-foreground mt-2 px-3 py-1 bg-muted/50 rounded-full inline-block">
-              مجموع جميع المصادر
+              رأس المال + صافي الأرباح
             </p>
           )}
-          {cashSource.name === 'قاصة المنزل' && (
+          {cashSource.name !== 'القاصة الرئيسية' && (
             <p className="text-xs text-muted-foreground mt-2 px-3 py-1 bg-muted/50 rounded-full inline-block">
-              رأس المال + صافي الأرباح
+              رصيد فعلي متاح
             </p>
           )}
         </div>

@@ -38,28 +38,28 @@ const CashManagementPage = () => {
     addCashSource,
     addCashToSource,
     withdrawCashFromSource,
-    getHomeCashBalance,
     getMainCashBalance,
+    getTotalSourcesBalance,
     getTotalBalance
   } = useCashSources();
 
   const [selectedSource, setSelectedSource] = useState(null);
   const [dialogType, setDialogType] = useState(null); // 'add' | 'withdraw'
   const [showDialog, setShowDialog] = useState(false);
-  const [homeCashBalance, setHomeCashBalance] = useState(0);
   const [mainCashBalance, setMainCashBalance] = useState(0);
+  const [totalSourcesBalance, setTotalSourcesBalance] = useState(0);
   const [deleteSource, setDeleteSource] = useState(null);
 
   // جلب أرصدة المصادر المختلفة
   useEffect(() => {
     const fetchBalances = async () => {
-      if (getHomeCashBalance) {
-        const homeBalance = await getHomeCashBalance();
-        setHomeCashBalance(homeBalance);
+      if (getMainCashBalance) {
+        const mainBalance = await getMainCashBalance();
+        setMainCashBalance(mainBalance);
       }
       
-      const mainBalance = getMainCashBalance();
-      setMainCashBalance(mainBalance);
+      const sourcesBalance = getTotalSourcesBalance();
+      setTotalSourcesBalance(sourcesBalance);
     };
     
     fetchBalances();
@@ -67,7 +67,7 @@ const CashManagementPage = () => {
     // تحديث الأرصدة عند تغيير المصادر أو الحركات
     const interval = setInterval(fetchBalances, 30000); // كل 30 ثانية
     return () => clearInterval(interval);
-  }, [getHomeCashBalance, getMainCashBalance, cashSources, cashMovements]);
+  }, [getMainCashBalance, getTotalSourcesBalance, cashSources, cashMovements]);
 
   // حذف مصدر نقد مع رسالة تأكيد أنيقة
 
@@ -184,15 +184,15 @@ const CashManagementPage = () => {
       format: 'currency',
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
-      change: 'مجموع جميع المصادر'
+      change: 'رأس المال + صافي الأرباح'
     },
     {
-      title: 'النقد الفعلي',
-      value: mainCashBalance, // نفس القاصة الرئيسية
+      title: 'الرصيد النقدي الفعلي',
+      value: totalSourcesBalance, // مجموع المصادر الفعلية
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],
-      change: 'الرصيد المتاح للاستخدام'
+      change: 'مجموع جميع المصادر'
     },
     {
       title: 'داخل هذا الشهر',
@@ -303,8 +303,6 @@ const CashManagementPage = () => {
                   let displayBalance = source.current_balance;
                   if (source.name === 'القاصة الرئيسية') {
                     displayBalance = mainCashBalance;
-                  } else if (source.name === 'قاصة المنزل') {
-                    displayBalance = homeCashBalance;
                   }
                   
                   return (
