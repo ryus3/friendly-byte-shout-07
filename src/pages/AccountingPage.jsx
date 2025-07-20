@@ -139,16 +139,14 @@ const AccountingPage = () => {
             }
         };
         
-        // جميع الطلبات المُوصلة (بغض النظر عن استلام الفاتورة لإظهار البيانات الحقيقية)
+        // استخدام نفس منطق لوحة التحكم: الطلبات المُستلمة الفواتير فقط
         const deliveredOrders = safeOrders.filter(o => 
-            o && o.status === 'delivered' && filterByDate(o.updated_at || o.created_at)
+            o && o.status === 'delivered' && 
+            o.receipt_received === true && 
+            filterByDate(o.updated_at || o.created_at)
         );
-        console.log('✅ الطلبات المُوصلة:', deliveredOrders.length);
-        console.log('✅ أمثلة الطلبات المُوصلة:', deliveredOrders.slice(0, 2));
-        
-        // للطلبات التي استُلِمت فواتيرها فقط للحسابات الدقيقة
-        const paidDeliveredOrders = deliveredOrders.filter(o => o.receipt_received === true);
-        console.log('💰 الطلبات المدفوعة (مع الفواتير):', paidDeliveredOrders.length);
+        console.log('✅ الطلبات المُوصلة والمُستلمة الفواتير:', deliveredOrders.length);
+        console.log('✅ أمثلة الطلبات المُستلمة:', deliveredOrders.slice(0, 2));
         
         const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
         
@@ -200,9 +198,9 @@ const AccountingPage = () => {
         
         console.log('🏪 قيمة المخزون:', inventoryValue);
         
-        // حساب مبيعات وأرباح المدير
+        // حساب مبيعات وأرباح المدير (المُستلمة الفواتير فقط)
         const managerOrders = deliveredOrders.filter(o => o.created_by === currentUser?.id);
-        console.log('👨‍💼 طلبات المدير:', managerOrders.length);
+        console.log('👨‍💼 طلبات المدير المُستلمة:', managerOrders.length);
         
         const managerSales = managerOrders.reduce((sum, o) => {
             const orderTotal = o.final_amount || o.total_amount || 0;
@@ -225,7 +223,7 @@ const AccountingPage = () => {
             return sum + orderProfit;
         }, 0);
 
-        // حساب مبيعات وأرباح الموظفين
+        // حساب مبيعات وأرباح الموظفين (المُستلمة الفواتير فقط)
         const employeeOrders = deliveredOrders.filter(o => {
             const orderUser = allUsers?.find(u => u.id === o.created_by);
             return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy') && o.created_by !== currentUser?.id;
