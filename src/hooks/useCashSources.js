@@ -189,9 +189,24 @@ export const useCashSources = () => {
   // الحصول على رصيد القاصة الحقيقي (رأس المال + صافي الأرباح المحققة)
   const getRealCashBalance = async () => {
     try {
-      // استخدام calculate_net_capital المحدث الذي يشمل رأس المال الأساسي
-      const { data: capitalData, error: capitalError } = await supabase.rpc('calculate_net_capital');
-      if (capitalError) throw capitalError;
+      // جلب رأس المال من الإعدادات
+      const { data: appSettings, error: settingsError } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'app_settings')
+        .single();
+
+      if (settingsError) {
+        console.error('خطأ في جلب رأس المال:', settingsError);
+      }
+
+      const capital = appSettings?.value?.capital || 0;
+
+      // حساب صافي الأرباح المحققة باستخدام calculate_net_capital (الذي يشمل حقن وسحوبات رأس المال)
+      const { data: netCapitalMovements, error: capitalError } = await supabase.rpc('calculate_net_capital');
+      if (capitalError) {
+        console.error('خطأ في حساب حركات رأس المال:', capitalError);
+      }
 
       // حساب الأرباح المحققة من الطلبات المستلمة الفواتير
       const { data: ordersData, error: ordersError } = await supabase
@@ -210,7 +225,9 @@ export const useCashSources = () => {
         .eq('status', 'delivered')
         .eq('receipt_received', true);
       
-      if (ordersError) throw ordersError;
+      if (ordersError) {
+        console.error('خطأ في جلب بيانات الطلبات:', ordersError);
+      }
 
       // حساب صافي الأرباح من الطلبات المحققة
       const realizedProfits = ordersData?.reduce((totalProfit, order) => {
@@ -227,11 +244,12 @@ export const useCashSources = () => {
         return totalProfit + orderProfit;
       }, 0) || 0;
 
-      // رصيد القاصة الحقيقي = رأس المال (من calculate_net_capital) + صافي الأرباح المحققة
-      const realBalance = (capitalData || 0) + realizedProfits;
+      // رصيد القاصة الحقيقي = رأس المال الأساسي + حركات رأس المال + صافي الأرباح المحققة
+      const realBalance = capital + (netCapitalMovements || 0) + realizedProfits;
 
       console.log('💰 تفاصيل رصيد القاصة المحدث:', {
-        totalCapital: capitalData,
+        baseCapital: capital,
+        netCapitalMovements: netCapitalMovements,
         realizedProfits,
         totalRealBalance: realBalance
       });
