@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNetProfitCalculator } from '@/components/financial/NetProfitCalculator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
@@ -257,74 +258,8 @@ const Dashboard = () => {
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
-    const financialSummary = useMemo(() => {
-        const periodKey = periods.netProfit;
-        const now = new Date();
-        let from, to;
-        switch (periodKey) {
-            case 'today': from = subDays(now, 1); to = now; break;
-            case 'week': from = startOfWeek(now, { weekStartsOn: 1 }); to = now; break;
-            case 'year': from = startOfYear(now); to = now; break;
-            default: from = startOfMonth(now); to = endOfMonth(now); break;
-        }
-
-        if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
-        
-        const filterByDate = (itemDateStr) => {
-            if (!from || !to || !itemDateStr) return true;
-            const itemDate = parseISO(itemDateStr);
-            return isValid(itemDate) && itemDate >= from && itemDate <= to;
-        };
-        
-        const deliveredOrders = (orders || []).filter(o => 
-            o.status === 'delivered' && 
-            o.receipt_received === true && 
-            filterByDate(o.updated_at || o.created_at)
-        );
-        const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
-        
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
-        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-        const salesWithoutDelivery = totalRevenue - deliveryFees;
-        
-        const cogs = deliveredOrders.reduce((sum, o) => {
-          const orderCogs = (o.items || []).reduce((itemSum, item) => {
-            const costPrice = item.costPrice || item.cost_price || 0;
-            return itemSum + (costPrice * item.quantity);
-          }, 0);
-          return sum + orderCogs;
-        }, 0);
-        const grossProfit = salesWithoutDelivery - cogs;
-        const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
-        const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
-        const totalExpenses = generalExpenses + employeeSettledDues;
-        const netProfit = grossProfit - totalExpenses;
-        
-        const salesByDay = {};
-        deliveredOrders.forEach(o => {
-          const day = format(parseISO(o.updated_at || o.created_at), 'dd');
-          if (!salesByDay[day]) salesByDay[day] = 0;
-          salesByDay[day] += o.final_amount || o.total_amount || 0;
-        });
-        
-        const expensesByDay = {};
-        expensesInRange.forEach(e => {
-            const day = format(parseISO(e.transaction_date), 'dd');
-            if (!expensesByDay[day]) expensesByDay[day] = 0;
-            expensesByDay[day] += e.amount;
-        });
-    
-        const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
-        
-        const chartData = allDays.map(day => ({
-            name: day,
-            sales: salesByDay[day] || 0,
-            expenses: expensesByDay[day] || 0,
-            net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
-        }));
-
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
-    }, [periods.netProfit, orders, accounting, products]);
+    // استخدام حاسبة الأرباح الموحدة
+    const financialSummary = useNetProfitCalculator(orders, accounting, products, periods.netProfit);
 
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !user) return {

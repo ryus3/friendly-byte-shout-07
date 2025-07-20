@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useNetProfitCalculator } from '@/components/financial/NetProfitCalculator';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -101,6 +102,9 @@ const AccountingPage = () => {
         }
     }, [datePeriod]);
 
+    // استخدام حاسبة الأرباح الموحدة  
+    const netProfitData = useNetProfitCalculator(orders, accounting, products, datePeriod);
+
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
         
@@ -108,10 +112,10 @@ const AccountingPage = () => {
         if (!orders || !Array.isArray(orders)) {
             console.warn('⚠️ لا توجد بيانات طلبات، orders:', orders);
             return {
-                totalRevenue: 0, cogs: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0,
+                ...netProfitData,
                 inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, 
                 employeePendingDues: 0, employeeSettledDues: 0, chartData: [], 
-                filteredExpenses: [], deliveredOrders: [], employeePendingDuesDetails: []
+                filteredExpenses: [], employeePendingDuesDetails: [], cashOnHand: 0
             };
         }
         
@@ -120,14 +124,7 @@ const AccountingPage = () => {
         
         console.log('🔥 === تشخيص البيانات المالية ===');
         console.log('📊 إجمالي الطلبات:', safeOrders.length);
-        console.log('📊 حالة البيانات:', { 
-            orders: !!orders, 
-            ordersLength: orders?.length,
-            accounting: !!accounting,
-            expensesLength: accounting?.expenses?.length,
-            capital: accounting?.capital
-        });
-        console.log('📊 الطلبات مع البيانات:', safeOrders.slice(0, 2));
+        console.log('📊 صافي الربح الموحد:', netProfitData.netProfit);
         
         const filterByDate = (itemDateStr) => {
             if (!from || !to || !itemDateStr) return true;
@@ -139,67 +136,22 @@ const AccountingPage = () => {
             }
         };
         
-        // استخدام نفس منطق لوحة التحكم: الطلبات المُستلمة الفواتير فقط
-        const deliveredOrders = safeOrders.filter(o => 
-            o && o.status === 'delivered' && 
-            o.receipt_received === true && 
-            filterByDate(o.updated_at || o.created_at)
-        );
-        console.log('✅ الطلبات المُوصلة والمُستلمة الفواتير:', deliveredOrders.length);
-        console.log('✅ أمثلة الطلبات المُستلمة:', deliveredOrders.slice(0, 2));
-        
         const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
         
-        // حساب إجمالي الإيرادات من الطلبات المُوصلة
-        const totalRevenue = deliveredOrders.reduce((sum, o) => {
-            const amount = o.final_amount || o.total_amount || 0;
-            console.log(`💰 طلب ${o.order_number}: ${amount}`);
-            return sum + amount;
-        }, 0);
-        
-        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-        const salesWithoutDelivery = totalRevenue - deliveryFees;
-        
-        // حساب تكلفة البضاعة المباعة
-        const cogs = deliveredOrders.reduce((sum, o) => {
-            if (!o.order_items || !Array.isArray(o.order_items)) {
-                console.warn(`⚠️ طلب ${o.order_number} لا يحتوي على عناصر`);
-                return sum;
-            }
-            
-            const orderCogs = o.order_items.reduce((itemSum, item) => {
-                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                const quantity = item.quantity || 0;
-                console.log(`📦 عنصر: تكلفة=${costPrice}, كمية=${quantity}, إجمالي=${costPrice * quantity}`);
-                return itemSum + (costPrice * quantity);
-            }, 0);
-            console.log(`📊 تكلفة الطلب ${o.order_number}: ${orderCogs}`);
-            return sum + orderCogs;
-        }, 0);
-        
-        const grossProfit = salesWithoutDelivery - cogs;
-        
-        const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + (e.amount || 0), 0);
-        const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + (e.amount || 0), 0);
-        
-        const totalExpenses = generalExpenses + employeeSettledDues;
-        const netProfit = grossProfit - totalExpenses;
-    
-        
         // حساب قيمة المخزون
-        const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
-            if (!p.variants || !Array.isArray(p.variants)) return sum;
-            return sum + p.variants.reduce((variantSum, v) => {
-                const quantity = v.quantity || 0;
-                const price = v.price || p.base_price || 0;
-                return variantSum + (quantity * price);
+        const inventoryValue = (products || []).reduce((sum, product) => {
+            if (!product?.variants) return sum;
+            return sum + product.variants.reduce((variantSum, variant) => {
+                const quantity = variant.inventory?.quantity || 0;
+                const costPrice = variant.cost_price || product.cost_price || 0;
+                return variantSum + (quantity * costPrice);
             }, 0);
-        }, 0) : 0;
+        }, 0);
         
         console.log('🏪 قيمة المخزون:', inventoryValue);
         
         // حساب مبيعات وأرباح المدير (المُستلمة الفواتير فقط)
-        const managerOrders = deliveredOrders.filter(o => o.created_by === currentUser?.id);
+        const managerOrders = netProfitData.deliveredOrders.filter(o => o.created_by === currentUser?.id);
         console.log('👨‍💼 طلبات المدير المُستلمة:', managerOrders.length);
         
         const managerSales = managerOrders.reduce((sum, o) => {
@@ -224,7 +176,7 @@ const AccountingPage = () => {
         }, 0);
 
         // حساب مبيعات وأرباح الموظفين (المُستلمة الفواتير فقط)
-        const employeeOrders = deliveredOrders.filter(o => {
+        const employeeOrders = netProfitData.deliveredOrders.filter(o => {
             const orderUser = allUsers?.find(u => u.id === o.created_by);
             return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy') && o.created_by !== currentUser?.id;
         });
@@ -257,10 +209,11 @@ const AccountingPage = () => {
         
         const employeePendingDues = employeePendingDuesDetails.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0) || 0), 0);
     
-        const cashOnHand = (accounting?.capital || 0) + netProfit;
+        // حساب القاصة الحقيقية: رأس المال + صافي الأرباح المُحققة
+        const cashOnHand = (accounting?.capital || 0) + netProfitData.netProfit;
     
         const salesByDay = {};
-        deliveredOrders.forEach(o => {
+        netProfitData.deliveredOrders.forEach(o => {
             const day = format(parseISO(o.updated_at || o.created_at), 'dd');
             if (!salesByDay[day]) salesByDay[day] = 0;
             // استخدام final_amount للمبيعات اليومية
@@ -283,12 +236,26 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
-    }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
+        return { 
+            ...netProfitData,
+            totalProfit, 
+            inventoryValue, 
+            myProfit, 
+            managerProfitFromEmployees, 
+            managerSales, 
+            employeeSales, 
+            employeePendingDues, 
+            employeeSettledDues: netProfitData.employeeSettledDues, 
+            cashOnHand, 
+            chartData, 
+            filteredExpenses: expensesInRange, 
+            employeePendingDuesDetails 
+        };
+    }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit, netProfitData]);
 
     const topRowCards = [
         { key: 'capital', title: "رأس المال", value: accounting?.capital || 0, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
-        { key: 'cash', title: "المبلغ في القاصة", value: financialSummary.cashOnHand, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
+        { key: 'cash', title: "الرصيد الحقيقي", value: financialSummary.cashOnHand, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
     ];
     
@@ -296,6 +263,7 @@ const AccountingPage = () => {
         { key: 'myProfit', title: "أرباحي", value: financialSummary.myProfit, icon: User, colors: ['rose-500', 'red-500'], format: 'currency', onClick: () => navigate('/profits-summary') },
         { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.managerProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
         { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
+        { key: 'netProfit', title: "صافي الأرباح", value: financialSummary.netProfit, icon: PieChart, colors: financialSummary.netProfit >= 0 ? ['green-500', 'emerald-500'] : ['red-500', 'orange-500'], format: 'currency', onClick: () => setDialogs(d => ({ ...d, profitLoss: true })) },
     ];
 
     return (
@@ -328,21 +296,12 @@ const AccountingPage = () => {
                     ))}
                 </div>
                 
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     {profitCards.map((card, index) => (
                         <StatCard key={index} {...card} />
                     ))}
                 </div>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <StatCard 
-                        title="صافي الربح" 
-                        value={financialSummary.netProfit} 
-                        icon={PieChart} 
-                        colors={['blue-500', 'sky-500']} 
-                        format="currency" 
-                        onClick={() => setDialogs(d => ({...d, profitLoss: true}))}
-                    />
                      <Card className="h-full">
                         <CardHeader>
                             <CardTitle>مستحقات الموظفين</CardTitle>
