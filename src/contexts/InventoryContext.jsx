@@ -930,62 +930,24 @@ export const InventoryProvider = ({ children }) => {
 
   const updateCapital = async (newCapital) => {
     try {
-      console.log('💰 تحديث رأس المال إلى:', newCapital);
+      console.log('💰 محاولة تحديث رأس المال إلى:', newCapital);
       
-      // البحث عن إعداد رأس المال الموجود
-      const { data: existingSettings, error: fetchError } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('key', 'app_settings')
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('خطأ في جلب الإعدادات:', fetchError);
-        throw fetchError;
-      }
-
-      let updateError;
-      if (existingSettings) {
-        // تحديث الإعدادات الموجودة
-        console.log('📝 تحديث الإعدادات الموجودة');
-        const { error } = await supabase
-          .from('settings')
-          .update({ 
-            value: { 
-              ...existingSettings.value, 
-              capital: parseFloat(newCapital) 
-            } 
-          })
-          .eq('id', existingSettings.id);
-        updateError = error;
-      } else {
-        // إنشاء إعدادات جديدة
-        console.log('➕ إنشاء إعدادات جديدة');
-        const { error } = await supabase
-          .from('settings')
-          .insert({ 
-            key: 'app_settings', 
-            value: { capital: parseFloat(newCapital) },
-            description: 'إعدادات التطبيق الأساسية'
-          });
-        updateError = error;
-      }
-
-      if (updateError) {
-        console.error('خطأ في تحديث رأس المال:', updateError);
-        throw updateError;
-      }
-
-      // تحديث البيانات المحلية
-      setAccounting(prev => ({ ...prev, capital: parseFloat(newCapital) }));
-      setSettings(prev => ({ ...prev, capital: parseFloat(newCapital) }));
+      // في النظام الجديد: رأس المال ثابت 15 مليون - لا يُحفظ في قاعدة البيانات
+      const FIXED_CAPITAL = 15000000;
       
-      console.log('✅ تم تحديث رأس المال بنجاح');
+      console.log('ℹ️ النظام الجديد: رأس المال ثابت =', FIXED_CAPITAL.toLocaleString(), 'د.ع');
+      
+      // تحديث البيانات المحلية للواجهة فقط
+      setAccounting(prev => ({ ...prev, capital: FIXED_CAPITAL }));
+      setSettings(prev => ({ ...prev, capital: FIXED_CAPITAL }));
+      
       toast({ 
-        title: "نجاح", 
-        description: `تم تحديث رأس المال إلى ${parseFloat(newCapital).toLocaleString()} د.ع`, 
-        variant: "success" 
+        title: "تنبيه", 
+        description: `رأس المال ثابت في النظام الجديد: ${FIXED_CAPITAL.toLocaleString()} د.ع`, 
+        variant: "default" 
       });
+      
+      console.log('✅ النظام المالي يستخدم رأس المال الثابت');
       
     } catch (error) {
       console.error('❌ فشل تحديث رأس المال:', error);

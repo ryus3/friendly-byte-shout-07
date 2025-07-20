@@ -48,29 +48,25 @@ const CapitalDetailsDialog = ({
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('settings')
-        .update({ 
-          value: capitalValue,
-          updated_at: new Date().toISOString()
-        })
-        .eq('key', 'initial_capital');
-
-      if (error) throw error;
-
+      // في النظام الجديد: لا نحفظ في قاعدة البيانات
+      // رأس المال ثابت 15 مليون في الكود
+      
       toast({ 
-        title: "تم التحديث", 
-        description: "تم تحديث رأس المال بنجاح.", 
+        title: "تنبيه", 
+        description: "رأس المال الآن ثابت في النظام (15 مليون د.ع). لا يمكن تغييره من الواجهة.", 
         variant: "default" 
       });
 
       setIsEditing(false);
-      if (onCapitalUpdate) onCapitalUpdate(capitalValue);
+      
+      // إشعار المستخدم بالنظام الجديد
+      console.log('💰 النظام الجديد: رأس المال ثابت = 15,000,000 د.ع');
+      
     } catch (error) {
-      console.error('Error updating capital:', error);
+      console.error('Error:', error);
       toast({ 
         title: "خطأ", 
-        description: "فشل في تحديث رأس المال. حاول مرة أخرى.", 
+        description: "حدث خطأ غير متوقع.", 
         variant: "destructive" 
       });
     } finally {
@@ -181,19 +177,19 @@ const CapitalDetailsDialog = ({
 
           {/* شرح المكونات */}
           <div className="bg-muted/30 p-4 rounded-lg">
-            <h4 className="font-semibold mb-3 text-sm">شرح المكونات:</h4>
+            <h4 className="font-semibold mb-3 text-sm">النظام المالي الجديد:</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>رأس المال النقدي:</strong> المبلغ الأولي المستثمر في المشروع</span>
+                <span><strong>رأس المال:</strong> ثابت 15 مليون د.ع في النظام</span>
               </li>
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>قيمة المخزون:</strong> قيمة البضائع المتوفرة بأسعار البيع</span>
+                <span><strong>قيمة المخزون:</strong> محسوبة تلقائياً من المنتجات</span>
               </li>
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>الرصيد النقدي الفعلي:</strong> المال المتوفر حالياً في الصناديق</span>
+                <span><strong>القاصة:</strong> رأس المال + أرباح - مصاريف - مشتريات</span>
               </li>
             </ul>
           </div>
@@ -219,9 +215,9 @@ const CapitalDetailsDialog = ({
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)}>
+              <Button onClick={() => setIsEditing(true)} disabled>
                 <Edit className="w-4 h-4 mr-2" />
-                تعديل رأس المال النقدي
+                رأس المال ثابت (لا يمكن التعديل)
               </Button>
             )}
           </div>
