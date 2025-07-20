@@ -90,11 +90,19 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     }
   });
 
+  const [filteredSummary, setFilteredSummary] = useState({
+    totalValue: 0,
+    totalAvailable: 0,
+    totalReserved: 0,
+    totalQuantity: 0,
+    itemsCount: 0
+  });
+
   const fetchInventoryDetails = async () => {
     setLoading(true);
     try {
-      // جلب بيانات المخزون مع جميع العلاقات
-      const { data: inventoryItems, error } = await supabase
+      // بناء query الفلترة
+      let query = supabase
         .from('inventory')
         .select(`
           *,
@@ -124,7 +132,46 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         `)
         .gt('quantity', 0);
 
+      // تطبيق فلاتر قاعدة البيانات
+      if (filters.department) {
+        query = query.filter('products.product_departments.departments.id', 'eq', filters.department);
+      }
+      if (filters.category) {
+        query = query.filter('products.product_categories.categories.id', 'eq', filters.category);
+      }
+      if (filters.productType) {
+        query = query.filter('products.product_product_types.product_types.id', 'eq', filters.productType);
+      }
+      if (filters.season) {
+        query = query.filter('products.product_seasons_occasions.seasons_occasions.id', 'eq', filters.season);
+      }
+
+      const { data: inventoryItems, error } = await query;
+
       if (error) throw error;
+
+      // جلب خيارات الفلترة (بدون تطبيق فلاتر)
+      const { data: allInventoryItems, error: optionsError } = await supabase
+        .from('inventory')
+        .select(`
+          products!inner (
+            product_departments (
+              departments (id, name)
+            ),
+            product_categories (
+              categories (id, name)
+            ),
+            product_product_types (
+              product_types (id, name)
+            ),
+            product_seasons_occasions (
+              seasons_occasions (id, name, type)
+            )
+          )
+        `)
+        .gt('quantity', 0);
+
+      if (optionsError) throw optionsError;
 
       // تنظيم البيانات
       const departmentMap = new Map();
@@ -133,24 +180,15 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
       const seasonMap = new Map();
       const productMap = new Map();
       
-      // خيارات الفلترة
+      // خيارات الفلترة من جميع البيانات
       const filterDepartments = new Set();
       const filterCategories = new Set();
       const filterProductTypes = new Set();
       const filterSeasons = new Set();
 
-      inventoryItems.forEach(item => {
+      // معالجة خيارات الفلترة
+      allInventoryItems.forEach(item => {
         const product = item.products;
-        const variant = item.product_variants;
-        const quantity = item.quantity || 0;
-        const reserved = item.reserved_quantity || 0;
-        const available = quantity - reserved;
-        const price = variant.price || product.base_price || 0;
-        const totalValue = quantity * price;
-        const availableValue = available * price;
-        const reservedValue = reserved * price;
-
-        // إضافة خيارات الفلترة
         product.product_departments?.forEach(pd => {
           if (pd.departments) filterDepartments.add(pd.departments);
         });
@@ -163,6 +201,19 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         product.product_seasons_occasions?.forEach(pso => {
           if (pso.seasons_occasions) filterSeasons.add(pso.seasons_occasions);
         });
+      });
+
+      // معالجة البيانات المفلترة
+      inventoryItems.forEach(item => {
+        const product = item.products;
+        const variant = item.product_variants;
+        const quantity = item.quantity || 0;
+        const reserved = item.reserved_quantity || 0;
+        const available = quantity - reserved;
+        const price = variant.price || product.base_price || 0;
+        const totalValue = quantity * price;
+        const availableValue = available * price;
+        const reservedValue = reserved * price;
 
         // معالجة الأقسام
         product.product_departments?.forEach(pd => {
@@ -314,10 +365,10 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         seasons: Array.from(seasonMap.values()).sort((a, b) => b.value - a.value),
         products: Array.from(productMap.values()).sort((a, b) => b.value - a.value),
         filterOptions: {
-          departments: Array.from(filterDepartments),
-          categories: Array.from(filterCategories),
-          productTypes: Array.from(filterProductTypes),
-          seasons: Array.from(filterSeasons)
+          departments: Array.from(filterDepartments).sort((a, b) => a.name.localeCompare(b.name)),
+          categories: Array.from(filterCategories).sort((a, b) => a.name.localeCompare(b.name)),
+          productTypes: Array.from(filterProductTypes).sort((a, b) => a.name.localeCompare(b.name)),
+          seasons: Array.from(filterSeasons).sort((a, b) => a.name.localeCompare(b.name))
         }
       });
 
@@ -337,7 +388,37 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     if (open) {
       fetchInventoryDetails();
     }
-  }, [open]);
+  }, [open, filters]); // إعادة التحميل عند تغيير الفلاتر
+
+  // تطبيق الفلاتر على البيانات الأصلية وحساب النتائج المفلترة
+  useEffect(() => {
+    if (!inventoryData.products.length) return;
+
+    // فلترة المنتجات على أساس المعايير المختارة
+    const filteredItems = inventoryData.products.filter(product => {
+      const matchesSearch = searchTerm === '' || product.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+      // يمكن إضافة فلاتر أخرى هنا لاحقاً
+    });
+
+    // حساب الملخص المفلتر
+    const summary = filteredItems.reduce((acc, item) => {
+      acc.totalValue += item.value || 0;
+      acc.totalAvailable += item.available_value || 0;
+      acc.totalReserved += item.reserved_value || 0;
+      acc.totalQuantity += item.quantity || 0;
+      acc.itemsCount += 1;
+      return acc;
+    }, {
+      totalValue: 0,
+      totalAvailable: 0,
+      totalReserved: 0,
+      totalQuantity: 0,
+      itemsCount: 0
+    });
+
+    setFilteredSummary(summary);
+  }, [inventoryData.products, searchTerm, filters]);
 
   // فلترة البيانات
   const getFilteredData = (data) => {
@@ -356,6 +437,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
       season: ''
     });
   };
+
+  const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
 
   const totalAvailable = inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0);
   const totalReserved = inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0);
@@ -397,39 +480,122 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
             </CardContent>
           </Card>
 
-          {/* البحث والفلترة */}
+
+          {/* نظام الفلترة المتقدم */}
           <Card>
             <CardContent className="p-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="البحث في المنتجات..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-10"
-                  />
+              <div className="space-y-4">
+                {/* البحث */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 relative">
+                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="البحث في المنتجات..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pr-10"
+                    />
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    disabled={!hasActiveFilters}
+                  >
+                    <X className="w-4 h-4 mr-1" />
+                    مسح الفلاتر
+                  </Button>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={clearFilters}
-                  disabled={!searchTerm}
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  مسح
-                </Button>
+
+                {/* فلاتر متقدمة */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div>
+                    <Label className="text-xs">القسم</Label>
+                    <Select value={filters.department} onValueChange={(value) => setFilters({...filters, department: value})}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="اختر القسم" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">جميع الأقسام</SelectItem>
+                        {inventoryData.filterOptions.departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">التصنيف</Label>
+                    <Select value={filters.category} onValueChange={(value) => setFilters({...filters, category: value})}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="اختر التصنيف" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">جميع التصنيفات</SelectItem>
+                        {inventoryData.filterOptions.categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">نوع المنتج</Label>
+                    <Select value={filters.productType} onValueChange={(value) => setFilters({...filters, productType: value})}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="اختر النوع" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">جميع الأنواع</SelectItem>
+                        {inventoryData.filterOptions.productTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">الموسم</Label>
+                    <Select value={filters.season} onValueChange={(value) => setFilters({...filters, season: value})}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="اختر الموسم" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">جميع المواسم</SelectItem>
+                        {inventoryData.filterOptions.seasons.map((season) => (
+                          <SelectItem key={season.id} value={season.id}>{season.name} ({season.type === 'season' ? 'موسم' : 'مناسبة'})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* ملخص النتائج المفلترة */}
+                {hasActiveFilters && (
+                  <Card className="bg-muted/30">
+                    <CardContent className="p-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">نتائج الفلترة:</span>
+                        <div className="flex gap-4">
+                          <span>{filteredSummary.itemsCount} عنصر</span>
+                          <span className="font-semibold text-primary">{formatCurrency(filteredSummary.totalValue)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </CardContent>
           </Card>
 
           {/* التفاصيل */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 text-xs">
+            <TabsList className="grid w-full grid-cols-6 text-xs">
               <TabsTrigger value="summary" className="text-xs">الملخص</TabsTrigger>
               <TabsTrigger value="departments" className="text-xs">الأقسام</TabsTrigger>
               <TabsTrigger value="categories" className="text-xs">التصنيفات</TabsTrigger>
               <TabsTrigger value="types" className="text-xs">الأنواع</TabsTrigger>
+              <TabsTrigger value="seasons" className="text-xs">المواسم</TabsTrigger>
               <TabsTrigger value="products" className="text-xs">المنتجات</TabsTrigger>
             </TabsList>
 
@@ -498,6 +664,14 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {getFilteredData(inventoryData.productTypes).map((type) => (
                     <ItemCard key={type.id} item={type} />
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="seasons" className="mt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getFilteredData(inventoryData.seasons).map((season) => (
+                    <ItemCard key={season.id} item={season} />
                   ))}
                 </div>
               </TabsContent>
