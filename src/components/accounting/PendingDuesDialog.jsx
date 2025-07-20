@@ -16,13 +16,29 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
     const [selectedEmployee, setSelectedEmployee] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState([]);
 
+    // فلترة الطلبات للأرباح المعلقة فقط
+    const pendingDuesOrders = useMemo(() => {
+        return orders.filter(order => {
+            // التحقق من الشروط:
+            // 1. تم تسليم الطلب
+            // 2. تم استلام الفاتورة
+            // 3. ليس الطلب من إنشاء المدير أو النظام
+            // 4. له موظف محدد أنشأه
+            const isDelivered = order.status === 'delivered' || order.status === 'completed';
+            const hasReceiptReceived = order.receipt_received === true;
+            const hasAssignedEmployee = order.created_by && order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير
+            
+            return isDelivered && hasReceiptReceived && hasAssignedEmployee;
+        });
+    }, [orders]);
+
     const employeesWithPendingDues = useMemo(() => {
-        const employeeIds = new Set(orders.map(o => o.created_by));
+        const employeeIds = new Set(pendingDuesOrders.map(o => o.created_by));
         return allUsers.filter(u => employeeIds.has(u.id));
-    }, [orders, allUsers]);
+    }, [pendingDuesOrders, allUsers]);
 
     const filteredOrders = useMemo(() => {
-        const ordersWithProfit = orders.map(o => ({
+        const ordersWithProfit = pendingDuesOrders.map(o => ({
             ...o,
             employee_profit: (o.items || []).reduce((sum, item) => {
                 const profit = (item.price - (item.costPrice || 0)) * item.quantity;
@@ -34,7 +50,7 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
             return ordersWithProfit;
         }
         return ordersWithProfit.filter(o => o.created_by === selectedEmployee);
-    }, [orders, selectedEmployee]);
+    }, [pendingDuesOrders, selectedEmployee]);
 
     const totalPendingAmount = useMemo(() => {
         return filteredOrders.reduce((sum, order) => sum + (order.employee_profit || 0), 0);
