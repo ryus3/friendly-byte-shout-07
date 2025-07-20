@@ -24,42 +24,58 @@ const formatNumber = (num) => {
 };
 
 const ItemCard = ({ item, showProductDetails = false }) => (
-  <Card className="bg-card/50 hover:bg-card/80 transition-colors border-border/50">
-    <CardContent className="p-4">
-      <div className="flex justify-between items-start mb-3">
+  <Card className="group bg-gradient-to-br from-background to-muted/30 hover:from-primary/5 hover:to-primary/10 transition-all duration-300 border-border/40 hover:border-primary/30 shadow-sm hover:shadow-md">
+    <CardContent className="p-5">
+      <div className="flex justify-between items-start mb-4">
         <div className="flex-1">
-          <h4 className="font-semibold text-foreground mb-1">{item.name}</h4>
+          <h4 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{item.name}</h4>
           {showProductDetails && item.variants && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full inline-block">
               {item.variants} متغير متوفر
             </p>
           )}
         </div>
-        <Badge variant="outline" className="text-xs shrink-0">
+        <Badge variant="outline" className="text-sm shrink-0 font-bold bg-primary/10 text-primary border-primary/30">
           {formatCurrency(item.value)}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-xs">
-        <div className="text-center p-2 bg-muted/50 rounded">
-          <div className="font-semibold text-primary">{formatNumber(item.quantity)}</div>
-          <div className="text-muted-foreground">إجمالي</div>
+      <div className="grid grid-cols-3 gap-3 text-sm mb-4">
+        <div className="text-center p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+          <div className="font-bold text-lg text-primary">{formatNumber(item.quantity)}</div>
+          <div className="text-xs text-muted-foreground font-medium">إجمالي</div>
         </div>
-        <div className="text-center p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded">
-          <div className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(item.available)}</div>
-          <div className="text-muted-foreground">متوفر</div>
+        <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30">
+          <div className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{formatNumber(item.available)}</div>
+          <div className="text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">متوفر</div>
         </div>
-        <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/30 rounded">
-          <div className="font-semibold text-orange-600 dark:text-orange-400">{formatNumber(item.reserved)}</div>
-          <div className="text-muted-foreground">محجوز</div>
+        <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 rounded-xl border border-orange-200/50 dark:border-orange-800/30">
+          <div className="font-bold text-lg text-orange-600 dark:text-orange-400">{formatNumber(item.reserved)}</div>
+          <div className="text-xs text-orange-700/70 dark:text-orange-300/70 font-medium">محجوز</div>
         </div>
       </div>
 
-      <div className="mt-3 pt-2 border-t border-border/50">
-        <div className="flex justify-between text-xs">
-          <span className="text-muted-foreground">المتوفر: {formatCurrency(item.available_value)}</span>
-          <span className="text-muted-foreground">المحجوز: {formatCurrency(item.reserved_value)}</span>
+      <div className="space-y-2">
+        <div className="flex justify-between items-center p-2 bg-muted/30 rounded-lg">
+          <span className="text-sm text-muted-foreground font-medium">القيمة المتوفرة:</span>
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.available_value)}</span>
         </div>
+        <div className="flex justify-between items-center p-2 bg-muted/30 rounded-lg">
+          <span className="text-sm text-muted-foreground font-medium">القيمة المحجوزة:</span>
+          <span className="font-bold text-orange-600 dark:text-orange-400">{formatCurrency(item.reserved_value)}</span>
+        </div>
+        {item.cost_value && (
+          <div className="flex justify-between items-center p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+            <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">التكلفة الإجمالية:</span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(item.cost_value)}</span>
+          </div>
+        )}
+        {item.expected_profit && (
+          <div className="flex justify-between items-center p-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200/50 dark:border-green-800/30">
+            <span className="text-sm text-green-700 dark:text-green-300 font-medium">الربح المتوقع:</span>
+            <span className="font-bold text-green-600 dark:text-green-400">{formatCurrency(item.expected_profit)}</span>
+          </div>
+        )}
       </div>
     </CardContent>
   </Card>
@@ -95,6 +111,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     totalAvailable: 0,
     totalReserved: 0,
     totalQuantity: 0,
+    totalCost: 0,
+    totalExpectedProfit: 0,
     itemsCount: 0
   });
 
@@ -110,6 +128,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
             id,
             name,
             base_price,
+            cost_price,
             product_departments (
               departments (id, name)
             ),
@@ -126,6 +145,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           product_variants!inner (
             id,
             price,
+            cost_price,
             colors (name),
             sizes (name)
           )
@@ -223,9 +243,12 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         const reserved = item.reserved_quantity || 0;
         const available = quantity - reserved;
         const price = variant.price || product.base_price || 0;
+        const costPrice = variant.cost_price || product.cost_price || 0;
         const totalValue = quantity * price;
         const availableValue = available * price;
         const reservedValue = reserved * price;
+        const totalCost = quantity * costPrice;
+        const expectedProfit = totalValue - totalCost;
 
         // معالجة الأقسام
         product.product_departments?.forEach(pd => {
@@ -242,6 +265,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
+              cost_value: 0,
+              expected_profit: 0,
               items: 0
             });
           }
@@ -253,6 +278,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           deptData.value += totalValue;
           deptData.available_value += availableValue;
           deptData.reserved_value += reservedValue;
+          deptData.cost_value += totalCost;
+          deptData.expected_profit += expectedProfit;
           deptData.items += 1;
         });
 
@@ -271,6 +298,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
+              cost_value: 0,
+              expected_profit: 0,
               items: 0
             });
           }
@@ -282,6 +311,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           catData.value += totalValue;
           catData.available_value += availableValue;
           catData.reserved_value += reservedValue;
+          catData.cost_value += totalCost;
+          catData.expected_profit += expectedProfit;
           catData.items += 1;
         });
 
@@ -300,6 +331,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
+              cost_value: 0,
+              expected_profit: 0,
               items: 0
             });
           }
@@ -311,6 +344,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           typeData.value += totalValue;
           typeData.available_value += availableValue;
           typeData.reserved_value += reservedValue;
+          typeData.cost_value += totalCost;
+          typeData.expected_profit += expectedProfit;
           typeData.items += 1;
         });
 
@@ -330,6 +365,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
+              cost_value: 0,
+              expected_profit: 0,
               items: 0
             });
           }
@@ -341,6 +378,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           seasonData.value += totalValue;
           seasonData.available_value += availableValue;
           seasonData.reserved_value += reservedValue;
+          seasonData.cost_value += totalCost;
+          seasonData.expected_profit += expectedProfit;
           seasonData.items += 1;
         });
 
@@ -356,6 +395,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
             value: 0,
             available_value: 0,
             reserved_value: 0,
+            cost_value: 0,
+            expected_profit: 0,
             variants: 0
           });
         }
@@ -367,6 +408,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         prodData.value += totalValue;
         prodData.available_value += availableValue;
         prodData.reserved_value += reservedValue;
+        prodData.cost_value += totalCost;
+        prodData.expected_profit += expectedProfit;
         prodData.variants += 1;
       });
 
@@ -429,6 +472,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
       acc.totalAvailable += item.available_value || 0;
       acc.totalReserved += item.reserved_value || 0;
       acc.totalQuantity += item.quantity || 0;
+      acc.totalCost += item.cost_value || 0;
+      acc.totalExpectedProfit += item.expected_profit || 0;
       acc.itemsCount += 1;
       return acc;
     }, {
@@ -436,6 +481,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
       totalAvailable: 0,
       totalReserved: 0,
       totalQuantity: 0,
+      totalCost: 0,
+      totalExpectedProfit: 0,
       itemsCount: 0
     });
 
@@ -469,42 +516,81 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg">
-            <Box className="w-5 h-5 text-primary" />
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+            <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
+              <Box className="w-6 h-6 text-primary" />
+            </div>
             تفاصيل قيمة المخزون
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* الملخص */}
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                 <div>
-                   <div className="text-2xl font-bold text-primary">
-                     {formatCurrency(filteredTotalValue)}
-                   </div>
-                   <p className="text-sm text-muted-foreground">
-                     {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
-                   </p>
-                 </div>
-                 <div>
-                   <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                     {formatCurrency(filteredTotalAvailable)}
-                   </div>
-                   <p className="text-sm text-muted-foreground">المتوفر للبيع</p>
-                 </div>
-                 <div>
-                   <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                     {formatCurrency(filteredTotalReserved)}
-                   </div>
-                   <p className="text-sm text-muted-foreground">المحجوز</p>
-                 </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="space-y-6">
+          {/* الملخص المحسن */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-primary/10 rounded-full inline-block">
+                  <BarChart3 className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-2xl font-bold text-primary mb-1">
+                  {formatCurrency(filteredTotalValue)}
+                </div>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
+                  <Package className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
+                  {formatCurrency(filteredTotalAvailable)}
+                </div>
+                <p className="text-sm text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر للبيع</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
+                  <Warehouse className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-1">
+                  {formatCurrency(filteredTotalReserved)}
+                </div>
+                <p className="text-sm text-orange-700/70 dark:text-orange-300/70 font-medium">المحجوز</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
+                  <Tag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                  {formatCurrency(hasActiveFilters ? filteredSummary.totalCost : inventoryData.products.reduce((sum, item) => sum + (item.cost_value || 0), 0))}
+                </div>
+                <p className="text-sm text-blue-700/70 dark:text-blue-300/70 font-medium">إجمالي التكلفة</p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
+                  <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="text-xl font-bold text-green-600 dark:text-green-400 mb-1">
+                  {formatCurrency(hasActiveFilters ? filteredSummary.totalExpectedProfit : inventoryData.products.reduce((sum, item) => sum + (item.expected_profit || 0), 0))}
+                </div>
+                <p className="text-sm text-green-700/70 dark:text-green-300/70 font-medium">الربح المتوقع</p>
+              </CardContent>
+            </Card>
+          </div>
 
 
           {/* نظام الفلترة المتقدم */}
