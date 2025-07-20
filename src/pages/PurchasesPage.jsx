@@ -28,12 +28,20 @@ const PurchasesPage = () => {
   const navigate = useNavigate();
   
   const [filters, setFilters] = useState({ searchTerm: '', dateFilter: 'all' });
-  const [viewMode, setViewMode] = useState('grid'); // grid أو table
+  // حفظ إعدادات العرض في localStorage
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem('purchases-view-mode') || 'grid';
+  });
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState(null);
+
+  // حفظ إعدادات العرض عند تغييرها
+  React.useEffect(() => {
+    localStorage.setItem('purchases-view-mode', viewMode);
+  }, [viewMode]);
 
   // جلب المشتريات عند تحميل الصفحة
   React.useEffect(() => {

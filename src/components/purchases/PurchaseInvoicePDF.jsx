@@ -2,17 +2,30 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
+import { AmiriFont } from '@/lib/AmiriFont';
 
-// استخدام خط افتراضي مدعوم
-// لا حاجة لتسجيل خط خارجي
+// تسجيل الخط العربي الجميل
+Font.register({
+  family: 'Amiri',
+  src: `data:font/truetype;charset=utf-8;base64,${AmiriFont}`,
+  fontDisplay: 'swap',
+});
+
+// تسجيل خط احتياطي للنصوص الإنجليزية
+Font.register({
+  family: 'Roboto',
+  src: 'https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2',
+  fontDisplay: 'swap',
+});
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
-    padding: 40,
-    fontFamily: 'Times-Roman',
-    direction: 'rtl',
-    fontSize: 12,
+    padding: 30,
+    fontFamily: 'Amiri',
+    fontSize: 13,
+    lineHeight: 1.6,
+    color: '#1a202c',
   },
   header: {
     marginBottom: 30,
@@ -22,17 +35,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e40af',
-    marginBottom: 10,
-    fontFamily: 'Arabic',
+    color: '#2563eb',
+    marginBottom: 15,
+    textAlign: 'center',
+    fontFamily: 'Amiri',
   },
   companyName: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#64748b',
-    marginBottom: 15,
-    fontFamily: 'Arabic',
+    marginBottom: 20,
+    textAlign: 'center',
+    fontFamily: 'Amiri',
   },
   invoiceInfo: {
     flexDirection: 'row',
@@ -53,7 +68,7 @@ const styles = StyleSheet.create({
     borderBottom: 1,
     borderBottomColor: '#e5e7eb',
     paddingBottom: 5,
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   row: {
     flexDirection: 'row',
@@ -64,13 +79,13 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     width: 120,
     fontWeight: 'bold',
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   value: {
     fontSize: 11,
     color: '#111827',
     flex: 1,
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   table: {
     marginTop: 20,
@@ -103,14 +118,14 @@ const styles = StyleSheet.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   tableCellHeader: {
     fontSize: 11,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   col1: { width: '8%' },
   col2: { width: '32%' },
@@ -136,13 +151,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#374151',
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   totalValue: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   grandTotal: {
     fontSize: 16,
@@ -151,7 +166,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTop: 2,
     borderTopColor: '#2563eb',
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   footer: {
     marginTop: 40,
@@ -164,7 +179,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     marginBottom: 5,
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   notes: {
     marginTop: 20,
@@ -179,13 +194,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#92400e',
     marginBottom: 8,
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   },
   notesText: {
     fontSize: 10,
     color: '#a16207',
     lineHeight: 1.4,
-    fontFamily: 'Arabic',
+    fontFamily: 'Amiri',
   }
 });
 
