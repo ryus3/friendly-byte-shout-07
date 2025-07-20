@@ -1946,6 +1946,10 @@ export type Database = {
           error_message: string
         }[]
       }
+      calculate_main_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       check_user_permission: {
         Args: { p_user_id: string; p_permission_name: string }
         Returns: boolean
