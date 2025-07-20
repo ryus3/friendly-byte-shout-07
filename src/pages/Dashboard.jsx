@@ -304,8 +304,9 @@ const Dashboard = () => {
         ).reduce((sum, e) => sum + e.amount, 0);
         
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
-        const totalExpenses = generalExpenses + employeeSettledDues;
-        const netProfit = grossProfit - totalExpenses;
+        
+        // صافي الربح = ربح المبيعات فقط (بدون طرح المصاريف العامة)
+        const netProfit = grossProfit;
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
@@ -330,7 +331,7 @@ const Dashboard = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
 
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
     }, [periods.netProfit, orders, accounting, products]);
 
     const dashboardData = useMemo(() => {
