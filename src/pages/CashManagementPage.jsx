@@ -50,22 +50,34 @@ const CashManagementPage = () => {
   const [totalSourcesBalance, setTotalSourcesBalance] = useState(0);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // جلب أرصدة المصادر المختلفة
+  // جلب أرصدة المصادر المختلفة - مع تحديث أكثر تكراراً
   useEffect(() => {
     const fetchBalances = async () => {
-      if (getMainCashBalance) {
-        const mainBalance = await getMainCashBalance();
-        setMainCashBalance(mainBalance);
+      try {
+        if (getMainCashBalance) {
+          const mainBalance = await getMainCashBalance();
+          setMainCashBalance(mainBalance);
+          
+          console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
+            baseCapital: 15000000,
+            realizedProfits: 21000,
+            totalMainCashBalance: mainBalance
+          });
+        }
+        
+        const sourcesBalance = getTotalSourcesBalance();
+        setTotalSourcesBalance(sourcesBalance);
+        
+        console.log('💰 الرصيد النقدي الفعلي (مجموع جميع المصادر):', mainBalance);
+      } catch (error) {
+        console.error('خطأ في جلب الأرصدة:', error);
       }
-      
-      const sourcesBalance = getTotalSourcesBalance();
-      setTotalSourcesBalance(sourcesBalance);
     };
     
     fetchBalances();
     
-    // تحديث الأرصدة عند تغيير المصادر أو الحركات
-    const interval = setInterval(fetchBalances, 30000); // كل 30 ثانية
+    // تحديث الأرصدة كل 3 ثوان للحصول على بيانات حية
+    const interval = setInterval(fetchBalances, 3000);
     return () => clearInterval(interval);
   }, [getMainCashBalance, getTotalSourcesBalance, cashSources, cashMovements]);
 
