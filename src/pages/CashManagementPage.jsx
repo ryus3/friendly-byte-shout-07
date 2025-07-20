@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useCashSources } from '@/hooks/useCashSources';
+import { supabase } from '@/lib/customSupabaseClient';
+import { toast } from '@/components/ui/use-toast';
 import CashSourceCard from '@/components/cash/CashSourceCard';
 import CashMovementsList from '@/components/cash/CashMovementsList';
 import AddCashDialog from '@/components/cash/AddCashDialog';
@@ -35,12 +37,73 @@ const CashManagementPage = () => {
     addCashSource,
     addCashToSource,
     withdrawCashFromSource,
+    getRealCashBalance,
     getTotalBalance
   } = useCashSources();
 
   const [selectedSource, setSelectedSource] = useState(null);
   const [dialogType, setDialogType] = useState(null); // 'add' | 'withdraw'
   const [showDialog, setShowDialog] = useState(false);
+  const [realCashBalance, setRealCashBalance] = useState(0);
+
+  // جلب رصيد القاصة الحقيقي
+  useEffect(() => {
+    const fetchRealBalance = async () => {
+      if (getRealCashBalance) {
+        const balance = await getRealCashBalance();
+        setRealCashBalance(balance);
+      }
+    };
+    fetchRealBalance();
+    
+    // تحديث الرصيد عند تغيير المصادر أو الحركات
+    const interval = setInterval(fetchRealBalance, 30000); // كل 30 ثانية
+    return () => clearInterval(interval);
+  }, [getRealCashBalance, cashSources, cashMovements]);
+
+  // حذف مصدر نقد
+  const handleDeleteSource = async (source) => {
+    if (source.name === 'القاصة الرئيسية') {
+      toast({
+        title: "خطأ",
+        description: "لا يمكن حذف القاصة الرئيسية",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (source.current_balance > 0) {
+      toast({
+        title: "خطأ", 
+        description: "لا يمكن حذف مصدر يحتوي على رصيد. يرجى تفريغ الرصيد أولاً",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (window.confirm(`هل أنت متأكد من حذف مصدر النقد "${source.name}"؟`)) {
+      try {
+        const { error } = await supabase
+          .from('cash_sources')
+          .update({ is_active: false })
+          .eq('id', source.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "تم بنجاح",
+          description: "تم حذف مصدر النقد"
+        });
+      } catch (error) {
+        console.error('خطأ في حذف مصدر النقد:', error);
+        toast({
+          title: "خطأ",
+          description: "فشل في حذف مصدر النقد",
+          variant: "destructive"
+        });
+      }
+    }
+  };
 
   // فتح نافذة إضافة أموال
   const handleAddCash = (source) => {
@@ -229,6 +292,8 @@ const CashManagementPage = () => {
                       onAddCash={handleAddCash}
                       onWithdrawCash={handleWithdrawCash}
                       onViewDetails={() => console.log('View details:', source)}
+                      onDelete={handleDeleteSource}
+                      realBalance={source.name === 'القاصة الرئيسية' ? realCashBalance : undefined}
                     />
                   );
                 })}

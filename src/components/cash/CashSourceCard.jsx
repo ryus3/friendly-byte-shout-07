@@ -2,8 +2,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Wallet, CreditCard, Smartphone, Plus, Minus, MoreHorizontal, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, CreditCard, Smartphone, Plus, Minus, MoreHorizontal, TrendingUp, TrendingDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const CashSourceCard = ({ 
   cashSource, 
@@ -11,6 +17,8 @@ const CashSourceCard = ({
   onAddCash, 
   onWithdrawCash, 
   onViewDetails,
+  onDelete,
+  realBalance, // للقاصة الرئيسية
   className 
 }) => {
   const getSourceIcon = (type) => {
@@ -72,14 +80,31 @@ const CashSourceCard = ({
               </Badge>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-white hover:bg-white/20"
-            onClick={() => onViewDetails?.(cashSource)}
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-white hover:bg-white/20"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onViewDetails?.(cashSource)}>
+                عرض التفاصيل
+              </DropdownMenuItem>
+              {cashSource.name !== 'القاصة الرئيسية' && (
+                <DropdownMenuItem 
+                  onClick={() => onDelete?.(cashSource)}
+                  className="text-red-600"
+                >
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  حذف المصدر
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
 
@@ -88,8 +113,16 @@ const CashSourceCard = ({
         <div className="text-center mb-4">
           <p className="text-sm text-muted-foreground mb-1">الرصيد الحالي</p>
           <p className="text-2xl font-bold text-primary">
-            {(cashSource.current_balance || 0).toLocaleString()} د.ع
+            {cashSource.name === 'القاصة الرئيسية' && realBalance !== undefined 
+              ? realBalance.toLocaleString() 
+              : (cashSource.current_balance || 0).toLocaleString()
+            } د.ع
           </p>
+          {cashSource.name === 'القاصة الرئيسية' && (
+            <p className="text-xs text-muted-foreground mt-1">
+              رأس المال + صافي الأرباح
+            </p>
+          )}
         </div>
 
         {/* إحصائيات اليوم */}
