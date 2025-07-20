@@ -16,7 +16,7 @@ import React, { useState, useEffect } from 'react';
     
     const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
       const [newExpense, setNewExpense] = useState({
-        date: new Date().toISOString().slice(0, 10),
+        date: new Date().toISOString().slice(0, 16),
         category: 'تسويق',
         description: '',
         amount: '',
@@ -60,7 +60,8 @@ import React, { useState, useEffect } from 'react';
       const filteredExpenses = expenses.filter(expense => {
         const categoryMatch = filters.category === 'all' || expense.related_data?.category === filters.category;
         const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
-        return categoryMatch && dateMatch && expense.related_data?.category !== 'مشتريات' && expense.related_data?.category !== 'مستحقات الموظفين';
+        // إزالة فلترة المشتريات والمستحقات لأنها مصاريف عامة
+        return categoryMatch && dateMatch && expense.related_data?.category !== 'مستحقات الموظفين';
       });
     
       const handleInputChange = (e) => {
@@ -82,7 +83,7 @@ import React, { useState, useEffect } from 'react';
           amount: parseFloat(newExpense.amount),
         });
         setNewExpense({
-          date: new Date().toISOString().slice(0, 10),
+          date: new Date().toISOString().slice(0, 16),
           category: 'تسويق',
           description: '',
           amount: '',
@@ -99,7 +100,7 @@ import React, { useState, useEffect } from 'react';
     
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-full">
+          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-50">
             <DialogHeader>
               <DialogTitle>إدارة المصاريف العامة</DialogTitle>
               <DialogDescription>عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
@@ -109,8 +110,8 @@ import React, { useState, useEffect } from 'react';
                 <h3 className="font-semibold flex items-center gap-2"><PlusCircle className="w-5 h-5 text-primary" /> إضافة مصروف جديد</h3>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="exp-date">التاريخ</Label>
-                    <Input id="exp-date" type="date" name="date" value={newExpense.date} onChange={handleInputChange} />
+                    <Label htmlFor="exp-date">التاريخ والوقت</Label>
+                    <Input id="exp-date" type="datetime-local" name="date" value={newExpense.date} onChange={handleInputChange} />
                   </div>
                   <div>
                     <Label htmlFor="exp-category">الفئة</Label>
@@ -118,7 +119,7 @@ import React, { useState, useEffect } from 'react';
                       <SelectTrigger id="exp-category">
                         <SelectValue placeholder="اختر فئة" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[60]">
                         {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -155,7 +156,7 @@ import React, { useState, useEffect } from 'react';
                         <SelectTrigger className="flex-1">
                             <SelectValue placeholder="فلترة حسب الفئة" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[60]">
                             <SelectItem value="all">كل الفئات</SelectItem>
                             {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
@@ -180,7 +181,7 @@ import React, { useState, useEffect } from 'react';
                         <TableRow key={expense.id}>
                           <TableCell>
                             <p className="font-medium">{expense.description}</p>
-                            <p className="text-xs text-muted-foreground">{expense.related_data?.category} - {format(parseISO(expense.transaction_date), 'd MMM yyyy', { locale: ar })}</p>
+                            <p className="text-xs text-muted-foreground">{expense.related_data?.category} - {format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })}</p>
                           </TableCell>
                           <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
                           <TableCell>
@@ -188,16 +189,32 @@ import React, { useState, useEffect } from 'react';
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent className="z-[70]">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    هل أنت متأكد من حذف هذا المصروف؟ لا يمكن التراجع عن هذا الإجراء.
+                                    هل أنت متأكد من حذف هذا المصروف؟ ({expense.amount?.toLocaleString() || 0} د.ع)
+                                    <br />لا يمكن التراجع عن هذا الإجراء.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteExpense(expense.id)}>حذف</AlertDialogAction>
+                                  <AlertDialogAction 
+                                    onClick={async () => {
+                                      try {
+                                        await deleteExpense(expense.id);
+                                      } catch (error) {
+                                        console.error('خطأ في حذف المصروف:', error);
+                                        toast({
+                                          title: 'خطأ',
+                                          description: 'فشل في حذف المصروف',
+                                          variant: 'destructive'
+                                        });
+                                      }
+                                    }}
+                                  >
+                                    حذف
+                                  </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
                             </AlertDialog>
