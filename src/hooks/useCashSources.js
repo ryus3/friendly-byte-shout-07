@@ -189,7 +189,7 @@ export const useCashSources = () => {
   // الحصول على رصيد القاصة الحقيقي (رأس المال + صافي الأرباح المحققة)
   const getRealCashBalance = async () => {
     try {
-      // حساب صافي رأس المال من حركات النقد
+      // استخدام calculate_net_capital المحدث الذي يشمل رأس المال الأساسي
       const { data: capitalData, error: capitalError } = await supabase.rpc('calculate_net_capital');
       if (capitalError) throw capitalError;
 
@@ -227,22 +227,12 @@ export const useCashSources = () => {
         return totalProfit + orderProfit;
       }, 0) || 0;
 
-      // الحصول على رأس المال من الإعدادات
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'capital')
-        .single();
+      // رصيد القاصة الحقيقي = رأس المال (من calculate_net_capital) + صافي الأرباح المحققة
+      const realBalance = (capitalData || 0) + realizedProfits;
 
-      const baseCapital = settingsData?.value || 0;
-
-      // رصيد القاصة الحقيقي = رأس المال + صافي الأرباح المحققة + صافي حركات رأس المال
-      const realBalance = baseCapital + realizedProfits + (capitalData || 0);
-
-      console.log('💰 تفاصيل رصيد القاصة:', {
-        baseCapital,
+      console.log('💰 تفاصيل رصيد القاصة المحدث:', {
+        totalCapital: capitalData,
         realizedProfits,
-        capitalMovements: capitalData,
         totalRealBalance: realBalance
       });
 

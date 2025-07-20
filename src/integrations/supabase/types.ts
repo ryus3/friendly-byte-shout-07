@@ -2125,7 +2125,7 @@ export type Database = {
           p_description: string
           p_created_by: string
         }
-        Returns: boolean
+        Returns: Json
       }
       update_reserved_stock: {
         Args: {
