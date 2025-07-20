@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useCashSources } from '@/hooks/useCashSources';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
@@ -84,10 +85,12 @@ const AccountingPage = () => {
     const { orders, purchases, accounting, products, addExpense, deleteExpense, updateCapital, settlementInvoices, calculateManagerProfit, calculateProfit } = useInventory();
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
+    const { getRealCashBalance } = useCashSources();
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false });
+    const [realCashBalance, setRealCashBalance] = useState(0);
 
     const dateRange = useMemo(() => {
         const now = new Date();
@@ -100,6 +103,17 @@ const AccountingPage = () => {
                 return { from: startOfMonth(now), to: endOfMonth(now) };
         }
     }, [datePeriod]);
+
+    // جلب رصيد القاصة الحقيقي
+    useEffect(() => {
+        const fetchRealBalance = async () => {
+            if (getRealCashBalance) {
+                const balance = await getRealCashBalance();
+                setRealCashBalance(balance);
+            }
+        };
+        fetchRealBalance();
+    }, [getRealCashBalance, accounting?.capital]);
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
@@ -257,7 +271,8 @@ const AccountingPage = () => {
         
         const employeePendingDues = employeePendingDuesDetails.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0) || 0), 0);
     
-        const cashOnHand = (accounting?.capital || 0) + netProfit;
+        // حساب رصيد القاصة الحقيقي = رأس المال + صافي الأرباح
+        const cashOnHand = realCashBalance || ((accounting?.capital || 0) + netProfit);
     
         const salesByDay = {};
         deliveredOrders.forEach(o => {

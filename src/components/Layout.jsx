@@ -38,7 +38,6 @@ const SidebarContent = ({ onClose }) => {
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
     { path: '/purchases', icon: TrendingUp, label: 'المشتريات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-emerald-500' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
-    { path: '/cash-management', icon: Wallet, label: 'إدارة القاصة', roles: ['super_admin', 'admin', 'department_manager', 'cashier'], color: 'text-teal-500' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-gray-500' }
   ];

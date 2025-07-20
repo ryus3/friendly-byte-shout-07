@@ -64,12 +64,26 @@ export const useCashSources = () => {
         .from('cash_sources')
         .insert([{
           ...sourceData,
+          current_balance: sourceData.initial_balance || 0,
           created_by: (await supabase.auth.getUser()).data.user?.id
         }])
         .select()
         .single();
 
       if (error) throw error;
+
+      // إضافة حركة افتتاحية إذا كان هناك رصيد ابتدائي
+      if (sourceData.initial_balance > 0) {
+        await supabase.rpc('update_cash_source_balance', {
+          p_cash_source_id: data.id,
+          p_amount: sourceData.initial_balance,
+          p_movement_type: 'in',
+          p_reference_type: 'capital_injection',
+          p_reference_id: null,
+          p_description: `رصيد افتتاحي لمصدر النقد: ${data.name}`,
+          p_created_by: (await supabase.auth.getUser()).data.user?.id
+        });
+      }
 
       setCashSources(prev => [...prev, data]);
       toast({
@@ -138,7 +152,7 @@ export const useCashSources = () => {
         p_cash_source_id: sourceId,
         p_amount: amount,
         p_movement_type: 'out',
-        p_reference_type: 'withdrawal',
+        p_reference_type: 'capital_withdrawal',
         p_reference_id: null,
         p_description: description || 'سحب أموال من القاصة',
         p_created_by: user.id
@@ -167,9 +181,60 @@ export const useCashSources = () => {
     }
   };
 
-  // الحصول على إجمالي الرصيد
+  // الحصول على إجمالي الرصيد من قاعدة البيانات
   const getTotalBalance = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
+  };
+
+  // الحصول على رصيد القاصة الحقيقي (رأس المال + صافي الأرباح المحققة)
+  const getRealCashBalance = async () => {
+    try {
+      // حساب صافي رأس المال من حركات النقد
+      const { data: capitalData, error: capitalError } = await supabase.rpc('calculate_net_capital');
+      if (capitalError) throw capitalError;
+
+      // حساب الأرباح المحققة من الطلبات المستلمة الفواتير
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          final_amount,
+          total_amount,
+          delivery_fee,
+          order_items!inner (
+            unit_price,
+            quantity,
+            product_variants (cost_price),
+            products (cost_price)
+          )
+        `)
+        .eq('status', 'delivered')
+        .eq('receipt_received', true);
+      
+      if (ordersError) throw ordersError;
+
+      // حساب صافي الأرباح من الطلبات المحققة
+      const realizedProfits = ordersData?.reduce((totalProfit, order) => {
+        if (!order.order_items) return totalProfit;
+        
+        const orderProfit = order.order_items.reduce((itemSum, item) => {
+          const sellPrice = item.unit_price || 0;
+          const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+          const quantity = item.quantity || 0;
+          const itemProfit = (sellPrice - costPrice) * quantity;
+          return itemSum + Math.max(itemProfit, 0);
+        }, 0);
+        
+        return totalProfit + orderProfit;
+      }, 0) || 0;
+
+      // رصيد القاصة الحقيقي = رأس المال + صافي الأرباح المحققة
+      const realBalance = (capitalData || 0) + realizedProfits;
+
+      return realBalance;
+    } catch (error) {
+      console.error('خطأ في حساب رصيد القاصة الحقيقي:', error);
+      return getTotalBalance(); // العودة للرصيد العادي في حالة الخطأ
+    }
   };
 
   // الحصول على القاصة الرئيسية
@@ -222,6 +287,7 @@ export const useCashSources = () => {
     fetchCashSources,
     fetchCashMovements,
     getTotalBalance,
+    getRealCashBalance,
     getMainCashSource
   };
 };
