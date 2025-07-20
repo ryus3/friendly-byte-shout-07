@@ -50,11 +50,13 @@ const CapitalDetailsDialog = ({
     try {
       const { error } = await supabase
         .from('settings')
-        .update({ 
+        .upsert({ 
+          key: 'initial_capital',
           value: capitalValue,
           updated_at: new Date().toISOString()
-        })
-        .eq('key', 'initial_capital');
+        }, {
+          onConflict: 'key'
+        });
 
       if (error) throw error;
 
