@@ -33,7 +33,7 @@ const gradientMap = {
 };
 
 
-const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, currentPeriod, onClick, periods, onEdit, children }) => {
+const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, currentPeriod, onClick, periods, onEdit, children, subtitle }) => {
   // تحويل القيمة إلى رقم آمن مع التعامل مع null وundefined
   const safeValue = value == null || value === undefined || value === '' ? 0 : value;
   const displayValue = isNaN(Number(safeValue)) ? (format === 'text' ? safeValue : 0) : Number(safeValue);
@@ -135,6 +135,11 @@ const StatCard = ({ title, value, icon: Icon, colors, format, onPeriodChange, cu
                   {currentPeriod && (
                     <p className="text-xs text-muted-foreground mt-1">
                       {availablePeriods[currentPeriod]}
+                    </p>
+                  )}
+                  {subtitle && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {subtitle}
                     </p>
                   )}
                 </div>

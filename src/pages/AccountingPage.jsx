@@ -364,8 +364,19 @@ const AccountingPage = () => {
         return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
+    const totalCapital = initialCapital + financialSummary.inventoryValue;
+    
     const topRowCards = [
-        { key: 'capital', title: "رأس المال", value: initialCapital, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
+        { 
+            key: 'capital', 
+            title: "رأس المال الكلي", 
+            value: totalCapital, 
+            icon: Banknote, 
+            colors: ['slate-500', 'gray-600'], 
+            format: "currency", 
+            onEdit: () => setDialogs(d => ({ ...d, capital: true })),
+            subtitle: `نقدي: ${formatCurrency(initialCapital)} + مخزون: ${formatCurrency(financialSummary.inventoryValue)}`
+        },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
     ];
