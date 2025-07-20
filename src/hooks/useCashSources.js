@@ -276,7 +276,8 @@ export const useCashSources = () => {
         realizedProfits,
         totalExpenses,
         totalPurchases,
-        netBalance
+        netBalance,
+        calculation: `${initialCapital} + ${capitalInjections} - ${capitalWithdrawals} + ${realizedProfits} - ${totalExpenses} - ${totalPurchases} = ${netBalance}`
       });
       
       return netBalance;
