@@ -1946,28 +1946,6 @@ export type Database = {
           error_message: string
         }[]
       }
-      calculate_employee_item_profit: {
-        Args: {
-          p_employee_id: string
-          p_product_id: string
-          p_variant_id: string
-          p_quantity: number
-          p_base_profit_amount: number
-        }
-        Returns: number
-      }
-      calculate_net_capital: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      calculate_order_profit: {
-        Args: { order_id_input: string }
-        Returns: undefined
-      }
-      calculate_order_profit_fixed_amounts: {
-        Args: { order_id_input: string }
-        Returns: undefined
-      }
       check_user_permission: {
         Args: { p_user_id: string; p_permission_name: string }
         Returns: boolean
@@ -1987,10 +1965,6 @@ export type Database = {
       cleanup_deleted_purchases: {
         Args: Record<PropertyKey, never>
         Returns: undefined
-      }
-      create_auto_settlement_request: {
-        Args: { p_employee_id: string; p_order_ids: string[] }
-        Returns: string
       }
       delete_purchase_completely: {
         Args: { p_purchase_id: string }
@@ -2045,15 +2019,6 @@ export type Database = {
         Args: { user_id_input: string; username_input: string }
         Returns: string
       }
-      get_actual_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          source_name: string
-          current_balance: number
-          total_in: number
-          total_out: number
-        }[]
-      }
       get_available_stock: {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
@@ -2071,10 +2036,6 @@ export type Database = {
           role: string
         }[]
       }
-      get_total_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
       get_user_by_username: {
         Args: { username_input: string }
         Returns: {
@@ -2088,15 +2049,6 @@ export type Database = {
       }
       get_user_product_access: {
         Args: { p_user_id: string; p_permission_type: string }
-        Returns: Json
-      }
-      handle_manual_cash_addition: {
-        Args: {
-          p_cash_source_id: string
-          p_amount: number
-          p_description: string
-          p_created_by: string
-        }
         Returns: Json
       }
       is_admin_or_deputy: {
@@ -2119,10 +2071,6 @@ export type Database = {
           p_employee_code?: string
         }
         Returns: string
-      }
-      recalculate_main_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
       }
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
@@ -2147,16 +2095,6 @@ export type Database = {
           p_sku?: string
         }
         Returns: undefined
-      }
-      update_settlement_status: {
-        Args: {
-          p_settlement_id: string
-          p_new_status: string
-          p_reviewer_id: string
-          p_review_notes?: string
-          p_approved_amount?: number
-        }
-        Returns: boolean
       }
       update_variant_stock_from_purchase: {
         Args: { p_sku: string; p_quantity_change: number; p_cost_price: number }
