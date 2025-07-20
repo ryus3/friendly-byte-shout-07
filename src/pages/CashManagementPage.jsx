@@ -21,6 +21,7 @@ import { useCashSources } from '@/hooks/useCashSources';
 import CashSourceCard from '@/components/cash/CashSourceCard';
 import CashMovementsList from '@/components/cash/CashMovementsList';
 import AddCashDialog from '@/components/cash/AddCashDialog';
+import AddCashSourceDialog from '@/components/cash/AddCashSourceDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import { format, startOfMonth, endOfMonth, startOfWeek, startOfDay, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -31,6 +32,7 @@ const CashManagementPage = () => {
     cashSources,
     cashMovements,
     loading,
+    addCashSource,
     addCashToSource,
     withdrawCashFromSource,
     getTotalBalance
@@ -200,10 +202,12 @@ const CashManagementPage = () => {
           <TabsContent value="sources" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">مصادر النقد النشطة</h2>
-              <Button size="sm" className="gap-2">
-                <Plus className="w-4 h-4" />
-                إضافة مصدر جديد
-              </Button>
+              <AddCashSourceDialog onAdd={addCashSource}>
+                <Button size="sm" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  إضافة مصدر جديد
+                </Button>
+              </AddCashSourceDialog>
             </div>
 
             {cashSources.length === 0 ? (

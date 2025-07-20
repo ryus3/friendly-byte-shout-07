@@ -1956,6 +1956,10 @@ export type Database = {
         }
         Returns: number
       }
+      calculate_net_capital: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       calculate_order_profit: {
         Args: { order_id_input: string }
         Returns: undefined
@@ -2054,6 +2058,10 @@ export type Database = {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
       }
+      get_default_cash_source: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_employee_by_telegram_id: {
         Args: { p_telegram_chat_id: number }
         Returns: {
@@ -2062,6 +2070,10 @@ export type Database = {
           full_name: string
           role: string
         }[]
+      }
+      get_total_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       get_user_by_username: {
         Args: { username_input: string }
