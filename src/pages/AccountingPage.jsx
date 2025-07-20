@@ -178,10 +178,18 @@ const AccountingPage = () => {
     useEffect(() => {
         const fetchRealBalance = async () => {
             try {
-                // استخدام الدالة الجديدة التي تحسب مجموع جميع المصادر
-                const totalRealBalance = await getTotalAllSourcesBalance();
+                // حساب الرصيد الفعلي لجميع المصادر النشطة
+                const { data: cashSourcesData, error } = await supabase
+                    .from('cash_sources')
+                    .select('current_balance')
+                    .eq('is_active', true);
                 
-                console.log('💰 الرصيد النقدي الفعلي (مجموع جميع المصادر):', totalRealBalance);
+                if (error) throw error;
+                
+                const totalRealBalance = cashSourcesData?.reduce((sum, source) => 
+                    sum + Number(source.current_balance || 0), 0) || 0;
+                
+                console.log('💰 الرصيد النقدي الفعلي (من قاعدة البيانات):', totalRealBalance);
                 
                 setRealCashBalance(totalRealBalance);
             } catch (error) {
@@ -193,7 +201,7 @@ const AccountingPage = () => {
         };
         
         fetchRealBalance();
-    }, [getTotalAllSourcesBalance, getTotalSourcesBalance, cashSources]);
+    }, [getTotalSourcesBalance, initialCapital]); // إضافة initialCapital كـ dependency
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
