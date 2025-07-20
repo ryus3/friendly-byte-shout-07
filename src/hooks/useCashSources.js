@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
+import { useFinancialCalculations } from './useFinancialCalculations';
 
 export const useCashSources = () => {
   const [cashSources, setCashSources] = useState([]);
   const [cashMovements, setCashMovements] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // استخدام النظام الجديد للحسابات المالية
+  const { getMainCashBalance: calculateMainBalance } = useFinancialCalculations();
 
   // جلب مصادر النقد
   const fetchCashSources = async () => {
@@ -186,28 +190,19 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الرئيسية الفعلي من قاعدة البيانات
+  // حساب رصيد القاصة الرئيسية باستخدام النظام الجديد
   const getMainCashBalance = async () => {
     try {
-      const { data: mainCashSource, error } = await supabase
-        .from('cash_sources')
-        .select('current_balance')
-        .eq('name', 'القاصة الرئيسية')
-        .maybeSingle();
-
-      if (error) {
-        console.error('خطأ في جلب رصيد القاصة الرئيسية:', error);
-        return 0;
-      }
-
-      const realBalance = Number(mainCashSource?.current_balance || 0);
+      const result = await calculateMainBalance();
+      const balance = result?.balance || 0;
       
-      console.log('💰 رصيد القاصة الرئيسية الفعلي:', {
-        realBalance,
-        formatted: realBalance.toLocaleString()
+      console.log('💰 رصيد القاصة الرئيسية المحسوب:', {
+        balance,
+        breakdown: result?.breakdown,
+        formatted: balance.toLocaleString()
       });
 
-      return realBalance;
+      return balance;
     } catch (error) {
       console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
       return 0;
