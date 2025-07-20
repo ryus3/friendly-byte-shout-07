@@ -35,6 +35,8 @@ export const filterOrdersByPeriod = (orders, period, returnDateRange = false) =>
     if (!createdAt) return false;
     // Handle both ISO strings and Date objects
     const orderDate = typeof createdAt === 'string' ? parseISO(createdAt) : createdAt;
+    // Additional safety check for valid date
+    if (!orderDate || isNaN(orderDate.getTime())) return false;
     return orderDate >= startDate && orderDate <= endDate;
   });
 };
@@ -96,7 +98,10 @@ const generateChartData = (orders, productCosts, period) => {
   });
 
   orders.forEach(order => {
-    const orderDate = typeof order.createdAt === 'string' ? parseISO(order.createdAt) : order.createdAt;
+    const createdAt = order.createdAt || order.created_at;
+    if (!createdAt) return;
+    const orderDate = typeof createdAt === 'string' ? parseISO(createdAt) : createdAt;
+    if (!orderDate || isNaN(orderDate.getTime())) return;
     const diffDays = Math.floor((new Date() - orderDate) / (1000 * 60 * 60 * 24));
     
     if (diffDays < days) {
