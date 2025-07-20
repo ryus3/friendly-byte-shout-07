@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { toast } from '@/components/ui/use-toast.js';
+import { toast } from '@/hooks/use-toast';
 import { useAuth, usePermissions } from '@/contexts/UnifiedAuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
