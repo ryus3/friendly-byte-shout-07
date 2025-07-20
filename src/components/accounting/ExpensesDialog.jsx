@@ -15,12 +15,12 @@ import React, { useState, useEffect } from 'react';
     import { supabase } from '@/lib/customSupabaseClient';
     
     const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
-  const [newExpense, setNewExpense] = useState({
-    date: new Date().toISOString().slice(0, 16),
-    category: 'تسويق',
-    description: '',
-    amount: '',
-  });
+      const [newExpense, setNewExpense] = useState({
+        date: new Date().toISOString().slice(0, 10),
+        category: 'تسويق',
+        description: '',
+        amount: '',
+      });
       const [filters, setFilters] = useState({
         category: 'all',
         dateRange: { from: undefined, to: undefined }
@@ -82,7 +82,7 @@ import React, { useState, useEffect } from 'react';
           amount: parseFloat(newExpense.amount),
         });
         setNewExpense({
-          date: new Date().toISOString().slice(0, 16),
+          date: new Date().toISOString().slice(0, 10),
           category: 'تسويق',
           description: '',
           amount: '',
@@ -99,7 +99,7 @@ import React, { useState, useEffect } from 'react';
     
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-50">
+          <DialogContent className="max-w-4xl w-[95vw] sm:w-full">
             <DialogHeader>
               <DialogTitle>إدارة المصاريف العامة</DialogTitle>
               <DialogDescription>عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
@@ -109,14 +109,8 @@ import React, { useState, useEffect } from 'react';
                 <h3 className="font-semibold flex items-center gap-2"><PlusCircle className="w-5 h-5 text-primary" /> إضافة مصروف جديد</h3>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="exp-date">التاريخ والوقت</Label>
-                    <Input 
-                      id="exp-date" 
-                      type="datetime-local" 
-                      name="date" 
-                      value={newExpense.date} 
-                      onChange={handleInputChange} 
-                    />
+                    <Label htmlFor="exp-date">التاريخ</Label>
+                    <Input id="exp-date" type="date" name="date" value={newExpense.date} onChange={handleInputChange} />
                   </div>
                   <div>
                     <Label htmlFor="exp-category">الفئة</Label>
@@ -124,7 +118,7 @@ import React, { useState, useEffect } from 'react';
                       <SelectTrigger id="exp-category">
                         <SelectValue placeholder="اختر فئة" />
                       </SelectTrigger>
-                      <SelectContent className="z-50">
+                      <SelectContent>
                         {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -161,17 +155,16 @@ import React, { useState, useEffect } from 'react';
                         <SelectTrigger className="flex-1">
                             <SelectValue placeholder="فلترة حسب الفئة" />
                         </SelectTrigger>
-                        <SelectContent className="z-50">
+                        <SelectContent>
                             <SelectItem value="all">كل الفئات</SelectItem>
                             {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <div className="flex-1 relative z-10">
-                      <DateRangePicker
+                    <DateRangePicker
+                        className="flex-1"
                         date={filters.dateRange}
                         onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
-                      />
-                    </div>
+                    />
                 </div>
                 <ScrollArea className="h-96 border rounded-lg">
                   <Table>
@@ -187,7 +180,7 @@ import React, { useState, useEffect } from 'react';
                         <TableRow key={expense.id}>
                           <TableCell>
                             <p className="font-medium">{expense.description}</p>
-                            <p className="text-xs text-muted-foreground">{expense.related_data?.category} - {format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })}</p>
+                            <p className="text-xs text-muted-foreground">{expense.related_data?.category} - {format(parseISO(expense.transaction_date), 'd MMM yyyy', { locale: ar })}</p>
                           </TableCell>
                           <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
                           <TableCell>
