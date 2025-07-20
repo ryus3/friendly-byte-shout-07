@@ -18,7 +18,6 @@ import ExpensesDialog from '@/components/accounting/ExpensesDialog';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
-import EditCapitalDialog from '@/components/accounting/EditCapitalDialog';
 
 // حساب صافي الأرباح الموحد
 const useNetProfitCalculator = (orders, accounting, products, period = 'month') => {
