@@ -82,6 +82,95 @@ export type Database = {
           },
         ]
       }
+      cash_movements: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          cash_source_id: string
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          movement_type: string
+          reference_id: string | null
+          reference_type: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number
+          balance_before?: number
+          cash_source_id: string
+          created_at?: string
+          created_by: string
+          description: string
+          id?: string
+          movement_type: string
+          reference_id?: string | null
+          reference_type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          cash_source_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          movement_type?: string
+          reference_id?: string | null
+          reference_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_movements_cash_source_id_fkey"
+            columns: ["cash_source_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_sources: {
+        Row: {
+          created_at: string
+          created_by: string
+          current_balance: number
+          description: string | null
+          id: string
+          initial_balance: number
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          current_balance?: number
+          description?: string | null
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          current_balance?: number
+          description?: string | null
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -706,6 +795,7 @@ export type Database = {
       orders: {
         Row: {
           assigned_to: string | null
+          cash_source_id: string | null
           created_at: string
           created_by: string
           custom_discount: number | null
@@ -724,6 +814,7 @@ export type Database = {
           id: string
           notes: string | null
           order_number: string
+          payment_received_source_id: string | null
           payment_status: string
           receipt_received: boolean | null
           receipt_received_at: string | null
@@ -735,6 +826,7 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          cash_source_id?: string | null
           created_at?: string
           created_by: string
           custom_discount?: number | null
@@ -753,6 +845,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number: string
+          payment_received_source_id?: string | null
           payment_status?: string
           receipt_received?: boolean | null
           receipt_received_at?: string | null
@@ -764,6 +857,7 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          cash_source_id?: string | null
           created_at?: string
           created_by?: string
           custom_discount?: number | null
@@ -782,6 +876,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: string
+          payment_received_source_id?: string | null
           payment_status?: string
           receipt_received?: boolean | null
           receipt_received_at?: string | null
@@ -800,6 +895,13 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "orders_cash_source_id_fkey"
+            columns: ["cash_source_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sources"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -811,6 +913,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_payment_received_source_id_fkey"
+            columns: ["payment_received_source_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sources"
             referencedColumns: ["id"]
           },
           {
@@ -1321,12 +1430,14 @@ export type Database = {
       }
       purchases: {
         Row: {
+          cash_source_id: string | null
           created_at: string
           created_by: string
           id: string
           items: Json | null
           notes: string | null
           paid_amount: number
+          payment_method: string | null
           purchase_date: string | null
           purchase_number: string
           shipping_cost: number | null
@@ -1339,12 +1450,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cash_source_id?: string | null
           created_at?: string
           created_by: string
           id?: string
           items?: Json | null
           notes?: string | null
           paid_amount?: number
+          payment_method?: string | null
           purchase_date?: string | null
           purchase_number: string
           shipping_cost?: number | null
@@ -1357,12 +1470,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cash_source_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
           items?: Json | null
           notes?: string | null
           paid_amount?: number
+          payment_method?: string | null
           purchase_date?: string | null
           purchase_number?: string
           shipping_cost?: number | null
@@ -1375,6 +1490,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchases_cash_source_id_fkey"
+            columns: ["cash_source_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sources"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchases_created_by_fkey"
             columns: ["created_by"]
@@ -1919,6 +2041,15 @@ export type Database = {
         Args: { user_id_input: string; username_input: string }
         Returns: string
       }
+      get_actual_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          source_name: string
+          current_balance: number
+          total_in: number
+          total_out: number
+        }[]
+      }
       get_available_stock: {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
@@ -1971,6 +2102,18 @@ export type Database = {
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
+      }
+      update_cash_source_balance: {
+        Args: {
+          p_cash_source_id: string
+          p_amount: number
+          p_movement_type: string
+          p_reference_type: string
+          p_reference_id: string
+          p_description: string
+          p_created_by: string
+        }
+        Returns: boolean
       }
       update_reserved_stock: {
         Args: {
