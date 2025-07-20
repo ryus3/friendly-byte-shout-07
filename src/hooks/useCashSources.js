@@ -266,6 +266,13 @@ export const useCashSources = () => {
     return getTotalSourcesBalance();
   };
 
+  // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية الحقيقية
+  const getTotalAllSourcesBalance = async () => {
+    const mainBalance = await getMainCashBalance(); // القاصة الرئيسية (رأس المال + الأرباح)
+    const otherBalance = getTotalSourcesBalance(); // باقي المصادر
+    return mainBalance + otherBalance;
+  };
+
   // الحصول على القاصة الرئيسية
   const getMainCashSource = async () => {
     const mainSource = cashSources.find(source => source.name === 'القاصة الرئيسية') || cashSources[0];
@@ -377,6 +384,7 @@ export const useCashSources = () => {
     getRealCashBalance,
     getMainCashBalance,
     getTotalSourcesBalance,
+    getTotalAllSourcesBalance,
     getMainCashSource
   };
 };

@@ -85,7 +85,7 @@ const AccountingPage = () => {
     const { orders, purchases, accounting, products, addExpense, deleteExpense, updateCapital, settlementInvoices, calculateManagerProfit, calculateProfit } = useInventory();
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
-    const { getTotalSourcesBalance } = useCashSources();
+    const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -104,16 +104,26 @@ const AccountingPage = () => {
         }
     }, [datePeriod]);
 
-    // جلب الرصيد النقدي الفعلي
+    // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
     useEffect(() => {
-        const fetchRealBalance = () => {
-            if (getTotalSourcesBalance) {
-                const balance = getTotalSourcesBalance();
-                setRealCashBalance(balance);
+        const fetchRealBalance = async () => {
+            try {
+                // استخدام الدالة الجديدة التي تحسب مجموع جميع المصادر
+                const totalRealBalance = await getTotalAllSourcesBalance();
+                
+                console.log('💰 الرصيد النقدي الفعلي (مجموع جميع المصادر):', totalRealBalance);
+                
+                setRealCashBalance(totalRealBalance);
+            } catch (error) {
+                console.error('❌ خطأ في حساب الرصيد النقدي الفعلي:', error);
+                // fallback إلى طريقة أخرى في حالة الخطأ
+                const fallbackBalance = getTotalSourcesBalance() || 0;
+                setRealCashBalance(fallbackBalance);
             }
         };
+        
         fetchRealBalance();
-    }, [getTotalSourcesBalance]);
+    }, [getTotalAllSourcesBalance, getTotalSourcesBalance, cashSources]);
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;

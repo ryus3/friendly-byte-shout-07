@@ -206,14 +206,17 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                             </SelectTrigger>
                             <SelectContent>
                                 {cashSources.map(source => {
-                                    // للقاصة الرئيسية، استخدم الرصيد المحسوب
+                                    // للقاصة الرئيسية، استخدم الرصيد المحسوب (رأس المال + الأرباح)
                                     const displayBalance = source.name === 'القاصة الرئيسية' 
                                         ? mainCashSourceBalance
                                         : source.current_balance;
                                     
+                                    // التأكد من أن الرصيد ليس سالبًا ولا يُظهر NaN
+                                    const safeBalance = isNaN(displayBalance) ? 0 : Math.max(0, displayBalance);
+                                    
                                     return (
                                         <SelectItem key={source.id} value={source.id}>
-                                            {source.name} - {displayBalance.toLocaleString()} د.ع
+                                            {source.name} - {safeBalance.toLocaleString()} د.ع
                                         </SelectItem>
                                     );
                                 })}
