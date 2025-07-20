@@ -54,8 +54,9 @@ const CashManagementPage = () => {
   useEffect(() => {
     const fetchBalances = async () => {
       try {
+        let mainBalance = 0;
         if (getMainCashBalance) {
-          const mainBalance = await getMainCashBalance();
+          mainBalance = await getMainCashBalance();
           setMainCashBalance(mainBalance);
           
           console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
