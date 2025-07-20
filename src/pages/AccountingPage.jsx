@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
+import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formatCurrency = (amount) => {
@@ -125,7 +126,7 @@ const AccountingPage = () => {
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
-    const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false });
+    const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [realCashBalance, setRealCashBalance] = useState(0);
     const [initialCapital, setInitialCapital] = useState(0);
 
@@ -426,7 +427,7 @@ const AccountingPage = () => {
             onClick: () => setDialogs(d => ({ ...d, capitalDetails: true }))
         },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
-        { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
+        { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
     ];
     
     const profitCards = [
@@ -577,6 +578,11 @@ const AccountingPage = () => {
                     // تحديث شامل لجميع البيانات المترابطة
                     await refreshFinancialData();
                 }}
+            />
+            <InventoryValueDialog
+                open={dialogs.inventoryDetails}
+                onOpenChange={(open) => setDialogs(d => ({ ...d, inventoryDetails: open }))}
+                totalInventoryValue={financialSummary.inventoryValue}
             />
         </>
     );
