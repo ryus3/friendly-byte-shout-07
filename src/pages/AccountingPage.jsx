@@ -3,7 +3,6 @@ import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
 import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -122,19 +121,7 @@ const AccountingPage = () => {
     const { orders, purchases, accounting, products, addExpense, deleteExpense, updateCapital, settlementInvoices, calculateManagerProfit, calculateProfit } = useInventory();
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
-    const { 
-      getTotalSourcesBalance, 
-      getMainCashBalance, 
-      getTotalAllSourcesBalance, 
-      cashSources 
-    } = useCashSources();
-    
-    const { 
-      getFinancialSummary, 
-      updateCapital, 
-      currentCapital,
-      loading: financialLoading 
-    } = useFinancialCalculations();
+    const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -157,12 +144,16 @@ const AccountingPage = () => {
     // دالة لإعادة تحميل جميع البيانات المالية
     const refreshFinancialData = async () => {
         try {
-            // رأس المال سيتم حسابه من النظام الجديد، لا حاجة لجلبه من قاعدة البيانات
-            console.log('💰 استخدام النظام الجديد للحسابات المالية');
+            // جلب رأس المال المحدث
+            const { data: capitalData, error: capitalError } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'initial_capital')
+                .single();
+
+            if (capitalError) throw capitalError;
             
-            // استخدام النظام الجديد فقط
-            const { getInitialCapital } = useFinancialCalculations();
-            const capitalValue = getInitialCapital();
+            const capitalValue = Number(capitalData?.value) || 0;
             setInitialCapital(capitalValue);
             
             console.log('💰 تم تحديث رأس المال:', capitalValue);
@@ -288,20 +279,24 @@ const AccountingPage = () => {
             return sum + orderCogs;
         }, 0);
         
-        // استخدام النظام الجديد للحسابات المالية
-        const { getFinancialSummary } = useFinancialCalculations();
-        const financialCalcs = getFinancialSummary();
+        const grossProfit = salesWithoutDelivery - cogs;
+        // حساب صافي ربح المبيعات (بدون طرح المصاريف العامة)
+        const netSalesProfit = salesWithoutDelivery - cogs; // هذا هو صافي ربح المبيعات فقط
         
-        // استخدام البيانات من النظام الجديد
-        const grossProfit = financialCalcs.grossProfit;
-        const netSalesProfit = financialCalcs.grossProfit; // صافي ربح المبيعات
-        const generalExpenses = financialCalcs.totalExpenses;
-        const netProfit = financialCalcs.netProfit; // صافي الربح الحقيقي
+        // المصاريف العامة (للعرض منفصلة وليس لطرحها من صافي الربح)
+        const generalExpenses = expensesInRange.filter(e => 
+          e.expense_type !== 'system' && 
+          e.category !== 'فئات_المصاريف' &&
+          e.related_data?.category !== 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // مستحقات الموظفين المسددة (من المصاريف المحلية)
+        // مستحقات الموظفين المسددة
         const employeeSettledDues = expensesInRange.filter(e => 
           e.related_data?.category === 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
+        
+        // صافي الربح = ربح المبيعات فقط (بدون حذف المصاريف العامة)
+        const netProfit = grossProfit;
     
         
         // حساب قيمة المخزون
@@ -573,10 +568,15 @@ const AccountingPage = () => {
             <CapitalDetailsDialog
                 open={dialogs.capitalDetails}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, capitalDetails: open }))}
-                initialCapital={currentCapital}
+                initialCapital={initialCapital}
                 inventoryValue={financialSummary.inventoryValue}
                 cashBalance={realCashBalance}
-                onCapitalUpdate={updateCapital}
+                onCapitalUpdate={async (newCapital) => {
+                    // تحديث فوري محلي
+                    setInitialCapital(newCapital);
+                    // تحديث شامل لجميع البيانات المترابطة
+                    await refreshFinancialData();
+                }}
             />
         </>
     );

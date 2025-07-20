@@ -48,26 +48,29 @@ const CapitalDetailsDialog = ({
 
     setLoading(true);
     try {
-      // استخدام دالة التحديث من الـ props
-      if (onCapitalUpdate) {
-        const result = await onCapitalUpdate(capitalValue);
-        if (result.success) {
-          toast({ 
-            title: "تم التحديث", 
-            description: result.message, 
-            variant: "default" 
-          });
-          setIsEditing(false);
-        } else {
-          throw new Error(result.message);
-        }
-      }
-      
+      const { error } = await supabase
+        .from('settings')
+        .update({ 
+          value: capitalValue,
+          updated_at: new Date().toISOString()
+        })
+        .eq('key', 'initial_capital');
+
+      if (error) throw error;
+
+      toast({ 
+        title: "تم التحديث", 
+        description: "تم تحديث رأس المال بنجاح.", 
+        variant: "default" 
+      });
+
+      setIsEditing(false);
+      if (onCapitalUpdate) onCapitalUpdate(capitalValue);
     } catch (error) {
       console.error('Error updating capital:', error);
       toast({ 
         title: "خطأ", 
-        description: error.message || "فشل في تحديث رأس المال. حاول مرة أخرى.", 
+        description: "فشل في تحديث رأس المال. حاول مرة أخرى.", 
         variant: "destructive" 
       });
     } finally {
@@ -178,19 +181,19 @@ const CapitalDetailsDialog = ({
 
           {/* شرح المكونات */}
           <div className="bg-muted/30 p-4 rounded-lg">
-            <h4 className="font-semibold mb-3 text-sm">النظام المالي:</h4>
+            <h4 className="font-semibold mb-3 text-sm">شرح المكونات:</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>رأس المال:</strong> قابل للتعديل - محفوظ في الواجهة</span>
+                <span><strong>رأس المال النقدي:</strong> المبلغ الأولي المستثمر في المشروع</span>
               </li>
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>قيمة المخزون:</strong> محسوبة تلقائياً من المنتجات</span>
+                <span><strong>قيمة المخزون:</strong> قيمة البضائع المتوفرة بأسعار البيع</span>
               </li>
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-purple-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>القاصة:</strong> رأس المال + أرباح - مصاريف - مشتريات</span>
+                <span><strong>الرصيد النقدي الفعلي:</strong> المال المتوفر حالياً في الصناديق</span>
               </li>
             </ul>
           </div>

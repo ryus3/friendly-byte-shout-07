@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -91,12 +90,6 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    const { 
-        getRealizedProfits, 
-        getPendingProfits, 
-        getFinancialSummary,
-        loading: financialLoading 
-    } = useFinancialCalculations();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -264,14 +257,7 @@ const Dashboard = () => {
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
-    // استخدام النظام الجديد للحسابات المالية
-    const { getFinancialSummary } = useFinancialCalculations();
-    
     const financialSummary = useMemo(() => {
-        // استخدام النظام الجديد بدلاً من الحسابات المحلية
-        const summary = getFinancialSummary();
-        
-        // إضافة بيانات الرسم البياني
         const periodKey = periods.netProfit;
         const now = new Date();
         let from, to;
@@ -282,7 +268,7 @@ const Dashboard = () => {
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
-        if (!orders || !accounting) return { ...summary, chartData: [], deliveredOrders: [] };
+        if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
         
         const filterByDate = (itemDateStr) => {
             if (!from || !to || !itemDateStr) return true;
@@ -297,38 +283,30 @@ const Dashboard = () => {
         );
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
-        // بيانات الرسم البياني
-        const salesByDay = {};
-        deliveredOrders.forEach(o => {
-          const day = format(parseISO(o.updated_at || o.created_at), 'dd');
-          if (!salesByDay[day]) salesByDay[day] = 0;
-          salesByDay[day] += o.final_amount || o.total_amount || 0;
-        });
+        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+        const salesWithoutDelivery = totalRevenue - deliveryFees;
         
-        const expensesByDay = {};
-        expensesInRange.forEach(e => {
-            const day = format(parseISO(e.transaction_date), 'dd');
-            if (!expensesByDay[day]) expensesByDay[day] = 0;
-            expensesByDay[day] += e.amount;
-        });
-    
-        const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
+        const cogs = deliveredOrders.reduce((sum, o) => {
+          const orderCogs = (o.items || []).reduce((itemSum, item) => {
+            const costPrice = item.costPrice || item.cost_price || 0;
+            return itemSum + (costPrice * item.quantity);
+          }, 0);
+          return sum + orderCogs;
+        }, 0);
+        const grossProfit = salesWithoutDelivery - cogs;
         
-        const chartData = allDays.map(day => ({
-            name: day,
-            sales: salesByDay[day] || 0,
-            expenses: expensesByDay[day] || 0,
-            net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
-        }));
+        // المصاريف العامة (استبعاد الفئات النظامية والمستحقات)
+        const generalExpenses = expensesInRange.filter(e => 
+          e.expense_type !== 'system' && 
+          e.category !== 'فئات_المصاريف' &&
+          e.related_data?.category !== 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + e.amount, 0);
         
-        // دمج البيانات من النظام الجديد مع الرسم البياني
-        return {
-            ...summary,
-            chartData,
-            deliveredOrders,
-            filteredExpenses: expensesInRange,
-            employeeSettledDues: expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0)
-        };
+        const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
+        
+        // صافي الربح = ربح المبيعات فقط (بدون طرح المصاريف العامة)
+        const netProfit = grossProfit;
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
@@ -388,19 +366,10 @@ const Dashboard = () => {
           return sum + employeeProfit + managerProfit;
         }, 0);
         
-        // الأرباح المحققة = الطلبات المسلمة التي استُلمت فواتيرها
-        const deliveredOrdersWithReceipt = deliveredOrders.filter(o => o.receipt_received === true);
-        const filteredRealizedOrders = filterOrdersByPeriod(deliveredOrdersWithReceipt, periods.deliveredSales);
-        const realizedProfits = filteredRealizedOrders.reduce((sum, o) => {
-          const employeeProfit = (o.items || []).reduce((itemSum, item) => {
-            const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
-            return itemSum + profit;
-          }, 0);
-          
-          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
-            ? calculateManagerProfit(o) : 0;
-          
-          return sum + employeeProfit + managerProfit;
+        const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
+        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
+          const productsSalesOnly = (o.total_amount || 0);
+          return sum + productsSalesOnly;
         }, 0);
 
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
@@ -414,10 +383,10 @@ const Dashboard = () => {
             totalOrdersCount: filteredTotalOrders.length,
             netProfit: 0,
             pendingProfit,
-            realizedProfits,  // الأرباح المحققة من الطلبات المستلمة + الفواتير
+            deliveredSales,
             pendingSales,
             pendingProfitOrders: filteredDeliveredOrders,
-            realizedProfitOrders: filteredRealizedOrders,  // الطلبات المستلمة + الفواتير
+            deliveredSalesOrders,
             pendingSalesOrders,
             topCustomers: getTopCustomers(visibleOrders),
             topProvinces: getTopProvinces(visibleOrders),
@@ -521,13 +490,13 @@ const Dashboard = () => {
         {
             key: 'deliveredSales', 
             title: canViewAllData ? 'المبيعات المستلمة' : 'أرباحي المستلمة', 
-            value: canViewAllData ? dashboardData.realizedProfits : employeeProfitsData.personalSettledProfit, 
+            value: canViewAllData ? dashboardData.deliveredSales : employeeProfitsData.personalSettledProfit, 
             icon: CheckCircle, 
             colors: ['purple-500', 'violet-500'], 
             format: 'currency', 
             currentPeriod: periods.deliveredSales, 
             onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), 
-            onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.realizedProfitOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
+            onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
         },
         {
             key: 'pendingSales', 

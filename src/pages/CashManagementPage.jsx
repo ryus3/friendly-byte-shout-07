@@ -19,7 +19,6 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useCashSources } from '@/hooks/useCashSources';
-import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import CashSourceCard from '@/components/cash/CashSourceCard';
@@ -39,12 +38,10 @@ const CashManagementPage = () => {
     addCashSource,
     addCashToSource,
     withdrawCashFromSource,
+    getMainCashBalance,
     getTotalSourcesBalance,
     getTotalBalance
   } = useCashSources();
-  
-  // استخدام النظام الجديد للحسابات المالية
-  const { getMainCashBalance } = useFinancialCalculations();
 
   const [selectedSource, setSelectedSource] = useState(null);
   const [dialogType, setDialogType] = useState(null); // 'add' | 'withdraw'
@@ -53,19 +50,26 @@ const CashManagementPage = () => {
   const [totalSourcesBalance, setTotalSourcesBalance] = useState(0);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // جلب أرصدة المصادر المختلفة - باستخدام النظام الجديد
+  // جلب أرصدة المصادر المختلفة - مع تحديث أكثر تكراراً
   useEffect(() => {
-    const fetchBalances = () => {
+    const fetchBalances = async () => {
       try {
-        // استخدام النظام الجديد للحسابات
-        const mainBalance = getMainCashBalance();
-        setMainCashBalance(mainBalance.balance);
-        
-        console.log('💰 تفاصيل رصيد القاصة الرئيسية (النظام الجديد):', mainBalance.breakdown);
+        let mainBalance = 0;
+        if (getMainCashBalance) {
+          mainBalance = await getMainCashBalance();
+          setMainCashBalance(mainBalance);
+          
+          console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
+            baseCapital: 15000000,
+            realizedProfits: 21000,
+            totalMainCashBalance: mainBalance
+          });
+        }
         
         const sourcesBalance = getTotalSourcesBalance();
         setTotalSourcesBalance(sourcesBalance);
         
+        console.log('💰 الرصيد النقدي الفعلي (مجموع جميع المصادر):', mainBalance);
       } catch (error) {
         console.error('خطأ في جلب الأرصدة:', error);
       }
@@ -194,8 +198,8 @@ const CashManagementPage = () => {
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
       change: mainCashBalance > 15000000 
-        ? `رأس مال: 15م + أرباح: ${(mainCashBalance - 15000000).toLocaleString()}` 
-        : `رأس المال: ${mainCashBalance.toLocaleString()} د.ع`
+        ? `رأس المال: 15,000,000 + أرباح: ${(mainCashBalance - 15000000).toLocaleString()}` 
+        : 'رأس المال فقط (لا توجد أرباح حقيقية بعد)'
     },
     {
       title: 'الرصيد النقدي الفعلي',

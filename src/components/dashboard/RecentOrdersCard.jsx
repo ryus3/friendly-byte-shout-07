@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, MapPin, Package, CreditCard, Truck, Home, Calendar, Clock } from 'lucide-react';
-import { formatRelativeTimeArabic } from '@/utils/dateFormatter';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -100,7 +99,16 @@ const RecentOrdersCard = ({ recentOrders }) => {
   };
 
   const formatDate = (dateString) => {
-    return formatRelativeTimeArabic(dateString);
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'منذ قليل';
+    if (diffInHours < 24) return `منذ ${diffInHours} ساعة`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays === 1) return 'منذ يوم واحد';
+    if (diffInDays < 7) return `منذ ${diffInDays} أيام`;
+    return date.toLocaleDateString('ar-SA');
   };
 
   return (
