@@ -2076,6 +2076,10 @@ export type Database = {
         }
         Returns: string
       }
+      refresh_main_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
