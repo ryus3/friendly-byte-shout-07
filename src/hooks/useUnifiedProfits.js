@@ -54,12 +54,31 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (expensesError) throw expensesError;
 
-      // 3. حساب البيانات العامة
+      // 3. جلب الطلبات التي تم استلام فواتيرها للأرباح المحققة فقط
+      const { data: realizedOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, receipt_received')
+        .eq('receipt_received', true);
+
+      if (ordersError) throw ordersError;
+
+      const realizedOrderIds = realizedOrders?.map(o => o.id) || [];
+      
+      // 4. حساب البيانات العامة - الأرباح المحققة فقط (التي تم استلام فواتيرها)
+      const realizedProfits = systemProfits?.filter(p => realizedOrderIds.includes(p.order_id)) || [];
+      const pendingProfits = systemProfits?.filter(p => !realizedOrderIds.includes(p.order_id)) || [];
+      
       const totalSystemProfit = systemProfits?.reduce((sum, p) => sum + (p.profit_amount || 0), 0) || 0;
       const totalEmployeeProfits = systemProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
+      
+      // صافي الأرباح = الأرباح المحققة فقط - المصاريف
+      const realizedManagerProfits = realizedProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
       const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      const netSystemProfit = totalManagerProfits - totalExpenses;
+      const netSystemProfit = realizedManagerProfits - totalExpenses;
+      
+      // الأرباح المعلقة = أرباح الطلبات التي لم يتم استلام فواتيرها
+      const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
 
       // 4. حساب البيانات الشخصية (إذا تم تمرير معرف المستخدم)
       let personalData = {
@@ -80,18 +99,19 @@ export const useUnifiedProfits = (userId = null) => {
         };
       }
 
-      // 5. إحصائيات إضافية
+      // 6. إحصائيات إضافية
       const settledOrders = systemProfits?.filter(p => p.status === 'settled').length || 0;
-      const pendingOrders = systemProfits?.filter(p => p.status === 'pending').length || 0;
+      const pendingOrders = pendingProfits.length || 0;
       const settledDues = systemProfits?.filter(p => p.status === 'settled').reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
 
-      // 6. تجميع جميع البيانات
+      // 7. تجميع جميع البيانات
       setProfitData({
         // البيانات العامة
         totalSystemProfit,
         totalEmployeeProfits,
         totalManagerProfits,
-        netSystemProfit,
+        netSystemProfit, // صافي الأرباح المحققة فقط - المصاريف
+        pendingSystemProfits, // الأرباح المعلقة
         
         // البيانات الشخصية
         ...personalData,
