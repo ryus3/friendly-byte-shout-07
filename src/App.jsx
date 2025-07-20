@@ -30,6 +30,7 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage.jsx'));
 const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
 const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
 const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
+const CashManagementPage = lazy(() => import('@/pages/CashManagementPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
 
@@ -105,6 +106,7 @@ function AppContent() {
           <Route path="/profits-summary" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
           <Route path="/profit-settlement/:employeeId" element={<ProtectedRoute permission="manage_profit_settlement">{childrenWithProps(ProfitSettlementPage)}</ProtectedRoute>} />
           <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
+          <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
 

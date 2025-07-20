@@ -3,21 +3,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useFullPurchases } from '@/hooks/useFullPurchases';
+import { useCashSources } from '@/hooks/useCashSources';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, PlusCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Wallet } from 'lucide-react';
 import SelectProductForPurchaseDialog from './SelectProductForPurchaseDialog';
 import PurchaseItemsPreview from './PurchaseItemsPreview';
 import { useLocation } from 'react-router-dom';
 
 const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const { addPurchase } = useFullPurchases();
+    const { cashSources, getMainCashSource } = useCashSources();
     const location = useLocation();
     const [supplier, setSupplier] = useState('');
     const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
     const [shippingCost, setShippingCost] = useState('');
-    const [transferCost, setTransferCost] = useState(''); // تكاليف التحويل الجديدة
+    const [transferCost, setTransferCost] = useState('');
+    const [selectedCashSource, setSelectedCashSource] = useState('');
     const [items, setItems] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
