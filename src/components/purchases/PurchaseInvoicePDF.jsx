@@ -2,27 +2,13 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
-import { AmiriFont } from '@/lib/AmiriFont';
-
-// تسجيل الخط العربي الجميل
-Font.register({
-  family: 'Amiri',
-  src: `data:font/truetype;charset=utf-8;base64,${AmiriFont}`,
-  fontDisplay: 'swap',
-});
-
-// تسجيل خط احتياطي للنصوص الإنجليزية
-Font.register({
-  family: 'Roboto',
-  src: 'https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2',
-  fontDisplay: 'swap',
-});
+// استخدام خط Times الافتراضي مؤقتاً
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
     padding: 30,
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
     fontSize: 13,
     lineHeight: 1.6,
     color: '#1a202c',
@@ -40,14 +26,14 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     marginBottom: 15,
     textAlign: 'center',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   companyName: {
     fontSize: 14,
     color: '#64748b',
     marginBottom: 20,
     textAlign: 'center',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   invoiceInfo: {
     flexDirection: 'row',
@@ -68,7 +54,7 @@ const styles = StyleSheet.create({
     borderBottom: 1,
     borderBottomColor: '#e5e7eb',
     paddingBottom: 5,
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   row: {
     flexDirection: 'row',
@@ -79,13 +65,13 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     width: 120,
     fontWeight: 'bold',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   value: {
     fontSize: 11,
     color: '#111827',
     flex: 1,
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   table: {
     marginTop: 20,
@@ -118,14 +104,14 @@ const styles = StyleSheet.create({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   tableCellHeader: {
     fontSize: 11,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   col1: { width: '8%' },
   col2: { width: '32%' },
@@ -151,13 +137,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#374151',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   totalValue: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   grandTotal: {
     fontSize: 16,
@@ -166,7 +152,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTop: 2,
     borderTopColor: '#2563eb',
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   footer: {
     marginTop: 40,
@@ -179,7 +165,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     marginBottom: 5,
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   notes: {
     marginTop: 20,
@@ -194,13 +180,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#92400e',
     marginBottom: 8,
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   },
   notesText: {
     fontSize: 10,
     color: '#a16207',
     lineHeight: 1.4,
-    fontFamily: 'Amiri',
+    fontFamily: 'Times-Roman',
   }
 });
 
