@@ -77,6 +77,11 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
             return;
         }
 
+        if (!selectedCashSource) {
+            toast({ title: "خطأ", description: "يرجى اختيار مصدر الأموال.", variant: "destructive" });
+            return;
+        }
+
         // التحقق من صحة البيانات
         const invalidItems = items.filter(item => !item.costPrice || item.costPrice <= 0 || !item.quantity || item.quantity <= 0);
         if (invalidItems.length > 0) {
@@ -104,7 +109,8 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                 })),
                 totalCost,
                 shippingCost: finalShippingCost,
-                transferCost: finalTransferCost, // تكاليف التحويل
+                transferCost: finalTransferCost,
+                cashSourceId: selectedCashSource,
                 status: 'completed'
             };
             
