@@ -445,6 +445,9 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     }
   }, [open, filters]); // إعادة التحميل عند تغيير الفلاتر
 
+  // تعريف hasActiveFilters هنا قبل استخدامه
+  const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
+
   // تطبيق الفلاتر وحساب النتائج المفلترة
   useEffect(() => {
     if (!inventoryData.departments.length && !inventoryData.categories.length && 
@@ -536,7 +539,6 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     });
   };
 
-  const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
 
   // حساب القيم المفلترة للملخص
   const displayedSummary = hasActiveFilters ? filteredSummary : {
