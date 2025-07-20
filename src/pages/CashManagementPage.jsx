@@ -64,7 +64,6 @@ const CashManagementPage = () => {
   }, [getRealCashBalance, cashSources, cashMovements]);
 
   // حذف مصدر نقد مع رسالة تأكيد أنيقة
-  const [deleteSource, setDeleteSource] = useState(null);
 
   const handleDeleteSource = (source) => {
     if (source.name === 'القاصة الرئيسية') {
