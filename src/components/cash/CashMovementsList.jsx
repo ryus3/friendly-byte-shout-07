@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { formatDateTimeArabic } from '@/utils/dateFormatter';
 import { cn } from '@/lib/utils';
 
 const CashMovementsList = ({ movements = [], cashSources = [] }) => {
@@ -187,9 +188,9 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          <span>
-                            {format(new Date(movement.created_at), 'dd/MM/yyyy HH:mm', { locale: ar })}
-                          </span>
+                           <span>
+                             {formatDateTimeArabic(movement.created_at)}
+                           </span>
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap">
