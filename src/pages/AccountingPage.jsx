@@ -210,7 +210,7 @@ const AccountingPage = () => {
         if (!orders || !Array.isArray(orders)) {
             console.warn('⚠️ لا توجد بيانات طلبات، orders:', orders);
             return {
-                totalRevenue: 0, cogs: 0, grossProfit: 0, totalExpenses: 0, netProfit: 0,
+                totalRevenue: 0, cogs: 0, grossProfit: 0, netProfit: 0,
                 inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, 
                 employeePendingDues: 0, employeeSettledDues: 0, chartData: [], 
                 filteredExpenses: [], deliveredOrders: [], employeePendingDuesDetails: []
@@ -410,7 +410,7 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, totalExpenses, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const totalCapital = initialCapital + financialSummary.inventoryValue;
@@ -523,7 +523,7 @@ const AccountingPage = () => {
                                 <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery || 0} colorClass="text-green-600" />
                                 <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs || 0} colorClass="text-orange-500" isNegative/>
                                 <StatRow label="مجمل الربح" value={financialSummary.grossProfit || 0} colorClass="text-blue-500 font-bold" />
-                                <StatRow label="إجمالي المصاريف" value={financialSummary.totalExpenses || 0} colorClass="text-red-500" isNegative/>
+                                <StatRow label="المصاريف العامة" value={financialSummary.generalExpenses || 0} colorClass="text-red-500" isNegative/>
                                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
                                     <p className="font-bold text-lg">صافي الربح</p>
                                     <p className="font-bold text-lg text-primary">{(financialSummary.netProfit || 0).toLocaleString()} د.ع</p>
