@@ -189,7 +189,13 @@ import React, { useState, useEffect } from 'react';
                         <TableRow key={expense.id}>
                           <TableCell>
                             <p className="font-medium">{expense.description}</p>
-                            <p className="text-xs text-muted-foreground">{expense.related_data?.category} - {format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {expense.related_data?.category} - {
+                                expense.transaction_date 
+                                  ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
+                                  : 'تاريخ غير محدد'
+                              }
+                            </p>
                           </TableCell>
                           <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
                           <TableCell>
