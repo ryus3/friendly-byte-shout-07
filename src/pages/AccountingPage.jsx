@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useCashSources } from '@/hooks/useCashSources';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
@@ -43,13 +44,40 @@ const EditCapitalDialog = ({ open, onOpenChange, currentCapital, onSave }) => {
         setNewCapital(currentCapital);
     }, [currentCapital, open]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         const capitalValue = parseFloat(newCapital);
         if (isNaN(capitalValue)) {
             toast({ title: "خطأ", description: "الرجاء إدخال مبلغ صحيح.", variant: "destructive" });
             return;
         }
-        onSave(capitalValue);
+        
+        try {
+            // تحديث رأس المال في قاعدة البيانات
+            const { error } = await supabase
+                .from('settings')
+                .update({ 
+                    value: capitalValue,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('key', 'initial_capital');
+
+            if (error) throw error;
+
+            onSave(capitalValue);
+            
+            toast({
+                title: "تم التحديث",
+                description: "تم تحديث رأس المال بنجاح",
+            });
+        } catch (error) {
+            console.error('خطأ في تحديث رأس المال:', error);
+            toast({
+                title: "خطأ",
+                description: "فشل في تحديث رأس المال",
+                variant: "destructive",
+            });
+        }
+        
         onOpenChange(false);
     };
 
@@ -91,6 +119,7 @@ const AccountingPage = () => {
     const [datePeriod, setDatePeriod] = useState('month');
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false });
     const [realCashBalance, setRealCashBalance] = useState(0);
+    const [initialCapital, setInitialCapital] = useState(0);
 
     const dateRange = useMemo(() => {
         const now = new Date();
@@ -103,6 +132,30 @@ const AccountingPage = () => {
                 return { from: startOfMonth(now), to: endOfMonth(now) };
         }
     }, [datePeriod]);
+
+    // جلب رأس المال الحقيقي من قاعدة البيانات
+    useEffect(() => {
+        const fetchInitialCapital = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('settings')
+                    .select('value')
+                    .eq('key', 'initial_capital')
+                    .single();
+
+                if (error) throw error;
+                
+                const capitalValue = Number(data?.value) || 0;
+                setInitialCapital(capitalValue);
+                console.log('💰 تم تحميل رأس المال من قاعدة البيانات:', capitalValue);
+            } catch (error) {
+                console.error('❌ خطأ في جلب رأس المال:', error);
+                setInitialCapital(0);
+            }
+        };
+
+        fetchInitialCapital();
+    }, []);
 
     // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
     useEffect(() => {
@@ -312,7 +365,7 @@ const AccountingPage = () => {
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const topRowCards = [
-        { key: 'capital', title: "رأس المال", value: accounting?.capital || 0, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
+        { key: 'capital', title: "رأس المال", value: initialCapital, icon: Banknote, colors: ['slate-500', 'gray-600'], format: "currency", onEdit: () => setDialogs(d => ({ ...d, capital: true })) },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
         { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => navigate('/inventory') },
     ];
@@ -431,8 +484,8 @@ const AccountingPage = () => {
             <EditCapitalDialog
                 open={dialogs.capital}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, capital: open }))}
-                currentCapital={accounting?.capital || 0}
-                onSave={updateCapital}
+                currentCapital={initialCapital}
+                onSave={(newCapital) => setInitialCapital(newCapital)}
             />
             <SettledDuesDialog
                 open={dialogs.settledDues}
