@@ -218,13 +218,26 @@ export const InventoryProvider = ({ children }) => {
         expenses: [...prev.expenses, newExpense]
       }));
 
-      if (expense.category !== 'مشتريات' && expense.category !== 'شحن ونقل' && expense.category !== 'تكاليف التحويل' && expense.category !== 'مستحقات الموظفين') {
-        toast({ title: "تمت إضافة المصروف", variant: "success" });
+      // عرض Toast للمصاريف العامة فقط (ليس للمشتريات أو المستحقات)
+      if (expense.category !== 'مشتريات' && 
+          expense.category !== 'شحن ونقل' && 
+          expense.category !== 'تكاليف التحويل' && 
+          expense.category !== 'مستحقات الموظفين') {
+        toast({ 
+          title: "تمت إضافة المصروف", 
+          description: `تم إضافة مصروف ${expense.description} بقيمة ${expense.amount.toLocaleString()} د.ع`,
+          variant: "success" 
+        });
       }
       
       return newExpense;
     } catch (error) {
       console.error('فشل إضافة المصروف:', error);
+      toast({
+        title: "خطأ في إضافة المصروف",
+        description: error.message || "حدث خطأ أثناء إضافة المصروف",
+        variant: "destructive"
+      });
       throw error;
     }
   }
