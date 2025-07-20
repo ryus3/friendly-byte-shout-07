@@ -16,19 +16,28 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
     const [selectedEmployee, setSelectedEmployee] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState([]);
 
-    // فلترة الطلبات للأرباح المعلقة فقط
+    // فلترة الطلبات للأرباح المعلقة فقط (للموظفين فقط، وليس للمدير)
     const pendingDuesOrders = useMemo(() => {
+        if (!orders || !Array.isArray(orders)) return [];
+        
         return orders.filter(order => {
             // التحقق من الشروط:
-            // 1. تم تسليم الطلب
+            // 1. تم تسليم الطلب أو اكتماله
             // 2. تم استلام الفاتورة
-            // 3. ليس الطلب من إنشاء المدير أو النظام
+            // 3. ليس الطلب من إنشاء المدير (معرف المدير: 91484496-b887-44f7-9e5d-be9db5567604)
             // 4. له موظف محدد أنشأه
+            // 5. يجب أن يكون للطلب مستحقات موظف (employee_profit > 0)
             const isDelivered = order.status === 'delivered' || order.status === 'completed';
             const hasReceiptReceived = order.receipt_received === true;
-            const hasAssignedEmployee = order.created_by && order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير
+            const isNotManagerOrder = order.created_by && order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604';
             
-            return isDelivered && hasReceiptReceived && hasAssignedEmployee;
+            // حساب ربح الموظف للطلب
+            const employeeProfit = (order.items || []).reduce((sum, item) => {
+                const profit = (item.price - (item.costPrice || 0)) * item.quantity * 0.1; // 10% للموظف افتراضياً
+                return sum + profit;
+            }, 0);
+            
+            return isDelivered && hasReceiptReceived && isNotManagerOrder && employeeProfit > 0;
         });
     }, [orders]);
 
