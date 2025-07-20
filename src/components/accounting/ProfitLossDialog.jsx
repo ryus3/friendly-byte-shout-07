@@ -112,15 +112,15 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                                 <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} className="w-full">
                                     <AccordionItem value="expenses" className="border-b-0">
                                         <AccordionTrigger className="flex justify-between items-center py-2 sm:py-3 hover:no-underline -mx-2 sm:-mx-4 px-2 sm:px-4 hover:bg-secondary/50 text-sm sm:text-base">
-                                            <p className="text-sm text-muted-foreground">إجمالي المصاريف</p>
+                                            <p className="text-sm text-muted-foreground">المصاريف</p>
                                             <p className="font-semibold text-red-500">
-                                                ({summary.totalExpenses.toLocaleString()}) د.ع
+                                                ({((summary.employeeSettledDues || 0) + (summary.generalExpenses || 0)).toLocaleString()}) د.ع
                                             </p>
                                         </AccordionTrigger>
                                         <AccordionContent className="pb-0">
                                             <div className="pl-2 sm:pl-4 pr-4 sm:pr-8 py-2 space-y-2">
-                                                <StatRow label="مستحقات مدفوعة" value={summary.employeeSettledDues} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
-                                                <StatRow label="مصاريف عامة" value={summary.generalExpenses} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
+                                                <StatRow label="مستحقات مدفوعة" value={summary.employeeSettledDues || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
+                                                <StatRow label="مصاريف عامة" value={summary.generalExpenses || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
                                             </div>
                                         </AccordionContent>
                                     </AccordionItem>
@@ -128,7 +128,7 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
 
                                 <div className="flex justify-between items-center py-2 sm:py-3 mt-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg px-3 sm:px-4 border border-primary/20">
                                     <p className="font-bold text-base sm:text-lg">صافي الربح</p>
-                                    <p className="font-bold text-base sm:text-lg text-primary">{summary.netProfit.toLocaleString()} د.ع</p>
+                                    <p className="font-bold text-base sm:text-lg text-primary">{(summary.netProfit || 0).toLocaleString()} د.ع</p>
                                 </div>
                             </div>
                         </div>
