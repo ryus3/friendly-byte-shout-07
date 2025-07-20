@@ -159,7 +159,7 @@ const AccountingPage = () => {
             console.log('💰 تم تحديث رأس المال:', capitalValue);
 
             // إعادة حساب الرصيد النقدي الفعلي
-            const totalRealBalance = await getTotalAllSourcesBalance();
+            const totalRealBalance = getTotalSourcesBalance();
             setRealCashBalance(totalRealBalance);
             
             console.log('💰 تم تحديث الرصيد النقدي الفعلي:', totalRealBalance);
