@@ -988,8 +988,37 @@ export const InventoryProvider = ({ children }) => {
   };
 
   const deleteExpense = async (expenseId) => {
-    // هذه الميزة غير متاحة حالياً
-    toast({ title: "تنبيه", description: "ميزة حذف المصاريف ستكون متاحة قريباً.", variant: "default" });
+    try {
+      console.log('🗑️ حذف المصروف:', expenseId);
+      
+      const { error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', expenseId);
+
+      if (error) throw error;
+
+      // تحديث البيانات المحلية
+      setAccounting(prev => ({
+        ...prev,
+        expenses: prev.expenses?.filter(exp => exp.id !== expenseId) || []
+      }));
+
+      toast({ 
+        title: "تم بنجاح", 
+        description: "تم حذف المصروف بنجاح", 
+        variant: "default" 
+      });
+
+      console.log('✅ تم حذف المصروف بنجاح');
+    } catch (error) {
+      console.error('❌ فشل حذف المصروف:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "فشل حذف المصروف. يرجى المحاولة مرة أخرى.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   return (
