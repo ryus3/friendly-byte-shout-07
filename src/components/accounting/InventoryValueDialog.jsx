@@ -25,55 +25,55 @@ const formatNumber = (num) => {
 
 const ItemCard = ({ item, showProductDetails = false }) => (
   <Card className="group bg-gradient-to-br from-background to-muted/30 hover:from-primary/5 hover:to-primary/10 transition-all duration-300 border-border/40 hover:border-primary/30 shadow-sm hover:shadow-md">
-    <CardContent className="p-3 sm:p-4">
-      <div className="flex justify-between items-start mb-3">
-        <div className="flex-1 min-w-0">
-          <h4 className="font-bold text-sm sm:text-base text-foreground mb-1 group-hover:text-primary transition-colors truncate">{item.name}</h4>
+    <CardContent className="p-5">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <h4 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">{item.name}</h4>
           {showProductDetails && item.variants && (
             <p className="text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded-full inline-block">
-              {item.variants} متغير
+              {item.variants} متغير متوفر
             </p>
           )}
         </div>
-        <Badge variant="outline" className="text-xs font-bold bg-primary/10 text-primary border-primary/30 shrink-0">
+        <Badge variant="outline" className="text-sm shrink-0 font-bold bg-primary/10 text-primary border-primary/30">
           {formatCurrency(item.value)}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-xs sm:text-sm mb-3">
-        <div className="text-center p-2 bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-          <div className="font-bold text-sm sm:text-base text-primary">{formatNumber(item.quantity)}</div>
+      <div className="grid grid-cols-3 gap-3 text-sm mb-4">
+        <div className="text-center p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+          <div className="font-bold text-lg text-primary">{formatNumber(item.quantity)}</div>
           <div className="text-xs text-muted-foreground font-medium">إجمالي</div>
         </div>
-        <div className="text-center p-2 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 rounded-lg border border-emerald-200/50 dark:border-emerald-800/30">
-          <div className="font-bold text-sm sm:text-base text-emerald-600 dark:text-emerald-400">{formatNumber(item.available)}</div>
+        <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30">
+          <div className="font-bold text-lg text-emerald-600 dark:text-emerald-400">{formatNumber(item.available)}</div>
           <div className="text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">متوفر</div>
         </div>
-        <div className="text-center p-2 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 rounded-lg border border-orange-200/50 dark:border-orange-800/30">
-          <div className="font-bold text-sm sm:text-base text-orange-600 dark:text-orange-400">{formatNumber(item.reserved)}</div>
+        <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 rounded-xl border border-orange-200/50 dark:border-orange-800/30">
+          <div className="font-bold text-lg text-orange-600 dark:text-orange-400">{formatNumber(item.reserved)}</div>
           <div className="text-xs text-orange-700/70 dark:text-orange-300/70 font-medium">محجوز</div>
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex justify-between items-center p-2 bg-muted/30 rounded-lg">
-          <span className="text-xs text-muted-foreground font-medium">المتوفر:</span>
-          <span className="font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">{formatCurrency(item.available_value)}</span>
+          <span className="text-sm text-muted-foreground font-medium">القيمة المتوفرة:</span>
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.available_value)}</span>
         </div>
         <div className="flex justify-between items-center p-2 bg-muted/30 rounded-lg">
-          <span className="text-xs text-muted-foreground font-medium">المحجوز:</span>
-          <span className="font-bold text-xs sm:text-sm text-orange-600 dark:text-orange-400">{formatCurrency(item.reserved_value)}</span>
+          <span className="text-sm text-muted-foreground font-medium">القيمة المحجوزة:</span>
+          <span className="font-bold text-orange-600 dark:text-orange-400">{formatCurrency(item.reserved_value)}</span>
         </div>
         {item.cost_value && (
           <div className="flex justify-between items-center p-2 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
-            <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">التكلفة:</span>
-            <span className="font-bold text-xs sm:text-sm text-blue-600 dark:text-blue-400">{formatCurrency(item.cost_value)}</span>
+            <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">التكلفة الإجمالية:</span>
+            <span className="font-bold text-blue-600 dark:text-blue-400">{formatCurrency(item.cost_value)}</span>
           </div>
         )}
-        {item.expected_profit !== undefined && (
+        {item.expected_profit && (
           <div className="flex justify-between items-center p-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200/50 dark:border-green-800/30">
-            <span className="text-xs text-green-700 dark:text-green-300 font-medium">الربح المتوقع:</span>
-            <span className="font-bold text-xs sm:text-sm text-green-600 dark:text-green-400">{formatCurrency(item.expected_profit)}</span>
+            <span className="text-sm text-green-700 dark:text-green-300 font-medium">الربح المتوقع:</span>
+            <span className="font-bold text-green-600 dark:text-green-400">{formatCurrency(item.expected_profit)}</span>
           </div>
         )}
       </div>
@@ -516,77 +516,78 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden p-4 sm:p-6">
-        <DialogHeader className="pb-4">
-          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
-            <div className="p-1.5 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg">
-              <Box className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+        <DialogHeader className="pb-6">
+          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+            <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
+              <Box className="w-6 h-6 text-primary" />
             </div>
             تفاصيل قيمة المخزون
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* الملخص المحسن */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3">
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="mb-2 p-1.5 bg-primary/10 rounded-full inline-block">
-                  <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-primary/10 rounded-full inline-block">
+                  <BarChart3 className="w-5 h-5 text-primary" />
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-primary mb-1 leading-tight">
+                <div className="text-2xl font-bold text-primary mb-1">
                   {formatCurrency(filteredTotalValue)}
                 </div>
-                <p className="text-xs text-muted-foreground font-medium">
+                <p className="text-sm text-muted-foreground font-medium">
                   {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
                 </p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="mb-2 p-1.5 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
-                  <Package className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
+                  <Package className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1 leading-tight">
+                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
                   {formatCurrency(filteredTotalAvailable)}
                 </div>
-                <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر للبيع</p>
+                <p className="text-sm text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر للبيع</p>
               </CardContent>
             </Card>
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="mb-2 p-1.5 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
-                  <Warehouse className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 dark:text-orange-400" />
+            
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
+                  <Warehouse className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 mb-1 leading-tight">
+                <div className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-1">
                   {formatCurrency(filteredTotalReserved)}
                 </div>
-                <p className="text-xs text-orange-700/70 dark:text-orange-300/70 font-medium">المحجوز</p>
+                <p className="text-sm text-orange-700/70 dark:text-orange-300/70 font-medium">المحجوز</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="mb-2 p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
-                  <Tag className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400" />
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
+                  <Tag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 mb-1 leading-tight">
+                <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
                   {formatCurrency(hasActiveFilters ? filteredSummary.totalCost : inventoryData.products.reduce((sum, item) => sum + (item.cost_value || 0), 0))}
                 </div>
-                <p className="text-xs text-blue-700/70 dark:text-blue-300/70 font-medium">إجمالي التكلفة</p>
+                <p className="text-sm text-blue-700/70 dark:text-blue-300/70 font-medium">إجمالي التكلفة</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 sm:p-4 text-center">
-                <div className="mb-2 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
-                  <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 dark:text-green-400" />
+            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-5 text-center">
+                <div className="mb-3 p-2 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
+                  <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 mb-1 leading-tight">
+                <div className="text-xl font-bold text-green-600 dark:text-green-400 mb-1">
                   {formatCurrency(hasActiveFilters ? filteredSummary.totalExpectedProfit : inventoryData.products.reduce((sum, item) => sum + (item.expected_profit || 0), 0))}
                 </div>
-                <p className="text-xs text-green-700/70 dark:text-green-300/70 font-medium">الربح المتوقع</p>
+                <p className="text-sm text-green-700/70 dark:text-green-300/70 font-medium">الربح المتوقع</p>
               </CardContent>
             </Card>
           </div>
@@ -711,12 +712,12 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
             </TabsList>
 
             <ScrollArea className="h-64 mt-4">
-              <TabsContent value="summary" className="mt-0 space-y-2 sm:space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-center">
+              <TabsContent value="summary" className="mt-0 space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                    <CardContent className="p-2 sm:p-3">
-                      <Warehouse className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
-                      <div className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300">
+                    <CardContent className="p-3">
+                      <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">
                         {inventoryData.departments.length}
                       </div>
                       <div className="text-xs text-blue-600 dark:text-blue-400">قسم</div>
@@ -724,9 +725,9 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   </Card>
                   
                   <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
-                    <CardContent className="p-2 sm:p-3">
-                      <Tag className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
-                      <div className="text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300">
+                    <CardContent className="p-3">
+                      <Tag className="w-6 h-6 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
                         {inventoryData.categories.length}
                       </div>
                       <div className="text-xs text-purple-600 dark:text-purple-400">تصنيف</div>
@@ -734,9 +735,9 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   </Card>
                   
                   <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
-                    <CardContent className="p-2 sm:p-3">
-                      <Package className="w-4 h-4 sm:w-6 sm:h-6 text-green-600 dark:text-green-400 mx-auto mb-1" />
-                      <div className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-300">
+                    <CardContent className="p-3">
+                      <Package className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-green-700 dark:text-green-300">
                         {inventoryData.productTypes.length}
                       </div>
                       <div className="text-xs text-green-600 dark:text-green-400">نوع</div>
@@ -744,9 +745,9 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   </Card>
                   
                   <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
-                    <CardContent className="p-2 sm:p-3">
-                      <BarChart3 className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
-                      <div className="text-xs sm:text-sm font-semibold text-orange-700 dark:text-orange-300">
+                    <CardContent className="p-3">
+                      <BarChart3 className="w-6 h-6 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-orange-700 dark:text-orange-300">
                         {inventoryData.products.length}
                       </div>
                       <div className="text-xs text-orange-600 dark:text-orange-400">منتج</div>
@@ -756,7 +757,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               </TabsContent>
 
               <TabsContent value="departments" className="mt-0">
-                <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {getFilteredData(inventoryData.departments).map((dept) => (
                     <ItemCard key={dept.id} item={dept} />
                   ))}
@@ -764,7 +765,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               </TabsContent>
 
               <TabsContent value="categories" className="mt-0">
-                <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {getFilteredData(inventoryData.categories).map((cat) => (
                     <ItemCard key={cat.id} item={cat} />
                   ))}
@@ -772,7 +773,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               </TabsContent>
 
               <TabsContent value="types" className="mt-0">
-                <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {getFilteredData(inventoryData.productTypes).map((type) => (
                     <ItemCard key={type.id} item={type} />
                   ))}
@@ -780,7 +781,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               </TabsContent>
 
               <TabsContent value="seasons" className="mt-0">
-                <div className="grid grid-cols-1 gap-2 sm:gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {getFilteredData(inventoryData.seasons).map((season) => (
                     <ItemCard key={season.id} item={season} />
                   ))}
@@ -788,15 +789,10 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               </TabsContent>
 
               <TabsContent value="products" className="mt-0">
-                <div className="grid grid-cols-1 gap-2 sm:gap-3">
-                  {getFilteredData(inventoryData.products).slice(0, 30).map((product) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getFilteredData(inventoryData.products).slice(0, 50).map((product) => (
                     <ItemCard key={product.id} item={product} showProductDetails />
                   ))}
-                  {inventoryData.products.length > 30 && (
-                    <div className="text-center text-sm text-muted-foreground p-4">
-                      عرض 30 منتج من أصل {inventoryData.products.length}
-                    </div>
-                  )}
                 </div>
               </TabsContent>
             </ScrollArea>
