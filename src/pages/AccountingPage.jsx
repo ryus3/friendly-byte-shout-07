@@ -25,6 +25,13 @@ import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('ar-IQ', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0) + ' د.ع';
+};
+
 const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
     const safeValue = value ?? 0;
     return (
