@@ -2090,6 +2090,15 @@ export type Database = {
         Args: { p_user_id: string; p_permission_type: string }
         Returns: Json
       }
+      handle_manual_cash_addition: {
+        Args: {
+          p_cash_source_id: string
+          p_amount: number
+          p_description: string
+          p_created_by: string
+        }
+        Returns: Json
+      }
       is_admin_or_deputy: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -2110,6 +2119,10 @@ export type Database = {
           p_employee_code?: string
         }
         Returns: string
+      }
+      recalculate_main_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
