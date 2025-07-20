@@ -227,8 +227,24 @@ export const useCashSources = () => {
         return totalProfit + orderProfit;
       }, 0) || 0;
 
-      // رصيد القاصة الحقيقي = رأس المال + صافي الأرباح المحققة
-      const realBalance = (capitalData || 0) + realizedProfits;
+      // الحصول على رأس المال من الإعدادات
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'capital')
+        .single();
+
+      const baseCapital = settingsData?.value || 0;
+
+      // رصيد القاصة الحقيقي = رأس المال + صافي الأرباح المحققة + صافي حركات رأس المال
+      const realBalance = baseCapital + realizedProfits + (capitalData || 0);
+
+      console.log('💰 تفاصيل رصيد القاصة:', {
+        baseCapital,
+        realizedProfits,
+        capitalMovements: capitalData,
+        totalRealBalance: realBalance
+      });
 
       return realBalance;
     } catch (error) {

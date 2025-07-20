@@ -16,6 +16,7 @@ import {
   PieChart,
   BarChart3
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -45,6 +46,7 @@ const CashManagementPage = () => {
   const [dialogType, setDialogType] = useState(null); // 'add' | 'withdraw'
   const [showDialog, setShowDialog] = useState(false);
   const [realCashBalance, setRealCashBalance] = useState(0);
+  const [deleteSource, setDeleteSource] = useState(null);
 
   // جلب رصيد القاصة الحقيقي
   useEffect(() => {
@@ -61,8 +63,10 @@ const CashManagementPage = () => {
     return () => clearInterval(interval);
   }, [getRealCashBalance, cashSources, cashMovements]);
 
-  // حذف مصدر نقد
-  const handleDeleteSource = async (source) => {
+  // حذف مصدر نقد مع رسالة تأكيد أنيقة
+  const [deleteSource, setDeleteSource] = useState(null);
+
+  const handleDeleteSource = (source) => {
     if (source.name === 'القاصة الرئيسية') {
       toast({
         title: "خطأ",
@@ -81,27 +85,32 @@ const CashManagementPage = () => {
       return;
     }
 
-    if (window.confirm(`هل أنت متأكد من حذف مصدر النقد "${source.name}"؟`)) {
-      try {
-        const { error } = await supabase
-          .from('cash_sources')
-          .update({ is_active: false })
-          .eq('id', source.id);
+    setDeleteSource(source);
+  };
 
-        if (error) throw error;
+  const confirmDeleteSource = async () => {
+    if (!deleteSource) return;
 
-        toast({
-          title: "تم بنجاح",
-          description: "تم حذف مصدر النقد"
-        });
-      } catch (error) {
-        console.error('خطأ في حذف مصدر النقد:', error);
-        toast({
-          title: "خطأ",
-          description: "فشل في حذف مصدر النقد",
-          variant: "destructive"
-        });
-      }
+    try {
+      const { error } = await supabase
+        .from('cash_sources')
+        .update({ is_active: false })
+        .eq('id', deleteSource.id);
+
+      if (error) throw error;
+
+      setDeleteSource(null);
+      toast({
+        title: "تم بنجاح",
+        description: "تم حذف مصدر النقد"
+      });
+    } catch (error) {
+      console.error('خطأ في حذف مصدر النقد:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في حذف مصدر النقد",
+        variant: "destructive"
+      });
     }
   };
 
@@ -434,6 +443,28 @@ const CashManagementPage = () => {
           type={dialogType}
           onConfirm={handleConfirmOperation}
         />
+
+        {/* نافذة تأكيد الحذف */}
+        <AlertDialog open={!!deleteSource} onOpenChange={() => setDeleteSource(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد حذف المصدر</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد من حذف مصدر النقد "{deleteSource?.name}"؟ 
+                لا يمكن التراجع عن هذا الإجراء.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmDeleteSource}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                حذف المصدر
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   );
