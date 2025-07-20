@@ -7,8 +7,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { useMainCashBalance } from '@/hooks/useMainCashBalance';
-import { formatDateTimeArabic, formatDateArabic } from '@/utils/dateFormatter';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -24,7 +22,6 @@ import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard'
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
-import MainCashCard from '@/components/dashboard/MainCashCard';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
@@ -93,7 +90,6 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    const { mainCashBalance, breakdown: cashBreakdown, loading: cashLoading } = useMainCashBalance();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -370,10 +366,19 @@ const Dashboard = () => {
           return sum + employeeProfit + managerProfit;
         }, 0);
         
-        const deliveredSalesOrders = filterOrdersByPeriod(deliveredOrders, periods.deliveredSales);
-        const deliveredSales = deliveredSalesOrders.reduce((sum, o) => {
-          const productsSalesOnly = (o.total_amount || 0);
-          return sum + productsSalesOnly;
+        // الأرباح المحققة = الطلبات المسلمة التي استُلمت فواتيرها
+        const deliveredOrdersWithReceipt = deliveredOrders.filter(o => o.receipt_received === true);
+        const filteredRealizedOrders = filterOrdersByPeriod(deliveredOrdersWithReceipt, periods.deliveredSales);
+        const realizedProfits = filteredRealizedOrders.reduce((sum, o) => {
+          const employeeProfit = (o.items || []).reduce((itemSum, item) => {
+            const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+            return itemSum + profit;
+          }, 0);
+          
+          const managerProfit = canViewAllData && o.created_by !== user?.id && o.created_by !== user?.user_id && calculateManagerProfit
+            ? calculateManagerProfit(o) : 0;
+          
+          return sum + employeeProfit + managerProfit;
         }, 0);
 
         const shippedOrders = visibleOrders.filter(o => o.status === 'shipped');
@@ -387,10 +392,10 @@ const Dashboard = () => {
             totalOrdersCount: filteredTotalOrders.length,
             netProfit: 0,
             pendingProfit,
-            deliveredSales,
+            realizedProfits,  // الأرباح المحققة من الطلبات المستلمة + الفواتير
             pendingSales,
             pendingProfitOrders: filteredDeliveredOrders,
-            deliveredSalesOrders,
+            realizedProfitOrders: filteredRealizedOrders,  // الطلبات المستلمة + الفواتير
             pendingSalesOrders,
             topCustomers: getTopCustomers(visibleOrders),
             topProvinces: getTopProvinces(visibleOrders),
@@ -494,13 +499,13 @@ const Dashboard = () => {
         {
             key: 'deliveredSales', 
             title: canViewAllData ? 'المبيعات المستلمة' : 'أرباحي المستلمة', 
-            value: canViewAllData ? dashboardData.deliveredSales : employeeProfitsData.personalSettledProfit, 
+            value: canViewAllData ? dashboardData.realizedProfits : employeeProfitsData.personalSettledProfit, 
             icon: CheckCircle, 
             colors: ['purple-500', 'violet-500'], 
             format: 'currency', 
             currentPeriod: periods.deliveredSales, 
             onPeriodChange: (p) => handlePeriodChange('deliveredSales', p), 
-            onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.deliveredSalesOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
+            onClick: canViewAllData ? () => openSummaryDialog('deliveredSales', dashboardData.realizedProfitOrders, 'deliveredSales') : () => navigate('/my-profits?status=settled')
         },
         {
             key: 'pendingSales', 
@@ -578,15 +583,6 @@ const Dashboard = () => {
                     <SettlementRequestCard 
                         pendingProfit={employeeProfitsData.personalPendingProfit} 
                         onSettle={() => navigate('/profits-summary')} 
-                    />
-                )}
-                
-                {/* عرض كارت القاصة الرئيسية للمديرين فقط */}
-                {canViewAllData && (
-                    <MainCashCard 
-                        mainCashBalance={mainCashBalance}
-                        breakdown={cashBreakdown}
-                        loading={cashLoading}
                     />
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
