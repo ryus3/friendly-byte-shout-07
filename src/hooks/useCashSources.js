@@ -186,102 +186,28 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الرئيسية مع حساب الأرباح والمصاريف والمشتريات
+  // الحصول على رصيد القاصة الرئيسية الفعلي من قاعدة البيانات
   const getMainCashBalance = async () => {
     try {
-      // 1. رأس المال الأساسي من الإعدادات
-      const { data: capitalSetting } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'initial_capital')
-        .single();
+      const { data: mainCashSource, error } = await supabase
+        .from('cash_sources')
+        .select('current_balance')
+        .eq('name', 'القاصة الرئيسية')
+        .maybeSingle();
+
+      if (error) {
+        console.error('خطأ في جلب رصيد القاصة الرئيسية:', error);
+        return 0;
+      }
+
+      const realBalance = Number(mainCashSource?.current_balance || 0);
       
-      const initialCapital = parseFloat(capitalSetting?.value || 0);
-      
-      // 2. الحقن والسحوبات الرأسمالية
-      const { data: capitalMovements } = await supabase
-        .from('cash_movements')
-        .select('amount, reference_type')
-        .in('reference_type', ['capital_injection', 'capital_withdrawal']);
-      
-      const capitalInjections = capitalMovements
-        ?.filter(m => m.reference_type === 'capital_injection')
-        .reduce((sum, m) => sum + parseFloat(m.amount || 0), 0) || 0;
-      
-      const capitalWithdrawals = capitalMovements
-        ?.filter(m => m.reference_type === 'capital_withdrawal')
-        .reduce((sum, m) => sum + parseFloat(m.amount || 0), 0) || 0;
-      
-      // 3. الأرباح المحققة من الطلبات المستلمة فقط
-      const { data: deliveredOrders } = await supabase
-        .from('orders')
-        .select(`
-          total_amount,
-          delivery_fee,
-          order_items (
-            quantity,
-            unit_price,
-            product_id,
-            variant_id,
-            products (cost_price),
-            product_variants (cost_price)
-          )
-        `)
-        .eq('status', 'delivered')
-        .eq('receipt_received', true);
-      
-      let realizedProfits = 0;
-      deliveredOrders?.forEach(order => {
-        const revenue = parseFloat(order.total_amount || 0);
-        
-        // حساب التكلفة الفعلية للطلب
-        const totalCost = order.order_items?.reduce((sum, item) => {
-          const costPrice = parseFloat(
-            item.product_variants?.cost_price || 
-            item.products?.cost_price || 
-            0
-          );
-          return sum + (costPrice * parseInt(item.quantity || 0));
-        }, 0) || 0;
-        
-        // الربح = الإيرادات - التكلفة
-        const orderProfit = revenue - totalCost;
-        realizedProfits += orderProfit;
+      console.log('💰 رصيد القاصة الرئيسية الفعلي:', {
+        realBalance,
+        formatted: realBalance.toLocaleString()
       });
-      
-      // 4. إجمالي المصاريف المعتمدة
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('status', 'approved');
-      
-      const totalExpenses = expenses?.reduce((sum, exp) => 
-        sum + parseFloat(exp.amount || 0), 0) || 0;
-      
-      // 5. إجمالي المشتريات المدفوعة
-      const { data: purchases } = await supabase
-        .from('purchases')
-        .select('paid_amount');
-      
-      const totalPurchases = purchases?.reduce((sum, purchase) => 
-        sum + parseFloat(purchase.paid_amount || 0), 0) || 0;
-      
-      // 6. حساب الرصيد النهائي
-      const netBalance = initialCapital + capitalInjections - capitalWithdrawals + realizedProfits - totalExpenses - totalPurchases;
-      
-      console.log('💰 تفاصيل القاصة الرئيسية:', {
-        initialCapital,
-        capitalInjections,
-        capitalWithdrawals,
-        realizedProfits,
-        totalExpenses,
-        totalPurchases,
-        netBalance,
-        calculation: `${initialCapital} + ${capitalInjections} - ${capitalWithdrawals} + ${realizedProfits} - ${totalExpenses} - ${totalPurchases} = ${netBalance}`
-      });
-      
-      return netBalance;
-      
+
+      return realBalance;
     } catch (error) {
       console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
       return 0;
