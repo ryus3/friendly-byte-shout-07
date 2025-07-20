@@ -364,17 +364,30 @@ const AccountingPage = () => {
     
         const salesByDay = {};
         deliveredOrders.forEach(o => {
-            const day = format(parseISO(o.updated_at || o.created_at), 'dd');
-            if (!salesByDay[day]) salesByDay[day] = 0;
-            // استخدام final_amount للمبيعات اليومية
-            salesByDay[day] += o.final_amount || o.total_amount || 0;
+            const dateStr = o.updated_at || o.created_at;
+            if (dateStr) {
+                try {
+                    const day = format(parseISO(dateStr), 'dd');
+                    if (!salesByDay[day]) salesByDay[day] = 0;
+                    // استخدام final_amount للمبيعات اليومية
+                    salesByDay[day] += o.final_amount || o.total_amount || 0;
+                } catch (error) {
+                    console.warn('⚠️ خطأ في تحليل تاريخ الطلب:', dateStr, error);
+                }
+            }
         });
         
         const expensesByDay = {};
         expensesInRange.forEach(e => {
-            const day = format(parseISO(e.transaction_date), 'dd');
-            if (!expensesByDay[day]) expensesByDay[day] = 0;
-            expensesByDay[day] += e.amount;
+            if (e.transaction_date) {
+                try {
+                    const day = format(parseISO(e.transaction_date), 'dd');
+                    if (!expensesByDay[day]) expensesByDay[day] = 0;
+                    expensesByDay[day] += e.amount;
+                } catch (error) {
+                    console.warn('⚠️ خطأ في تحليل تاريخ المصروف:', e.transaction_date, error);
+                }
+            }
         });
     
         const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
