@@ -295,7 +295,14 @@ const Dashboard = () => {
           return sum + orderCogs;
         }, 0);
         const grossProfit = salesWithoutDelivery - cogs;
-        const generalExpenses = expensesInRange.filter(e => e.related_data?.category !== 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
+        
+        // المصاريف العامة (استبعاد الفئات النظامية والمستحقات)
+        const generalExpenses = expensesInRange.filter(e => 
+          e.expense_type !== 'system' && 
+          e.category !== 'فئات_المصاريف' &&
+          e.related_data?.category !== 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + e.amount, 0);
+        
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         const totalExpenses = generalExpenses + employeeSettledDues;
         const netProfit = grossProfit - totalExpenses;
