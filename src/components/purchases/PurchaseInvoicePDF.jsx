@@ -2,7 +2,7 @@ import React from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
-// استخدام خط Times الافتراضي مؤقتاً
+// استخدام خط Times الافتراضي
 
 const styles = StyleSheet.create({
   page: {
