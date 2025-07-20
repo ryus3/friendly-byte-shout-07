@@ -76,17 +76,21 @@ export const useCashSources = () => {
 
       if (error) throw error;
 
-      // إضافة حركة افتتاحية إذا كان هناك رصيد ابتدائي
+      // إضافة حركة افتتاحية مباشرة في جدول cash_movements بدلاً من استخدام دالة
       if (sourceData.initial_balance > 0) {
-        await supabase.rpc('update_cash_source_balance', {
-          p_cash_source_id: data.id,
-          p_amount: sourceData.initial_balance,
-          p_movement_type: 'in',
-          p_reference_type: 'capital_injection',
-          p_reference_id: null,
-          p_description: `رصيد افتتاحي لمصدر النقد: ${data.name}`,
-          p_created_by: (await supabase.auth.getUser()).data.user?.id
-        });
+        const { error: movementError } = await supabase
+          .from('cash_movements')
+          .insert([{
+            cash_source_id: data.id,
+            amount: sourceData.initial_balance,
+            movement_type: 'in',
+            reference_type: 'capital_injection',
+            reference_id: null,
+            description: `رصيد افتتاحي لمصدر النقد: ${data.name}`,
+            created_by: (await supabase.auth.getUser()).data.user?.id
+          }]);
+        
+        if (movementError) throw movementError;
       }
 
       setCashSources(prev => [...prev, data]);
@@ -107,23 +111,36 @@ export const useCashSources = () => {
     }
   };
 
-  // إضافة أموال لمصدر نقد
+  // إضافة أموال لمصدر نقد - بدون دوال قاعدة البيانات
   const addCashToSource = async (sourceId, amount, description) => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('المستخدم غير مسجل الدخول');
 
-      const { data, error } = await supabase.rpc('update_cash_source_balance', {
-        p_cash_source_id: sourceId,
-        p_amount: amount,
-        p_movement_type: 'in',
-        p_reference_type: 'capital_injection',
-        p_reference_id: null,
-        p_description: description || 'إضافة أموال للقاصة',
-        p_created_by: user.id
-      });
+      // إضافة الحركة مباشرة في الجدول
+      const { error: movementError } = await supabase
+        .from('cash_movements')
+        .insert([{
+          cash_source_id: sourceId,
+          amount: amount,
+          movement_type: 'in',
+          reference_type: 'capital_injection',
+          reference_id: null,
+          description: description || 'إضافة أموال للقاصة',
+          created_by: user.id
+        }]);
 
-      if (error) throw error;
+      if (movementError) throw movementError;
+      
+      // تحديث رصيد المصدر مباشرة
+      const { error: updateError } = await supabase
+        .from('cash_sources')
+        .update({ 
+          current_balance: supabase.rpc('get_current_balance', { source_id: sourceId }) 
+        })
+        .eq('id', sourceId);
+
+      if (updateError) console.warn('تحذير: فشل في تحديث الرصيد:', updateError);
 
       // تحديث البيانات
       await fetchCashSources();
@@ -146,23 +163,36 @@ export const useCashSources = () => {
     }
   };
 
-  // سحب أموال من مصدر نقد
+  // سحب أموال من مصدر نقد - بدون دوال قاعدة البيانات
   const withdrawCashFromSource = async (sourceId, amount, description) => {
     try {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('المستخدم غير مسجل الدخول');
 
-      const { data, error } = await supabase.rpc('update_cash_source_balance', {
-        p_cash_source_id: sourceId,
-        p_amount: amount,
-        p_movement_type: 'out',
-        p_reference_type: 'capital_withdrawal',
-        p_reference_id: null,
-        p_description: description || 'سحب أموال من القاصة',
-        p_created_by: user.id
-      });
+      // إضافة الحركة مباشرة في الجدول
+      const { error: movementError } = await supabase
+        .from('cash_movements')
+        .insert([{
+          cash_source_id: sourceId,
+          amount: amount,
+          movement_type: 'out',
+          reference_type: 'capital_withdrawal',
+          reference_id: null,
+          description: description || 'سحب أموال من القاصة',
+          created_by: user.id
+        }]);
 
-      if (error) throw error;
+      if (movementError) throw movementError;
+      
+      // تحديث رصيد المصدر مباشرة
+      const { error: updateError } = await supabase
+        .from('cash_sources')
+        .update({ 
+          current_balance: supabase.rpc('get_current_balance', { source_id: sourceId }) 
+        })
+        .eq('id', sourceId);
+
+      if (updateError) console.warn('تحذير: فشل في تحديث الرصيد:', updateError);
 
       // تحديث البيانات
       await fetchCashSources();
@@ -190,22 +220,22 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // حساب رصيد القاصة الرئيسية باستخدام النظام الجديد
-  const getMainCashBalance = async () => {
+  // حساب رصيد القاصة الرئيسية باستخدام النظام الجديد فقط
+  const getMainCashBalance = () => {
     try {
-      const result = await calculateMainBalance();
+      const result = calculateMainBalance();
       const balance = result?.balance || 0;
       
-      console.log('💰 رصيد القاصة الرئيسية المحسوب:', {
+      console.log('💰 رصيد القاصة الرئيسية المحسوب (النظام الجديد):', {
         balance,
         breakdown: result?.breakdown,
         formatted: balance.toLocaleString()
       });
 
-      return balance;
+      return result; // إرجاع الكائن الكامل بدلاً من الرقم فقط
     } catch (error) {
       console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
-      return 0;
+      return { balance: 0, breakdown: {} };
     }
   };
 
@@ -222,17 +252,17 @@ export const useCashSources = () => {
   };
 
   // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية الحقيقية
-  const getTotalAllSourcesBalance = async () => {
-    const mainBalance = await getMainCashBalance(); // القاصة الرئيسية (رأس المال + الأرباح)
+  const getTotalAllSourcesBalance = () => {
+    const mainBalance = getMainCashBalance().balance; // القاصة الرئيسية (رأس المال + الأرباح)
     const otherBalance = getTotalSourcesBalance(); // باقي المصادر
     return mainBalance + otherBalance;
   };
 
   // الحصول على القاصة الرئيسية
-  const getMainCashSource = async () => {
+  const getMainCashSource = () => {
     const mainSource = cashSources.find(source => source.name === 'القاصة الرئيسية') || cashSources[0];
     if (mainSource && mainSource.name === 'القاصة الرئيسية') {
-      const calculatedBalance = await getMainCashBalance();
+      const calculatedBalance = getMainCashBalance().balance;
       return {
         ...mainSource,
         calculatedBalance

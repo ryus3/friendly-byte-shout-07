@@ -145,16 +145,12 @@ const AccountingPage = () => {
     // دالة لإعادة تحميل جميع البيانات المالية
     const refreshFinancialData = async () => {
         try {
-            // جلب رأس المال المحدث
-            const { data: capitalData, error: capitalError } = await supabase
-                .from('settings')
-                .select('value')
-                .eq('key', 'initial_capital')
-                .single();
-
-            if (capitalError) throw capitalError;
+            // رأس المال سيتم حسابه من النظام الجديد، لا حاجة لجلبه من قاعدة البيانات
+            console.log('💰 استخدام النظام الجديد للحسابات المالية');
             
-            const capitalValue = Number(capitalData?.value) || 0;
+            // استخدام النظام الجديد فقط
+            const { getInitialCapital } = useFinancialCalculations();
+            const capitalValue = getInitialCapital();
             setInitialCapital(capitalValue);
             
             console.log('💰 تم تحديث رأس المال:', capitalValue);
