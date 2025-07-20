@@ -267,8 +267,16 @@ export const useCashSources = () => {
   };
 
   // الحصول على القاصة الرئيسية
-  const getMainCashSource = () => {
-    return cashSources.find(source => source.name === 'القاصة الرئيسية') || cashSources[0];
+  const getMainCashSource = async () => {
+    const mainSource = cashSources.find(source => source.name === 'القاصة الرئيسية') || cashSources[0];
+    if (mainSource && mainSource.name === 'القاصة الرئيسية') {
+      const calculatedBalance = await getMainCashBalance();
+      return {
+        ...mainSource,
+        calculatedBalance
+      };
+    }
+    return mainSource;
   };
 
   useEffect(() => {
@@ -283,12 +291,15 @@ export const useCashSources = () => {
 
     loadData();
 
-    // Realtime subscriptions
+    // Realtime subscriptions للجداول المالية
     const cashSourcesSubscription = supabase
       .channel('cash_sources_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'cash_sources' },
-        () => fetchCashSources()
+        () => {
+          console.log('🔄 Cash sources changed, refreshing...');
+          fetchCashSources();
+        }
       )
       .subscribe();
 
@@ -296,13 +307,60 @@ export const useCashSources = () => {
       .channel('cash_movements_changes')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'cash_movements' },
-        () => fetchCashMovements()
+        () => {
+          console.log('🔄 Cash movements changed, refreshing...');
+          fetchCashMovements();
+        }
+      )
+      .subscribe();
+
+    // Real-time subscription للطلبات لتحديث الأرباح
+    const ordersSubscription = supabase
+      .channel('orders_changes')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload) => {
+          console.log('🔄 Order updated, refreshing cash sources...');
+          // إذا تم تحديث حالة الطلب للتسليم، قم بتحديث الأرباح
+          if (payload.new.status === 'delivered' || payload.new.receipt_received) {
+            fetchCashSources();
+          }
+        }
+      )
+      .subscribe();
+
+    // Real-time subscription للمشتريات
+    const purchasesSubscription = supabase
+      .channel('purchases_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'purchases' },
+        () => {
+          console.log('🔄 Purchases changed, refreshing cash sources...');
+          fetchCashSources();
+          fetchCashMovements();
+        }
+      )
+      .subscribe();
+
+    // Real-time subscription للمصاريف
+    const expensesSubscription = supabase
+      .channel('expenses_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'expenses' },
+        () => {
+          console.log('🔄 Expenses changed, refreshing cash sources...');
+          fetchCashSources();
+          fetchCashMovements();
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(cashSourcesSubscription);
       supabase.removeChannel(cashMovementsSubscription);
+      supabase.removeChannel(ordersSubscription);
+      supabase.removeChannel(purchasesSubscription);
+      supabase.removeChannel(expensesSubscription);
     };
   }, []);
 

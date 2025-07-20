@@ -25,6 +25,21 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const [items, setItems] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+    const [mainCashSourceBalance, setMainCashSourceBalance] = useState(0);
+
+    // جلب رصيد القاصة الرئيسية
+    useEffect(() => {
+        const loadMainCashBalance = async () => {
+            const mainSource = await getMainCashSource();
+            if (mainSource) {
+                setMainCashSourceBalance(mainSource.calculatedBalance || 0);
+            }
+        };
+        
+        if (open) {
+            loadMainCashBalance();
+        }
+    }, [open, getMainCashSource]);
 
     useEffect(() => {
         if (location.state?.productJustAdded) {
@@ -190,11 +205,18 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                 <SelectValue placeholder="اختر مصدر الأموال" />
                             </SelectTrigger>
                             <SelectContent>
-                                {cashSources.map(source => (
-                                    <SelectItem key={source.id} value={source.id}>
-                                        {source.name} - {source.current_balance.toLocaleString()} د.ع
-                                    </SelectItem>
-                                ))}
+                                {cashSources.map(source => {
+                                    // للقاصة الرئيسية، استخدم الرصيد المحسوب
+                                    const displayBalance = source.name === 'القاصة الرئيسية' 
+                                        ? mainCashSourceBalance
+                                        : source.current_balance;
+                                    
+                                    return (
+                                        <SelectItem key={source.id} value={source.id}>
+                                            {source.name} - {displayBalance.toLocaleString()} د.ع
+                                        </SelectItem>
+                                    );
+                                })}
                             </SelectContent>
                         </Select>
                     </div>
