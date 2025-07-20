@@ -100,7 +100,15 @@ import React, { useState, useEffect } from 'react';
     
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-50">
+          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-[9999] bg-background border shadow-2xl"
+            style={{ 
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 9999
+            }}
+          >
             <DialogHeader>
               <DialogTitle>إدارة المصاريف العامة</DialogTitle>
               <DialogDescription>عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
@@ -119,7 +127,7 @@ import React, { useState, useEffect } from 'react';
                       <SelectTrigger id="exp-category">
                         <SelectValue placeholder="اختر فئة" />
                       </SelectTrigger>
-                      <SelectContent className="z-[60]">
+                      <SelectContent className="z-[10000] bg-background border shadow-lg">
                         {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -156,7 +164,7 @@ import React, { useState, useEffect } from 'react';
                         <SelectTrigger className="flex-1">
                             <SelectValue placeholder="فلترة حسب الفئة" />
                         </SelectTrigger>
-                        <SelectContent className="z-[60]">
+                        <SelectContent className="z-[10000] bg-background border shadow-lg">
                             <SelectItem value="all">كل الفئات</SelectItem>
                             {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
@@ -189,7 +197,7 @@ import React, { useState, useEffect } from 'react';
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent className="z-[70]">
+                              <AlertDialogContent className="z-[10001] bg-background border shadow-2xl">
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
                                   <AlertDialogDescription>
