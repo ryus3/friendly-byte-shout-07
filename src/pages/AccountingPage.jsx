@@ -141,28 +141,37 @@ const AccountingPage = () => {
         }
     }, [datePeriod]);
 
+    // دالة لإعادة تحميل جميع البيانات المالية
+    const refreshFinancialData = async () => {
+        try {
+            // جلب رأس المال المحدث
+            const { data: capitalData, error: capitalError } = await supabase
+                .from('settings')
+                .select('value')
+                .eq('key', 'initial_capital')
+                .single();
+
+            if (capitalError) throw capitalError;
+            
+            const capitalValue = Number(capitalData?.value) || 0;
+            setInitialCapital(capitalValue);
+            
+            console.log('💰 تم تحديث رأس المال:', capitalValue);
+
+            // إعادة حساب الرصيد النقدي الفعلي
+            const totalRealBalance = await getTotalAllSourcesBalance();
+            setRealCashBalance(totalRealBalance);
+            
+            console.log('💰 تم تحديث الرصيد النقدي الفعلي:', totalRealBalance);
+            
+        } catch (error) {
+            console.error('❌ خطأ في تحديث البيانات المالية:', error);
+        }
+    };
+
     // جلب رأس المال الحقيقي من قاعدة البيانات
     useEffect(() => {
-        const fetchInitialCapital = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('settings')
-                    .select('value')
-                    .eq('key', 'initial_capital')
-                    .single();
-
-                if (error) throw error;
-                
-                const capitalValue = Number(data?.value) || 0;
-                setInitialCapital(capitalValue);
-                console.log('💰 تم تحميل رأس المال من قاعدة البيانات:', capitalValue);
-            } catch (error) {
-                console.error('❌ خطأ في جلب رأس المال:', error);
-                setInitialCapital(0);
-            }
-        };
-
-        fetchInitialCapital();
+        refreshFinancialData();
     }, []);
 
     // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
@@ -530,7 +539,12 @@ const AccountingPage = () => {
                 initialCapital={initialCapital}
                 inventoryValue={financialSummary.inventoryValue}
                 cashBalance={realCashBalance}
-                onCapitalUpdate={(newCapital) => setInitialCapital(newCapital)}
+                onCapitalUpdate={async (newCapital) => {
+                    // تحديث فوري محلي
+                    setInitialCapital(newCapital);
+                    // تحديث شامل لجميع البيانات المترابطة
+                    await refreshFinancialData();
+                }}
             />
         </>
     );
