@@ -511,12 +511,12 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <div>
                     <Label className="text-xs">القسم</Label>
-                    <Select value={filters.department} onValueChange={(value) => setFilters({...filters, department: value})}>
+                    <Select value={filters.department || "all"} onValueChange={(value) => setFilters({...filters, department: value === "all" ? "" : value})}>
                       <SelectTrigger className="h-8">
                         <SelectValue placeholder="اختر القسم" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">جميع الأقسام</SelectItem>
+                        <SelectItem value="all">جميع الأقسام</SelectItem>
                         {inventoryData.filterOptions.departments.map((dept) => (
                           <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                         ))}
@@ -526,12 +526,12 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
                   <div>
                     <Label className="text-xs">التصنيف</Label>
-                    <Select value={filters.category} onValueChange={(value) => setFilters({...filters, category: value})}>
+                    <Select value={filters.category || "all"} onValueChange={(value) => setFilters({...filters, category: value === "all" ? "" : value})}>
                       <SelectTrigger className="h-8">
                         <SelectValue placeholder="اختر التصنيف" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">جميع التصنيفات</SelectItem>
+                        <SelectItem value="all">جميع التصنيفات</SelectItem>
                         {inventoryData.filterOptions.categories.map((cat) => (
                           <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                         ))}
@@ -541,12 +541,12 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
                   <div>
                     <Label className="text-xs">نوع المنتج</Label>
-                    <Select value={filters.productType} onValueChange={(value) => setFilters({...filters, productType: value})}>
+                    <Select value={filters.productType || "all"} onValueChange={(value) => setFilters({...filters, productType: value === "all" ? "" : value})}>
                       <SelectTrigger className="h-8">
                         <SelectValue placeholder="اختر النوع" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">جميع الأنواع</SelectItem>
+                        <SelectItem value="all">جميع الأنواع</SelectItem>
                         {inventoryData.filterOptions.productTypes.map((type) => (
                           <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                         ))}
@@ -556,12 +556,12 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
                   <div>
                     <Label className="text-xs">الموسم</Label>
-                    <Select value={filters.season} onValueChange={(value) => setFilters({...filters, season: value})}>
+                    <Select value={filters.season || "all"} onValueChange={(value) => setFilters({...filters, season: value === "all" ? "" : value})}>
                       <SelectTrigger className="h-8">
                         <SelectValue placeholder="اختر الموسم" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">جميع المواسم</SelectItem>
+                        <SelectItem value="all">جميع المواسم</SelectItem>
                         {inventoryData.filterOptions.seasons.map((season) => (
                           <SelectItem key={season.id} value={season.id}>{season.name} ({season.type === 'season' ? 'موسم' : 'مناسبة'})</SelectItem>
                         ))}
