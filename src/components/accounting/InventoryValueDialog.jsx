@@ -629,25 +629,25 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] overflow-hidden">
-        <DialogHeader className="pb-6">
-          <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
-            <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
-              <Box className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-5xl w-[98vw] max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-3 flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+            <div className="p-1.5 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg">
+              <Box className="w-5 h-5 text-primary" />
             </div>
             تفاصيل قيمة المخزون
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* الملخص المحسن */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 text-center">
-                <div className="mb-2 p-1.5 bg-primary/10 rounded-full inline-block">
-                  <BarChart3 className="w-4 h-4 text-primary" />
+        <div className="flex-1 overflow-auto space-y-4">
+          {/* الملخص المحسن - مضغوط */}
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-sm">
+              <CardContent className="p-2 text-center">
+                <div className="mb-1 p-1 bg-primary/10 rounded-full inline-block">
+                  <BarChart3 className="w-3 h-3 text-primary" />
                 </div>
-                <div className="text-lg md:text-xl font-bold text-primary mb-1 text-xs md:text-sm">
+                <div className="text-sm font-bold text-primary mb-1">
                   {formatCurrency(displayedSummary.totalValue)}
                 </div>
                 <p className="text-xs text-muted-foreground font-medium">
@@ -656,69 +656,69 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 text-center">
-                <div className="mb-2 p-1.5 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
-                  <Package className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-sm">
+              <CardContent className="p-2 text-center">
+                <div className="mb-1 p-1 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
+                  <Package className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div className="text-lg md:text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1 text-xs md:text-sm">
+                <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mb-1">
                   {formatCurrency(displayedSummary.totalAvailable)}
                 </div>
-                <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر للبيع</p>
+                <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 text-center">
-                <div className="mb-2 p-1.5 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
-                  <Warehouse className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-sm">
+              <CardContent className="p-2 text-center">
+                <div className="mb-1 p-1 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
+                  <Warehouse className="w-3 h-3 text-orange-600 dark:text-orange-400" />
                 </div>
-                <div className="text-lg md:text-xl font-bold text-orange-600 dark:text-orange-400 mb-1 text-xs md:text-sm">
+                <div className="text-sm font-bold text-orange-600 dark:text-orange-400 mb-1">
                   {formatCurrency(displayedSummary.totalReserved)}
                 </div>
                 <p className="text-xs text-orange-700/70 dark:text-orange-300/70 font-medium">المحجوز</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 text-center">
-                <div className="mb-2 p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
-                  <Tag className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-sm">
+              <CardContent className="p-2 text-center">
+                <div className="mb-1 p-1 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
+                  <Tag className="w-3 h-3 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="text-lg md:text-xl font-bold text-blue-600 dark:text-blue-400 mb-1 text-xs md:text-sm">
+                <div className="text-sm font-bold text-blue-600 dark:text-blue-400 mb-1">
                   {formatCurrency(displayedSummary.totalCost)}
                 </div>
-                <p className="text-xs text-blue-700/70 dark:text-blue-300/70 font-medium">إجمالي التكلفة</p>
+                <p className="text-xs text-blue-700/70 dark:text-blue-300/70 font-medium">التكلفة</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-sm hover:shadow-md transition-all duration-300">
-              <CardContent className="p-3 text-center">
-                <div className="mb-2 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
-                  <BarChart3 className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-sm">
+              <CardContent className="p-2 text-center">
+                <div className="mb-1 p-1 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
+                  <BarChart3 className="w-3 h-3 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="text-lg md:text-xl font-bold text-green-600 dark:text-green-400 mb-1 text-xs md:text-sm">
+                <div className="text-sm font-bold text-green-600 dark:text-green-400 mb-1">
                   {formatCurrency(displayedSummary.totalExpectedProfit)}
                 </div>
-                <p className="text-xs text-green-700/70 dark:text-green-300/70 font-medium">الربح المتوقع</p>
+                <p className="text-xs text-green-700/70 dark:text-green-300/70 font-medium">الربح</p>
               </CardContent>
             </Card>
           </div>
 
 
-          {/* نظام الفلترة المتقدم */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="space-y-4">
+          {/* نظام الفلترة المضغوط */}
+          <Card className="flex-shrink-0">
+            <CardContent className="p-3">
+              <div className="space-y-3">
                 {/* البحث */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <div className="flex-1 relative">
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Search className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3 h-3" />
                     <Input
                       placeholder="البحث في المنتجات..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pr-10"
+                      className="pr-8 h-8"
                     />
                   </div>
                   <Button 
@@ -726,39 +726,25 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                     size="sm" 
                     onClick={clearFilters}
                     disabled={!hasActiveFilters}
+                    className="h-8"
                   >
-                    <X className="w-4 h-4 mr-1" />
+                    <X className="w-3 h-3 mr-1" />
                     مسح الفلاتر
                   </Button>
                 </div>
 
-                {/* فلاتر متقدمة - ترتيب جديد: القسم، التصنيف، الموسم، نوع المنتج */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {/* فلاتر متقدمة - ترتيب جديد: نوع المنتج، الموسم، التصنيف، القسم */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   <div>
-                    <Label className="text-xs">القسم</Label>
-                    <Select value={filters.department || "all"} onValueChange={(value) => setFilters({...filters, department: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="اختر القسم" />
+                    <Label className="text-xs">نوع المنتج</Label>
+                    <Select value={filters.productType || "all"} onValueChange={(value) => setFilters({...filters, productType: value === "all" ? "" : value})}>
+                      <SelectTrigger className="h-7">
+                        <SelectValue placeholder="اختر النوع" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">جميع الأقسام</SelectItem>
-                        {inventoryData.filterOptions.departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">التصنيف</Label>
-                    <Select value={filters.category || "all"} onValueChange={(value) => setFilters({...filters, category: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="اختر التصنيف" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">جميع التصنيفات</SelectItem>
-                        {inventoryData.filterOptions.categories.map((cat) => (
-                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        <SelectItem value="all">جميع الأنواع</SelectItem>
+                        {inventoryData.filterOptions.productTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -767,7 +753,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   <div>
                     <Label className="text-xs">الموسم</Label>
                     <Select value={filters.season || "all"} onValueChange={(value) => setFilters({...filters, season: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
+                      <SelectTrigger className="h-7">
                         <SelectValue placeholder="اختر الموسم" />
                       </SelectTrigger>
                       <SelectContent>
@@ -780,15 +766,30 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                   </div>
 
                   <div>
-                    <Label className="text-xs">نوع المنتج</Label>
-                    <Select value={filters.productType || "all"} onValueChange={(value) => setFilters({...filters, productType: value === "all" ? "" : value})}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="اختر النوع" />
+                    <Label className="text-xs">التصنيف</Label>
+                    <Select value={filters.category || "all"} onValueChange={(value) => setFilters({...filters, category: value === "all" ? "" : value})}>
+                      <SelectTrigger className="h-7">
+                        <SelectValue placeholder="اختر التصنيف" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">جميع الأنواع</SelectItem>
-                        {inventoryData.filterOptions.productTypes.map((type) => (
-                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                        <SelectItem value="all">جميع التصنيفات</SelectItem>
+                        {inventoryData.filterOptions.categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">القسم</Label>
+                    <Select value={filters.department || "all"} onValueChange={(value) => setFilters({...filters, department: value === "all" ? "" : value})}>
+                      <SelectTrigger className="h-7">
+                        <SelectValue placeholder="اختر القسم" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">جميع الأقسام</SelectItem>
+                        {inventoryData.filterOptions.departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -798,10 +799,10 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                 {/* ملخص النتائج المفلترة */}
                 {hasActiveFilters && (
                   <Card className="bg-muted/30">
-                    <CardContent className="p-3">
+                    <CardContent className="p-2">
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-muted-foreground">نتائج الفلترة:</span>
-                        <div className="flex gap-4">
+                        <div className="flex gap-3">
                           <span>{filteredSummary.itemsCount} عنصر</span>
                           <span className="font-semibold text-primary">{formatCurrency(filteredSummary.totalValue)}</span>
                         </div>
@@ -813,18 +814,19 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
             </CardContent>
           </Card>
 
-          {/* التفاصيل */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6 text-xs">
-              <TabsTrigger value="summary" className="text-xs">الملخص</TabsTrigger>
-              <TabsTrigger value="departments" className="text-xs">الأقسام</TabsTrigger>
+          {/* التفاصيل - مساحة أكبر للتمرير */}
+          <div className="flex-1 min-h-0">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-6 text-xs flex-shrink-0">
+                <TabsTrigger value="summary" className="text-xs">الملخص</TabsTrigger>
+                <TabsTrigger value="departments" className="text-xs">الأقسام</TabsTrigger>
               <TabsTrigger value="categories" className="text-xs">التصنيفات</TabsTrigger>
               <TabsTrigger value="types" className="text-xs">الأنواع</TabsTrigger>
               <TabsTrigger value="seasons" className="text-xs">المواسم</TabsTrigger>
               <TabsTrigger value="products" className="text-xs">المنتجات</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="h-48 md:h-64 mt-4">
+            <ScrollArea className="flex-1 mt-3">
               <TabsContent value="summary" className="mt-0 space-y-3">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
@@ -909,7 +911,8 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                 </div>
               </TabsContent>
             </ScrollArea>
-          </Tabs>
+            </Tabs>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
