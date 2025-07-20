@@ -186,8 +186,8 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الحقيقي (رأس المال + صافي الأرباح المحققة)
-  const getRealCashBalance = async () => {
+  // الحصول على رصيد قاصة المنزل (رأس المال + صافي الأرباح المحققة)
+  const getHomeCashBalance = async () => {
     try {
       // جلب رأس المال من الإعدادات
       const { data: appSettings, error: settingsError } = await supabase
@@ -201,12 +201,6 @@ export const useCashSources = () => {
       }
 
       const capital = appSettings?.value?.capital || 0;
-
-      // حساب صافي الأرباح المحققة باستخدام calculate_net_capital (الذي يشمل حقن وسحوبات رأس المال)
-      const { data: netCapitalMovements, error: capitalError } = await supabase.rpc('calculate_net_capital');
-      if (capitalError) {
-        console.error('خطأ في حساب حركات رأس المال:', capitalError);
-      }
 
       // حساب الأرباح المحققة من الطلبات المستلمة الفواتير
       const { data: ordersData, error: ordersError } = await supabase
@@ -244,21 +238,34 @@ export const useCashSources = () => {
         return totalProfit + orderProfit;
       }, 0) || 0;
 
-      // رصيد القاصة الحقيقي = رأس المال الأساسي + حركات رأس المال + صافي الأرباح المحققة
-      const realBalance = capital + (netCapitalMovements || 0) + realizedProfits;
+      // رصيد قاصة المنزل = رأس المال الأساسي + صافي الأرباح المحققة فقط
+      const homeCashBalance = capital + realizedProfits;
 
-      console.log('💰 تفاصيل رصيد القاصة المحدث:', {
+      console.log('🏠 تفاصيل رصيد قاصة المنزل:', {
         baseCapital: capital,
-        netCapitalMovements: netCapitalMovements,
         realizedProfits,
-        totalRealBalance: realBalance
+        totalHomeCashBalance: homeCashBalance
       });
 
-      return realBalance;
+      return homeCashBalance;
     } catch (error) {
-      console.error('خطأ في حساب رصيد القاصة الحقيقي:', error);
-      return getTotalBalance(); // العودة للرصيد العادي في حالة الخطأ
+      console.error('خطأ في حساب رصيد قاصة المنزل:', error);
+      return 0;
     }
+  };
+
+  // الحصول على رصيد القاصة الرئيسية (مجموع جميع المصادر)
+  const getMainCashBalance = () => {
+    return cashSources.reduce((total, source) => {
+      // استثناء قاصة المنزل من الحساب لتجنب التكرار
+      if (source.name === 'قاصة المنزل') return total;
+      return total + (source.current_balance || 0);
+    }, 0);
+  };
+
+  // الحصول على رصيد القاصة الحقيقي (deprecated - للتوافق مع النسخة السابقة)
+  const getRealCashBalance = async () => {
+    return getMainCashBalance();
   };
 
   // الحصول على القاصة الرئيسية
@@ -312,6 +319,8 @@ export const useCashSources = () => {
     fetchCashMovements,
     getTotalBalance,
     getRealCashBalance,
+    getHomeCashBalance,
+    getMainCashBalance,
     getMainCashSource
   };
 };

@@ -29,11 +29,15 @@ const CashSourceCard = ({
     }
   };
 
-  const getSourceColor = (type) => {
+  const getSourceColor = (name, type) => {
+    // ألوان مخصصة لكل مصدر
+    if (name === 'القاصة الرئيسية') return 'from-indigo-600 to-purple-600';
+    if (name === 'قاصة المنزل') return 'from-emerald-600 to-teal-600';
+    
     switch (type) {
-      case 'bank': return 'from-blue-500 to-blue-600';
-      case 'digital_wallet': return 'from-purple-500 to-purple-600';
-      default: return 'from-green-500 to-green-600';
+      case 'bank': return 'from-blue-600 to-cyan-600';
+      case 'digital_wallet': return 'from-violet-600 to-purple-600';
+      default: return 'from-amber-600 to-orange-600';
     }
   };
 
@@ -64,8 +68,15 @@ const CashSourceCard = ({
     .reduce((sum, m) => sum + (m.amount || 0), 0);
 
   return (
-    <Card className={cn("overflow-hidden hover:shadow-lg transition-all duration-200", className)}>
-      <CardHeader className={`bg-gradient-to-r ${getSourceColor(cashSource.type)} text-white pb-2`}>
+    <Card className={cn(
+      "overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:scale-[1.02] border-0",
+      "bg-gradient-to-br from-background to-background/50 backdrop-blur-sm",
+      className
+    )}>
+      <CardHeader className={cn(
+        `bg-gradient-to-br ${getSourceColor(cashSource.name, cashSource.type)} text-white pb-3 relative`,
+        "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none"
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
@@ -108,18 +119,20 @@ const CashSourceCard = ({
         </div>
       </CardHeader>
 
-      <CardContent className="p-4">
+      <CardContent className="p-6">
         {/* الرصيد الحالي */}
-        <div className="text-center mb-4">
-          <p className="text-sm text-muted-foreground mb-1">الرصيد الحالي</p>
-          <p className="text-2xl font-bold text-primary">
-            {cashSource.name === 'القاصة الرئيسية' && realBalance !== undefined 
-              ? realBalance.toLocaleString() 
-              : (cashSource.current_balance || 0).toLocaleString()
-            } د.ع
+        <div className="text-center mb-6">
+          <p className="text-sm text-muted-foreground mb-2">الرصيد الحالي</p>
+          <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            {(realBalance !== undefined ? realBalance : cashSource.current_balance || 0).toLocaleString()} د.ع
           </p>
           {cashSource.name === 'القاصة الرئيسية' && (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-2 px-3 py-1 bg-muted/50 rounded-full inline-block">
+              مجموع جميع المصادر
+            </p>
+          )}
+          {cashSource.name === 'قاصة المنزل' && (
+            <p className="text-xs text-muted-foreground mt-2 px-3 py-1 bg-muted/50 rounded-full inline-block">
               رأس المال + صافي الأرباح
             </p>
           )}
@@ -173,24 +186,42 @@ const CashSourceCard = ({
         )}
 
         {/* أزرار العمليات */}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button 
             size="sm" 
             variant="outline" 
-            className="flex-1 text-green-600 border-green-200 hover:bg-green-50"
+            className={cn(
+              "flex-1 group relative overflow-hidden border-2 transition-all duration-300",
+              "border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-300",
+              "hover:shadow-lg hover:shadow-emerald-200/50 hover:scale-105"
+            )}
             onClick={() => onAddCash?.(cashSource)}
           >
-            <Plus className="w-4 h-4 ml-1" />
-            إضافة
+            <Plus className="w-4 h-4 ml-1 transition-transform group-hover:scale-110" />
+            <span className="transition-all duration-300 group-hover:text-emerald-800">
+              إضافة
+            </span>
+            <span className="absolute inset-0 flex items-center justify-center text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-emerald-50/80 backdrop-blur-sm">
+              إضافة أموال
+            </span>
           </Button>
           <Button 
             size="sm" 
             variant="outline" 
-            className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
+            className={cn(
+              "flex-1 group relative overflow-hidden border-2 transition-all duration-300",
+              "border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300",
+              "hover:shadow-lg hover:shadow-red-200/50 hover:scale-105"
+            )}
             onClick={() => onWithdrawCash?.(cashSource)}
           >
-            <Minus className="w-4 h-4 ml-1" />
-            سحب
+            <Minus className="w-4 h-4 ml-1 transition-transform group-hover:scale-110" />
+            <span className="transition-all duration-300 group-hover:text-red-800">
+              سحب
+            </span>
+            <span className="absolute inset-0 flex items-center justify-center text-red-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-red-50/80 backdrop-blur-sm">
+              سحب أموال
+            </span>
           </Button>
         </div>
 

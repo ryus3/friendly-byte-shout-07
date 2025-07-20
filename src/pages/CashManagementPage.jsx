@@ -38,30 +38,36 @@ const CashManagementPage = () => {
     addCashSource,
     addCashToSource,
     withdrawCashFromSource,
-    getRealCashBalance,
+    getHomeCashBalance,
+    getMainCashBalance,
     getTotalBalance
   } = useCashSources();
 
   const [selectedSource, setSelectedSource] = useState(null);
   const [dialogType, setDialogType] = useState(null); // 'add' | 'withdraw'
   const [showDialog, setShowDialog] = useState(false);
-  const [realCashBalance, setRealCashBalance] = useState(0);
+  const [homeCashBalance, setHomeCashBalance] = useState(0);
+  const [mainCashBalance, setMainCashBalance] = useState(0);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // جلب رصيد القاصة الحقيقي
+  // جلب أرصدة المصادر المختلفة
   useEffect(() => {
-    const fetchRealBalance = async () => {
-      if (getRealCashBalance) {
-        const balance = await getRealCashBalance();
-        setRealCashBalance(balance);
+    const fetchBalances = async () => {
+      if (getHomeCashBalance) {
+        const homeBalance = await getHomeCashBalance();
+        setHomeCashBalance(homeBalance);
       }
+      
+      const mainBalance = getMainCashBalance();
+      setMainCashBalance(mainBalance);
     };
-    fetchRealBalance();
     
-    // تحديث الرصيد عند تغيير المصادر أو الحركات
-    const interval = setInterval(fetchRealBalance, 30000); // كل 30 ثانية
+    fetchBalances();
+    
+    // تحديث الأرصدة عند تغيير المصادر أو الحركات
+    const interval = setInterval(fetchBalances, 30000); // كل 30 ثانية
     return () => clearInterval(interval);
-  }, [getRealCashBalance, cashSources, cashMovements]);
+  }, [getHomeCashBalance, getMainCashBalance, cashSources, cashMovements]);
 
   // حذف مصدر نقد مع رسالة تأكيد أنيقة
 
@@ -173,20 +179,20 @@ const CashManagementPage = () => {
   // إحصائيات المؤشرات الرئيسية
   const kpiCards = [
     {
-      title: 'إجمالي الأرصدة',
-      value: getTotalBalance(),
+      title: 'القاصة الرئيسية',
+      value: mainCashBalance,
       format: 'currency',
       icon: Wallet,
-      colors: ['blue-500', 'sky-500'],
-      change: `${cashSources.length} مصدر نشط`
+      colors: ['indigo-600', 'purple-600'],
+      change: 'مجموع جميع المصادر'
     },
     {
-      title: 'حركات اليوم',
-      value: todayMovements.length,
-      format: 'number',
-      icon: Activity,
-      colors: ['green-500', 'emerald-500'],
-      change: `صافي: ${todayStats.net >= 0 ? '+' : ''}${todayStats.net.toLocaleString()} د.ع`
+      title: 'النقد الفعلي',
+      value: mainCashBalance, // نفس القاصة الرئيسية
+      format: 'currency',
+      icon: DollarSign,
+      colors: ['emerald-600', 'teal-600'],
+      change: 'الرصيد المتاح للاستخدام'
     },
     {
       title: 'داخل هذا الشهر',
@@ -289,9 +295,18 @@ const CashManagementPage = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {cashSources.map((source) => {
                   const sourceMovements = cashMovements.filter(m => m.cash_source_id === source.id);
+                  
+                  // تحديد الرصيد المناسب لكل مصدر
+                  let displayBalance = source.current_balance;
+                  if (source.name === 'القاصة الرئيسية') {
+                    displayBalance = mainCashBalance;
+                  } else if (source.name === 'قاصة المنزل') {
+                    displayBalance = homeCashBalance;
+                  }
+                  
                   return (
                     <CashSourceCard
                       key={source.id}
@@ -301,7 +316,7 @@ const CashManagementPage = () => {
                       onWithdrawCash={handleWithdrawCash}
                       onViewDetails={() => console.log('View details:', source)}
                       onDelete={handleDeleteSource}
-                      realBalance={source.name === 'القاصة الرئيسية' ? realCashBalance : undefined}
+                      realBalance={displayBalance}
                     />
                   );
                 })}
