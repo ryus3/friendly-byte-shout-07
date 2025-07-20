@@ -194,8 +194,8 @@ const CashManagementPage = () => {
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
       change: mainCashBalance > 15000000 
-        ? `رأس المال: 15,000,000 + أرباح: ${(mainCashBalance - 15000000).toLocaleString()}` 
-        : 'رأس المال فقط (لا توجد أرباح حقيقية بعد)'
+        ? `رأس مال: 15م + أرباح: ${(mainCashBalance - 15000000).toLocaleString()}` 
+        : `رأس المال: ${mainCashBalance.toLocaleString()} د.ع`
     },
     {
       title: 'الرصيد النقدي الفعلي',

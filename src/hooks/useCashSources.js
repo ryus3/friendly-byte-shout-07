@@ -261,18 +261,37 @@ export const useCashSources = () => {
   const getMainCashBalance = () => {
     try {
       const result = calculateMainBalance();
-      const balance = result?.balance || 0;
+      const balance = result?.balance || 15000000; // رأس المال الافتراضي
       
       console.log('💰 رصيد القاصة الرئيسية المحسوب (النظام الجديد):', {
         balance,
         breakdown: result?.breakdown,
+        formula: result?.breakdown?.calculation,
         formatted: balance.toLocaleString()
       });
 
-      return result; // إرجاع الكائن الكامل بدلاً من الرقم فقط
+      return result || {
+        balance: 15000000,
+        breakdown: {
+          initialCapital: 15000000,
+          realizedProfits: 0,
+          totalExpenses: 0,
+          totalPurchases: 0,
+          calculation: "15000000 + 0 - 0 - 0 = 15000000"
+        }
+      };
     } catch (error) {
       console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
-      return { balance: 0, breakdown: {} };
+      return { 
+        balance: 15000000, 
+        breakdown: { 
+          initialCapital: 15000000,
+          realizedProfits: 0,
+          totalExpenses: 0,
+          totalPurchases: 0,
+          error: error.message 
+        } 
+      };
     }
   };
 

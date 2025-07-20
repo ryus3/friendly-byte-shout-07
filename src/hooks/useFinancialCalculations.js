@@ -17,13 +17,13 @@ export const useFinancialCalculations = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // جلب جميع البيانات الخام
+  // جلب جميع البيانات الخام (بدون إعدادات أو حركات نقد)
   const fetchRawData = async () => {
     try {
       setLoading(true);
       
-      // جلب البيانات بالتوازي
-      const [ordersResult, expensesResult, purchasesResult, settingsResult, cashMovementsResult] = await Promise.all([
+      // جلب البيانات الأساسية فقط - بدون إعدادات أو حركات نقد
+      const [ordersResult, expensesResult, purchasesResult] = await Promise.all([
         // الطلبات مع التفاصيل
         supabase
           .from('orders')
@@ -48,37 +48,19 @@ export const useFinancialCalculations = () => {
         // المشتريات
         supabase
           .from('purchases')
-          .select('*'),
-        
-        // الإعدادات
-        supabase
-          .from('settings')
-          .select('*'),
-        
-        // حركات النقد
-        supabase
-          .from('cash_movements')
           .select('*')
       ]);
 
       if (ordersResult.error) throw ordersResult.error;
       if (expensesResult.error) throw expensesResult.error;
       if (purchasesResult.error) throw purchasesResult.error;
-      if (settingsResult.error) throw settingsResult.error;
-      if (cashMovementsResult.error) throw cashMovementsResult.error;
-
-      // تحويل الإعدادات لكائن سهل الاستخدام
-      const settingsObj = {};
-      settingsResult.data?.forEach(setting => {
-        settingsObj[setting.key] = setting.value;
-      });
 
       setRawData({
         orders: ordersResult.data || [],
         expenses: expensesResult.data || [],
         purchases: purchasesResult.data || [],
-        settings: settingsObj,
-        cashMovements: cashMovementsResult.data || []
+        settings: {}, // فارغ - لا نستخدم إعدادات من قاعدة البيانات
+        cashMovements: [] // فارغ - لا نستخدم حركات نقد من قاعدة البيانات
       });
       
     } catch (err) {
@@ -89,21 +71,9 @@ export const useFinancialCalculations = () => {
     }
   };
 
-  // 1. حساب رأس المال الحقيقي
+  // 1. حساب رأس المال (ثابت 15 مليون - لا يُحفظ في قاعدة البيانات)
   const getInitialCapital = () => {
-    const capital = parseFloat(rawData.settings.initial_capital || 0);
-    
-    // إضافة الحقن الرأسمالية
-    const capitalInjections = rawData.cashMovements
-      .filter(m => m.reference_type === 'capital_injection')
-      .reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
-    
-    // طرح السحوبات الرأسمالية
-    const capitalWithdrawals = rawData.cashMovements
-      .filter(m => m.reference_type === 'capital_withdrawal')
-      .reduce((sum, m) => sum + parseFloat(m.amount || 0), 0);
-    
-    return capital + capitalInjections - capitalWithdrawals;
+    return 15000000; // 15 مليون دينار عراقي - رأس المال الثابت
   };
 
   // 2. حساب الأرباح المحققة (طلبات مستلمة + فاتورة)
