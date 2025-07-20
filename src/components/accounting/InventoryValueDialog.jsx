@@ -186,20 +186,32 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
       const filterProductTypes = new Set();
       const filterSeasons = new Set();
 
-      // معالجة خيارات الفلترة
+      // معالجة خيارات الفلترة - إزالة التكرار
       allInventoryItems.forEach(item => {
         const product = item.products;
         product.product_departments?.forEach(pd => {
-          if (pd.departments) filterDepartments.add(pd.departments);
+          if (pd.departments) {
+            const exists = Array.from(filterDepartments).some(d => d.id === pd.departments.id);
+            if (!exists) filterDepartments.add(pd.departments);
+          }
         });
         product.product_categories?.forEach(pc => {
-          if (pc.categories) filterCategories.add(pc.categories);
+          if (pc.categories) {
+            const exists = Array.from(filterCategories).some(c => c.id === pc.categories.id);
+            if (!exists) filterCategories.add(pc.categories);
+          }
         });
         product.product_product_types?.forEach(ppt => {
-          if (ppt.product_types) filterProductTypes.add(ppt.product_types);
+          if (ppt.product_types) {
+            const exists = Array.from(filterProductTypes).some(t => t.id === ppt.product_types.id);
+            if (!exists) filterProductTypes.add(ppt.product_types);
+          }
         });
         product.product_seasons_occasions?.forEach(pso => {
-          if (pso.seasons_occasions) filterSeasons.add(pso.seasons_occasions);
+          if (pso.seasons_occasions) {
+            const exists = Array.from(filterSeasons).some(s => s.id === pso.seasons_occasions.id);
+            if (!exists) filterSeasons.add(pso.seasons_occasions);
+          }
         });
       });
 
@@ -390,15 +402,25 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     }
   }, [open, filters]); // إعادة التحميل عند تغيير الفلاتر
 
-  // تطبيق الفلاتر على البيانات الأصلية وحساب النتائج المفلترة
+  // تطبيق الفلاتر وحساب النتائج المفلترة
   useEffect(() => {
-    if (!inventoryData.products.length) return;
+    if (!inventoryData.departments.length && !inventoryData.categories.length && 
+        !inventoryData.productTypes.length && !inventoryData.seasons.length && 
+        !inventoryData.products.length) return;
 
-    // فلترة المنتجات على أساس المعايير المختارة
-    const filteredItems = inventoryData.products.filter(product => {
-      const matchesSearch = searchTerm === '' || product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    // دمج جميع البيانات لحساب الفلترة
+    const allItems = [
+      ...inventoryData.departments,
+      ...inventoryData.categories, 
+      ...inventoryData.productTypes,
+      ...inventoryData.seasons,
+      ...inventoryData.products
+    ];
+
+    // فلترة البيانات
+    const filteredItems = allItems.filter(item => {
+      const matchesSearch = searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesSearch;
-      // يمكن إضافة فلاتر أخرى هنا لاحقاً
     });
 
     // حساب الملخص المفلتر
@@ -418,7 +440,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     });
 
     setFilteredSummary(summary);
-  }, [inventoryData.products, searchTerm, filters]);
+  }, [inventoryData, searchTerm, filters]);
 
   // فلترة البيانات
   const getFilteredData = (data) => {
@@ -440,8 +462,10 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
   const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
 
-  const totalAvailable = inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0);
-  const totalReserved = inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0);
+  // حساب القيم المفلترة للملخص
+  const filteredTotalValue = hasActiveFilters ? filteredSummary.totalValue : totalInventoryValue;
+  const filteredTotalAvailable = hasActiveFilters ? filteredSummary.totalAvailable : inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0);
+  const filteredTotalReserved = hasActiveFilters ? filteredSummary.totalReserved : inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -458,24 +482,26 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <CardContent className="p-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-primary">
-                    {formatCurrency(totalInventoryValue)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">إجمالي القيمة</p>
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(totalAvailable)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">المتوفر للبيع</p>
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
-                    {formatCurrency(totalReserved)}
-                  </div>
-                  <p className="text-sm text-muted-foreground">المحجوز</p>
-                </div>
+                 <div>
+                   <div className="text-2xl font-bold text-primary">
+                     {formatCurrency(filteredTotalValue)}
+                   </div>
+                   <p className="text-sm text-muted-foreground">
+                     {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
+                   </p>
+                 </div>
+                 <div>
+                   <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                     {formatCurrency(filteredTotalAvailable)}
+                   </div>
+                   <p className="text-sm text-muted-foreground">المتوفر للبيع</p>
+                 </div>
+                 <div>
+                   <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                     {formatCurrency(filteredTotalReserved)}
+                   </div>
+                   <p className="text-sm text-muted-foreground">المحجوز</p>
+                 </div>
               </div>
             </CardContent>
           </Card>
