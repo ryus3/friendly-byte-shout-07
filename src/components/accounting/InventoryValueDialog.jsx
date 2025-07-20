@@ -3,11 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import { Box, Package, Tag, Calendar, BarChart3, Warehouse, Shield } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Box, Package, Tag, Calendar, BarChart3, Warehouse, Search, Filter, X } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -16,88 +19,75 @@ const formatCurrency = (amount) => {
   }).format(amount || 0) + ' د.ع';
 };
 
-const CategoryCard = ({ title, items, icon: Icon, color }) => {
-  const totalValue = items.reduce((sum, item) => sum + item.value, 0);
-  const totalAvailable = items.reduce((sum, item) => sum + item.available_value, 0);
-  const totalReserved = items.reduce((sum, item) => sum + item.reserved_value, 0);
-
-  return (
-    <Card className="h-full">
-      <CardHeader className="pb-3">
-        <CardTitle className={`flex items-center gap-2 text-lg text-${color}-600`}>
-          <Icon className="w-5 h-5" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {/* إجمالي القيمة */}
-          <div className={`p-4 rounded-lg bg-${color}-50 border border-${color}-200`}>
-            <div className="text-center">
-              <div className={`text-2xl font-bold text-${color}-700 mb-1`}>
-                {formatCurrency(totalValue)}
-              </div>
-              <Badge variant="outline" className={`text-${color}-600 border-${color}-300`}>
-                إجمالي القيمة
-              </Badge>
-            </div>
-          </div>
-
-          {/* تفاصيل المتوفر والمحجوز */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="text-lg font-semibold text-green-700">
-                {formatCurrency(totalAvailable)}
-              </div>
-              <p className="text-xs text-green-600 mt-1">متوفر</p>
-            </div>
-            <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-              <div className="text-lg font-semibold text-orange-700">
-                {formatCurrency(totalReserved)}
-              </div>
-              <p className="text-xs text-orange-600 mt-1">محجوز</p>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* قائمة العناصر */}
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {items.map((item, index) => (
-              <div key={index} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{item.name}</p>
-                  <div className="flex gap-4 text-xs text-muted-foreground mt-1">
-                    <span>كمية: {item.quantity}</span>
-                    <span>متوفر: {item.available}</span>
-                    <span>محجوز: {item.reserved}</span>
-                  </div>
-                </div>
-                <div className="text-left">
-                  <div className="font-semibold text-sm">
-                    {formatCurrency(item.value)}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatCurrency(item.price)} / قطعة
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+const formatNumber = (num) => {
+  return new Intl.NumberFormat('ar-IQ').format(num || 0);
 };
+
+const ItemCard = ({ item, showProductDetails = false }) => (
+  <Card className="bg-card/50 hover:bg-card/80 transition-colors border-border/50">
+    <CardContent className="p-4">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex-1">
+          <h4 className="font-semibold text-foreground mb-1">{item.name}</h4>
+          {showProductDetails && item.variants && (
+            <p className="text-xs text-muted-foreground">
+              {item.variants} متغير متوفر
+            </p>
+          )}
+        </div>
+        <Badge variant="outline" className="text-xs shrink-0">
+          {formatCurrency(item.value)}
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="text-center p-2 bg-muted/50 rounded">
+          <div className="font-semibold text-primary">{formatNumber(item.quantity)}</div>
+          <div className="text-muted-foreground">إجمالي</div>
+        </div>
+        <div className="text-center p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded">
+          <div className="font-semibold text-emerald-600 dark:text-emerald-400">{formatNumber(item.available)}</div>
+          <div className="text-muted-foreground">متوفر</div>
+        </div>
+        <div className="text-center p-2 bg-orange-50 dark:bg-orange-950/30 rounded">
+          <div className="font-semibold text-orange-600 dark:text-orange-400">{formatNumber(item.reserved)}</div>
+          <div className="text-muted-foreground">محجوز</div>
+        </div>
+      </div>
+
+      <div className="mt-3 pt-2 border-t border-border/50">
+        <div className="flex justify-between text-xs">
+          <span className="text-muted-foreground">المتوفر: {formatCurrency(item.available_value)}</span>
+          <span className="text-muted-foreground">المحجوز: {formatCurrency(item.reserved_value)}</span>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('summary');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    department: '',
+    category: '',
+    productType: '',
+    season: ''
+  });
+  
   const [inventoryData, setInventoryData] = useState({
     departments: [],
     categories: [],
     productTypes: [],
     seasons: [],
-    products: []
+    products: [],
+    filterOptions: {
+      departments: [],
+      categories: [],
+      productTypes: [],
+      seasons: []
+    }
   });
 
   const fetchInventoryDetails = async () => {
@@ -136,12 +126,18 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
       if (error) throw error;
 
-      // تنظيم البيانات حسب الأقسام
+      // تنظيم البيانات
       const departmentMap = new Map();
       const categoryMap = new Map();
       const productTypeMap = new Map();
       const seasonMap = new Map();
       const productMap = new Map();
+      
+      // خيارات الفلترة
+      const filterDepartments = new Set();
+      const filterCategories = new Set();
+      const filterProductTypes = new Set();
+      const filterSeasons = new Set();
 
       inventoryItems.forEach(item => {
         const product = item.products;
@@ -154,6 +150,20 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         const availableValue = available * price;
         const reservedValue = reserved * price;
 
+        // إضافة خيارات الفلترة
+        product.product_departments?.forEach(pd => {
+          if (pd.departments) filterDepartments.add(pd.departments);
+        });
+        product.product_categories?.forEach(pc => {
+          if (pc.categories) filterCategories.add(pc.categories);
+        });
+        product.product_product_types?.forEach(ppt => {
+          if (ppt.product_types) filterProductTypes.add(ppt.product_types);
+        });
+        product.product_seasons_occasions?.forEach(pso => {
+          if (pso.seasons_occasions) filterSeasons.add(pso.seasons_occasions);
+        });
+
         // معالجة الأقسام
         product.product_departments?.forEach(pd => {
           const dept = pd.departments;
@@ -161,6 +171,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           
           if (!departmentMap.has(dept.id)) {
             departmentMap.set(dept.id, {
+              id: dept.id,
               name: dept.name,
               quantity: 0,
               available: 0,
@@ -168,7 +179,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
-              price: 0
+              items: 0
             });
           }
           
@@ -179,6 +190,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           deptData.value += totalValue;
           deptData.available_value += availableValue;
           deptData.reserved_value += reservedValue;
+          deptData.items += 1;
         });
 
         // معالجة التصنيفات
@@ -188,6 +200,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           
           if (!categoryMap.has(cat.id)) {
             categoryMap.set(cat.id, {
+              id: cat.id,
               name: cat.name,
               quantity: 0,
               available: 0,
@@ -195,7 +208,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
-              price: 0
+              items: 0
             });
           }
           
@@ -206,6 +219,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           catData.value += totalValue;
           catData.available_value += availableValue;
           catData.reserved_value += reservedValue;
+          catData.items += 1;
         });
 
         // معالجة أنواع المنتجات
@@ -215,6 +229,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           
           if (!productTypeMap.has(type.id)) {
             productTypeMap.set(type.id, {
+              id: type.id,
               name: type.name,
               quantity: 0,
               available: 0,
@@ -222,7 +237,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               value: 0,
               available_value: 0,
               reserved_value: 0,
-              price: 0
+              items: 0
             });
           }
           
@@ -233,6 +248,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           typeData.value += totalValue;
           typeData.available_value += availableValue;
           typeData.reserved_value += reservedValue;
+          typeData.items += 1;
         });
 
         // معالجة المواسم
@@ -242,14 +258,16 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           
           if (!seasonMap.has(season.id)) {
             seasonMap.set(season.id, {
-              name: `${season.name} (${season.type === 'season' ? 'موسم' : 'مناسبة'})`,
+              id: season.id,
+              name: season.name,
+              type: season.type,
               quantity: 0,
               available: 0,
               reserved: 0,
               value: 0,
               available_value: 0,
               reserved_value: 0,
-              price: 0
+              items: 0
             });
           }
           
@@ -260,12 +278,14 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
           seasonData.value += totalValue;
           seasonData.available_value += availableValue;
           seasonData.reserved_value += reservedValue;
+          seasonData.items += 1;
         });
 
         // معالجة المنتجات
         const productKey = product.id;
         if (!productMap.has(productKey)) {
           productMap.set(productKey, {
+            id: product.id,
             name: product.name,
             quantity: 0,
             available: 0,
@@ -273,7 +293,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
             value: 0,
             available_value: 0,
             reserved_value: 0,
-            price: 0
+            variants: 0
           });
         }
         
@@ -284,6 +304,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         prodData.value += totalValue;
         prodData.available_value += availableValue;
         prodData.reserved_value += reservedValue;
+        prodData.variants += 1;
       });
 
       setInventoryData({
@@ -291,7 +312,13 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         categories: Array.from(categoryMap.values()).sort((a, b) => b.value - a.value),
         productTypes: Array.from(productTypeMap.values()).sort((a, b) => b.value - a.value),
         seasons: Array.from(seasonMap.values()).sort((a, b) => b.value - a.value),
-        products: Array.from(productMap.values()).sort((a, b) => b.value - a.value).slice(0, 20) // أفضل 20 منتج
+        products: Array.from(productMap.values()).sort((a, b) => b.value - a.value),
+        filterOptions: {
+          departments: Array.from(filterDepartments),
+          categories: Array.from(filterCategories),
+          productTypes: Array.from(filterProductTypes),
+          seasons: Array.from(filterSeasons)
+        }
       });
 
     } catch (error) {
@@ -312,135 +339,177 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     }
   }, [open]);
 
-  const totalAvailable = Object.values(inventoryData).flat().reduce((sum, items) => 
-    Array.isArray(items) ? sum + items.reduce((s, item) => s + (item.available_value || 0), 0) : sum, 0
-  );
-  
-  const totalReserved = Object.values(inventoryData).flat().reduce((sum, items) => 
-    Array.isArray(items) ? sum + items.reduce((s, item) => s + (item.reserved_value || 0), 0) : sum, 0
-  );
+  // فلترة البيانات
+  const getFilteredData = (data) => {
+    return data.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    });
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilters({
+      department: '',
+      category: '',
+      productType: '',
+      season: ''
+    });
+  };
+
+  const totalAvailable = inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0);
+  const totalReserved = inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Box className="w-6 h-6 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Box className="w-5 h-5 text-primary" />
             تفاصيل قيمة المخزون
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* إجمالي قيمة المخزون */}
-          <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-            <CardContent className="p-6">
-              <div className="text-center space-y-4">
-                <div className="text-4xl font-bold text-primary">
-                  {formatCurrency(totalInventoryValue)}
+        <div className="space-y-4">
+          {/* الملخص */}
+          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-primary">
+                    {formatCurrency(totalInventoryValue)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">إجمالي القيمة</p>
                 </div>
-                <Badge variant="outline" className="text-lg px-4 py-2">
-                  إجمالي قيمة المخزون
-                </Badge>
-                
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                    <div className="text-2xl font-bold text-green-700">
-                      {formatCurrency(totalAvailable)}
-                    </div>
-                    <p className="text-green-600 font-medium">المتوفر للبيع</p>
+                <div>
+                  <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {formatCurrency(totalAvailable)}
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <div className="text-2xl font-bold text-orange-700">
-                      {formatCurrency(totalReserved)}
-                    </div>
-                    <p className="text-orange-600 font-medium">المحجوز</p>
+                  <p className="text-sm text-muted-foreground">المتوفر للبيع</p>
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                    {formatCurrency(totalReserved)}
                   </div>
+                  <p className="text-sm text-muted-foreground">المحجوز</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* التفاصيل في تابات */}
-          <Tabs defaultValue="departments" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="departments" className="text-sm">الأقسام</TabsTrigger>
-              <TabsTrigger value="categories" className="text-sm">التصنيفات</TabsTrigger>
-              <TabsTrigger value="types" className="text-sm">أنواع المنتجات</TabsTrigger>
-              <TabsTrigger value="seasons" className="text-sm">المواسم</TabsTrigger>
-              <TabsTrigger value="products" className="text-sm">أفضل المنتجات</TabsTrigger>
+          {/* البحث والفلترة */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder="البحث في المنتجات..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pr-10"
+                  />
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={clearFilters}
+                  disabled={!searchTerm}
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  مسح
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* التفاصيل */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 text-xs">
+              <TabsTrigger value="summary" className="text-xs">الملخص</TabsTrigger>
+              <TabsTrigger value="departments" className="text-xs">الأقسام</TabsTrigger>
+              <TabsTrigger value="categories" className="text-xs">التصنيفات</TabsTrigger>
+              <TabsTrigger value="types" className="text-xs">الأنواع</TabsTrigger>
+              <TabsTrigger value="products" className="text-xs">المنتجات</TabsTrigger>
             </TabsList>
 
-            <div className="mt-6 max-h-96 overflow-y-auto">
+            <ScrollArea className="h-64 mt-4">
+              <TabsContent value="summary" className="mt-0 space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                  <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                    <CardContent className="p-3">
+                      <Warehouse className="w-6 h-6 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                        {inventoryData.departments.length}
+                      </div>
+                      <div className="text-xs text-blue-600 dark:text-blue-400">قسم</div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
+                    <CardContent className="p-3">
+                      <Tag className="w-6 h-6 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                        {inventoryData.categories.length}
+                      </div>
+                      <div className="text-xs text-purple-600 dark:text-purple-400">تصنيف</div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                    <CardContent className="p-3">
+                      <Package className="w-6 h-6 text-green-600 dark:text-green-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-green-700 dark:text-green-300">
+                        {inventoryData.productTypes.length}
+                      </div>
+                      <div className="text-xs text-green-600 dark:text-green-400">نوع</div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
+                    <CardContent className="p-3">
+                      <BarChart3 className="w-6 h-6 text-orange-600 dark:text-orange-400 mx-auto mb-1" />
+                      <div className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                        {inventoryData.products.length}
+                      </div>
+                      <div className="text-xs text-orange-600 dark:text-orange-400">منتج</div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
               <TabsContent value="departments" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {inventoryData.departments.map((dept, index) => (
-                    <CategoryCard
-                      key={index}
-                      title={dept.name}
-                      items={[dept]}
-                      icon={Warehouse}
-                      color="blue"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getFilteredData(inventoryData.departments).map((dept) => (
+                    <ItemCard key={dept.id} item={dept} />
                   ))}
                 </div>
               </TabsContent>
 
               <TabsContent value="categories" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {inventoryData.categories.map((cat, index) => (
-                    <CategoryCard
-                      key={index}
-                      title={cat.name}
-                      items={[cat]}
-                      icon={Tag}
-                      color="purple"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getFilteredData(inventoryData.categories).map((cat) => (
+                    <ItemCard key={cat.id} item={cat} />
                   ))}
                 </div>
               </TabsContent>
 
               <TabsContent value="types" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {inventoryData.productTypes.map((type, index) => (
-                    <CategoryCard
-                      key={index}
-                      title={type.name}
-                      items={[type]}
-                      icon={Package}
-                      color="green"
-                    />
-                  ))}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="seasons" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {inventoryData.seasons.map((season, index) => (
-                    <CategoryCard
-                      key={index}
-                      title={season.name}
-                      items={[season]}
-                      icon={Calendar}
-                      color="orange"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getFilteredData(inventoryData.productTypes).map((type) => (
+                    <ItemCard key={type.id} item={type} />
                   ))}
                 </div>
               </TabsContent>
 
               <TabsContent value="products" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {inventoryData.products.map((product, index) => (
-                    <CategoryCard
-                      key={index}
-                      title={product.name}
-                      items={[product]}
-                      icon={BarChart3}
-                      color="red"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {getFilteredData(inventoryData.products).slice(0, 50).map((product) => (
+                    <ItemCard key={product.id} item={product} showProductDetails />
                   ))}
                 </div>
               </TabsContent>
-            </div>
+            </ScrollArea>
           </Tabs>
         </div>
       </DialogContent>
