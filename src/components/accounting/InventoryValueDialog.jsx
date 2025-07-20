@@ -451,23 +451,60 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         !inventoryData.productTypes.length && !inventoryData.seasons.length && 
         !inventoryData.products.length) return;
 
-    // دمج جميع البيانات لحساب الفلترة
-    const allItems = [
-      ...inventoryData.departments,
-      ...inventoryData.categories, 
-      ...inventoryData.productTypes,
-      ...inventoryData.seasons,
-      ...inventoryData.products
-    ];
+    // عندما لا توجد فلاتر، استخدم جميع البيانات
+    if (!hasActiveFilters) {
+      const allSummary = {
+        totalValue: inventoryData.products.reduce((sum, item) => sum + (item.value || 0), 0),
+        totalAvailable: inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0),
+        totalReserved: inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0),
+        totalQuantity: inventoryData.products.reduce((sum, item) => sum + (item.quantity || 0), 0),
+        totalCost: inventoryData.products.reduce((sum, item) => sum + (item.cost_value || 0), 0),
+        totalExpectedProfit: inventoryData.products.reduce((sum, item) => sum + (item.expected_profit || 0), 0),
+        itemsCount: inventoryData.products.length
+      };
+      setFilteredSummary(allSummary);
+      return;
+    }
 
-    // فلترة البيانات
-    const filteredItems = allItems.filter(item => {
-      const matchesSearch = searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesSearch;
-    });
+    // عند وجود فلاتر، احسب بناءً على البيانات المفلترة من قاعدة البيانات
+    let filteredSums = {
+      totalValue: 0,
+      totalAvailable: 0,
+      totalReserved: 0,
+      totalQuantity: 0,
+      totalCost: 0,
+      totalExpectedProfit: 0,
+      itemsCount: 0
+    };
 
-    // حساب الملخص المفلتر
-    const summary = filteredItems.reduce((acc, item) => {
+    // استخدم النوع المحدد في التبويبة الحالية للحساب
+    let sourceData = [];
+    switch(activeTab) {
+      case 'departments':
+        sourceData = inventoryData.departments;
+        break;
+      case 'categories':
+        sourceData = inventoryData.categories;
+        break;
+      case 'types':
+        sourceData = inventoryData.productTypes;
+        break;
+      case 'seasons':
+        sourceData = inventoryData.seasons;
+        break;
+      case 'products':
+      default:
+        sourceData = inventoryData.products;
+        break;
+    }
+
+    // فلترة حسب البحث النصي
+    const searchFiltered = sourceData.filter(item => 
+      searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // حساب المجاميع للعناصر المفلترة
+    filteredSums = searchFiltered.reduce((acc, item) => {
       acc.totalValue += item.value || 0;
       acc.totalAvailable += item.available_value || 0;
       acc.totalReserved += item.reserved_value || 0;
@@ -476,18 +513,10 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
       acc.totalExpectedProfit += item.expected_profit || 0;
       acc.itemsCount += 1;
       return acc;
-    }, {
-      totalValue: 0,
-      totalAvailable: 0,
-      totalReserved: 0,
-      totalQuantity: 0,
-      totalCost: 0,
-      totalExpectedProfit: 0,
-      itemsCount: 0
-    });
+    }, filteredSums);
 
-    setFilteredSummary(summary);
-  }, [inventoryData, searchTerm, filters]);
+    setFilteredSummary(filteredSums);
+  }, [inventoryData, searchTerm, filters, activeTab, hasActiveFilters]);
 
   // فلترة البيانات
   const getFilteredData = (data) => {
@@ -510,13 +539,17 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
   const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
 
   // حساب القيم المفلترة للملخص
-  const filteredTotalValue = hasActiveFilters ? filteredSummary.totalValue : totalInventoryValue;
-  const filteredTotalAvailable = hasActiveFilters ? filteredSummary.totalAvailable : inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0);
-  const filteredTotalReserved = hasActiveFilters ? filteredSummary.totalReserved : inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0);
+  const displayedSummary = hasActiveFilters ? filteredSummary : {
+    totalValue: totalInventoryValue,
+    totalAvailable: inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0),
+    totalReserved: inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0),
+    totalCost: inventoryData.products.reduce((sum, item) => sum + (item.cost_value || 0), 0),
+    totalExpectedProfit: inventoryData.products.reduce((sum, item) => sum + (item.expected_profit || 0), 0)
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] overflow-hidden">
         <DialogHeader className="pb-6">
           <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
             <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-xl">
@@ -528,66 +561,66 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
         <div className="space-y-6">
           {/* الملخص المحسن */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="p-5 text-center">
-                <div className="mb-3 p-2 bg-primary/10 rounded-full inline-block">
-                  <BarChart3 className="w-5 h-5 text-primary" />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 md:gap-3">
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardContent className="p-3 text-center">
+                <div className="mb-2 p-1.5 bg-primary/10 rounded-full inline-block">
+                  <BarChart3 className="w-4 h-4 text-primary" />
                 </div>
-                <div className="text-2xl font-bold text-primary mb-1">
-                  {formatCurrency(filteredTotalValue)}
+                <div className="text-lg md:text-xl font-bold text-primary mb-1 text-xs md:text-sm">
+                  {formatCurrency(displayedSummary.totalValue)}
                 </div>
-                <p className="text-sm text-muted-foreground font-medium">
+                <p className="text-xs text-muted-foreground font-medium">
                   {hasActiveFilters ? 'القيمة المفلترة' : 'إجمالي القيمة'}
                 </p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="p-5 text-center">
-                <div className="mb-3 p-2 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
-                  <Package className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardContent className="p-3 text-center">
+                <div className="mb-2 p-1.5 bg-emerald-100 dark:bg-emerald-900/50 rounded-full inline-block">
+                  <Package className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 </div>
-                <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">
-                  {formatCurrency(filteredTotalAvailable)}
+                <div className="text-lg md:text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1 text-xs md:text-sm">
+                  {formatCurrency(displayedSummary.totalAvailable)}
                 </div>
-                <p className="text-sm text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر للبيع</p>
+                <p className="text-xs text-emerald-700/70 dark:text-emerald-300/70 font-medium">المتوفر للبيع</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="p-5 text-center">
-                <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
-                  <Warehouse className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/30 dark:to-orange-900/20 border-orange-200/50 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardContent className="p-3 text-center">
+                <div className="mb-2 p-1.5 bg-orange-100 dark:bg-orange-900/50 rounded-full inline-block">
+                  <Warehouse className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 </div>
-                <div className="text-xl font-bold text-orange-600 dark:text-orange-400 mb-1">
-                  {formatCurrency(filteredTotalReserved)}
+                <div className="text-lg md:text-xl font-bold text-orange-600 dark:text-orange-400 mb-1 text-xs md:text-sm">
+                  {formatCurrency(displayedSummary.totalReserved)}
                 </div>
-                <p className="text-sm text-orange-700/70 dark:text-orange-300/70 font-medium">المحجوز</p>
+                <p className="text-xs text-orange-700/70 dark:text-orange-300/70 font-medium">المحجوز</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="p-5 text-center">
-                <div className="mb-3 p-2 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
-                  <Tag className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-200/50 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardContent className="p-3 text-center">
+                <div className="mb-2 p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-full inline-block">
+                  <Tag className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div className="text-xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                  {formatCurrency(hasActiveFilters ? filteredSummary.totalCost : inventoryData.products.reduce((sum, item) => sum + (item.cost_value || 0), 0))}
+                <div className="text-lg md:text-xl font-bold text-blue-600 dark:text-blue-400 mb-1 text-xs md:text-sm">
+                  {formatCurrency(displayedSummary.totalCost)}
                 </div>
-                <p className="text-sm text-blue-700/70 dark:text-blue-300/70 font-medium">إجمالي التكلفة</p>
+                <p className="text-xs text-blue-700/70 dark:text-blue-300/70 font-medium">إجمالي التكلفة</p>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="p-5 text-center">
-                <div className="mb-3 p-2 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
-                  <BarChart3 className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <Card className="bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20 border-green-200/50 dark:border-green-800/30 shadow-sm hover:shadow-md transition-all duration-300">
+              <CardContent className="p-3 text-center">
+                <div className="mb-2 p-1.5 bg-green-100 dark:bg-green-900/50 rounded-full inline-block">
+                  <BarChart3 className="w-4 h-4 text-green-600 dark:text-green-400" />
                 </div>
-                <div className="text-xl font-bold text-green-600 dark:text-green-400 mb-1">
-                  {formatCurrency(hasActiveFilters ? filteredSummary.totalExpectedProfit : inventoryData.products.reduce((sum, item) => sum + (item.expected_profit || 0), 0))}
+                <div className="text-lg md:text-xl font-bold text-green-600 dark:text-green-400 mb-1 text-xs md:text-sm">
+                  {formatCurrency(displayedSummary.totalExpectedProfit)}
                 </div>
-                <p className="text-sm text-green-700/70 dark:text-green-300/70 font-medium">الربح المتوقع</p>
+                <p className="text-xs text-green-700/70 dark:text-green-300/70 font-medium">الربح المتوقع</p>
               </CardContent>
             </Card>
           </div>
@@ -711,7 +744,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               <TabsTrigger value="products" className="text-xs">المنتجات</TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="h-64 mt-4">
+            <ScrollArea className="h-48 md:h-64 mt-4">
               <TabsContent value="summary" className="mt-0 space-y-3">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
