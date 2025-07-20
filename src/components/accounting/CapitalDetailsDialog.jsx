@@ -48,25 +48,26 @@ const CapitalDetailsDialog = ({
 
     setLoading(true);
     try {
-      // في النظام الجديد: لا نحفظ في قاعدة البيانات
-      // رأس المال ثابت 15 مليون في الكود
-      
-      toast({ 
-        title: "تنبيه", 
-        description: "رأس المال الآن ثابت في النظام (15 مليون د.ع). لا يمكن تغييره من الواجهة.", 
-        variant: "default" 
-      });
-
-      setIsEditing(false);
-      
-      // إشعار المستخدم بالنظام الجديد
-      console.log('💰 النظام الجديد: رأس المال ثابت = 15,000,000 د.ع');
+      // استخدام دالة التحديث من الـ props
+      if (onCapitalUpdate) {
+        const result = await onCapitalUpdate(capitalValue);
+        if (result.success) {
+          toast({ 
+            title: "تم التحديث", 
+            description: result.message, 
+            variant: "default" 
+          });
+          setIsEditing(false);
+        } else {
+          throw new Error(result.message);
+        }
+      }
       
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error updating capital:', error);
       toast({ 
         title: "خطأ", 
-        description: "حدث خطأ غير متوقع.", 
+        description: error.message || "فشل في تحديث رأس المال. حاول مرة أخرى.", 
         variant: "destructive" 
       });
     } finally {
@@ -177,11 +178,11 @@ const CapitalDetailsDialog = ({
 
           {/* شرح المكونات */}
           <div className="bg-muted/30 p-4 rounded-lg">
-            <h4 className="font-semibold mb-3 text-sm">النظام المالي الجديد:</h4>
+            <h4 className="font-semibold mb-3 text-sm">النظام المالي:</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5 shrink-0"></div>
-                <span><strong>رأس المال:</strong> ثابت 15 مليون د.ع في النظام</span>
+                <span><strong>رأس المال:</strong> قابل للتعديل - محفوظ في الواجهة</span>
               </li>
               <li className="flex items-start gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5 shrink-0"></div>
@@ -215,9 +216,9 @@ const CapitalDetailsDialog = ({
                 </Button>
               </>
             ) : (
-              <Button onClick={() => setIsEditing(true)} disabled>
+              <Button onClick={() => setIsEditing(true)}>
                 <Edit className="w-4 h-4 mr-2" />
-                رأس المال ثابت (لا يمكن التعديل)
+                تعديل رأس المال النقدي
               </Button>
             )}
           </div>

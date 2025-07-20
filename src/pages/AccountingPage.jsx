@@ -122,7 +122,19 @@ const AccountingPage = () => {
     const { orders, purchases, accounting, products, addExpense, deleteExpense, updateCapital, settlementInvoices, calculateManagerProfit, calculateProfit } = useInventory();
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
-    const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
+    const { 
+      getTotalSourcesBalance, 
+      getMainCashBalance, 
+      getTotalAllSourcesBalance, 
+      cashSources 
+    } = useCashSources();
+    
+    const { 
+      getFinancialSummary, 
+      updateCapital, 
+      currentCapital,
+      loading: financialLoading 
+    } = useFinancialCalculations();
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -561,15 +573,10 @@ const AccountingPage = () => {
             <CapitalDetailsDialog
                 open={dialogs.capitalDetails}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, capitalDetails: open }))}
-                initialCapital={initialCapital}
+                initialCapital={currentCapital}
                 inventoryValue={financialSummary.inventoryValue}
                 cashBalance={realCashBalance}
-                onCapitalUpdate={async (newCapital) => {
-                    // تحديث فوري محلي
-                    setInitialCapital(newCapital);
-                    // تحديث شامل لجميع البيانات المترابطة
-                    await refreshFinancialData();
-                }}
+                onCapitalUpdate={updateCapital}
             />
         </>
     );

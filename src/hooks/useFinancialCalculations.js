@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-
+import { useCapitalManager } from './useCapitalManager';
 /**
  * Hook موحد لكل الحسابات المالية في الواجهة
  * جميع العمليات الحسابية تتم هنا بدون دوال قاعدة بيانات
+ * رأس المال محفوظ في localStorage
  */
 export const useFinancialCalculations = () => {
+  // استخدام مدير رأس المال
+  const { capital: initialCapital, updateCapital } = useCapitalManager();
   const [rawData, setRawData] = useState({
     orders: [],
     expenses: [],
@@ -71,9 +74,9 @@ export const useFinancialCalculations = () => {
     }
   };
 
-  // 1. حساب رأس المال (ثابت 15 مليون - لا يُحفظ في قاعدة البيانات)
+  // 1. حساب رأس المال (من localStorage - قابل للتعديل)
   const getInitialCapital = () => {
-    return 15000000; // 15 مليون دينار عراقي - رأس المال الثابت
+    return initialCapital; // من useCapitalManager
   };
 
   // 2. حساب الأرباح المحققة (طلبات مستلمة + فاتورة)
@@ -268,6 +271,10 @@ export const useFinancialCalculations = () => {
     getMainCashBalance,
     getProductProfits,
     getFinancialSummary,
+    
+    // إدارة رأس المال
+    updateCapital,
+    currentCapital: initialCapital,
     
     // تحديث البيانات
     refreshData: fetchRawData
