@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useFinancialCalculations } from '@/hooks/useFinancialCalculations';
 import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -279,24 +280,20 @@ const AccountingPage = () => {
             return sum + orderCogs;
         }, 0);
         
-        const grossProfit = salesWithoutDelivery - cogs;
-        // حساب صافي ربح المبيعات (بدون طرح المصاريف العامة)
-        const netSalesProfit = salesWithoutDelivery - cogs; // هذا هو صافي ربح المبيعات فقط
+        // استخدام النظام الجديد للحسابات المالية
+        const { getFinancialSummary } = useFinancialCalculations();
+        const financialCalcs = getFinancialSummary();
         
-        // المصاريف العامة (للعرض منفصلة وليس لطرحها من صافي الربح)
-        const generalExpenses = expensesInRange.filter(e => 
-          e.expense_type !== 'system' && 
-          e.category !== 'فئات_المصاريف' &&
-          e.related_data?.category !== 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + (e.amount || 0), 0);
+        // استخدام البيانات من النظام الجديد
+        const grossProfit = financialCalcs.grossProfit;
+        const netSalesProfit = financialCalcs.grossProfit; // صافي ربح المبيعات
+        const generalExpenses = financialCalcs.totalExpenses;
+        const netProfit = financialCalcs.netProfit; // صافي الربح الحقيقي
         
-        // مستحقات الموظفين المسددة
+        // مستحقات الموظفين المسددة (من المصاريف المحلية)
         const employeeSettledDues = expensesInRange.filter(e => 
           e.related_data?.category === 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
-        
-        // صافي الربح = ربح المبيعات فقط (بدون حذف المصاريف العامة)
-        const netProfit = grossProfit;
     
         
         // حساب قيمة المخزون

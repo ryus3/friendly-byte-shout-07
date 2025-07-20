@@ -264,7 +264,14 @@ const Dashboard = () => {
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
+    // استخدام النظام الجديد للحسابات المالية
+    const { getFinancialSummary } = useFinancialCalculations();
+    
     const financialSummary = useMemo(() => {
+        // استخدام النظام الجديد بدلاً من الحسابات المحلية
+        const summary = getFinancialSummary();
+        
+        // إضافة بيانات الرسم البياني
         const periodKey = periods.netProfit;
         const now = new Date();
         let from, to;
@@ -275,7 +282,7 @@ const Dashboard = () => {
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
-        if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
+        if (!orders || !accounting) return { ...summary, chartData: [], deliveredOrders: [] };
         
         const filterByDate = (itemDateStr) => {
             if (!from || !to || !itemDateStr) return true;
@@ -290,30 +297,38 @@ const Dashboard = () => {
         );
         const expensesInRange = (accounting.expenses || []).filter(e => filterByDate(e.transaction_date));
         
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
-        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-        const salesWithoutDelivery = totalRevenue - deliveryFees;
+        // بيانات الرسم البياني
+        const salesByDay = {};
+        deliveredOrders.forEach(o => {
+          const day = format(parseISO(o.updated_at || o.created_at), 'dd');
+          if (!salesByDay[day]) salesByDay[day] = 0;
+          salesByDay[day] += o.final_amount || o.total_amount || 0;
+        });
         
-        const cogs = deliveredOrders.reduce((sum, o) => {
-          const orderCogs = (o.items || []).reduce((itemSum, item) => {
-            const costPrice = item.costPrice || item.cost_price || 0;
-            return itemSum + (costPrice * item.quantity);
-          }, 0);
-          return sum + orderCogs;
-        }, 0);
-        const grossProfit = salesWithoutDelivery - cogs;
+        const expensesByDay = {};
+        expensesInRange.forEach(e => {
+            const day = format(parseISO(e.transaction_date), 'dd');
+            if (!expensesByDay[day]) expensesByDay[day] = 0;
+            expensesByDay[day] += e.amount;
+        });
+    
+        const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
         
-        // المصاريف العامة (استبعاد الفئات النظامية والمستحقات)
-        const generalExpenses = expensesInRange.filter(e => 
-          e.expense_type !== 'system' && 
-          e.category !== 'فئات_المصاريف' &&
-          e.related_data?.category !== 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + e.amount, 0);
+        const chartData = allDays.map(day => ({
+            name: day,
+            sales: salesByDay[day] || 0,
+            expenses: expensesByDay[day] || 0,
+            net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
+        }));
         
-        const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
-        
-        // صافي الربح = ربح المبيعات فقط (بدون طرح المصاريف العامة)
-        const netProfit = grossProfit;
+        // دمج البيانات من النظام الجديد مع الرسم البياني
+        return {
+            ...summary,
+            chartData,
+            deliveredOrders,
+            filteredExpenses: expensesInRange,
+            employeeSettledDues: expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0)
+        };
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
