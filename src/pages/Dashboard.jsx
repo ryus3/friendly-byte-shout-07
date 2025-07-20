@@ -24,6 +24,7 @@ import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard'
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
+import MainCashCard from '@/components/dashboard/MainCashCard';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
@@ -92,7 +93,7 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    const { mainCashBalance, loading: cashLoading } = useMainCashBalance();
+    const { mainCashBalance, breakdown: cashBreakdown, loading: cashLoading } = useMainCashBalance();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -577,6 +578,15 @@ const Dashboard = () => {
                     <SettlementRequestCard 
                         pendingProfit={employeeProfitsData.personalPendingProfit} 
                         onSettle={() => navigate('/profits-summary')} 
+                    />
+                )}
+                
+                {/* عرض كارت القاصة الرئيسية للمديرين فقط */}
+                {canViewAllData && (
+                    <MainCashCard 
+                        mainCashBalance={mainCashBalance}
+                        breakdown={cashBreakdown}
+                        loading={cashLoading}
                     />
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
