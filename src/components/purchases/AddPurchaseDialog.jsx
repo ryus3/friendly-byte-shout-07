@@ -179,6 +179,26 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                         </div>
                     </div>
 
+                    {/* مصدر الأموال */}
+                    <div className="space-y-2">
+                        <Label htmlFor="cashSource" className="flex items-center gap-2">
+                            <Wallet className="w-4 h-4" />
+                            مصدر الأموال
+                        </Label>
+                        <Select value={selectedCashSource} onValueChange={setSelectedCashSource}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="اختر مصدر الأموال" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {cashSources.map(source => (
+                                    <SelectItem key={source.id} value={source.id}>
+                                        {source.name} - {source.current_balance.toLocaleString()} د.ع
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
                     <div className="space-y-4">
                         <h3 className="font-semibold">المنتجات</h3>
                         <PurchaseItemsPreview items={items} onRemove={handleRemoveItem} onUpdate={handleUpdateItem} />
