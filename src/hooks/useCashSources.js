@@ -309,15 +309,17 @@ export const useCashSources = () => {
       )
       .subscribe();
 
-    // Real-time subscription للمصاريف
+    // Real-time subscription للمصاريف - تحديث مبسط لتجنب التكرار
     const expensesSubscription = supabase
       .channel('expenses_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'expenses' },
-        () => {
-          console.log('🔄 Expenses changed, refreshing cash sources...');
-          fetchCashSources();
-          fetchCashMovements();
+        (payload) => {
+          console.log('🔄 Expense changed:', payload.eventType, payload.new?.id);
+          // تحديث مؤجل لتجنب التكرار
+          setTimeout(() => {
+            fetchCashMovements();
+          }, 500);
         }
       )
       .subscribe();
