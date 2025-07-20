@@ -76,7 +76,7 @@ export const useCashSources = () => {
 
       if (error) throw error;
 
-      // إضافة حركة افتتاحية مباشرة في جدول cash_movements بدلاً من استخدام دالة
+      // إضافة حركة افتتاحية مباشرة - بدون دوال قاعدة البيانات
       if (sourceData.initial_balance > 0) {
         const { error: movementError } = await supabase
           .from('cash_movements')
@@ -87,10 +87,18 @@ export const useCashSources = () => {
             reference_type: 'capital_injection',
             reference_id: null,
             description: `رصيد افتتاحي لمصدر النقد: ${data.name}`,
-            created_by: (await supabase.auth.getUser()).data.user?.id
+            created_by: (await supabase.auth.getUser()).data.user?.id,
+            balance_before: 0,
+            balance_after: sourceData.initial_balance
           }]);
         
         if (movementError) throw movementError;
+        
+        // تحديث رصيد المصدر مباشرة
+        await supabase
+          .from('cash_sources')
+          .update({ current_balance: sourceData.initial_balance })
+          .eq('id', data.id);
       }
 
       setCashSources(prev => [...prev, data]);
@@ -117,7 +125,19 @@ export const useCashSources = () => {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('المستخدم غير مسجل الدخول');
 
-      // إضافة الحركة مباشرة في الجدول
+      // الحصول على الرصيد الحالي
+      const { data: currentSource, error: fetchError } = await supabase
+        .from('cash_sources')
+        .select('current_balance')
+        .eq('id', sourceId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const oldBalance = currentSource.current_balance || 0;
+      const newBalance = oldBalance + amount;
+
+      // إضافة الحركة مباشرة
       const { error: movementError } = await supabase
         .from('cash_movements')
         .insert([{
@@ -127,7 +147,9 @@ export const useCashSources = () => {
           reference_type: 'capital_injection',
           reference_id: null,
           description: description || 'إضافة أموال للقاصة',
-          created_by: user.id
+          created_by: user.id,
+          balance_before: oldBalance,
+          balance_after: newBalance
         }]);
 
       if (movementError) throw movementError;
@@ -135,12 +157,10 @@ export const useCashSources = () => {
       // تحديث رصيد المصدر مباشرة
       const { error: updateError } = await supabase
         .from('cash_sources')
-        .update({ 
-          current_balance: supabase.rpc('get_current_balance', { source_id: sourceId }) 
-        })
+        .update({ current_balance: newBalance })
         .eq('id', sourceId);
 
-      if (updateError) console.warn('تحذير: فشل في تحديث الرصيد:', updateError);
+      if (updateError) throw updateError;
 
       // تحديث البيانات
       await fetchCashSources();
@@ -169,7 +189,24 @@ export const useCashSources = () => {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('المستخدم غير مسجل الدخول');
 
-      // إضافة الحركة مباشرة في الجدول
+      // الحصول على الرصيد الحالي
+      const { data: currentSource, error: fetchError } = await supabase
+        .from('cash_sources')
+        .select('current_balance, name')
+        .eq('id', sourceId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const oldBalance = currentSource.current_balance || 0;
+      const newBalance = oldBalance - amount;
+
+      // التحقق من كفاية الرصيد (إلا للقاصة الرئيسية)
+      if (newBalance < 0 && currentSource.name !== 'القاصة الرئيسية') {
+        throw new Error(`الرصيد غير كافي. الرصيد الحالي: ${oldBalance.toLocaleString()}, المطلوب سحبه: ${amount.toLocaleString()}`);
+      }
+
+      // إضافة الحركة مباشرة
       const { error: movementError } = await supabase
         .from('cash_movements')
         .insert([{
@@ -179,7 +216,9 @@ export const useCashSources = () => {
           reference_type: 'capital_withdrawal',
           reference_id: null,
           description: description || 'سحب أموال من القاصة',
-          created_by: user.id
+          created_by: user.id,
+          balance_before: oldBalance,
+          balance_after: newBalance
         }]);
 
       if (movementError) throw movementError;
@@ -187,12 +226,10 @@ export const useCashSources = () => {
       // تحديث رصيد المصدر مباشرة
       const { error: updateError } = await supabase
         .from('cash_sources')
-        .update({ 
-          current_balance: supabase.rpc('get_current_balance', { source_id: sourceId }) 
-        })
+        .update({ current_balance: newBalance })
         .eq('id', sourceId);
 
-      if (updateError) console.warn('تحذير: فشل في تحديث الرصيد:', updateError);
+      if (updateError) throw updateError;
 
       // تحديث البيانات
       await fetchCashSources();

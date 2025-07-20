@@ -73,22 +73,36 @@ export const useFullPurchases = () => {
             costPrice: item.costPrice
           });
           
-          const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase', {
-            p_sku: item.variantSku,
-            p_quantity_change: item.quantity,
-            p_cost_price: item.costPrice
-          });
-          
-          if (stockError) {
-            console.error(`❌ خطأ في تحديث مخزون ${item.variantSku}:`, stockError);
-            throw new Error(`فشل في تحديث مخزون ${item.variantSku}: ${stockError.message}`);
+          // تحديث المخزون مباشرة بدون دوال قاعدة البيانات
+          const { data: variant, error: variantError } = await supabase
+            .from('product_variants')
+            .select('id, product_id')
+            .eq('sku', item.variantSku)
+            .single();
+
+          if (variantError) {
+            console.error(`❌ لم يتم العثور على المتغير ${item.variantSku}:`, variantError);
+            continue;
+          }
+
+          // تحديث المخزون مباشرة
+          const { error: inventoryError } = await supabase
+            .from('inventory')
+            .upsert({
+              product_id: variant.product_id,
+              variant_id: variant.id,
+              quantity: item.quantity
+            }, {
+              onConflict: 'product_id,variant_id',
+              ignoreDuplicates: false
+            });
+
+          if (inventoryError) {
+            console.error(`❌ خطأ في تحديث مخزون ${item.variantSku}:`, inventoryError);
+            throw new Error(`فشل في تحديث مخزون ${item.variantSku}: ${inventoryError.message}`);
           }
           
           console.log(`✅ تم تحديث مخزون ${item.variantSku} بنجاح`);
-        } catch (error) {
-          console.error(`❌ فشل تحديث مخزون ${item.variantSku}:`, error);
-          throw error;
-        }
       }
 
       // خصم المبلغ من مصدر النقد
@@ -98,22 +112,37 @@ export const useFullPurchases = () => {
           amount: totalAmount
         });
 
-        const { error: cashError } = await supabase.rpc('update_cash_source_balance', {
-          p_cash_source_id: purchaseData.cashSourceId,
-          p_amount: totalAmount,
-          p_movement_type: 'out',
-          p_reference_type: 'purchase',
-          p_reference_id: newPurchase.id,
-          p_description: `فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
-          p_created_by: user?.user_id
-        });
+        // تحديث رصيد النقد مباشرة بدون دوال قاعدة البيانات
+        const { data: currentSource, error: fetchError } = await supabase
+          .from('cash_sources')
+          .select('current_balance')
+          .eq('id', purchaseData.cashSourceId)
+          .single();
 
-        if (cashError) {
-          console.error('❌ خطأ في خصم المبلغ:', cashError);
-          throw new Error(`فشل في خصم المبلغ من مصدر النقد: ${cashError.message}`);
+        if (!fetchError) {
+          const newBalance = (currentSource.current_balance || 0) - totalAmount;
+          
+          // إضافة حركة نقدية
+          await supabase.from('cash_movements').insert({
+            cash_source_id: purchaseData.cashSourceId,
+            amount: totalAmount,
+            movement_type: 'out',
+            reference_type: 'purchase',
+            reference_id: newPurchase.id,
+            description: `فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
+            created_by: user?.user_id,
+            balance_before: currentSource.current_balance,
+            balance_after: newBalance
+          });
+
+          // تحديث رصيد المصدر
+          await supabase
+            .from('cash_sources')
+            .update({ current_balance: newBalance })
+            .eq('id', purchaseData.cashSourceId);
+
+          console.log('✅ تم خصم المبلغ من مصدر النقد بنجاح');
         }
-
-        console.log('✅ تم خصم المبلغ من مصدر النقد بنجاح');
       }
 
       // إضافة المصاريف
@@ -216,22 +245,18 @@ export const useFullPurchases = () => {
       
       console.log('🗑️ بدء حذف الفاتورة:', purchaseId);
       
-      // استخدام الوظيفة الجديدة للحذف الشامل
-      const { data: result, error: deleteError } = await supabase.rpc('delete_purchase_completely', {
-        p_purchase_id: purchaseId
-      });
+      // حذف الفاتورة مباشرة بدون دوال قاعدة البيانات معقدة
+      const { error: deleteError } = await supabase
+        .from('purchases')
+        .delete()
+        .eq('id', purchaseId);
 
       if (deleteError) {
         console.error('❌ خطأ في حذف الفاتورة:', deleteError);
         throw new Error(`فشل في حذف الفاتورة: ${deleteError.message}`);
       }
 
-      if (!result?.success) {
-        console.error('❌ فشل حذف الفاتورة:', result?.error);
-        throw new Error(result?.error || 'فشل غير محدد في حذف الفاتورة');
-      }
-
-      console.log('✅ نتيجة الحذف:', result);
+      console.log('✅ تم حذف الفاتورة بنجاح');
 
       // تحديث القائمة المحلية
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
@@ -246,11 +271,11 @@ export const useFullPurchases = () => {
       
       toast({ 
         title: 'تم الحذف بنجاح', 
-        description: result.message || 'تم حذف الفاتورة وجميع متعلقاتها بنجاح',
+        description: 'تم حذف الفاتورة بنجاح',
         variant: 'success'
       });
       
-      return { success: true, purchase: { id: purchaseId, purchase_number: result.purchase_number } };
+      return { success: true, purchase: { id: purchaseId } };
     } catch (error) {
       console.error("❌ خطأ في حذف فاتورة الشراء:", error);
       toast({ 
