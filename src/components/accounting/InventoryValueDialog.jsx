@@ -798,7 +798,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                     </div>
                   )}
                 </div>
-              </TabsContent>{
+              </TabsContent>
             </ScrollArea>
           </Tabs>
         </div>
