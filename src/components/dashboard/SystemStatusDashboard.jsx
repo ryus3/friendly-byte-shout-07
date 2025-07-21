@@ -29,10 +29,10 @@ const SystemStatusDashboard = () => {
     
     // إحصائيات الطلبات
     const totalOrders = safeOrders.length;
-    const deliveredOrders = safeOrders.filter(o => o.status === 'delivered').length;
+    const deliveredOrders = safeOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length;
     const pendingOrders = safeOrders.filter(o => o.status === 'pending').length;
     const totalRevenue = safeOrders
-      .filter(o => o.status === 'delivered')
+      .filter(o => o.status === 'delivered' || o.status === 'completed')
       .reduce((sum, o) => sum + (o.final_amount || 0), 0);
 
     // إحصائيات المخزون

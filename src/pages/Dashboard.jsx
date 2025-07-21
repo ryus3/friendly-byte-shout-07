@@ -277,7 +277,7 @@ const Dashboard = () => {
         };
         
         const deliveredOrders = (orders || []).filter(o => 
-            o.status === 'delivered' && 
+            (o.status === 'delivered' || o.status === 'completed') && 
             o.receipt_received === true && 
             filterByDate(o.updated_at || o.created_at)
         );
@@ -350,7 +350,7 @@ const Dashboard = () => {
         };
 
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
-        const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered');
+        const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered' || o.status === 'completed');
         const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         

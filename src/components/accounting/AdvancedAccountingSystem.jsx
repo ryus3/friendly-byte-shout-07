@@ -69,7 +69,7 @@ const AdvancedAccountingSystem = () => {
 
     // حساب الإيرادات (نفس طريقة لوحة التحكم - الطلبات المُوصلة التي تم استلام فواتيرها فقط)
     const deliveredOrdersWithReceipts = filteredOrders.filter(o => 
-      o.status === 'delivered' && o.receipt_received === true
+      (o.status === 'delivered' || o.status === 'completed') && o.receipt_received === true
     );
     
     const totalRevenue = deliveredOrdersWithReceipts.reduce((sum, order) => 

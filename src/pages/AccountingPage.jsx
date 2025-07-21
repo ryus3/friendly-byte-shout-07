@@ -244,7 +244,7 @@ const AccountingPage = () => {
         
         // استخدام نفس منطق لوحة التحكم: الطلبات المُستلمة الفواتير فقط
         const deliveredOrders = safeOrders.filter(o => 
-            o && o.status === 'delivered' && 
+            o && (o.status === 'delivered' || o.status === 'completed') && 
             o.receipt_received === true && 
             filterByDate(o.updated_at || o.created_at)
         );
@@ -367,7 +367,7 @@ const AccountingPage = () => {
         const totalProfit = myProfit + managerProfitFromEmployees;
     
         const employeePendingDuesDetails = safeOrders
-          .filter(o => o.status === 'delivered' && (o.profitStatus || 'pending') === 'pending' && o.created_by !== currentUser?.id);
+          .filter(o => (o.status === 'delivered' || o.status === 'completed') && (o.profitStatus || 'pending') === 'pending' && o.created_by !== currentUser?.id);
         
         const employeePendingDues = employeePendingDuesDetails.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0) || 0), 0);
     

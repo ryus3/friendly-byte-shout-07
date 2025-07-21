@@ -99,7 +99,7 @@ const ProfitsSummaryPage = () => {
         // فلترة الطلبات الموصلة التي تم استلام فواتيرها في النطاق الزمني المحدد
         const deliveredOrders = orders?.filter(o => {
             const orderDate = o.created_at ? parseISO(o.created_at) : null;
-            return o.status === 'delivered' && o.receipt_received === true && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+            return (o.status === 'delivered' || o.status === 'completed') && o.receipt_received === true && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
         }) || [];
 
         // الطلبات الموصلة بدون فواتير مستلمة (معلقة)
