@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { motion } from 'framer-motion';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -19,7 +20,8 @@ import {
   BarChart3,
   PieChart,
   Eye,
-  Target
+  Target,
+  CreditCard
 } from 'lucide-react';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, subWeeks, subMonths, subYears } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -209,12 +211,24 @@ const SystemProfitSummary = ({
       </Card>
 
       {/* لوحة الربح العام الاحترافية */}
-      <Card className={`border-2 transition-all duration-300 ${calculations.isProfit ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50' : 'border-orange-200 bg-gradient-to-br from-orange-50 to-red-50'}`}>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+        <div 
+          className="absolute inset-px rounded-xl opacity-60"
+          style={{
+            backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+          }}
+        ></div>
+        
+        <CardHeader className="pb-3 relative z-10">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-3 text-xl">
-              <div className={`p-2 rounded-lg ${calculations.isProfit ? 'bg-emerald-100' : 'bg-orange-100'}`}>
-                <Calculator className={`w-6 h-6 ${calculations.isProfit ? 'text-emerald-600' : 'text-orange-600'}`} />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
+                calculations.isProfit 
+                  ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
+                  : 'bg-gradient-to-br from-orange-500 to-red-500'
+              }`}>
+                <Calculator className="w-6 h-6" />
               </div>
               مركز السيطرة المالي العالمي
               <Badge variant={calculations.isProfit ? "default" : "destructive"} className="text-sm">
@@ -227,7 +241,6 @@ const SystemProfitSummary = ({
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
-                className="bg-white/80"
               >
                 <Eye className="w-4 h-4 mr-1" />
                 {showDetails ? 'إخفاء' : 'تفاصيل'}
@@ -236,48 +249,96 @@ const SystemProfitSummary = ({
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 relative z-10">
           {/* الحساب الأساسي */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200">
-              <div className="p-3 bg-blue-500 rounded-lg">
-                <Wallet className="w-5 h-5 text-white" />
+            <motion.div 
+              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
+              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+            >
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+              <div 
+                className="absolute inset-px rounded-xl opacity-60"
+                style={{
+                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+                }}
+              ></div>
+              <div className="p-4 relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">رأس المال</span>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-blue-500 to-sky-500">
+                    <Wallet className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-lg font-bold text-foreground">+{formatCurrency(capitalAmount)}</p>
               </div>
-              <div>
-                <p className="text-sm text-blue-600 font-medium">رأس المال</p>
-                <p className="text-lg font-bold text-blue-700">+{formatCurrency(capitalAmount)}</p>
-              </div>
-            </div>
+            </motion.div>
             
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
-              <div className="p-3 bg-emerald-500 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-white" />
+            <motion.div 
+              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
+              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+            >
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+              <div 
+                className="absolute inset-px rounded-xl opacity-60"
+                style={{
+                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+                }}
+              ></div>
+              <div className="p-4 relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">أرباح المبيعات</span>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-green-500 to-emerald-500">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-lg font-bold text-foreground">+{formatCurrency(realizedProfits)}</p>
               </div>
-              <div>
-                <p className="text-sm text-emerald-600 font-medium">أرباح المبيعات</p>
-                <p className="text-lg font-bold text-emerald-700">+{formatCurrency(realizedProfits)}</p>
-              </div>
-            </div>
+            </motion.div>
             
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl border border-orange-200">
-              <div className="p-3 bg-orange-500 rounded-lg">
-                <Package className="w-5 h-5 text-white" />
+            <motion.div 
+              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
+              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+            >
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+              <div 
+                className="absolute inset-px rounded-xl opacity-60"
+                style={{
+                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+                }}
+              ></div>
+              <div className="p-4 relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">المشتريات</span>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-orange-500 to-amber-500">
+                    <Package className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-lg font-bold text-foreground">-{formatCurrency(totalPurchases)}</p>
               </div>
-              <div>
-                <p className="text-sm text-orange-600 font-medium">المشتريات</p>
-                <p className="text-lg font-bold text-orange-700">-{formatCurrency(totalPurchases)}</p>
-              </div>
-            </div>
+            </motion.div>
             
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-xl border border-red-200">
-              <div className="p-3 bg-red-500 rounded-lg">
-                <TrendingDown className="w-5 h-5 text-white" />
+            <motion.div 
+              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
+              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+            >
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+              <div 
+                className="absolute inset-px rounded-xl opacity-60"
+                style={{
+                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
+                }}
+              ></div>
+              <div className="p-4 relative z-10">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">المصاريف</span>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-red-500 to-rose-500">
+                    <TrendingDown className="h-4 w-4" />
+                  </div>
+                </div>
+                <p className="text-lg font-bold text-foreground">-{formatCurrency(totalExpenses)}</p>
               </div>
-              <div>
-                <p className="text-sm text-red-600 font-medium">المصاريف</p>
-                <p className="text-lg font-bold text-red-700">-{formatCurrency(totalExpenses)}</p>
-              </div>
-            </div>
+            </motion.div>
           </div>
           
           {/* النتيجة النهائية الاحترافية */}
