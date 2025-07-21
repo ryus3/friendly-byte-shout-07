@@ -25,6 +25,7 @@ import CashSourceCard from '@/components/cash/CashSourceCard';
 import CashMovementsList from '@/components/cash/CashMovementsList';
 import AddCashDialog from '@/components/cash/AddCashDialog';
 import AddCashSourceDialog from '@/components/cash/AddCashSourceDialog';
+import SystemProfitSummary from '@/components/cash/SystemProfitSummary';
 import StatCard from '@/components/dashboard/StatCard';
 import { format, startOfMonth, endOfMonth, startOfWeek, startOfDay, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -48,6 +49,12 @@ const CashManagementPage = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [mainCashBalance, setMainCashBalance] = useState(0);
   const [totalSourcesBalance, setTotalSourcesBalance] = useState(0);
+  const [systemFinancials, setSystemFinancials] = useState({
+    realizedProfits: 0,
+    totalPurchases: 0,
+    totalExpenses: 0,
+    capitalAmount: 5000000
+  });
   const [deleteSource, setDeleteSource] = useState(null);
 
   // جلب أرصدة المصادر المختلفة - مع تحديث أكثر تكراراً
@@ -77,10 +84,61 @@ const CashManagementPage = () => {
     
     fetchBalances();
     
+    // جلب البيانات المالية الشاملة
+    fetchSystemFinancials();
+    
     // تحديث الأرصدة كل 3 ثوان للحصول على بيانات حية
-    const interval = setInterval(fetchBalances, 3000);
+    const interval = setInterval(() => {
+      fetchBalances();
+      fetchSystemFinancials();
+    }, 5000);
     return () => clearInterval(interval);
   }, [getMainCashBalance, getTotalSourcesBalance, cashSources, cashMovements]);
+
+  // جلب البيانات المالية الشاملة للربح العام
+  const fetchSystemFinancials = async () => {
+    try {
+      // جلب رأس المال
+      const { data: capitalData } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'initial_capital')
+        .single();
+
+      // جلب الأرباح المحققة (من الطلبات المستلمة)
+      const { data: profitsData } = await supabase
+        .from('cash_movements')
+        .select('amount')
+        .eq('reference_type', 'realized_profit');
+
+      // جلب المشتريات
+      const { data: purchasesData } = await supabase
+        .from('purchases')
+        .select('total_amount');
+
+      // جلب المصاريف المعتمدة
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('amount')
+        .eq('status', 'approved')
+        .neq('expense_type', 'system');
+
+      const capitalAmount = parseFloat(capitalData?.value || 0);
+      const realizedProfits = profitsData?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
+      const totalPurchases = purchasesData?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
+      const totalExpenses = expensesData?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+
+      setSystemFinancials({
+        capitalAmount,
+        realizedProfits,
+        totalPurchases,
+        totalExpenses
+      });
+
+    } catch (error) {
+      console.error('خطأ في جلب البيانات المالية:', error);
+    }
+  };
 
   // حذف مصدر نقد مع رسالة تأكيد أنيقة
 
@@ -203,11 +261,13 @@ const CashManagementPage = () => {
     },
     {
       title: 'الرصيد النقدي الفعلي',
-      value: totalSourcesBalance, // مجموع المصادر الفعلية
+      value: mainCashBalance, // الرصيد الحقيقي للقاصة الرئيسية
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],
-      change: 'مجموع جميع المصادر'
+      change: systemFinancials.realizedProfits > 0 
+        ? `رأس المال + ${systemFinancials.realizedProfits.toLocaleString()} أرباح محققة`
+        : 'رأس المال فقط'
     },
     {
       title: 'داخل هذا الشهر',
@@ -347,6 +407,14 @@ const CashManagementPage = () => {
 
           {/* التحليلات */}
           <TabsContent value="analytics" className="space-y-6">
+            {/* الربح العام للنظام */}
+            <SystemProfitSummary
+              capitalAmount={systemFinancials.capitalAmount}
+              realizedProfits={systemFinancials.realizedProfits}
+              totalPurchases={systemFinancials.totalPurchases}
+              totalExpenses={systemFinancials.totalExpenses}
+            />
+            
             {/* إحصائيات فترية */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card>
