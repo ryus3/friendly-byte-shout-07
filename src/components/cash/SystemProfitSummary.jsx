@@ -224,115 +224,161 @@ const SystemProfitSummary = ({
 
       {/* مركز السيطرة المالي */}
       <Card className={cn(
-        "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.01] border-0",
-        "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-lg shadow-primary/5",
-        "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none before:rounded-lg"
+        "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 border-0",
+        "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-lg shadow-primary/5"
       )}>
         <CardHeader className={cn(
-          "bg-gradient-to-br from-emerald-600 to-teal-600 text-white pb-6 relative",
+          "bg-gradient-to-br from-indigo-600 to-purple-600 text-white pb-6 relative",
           "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none"
         )}>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-xl font-bold text-white">
-              <div className="p-3 bg-white/20 rounded-xl shadow-lg transition-transform hover:scale-110">
-                <Calculator className="w-6 h-6 transition-transform hover:rotate-12" />
-              </div>
-              مركز السيطرة المالي
-              <Badge variant="secondary" className="bg-white/20 text-white border-0 text-sm shadow-md">
-                {calculations.isProfit ? "نشاط ربحي" : "تحت المراقبة"}
-              </Badge>
-            </CardTitle>
-            
-            <div className="flex gap-2">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-3 text-lg md:text-xl font-bold text-white">
+                <div className="p-2 md:p-3 bg-white/20 rounded-xl shadow-lg">
+                  <Calculator className="w-5 h-5 md:w-6 md:h-6" />
+                </div>
+                مركز السيطرة المالي
+                <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs md:text-sm shadow-md">
+                  {calculations.isProfit ? "نشاط ربحي" : "تحت المراقبة"}
+                </Badge>
+              </CardTitle>
+              
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
                 className="text-white hover:bg-white/20 transition-all duration-300 hover:scale-105 rounded-xl shadow-md"
               >
-                <Eye className="w-4 h-4 ml-1 transition-transform hover:scale-110" />
-                <span className="transition-all duration-300">
+                <Eye className="w-4 h-4 ml-1" />
+                <span className="hidden md:inline">
                   {showDetails ? 'إخفاء' : 'تفاصيل'}
                 </span>
               </Button>
             </div>
+            
+            {/* الفلاتر المدمجة */}
+            <div className="grid grid-cols-3 md:grid-cols-7 gap-1 md:gap-2">
+              {[
+                { value: 'today', label: 'اليوم' },
+                { value: 'week', label: 'الأسبوع' },
+                { value: 'month', label: 'الشهر' },
+                { value: 'year', label: 'السنة' },
+                { value: 'last30', label: 'آخر 30' },
+                { value: 'last90', label: 'آخر 90' },
+                { value: 'custom', label: 'مخصص' }
+              ].map((period) => (
+                <Button
+                  key={period.value}
+                  variant={filterPeriod === period.value ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => handleFilterChange(period.value)}
+                  className={cn(
+                    "text-xs px-2 py-1 transition-all duration-300",
+                    filterPeriod === period.value 
+                      ? 'bg-white/20 text-white border border-white/30 shadow-md' 
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  )}
+                >
+                  {period.label}
+                </Button>
+              ))}
+            </div>
+            
+            {filterPeriod === 'custom' && (
+              <div className="flex gap-2 items-center">
+                <DateRangePicker
+                  date={customDateRange}
+                  onDateChange={setCustomDateRange}
+                  className="flex-1"
+                />
+                <Button 
+                  onClick={() => handleFilterChange('custom')}
+                  disabled={!customDateRange?.from || !customDateRange?.to}
+                  size="sm"
+                  variant="secondary"
+                  className="bg-white/20 text-white hover:bg-white/30"
+                >
+                  تطبيق
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         
-          <CardContent className="space-y-8 p-8">
+          <CardContent className="space-y-6 md:space-y-8 p-4 md:p-8">
             {/* الكروت الأساسية - بتصميم منسق مع كروت المنتجات */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               <Card className={cn(
-                "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-105 border-0 group cursor-pointer",
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
                 "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
                 "bg-gradient-to-br from-indigo-600 to-purple-600 text-white",
-                "hover:shadow-2xl hover:shadow-indigo-500/30 dark:hover:shadow-2xl dark:hover:shadow-indigo-500/40"
+                "hover:shadow-xl hover:shadow-indigo-500/20 hover:scale-[1.02]"
               )}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-                      <Wallet className="w-6 h-6 transition-transform group-hover:rotate-12" />
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    <div className="p-2 md:p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+                      <Wallet className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <p className="text-sm text-white/80 font-medium">رأس المال</p>
-                      <p className="text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(capitalAmount)}</p>
+                      <p className="text-xs md:text-sm text-white/80 font-medium">رأس المال</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(capitalAmount)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               
               <Card className={cn(
-                "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-105 border-0 group cursor-pointer",
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
                 "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
                 "bg-gradient-to-br from-emerald-600 to-teal-600 text-white",
-                "hover:shadow-2xl hover:shadow-emerald-500/30 dark:hover:shadow-2xl dark:hover:shadow-emerald-500/40"
+                "hover:shadow-xl hover:shadow-emerald-500/20 hover:scale-[1.02]"
               )}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-                      <TrendingUp className="w-6 h-6 transition-transform group-hover:rotate-12" />
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    <div className="p-2 md:p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+                      <TrendingUp className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <p className="text-sm text-white/80 font-medium">أرباح المبيعات</p>
-                      <p className="text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(realizedProfits)}</p>
+                      <p className="text-xs md:text-sm text-white/80 font-medium">أرباح المبيعات</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(realizedProfits)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               
               <Card className={cn(
-                "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-105 border-0 group cursor-pointer",
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
                 "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
                 "bg-gradient-to-br from-orange-600 to-amber-600 text-white",
-                "hover:shadow-2xl hover:shadow-orange-500/30 dark:hover:shadow-2xl dark:hover:shadow-orange-500/40"
+                "hover:shadow-xl hover:shadow-orange-500/20 hover:scale-[1.02]"
               )}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-                      <Package className="w-6 h-6 transition-transform group-hover:rotate-12" />
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    <div className="p-2 md:p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+                      <Package className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <p className="text-sm text-white/80 font-medium">المشتريات</p>
-                      <p className="text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(totalPurchases)}</p>
+                      <p className="text-xs md:text-sm text-white/80 font-medium">المشتريات</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(totalPurchases)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               
               <Card className={cn(
-                "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-105 border-0 group cursor-pointer",
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
                 "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
                 "bg-gradient-to-br from-red-600 to-pink-600 text-white",
-                "hover:shadow-2xl hover:shadow-red-500/30 dark:hover:shadow-2xl dark:hover:shadow-red-500/40"
+                "hover:shadow-xl hover:shadow-red-500/20 hover:scale-[1.02]"
               )}>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-                      <TrendingDown className="w-6 h-6 transition-transform group-hover:rotate-12" />
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex items-center gap-2 md:gap-4">
+                    <div className="p-2 md:p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
+                      <TrendingDown className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <p className="text-sm text-white/80 font-medium">المصاريف</p>
-                      <p className="text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(totalExpenses)}</p>
+                      <p className="text-xs md:text-sm text-white/80 font-medium">المصاريف</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(totalExpenses)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -341,36 +387,38 @@ const SystemProfitSummary = ({
           
           {/* النتيجة النهائية الاحترافية - صافي الثروة الإجمالية */}
           <Card className={cn(
-            "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.01] border-0 group cursor-pointer",
+            "overflow-hidden transition-all duration-300 border-0 group",
             "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
-            "bg-gradient-to-br from-emerald-600 to-teal-600 text-white",
-            "hover:shadow-2xl hover:shadow-emerald-500/30 dark:hover:shadow-2xl dark:hover:shadow-emerald-500/40"
+            "bg-gradient-to-br from-purple-600 via-indigo-600 to-blue-600 text-white relative",
+            "hover:shadow-xl hover:shadow-purple-500/20 hover:scale-[1.01]",
+            "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none",
+            "after:absolute after:inset-0 after:bg-gradient-to-t after:from-black/20 after:to-transparent after:pointer-events-none"
           )}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-                    <DollarSign className="w-8 h-8 text-white transition-transform group-hover:rotate-12" />
+            <CardContent className="p-4 md:p-6 relative z-10">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3 md:gap-4">
+                  <div className="p-3 md:p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform backdrop-blur-sm">
+                    <DollarSign className="w-6 h-6 md:w-8 md:h-8 text-white transition-transform group-hover:rotate-12" />
                   </div>
                   <div>
-                    <p className="text-sm text-white/80 font-medium">صافي الثروة الإجمالية</p>
-                    <p className="text-3xl font-bold text-white group-hover:scale-105 transition-transform">
+                    <p className="text-xs md:text-sm text-white/90 font-medium">صافي الثروة الإجمالية</p>
+                    <p className="text-xl md:text-3xl font-bold text-white group-hover:scale-105 transition-transform bg-gradient-to-r from-white to-white/90 bg-clip-text">
                       {formatCurrency(calculations.netWorth)} د.ع
                     </p>
-                    <p className="text-sm text-white/80">
+                    <p className="text-xs md:text-sm text-white/80 mt-1">
                       الربح الفعلي: {calculations.actualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.actualProfit)} د.ع
                     </p>
                   </div>
                 </div>
                 
-                <div className="text-right space-y-2">
-                  <div className="px-4 py-2 bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 shadow-md">
-                    <p className="text-xs font-medium text-white/80">عائد الاستثمار</p>
-                    <p className="text-lg font-bold text-white">{calculations.roi.toFixed(1)}%</p>
+                <div className="flex flex-row md:flex-col gap-2 md:text-right">
+                  <div className="px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-white/20 to-white/10 rounded-lg transition-all duration-300 hover:scale-105 shadow-md backdrop-blur-sm border border-white/20">
+                    <p className="text-xs font-medium text-white/90">عائد الاستثمار</p>
+                    <p className="text-sm md:text-lg font-bold text-white bg-gradient-to-r from-yellow-300 to-amber-300 bg-clip-text text-transparent">{calculations.roi.toFixed(1)}%</p>
                   </div>
-                  <div className="px-4 py-2 bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 shadow-md">
-                    <p className="text-xs font-medium text-white/80">الحالة المالية</p>
-                    <p className="text-sm font-bold text-white">{calculations.isHealthy ? 'ممتازة' : 'تحتاج مراقبة'}</p>
+                  <div className="px-3 py-2 md:px-4 md:py-2 bg-gradient-to-r from-white/20 to-white/10 rounded-lg transition-all duration-300 hover:scale-105 shadow-md backdrop-blur-sm border border-white/20">
+                    <p className="text-xs font-medium text-white/90">الحالة المالية</p>
+                    <p className="text-xs md:text-sm font-bold text-white bg-gradient-to-r from-green-300 to-emerald-300 bg-clip-text text-transparent">{calculations.isHealthy ? 'ممتازة' : 'تحتاج مراقبة'}</p>
                   </div>
                 </div>
               </div>

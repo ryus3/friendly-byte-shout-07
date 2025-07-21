@@ -121,7 +121,7 @@ import React, { useState, useEffect } from 'react';
     
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-[9999] bg-background border shadow-2xl max-h-[95vh] overflow-hidden flex flex-col"
+          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-[9999] bg-background border shadow-2xl max-h-[95vh] md:max-h-[90vh] overflow-hidden flex flex-col"
             style={{ 
               position: 'fixed',
               top: '50%',
@@ -134,8 +134,8 @@ import React, { useState, useEffect } from 'react';
               <DialogTitle className="text-right">إدارة المصاريف العامة</DialogTitle>
               <DialogDescription className="text-right">عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4 flex-1 overflow-hidden">
-              <div className="md:col-span-1 space-y-4 p-4 border rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 py-4 flex-1 overflow-hidden">
+              <div className="md:col-span-1 space-y-4 p-4 border rounded-lg max-h-full overflow-y-auto">
                 <h3 className="font-semibold flex items-center gap-2"><PlusCircle className="w-5 h-5 text-primary" /> إضافة مصروف جديد</h3>
                 <div className="space-y-3">
                   <div>
@@ -178,8 +178,8 @@ import React, { useState, useEffect } from 'react';
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-2 space-y-4 overflow-hidden flex flex-col">
-                <h3 className="font-semibold">قائمة المصاريف</h3>
+              <div className="md:col-span-2 space-y-4 overflow-hidden flex flex-col max-h-full">
+                <h3 className="font-semibold flex-shrink-0">قائمة المصاريف</h3>
                 <div className="flex flex-col sm:flex-row gap-2 p-2 border rounded-md">
                     <Select value={filters.category} onValueChange={(v) => setFilters(f => ({...f, category: v}))}>
                         <SelectTrigger className="flex-1">
@@ -196,7 +196,7 @@ import React, { useState, useEffect } from 'react';
                         onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
                     />
                 </div>
-                <ScrollArea className="flex-1 border rounded-lg">
+                <ScrollArea className="flex-1 border rounded-lg min-h-[300px] max-h-[500px]">
                   <Table>
                     <TableHeader>
                       <TableRow>
