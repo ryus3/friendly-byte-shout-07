@@ -54,22 +54,19 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (expensesError) throw expensesError;
 
-      // 3. جلب الطلبات المُوصلة والمكتملة
-      const { data: allOrders, error: allOrdersError } = await supabase
+      // 3. جلب الطلبات التي تم استلام فواتيرها للأرباح المحققة فقط
+      const { data: realizedOrders, error: ordersError } = await supabase
         .from('orders')
-        .select('id, status, receipt_received')
-        .in('status', ['delivered', 'completed']);
+        .select('id, receipt_received')
+        .eq('receipt_received', true);
 
-      if (allOrdersError) throw allOrdersError;
+      if (ordersError) throw ordersError;
 
-      // الطلبات التي تم استلام فواتيرها (أرباح محققة)
-      const realizedOrderIds = allOrders?.filter(o => o.receipt_received === true).map(o => o.id) || [];
-      // الطلبات المُوصلة ولم يتم استلام فواتيرها (أرباح معلقة)
-      const pendingOrderIds = allOrders?.filter(o => o.receipt_received === false).map(o => o.id) || [];
+      const realizedOrderIds = realizedOrders?.map(o => o.id) || [];
       
-      // 4. حساب البيانات العامة
+      // 4. حساب البيانات العامة - الأرباح المحققة فقط (التي تم استلام فواتيرها)
       const realizedProfits = systemProfits?.filter(p => realizedOrderIds.includes(p.order_id)) || [];
-      const pendingProfits = systemProfits?.filter(p => pendingOrderIds.includes(p.order_id)) || [];
+      const pendingProfits = systemProfits?.filter(p => !realizedOrderIds.includes(p.order_id)) || [];
       
       const totalSystemProfit = systemProfits?.reduce((sum, p) => sum + (p.profit_amount || 0), 0) || 0;
       const totalEmployeeProfits = systemProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
@@ -104,7 +101,7 @@ export const useUnifiedProfits = (userId = null) => {
 
       // 6. إحصائيات إضافية
       const settledOrders = systemProfits?.filter(p => p.status === 'settled').length || 0;
-      const pendingOrders = pendingOrderIds.length || 0;
+      const pendingOrders = pendingProfits.length || 0;
       const settledDues = systemProfits?.filter(p => p.status === 'settled').reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
 
       // 7. تجميع جميع البيانات

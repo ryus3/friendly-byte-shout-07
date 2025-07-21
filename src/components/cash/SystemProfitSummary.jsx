@@ -154,14 +154,14 @@ const SystemProfitSummary = ({
       {/* فلاتر الفترة الزمنية */}
       <Card className={cn(
         "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 border-0",
-        "bg-card/80 backdrop-blur-sm"
+        "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm"
       )}>
         <CardHeader className={cn(
-          "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground pb-4 relative",
+          "bg-gradient-to-br from-indigo-600 to-purple-600 text-white pb-4 relative",
           "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none"
         )}>
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-lg font-bold">
+            <CardTitle className="flex items-center gap-3 text-lg font-bold text-white">
               <div className="p-2 bg-white/20 rounded-lg">
                 <Filter className="w-5 h-5 transition-transform hover:rotate-12" />
               </div>
@@ -193,7 +193,7 @@ const SystemProfitSummary = ({
                   "group relative overflow-hidden border-2 transition-all duration-300",
                   filterPeriod === period.value 
                     ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-105' 
-                    : 'border-border hover:bg-accent hover:text-accent-foreground hover:shadow-md hover:scale-102'
+                    : 'border-muted-foreground/20 hover:bg-primary/5 hover:border-primary/30 hover:shadow-md hover:scale-102'
                 )}
               >
                 <period.icon className="w-3 h-3 ml-1 transition-transform group-hover:scale-110" />
@@ -223,13 +223,12 @@ const SystemProfitSummary = ({
       </Card>
 
       {/* لوحة الربح العام الاحترافية */}
-      <div className="mt-6">
       <Card className={cn(
         "overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:scale-[1.01] border-0",
-        "bg-card/80 backdrop-blur-sm"
+        "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm"
       )}>
         <CardHeader className={cn(
-          `bg-gradient-to-br ${calculations.isProfit ? 'from-emerald-500 to-emerald-600' : 'from-orange-500 to-red-500'} text-white pb-3 relative`,
+          `bg-gradient-to-br ${calculations.isProfit ? 'from-emerald-600 to-teal-600' : 'from-orange-600 to-red-600'} text-white pb-3 relative`,
           "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none"
         )}>
           <div className="flex items-center justify-between">
@@ -237,7 +236,7 @@ const SystemProfitSummary = ({
               <div className="p-3 bg-white/20 rounded-lg">
                 <Calculator className="w-6 h-6 transition-transform hover:rotate-12" />
               </div>
-              مركز السيطرة المالي
+              مركز السيطرة المالي العالمي
               <Badge variant="secondary" className="bg-white/20 text-white border-0 text-sm">
                 {calculations.isProfit ? "نشاط ربحي" : "تحت المراقبة"}
               </Badge>
@@ -259,12 +258,12 @@ const SystemProfitSummary = ({
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6 p-6">
+        <CardContent className="space-y-6">
           {/* الحساب الأساسي */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className={cn(
-              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 border-0",
-              "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground"
+              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-indigo-200/50 hover:scale-105 border-0",
+              "bg-gradient-to-br from-indigo-600 to-purple-600 text-white"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -280,8 +279,8 @@ const SystemProfitSummary = ({
             </Card>
             
             <Card className={cn(
-              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 border-0",
-              "bg-gradient-to-br from-emerald-500 to-emerald-600 text-white"
+              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-emerald-200/50 hover:scale-105 border-0",
+              "bg-gradient-to-br from-emerald-600 to-teal-600 text-white"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -297,8 +296,8 @@ const SystemProfitSummary = ({
             </Card>
             
             <Card className={cn(
-              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 border-0",
-              "bg-gradient-to-br from-orange-500 to-orange-600 text-white"
+              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-orange-200/50 hover:scale-105 border-0",
+              "bg-gradient-to-br from-orange-600 to-amber-600 text-white"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -314,8 +313,8 @@ const SystemProfitSummary = ({
             </Card>
             
             <Card className={cn(
-              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 border-0",
-              "bg-gradient-to-br from-red-500 to-red-600 text-white"
+              "overflow-hidden transition-all duration-300 hover:shadow-lg hover:shadow-red-200/50 hover:scale-105 border-0",
+              "bg-gradient-to-br from-red-600 to-pink-600 text-white"
             )}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -333,10 +332,10 @@ const SystemProfitSummary = ({
           
           {/* النتيجة النهائية الاحترافية */}
           <Card className={cn(
-            "overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-[1.01] border-0 mt-6",
+            "overflow-hidden transition-all duration-300 hover:shadow-2xl hover:scale-[1.01] border-0",
             calculations.isProfit 
-              ? 'bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950 dark:to-emerald-900' 
-              : 'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900'
+              ? 'bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 hover:shadow-emerald-200/50' 
+              : 'bg-gradient-to-br from-orange-50 via-red-50 to-orange-100 hover:shadow-orange-200/50'
           )}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
