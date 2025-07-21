@@ -327,12 +327,18 @@ const SystemProfitSummary = ({
                 </CardContent>
               </Card>
               
-              <Card className={cn(
-                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
-                "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
-                "bg-gradient-to-br from-emerald-600 to-teal-600 text-white",
-                "hover:shadow-xl hover:shadow-emerald-500/20 hover:scale-[1.02]"
-              )}>
+              <Card 
+                className={cn(
+                  "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
+                  "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+                  "bg-gradient-to-br from-emerald-600 to-teal-600 text-white",
+                  "hover:shadow-xl hover:shadow-emerald-500/20 hover:scale-[1.02]"
+                )}
+                onClick={() => {
+                  // التنقل إلى صفحة تحليل الأرباح المتقدم
+                  window.open('/advanced-profits-analysis', '_blank');
+                }}
+              >
                 <CardContent className="p-3 md:p-6">
                   <div className="flex items-center gap-2 md:gap-4">
                     <div className="p-2 md:p-4 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
@@ -341,6 +347,7 @@ const SystemProfitSummary = ({
                     <div>
                       <p className="text-xs md:text-sm text-white/80 font-medium">أرباح المبيعات</p>
                       <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(realizedProfits)}</p>
+                      <p className="text-xs text-white/60 mt-1">اضغط للتحليل المتقدم</p>
                     </div>
                   </div>
                 </CardContent>

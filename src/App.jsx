@@ -33,6 +33,7 @@ const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
 const CashManagementPage = lazy(() => import('@/pages/CashManagementPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
+const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAnalysisPage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -109,6 +110,7 @@ function AppContent() {
           <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
+          <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
 
         </Routes>
       </Suspense>
