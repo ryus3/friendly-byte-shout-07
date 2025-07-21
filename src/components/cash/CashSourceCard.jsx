@@ -70,7 +70,8 @@ const CashSourceCard = ({
   return (
     <Card className={cn(
       "overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:scale-[1.02] border-0",
-      "bg-gradient-to-br from-background to-background/50 backdrop-blur-sm",
+      "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-lg shadow-primary/5",
+      "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none before:rounded-lg",
       className
     )}>
       <CardHeader className={cn(

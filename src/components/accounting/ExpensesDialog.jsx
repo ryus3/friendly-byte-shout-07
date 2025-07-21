@@ -208,16 +208,16 @@ import React, { useState, useEffect } from 'react';
                     <TableBody>
                       {filteredExpenses.map(expense => (
                         <TableRow key={expense.id}>
-                          <TableCell>
-                            <p className="font-medium">{expense.description}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {expense.category || 'غير محدد'} - {
-                                expense.transaction_date 
-                                  ? format(new Date(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
-                                  : 'تاريخ غير محدد'
-                              }
-                            </p>
-                          </TableCell>
+                           <TableCell>
+                             <p className="font-medium">{expense.description}</p>
+                             <p className="text-xs text-muted-foreground">
+                               {expense.category || 'غير محدد'} - {
+                                 expense.transaction_date 
+                                   ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
+                                   : format(new Date(), 'd MMM yyyy HH:mm', { locale: ar })
+                               }
+                             </p>
+                           </TableCell>
                           <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
                           <TableCell>
                             <AlertDialog>

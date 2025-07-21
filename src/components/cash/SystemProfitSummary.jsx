@@ -151,29 +151,29 @@ const SystemProfitSummary = ({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* فلاتر الفترة الزمنية */}
+      {/* مركز السيطرة المالي مع الفلاتر */}
       <Card className={cn(
-        "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 border-0",
-        "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-lg"
+        "overflow-hidden transition-all duration-300 border-0",
+        "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm shadow-lg shadow-primary/5",
+        "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/5 before:to-transparent before:pointer-events-none before:rounded-lg"
       )}>
         <CardHeader className={cn(
           "bg-gradient-to-br from-indigo-600 to-purple-600 text-white pb-4 relative",
           "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none"
         )}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <CardTitle className="flex items-center gap-3 text-lg font-bold text-white">
               <div className="p-2 bg-white/20 rounded-lg">
-                <Filter className="w-5 h-5 transition-transform hover:rotate-12" />
+                <Target className="w-5 h-5 transition-transform hover:rotate-12" />
               </div>
-              فلاتر الفترة الزمنية
+              مركز السيطرة المالي
             </CardTitle>
             <Badge variant="secondary" className="bg-white/20 text-white border-0">
               {getPeriodLabel()}
             </Badge>
           </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4 p-6">
+          
+          {/* فلاتر الفترة الزمنية داخل المركز */}
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
             {[
               { value: 'today', label: 'اليوم', icon: Calendar },
@@ -186,26 +186,24 @@ const SystemProfitSummary = ({
             ].map((period) => (
               <Button
                 key={period.value}
-                variant={filterPeriod === period.value ? "default" : "outline"}
+                variant={filterPeriod === period.value ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => handleFilterChange(period.value)}
                 className={cn(
-                  "group relative overflow-hidden border-2 transition-all duration-300",
+                  "group relative overflow-hidden transition-all duration-300 text-white border-white/20",
                   filterPeriod === period.value 
-                    ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25 scale-105' 
-                    : 'border-muted-foreground/20 hover:bg-primary/5 hover:border-primary/30 hover:shadow-md hover:scale-102'
+                    ? 'bg-white/20 text-white border-white/40 shadow-lg shadow-white/10 scale-105' 
+                    : 'hover:bg-white/10 hover:border-white/30 hover:shadow-md hover:scale-102'
                 )}
               >
                 <period.icon className="w-3 h-3 ml-1 transition-transform group-hover:scale-110" />
-                <span className="transition-all duration-300">
-                  {period.label}
-                </span>
+                <span className="transition-all duration-300">{period.label}</span>
               </Button>
             ))}
           </div>
           
           {filterPeriod === 'custom' && (
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2 items-center mt-4">
               <DateRangePicker
                 date={customDateRange}
                 onDateChange={setCustomDateRange}
@@ -214,50 +212,12 @@ const SystemProfitSummary = ({
                 onClick={() => handleFilterChange('custom')}
                 disabled={!customDateRange?.from || !customDateRange?.to}
                 size="sm"
+                className="text-white hover:bg-white/10 border-white/20"
               >
                 تطبيق
               </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* مركز السيطرة المالي الاحترافي - بتصميم منسق مع فلاتر الفترة التجريبية */}
-      <Card className={cn(
-        "overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 hover:scale-[1.01] border-0 group",
-        "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
-        "bg-card/80 backdrop-blur-sm"
-      )}>
-        <CardHeader className={cn(
-          "bg-gradient-to-br from-indigo-600 to-purple-600 text-white pb-6 relative mb-6",
-          "before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none",
-          "rounded-b-xl shadow-lg"
-        )}>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-3 text-xl font-bold text-white">
-              <div className="p-3 bg-white/20 rounded-xl shadow-lg group-hover:scale-110 transition-transform">
-                <Calculator className="w-6 h-6 transition-transform group-hover:rotate-12" />
-              </div>
-              مركز السيطرة المالي
-              <Badge variant="secondary" className="bg-white/20 text-white border-0 text-sm shadow-md">
-                {calculations.isProfit ? "نشاط ربحي" : "تحت المراقبة"}
-              </Badge>
-            </CardTitle>
-            
-            <div className="flex gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowDetails(!showDetails)}
-                className="text-white hover:bg-white/20 transition-all duration-300 hover:scale-105 rounded-xl shadow-md"
-              >
-                <Eye className="w-4 h-4 ml-1 transition-transform hover:scale-110" />
-                <span className="transition-all duration-300">
-                  {showDetails ? 'إخفاء' : 'تفاصيل'}
-                </span>
-              </Button>
-            </div>
-          </div>
         </CardHeader>
         
           <CardContent className="space-y-8 p-8">
