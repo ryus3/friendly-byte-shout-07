@@ -200,7 +200,6 @@ export const InventoryProvider = ({ children }) => {
           vendor_name: expense.vendor_name || null,
           receipt_number: expense.receipt_number || null,
           status: expense.status || 'approved',
-          transaction_date: expense.transaction_date || new Date().toISOString(), // إضافة التاريخ المرسل
           created_by: user?.user_id
         })
         .select()
