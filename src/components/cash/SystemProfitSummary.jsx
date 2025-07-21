@@ -211,27 +211,15 @@ const SystemProfitSummary = ({
       </Card>
 
       {/* لوحة الربح العام الاحترافية */}
-      <Card className="overflow-hidden shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 mt-6">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-background/10 to-transparent rounded-xl pointer-events-none"></div>
-        <div 
-          className="absolute inset-px rounded-xl opacity-60"
-          style={{
-            backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-          }}
-        ></div>
-        
-        <CardHeader className="pb-3 relative z-10">
+      <Card className="overflow-hidden border border-border/50 bg-gradient-to-br from-card via-card to-muted/20 shadow-lg hover:shadow-xl transition-all duration-300 mt-8">
+        <CardHeader className="pb-3 relative">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-3 text-xl">
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white ${
-                calculations.isProfit 
-                  ? 'bg-gradient-to-br from-green-500 to-emerald-500' 
-                  : 'bg-gradient-to-br from-orange-500 to-red-500'
-              }`}>
-                <Calculator className="w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/90 to-primary flex items-center justify-center text-primary-foreground shadow-lg">
+                <Calculator className="w-5 h-5" />
               </div>
               مركز السيطرة المالي
-              <Badge variant={calculations.isProfit ? "default" : "destructive"} className="text-sm">
+              <Badge variant={calculations.isProfit ? "default" : "secondary"} className="bg-background/80 text-foreground border">
                 {calculations.isProfit ? "نشاط ربحي" : "تحت المراقبة"}
               </Badge>
             </CardTitle>
@@ -241,6 +229,7 @@ const SystemProfitSummary = ({
                 variant="outline" 
                 size="sm"
                 onClick={() => setShowDetails(!showDetails)}
+                className="bg-background/50 hover:bg-background/80"
               >
                 <Eye className="w-4 h-4 mr-1" />
                 {showDetails ? 'إخفاء' : 'تفاصيل'}
@@ -249,24 +238,17 @@ const SystemProfitSummary = ({
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6 relative z-10">
+        <CardContent className="space-y-6 relative">
           {/* الحساب الأساسي */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <motion.div 
-              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
-              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
             >
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-              <div 
-                className="absolute inset-px rounded-xl opacity-60"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-                }}
-              ></div>
-              <div className="p-4 relative z-10">
+              <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">رأس المال</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-blue-500 to-sky-500">
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-blue-500 to-sky-500 shadow-sm">
                      <Wallet className="h-4 w-4" />
                    </div>
                 </div>
@@ -275,20 +257,13 @@ const SystemProfitSummary = ({
             </motion.div>
             
             <motion.div 
-              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
-              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
             >
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-              <div 
-                className="absolute inset-px rounded-xl opacity-60"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-                }}
-              ></div>
-              <div className="p-4 relative z-10">
+              <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">أرباح المبيعات</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-green-500 to-emerald-500">
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-green-500 to-emerald-500 shadow-sm">
                      <TrendingUp className="h-4 w-4" />
                    </div>
                 </div>
@@ -297,20 +272,13 @@ const SystemProfitSummary = ({
             </motion.div>
             
             <motion.div 
-              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
-              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
             >
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-              <div 
-                className="absolute inset-px rounded-xl opacity-60"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-                }}
-              ></div>
-              <div className="p-4 relative z-10">
+              <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">المشتريات</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-orange-500 to-amber-500">
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-orange-500 to-amber-500 shadow-sm">
                      <Package className="h-4 w-4" />
                    </div>
                 </div>
@@ -319,20 +287,13 @@ const SystemProfitSummary = ({
             </motion.div>
             
             <motion.div 
-              className="overflow-hidden h-full flex flex-col shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 bg-card rounded-xl border"
-              whileHover={{ y: -5, transition: { type: 'spring', stiffness: 300, damping: 10 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
             >
-              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-              <div 
-                className="absolute inset-px rounded-xl opacity-60"
-                style={{
-                  backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-                }}
-              ></div>
-              <div className="p-4 relative z-10">
+              <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">المصاريف</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-red-500 to-rose-500">
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-red-500 to-rose-500 shadow-sm">
                      <TrendingDown className="h-4 w-4" />
                    </div>
                 </div>
@@ -343,45 +304,31 @@ const SystemProfitSummary = ({
           
           {/* النتيجة النهائية الاحترافية */}
           <div className="relative">
-            <div className={`p-6 rounded-2xl border-2 bg-gradient-to-br ${
-              calculations.isProfit 
-                ? 'from-emerald-100 via-green-50 to-emerald-100 border-emerald-300' 
-                : 'from-orange-100 via-red-50 to-orange-100 border-orange-300'
-            }`}>
+            <div className="p-6 rounded-xl border border-border bg-gradient-to-br from-card via-card to-muted/20 shadow-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                   <div className={`p-4 rounded-xl ${
-                     calculations.isProfit ? 'bg-emerald-500' : 'bg-orange-500'
-                   }`}>
+                   <div className="p-4 rounded-xl bg-gradient-to-br from-primary/90 to-primary shadow-lg">
                      <DollarSign className="w-8 h-8 text-primary-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 font-medium">صافي الثروة الإجمالية</p>
-                    <p className={`text-3xl font-bold ${
-                      calculations.isProfit ? 'text-emerald-700' : 'text-orange-700'
-                    }`}>
+                    <p className="text-sm text-muted-foreground font-medium">صافي الثروة الإجمالية</p>
+                    <p className="text-3xl font-bold text-foreground">
                       {formatCurrency(calculations.netWorth)} د.ع
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       الربح الفعلي: {calculations.actualProfit >= 0 ? '+' : ''}{formatCurrency(calculations.actualProfit)} د.ع
                     </p>
                   </div>
                 </div>
                 
                 <div className="text-right space-y-2">
-                  <div className={`px-4 py-2 rounded-lg ${
-                    calculations.roi > 10 ? 'bg-green-100 text-green-700' :
-                    calculations.roi > 0 ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    <p className="text-xs font-medium">عائد الاستثمار</p>
-                    <p className="text-lg font-bold">{calculations.roi.toFixed(1)}%</p>
+                  <div className="px-4 py-2 rounded-lg bg-background/80 border">
+                    <p className="text-xs font-medium text-muted-foreground">عائد الاستثمار</p>
+                    <p className="text-lg font-bold text-foreground">{calculations.roi.toFixed(1)}%</p>
                   </div>
-                  <div className={`px-4 py-2 rounded-lg ${
-                    calculations.isHealthy ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
-                  }`}>
-                    <p className="text-xs font-medium">الحالة المالية</p>
-                    <p className="text-sm font-bold">{calculations.isHealthy ? 'ممتازة' : 'تحتاج مراقبة'}</p>
+                  <div className="px-4 py-2 rounded-lg bg-background/80 border">
+                    <p className="text-xs font-medium text-muted-foreground">الحالة المالية</p>
+                    <p className="text-sm font-bold text-foreground">{calculations.isHealthy ? 'ممتازة' : 'تحتاج مراقبة'}</p>
                   </div>
                 </div>
               </div>

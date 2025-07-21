@@ -77,8 +77,8 @@ export const useUnifiedProfits = (userId = null) => {
       const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       const netSystemProfit = realizedManagerProfits - totalExpenses;
       
-      // الأرباح المعلقة = أرباح الطلبات التي لم يتم استلام فواتيرها
-      const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
+      // الأرباح المعلقة = أرباح الموظفين فقط من الطلبات التي لم يتم استلام فواتيرها
+      const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
       // 4. حساب البيانات الشخصية (إذا تم تمرير معرف المستخدم)
       let personalData = {
