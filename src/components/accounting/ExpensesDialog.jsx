@@ -89,6 +89,7 @@ import React, { useState, useEffect } from 'react';
           await addExpense({
             ...newExpense,
             amount: parseFloat(newExpense.amount),
+            transaction_date: new Date(newExpense.date).toISOString(), // تأكيد إضافة التاريخ والوقت الصحيح
             expense_type: 'operational' // تأكيد أنه مصروف تشغيلي وليس نظامي
           });
           
@@ -144,7 +145,7 @@ import React, { useState, useEffect } from 'react';
                       <SelectTrigger id="exp-category">
                         <SelectValue placeholder="اختر فئة" />
                       </SelectTrigger>
-                      <SelectContent className="z-[10000] bg-background border shadow-lg">
+                       <SelectContent className="z-[10000] bg-popover border shadow-lg pointer-events-auto">
                         {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -181,7 +182,7 @@ import React, { useState, useEffect } from 'react';
                         <SelectTrigger className="flex-1">
                             <SelectValue placeholder="فلترة حسب الفئة" />
                         </SelectTrigger>
-                        <SelectContent className="z-[10000] bg-background border shadow-lg">
+                        <SelectContent className="z-[10000] bg-popover border shadow-lg pointer-events-auto">
                             <SelectItem value="all">كل الفئات</SelectItem>
                             {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                         </SelectContent>
