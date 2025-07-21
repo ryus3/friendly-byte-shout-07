@@ -153,14 +153,14 @@ const SystemProfitSummary = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* فلاتر الفترة الزمنية */}
-      <Card className="border-2 border-border bg-gradient-to-br from-card to-muted/30">
+      <Card className="border-2 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-cyan-950/30 border-emerald-200 dark:border-emerald-800/50 shadow-lg">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="w-5 h-5 text-primary" />
+            <CardTitle className="flex items-center gap-2 text-lg text-emerald-700 dark:text-emerald-300">
+              <Filter className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
               فلاتر الفترة الزمنية
             </CardTitle>
-            <Badge variant="outline" className="bg-background/80">
+            <Badge variant="outline" className="bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700">
               {getPeriodLabel()}
             </Badge>
           </div>
@@ -182,8 +182,10 @@ const SystemProfitSummary = ({
                 variant={filterPeriod === period.value ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleFilterChange(period.value)}
-                className={`flex items-center gap-1 ${
-                  filterPeriod === period.value ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                className={`flex items-center gap-1 transition-all duration-300 ${
+                  filterPeriod === period.value 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg hover:from-emerald-600 hover:to-teal-600' 
+                    : 'bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:scale-105'
                 }`}
               >
                 <period.icon className="w-3 h-3" />
@@ -242,62 +244,106 @@ const SystemProfitSummary = ({
           {/* الحساب الأساسي */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <motion.div 
-              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
-              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-100 dark:from-blue-950/30 dark:via-indigo-950/30 dark:to-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800/50 shadow-md hover:shadow-xl transition-all duration-300"
+              whileHover={{ 
+                y: -4, 
+                scale: 1.02,
+                transition: { type: 'spring', stiffness: 300, damping: 20 } 
+              }}
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">رأس المال</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-blue-500 to-sky-500 shadow-sm">
+                  <span className="text-sm font-medium text-blue-600 dark:text-blue-300">رأس المال</span>
+                   <motion.div 
+                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-blue-500 to-sky-500 shadow-sm"
+                     whileHover={{ 
+                       rotate: [0, -10, 10, 0], 
+                       scale: 1.1,
+                       transition: { duration: 0.4 } 
+                     }}
+                   >
                      <Wallet className="h-4 w-4" />
-                   </div>
+                   </motion.div>
                 </div>
-                <p className="text-lg font-bold text-foreground">+{formatCurrency(capitalAmount)}</p>
+                <p className="text-lg font-bold text-blue-700 dark:text-blue-200">+{formatCurrency(capitalAmount)}</p>
               </div>
             </motion.div>
             
             <motion.div 
-              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
-              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 dark:from-green-950/30 dark:via-emerald-950/30 dark:to-green-900/30 rounded-xl border border-green-200 dark:border-green-800/50 shadow-md hover:shadow-xl transition-all duration-300"
+              whileHover={{ 
+                y: -4, 
+                scale: 1.02,
+                transition: { type: 'spring', stiffness: 300, damping: 20 } 
+              }}
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">أرباح المبيعات</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-green-500 to-emerald-500 shadow-sm">
+                  <span className="text-sm font-medium text-green-600 dark:text-green-300">أرباح المبيعات</span>
+                   <motion.div 
+                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-green-500 to-emerald-500 shadow-sm"
+                     whileHover={{ 
+                       y: [0, -3, 0], 
+                       scale: 1.1,
+                       transition: { duration: 0.4 } 
+                     }}
+                   >
                      <TrendingUp className="h-4 w-4" />
-                   </div>
+                   </motion.div>
                 </div>
-                <p className="text-lg font-bold text-foreground">+{formatCurrency(realizedProfits)}</p>
+                <p className="text-lg font-bold text-green-700 dark:text-green-200">+{formatCurrency(realizedProfits)}</p>
               </div>
             </motion.div>
             
             <motion.div 
-              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
-              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 dark:from-orange-950/30 dark:via-amber-950/30 dark:to-orange-900/30 rounded-xl border border-orange-200 dark:border-orange-800/50 shadow-md hover:shadow-xl transition-all duration-300"
+              whileHover={{ 
+                y: -4, 
+                scale: 1.02,
+                transition: { type: 'spring', stiffness: 300, damping: 20 } 
+              }}
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">المشتريات</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-orange-500 to-amber-500 shadow-sm">
+                  <span className="text-sm font-medium text-orange-600 dark:text-orange-300">المشتريات</span>
+                   <motion.div 
+                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-orange-500 to-amber-500 shadow-sm"
+                     whileHover={{ 
+                       rotate: [0, 10, -10, 0], 
+                       scale: 1.1,
+                       transition: { duration: 0.4 } 
+                     }}
+                   >
                      <Package className="h-4 w-4" />
-                   </div>
+                   </motion.div>
                 </div>
-                <p className="text-lg font-bold text-foreground">-{formatCurrency(totalPurchases)}</p>
+                <p className="text-lg font-bold text-orange-700 dark:text-orange-200">-{formatCurrency(totalPurchases)}</p>
               </div>
             </motion.div>
             
             <motion.div 
-              className="relative overflow-hidden bg-gradient-to-br from-card to-muted/30 rounded-xl border border-border/50 shadow-md hover:shadow-lg transition-all duration-300"
-              whileHover={{ y: -2, transition: { type: 'spring', stiffness: 300, damping: 20 } }}
+              className="relative overflow-hidden bg-gradient-to-br from-red-50 via-rose-50 to-red-100 dark:from-red-950/30 dark:via-rose-950/30 dark:to-red-900/30 rounded-xl border border-red-200 dark:border-red-800/50 shadow-md hover:shadow-xl transition-all duration-300"
+              whileHover={{ 
+                y: -4, 
+                scale: 1.02,
+                transition: { type: 'spring', stiffness: 300, damping: 20 } 
+              }}
             >
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-muted-foreground">المصاريف</span>
-                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-red-500 to-rose-500 shadow-sm">
+                  <span className="text-sm font-medium text-red-600 dark:text-red-300">المصاريف</span>
+                   <motion.div 
+                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-red-500 to-rose-500 shadow-sm"
+                     whileHover={{ 
+                       x: [0, -2, 2, 0], 
+                       scale: 1.1,
+                       transition: { duration: 0.4 } 
+                     }}
+                   >
                      <TrendingDown className="h-4 w-4" />
-                   </div>
+                   </motion.div>
                 </div>
-                <p className="text-lg font-bold text-foreground">-{formatCurrency(totalExpenses)}</p>
+                <p className="text-lg font-bold text-red-700 dark:text-red-200">-{formatCurrency(totalExpenses)}</p>
               </div>
             </motion.div>
           </div>
@@ -371,18 +417,27 @@ const SystemProfitSummary = ({
           
           {/* المؤشرات السريعة */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 bg-emerald-50 rounded-lg border border-emerald-200">
-              <p className="text-xs text-emerald-600 font-medium">هامش الربح</p>
-              <p className="text-lg font-bold text-emerald-700">{calculations.profitMargin.toFixed(1)}%</p>
-            </div>
-            <div className="text-center p-3 bg-orange-50 rounded-lg border border-orange-200">
-              <p className="text-xs text-orange-600 font-medium">نسبة المشتريات</p>
-              <p className="text-lg font-bold text-orange-700">{calculations.purchaseRatio.toFixed(1)}%</p>
-            </div>
-            <div className="text-center p-3 bg-red-50 rounded-lg border border-red-200">
-              <p className="text-xs text-red-600 font-medium">نسبة المصاريف</p>
-              <p className="text-lg font-bold text-red-700">{calculations.expenseRatio.toFixed(1)}%</p>
-            </div>
+            <motion.div 
+              className="text-center p-4 bg-gradient-to-br from-emerald-50 via-green-50 to-emerald-100 dark:from-emerald-950/30 dark:via-green-950/30 dark:to-emerald-900/30 rounded-lg border border-emerald-200 dark:border-emerald-800/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ scale: 1.05, y: -2 }}
+            >
+              <p className="text-xs text-emerald-600 dark:text-emerald-300 font-medium">هامش الربح</p>
+              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-200">{calculations.profitMargin.toFixed(1)}%</p>
+            </motion.div>
+            <motion.div 
+              className="text-center p-4 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 dark:from-orange-950/30 dark:via-amber-950/30 dark:to-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-800/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ scale: 1.05, y: -2 }}
+            >
+              <p className="text-xs text-orange-600 dark:text-orange-300 font-medium">نسبة المشتريات</p>
+              <p className="text-lg font-bold text-orange-700 dark:text-orange-200">{calculations.purchaseRatio.toFixed(1)}%</p>
+            </motion.div>
+            <motion.div 
+              className="text-center p-4 bg-gradient-to-br from-red-50 via-rose-50 to-red-100 dark:from-red-950/30 dark:via-rose-950/30 dark:to-red-900/30 rounded-lg border border-red-200 dark:border-red-800/50 shadow-md hover:shadow-lg transition-all duration-300"
+              whileHover={{ scale: 1.05, y: -2 }}
+            >
+              <p className="text-xs text-red-600 dark:text-red-300 font-medium">نسبة المصاريف</p>
+              <p className="text-lg font-bold text-red-700 dark:text-red-200">{calculations.expenseRatio.toFixed(1)}%</p>
+            </motion.div>
           </div>
           
           {/* تحذيرات ذكية */}
