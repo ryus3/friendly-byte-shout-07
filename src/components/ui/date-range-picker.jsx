@@ -45,7 +45,7 @@ export function DateRangePicker({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 z-[10000] bg-popover border shadow-lg pointer-events-auto" align="start">
           <Calendar
             initialFocus
             mode="range"
@@ -54,6 +54,7 @@ export function DateRangePicker({
             onSelect={onDateChange}
             numberOfMonths={2}
             locale={ar}
+            className="pointer-events-auto"
           />
         </PopoverContent>
       </Popover>

@@ -86,10 +86,13 @@ import React, { useState, useEffect } from 'react';
         }
         
         try {
+          // التأكد من أن التاريخ صحيح
+          const expenseDate = newExpense.date ? new Date(newExpense.date) : new Date();
+          
           await addExpense({
             ...newExpense,
             amount: parseFloat(newExpense.amount),
-            transaction_date: new Date(newExpense.date).toISOString(), // تأكيد إضافة التاريخ والوقت الصحيح
+            transaction_date: expenseDate.toISOString(), // تأكيد إضافة التاريخ والوقت الصحيح
             expense_type: 'operational' // تأكيد أنه مصروف تشغيلي وليس نظامي
           });
           
