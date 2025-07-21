@@ -121,7 +121,7 @@ import React, { useState, useEffect } from 'react';
     
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-[9999] bg-background border shadow-2xl"
+          <DialogContent className="max-w-4xl w-[95vw] sm:w-full z-[9999] bg-background border shadow-2xl max-h-[95vh] overflow-hidden flex flex-col"
             style={{ 
               position: 'fixed',
               top: '50%',
@@ -130,11 +130,11 @@ import React, { useState, useEffect } from 'react';
               zIndex: 9999
             }}
           >
-            <DialogHeader>
-              <DialogTitle>إدارة المصاريف العامة</DialogTitle>
-              <DialogDescription>عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
+            <DialogHeader className="flex-shrink-0 pb-4 border-b">
+              <DialogTitle className="text-right">إدارة المصاريف العامة</DialogTitle>
+              <DialogDescription className="text-right">عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4 max-h-[80vh] overflow-y-auto md:overflow-visible">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4 flex-1 overflow-hidden">
               <div className="md:col-span-1 space-y-4 p-4 border rounded-lg">
                 <h3 className="font-semibold flex items-center gap-2"><PlusCircle className="w-5 h-5 text-primary" /> إضافة مصروف جديد</h3>
                 <div className="space-y-3">
@@ -178,7 +178,7 @@ import React, { useState, useEffect } from 'react';
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-2 space-y-4">
+              <div className="md:col-span-2 space-y-4 overflow-hidden flex flex-col">
                 <h3 className="font-semibold">قائمة المصاريف</h3>
                 <div className="flex flex-col sm:flex-row gap-2 p-2 border rounded-md">
                     <Select value={filters.category} onValueChange={(v) => setFilters(f => ({...f, category: v}))}>
@@ -196,7 +196,7 @@ import React, { useState, useEffect } from 'react';
                         onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
                     />
                 </div>
-                <ScrollArea className="h-96 border rounded-lg">
+                <ScrollArea className="flex-1 border rounded-lg">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -208,16 +208,16 @@ import React, { useState, useEffect } from 'react';
                     <TableBody>
                       {filteredExpenses.map(expense => (
                         <TableRow key={expense.id}>
-                           <TableCell>
-                             <p className="font-medium">{expense.description}</p>
-                             <p className="text-xs text-muted-foreground">
-                               {expense.category || 'غير محدد'} - {
-                                 expense.transaction_date 
-                                   ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
-                                   : format(new Date(), 'd MMM yyyy HH:mm', { locale: ar })
-                               }
-                             </p>
-                           </TableCell>
+                          <TableCell>
+                            <p className="font-medium">{expense.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {expense.category || 'غير محدد'} - {
+                                expense.transaction_date 
+                                  ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
+                                  : format(new Date(), 'd MMM yyyy HH:mm', { locale: ar })
+                              }
+                            </p>
+                          </TableCell>
                           <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
                           <TableCell>
                             <AlertDialog>
@@ -261,7 +261,7 @@ import React, { useState, useEffect } from 'react';
                 </ScrollArea>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
               <Button variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>
             </DialogFooter>
           </DialogContent>
