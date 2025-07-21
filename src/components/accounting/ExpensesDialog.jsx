@@ -27,7 +27,7 @@ import React, { useState, useEffect } from 'react';
       });
     
       const [expenseCategories, setExpenseCategories] = useState([
-        'مشتريات', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'أخرى'
+        'مشتريات', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'مصاريف بنكية', 'أخرى'
       ]);
       const [newCategory, setNewCategory] = useState('');
 
@@ -213,7 +213,7 @@ import React, { useState, useEffect } from 'react';
                             <p className="text-xs text-muted-foreground">
                               {expense.category || 'غير محدد'} - {
                                 expense.transaction_date 
-                                  ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
+                                  ? format(new Date(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
                                   : 'تاريخ غير محدد'
                               }
                             </p>
