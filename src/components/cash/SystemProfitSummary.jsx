@@ -153,14 +153,14 @@ const SystemProfitSummary = ({
   return (
     <div className={`space-y-6 ${className}`}>
       {/* فلاتر الفترة الزمنية */}
-      <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+      <Card className="border-2 border-border bg-gradient-to-br from-card to-muted/30">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="w-5 h-5 text-blue-600" />
+              <Filter className="w-5 h-5 text-primary" />
               فلاتر الفترة الزمنية
             </CardTitle>
-            <Badge variant="outline" className="bg-white/80">
+            <Badge variant="outline" className="bg-background/80">
               {getPeriodLabel()}
             </Badge>
           </div>
@@ -183,7 +183,7 @@ const SystemProfitSummary = ({
                 size="sm"
                 onClick={() => handleFilterChange(period.value)}
                 className={`flex items-center gap-1 ${
-                  filterPeriod === period.value ? 'bg-blue-600 text-white' : 'hover:bg-blue-50'
+                  filterPeriod === period.value ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
                 }`}
               >
                 <period.icon className="w-3 h-3" />
@@ -211,8 +211,8 @@ const SystemProfitSummary = ({
       </Card>
 
       {/* لوحة الربح العام الاحترافية */}
-      <Card className="overflow-hidden shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20">
-        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
+      <Card className="overflow-hidden shadow-lg shadow-black/10 dark:shadow-black/30 hover:shadow-2xl hover:shadow-primary/10 dark:hover:shadow-primary/20 mt-6">
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-background/10 to-transparent rounded-xl pointer-events-none"></div>
         <div 
           className="absolute inset-px rounded-xl opacity-60"
           style={{
@@ -230,7 +230,7 @@ const SystemProfitSummary = ({
               }`}>
                 <Calculator className="w-6 h-6" />
               </div>
-              مركز السيطرة المالي العالمي
+              مركز السيطرة المالي
               <Badge variant={calculations.isProfit ? "default" : "destructive"} className="text-sm">
                 {calculations.isProfit ? "نشاط ربحي" : "تحت المراقبة"}
               </Badge>
@@ -266,9 +266,9 @@ const SystemProfitSummary = ({
               <div className="p-4 relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">رأس المال</span>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-blue-500 to-sky-500">
-                    <Wallet className="h-4 w-4" />
-                  </div>
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-blue-500 to-sky-500">
+                     <Wallet className="h-4 w-4" />
+                   </div>
                 </div>
                 <p className="text-lg font-bold text-foreground">+{formatCurrency(capitalAmount)}</p>
               </div>
@@ -288,9 +288,9 @@ const SystemProfitSummary = ({
               <div className="p-4 relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">أرباح المبيعات</span>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-green-500 to-emerald-500">
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-green-500 to-emerald-500">
+                     <TrendingUp className="h-4 w-4" />
+                   </div>
                 </div>
                 <p className="text-lg font-bold text-foreground">+{formatCurrency(realizedProfits)}</p>
               </div>
@@ -310,9 +310,9 @@ const SystemProfitSummary = ({
               <div className="p-4 relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">المشتريات</span>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-orange-500 to-amber-500">
-                    <Package className="h-4 w-4" />
-                  </div>
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-orange-500 to-amber-500">
+                     <Package className="h-4 w-4" />
+                   </div>
                 </div>
                 <p className="text-lg font-bold text-foreground">-{formatCurrency(totalPurchases)}</p>
               </div>
@@ -332,9 +332,9 @@ const SystemProfitSummary = ({
               <div className="p-4 relative z-10">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium text-muted-foreground">المصاريف</span>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white bg-gradient-to-br from-red-500 to-rose-500">
-                    <TrendingDown className="h-4 w-4" />
-                  </div>
+                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-primary-foreground bg-gradient-to-br from-red-500 to-rose-500">
+                     <TrendingDown className="h-4 w-4" />
+                   </div>
                 </div>
                 <p className="text-lg font-bold text-foreground">-{formatCurrency(totalExpenses)}</p>
               </div>
@@ -350,10 +350,10 @@ const SystemProfitSummary = ({
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className={`p-4 rounded-xl ${
-                    calculations.isProfit ? 'bg-emerald-500' : 'bg-orange-500'
-                  }`}>
-                    <DollarSign className="w-8 h-8 text-white" />
+                   <div className={`p-4 rounded-xl ${
+                     calculations.isProfit ? 'bg-emerald-500' : 'bg-orange-500'
+                   }`}>
+                     <DollarSign className="w-8 h-8 text-primary-foreground" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 font-medium">صافي الثروة الإجمالية</p>
