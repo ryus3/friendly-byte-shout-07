@@ -59,7 +59,7 @@ import React, { useState, useEffect } from 'react';
     
       // فلترة المصاريف لإظهار المصاريف الفعلية فقط (ليس الفئات النظامية)
       const filteredExpenses = expenses.filter(expense => {
-        // استبعاد الفئات النظامية وإظهار المصاريف التشغيلية الفعلية فقط
+        // استبعاد الفئات النظامية فقط وإظهار جميع المصاريف التشغيلية
         if (expense.expense_type === 'system' || expense.category === 'فئات_المصاريف') {
           return false;
         }
@@ -131,138 +131,255 @@ import React, { useState, useEffect } from 'react';
             }}
           >
             <DialogHeader className="flex-shrink-0 pb-4 border-b">
-              <DialogTitle className="text-right">إدارة المصاريف العامة</DialogTitle>
-              <DialogDescription className="text-right">عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
+              <DialogTitle className="text-right text-lg sm:text-xl">إدارة المصاريف العامة</DialogTitle>
+              <DialogDescription className="text-right text-sm">عرض وإضافة المصاريف التشغيلية للمتجر.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 py-4 flex-1 overflow-hidden">
-              <div className="md:col-span-1 space-y-4 p-4 border rounded-lg max-h-full overflow-y-auto">
-                <h3 className="font-semibold flex items-center gap-2"><PlusCircle className="w-5 h-5 text-primary" /> إضافة مصروف جديد</h3>
+            
+            {/* تخطيط موائم للهاتف */}
+            <div className="flex flex-col lg:grid lg:grid-cols-3 gap-4 py-4 flex-1 overflow-hidden">
+              {/* قسم إضافة مصروف جديد */}
+              <div className="lg:col-span-1 space-y-4 p-3 sm:p-4 border rounded-lg max-h-[40vh] lg:max-h-full overflow-y-auto">
+                <h3 className="font-semibold text-sm sm:text-base flex items-center gap-2">
+                  <PlusCircle className="w-4 h-4 sm:w-5 sm:h-5 text-primary" /> 
+                  إضافة مصروف جديد
+                </h3>
                 <div className="space-y-3">
                   <div>
-                    <Label htmlFor="exp-date">التاريخ والوقت</Label>
-                    <Input id="exp-date" type="datetime-local" name="date" value={newExpense.date} onChange={handleInputChange} />
+                    <Label htmlFor="exp-date" className="text-xs sm:text-sm">التاريخ والوقت</Label>
+                    <Input 
+                      id="exp-date" 
+                      type="datetime-local" 
+                      name="date" 
+                      value={newExpense.date} 
+                      onChange={handleInputChange}
+                      className="text-sm"
+                    />
                   </div>
                   <div>
-                    <Label htmlFor="exp-category">الفئة</Label>
+                    <Label htmlFor="exp-category" className="text-xs sm:text-sm">الفئة</Label>
                     <Select value={newExpense.category} onValueChange={handleSelectChange}>
-                      <SelectTrigger id="exp-category">
+                      <SelectTrigger id="exp-category" className="text-sm">
                         <SelectValue placeholder="اختر فئة" />
                       </SelectTrigger>
-                       <SelectContent className="z-[10000] bg-popover border shadow-lg pointer-events-auto">
-                        {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                      <SelectContent className="z-[10000] bg-popover border shadow-lg pointer-events-auto">
+                        {expenseCategories.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label htmlFor="exp-desc">الوصف</Label>
-                    <Input id="exp-desc" name="description" value={newExpense.description} onChange={handleInputChange} placeholder="مثال: إعلان فيسبوك" />
+                    <Label htmlFor="exp-desc" className="text-xs sm:text-sm">الوصف</Label>
+                    <Input 
+                      id="exp-desc" 
+                      name="description" 
+                      value={newExpense.description} 
+                      onChange={handleInputChange} 
+                      placeholder="مثال: إعلان فيسبوك"
+                      className="text-sm"
+                    />
                   </div>
                   <div>
-                    <Label htmlFor="exp-amount">المبلغ (د.ع)</Label>
-                    <Input id="exp-amount" type="number" name="amount" value={newExpense.amount} onChange={handleInputChange} placeholder="50,000" />
+                    <Label htmlFor="exp-amount" className="text-xs sm:text-sm">المبلغ (د.ع)</Label>
+                    <Input 
+                      id="exp-amount" 
+                      type="number" 
+                      name="amount" 
+                      value={newExpense.amount} 
+                      onChange={handleInputChange} 
+                      placeholder="50,000"
+                      className="text-sm"
+                    />
                   </div>
-                  <Button onClick={handleAddExpense} className="w-full">إضافة المصروف</Button>
+                  <Button onClick={handleAddExpense} className="w-full text-sm">إضافة المصروف</Button>
                   
                   {/* إضافة فئة جديدة */}
                   <div className="pt-4 border-t">
-                    <h4 className="text-sm font-medium mb-2">إضافة فئة جديدة</h4>
+                    <h4 className="text-xs sm:text-sm font-medium mb-2">إضافة فئة جديدة</h4>
                     <div className="flex gap-2">
                       <Input
                         value={newCategory}
                         onChange={(e) => setNewCategory(e.target.value)}
                         placeholder="اسم الفئة الجديدة"
-                        className="flex-1"
+                        className="flex-1 text-sm"
                       />
-                      <Button onClick={handleAddCategory} size="sm">إضافة</Button>
+                      <Button onClick={handleAddCategory} size="sm" className="text-xs">إضافة</Button>
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="md:col-span-2 space-y-4 overflow-hidden flex flex-col max-h-full">
-                <h3 className="font-semibold flex-shrink-0">قائمة المصاريف</h3>
+              
+              {/* قسم قائمة المصاريف */}
+              <div className="lg:col-span-2 space-y-4 overflow-hidden flex flex-col flex-1">
+                <h3 className="font-semibold text-sm sm:text-base flex-shrink-0">قائمة المصاريف</h3>
+                
+                {/* الفلاتر */}
                 <div className="flex flex-col sm:flex-row gap-2 p-2 border rounded-md">
-                    <Select value={filters.category} onValueChange={(v) => setFilters(f => ({...f, category: v}))}>
-                        <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="فلترة حسب الفئة" />
-                        </SelectTrigger>
-                        <SelectContent className="z-[10000] bg-popover border shadow-lg pointer-events-auto">
-                            <SelectItem value="all">كل الفئات</SelectItem>
-                            {expenseCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <DateRangePicker
-                        className="flex-1"
-                        date={filters.dateRange}
-                        onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
-                    />
+                  <Select value={filters.category} onValueChange={(v) => setFilters(f => ({...f, category: v}))}>
+                    <SelectTrigger className="flex-1 text-sm">
+                      <SelectValue placeholder="فلترة حسب الفئة" />
+                    </SelectTrigger>
+                    <SelectContent className="z-[10000] bg-popover border shadow-lg pointer-events-auto">
+                      <SelectItem value="all" className="text-sm">كل الفئات</SelectItem>
+                      {expenseCategories.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <DateRangePicker
+                    className="flex-1"
+                    date={filters.dateRange}
+                    onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
+                  />
                 </div>
-                <ScrollArea className="flex-1 border rounded-lg min-h-[300px] max-h-[500px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>الوصف</TableHead>
-                        <TableHead>المبلغ</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredExpenses.map(expense => (
-                        <TableRow key={expense.id}>
-                          <TableCell>
-                            <p className="font-medium">{expense.description}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {expense.category || 'غير محدد'} - {
-                                expense.transaction_date 
-                                  ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
-                                  : format(new Date(), 'd MMM yyyy HH:mm', { locale: ar })
-                              }
-                            </p>
-                          </TableCell>
-                          <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
-                          <TableCell>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon"><Trash2 className="w-4 h-4 text-destructive" /></Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent className="z-[10001] bg-background border shadow-2xl">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    هل أنت متأكد من حذف هذا المصروف؟ ({expense.amount?.toLocaleString() || 0} د.ع)
-                                    <br />لا يمكن التراجع عن هذا الإجراء.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                  <AlertDialogAction 
-                                    onClick={async () => {
-                                      try {
-                                        await deleteExpense(expense.id);
-                                      } catch (error) {
-                                        console.error('خطأ في حذف المصروف:', error);
-                                        toast({
-                                          title: 'خطأ',
-                                          description: 'فشل في حذف المصروف',
-                                          variant: 'destructive'
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    حذف
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                
+                {/* جدول المصاريف */}
+                <ScrollArea className="flex-1 border rounded-lg min-h-[200px] sm:min-h-[300px] max-h-[60vh] lg:max-h-[500px] bg-card">
+                  <div className="p-2">
+                    {/* عرض الهاتف */}
+                    <div className="block sm:hidden space-y-2">
+                      {filteredExpenses.length === 0 ? (
+                        <div className="text-center py-8 text-muted-foreground text-sm">
+                          لا توجد مصاريف للعرض
+                        </div>
+                      ) : (
+                        filteredExpenses.map(expense => (
+                          <div key={expense.id} className="bg-background border rounded-lg p-3 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <p className="font-medium text-sm">{expense.description}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {expense.category || 'غير محدد'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {expense.transaction_date 
+                                    ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
+                                    : format(new Date(), 'd MMM yyyy HH:mm', { locale: ar })
+                                  }
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-red-500 text-sm">{expense.amount.toLocaleString()} د.ع</p>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="text-destructive p-1">
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="z-[10001] bg-background border shadow-2xl w-[90vw] max-w-md">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="text-sm">تأكيد الحذف</AlertDialogTitle>
+                                      <AlertDialogDescription className="text-xs">
+                                        هل أنت متأكد من حذف هذا المصروف؟ ({expense.amount?.toLocaleString() || 0} د.ع)
+                                        <br />لا يمكن التراجع عن هذا الإجراء.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="text-xs">إلغاء</AlertDialogCancel>
+                                      <AlertDialogAction 
+                                        className="text-xs"
+                                        onClick={async () => {
+                                          try {
+                                            await deleteExpense(expense.id);
+                                          } catch (error) {
+                                            console.error('خطأ في حذف المصروف:', error);
+                                            toast({
+                                              title: 'خطأ',
+                                              description: 'فشل في حذف المصروف',
+                                              variant: 'destructive'
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        حذف
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    
+                    {/* عرض الديسكتوب */}
+                    <div className="hidden sm:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-right">الوصف</TableHead>
+                            <TableHead className="text-right">المبلغ</TableHead>
+                            <TableHead className="text-right w-20">الإجراءات</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredExpenses.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                                لا توجد مصاريف للعرض
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredExpenses.map(expense => (
+                              <TableRow key={expense.id}>
+                                <TableCell>
+                                  <p className="font-medium">{expense.description}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {expense.category || 'غير محدد'} - {
+                                      expense.transaction_date 
+                                        ? format(parseISO(expense.transaction_date), 'd MMM yyyy HH:mm', { locale: ar })
+                                        : format(new Date(), 'd MMM yyyy HH:mm', { locale: ar })
+                                    }
+                                  </p>
+                                </TableCell>
+                                <TableCell className="font-semibold text-red-500">{expense.amount.toLocaleString()} د.ع</TableCell>
+                                <TableCell>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="icon">
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="z-[10001] bg-background border shadow-2xl">
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          هل أنت متأكد من حذف هذا المصروف؟ ({expense.amount?.toLocaleString() || 0} د.ع)
+                                          <br />لا يمكن التراجع عن هذا الإجراء.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={async () => {
+                                            try {
+                                              await deleteExpense(expense.id);
+                                            } catch (error) {
+                                              console.error('خطأ في حذف المصروف:', error);
+                                              toast({
+                                                title: 'خطأ',
+                                                description: 'فشل في حذف المصروف',
+                                                variant: 'destructive'
+                                              });
+                                            }
+                                          }}
+                                        >
+                                          حذف
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
                 </ScrollArea>
               </div>
             </div>
+            
             <DialogFooter className="flex-shrink-0 pt-4 border-t">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="text-sm">إغلاق</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
