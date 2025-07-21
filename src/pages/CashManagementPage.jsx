@@ -413,6 +413,11 @@ const CashManagementPage = () => {
               realizedProfits={systemFinancials.realizedProfits}
               totalPurchases={systemFinancials.totalPurchases}
               totalExpenses={systemFinancials.totalExpenses}
+              inventoryValue={0} // سيتم حسابه لاحقاً
+              onFilterChange={(period, dateRange) => {
+                console.log('تم تغيير الفلتر:', period, dateRange);
+                // هنا يمكن إضافة منطق إعادة جلب البيانات حسب الفترة
+              }}
             />
             
             {/* إحصائيات فترية */}
