@@ -220,11 +220,11 @@ const AdvancedProfitsAnalysisPage = () => {
               </SelectContent>
             </Select>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
               <DateRangePicker
                 date={dateRange}
                 onDateChange={setDateRange}
-                className="flex-1"
+                className="flex-1 w-full sm:w-auto"
               />
               <Button 
                 onClick={async () => {
@@ -235,9 +235,10 @@ const AdvancedProfitsAnalysisPage = () => {
                 size="sm"
                 variant="outline"
                 disabled={isRefreshing}
-                className="px-3"
+                className="w-full sm:w-auto px-4 flex items-center justify-center gap-2"
               >
                 <Activity className={`w-4 h-4 transition-transform duration-1000 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="text-sm">تحديث</span>
               </Button>
             </div>
           </CardContent>
