@@ -343,40 +343,130 @@ const AdvancedProfitsAnalysisPage = () => {
       </div>
 
 
-      {/* بطاقات الملخص */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summaryCards.map((card, index) => (
-          <motion.div
-            key={card.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-          >
-            <Card className={cn(
-              "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
-              "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
-              `bg-gradient-to-br ${card.color} text-white`,
-              "hover:shadow-xl hover:scale-[1.02]"
-            )}>
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-                    <card.icon className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* بطاقات الملخص - كارت خارجي */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <TrendingUp className="w-5 h-5" />
+            تحليل أرباح المنتجات
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* الصف الأول: إجمالي الأرباح + عدد الطلبات */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0 }}
+            >
+              <Card className={cn(
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
+                "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+                `bg-gradient-to-br ${summaryCards[0].color} text-white`,
+                "hover:shadow-xl hover:scale-[1.02]"
+              )}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+                      <TrendingUp className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/80 font-medium truncate">إجمالي الأرباح</p>
+                      <p className="text-sm font-bold text-white truncate">
+                        {formatCurrency(analysisData?.totalProfit || 0)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white/80 font-medium truncate">{card.title}</p>
-                    <p className="text-sm sm:text-lg font-bold text-white truncate">
-                      {typeof card.value === 'number' && card.title !== 'هامش الربح' ? 
-                        formatCurrency(card.value) : card.value}
-                    </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card className={cn(
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
+                "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+                `bg-gradient-to-br ${summaryCards[1].color} text-white`,
+                "hover:shadow-xl hover:scale-[1.02]"
+              )}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+                      <Package className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/80 font-medium truncate">عدد الطلبات</p>
+                      <p className="text-sm font-bold text-white truncate">
+                        {formatCurrency(analysisData?.totalOrders || 0)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <p className="text-xs text-white/70 mt-2 line-clamp-2">{card.description}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* الصف الثاني: متوسط الربح + هامش الربح */}
+          <div className="grid grid-cols-2 gap-3">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Card className={cn(
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
+                "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+                `bg-gradient-to-br ${summaryCards[2].color} text-white`,
+                "hover:shadow-xl hover:scale-[1.02]"
+              )}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+                      <Target className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/80 font-medium truncate">متوسط الربح</p>
+                      <p className="text-sm font-bold text-white truncate">
+                        {formatCurrency(analysisData?.averageProfit || 0)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className={cn(
+                "overflow-hidden transition-all duration-300 border-0 group cursor-pointer",
+                "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+                `bg-gradient-to-br ${summaryCards[3].color} text-white`,
+                "hover:shadow-xl hover:scale-[1.02]"
+              )}>
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/80 font-medium truncate">هامش الربح</p>
+                      <p className="text-sm font-bold text-white truncate">
+                        {`${(analysisData?.profitMargin || 0).toFixed(1)}%`}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* محتوى التحليل الرئيسي */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
