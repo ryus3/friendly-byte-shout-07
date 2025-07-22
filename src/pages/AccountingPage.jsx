@@ -435,18 +435,42 @@ const AccountingPage = () => {
           key: 'myProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
+            // حساب عدد المنتجات المباعة
             const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
               sum + (order.order_items?.length || 0), 0) || 0;
-            const profitMargin = financialSummary.totalRevenue > 0 ? 
-              Math.round((financialSummary.grossProfit / financialSummary.totalRevenue) * 100) : 0;
-            return profitMargin > 0 ? `${profitMargin}%` : `${totalProducts} منتج`;
+            
+            // حساب نسبة الربح
+            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
+            const profit = financialSummary.grossProfit || 0;
+            const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+            
+            // إرجاع نسبة الربح إذا كانت أكبر من 0، وإلا عدد المنتجات
+            if (profitMargin > 0) {
+              return `${profitMargin}%`;
+            } else if (totalProducts > 0) {
+              return `${totalProducts} منتج`;
+            } else {
+              return "لا توجد بيانات";
+            }
           })(),
           subValue: (() => {
+            // حساب عدد المنتجات المباعة
             const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
               sum + (order.order_items?.length || 0), 0) || 0;
-            const profitMargin = financialSummary.totalRevenue > 0 ? 
-              Math.round((financialSummary.grossProfit / financialSummary.totalRevenue) * 100) : 0;
-            return profitMargin > 0 ? `${totalProducts} منتج` : `${profitMargin}%`;
+            
+            // حساب نسبة الربح
+            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
+            const profit = financialSummary.grossProfit || 0;
+            const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+            
+            // إرجاع عدد المنتجات إذا كان الربح أكبر من 0، وإلا نسبة الربح
+            if (profitMargin > 0 && totalProducts > 0) {
+              return `${totalProducts} منتج`;
+            } else if (profitMargin > 0) {
+              return `${profitMargin}%`;
+            } else {
+              return "0%";
+            }
           })(),
           icon: PieChart, 
           colors: ['rose-500', 'red-500'], 
