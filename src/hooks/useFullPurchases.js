@@ -36,7 +36,7 @@ export const useFullPurchases = () => {
           paid_amount: totalAmount,
           shipping_cost: purchaseData.shippingCost || 0,
           transfer_cost: purchaseData.transferCost || 0,
-          purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate) : new Date(),
+          purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate).toISOString() : new Date().toISOString(),
           cash_source_id: purchaseData.cashSourceId, // مصدر النقد
           status: 'completed',
           items: purchaseData.items,

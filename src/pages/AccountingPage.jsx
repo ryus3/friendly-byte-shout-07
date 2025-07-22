@@ -438,6 +438,13 @@ const AccountingPage = () => {
             // حساب عدد الطلبات المُستلمة
             const deliveredOrdersCount = financialSummary.deliveredOrders?.length || 0;
             
+            console.log('🎯 Debug Product Profit Card:', {
+              deliveredOrdersCount,
+              deliveredOrders: financialSummary.deliveredOrders?.slice(0, 2),
+              salesWithoutDelivery: financialSummary.salesWithoutDelivery,
+              grossProfit: financialSummary.grossProfit
+            });
+            
             // حساب نسبة الربح
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
@@ -482,7 +489,7 @@ const AccountingPage = () => {
               return "0%";
             }
           })(),
-          icon: TrendingUp, 
+          icon: BarChart, 
           colors: ['orange-500', 'amber-500'], 
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
