@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import PurchaseInvoicePDFButton from './PurchaseInvoicePDF';
 
 const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
-  const totalCost = (purchase.total_amount || 0) + (purchase.shipping_cost || 0) + (purchase.transfer_cost || 0);
+  const totalCost = (purchase.total_amount || 0); // المبلغ الأساسي فقط
   const hasShipping = (purchase.shipping_cost || 0) > 0;
   const hasTransfer = (purchase.transfer_cost || 0) > 0;
   

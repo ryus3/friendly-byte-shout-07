@@ -193,17 +193,24 @@ export const useFullPurchases = () => {
     try {
       const current_user_id = user?.user_id || (await supabase.from('profiles').select('user_id').limit(1)).data?.[0]?.user_id;
       
-      // البحث عن المنتج والمتغير الموجود بـ SKU
+      // البحث عن المنتج الموجود أولاً بالاسم
+      const { data: existingProduct } = await supabase
+        .from('products')
+        .select('id')
+        .ilike('name', `%${item.productName}%`)
+        .maybeSingle();
+
+      // إذا وُجد منتج بنفس الاسم، البحث عن متغير بـ SKU
       const { data: existingVariant } = await supabase
         .from('product_variants')
         .select('id, product_id, products(id, name)')
         .eq('barcode', item.variantSku)
-        .single();
+        .maybeSingle();
 
       let productId, variantId;
 
       if (existingVariant) {
-        // المنتج موجود - نحديث المخزون فقط
+        // المتغير موجود - نحديث المخزون فقط
         productId = existingVariant.product_id;
         variantId = existingVariant.id;
         
@@ -218,6 +225,33 @@ export const useFullPurchases = () => {
           .update({ cost_price: item.costPrice })
           .eq('id', productId);
           
+      } else if (existingProduct) {
+        // المنتج موجود ولكن بـ SKU جديد - إنشاء متغير جديد
+        productId = existingProduct.id;
+        
+        // تحديث سعر التكلفة للمنتج الموجود
+        await supabase
+          .from('products')
+          .update({ cost_price: item.costPrice })
+          .eq('id', productId);
+
+        // إنشاء متغير جديد للمنتج الموجود
+        const { data: newVariant, error: variantError } = await supabase
+          .from('product_variants')
+          .insert({
+            product_id: productId,
+            barcode: item.variantSku,
+            sku: item.variantSku,
+            price: item.costPrice * 1.3,
+            cost_price: item.costPrice,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (variantError) throw variantError;
+        variantId = newVariant.id;
+        
       } else {
         // إنشاء منتج جديد
         const { data: newProduct, error: productError } = await supabase
