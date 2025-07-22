@@ -50,7 +50,7 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
               </TableCell>
               <TableCell className="text-orange-600 font-medium">{(purchase.shipping_cost || 0).toLocaleString()} د.ع</TableCell>
               <TableCell className="text-purple-600 font-medium">{(purchase.transfer_cost || 0).toLocaleString()} د.ع</TableCell>
-              <TableCell className="font-bold text-primary">{((purchase.total_amount || 0) + (purchase.shipping_cost || 0) + (purchase.transfer_cost || 0)).toLocaleString()} د.ع</TableCell>
+              <TableCell className="font-bold text-primary">{(purchase.total_amount || 0).toLocaleString()} د.ع</TableCell>
                <TableCell>
                  <div className="flex gap-1">
                    <Button variant="ghost" size="sm" onClick={() => onViewDetails(purchase)} className="text-blue-600 hover:text-blue-700">
