@@ -3,12 +3,18 @@ import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/rendere
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-// تسجيل الخط العربي
+// تسجيل خط عربي يدعم PDF
 Font.register({
-  family: 'Cairo',
+  family: 'Amiri',
   fonts: [
-    { src: 'https://fonts.gstatic.com/s/cairo/v28/SLXgc1nY6HkvangtZmpQdkhYl0M.ttf', fontWeight: 400 },
-    { src: 'https://fonts.gstatic.com/s/cairo/v28/SLXbc1nY6HkvangtZmpQeGgNl0M1QHs.ttf', fontWeight: 700 },
+    { 
+      src: 'https://fonts.gstatic.com/s/amiri/v28/J7aFnoNzCdQnFN8jk8JRuMs.ttf',
+      fontWeight: 'normal'
+    },
+    { 
+      src: 'https://fonts.gstatic.com/s/amiri/v28/J7aEnoxzCdQnFN8jlcS7iJvO.ttf',
+      fontWeight: 'bold'
+    }
   ]
 });
 
@@ -17,137 +23,100 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#FFFFFF',
     padding: 30,
-    fontFamily: 'Cairo',
+    fontFamily: 'Amiri',
     direction: 'rtl',
   },
   header: {
-    textAlign: 'center',
-    marginBottom: 25,
-    borderBottom: '3px solid #3B82F6',
-    paddingBottom: 15,
+    marginBottom: 20,
+    borderBottom: '2px solid #374151',
+    paddingBottom: 10,
   },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#1E40AF',
-    marginBottom: 5,
+    textAlign: 'center',
+    color: '#1F2937',
+    marginBottom: 10,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
+    textAlign: 'center',
     color: '#6B7280',
     marginBottom: 5,
   },
   dateRange: {
-    fontSize: 12,
-    color: '#4B5563',
-    backgroundColor: '#F3F4F6',
-    padding: 8,
-    borderRadius: 5,
-    marginTop: 10,
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#9CA3AF',
+    marginBottom: 5,
   },
-  summarySection: {
-    backgroundColor: '#F8FAFC',
-    border: '2px solid #E2E8F0',
-    borderRadius: 8,
-    padding: 15,
+  filters: {
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#9CA3AF',
+  },
+  section: {
     marginBottom: 20,
   },
-  summaryTitle: {
+  sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1E293B',
-    marginBottom: 15,
-    textAlign: 'center',
+    color: '#374151',
+    marginBottom: 10,
+    textAlign: 'right',
   },
-  summaryGrid: {
+  summaryContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginBottom: 20,
   },
   summaryCard: {
     width: '48%',
-    backgroundColor: '#FFFFFF',
-    border: '1px solid #D1D5DB',
-    borderRadius: 5,
-    padding: 10,
+    backgroundColor: '#F9FAFB',
+    padding: 15,
+    borderRadius: 8,
     marginBottom: 10,
+    border: '1px solid #E5E7EB',
   },
-  summaryLabel: {
-    fontSize: 11,
+  summaryTitle: {
+    fontSize: 12,
     color: '#6B7280',
-    marginBottom: 3,
+    marginBottom: 5,
+    textAlign: 'right',
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1F2937',
-  },
-  section: {
-    marginBottom: 20,
-    border: '1px solid #E5E7EB',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  sectionHeader: {
-    backgroundColor: '#F9FAFB',
-    borderBottom: '1px solid #E5E7EB',
-    padding: 12,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#111827',
+    textAlign: 'right',
   },
   table: {
-    width: '100%',
+    marginBottom: 20,
   },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
-    borderBottom: '2px solid #D1D5DB',
+    borderBottom: '1px solid #D1D5DB',
     padding: 8,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottom: '1px solid #E5E7EB',
     padding: 8,
-    minHeight: 30,
-  },
-  tableRowEven: {
-    backgroundColor: '#F9FAFB',
   },
   tableCell: {
-    fontSize: 10,
-    color: '#374151',
-    textAlign: 'center',
-    paddingHorizontal: 4,
-    justifyContent: 'center',
-  },
-  nameCell: {
-    flex: 3,
-    textAlign: 'right',
-    fontWeight: 'bold',
-  },
-  profitCell: {
-    flex: 2,
-    color: '#059669',
-    fontWeight: 'bold',
-  },
-  countCell: {
     flex: 1,
-    color: '#7C3AED',
+    fontSize: 12,
+    textAlign: 'center',
+    color: '#374151',
   },
-  colorCell: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  colorDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: 4,
-    border: '1px solid #D1D5DB',
+  tableCellHeader: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#1F2937',
   },
   footer: {
     position: 'absolute',
@@ -155,123 +124,145 @@ const styles = StyleSheet.create({
     left: 30,
     right: 30,
     textAlign: 'center',
+    fontSize: 10,
+    color: '#9CA3AF',
     borderTop: '1px solid #E5E7EB',
     paddingTop: 10,
   },
-  footerText: {
-    fontSize: 10,
-    color: '#9CA3AF',
-  },
   noData: {
     textAlign: 'center',
-    padding: 20,
+    fontSize: 14,
     color: '#6B7280',
-    fontSize: 12,
+    fontStyle: 'italic',
+    padding: 20,
   }
 });
 
+// دالة تنسيق العملة
 const formatCurrency = (amount) => {
+  if (!amount || isNaN(amount)) return '0 د.ع';
   return new Intl.NumberFormat('ar-IQ', {
     style: 'decimal',
-    minimumFractionDigits: 0
-  }).format(Math.abs(amount || 0)) + ' د.ع';
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(Math.abs(amount)) + ' د.ع';
 };
 
 const ProfitsAnalysisPDF = ({ analysisData, dateRange, filters }) => {
+  // تنسيق التاريخ
   const formatDate = (date) => {
     if (!date) return '';
-    return format(new Date(date), 'dd/MM/yyyy', { locale: ar });
+    try {
+      return format(new Date(date), 'dd/MM/yyyy', { locale: ar });
+    } catch {
+      return date;
+    }
   };
 
+  // الحصول على الفلاتر النشطة
   const getActiveFilters = () => {
     const activeFilters = [];
-    if (filters.department !== 'all') activeFilters.push('القسم');
-    if (filters.category !== 'all') activeFilters.push('التصنيف');
-    if (filters.productType !== 'all') activeFilters.push('نوع المنتج');
-    if (filters.season !== 'all') activeFilters.push('الموسم');
-    if (filters.color !== 'all') activeFilters.push('اللون');
-    if (filters.size !== 'all') activeFilters.push('القياس');
-    return activeFilters.length > 0 ? activeFilters.join(' - ') : 'بدون فلاتر';
+    if (filters?.department && filters.department !== 'all') activeFilters.push(`القسم: ${filters.department}`);
+    if (filters?.category && filters.category !== 'all') activeFilters.push(`التصنيف: ${filters.category}`);
+    if (filters?.productType && filters.productType !== 'all') activeFilters.push(`نوع المنتج: ${filters.productType}`);
+    if (filters?.season && filters.season !== 'all') activeFilters.push(`الموسم: ${filters.season}`);
+    return activeFilters.length > 0 ? activeFilters.join(' • ') : 'جميع المنتجات';
   };
+
+  // بيانات افتراضية في حالة عدم وجود بيانات
+  const defaultData = {
+    totalProfit: 0,
+    totalOrders: 0,
+    averageProfit: 0,
+    profitMargin: 0,
+    profitsByDepartment: [],
+    profitsByCategory: [],
+    topProducts: [],
+    profitsByColor: [],
+    profitsBySize: []
+  };
+
+  const data = analysisData || defaultData;
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* الرأس */}
+        {/* العنوان الرئيسي */}
         <View style={styles.header}>
-          <Text style={styles.title}>تقرير تحليل أرباح المنتجات</Text>
-          <Text style={styles.subtitle}>تحليل شامل للأرباح مقسم حسب المعايير المختلفة</Text>
+          <Text style={styles.title}>تقرير تحليل الأرباح</Text>
+          <Text style={styles.subtitle}>تحليل شامل للأرباح والمبيعات</Text>
           <Text style={styles.dateRange}>
-            الفترة: {formatDate(dateRange.from)} - {formatDate(dateRange.to)}
+            {dateRange?.from && dateRange?.to 
+              ? `من ${formatDate(dateRange.from)} إلى ${formatDate(dateRange.to)}`
+              : 'جميع الفترات'
+            }
           </Text>
-          <Text style={[styles.dateRange, { marginTop: 5 }]}>
-            الفلاتر المطبقة: {getActiveFilters()}
-          </Text>
+          <Text style={styles.filters}>الفلاتر المطبقة: {getActiveFilters()}</Text>
         </View>
 
         {/* ملخص الأرباح */}
-        <View style={styles.summarySection}>
-          <Text style={styles.summaryTitle}>الملخص العام</Text>
-          <View style={styles.summaryGrid}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>ملخص الأرباح</Text>
+          <View style={styles.summaryContainer}>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>إجمالي الأرباح</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(analysisData?.totalProfit)}</Text>
+              <Text style={styles.summaryTitle}>إجمالي الربح</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(data.totalProfit)}</Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>عدد الطلبات</Text>
-              <Text style={styles.summaryValue}>{analysisData?.totalOrders || 0}</Text>
+              <Text style={styles.summaryTitle}>عدد الطلبات</Text>
+              <Text style={styles.summaryValue}>{data.totalOrders || 0}</Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>متوسط الربح</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(analysisData?.averageProfit)}</Text>
+              <Text style={styles.summaryTitle}>متوسط الربح</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(data.averageProfit)}</Text>
             </View>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryLabel}>هامش الربح</Text>
-              <Text style={styles.summaryValue}>{(analysisData?.profitMargin || 0).toFixed(1)}%</Text>
+              <Text style={styles.summaryTitle}>هامش الربح</Text>
+              <Text style={styles.summaryValue}>{(data.profitMargin || 0).toFixed(1)}%</Text>
             </View>
           </View>
         </View>
 
-        {/* الأرباح حسب الأقسام */}
-        {analysisData?.departmentBreakdown?.length > 0 && (
+        {/* الأرباح حسب القسم */}
+        {data.profitsByDepartment && data.profitsByDepartment.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>الأرباح حسب الأقسام</Text>
-            </View>
+            <Text style={styles.sectionTitle}>الأرباح حسب القسم</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableCell, styles.nameCell]}>القسم</Text>
-                <Text style={[styles.tableCell, styles.profitCell]}>الربح</Text>
-                <Text style={[styles.tableCell, styles.countCell]}>الطلبات</Text>
+                <Text style={styles.tableCellHeader}>القسم</Text>
+                <Text style={styles.tableCellHeader}>الربح</Text>
+                <Text style={styles.tableCellHeader}>عدد الطلبات</Text>
+                <Text style={styles.tableCellHeader}>النسبة</Text>
               </View>
-              {analysisData.departmentBreakdown.slice(0, 10).map((dept, index) => (
-                <View key={dept.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                  <Text style={[styles.tableCell, styles.nameCell]}>{dept.name}</Text>
-                  <Text style={[styles.tableCell, styles.profitCell]}>{formatCurrency(dept.profit)}</Text>
-                  <Text style={[styles.tableCell, styles.countCell]}>{dept.orderCount}</Text>
+              {data.profitsByDepartment.slice(0, 10).map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={styles.tableCell}>{item.department || 'غير محدد'}</Text>
+                  <Text style={styles.tableCell}>{formatCurrency(item.profit)}</Text>
+                  <Text style={styles.tableCell}>{item.orderCount || 0}</Text>
+                  <Text style={styles.tableCell}>{(item.percentage || 0).toFixed(1)}%</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
 
-        {/* الأرباح حسب التصنيفات */}
-        {analysisData?.categoryBreakdown?.length > 0 && (
+        {/* الأرباح حسب التصنيف */}
+        {data.profitsByCategory && data.profitsByCategory.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>الأرباح حسب التصنيفات</Text>
-            </View>
+            <Text style={styles.sectionTitle}>الأرباح حسب التصنيف</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableCell, styles.nameCell]}>التصنيف</Text>
-                <Text style={[styles.tableCell, styles.profitCell]}>الربح</Text>
-                <Text style={[styles.tableCell, styles.countCell]}>الطلبات</Text>
+                <Text style={styles.tableCellHeader}>التصنيف</Text>
+                <Text style={styles.tableCellHeader}>الربح</Text>
+                <Text style={styles.tableCellHeader}>عدد الطلبات</Text>
+                <Text style={styles.tableCellHeader}>النسبة</Text>
               </View>
-              {analysisData.categoryBreakdown.slice(0, 10).map((cat, index) => (
-                <View key={cat.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                  <Text style={[styles.tableCell, styles.nameCell]}>{cat.name}</Text>
-                  <Text style={[styles.tableCell, styles.profitCell]}>{formatCurrency(cat.profit)}</Text>
-                  <Text style={[styles.tableCell, styles.countCell]}>{cat.orderCount}</Text>
+              {data.profitsByCategory.slice(0, 10).map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={styles.tableCell}>{item.category || 'غير محدد'}</Text>
+                  <Text style={styles.tableCell}>{formatCurrency(item.profit)}</Text>
+                  <Text style={styles.tableCell}>{item.orderCount || 0}</Text>
+                  <Text style={styles.tableCell}>{(item.percentage || 0).toFixed(1)}%</Text>
                 </View>
               ))}
             </View>
@@ -279,90 +270,98 @@ const ProfitsAnalysisPDF = ({ analysisData, dateRange, filters }) => {
         )}
 
         {/* أفضل المنتجات */}
-        {analysisData?.topProducts?.length > 0 && (
+        {data.topProducts && data.topProducts.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>أفضل المنتجات ربحاً</Text>
-            </View>
+            <Text style={styles.sectionTitle}>أفضل المنتجات ربحاً</Text>
             <View style={styles.table}>
               <View style={styles.tableHeader}>
-                <Text style={[styles.tableCell, styles.nameCell]}>المنتج</Text>
-                <Text style={[styles.tableCell, styles.profitCell]}>الربح</Text>
-                <Text style={[styles.tableCell, styles.countCell]}>المبيعات</Text>
+                <Text style={styles.tableCellHeader}>المنتج</Text>
+                <Text style={styles.tableCellHeader}>الربح</Text>
+                <Text style={styles.tableCellHeader}>الكمية</Text>
+                <Text style={styles.tableCellHeader}>هامش الربح</Text>
               </View>
-              {analysisData.topProducts.slice(0, 15).map((product, index) => (
-                <View key={product.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                  <Text style={[styles.tableCell, styles.nameCell]}>{product.name}</Text>
-                  <Text style={[styles.tableCell, styles.profitCell]}>{formatCurrency(product.profit)}</Text>
-                  <Text style={[styles.tableCell, styles.countCell]}>{product.salesCount}</Text>
+              {data.topProducts.slice(0, 15).map((item, index) => (
+                <View key={index} style={styles.tableRow}>
+                  <Text style={styles.tableCell}>{item.productName || 'غير محدد'}</Text>
+                  <Text style={styles.tableCell}>{formatCurrency(item.profit)}</Text>
+                  <Text style={styles.tableCell}>{item.quantity || 0}</Text>
+                  <Text style={styles.tableCell}>{(item.profitMargin || 0).toFixed(1)}%</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
 
+        {/* رسالة في حالة عدم وجود بيانات */}
+        {(!data.profitsByDepartment || data.profitsByDepartment.length === 0) &&
+         (!data.profitsByCategory || data.profitsByCategory.length === 0) &&
+         (!data.topProducts || data.topProducts.length === 0) && (
+          <View style={styles.noData}>
+            <Text>لا توجد بيانات متاحة للفترة المحددة</Text>
+          </View>
+        )}
+
         {/* التذييل */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            تم إنشاء التقرير في {format(new Date(), 'dd/MM/yyyy - HH:mm', { locale: ar })}
-          </Text>
+          <Text>تم إنشاء التقرير في: {formatDate(new Date())}</Text>
+          <Text>نظام إدارة المخزون والمبيعات</Text>
         </View>
       </Page>
 
-      {/* صفحة ثانية للتفاصيل الإضافية */}
-      {(analysisData?.colorBreakdown?.length > 0 || analysisData?.sizeBreakdown?.length > 0) && (
+      {/* صفحة إضافية للتفاصيل */}
+      {((data.profitsByColor && data.profitsByColor.length > 0) || 
+        (data.profitsBySize && data.profitsBySize.length > 0)) && (
         <Page size="A4" style={styles.page}>
-          <View style={styles.header}>
-            <Text style={styles.title}>تفاصيل الأرباح الإضافية</Text>
-          </View>
-
-          {/* الأرباح حسب الألوان */}
-          {analysisData?.colorBreakdown?.length > 0 && (
+          {/* الأرباح حسب اللون */}
+          {data.profitsByColor && data.profitsByColor.length > 0 && (
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>الأرباح حسب الألوان</Text>
-              </View>
+              <Text style={styles.sectionTitle}>الأرباح حسب اللون</Text>
               <View style={styles.table}>
                 <View style={styles.tableHeader}>
-                  <Text style={[styles.tableCell, styles.nameCell]}>اللون</Text>
-                  <Text style={[styles.tableCell, styles.profitCell]}>الربح</Text>
+                  <Text style={styles.tableCellHeader}>اللون</Text>
+                  <Text style={styles.tableCellHeader}>الربح</Text>
+                  <Text style={styles.tableCellHeader}>عدد الطلبات</Text>
+                  <Text style={styles.tableCellHeader}>النسبة</Text>
                 </View>
-                {analysisData.colorBreakdown.slice(0, 15).map((color, index) => (
-                  <View key={color.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                    <View style={[styles.tableCell, styles.colorCell]}>
-                      <View style={[styles.colorDot, { backgroundColor: color.hex_code }]} />
-                      <Text>{color.name}</Text>
-                    </View>
-                    <Text style={[styles.tableCell, styles.profitCell]}>{formatCurrency(color.profit)}</Text>
+                {data.profitsByColor.slice(0, 15).map((item, index) => (
+                  <View key={index} style={styles.tableRow}>
+                    <Text style={styles.tableCell}>{item.color || 'غير محدد'}</Text>
+                    <Text style={styles.tableCell}>{formatCurrency(item.profit)}</Text>
+                    <Text style={styles.tableCell}>{item.orderCount || 0}</Text>
+                    <Text style={styles.tableCell}>{(item.percentage || 0).toFixed(1)}%</Text>
                   </View>
                 ))}
               </View>
             </View>
           )}
 
-          {/* الأرباح حسب القياسات */}
-          {analysisData?.sizeBreakdown?.length > 0 && (
+          {/* الأرباح حسب المقاس */}
+          {data.profitsBySize && data.profitsBySize.length > 0 && (
             <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>الأرباح حسب القياسات</Text>
-              </View>
+              <Text style={styles.sectionTitle}>الأرباح حسب المقاس</Text>
               <View style={styles.table}>
                 <View style={styles.tableHeader}>
-                  <Text style={[styles.tableCell, styles.nameCell]}>القياس</Text>
-                  <Text style={[styles.tableCell, styles.profitCell]}>الربح</Text>
+                  <Text style={styles.tableCellHeader}>المقاس</Text>
+                  <Text style={styles.tableCellHeader}>الربح</Text>
+                  <Text style={styles.tableCellHeader}>عدد الطلبات</Text>
+                  <Text style={styles.tableCellHeader}>النسبة</Text>
                 </View>
-                {analysisData.sizeBreakdown.slice(0, 15).map((size, index) => (
-                  <View key={size.id} style={[styles.tableRow, index % 2 === 0 && styles.tableRowEven]}>
-                    <Text style={[styles.tableCell, styles.nameCell]}>{size.name}</Text>
-                    <Text style={[styles.tableCell, styles.profitCell]}>{formatCurrency(size.profit)}</Text>
+                {data.profitsBySize.slice(0, 15).map((item, index) => (
+                  <View key={index} style={styles.tableRow}>
+                    <Text style={styles.tableCell}>{item.size || 'غير محدد'}</Text>
+                    <Text style={styles.tableCell}>{formatCurrency(item.profit)}</Text>
+                    <Text style={styles.tableCell}>{item.orderCount || 0}</Text>
+                    <Text style={styles.tableCell}>{(item.percentage || 0).toFixed(1)}%</Text>
                   </View>
                 ))}
               </View>
             </View>
           )}
 
+          {/* التذييل */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>صفحة 2 من 2</Text>
+            <Text>تم إنشاء التقرير في: {formatDate(new Date())}</Text>
+            <Text>نظام إدارة المخزون والمبيعات - الصفحة 2</Text>
           </View>
         </Page>
       )}

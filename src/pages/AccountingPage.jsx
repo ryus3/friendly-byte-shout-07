@@ -434,8 +434,20 @@ const AccountingPage = () => {
         { 
           key: 'myProfit', 
           title: "تحليل أرباح المنتجات", 
-          value: financialSummary.grossProfit > 0 ? `${Math.round((financialSummary.grossProfit / Math.max(financialSummary.totalRevenue, 1)) * 100)}%` : `${financialSummary.deliveredOrders?.length || 0} طلب`,
-          subValue: financialSummary.grossProfit > 0 ? `${financialSummary.deliveredOrders?.length || 0} طلب` : `${Math.round((financialSummary.grossProfit / Math.max(financialSummary.totalRevenue, 1)) * 100) || 0}%`,
+          value: (() => {
+            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.length || 0), 0) || 0;
+            const profitMargin = financialSummary.totalRevenue > 0 ? 
+              Math.round((financialSummary.grossProfit / financialSummary.totalRevenue) * 100) : 0;
+            return profitMargin > 0 ? `${profitMargin}%` : `${totalProducts} منتج`;
+          })(),
+          subValue: (() => {
+            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.length || 0), 0) || 0;
+            const profitMargin = financialSummary.totalRevenue > 0 ? 
+              Math.round((financialSummary.grossProfit / financialSummary.totalRevenue) * 100) : 0;
+            return profitMargin > 0 ? `${totalProducts} منتج` : `${profitMargin}%`;
+          })(),
           icon: PieChart, 
           colors: ['rose-500', 'red-500'], 
           format: 'custom', 
