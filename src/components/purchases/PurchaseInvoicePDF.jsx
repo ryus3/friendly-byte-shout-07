@@ -7,16 +7,7 @@ import { Download, FileText } from 'lucide-react';
 // تسجيل خط يدعم العربية
 Font.register({
   family: 'NotoSansArabic',
-  fonts: [
-    {
-      src: 'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHmeR4dMzSNqiF7vA.ttf',
-      fontWeight: 'normal'
-    },
-    {
-      src: 'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHmeR4dMzSNqiF7vA.ttf',
-      fontWeight: 'bold'
-    }
-  ]
+  src: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf'
 });
 
 const styles = StyleSheet.create({

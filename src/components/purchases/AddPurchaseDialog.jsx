@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useFullPurchases } from '@/hooks/useFullPurchases';
+import { useSimplePurchases } from '@/hooks/useSimplePurchases';
 import { useCashSources } from '@/hooks/useCashSources';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2, PlusCircle, Wallet } from 'lucide-react';
@@ -14,7 +14,7 @@ import PurchaseItemsPreview from './PurchaseItemsPreview';
 import { useLocation } from 'react-router-dom';
 
 const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
-    const { addPurchase } = useFullPurchases();
+    const { addPurchase } = useSimplePurchases();
     const { cashSources, getMainCashSource } = useCashSources();
     const location = useLocation();
     const [supplier, setSupplier] = useState('');
