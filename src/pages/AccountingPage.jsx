@@ -7,7 +7,7 @@ import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
+import { FileText, Edit, BarChart, BarChart3, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
 import { format, parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/components/ui/use-toast';
@@ -435,45 +435,53 @@ const AccountingPage = () => {
           key: 'myProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // حساب عدد المنتجات المباعة
-            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
-              sum + (order.order_items?.length || 0), 0) || 0;
+            // حساب عدد الطلبات المُوصلة والمُستلمة الفواتير
+            const deliveredOrdersCount = financialSummary.deliveredOrders?.length || 0;
             
-            // حساب نسبة الربح
+            // حساب إجمالي عدد المنتجات المباعة
+            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0) || 0;
+            
+            // حساب نسبة الربح الإجمالية
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
-            // إرجاع نسبة الربح إذا كانت أكبر من 0، وإلا عدد المنتجات
-            if (profitMargin > 0) {
+            // عرض البيانات بناءً على ما هو متوفر
+            if (deliveredOrdersCount > 0 && profitMargin > 0) {
               return `${profitMargin}%`;
+            } else if (deliveredOrdersCount > 0) {
+              return `${deliveredOrdersCount} طلب`;
             } else if (totalProducts > 0) {
               return `${totalProducts} منتج`;
             } else {
-              return "لا توجد بيانات";
+              return "لا توجد مبيعات";
             }
           })(),
           subValue: (() => {
-            // حساب عدد المنتجات المباعة
-            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
-              sum + (order.order_items?.length || 0), 0) || 0;
+            // حساب عدد الطلبات المُوصلة والمُستلمة الفواتير
+            const deliveredOrdersCount = financialSummary.deliveredOrders?.length || 0;
             
-            // حساب نسبة الربح
+            // حساب إجمالي عدد المنتجات المباعة (الكمية الفعلية)
+            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0) || 0;
+            
+            // حساب نسبة الربح الإجمالية
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
-            // إرجاع عدد المنتجات إذا كان الربح أكبر من 0، وإلا نسبة الربح
-            if (profitMargin > 0 && totalProducts > 0) {
-              return `${totalProducts} منتج`;
-            } else if (profitMargin > 0) {
-              return `${profitMargin}%`;
+            // عرض المعلومة المكملة
+            if (deliveredOrdersCount > 0 && profitMargin > 0) {
+              return `${totalProducts} قطعة`;
+            } else if (deliveredOrdersCount > 0) {
+              return `${totalProducts} قطعة`;
             } else {
               return "0%";
             }
           })(),
-          icon: PieChart, 
-          colors: ['rose-500', 'red-500'], 
+          icon: BarChart3, 
+          colors: ['orange-500', 'amber-500'], 
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
