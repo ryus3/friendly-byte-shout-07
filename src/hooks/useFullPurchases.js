@@ -13,11 +13,11 @@ export const useFullPurchases = () => {
   const addPurchase = useCallback(async (purchaseData) => {
     setLoading(true);
     try {
-      // حساب التكلفة الإجمالية بشكل صحيح
+      // حساب التكلفة الإجمالية بشكل صحيح - فقط تكلفة المنتجات
       const itemsTotal = purchaseData.items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0);
       const shippingCost = Number(purchaseData.shippingCost) || 0;
       const transferCost = Number(purchaseData.transferCost) || 0;
-      const totalAmount = itemsTotal + shippingCost + transferCost;
+      const totalAmount = itemsTotal; // فقط تكلفة المنتجات للفاتورة الأساسية
 
       console.log('🛒 حساب التكلفة الصحيح:', {
         supplier: purchaseData.supplier,
@@ -38,7 +38,9 @@ export const useFullPurchases = () => {
           paid_amount: totalAmount,
           shipping_cost: shippingCost,
           transfer_cost: transferCost,
-          purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate).toISOString() : new Date().toISOString(),
+          purchase_date: purchaseData.purchaseDate ? 
+            new Date(purchaseData.purchaseDate + 'T' + new Date().toTimeString().split(' ')[0]).toISOString() : 
+            new Date().toISOString(),
           cash_source_id: purchaseData.cashSourceId,
           status: 'completed',
           items: purchaseData.items,
@@ -66,7 +68,7 @@ export const useFullPurchases = () => {
       await Promise.all(purchaseItemsPromises);
       console.log('📦 تم إضافة عناصر الفاتورة');
 
-      // تحديث المخزون لكل منتج مع إضافة المنتجات الجديدة
+      // معالجة المنتجات وإضافتها للمخزون بطريقة مبسطة ومضمونة
       for (const item of purchaseData.items) {
         try {
           console.log('📈 معالجة المنتج:', {
@@ -76,39 +78,27 @@ export const useFullPurchases = () => {
             productName: item.productName
           });
           
-          // استخدام الوظيفة المحسنة لإضافة/تحديث المخزون
-          const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase_with_cost', {
-            p_sku: item.variantSku,
-            p_quantity_change: item.quantity,
-            p_cost_price: item.costPrice,
-            p_purchase_id: newPurchase.id,
-            p_purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate).toISOString() : new Date().toISOString()
-          });
-          
-          if (stockError) {
-            console.error(`❌ خطأ في تحديث مخزون ${item.variantSku}:`, stockError);
-            // في حالة فشل الوظيفة، إضافة المنتج يدوياً
-            await addProductManually(item, newPurchase.id);
-          }
+          // إضافة المنتج مباشرة بدون تعقيد
+          await addProductDirectly(item, newPurchase.id, purchaseData.purchaseDate);
           
           console.log(`✅ تم معالجة ${item.variantSku} بنجاح`);
         } catch (error) {
           console.error(`❌ فشل معالجة ${item.variantSku}:`, error);
-          // محاولة إضافة المنتج يدوياً في حالة الفشل
-          await addProductManually(item, newPurchase.id);
+          throw error; // إيقاف العملية في حالة الفشل
         }
       }
 
-      // خصم المبلغ من مصدر النقد
-      if (purchaseData.cashSourceId && totalAmount > 0) {
-        console.log('💰 خصم المبلغ من مصدر النقد:', {
+      // خصم المبلغ الإجمالي الكامل من مصدر النقد (المنتجات + الشحن + التحويل)
+      const fullTotalAmount = itemsTotal + shippingCost + transferCost;
+      if (purchaseData.cashSourceId && fullTotalAmount > 0) {
+        console.log('💰 خصم المبلغ الإجمالي من مصدر النقد:', {
           cashSourceId: purchaseData.cashSourceId,
-          amount: totalAmount
+          amount: fullTotalAmount
         });
 
         const { error: cashError } = await supabase.rpc('update_cash_source_balance', {
           p_cash_source_id: purchaseData.cashSourceId,
-          p_amount: totalAmount,
+          p_amount: fullTotalAmount,
           p_movement_type: 'out',
           p_reference_type: 'purchase',
           p_reference_id: newPurchase.id,
@@ -180,7 +170,7 @@ export const useFullPurchases = () => {
       
       toast({ 
         title: 'نجح', 
-        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح بمبلغ ${totalAmount.toLocaleString()} د.ع`,
+        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح بمبلغ ${(itemsTotal + shippingCost + transferCost).toLocaleString()} د.ع`,
         variant: 'success'
       });
 
@@ -198,14 +188,37 @@ export const useFullPurchases = () => {
     }
   }, [addExpense, refetchData, user]);
 
-  // دالة لإضافة المنتج يدوياً في حالة فشل الوظيفة الأساسية
-  const addProductManually = async (item, purchaseId) => {
+  // دالة مبسطة لإضافة المنتجات مباشرة
+  const addProductDirectly = async (item, purchaseId, purchaseDate) => {
     try {
-      let productId = item.productId;
-      let variantId = item.variantId;
+      const current_user_id = user?.user_id || (await supabase.from('profiles').select('user_id').limit(1)).data?.[0]?.user_id;
+      
+      // البحث عن المنتج والمتغير الموجود بـ SKU
+      const { data: existingVariant } = await supabase
+        .from('product_variants')
+        .select('id, product_id, products(id, name)')
+        .eq('barcode', item.variantSku)
+        .single();
 
-      // إذا لم يكن هناك معرف منتج، إنشاء منتج جديد
-      if (!productId) {
+      let productId, variantId;
+
+      if (existingVariant) {
+        // المنتج موجود - نحديث المخزون فقط
+        productId = existingVariant.product_id;
+        variantId = existingVariant.id;
+        
+        // تحديث سعر التكلفة
+        await supabase
+          .from('product_variants')
+          .update({ cost_price: item.costPrice })
+          .eq('id', variantId);
+        
+        await supabase
+          .from('products')
+          .update({ cost_price: item.costPrice })
+          .eq('id', productId);
+          
+      } else {
         // إنشاء منتج جديد
         const { data: newProduct, error: productError } = await supabase
           .from('products')
@@ -214,7 +227,7 @@ export const useFullPurchases = () => {
             cost_price: item.costPrice,
             base_price: item.costPrice * 1.3,
             is_active: true,
-            created_by: user?.user_id
+            created_by: current_user_id
           })
           .select()
           .single();
@@ -240,7 +253,7 @@ export const useFullPurchases = () => {
         variantId = newVariant.id;
       }
 
-      // إضافة/تحديث المخزون
+      // تحديث المخزون
       const { data: existingInventory } = await supabase
         .from('inventory')
         .select('*')
@@ -255,7 +268,7 @@ export const useFullPurchases = () => {
           .update({
             quantity: existingInventory.quantity + item.quantity,
             updated_at: new Date().toISOString(),
-            last_updated_by: user?.user_id
+            last_updated_by: current_user_id
           })
           .eq('id', existingInventory.id);
       } else {
@@ -268,11 +281,15 @@ export const useFullPurchases = () => {
             quantity: item.quantity,
             min_stock: 0,
             reserved_quantity: 0,
-            last_updated_by: user?.user_id
+            last_updated_by: current_user_id
           });
       }
 
       // إضافة سجل التكلفة
+      const purchaseDateTime = purchaseDate ? 
+        new Date(purchaseDate + 'T' + new Date().toTimeString().split(' ')[0]).toISOString() : 
+        new Date().toISOString();
+        
       await supabase
         .from('purchase_cost_history')
         .insert({
@@ -282,12 +299,13 @@ export const useFullPurchases = () => {
           quantity: item.quantity,
           remaining_quantity: item.quantity,
           unit_cost: item.costPrice,
-          purchase_date: new Date().toISOString()
+          purchase_date: purchaseDateTime
         });
 
-      console.log(`✅ تم إضافة المنتج ${item.productName} يدوياً`);
+      console.log(`✅ تم إضافة المنتج ${item.productName} بنجاح`);
     } catch (error) {
-      console.error(`❌ فشل إضافة المنتج ${item.productName} يدوياً:`, error);
+      console.error(`❌ فشل إضافة المنتج ${item.productName}:`, error);
+      throw error;
     }
   };
 
