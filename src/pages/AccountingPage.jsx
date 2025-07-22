@@ -434,11 +434,11 @@ const AccountingPage = () => {
         { 
           key: 'myProfit', 
           title: "تحليل أرباح المنتجات", 
-          value: `${Math.round((financialSummary.grossProfit / Math.max(financialSummary.totalRevenue, 1)) * 100)}%`,
-          subValue: `${financialSummary.deliveredOrders?.filter(o => o.order_items?.length > 0).length || 0} منتج`,
-          icon: User, 
+          value: financialSummary.grossProfit > 0 ? `${Math.round((financialSummary.grossProfit / Math.max(financialSummary.totalRevenue, 1)) * 100)}%` : `${financialSummary.deliveredOrders?.length || 0} طلب`,
+          subValue: financialSummary.grossProfit > 0 ? `${financialSummary.deliveredOrders?.length || 0} طلب` : `${Math.round((financialSummary.grossProfit / Math.max(financialSummary.totalRevenue, 1)) * 100) || 0}%`,
+          icon: PieChart, 
           colors: ['rose-500', 'red-500'], 
-          format: 'percentage', 
+          format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
         { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.managerProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },

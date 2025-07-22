@@ -19,15 +19,14 @@ import {
   Ruler,
   Package,
   CalendarDays,
-  Activity,
-  Share2
+  Activity
 } from 'lucide-react';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { motion } from 'framer-motion';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import ProfitsAnalysisPDF from '@/components/pdf/ProfitsAnalysisPDF';
-import ShareDialog from '@/components/share/ShareDialog';
+
 
 /**
  * صفحة تحليل الأرباح المتقدمة
@@ -186,7 +185,6 @@ const AdvancedProfitsAnalysisPage = () => {
           <PDFDownloadLink
             document={<ProfitsAnalysisPDF analysisData={analysisData} dateRange={dateRange} filters={filters} />}
             fileName={`تحليل-الأرباح-${new Date().toLocaleDateString('ar-EG')}.pdf`}
-            className="inline-flex"
           >
             {({ loading }) => (
               <Button variant="outline" size="sm" disabled={loading}>
@@ -195,17 +193,6 @@ const AdvancedProfitsAnalysisPage = () => {
               </Button>
             )}
           </PDFDownloadLink>
-
-          <ShareDialog 
-            pdfDocument={<ProfitsAnalysisPDF analysisData={analysisData} dateRange={dateRange} filters={filters} />}
-            fileName={`تحليل-الأرباح-${new Date().toLocaleDateString('ar-EG')}`}
-            triggerButton={
-              <Button variant="outline" size="sm">
-                <Share2 className="w-4 h-4 ml-1" />
-                مشاركة
-              </Button>
-            }
-          />
           
           <Button 
             variant={viewMode === 'overview' ? 'default' : 'outline'} 
