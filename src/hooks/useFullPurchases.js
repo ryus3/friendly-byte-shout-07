@@ -15,13 +15,15 @@ export const useFullPurchases = () => {
     try {
       // حساب التكلفة الإجمالية شاملة الشحن والتحويل
       const itemsTotal = purchaseData.items.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
-      const totalAmount = itemsTotal + (purchaseData.shippingCost || 0) + (purchaseData.transferCost || 0);
+      const shippingCost = Number(purchaseData.shippingCost) || 0;
+      const transferCost = Number(purchaseData.transferCost) || 0;
+      const totalAmount = itemsTotal + shippingCost + transferCost;
 
       console.log('🛒 بيانات الفاتورة:', {
         supplier: purchaseData.supplier,
         itemsTotal,
-        shippingCost: purchaseData.shippingCost || 0,
-        transferCost: purchaseData.transferCost || 0,
+        shippingCost,
+        transferCost,
         totalAmount,
         cashSourceId: purchaseData.cashSourceId
       });
@@ -34,8 +36,8 @@ export const useFullPurchases = () => {
           supplier_contact: purchaseData.supplierContact || null,
           total_amount: totalAmount, // المبلغ الإجمالي شامل كل شيء
           paid_amount: totalAmount,
-          shipping_cost: purchaseData.shippingCost || 0,
-          transfer_cost: purchaseData.transferCost || 0,
+          shipping_cost: shippingCost,
+          transfer_cost: transferCost,
           purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate).toISOString() : new Date().toISOString(),
           cash_source_id: purchaseData.cashSourceId, // مصدر النقد
           status: 'completed',
@@ -134,31 +136,31 @@ export const useFullPurchases = () => {
       console.log(`✅ تم إضافة مصروف الشراء: ${itemsTotal} د.ع`);
 
       // إضافة مصروف الشحن إذا كان موجود
-      if (purchaseData.shippingCost && purchaseData.shippingCost > 0) {
+      if (shippingCost > 0) {
         await addExpense({
           category: 'شحن ونقل',
           expense_type: 'operational',
           description: `تكلفة شحن فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
-          amount: purchaseData.shippingCost,
+          amount: shippingCost,
           vendor_name: purchaseData.supplier,
           receipt_number: newPurchase.purchase_number + '-SHIP',
           status: 'approved'
         });
-        console.log(`✅ تم إضافة مصروف الشحن: ${purchaseData.shippingCost} د.ع`);
+        console.log(`✅ تم إضافة مصروف الشحن: ${shippingCost} د.ع`);
       }
 
       // إضافة مصروف التحويل إذا كان موجود
-      if (purchaseData.transferCost && purchaseData.transferCost > 0) {
+      if (transferCost > 0) {
         await addExpense({
           category: 'تكاليف التحويل',
           expense_type: 'operational',
           description: `تكلفة تحويل مالي فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
-          amount: purchaseData.transferCost,
+          amount: transferCost,
           vendor_name: purchaseData.supplier,
           receipt_number: newPurchase.purchase_number + '-TRANSFER',
           status: 'approved'
         });
-        console.log(`✅ تم إضافة مصروف التحويل: ${purchaseData.transferCost} د.ع`);
+        console.log(`✅ تم إضافة مصروف التحويل: ${transferCost} د.ع`);
       }
 
       // تحديث قائمة المشتريات فوراً
