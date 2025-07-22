@@ -64,19 +64,23 @@ export const useFullPurchases = () => {
       await Promise.all(purchaseItemsPromises);
       console.log('📦 تم إضافة عناصر الفاتورة');
 
-      // تحديث المخزون لكل منتج
+      // تحديث المخزون لكل منتج مع تسجيل التكاليف بالوقت
       for (const item of purchaseData.items) {
         try {
-          console.log('📈 تحديث مخزون:', {
+          console.log('📈 تحديث مخزون مع تتبع التكلفة:', {
             sku: item.variantSku,
             quantity: item.quantity,
-            costPrice: item.costPrice
+            costPrice: item.costPrice,
+            purchaseDate: purchaseData.purchaseDate
           });
           
-          const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase', {
+          // استخدام الوظيفة الجديدة التي تدعم تتبع التكلفة بالوقت
+          const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase_with_cost', {
             p_sku: item.variantSku,
             p_quantity_change: item.quantity,
-            p_cost_price: item.costPrice
+            p_cost_price: item.costPrice,
+            p_purchase_id: newPurchase.id,
+            p_purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate).toISOString() : new Date().toISOString()
           });
           
           if (stockError) {
@@ -84,7 +88,7 @@ export const useFullPurchases = () => {
             throw new Error(`فشل في تحديث مخزون ${item.variantSku}: ${stockError.message}`);
           }
           
-          console.log(`✅ تم تحديث مخزون ${item.variantSku} بنجاح`);
+          console.log(`✅ تم تحديث مخزون ${item.variantSku} بنجاح مع تسجيل التكلفة`);
         } catch (error) {
           console.error(`❌ فشل تحديث مخزون ${item.variantSku}:`, error);
           throw error;

@@ -1373,6 +1373,67 @@ export type Database = {
           },
         ]
       }
+      purchase_cost_history: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string
+          purchase_date: string
+          purchase_id: string
+          quantity: number
+          remaining_quantity: number
+          unit_cost: number
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id: string
+          purchase_date: string
+          purchase_id: string
+          quantity: number
+          remaining_quantity?: number
+          unit_cost: number
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string
+          purchase_date?: string
+          purchase_id?: string
+          quantity?: number
+          remaining_quantity?: number
+          unit_cost?: number
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_purchase_cost_product"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_purchase_cost_purchase"
+            columns: ["purchase_id"]
+            isOneToOne: false
+            referencedRelation: "purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_purchase_cost_variant"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       purchase_items: {
         Row: {
           created_at: string
@@ -1938,6 +1999,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_purchase_cost_record: {
+        Args: {
+          p_product_id: string
+          p_variant_id: string
+          p_purchase_id: string
+          p_quantity: number
+          p_unit_cost: number
+          p_purchase_date: string
+        }
+        Returns: undefined
+      }
       auth_with_username: {
         Args: { username_input: string; password_input: string }
         Returns: {
@@ -1945,6 +2017,14 @@ export type Database = {
           user_email: string
           error_message: string
         }[]
+      }
+      calculate_fifo_cost: {
+        Args: {
+          p_product_id: string
+          p_variant_id: string
+          p_quantity_sold: number
+        }
+        Returns: number
       }
       calculate_main_cash_balance: {
         Args: Record<PropertyKey, never>
@@ -2106,6 +2186,16 @@ export type Database = {
       }
       update_variant_stock_from_purchase: {
         Args: { p_sku: string; p_quantity_change: number; p_cost_price: number }
+        Returns: undefined
+      }
+      update_variant_stock_from_purchase_with_cost: {
+        Args: {
+          p_sku: string
+          p_quantity_change: number
+          p_cost_price: number
+          p_purchase_id: string
+          p_purchase_date: string
+        }
         Returns: undefined
       }
       username_exists: {

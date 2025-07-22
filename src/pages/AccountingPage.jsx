@@ -432,48 +432,58 @@ const AccountingPage = () => {
     
     const profitCards = [
         { 
-          key: 'myProfit', 
+          key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // حساب عدد المنتجات المباعة
-            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
-              sum + (order.order_items?.length || 0), 0) || 0;
+            // حساب عدد الطلبات المُستلمة
+            const deliveredOrdersCount = financialSummary.deliveredOrders?.length || 0;
             
             // حساب نسبة الربح
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
-            // إرجاع نسبة الربح إذا كانت أكبر من 0، وإلا عدد المنتجات
+            // إذا كان هناك ربح، اعرض نسبة الربح
             if (profitMargin > 0) {
               return `${profitMargin}%`;
-            } else if (totalProducts > 0) {
-              return `${totalProducts} منتج`;
-            } else {
+            } 
+            // إذا كان هناك طلبات ولكن لا يوجد ربح، اعرض عدد الطلبات
+            else if (deliveredOrdersCount > 0) {
+              return `${deliveredOrdersCount} طلب`;
+            } 
+            // إذا لم يكن هناك طلبات أو ربح
+            else {
               return "لا توجد بيانات";
             }
           })(),
           subValue: (() => {
-            // حساب عدد المنتجات المباعة
-            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
-              sum + (order.order_items?.length || 0), 0) || 0;
+            // حساب عدد القطع المباعة
+            const totalPiecesSold = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0) || 0), 0) || 0;
+            
+            // حساب عدد الطلبات المُستلمة
+            const deliveredOrdersCount = financialSummary.deliveredOrders?.length || 0;
             
             // حساب نسبة الربح
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
-            // إرجاع عدد المنتجات إذا كان الربح أكبر من 0، وإلا نسبة الربح
-            if (profitMargin > 0 && totalProducts > 0) {
-              return `${totalProducts} منتج`;
-            } else if (profitMargin > 0) {
+            // إذا كان هناك ربح، اعرض عدد القطع
+            if (profitMargin > 0 && totalPiecesSold > 0) {
+              return `${totalPiecesSold} قطعة`;
+            } 
+            // إذا كان هناك طلبات ولكن لا يوجد ربح، اعرض نسبة الربح
+            else if (deliveredOrdersCount > 0) {
               return `${profitMargin}%`;
-            } else {
+            } 
+            // إذا لم يكن هناك طلبات
+            else {
               return "0%";
             }
           })(),
-          icon: PieChart, 
-          colors: ['rose-500', 'red-500'], 
+          icon: TrendingUp, 
+          colors: ['orange-500', 'amber-500'], 
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
