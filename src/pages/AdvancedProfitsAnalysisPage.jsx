@@ -19,11 +19,15 @@ import {
   Ruler,
   Package,
   CalendarDays,
-  Activity
+  Activity,
+  Share2
 } from 'lucide-react';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { motion } from 'framer-motion';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import ProfitsAnalysisPDF from '@/components/pdf/ProfitsAnalysisPDF';
+import ShareDialog from '@/components/share/ShareDialog';
 
 /**
  * صفحة تحليل الأرباح المتقدمة
@@ -179,10 +183,30 @@ const AdvancedProfitsAnalysisPage = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 ml-1" />
-            تصدير
-          </Button>
+          <PDFDownloadLink
+            document={<ProfitsAnalysisPDF analysisData={analysisData} dateRange={dateRange} filters={filters} />}
+            fileName={`تحليل-الأرباح-${new Date().toLocaleDateString('ar-EG')}.pdf`}
+            className="inline-flex"
+          >
+            {({ loading }) => (
+              <Button variant="outline" size="sm" disabled={loading}>
+                <Download className="w-4 h-4 ml-1" />
+                {loading ? 'جاري التجهيز...' : 'تصدير PDF'}
+              </Button>
+            )}
+          </PDFDownloadLink>
+
+          <ShareDialog 
+            pdfDocument={<ProfitsAnalysisPDF analysisData={analysisData} dateRange={dateRange} filters={filters} />}
+            fileName={`تحليل-الأرباح-${new Date().toLocaleDateString('ar-EG')}`}
+            triggerButton={
+              <Button variant="outline" size="sm">
+                <Share2 className="w-4 h-4 ml-1" />
+                مشاركة
+              </Button>
+            }
+          />
+          
           <Button 
             variant={viewMode === 'overview' ? 'default' : 'outline'} 
             size="sm"
@@ -266,6 +290,40 @@ const AdvancedProfitsAnalysisPage = () => {
                   {categories?.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={filters.productType} 
+                onValueChange={(value) => setFilters(prev => ({ ...prev, productType: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="نوع المنتج" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الأنواع</SelectItem>
+                  {productTypes?.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={filters.season} 
+                onValueChange={(value) => setFilters(prev => ({ ...prev, season: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="الموسم" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل المواسم</SelectItem>
+                  {seasons?.map((season) => (
+                    <SelectItem key={season.id} value={season.id}>
+                      {season.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

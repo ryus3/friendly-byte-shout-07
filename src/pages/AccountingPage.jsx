@@ -431,7 +431,16 @@ const AccountingPage = () => {
     ];
     
     const profitCards = [
-        { key: 'myProfit', title: "تحليل أرباح المنتجات", value: financialSummary.myProfit, icon: User, colors: ['rose-500', 'red-500'], format: 'currency', onClick: () => navigate('/advanced-profits-analysis') },
+        { 
+          key: 'myProfit', 
+          title: "تحليل أرباح المنتجات", 
+          value: `${Math.round((financialSummary.grossProfit / Math.max(financialSummary.totalRevenue, 1)) * 100)}%`,
+          subValue: `${financialSummary.deliveredOrders?.filter(o => o.order_items?.length > 0).length || 0} منتج`,
+          icon: User, 
+          colors: ['rose-500', 'red-500'], 
+          format: 'percentage', 
+          onClick: () => navigate('/advanced-profits-analysis') 
+        },
         { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.managerProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
         { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
