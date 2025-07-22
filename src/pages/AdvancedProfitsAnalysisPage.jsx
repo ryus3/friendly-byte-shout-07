@@ -30,7 +30,6 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear,
  * تعرض تحليلاً شاملاً للأرباح مقسم حسب الأقسام والتصنيفات والمنتجات
  */
 const AdvancedProfitsAnalysisPage = () => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
   // حالة الفلاتر
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
@@ -220,27 +219,11 @@ const AdvancedProfitsAnalysisPage = () => {
               </SelectContent>
             </Select>
             
-            <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
-              <DateRangePicker
-                date={dateRange}
-                onDateChange={setDateRange}
-                className="flex-1 w-full sm:w-auto"
-              />
-              <Button 
-                onClick={async () => {
-                  setIsRefreshing(true);
-                  await refreshData();
-                  setTimeout(() => setIsRefreshing(false), 1000);
-                }}
-                size="sm"
-                variant="outline"
-                disabled={isRefreshing}
-                className="w-full sm:w-auto px-4 flex items-center justify-center gap-2"
-              >
-                <Activity className={`w-4 h-4 transition-transform duration-1000 ${isRefreshing ? 'animate-spin' : ''}`} />
-                <span className="text-sm">تحديث</span>
-              </Button>
-            </div>
+            <DateRangePicker
+              date={dateRange}
+              onDateChange={setDateRange}
+              className="w-full"
+            />
           </CardContent>
         </Card>
 
