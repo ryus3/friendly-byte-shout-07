@@ -347,7 +347,10 @@ const SystemProfitSummary = ({
                     <div>
                       <p className="text-xs md:text-sm text-white/80 font-medium">أرباح المبيعات</p>
                       <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(realizedProfits)}</p>
-                      <p className="text-xs text-white/60 mt-1">اضغط للتحليل المتقدم</p>
+                      <p className="text-xs text-white/60 mt-1 flex items-center gap-1">
+                        <Target className="w-3 h-3" />
+                        اضغط للتحليل المتقدم
+                      </p>
                     </div>
                   </div>
                 </CardContent>
