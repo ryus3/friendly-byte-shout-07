@@ -336,7 +336,7 @@ const SystemProfitSummary = ({
                 )}
                 onClick={() => {
                   // التنقل إلى صفحة تحليل الأرباح المتقدم
-                  window.open('/advanced-profits-analysis', '_blank');
+                  window.location.href = '/advanced-profits-analysis';
                 }}
               >
                 <CardContent className="p-3 md:p-6">
