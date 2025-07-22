@@ -1,17 +1,33 @@
+
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
-// استخدام خط Times الافتراضي
+
+// تسجيل خط يدعم العربية
+Font.register({
+  family: 'NotoSansArabic',
+  fonts: [
+    {
+      src: 'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHmeR4dMzSNqiF7vA.ttf',
+      fontWeight: 'normal'
+    },
+    {
+      src: 'https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHmeR4dMzSNqiF7vA.ttf',
+      fontWeight: 'bold'
+    }
+  ]
+});
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
     padding: 30,
-    fontFamily: 'Times-Roman',
-    fontSize: 13,
-    lineHeight: 1.6,
+    fontFamily: 'NotoSansArabic',
+    fontSize: 12,
+    lineHeight: 1.5,
     color: '#1a202c',
+    direction: 'rtl'
   },
   header: {
     marginBottom: 30,
@@ -21,19 +37,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#2563eb',
     marginBottom: 15,
     textAlign: 'center',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
   },
   companyName: {
     fontSize: 14,
     color: '#64748b',
     marginBottom: 20,
     textAlign: 'center',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
   },
   invoiceInfo: {
     flexDirection: 'row',
@@ -45,6 +61,8 @@ const styles = StyleSheet.create({
   },
   infoSection: {
     flex: 1,
+    marginLeft: 10,
+    marginRight: 10,
   },
   sectionTitle: {
     fontSize: 14,
@@ -54,24 +72,28 @@ const styles = StyleSheet.create({
     borderBottom: 1,
     borderBottomColor: '#e5e7eb',
     paddingBottom: 5,
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   row: {
     flexDirection: 'row',
     marginBottom: 8,
+    textAlign: 'right',
   },
   label: {
     fontSize: 11,
     color: '#6b7280',
     width: 120,
     fontWeight: 'bold',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   value: {
     fontSize: 11,
     color: '#111827',
     flex: 1,
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   table: {
     marginTop: 20,
@@ -101,17 +123,17 @@ const styles = StyleSheet.create({
     color: '#374151',
     textAlign: 'center',
     paddingHorizontal: 5,
+    fontFamily: 'NotoSansArabic',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontFamily: 'Times-Roman',
   },
   tableCellHeader: {
     fontSize: 11,
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
   },
   col1: { width: '8%' },
   col2: { width: '32%' },
@@ -137,13 +159,15 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#374151',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   totalValue: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   grandTotal: {
     fontSize: 16,
@@ -152,7 +176,8 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTop: 2,
     borderTopColor: '#2563eb',
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   footer: {
     marginTop: 40,
@@ -165,7 +190,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     marginBottom: 5,
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'center',
   },
   notes: {
     marginTop: 20,
@@ -180,13 +206,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#92400e',
     marginBottom: 8,
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   },
   notesText: {
     fontSize: 10,
     color: '#a16207',
     lineHeight: 1.4,
-    fontFamily: 'Times-Roman',
+    fontFamily: 'NotoSansArabic',
+    textAlign: 'right',
   }
 });
 
@@ -214,6 +242,12 @@ const PurchaseInvoicePDF = ({ purchase }) => {
       default: return 'غير محدد';
     }
   };
+
+  // حساب الإجمالي الصحيح
+  const itemsTotal = (purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
+  const shippingCost = Number(purchase.shipping_cost) || 0;
+  const transferCost = Number(purchase.transfer_cost) || 0;
+  const finalTotal = itemsTotal + shippingCost + transferCost;
 
   return (
     <Document>
@@ -285,32 +319,28 @@ const PurchaseInvoicePDF = ({ purchase }) => {
         <View style={styles.totalSection}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>إجمالي قيمة المنتجات:</Text>
-            <Text style={styles.totalValue}>
-              {formatCurrency((purchase.items || []).reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}
-            </Text>
+            <Text style={styles.totalValue}>{formatCurrency(itemsTotal)}</Text>
           </View>
-          {/* عرض تكلفة الشحن من العمود المنفصل */}
-          {(purchase.shipping_cost || 0) > 0 && (
+          
+          {shippingCost > 0 && (
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>مصاريف الشحن:</Text>
-              <Text style={styles.totalValue}>
-                {formatCurrency(purchase.shipping_cost)}
-              </Text>
+              <Text style={styles.totalValue}>{formatCurrency(shippingCost)}</Text>
             </View>
           )}
-          {/* عرض تكاليف التحويل */}
-          {(purchase.transfer_cost || 0) > 0 && (
+          
+          {transferCost > 0 && (
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>تكاليف التحويل:</Text>
-              <Text style={styles.totalValue}>
-                {formatCurrency(purchase.transfer_cost)}
-              </Text>
+              <Text style={styles.totalValue}>{formatCurrency(transferCost)}</Text>
             </View>
           )}
+          
           <View style={[styles.totalRow, { borderTop: 2, borderTopColor: '#2563eb', paddingTop: 10 }]}>
             <Text style={styles.grandTotal}>إجمالي الفاتورة:</Text>
-            <Text style={styles.grandTotal}>{formatCurrency((purchase.total_amount || 0) + (purchase.shipping_cost || 0) + (purchase.transfer_cost || 0))}</Text>
+            <Text style={styles.grandTotal}>{formatCurrency(finalTotal)}</Text>
           </View>
+          
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>المبلغ المدفوع:</Text>
             <Text style={styles.totalValue}>{formatCurrency(purchase.paid_amount)}</Text>

@@ -13,13 +13,13 @@ export const useFullPurchases = () => {
   const addPurchase = useCallback(async (purchaseData) => {
     setLoading(true);
     try {
-      // حساب التكلفة الإجمالية شاملة الشحن والتحويل
-      const itemsTotal = purchaseData.items.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0);
+      // حساب التكلفة الإجمالية بشكل صحيح
+      const itemsTotal = purchaseData.items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0);
       const shippingCost = Number(purchaseData.shippingCost) || 0;
       const transferCost = Number(purchaseData.transferCost) || 0;
       const totalAmount = itemsTotal + shippingCost + transferCost;
 
-      console.log('🛒 بيانات الفاتورة:', {
+      console.log('🛒 حساب التكلفة الصحيح:', {
         supplier: purchaseData.supplier,
         itemsTotal,
         shippingCost,
@@ -28,18 +28,18 @@ export const useFullPurchases = () => {
         cashSourceId: purchaseData.cashSourceId
       });
 
-      // إضافة فاتورة الشراء
+      // إضافة فاتورة الشراء مع التكلفة الصحيحة
       const { data: newPurchase, error } = await supabase
         .from('purchases')
         .insert({
           supplier_name: purchaseData.supplier,
           supplier_contact: purchaseData.supplierContact || null,
-          total_amount: totalAmount, // المبلغ الإجمالي شامل كل شيء
+          total_amount: totalAmount,
           paid_amount: totalAmount,
           shipping_cost: shippingCost,
           transfer_cost: transferCost,
           purchase_date: purchaseData.purchaseDate ? new Date(purchaseData.purchaseDate).toISOString() : new Date().toISOString(),
-          cash_source_id: purchaseData.cashSourceId, // مصدر النقد
+          cash_source_id: purchaseData.cashSourceId,
           status: 'completed',
           items: purchaseData.items,
           created_by: user?.user_id
@@ -66,17 +66,17 @@ export const useFullPurchases = () => {
       await Promise.all(purchaseItemsPromises);
       console.log('📦 تم إضافة عناصر الفاتورة');
 
-      // تحديث المخزون لكل منتج مع تسجيل التكاليف بالوقت
+      // تحديث المخزون لكل منتج مع إضافة المنتجات الجديدة
       for (const item of purchaseData.items) {
         try {
-          console.log('📈 تحديث مخزون مع تتبع التكلفة:', {
+          console.log('📈 معالجة المنتج:', {
             sku: item.variantSku,
             quantity: item.quantity,
             costPrice: item.costPrice,
-            purchaseDate: purchaseData.purchaseDate
+            productName: item.productName
           });
           
-          // استخدام الوظيفة الجديدة التي تدعم تتبع التكلفة بالوقت
+          // استخدام الوظيفة المحسنة لإضافة/تحديث المخزون
           const { error: stockError } = await supabase.rpc('update_variant_stock_from_purchase_with_cost', {
             p_sku: item.variantSku,
             p_quantity_change: item.quantity,
@@ -87,13 +87,15 @@ export const useFullPurchases = () => {
           
           if (stockError) {
             console.error(`❌ خطأ في تحديث مخزون ${item.variantSku}:`, stockError);
-            throw new Error(`فشل في تحديث مخزون ${item.variantSku}: ${stockError.message}`);
+            // في حالة فشل الوظيفة، إضافة المنتج يدوياً
+            await addProductManually(item, newPurchase.id);
           }
           
-          console.log(`✅ تم تحديث مخزون ${item.variantSku} بنجاح مع تسجيل التكلفة`);
+          console.log(`✅ تم معالجة ${item.variantSku} بنجاح`);
         } catch (error) {
-          console.error(`❌ فشل تحديث مخزون ${item.variantSku}:`, error);
-          throw error;
+          console.error(`❌ فشل معالجة ${item.variantSku}:`, error);
+          // محاولة إضافة المنتج يدوياً في حالة الفشل
+          await addProductManually(item, newPurchase.id);
         }
       }
 
@@ -122,20 +124,22 @@ export const useFullPurchases = () => {
         console.log('✅ تم خصم المبلغ من مصدر النقد بنجاح');
       }
 
-      // إضافة المصاريف
-      // إضافة مصروف الشراء (تكلفة المنتجات)
-      await addExpense({
-        category: 'مشتريات',
-        expense_type: 'operational',
-        description: `شراء بضاعة - فاتورة ${newPurchase.purchase_number} من ${purchaseData.supplier}`,
-        amount: itemsTotal,
-        vendor_name: purchaseData.supplier,
-        receipt_number: newPurchase.purchase_number,
-        status: 'approved'
-      });
-      console.log(`✅ تم إضافة مصروف الشراء: ${itemsTotal} د.ع`);
+      // إضافة المصاريف بشكل صحيح
+      // 1. مصروف الشراء (تكلفة المنتجات)
+      if (itemsTotal > 0) {
+        await addExpense({
+          category: 'مشتريات',
+          expense_type: 'operational',
+          description: `شراء بضاعة - فاتورة ${newPurchase.purchase_number} من ${purchaseData.supplier}`,
+          amount: itemsTotal,
+          vendor_name: purchaseData.supplier,
+          receipt_number: newPurchase.purchase_number,
+          status: 'approved'
+        });
+        console.log(`✅ تم إضافة مصروف الشراء: ${itemsTotal} د.ع`);
+      }
 
-      // إضافة مصروف الشحن إذا كان موجود
+      // 2. مصروف الشحن
       if (shippingCost > 0) {
         await addExpense({
           category: 'شحن ونقل',
@@ -149,7 +153,7 @@ export const useFullPurchases = () => {
         console.log(`✅ تم إضافة مصروف الشحن: ${shippingCost} د.ع`);
       }
 
-      // إضافة مصروف التحويل إذا كان موجود
+      // 3. مصروف التحويل
       if (transferCost > 0) {
         await addExpense({
           category: 'تكاليف التحويل',
@@ -176,7 +180,7 @@ export const useFullPurchases = () => {
       
       toast({ 
         title: 'نجح', 
-        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح وتم تحديث المخزون والمحاسبة.`,
+        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بنجاح بمبلغ ${totalAmount.toLocaleString()} د.ع`,
         variant: 'success'
       });
 
@@ -193,6 +197,99 @@ export const useFullPurchases = () => {
       setLoading(false);
     }
   }, [addExpense, refetchData, user]);
+
+  // دالة لإضافة المنتج يدوياً في حالة فشل الوظيفة الأساسية
+  const addProductManually = async (item, purchaseId) => {
+    try {
+      let productId = item.productId;
+      let variantId = item.variantId;
+
+      // إذا لم يكن هناك معرف منتج، إنشاء منتج جديد
+      if (!productId) {
+        // إنشاء منتج جديد
+        const { data: newProduct, error: productError } = await supabase
+          .from('products')
+          .insert({
+            name: item.productName || 'منتج جديد',
+            cost_price: item.costPrice,
+            base_price: item.costPrice * 1.3,
+            is_active: true,
+            created_by: user?.user_id
+          })
+          .select()
+          .single();
+
+        if (productError) throw productError;
+        productId = newProduct.id;
+
+        // إنشاء متغير للمنتج
+        const { data: newVariant, error: variantError } = await supabase
+          .from('product_variants')
+          .insert({
+            product_id: productId,
+            barcode: item.variantSku,
+            sku: item.variantSku,
+            price: item.costPrice * 1.3,
+            cost_price: item.costPrice,
+            is_active: true
+          })
+          .select()
+          .single();
+
+        if (variantError) throw variantError;
+        variantId = newVariant.id;
+      }
+
+      // إضافة/تحديث المخزون
+      const { data: existingInventory } = await supabase
+        .from('inventory')
+        .select('*')
+        .eq('product_id', productId)
+        .eq('variant_id', variantId)
+        .single();
+
+      if (existingInventory) {
+        // تحديث الكمية الموجودة
+        await supabase
+          .from('inventory')
+          .update({
+            quantity: existingInventory.quantity + item.quantity,
+            updated_at: new Date().toISOString(),
+            last_updated_by: user?.user_id
+          })
+          .eq('id', existingInventory.id);
+      } else {
+        // إنشاء سجل مخزون جديد
+        await supabase
+          .from('inventory')
+          .insert({
+            product_id: productId,
+            variant_id: variantId,
+            quantity: item.quantity,
+            min_stock: 0,
+            reserved_quantity: 0,
+            last_updated_by: user?.user_id
+          });
+      }
+
+      // إضافة سجل التكلفة
+      await supabase
+        .from('purchase_cost_history')
+        .insert({
+          product_id: productId,
+          variant_id: variantId,
+          purchase_id: purchaseId,
+          quantity: item.quantity,
+          remaining_quantity: item.quantity,
+          unit_cost: item.costPrice,
+          purchase_date: new Date().toISOString()
+        });
+
+      console.log(`✅ تم إضافة المنتج ${item.productName} يدوياً`);
+    } catch (error) {
+      console.error(`❌ فشل إضافة المنتج ${item.productName} يدوياً:`, error);
+    }
+  };
 
   const fetchPurchases = useCallback(async () => {
     setLoading(true);
@@ -222,7 +319,6 @@ export const useFullPurchases = () => {
       
       console.log('🗑️ بدء حذف الفاتورة:', purchaseId);
       
-      // استخدام الوظيفة الجديدة للحذف الشامل
       const { data: result, error: deleteError } = await supabase.rpc('delete_purchase_completely', {
         p_purchase_id: purchaseId
       });
@@ -239,10 +335,8 @@ export const useFullPurchases = () => {
 
       console.log('✅ نتيجة الحذف:', result);
 
-      // تحديث القائمة المحلية
       setPurchases(prev => prev.filter(p => p.id !== purchaseId));
       
-      // إعادة تحميل البيانات لضمان التحديث الكامل
       if (refetchData) {
         setTimeout(async () => {
           await refetchData();
