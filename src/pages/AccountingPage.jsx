@@ -7,7 +7,7 @@ import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart, BarChart3 } from 'lucide-react';
+import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
 import { format, parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/components/ui/use-toast';
@@ -435,53 +435,45 @@ const AccountingPage = () => {
           key: 'myProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // حساب عدد المنتجات المباعة الفعلي
-            let totalProducts = 0;
-            financialSummary.deliveredOrders?.forEach(order => {
-              if (order.order_items && Array.isArray(order.order_items)) {
-                totalProducts += order.order_items.length;
-              }
-            });
+            // حساب عدد المنتجات المباعة
+            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.length || 0), 0) || 0;
             
-            // حساب نسبة الربح الفعلية
-            const revenue = financialSummary.salesWithoutDelivery || 0;
+            // حساب نسبة الربح
+            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
-            console.log('🔍 كارت تحليل الأرباح - المنتجات:', totalProducts, 'الإيرادات:', revenue, 'الربح:', profit, 'النسبة:', profitMargin);
-            
-            // عرض نسبة الربح إذا كان هناك مبيعات، وإلا عدد المنتجات
-            if (revenue > 0 && profitMargin >= 0) {
+            // إرجاع نسبة الربح إذا كانت أكبر من 0، وإلا عدد المنتجات
+            if (profitMargin > 0) {
               return `${profitMargin}%`;
             } else if (totalProducts > 0) {
               return `${totalProducts} منتج`;
             } else {
-              return "0 منتج";
+              return "لا توجد بيانات";
             }
           })(),
           subValue: (() => {
-            // حساب عدد المنتجات المباعة الفعلي
-            let totalProducts = 0;
-            financialSummary.deliveredOrders?.forEach(order => {
-              if (order.order_items && Array.isArray(order.order_items)) {
-                totalProducts += order.order_items.length;
-              }
-            });
+            // حساب عدد المنتجات المباعة
+            const totalProducts = financialSummary.deliveredOrders?.reduce((sum, order) => 
+              sum + (order.order_items?.length || 0), 0) || 0;
             
-            // حساب نسبة الربح الفعلية
-            const revenue = financialSummary.salesWithoutDelivery || 0;
+            // حساب نسبة الربح
+            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
             const profit = financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
-            // عرض عدد المنتجات إذا كان هناك ربح، وإلا نسبة الربح
-            if (revenue > 0 && profitMargin >= 0) {
+            // إرجاع عدد المنتجات إذا كان الربح أكبر من 0، وإلا نسبة الربح
+            if (profitMargin > 0 && totalProducts > 0) {
               return `${totalProducts} منتج`;
-            } else {
+            } else if (profitMargin > 0) {
               return `${profitMargin}%`;
+            } else {
+              return "0%";
             }
           })(),
-          icon: BarChart3, 
-          colors: ['orange-500', 'amber-500'], 
+          icon: PieChart, 
+          colors: ['rose-500', 'red-500'], 
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
