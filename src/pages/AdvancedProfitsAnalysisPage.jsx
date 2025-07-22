@@ -30,6 +30,7 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear,
  * تعرض تحليلاً شاملاً للأرباح مقسم حسب الأقسام والتصنيفات والمنتجات
  */
 const AdvancedProfitsAnalysisPage = () => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   // حالة الفلاتر
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
@@ -226,11 +227,17 @@ const AdvancedProfitsAnalysisPage = () => {
                 className="flex-1"
               />
               <Button 
-                onClick={refreshData}
+                onClick={async () => {
+                  setIsRefreshing(true);
+                  await refreshData();
+                  setTimeout(() => setIsRefreshing(false), 1000);
+                }}
                 size="sm"
                 variant="outline"
+                disabled={isRefreshing}
+                className="px-3"
               >
-                <Activity className="w-4 h-4" />
+                <Activity className={`w-4 h-4 transition-transform duration-1000 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </CardContent>
