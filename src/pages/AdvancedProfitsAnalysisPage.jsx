@@ -170,10 +170,10 @@ const AdvancedProfitsAnalysisPage = () => {
       {/* العنوان والأدوات */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-br from-primary to-primary/70 bg-clip-text text-transparent">
-            تحليل الأرباح المتقدم
+          <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-br from-primary to-primary/70 bg-clip-text text-transparent">
+            تحليل أرباح المنتجات
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             تحليل شامل للأرباح مقسم حسب الأقسام والمنتجات والفترات الزمنية
           </p>
         </div>
@@ -194,38 +194,32 @@ const AdvancedProfitsAnalysisPage = () => {
         </div>
       </div>
 
-      {/* فلاتر الفترة الزمنية */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CalendarDays className="w-5 h-5" />
-            الفترة الزمنية
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-              {[
-                { value: 'today', label: 'اليوم' },
-                { value: 'week', label: 'أسبوع' },
-                { value: 'month', label: 'شهر' },
-                { value: 'year', label: 'سنة' },
-                { value: 'last30', label: 'آخر 30' },
-                { value: 'last90', label: 'آخر 90' }
-              ].map((period) => (
-                <Button
-                  key={period.value}
-                  variant={filters.period === period.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handlePeriodChange(period.value)}
-                  className="transition-all duration-200"
-                >
-                  {period.label}
-                </Button>
-              ))}
-            </div>
+      {/* فلاتر مدمجة للهاتف */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* فلتر الفترة الزمنية */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CalendarDays className="w-4 h-4" />
+              الفترة الزمنية
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Select value={filters.period} onValueChange={handlePeriodChange}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="اختر الفترة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">اليوم</SelectItem>
+                <SelectItem value="week">أسبوع</SelectItem>
+                <SelectItem value="month">شهر</SelectItem>
+                <SelectItem value="year">سنة</SelectItem>
+                <SelectItem value="last30">آخر 30 يوم</SelectItem>
+                <SelectItem value="last90">آخر 90 يوم</SelectItem>
+              </SelectContent>
+            </Select>
             
-            <div className="flex gap-2 items-center">
+            <div className="flex gap-2">
               <DateRangePicker
                 date={dateRange}
                 onDateChange={setDateRange}
@@ -234,36 +228,30 @@ const AdvancedProfitsAnalysisPage = () => {
               <Button 
                 onClick={refreshData}
                 size="sm"
-                className="shrink-0"
+                variant="outline"
               >
-                تحديث
+                <Activity className="w-4 h-4" />
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {/* فلاتر المنتجات */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            فلاتر التحليل
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-1">
-                <Layers className="w-3 h-3" />
-                القسم
-              </label>
+        {/* فلاتر المنتجات */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Filter className="w-4 h-4" />
+              فلاتر التحليل
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <Select 
                 value={filters.department} 
                 onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر القسم" />
+                  <SelectValue placeholder="القسم" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">كل الأقسام</SelectItem>
@@ -274,16 +262,13 @@ const AdvancedProfitsAnalysisPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">التصنيف</label>
               <Select 
                 value={filters.category} 
                 onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر التصنيف" />
+                  <SelectValue placeholder="التصنيف" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">كل التصنيفات</SelectItem>
@@ -294,59 +279,13 @@ const AdvancedProfitsAnalysisPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">نوع المنتج</label>
-              <Select 
-                value={filters.productType} 
-                onValueChange={(value) => setFilters(prev => ({ ...prev, productType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر النوع" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الأنواع</SelectItem>
-                  {productTypes?.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>
-                      {type.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">الموسم</label>
-              <Select 
-                value={filters.season} 
-                onValueChange={(value) => setFilters(prev => ({ ...prev, season: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر الموسم" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل المواسم</SelectItem>
-                  {seasons?.map((season) => (
-                    <SelectItem key={season.id} value={season.id}>
-                      {season.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-1">
-                <Palette className="w-3 h-3" />
-                اللون
-              </label>
               <Select 
                 value={filters.color} 
                 onValueChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر اللون" />
+                  <SelectValue placeholder="اللون" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">كل الألوان</SelectItem>
@@ -363,19 +302,13 @@ const AdvancedProfitsAnalysisPage = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-1">
-                <Ruler className="w-3 h-3" />
-                القياس
-              </label>
               <Select 
                 value={filters.size} 
                 onValueChange={(value) => setFilters(prev => ({ ...prev, size: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر القياس" />
+                  <SelectValue placeholder="القياس" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">كل القياسات</SelectItem>
@@ -388,51 +321,30 @@ const AdvancedProfitsAnalysisPage = () => {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">المنتج</label>
-              <Select 
-                value={filters.product} 
-                onValueChange={(value) => setFilters(prev => ({ ...prev, product: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر المنتج" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل المنتجات</SelectItem>
-                  {products?.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Button 
+              onClick={() => setFilters({
+                period: 'month',
+                department: 'all',
+                category: 'all',
+                productType: 'all',
+                season: 'all',
+                color: 'all',
+                size: 'all',
+                product: 'all'
+              })}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              إعادة تعيين الفلاتر
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
 
-            <div className="flex items-end">
-              <Button 
-                onClick={() => setFilters({
-                  period: 'month',
-                  department: 'all',
-                  category: 'all',
-                  productType: 'all',
-                  season: 'all',
-                  color: 'all',
-                  size: 'all',
-                  product: 'all'
-                })}
-                variant="outline"
-                size="sm"
-                className="w-full"
-              >
-                إعادة تعيين
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* بطاقات الملخص */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {summaryCards.map((card, index) => (
           <motion.div
             key={card.title}
@@ -446,20 +358,20 @@ const AdvancedProfitsAnalysisPage = () => {
               `bg-gradient-to-br ${card.color} text-white`,
               "hover:shadow-xl hover:scale-[1.02]"
             )}>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
-                    <card.icon className="w-5 h-5" />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg group-hover:scale-110 transition-transform">
+                    <card.icon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xs text-white/80 font-medium">{card.title}</p>
-                    <p className="text-lg font-bold text-white">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white/80 font-medium truncate">{card.title}</p>
+                    <p className="text-sm sm:text-lg font-bold text-white truncate">
                       {typeof card.value === 'number' && card.title !== 'هامش الربح' ? 
                         formatCurrency(card.value) : card.value}
                     </p>
                   </div>
                 </div>
-                <p className="text-xs text-white/70 mt-2">{card.description}</p>
+                <p className="text-xs text-white/70 mt-2 line-clamp-2">{card.description}</p>
               </CardContent>
             </Card>
           </motion.div>
