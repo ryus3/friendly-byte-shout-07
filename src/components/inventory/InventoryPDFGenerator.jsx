@@ -246,12 +246,16 @@ const InventoryPDFGenerator = ({
                 
                 // تحديد حالة المخزون للمتغير (بدون النافد)
                 let variantStatus = '';
+                let statusColor = '#10b981'; // أخضر للجيد
                 if (variantStock < 3) {
                   variantStatus = ' منخفض';
+                  statusColor = '#ef4444'; // أحمر للمنخفض
                 } else if (variantStock < 10) {
                   variantStatus = ' متوسط';
+                  statusColor = '#f59e0b'; // أصفر للمتوسط
                 } else {
                   variantStatus = ' جيد';
+                  statusColor = '#10b981'; // أخضر للجيد
                 }
                 
                 if (variant.color && variant.size) {
@@ -306,35 +310,50 @@ const InventoryPDFGenerator = ({
               if (Object.keys(variantsByColor).length > 0) {
                 colorSizeDisplay += Object.entries(variantsByColor).map(([color, variants]) => {
                   if (variants.length > 1 && variants[0].size) {
-                    // لون مع عدة أقياس
+                    // لون مع عدة أقياس - مربعات محسنة
                     const sizesBoxes = variants.map(v => {
-                      const statusColor = v.total < 3 ? '#f59e0b' : v.total < 10 ? '#3b82f6' : '#10b981';
+                      const statusColor = v.total < 3 ? '#ef4444' : v.total < 10 ? '#f59e0b' : '#10b981';
+                      const statusBg = v.total < 3 ? '#fef2f2' : v.total < 10 ? '#fefce8' : '#f0fdf4';
+                      const statusIcon = v.total < 3 ? '⚠️' : v.total < 10 ? '⚡' : '✅';
                       return `
-                        <div style="display: inline-block; margin: 2px; padding: 4px 6px; background: white; border: 2px solid ${statusColor}; border-radius: 6px; font-size: 8px; text-align: center; direction: rtl; min-width: 40px;">
-                          <div style="font-weight: 700; color: ${statusColor};">${v.size}</div>
-                          <div style="color: #374151; font-size: 7px;">كلي: ${v.total}</div>
-                          <div style="color: #374151; font-size: 7px;">محجوز: ${v.reserved}</div>
-                          <div style="color: ${statusColor}; font-weight: 600; font-size: 7px;">متاح: ${v.available}</div>
+                        <div style="display: inline-block; margin: 3px; padding: 6px 8px; background: ${statusBg}; border: 2px solid ${statusColor}; border-radius: 8px; font-size: 9px; text-align: center; direction: rtl; min-width: 50px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                          <div style="font-weight: 800; color: ${statusColor}; margin-bottom: 2px; display: flex; align-items: center; justify-content: center; gap: 2px;">
+                            ${statusIcon} ${v.size}
+                          </div>
+                          <div style="color: #374151; font-size: 7px; margin-bottom: 1px;">كلي: ${v.total}</div>
+                          <div style="color: #6b7280; font-size: 7px; margin-bottom: 1px;">محجوز: ${v.reserved}</div>
+                          <div style="color: ${statusColor}; font-weight: 700; font-size: 8px; background: white; padding: 1px 3px; border-radius: 4px;">متاح: ${v.available}</div>
                         </div>
                       `;
                     }).join('');
                     
                     return `
-                      <div style="margin: 6px 0; padding: 8px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 8px; border-right: 4px solid #6366f1; direction: rtl;">
-                        <div style="font-weight: 700; color: #4338ca; margin-bottom: 6px; font-size: 11px;">🎨 ${color} (${variants.length} أقياس)</div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 2px; direction: rtl;">
+                      <div style="margin: 8px 0; padding: 10px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 10px; border-right: 5px solid #6366f1; direction: rtl; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 800; color: #4338ca; margin-bottom: 8px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                          🎨 <span>${color}</span> 
+                          <span style="font-size: 9px; background: #6366f120; color: #4338ca; padding: 2px 8px; border-radius: 12px; border: 1px solid #6366f130;">${variants.length} أقياس</span>
+                        </div>
+                        <div style="display: flex; flex-wrap: wrap; gap: 3px; direction: rtl; justify-content: flex-start;">
                           ${sizesBoxes}
                         </div>
                       </div>
                     `;
                   } else {
-                    // لون واحد بدون أقياس
+                    // لون واحد بدون أقياس - كرت محسن
                     const variant = variants[0];
-                    const statusColor = variant.total < 3 ? '#f59e0b' : variant.total < 10 ? '#3b82f6' : '#10b981';
+                    const statusColor = variant.total < 3 ? '#ef4444' : variant.total < 10 ? '#f59e0b' : '#10b981';
+                    const statusBg = variant.total < 3 ? '#fef2f2' : variant.total < 10 ? '#fefce8' : '#f0fdf4';
+                    const statusIcon = variant.total < 3 ? '⚠️' : variant.total < 10 ? '⚡' : '✅';
                     return `
-                      <div style="margin: 4px 0; padding: 6px 8px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 6px; border-right: 4px solid ${statusColor}; direction: rtl;">
-                        <div style="font-weight: 700; color: ${statusColor}; margin-bottom: 2px; font-size: 10px;">🎨 ${color}</div>
-                        <div style="color: #374151; font-size: 8px;">كلي: ${variant.total} • محجوز: ${variant.reserved} • متاح: ${variant.available}</div>
+                      <div style="margin: 6px 0; padding: 8px 10px; background: linear-gradient(135deg, ${statusBg}, #ffffff); border-radius: 8px; border-right: 4px solid ${statusColor}; direction: rtl; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                        <div style="font-weight: 800; color: ${statusColor}; margin-bottom: 4px; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+                          🎨 ${statusIcon} ${color}
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center; font-size: 8px;">
+                          <span style="color: #374151; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">كلي: ${variant.total}</span>
+                          <span style="color: #6b7280; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">محجوز: ${variant.reserved}</span>
+                          <span style="color: ${statusColor}; background: white; padding: 2px 6px; border-radius: 4px; border: 2px solid ${statusColor}; font-weight: 700;">متاح: ${variant.available}</span>
+                        </div>
                       </div>
                     `;
                   }
@@ -344,11 +363,19 @@ const InventoryPDFGenerator = ({
               // عرض الأقياس فقط
               if (Object.keys(variantsBySize).length > 0) {
                 colorSizeDisplay += Object.entries(variantsBySize).map(([size, variant]) => {
-                  const statusColor = variant.total < 3 ? '#f59e0b' : variant.total < 10 ? '#3b82f6' : '#10b981';
+                  const statusColor = variant.total < 3 ? '#ef4444' : variant.total < 10 ? '#f59e0b' : '#10b981';
+                  const statusBg = variant.total < 3 ? '#fef2f2' : variant.total < 10 ? '#fefce8' : '#f0fdf4';
+                  const statusIcon = variant.total < 3 ? '⚠️' : variant.total < 10 ? '⚡' : '✅';
                   return `
-                    <div style="margin: 4px 0; padding: 6px 8px; background: linear-gradient(135deg, #fefce8, #fef3c7); border-radius: 6px; border-right: 4px solid ${statusColor}; direction: rtl;">
-                      <div style="font-weight: 700; color: ${statusColor}; margin-bottom: 2px; font-size: 10px;">📏 ${size}</div>
-                      <div style="color: #374151; font-size: 8px;">كلي: ${variant.total} • محجوز: ${variant.reserved} • متاح: ${variant.available}</div>
+                    <div style="margin: 6px 0; padding: 8px 10px; background: linear-gradient(135deg, ${statusBg}, #ffffff); border-radius: 8px; border-right: 4px solid ${statusColor}; direction: rtl; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                      <div style="font-weight: 800; color: ${statusColor}; margin-bottom: 4px; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+                        📏 ${statusIcon} ${size}
+                      </div>
+                      <div style="display: flex; gap: 8px; align-items: center; font-size: 8px;">
+                        <span style="color: #374151; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">كلي: ${variant.total}</span>
+                        <span style="color: #6b7280; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">محجوز: ${variant.reserved}</span>
+                        <span style="color: ${statusColor}; background: white; padding: 2px 6px; border-radius: 4px; border: 2px solid ${statusColor}; font-weight: 700;">متاح: ${variant.available}</span>
+                      </div>
                     </div>
                   `;
                 }).join('');
@@ -357,11 +384,19 @@ const InventoryPDFGenerator = ({
               // عرض المتغيرات العامة
               if (generalVariants.length > 0) {
                 colorSizeDisplay += generalVariants.map((variant, idx) => {
-                  const statusColor = variant.total < 3 ? '#f59e0b' : variant.total < 10 ? '#3b82f6' : '#10b981';
+                  const statusColor = variant.total < 3 ? '#ef4444' : variant.total < 10 ? '#f59e0b' : '#10b981';
+                  const statusBg = variant.total < 3 ? '#fef2f2' : variant.total < 10 ? '#fefce8' : '#f0fdf4';
+                  const statusIcon = variant.total < 3 ? '⚠️' : variant.total < 10 ? '⚡' : '✅';
                   return `
-                    <div style="margin: 4px 0; padding: 6px 8px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 6px; border-right: 4px solid ${statusColor}; direction: rtl;">
-                      <div style="font-weight: 700; color: ${statusColor}; margin-bottom: 2px; font-size: 10px;">📦 منتج عام</div>
-                      <div style="color: #374151; font-size: 8px;">كلي: ${variant.total} • محجوز: ${variant.reserved} • متاح: ${variant.available}</div>
+                    <div style="margin: 6px 0; padding: 8px 10px; background: linear-gradient(135deg, ${statusBg}, #ffffff); border-radius: 8px; border-right: 4px solid ${statusColor}; direction: rtl; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+                      <div style="font-weight: 800; color: ${statusColor}; margin-bottom: 4px; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+                        📦 ${statusIcon} منتج عام
+                      </div>
+                      <div style="display: flex; gap: 8px; align-items: center; font-size: 8px;">
+                        <span style="color: #374151; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">كلي: ${variant.total}</span>
+                        <span style="color: #6b7280; background: white; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e7eb;">محجوز: ${variant.reserved}</span>
+                        <span style="color: ${statusColor}; background: white; padding: 2px 6px; border-radius: 4px; border: 2px solid ${statusColor}; font-weight: 700;">متاح: ${variant.available}</span>
+                      </div>
                     </div>
                   `;
                 }).join('');
