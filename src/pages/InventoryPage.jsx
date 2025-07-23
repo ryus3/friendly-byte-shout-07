@@ -450,32 +450,8 @@ const InventoryPage = () => {
       console.log("✅ نتائج فلتر القسم:", items.length, "منتج");
     }
 
-    // تطبيق فلتر التصنيفات من الكروت القديمة (إذا كان موجود)
-    if (categoryFilter) {
-      console.log("🏷️ تطبيق فلتر التصنيف:", categoryFilter);
-      switch (categoryFilter.type) {
-        case 'department':
-          items = items.filter(p => 
-            p.product_departments?.some(pd => pd.department_id === categoryFilter.id)
-          );
-          break;
-        case 'category':
-          items = items.filter(p => 
-            p.product_categories?.some(pc => pc.category_id === categoryFilter.id)
-          );
-          break;
-        case 'product_type':
-          items = items.filter(p => 
-            p.product_product_types?.some(ppt => ppt.product_type_id === categoryFilter.id)
-          );
-          break;
-        case 'season_occasion':
-          items = items.filter(p => 
-            p.product_seasons_occasions?.some(pso => pso.season_occasion_id === categoryFilter.id)
-          );
-          break;
-      }
-    }
+    // إزالة فلتر categoryFilter المضاعف
+    // if (categoryFilter) { ... } // تم إزالته لتجنب التعارض
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
@@ -687,7 +663,7 @@ const InventoryPage = () => {
                     searchTerm: '', // مسح البحث عند تغيير القسم
                     stockFilter: 'all' // إعادة تعيين فلتر المخزون
                   }));
-                  setCategoryFilter(dept.id); // حفظ معرف القسم للفلترة
+                  // إزالة categoryFilter لتجنب التعارض
                 }}
               >
                 <CardContent className="p-6">
