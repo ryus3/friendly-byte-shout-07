@@ -104,13 +104,13 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
   // ألوان متدرجة للكروت مع تنويع أكبر
   const getGradientForIndex = (index) => {
     const gradients = [
-      'from-blue-500 to-blue-700',     // ملابس - أزرق
-      'from-orange-500 to-red-600',    // أحذية - برتقالي لأحمر  
-      'from-emerald-500 to-teal-600',  // مواد عامة - أخضر لتيل
-      'from-purple-500 to-indigo-600', // قسم رابع - بنفسجي
-      'from-yellow-500 to-orange-600', // قسم خامس - أصفر لبرتقالي
-      'from-pink-500 to-rose-600',     // قسم سادس - وردي
-      'from-cyan-500 to-blue-600'      // قسم سابع - سماوي
+      'from-blue-500 to-blue-700',        // ملابس - أزرق
+      'from-orange-500 to-red-600',       // أحذية - برتقالي لأحمر  
+      'from-purple-500 to-pink-600',      // مواد عامة - بنفسجي لوردي
+      'from-emerald-500 to-teal-600',     // قسم رابع - أخضر لتيل
+      'from-yellow-500 to-orange-600',    // قسم خامس - أصفر لبرتقالي
+      'from-indigo-500 to-purple-600',    // قسم سادس - نيلي لبنفسجي
+      'from-cyan-500 to-blue-600'         // قسم سابع - سماوي
     ];
     
     return gradients[index % gradients.length];
