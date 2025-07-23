@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) => {
   const { colors, sizes, categories: allCategories } = useVariants();
