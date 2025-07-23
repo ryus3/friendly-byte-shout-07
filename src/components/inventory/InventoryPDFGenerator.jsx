@@ -93,6 +93,12 @@ const InventoryPDFGenerator = ({
       return sum + (item.variants?.reduce((vSum, v) => vSum + (v.reserved_quantity || 0), 0) || 0);
     }, 0);
     
+    // تحليل مفصل للمخزون بدقة
+    const mediumStockItems = data.filter(item => {
+      const itemStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
+      return itemStock >= 5 && itemStock < 15;
+    }).length;
+    
     const lowStockItems = data.filter(item => {
       const itemStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
       return itemStock > 0 && itemStock < 5;
@@ -103,11 +109,29 @@ const InventoryPDFGenerator = ({
       return itemStock === 0;
     }).length;
 
-    const goodStockItems = totalProducts - lowStockItems - outOfStockItems;
+    const goodStockItems = data.filter(item => {
+      const itemStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
+      return itemStock >= 15;
+    }).length;
 
-    // حساب نسب للرسم البياني المبسط
+    // تحليل التفاصيل المتقدمة
+    const variantAnalysis = {
+      totalVariants: totalVariants,
+      availableVariants: data.reduce((sum, item) => {
+        return sum + (item.variants?.filter(v => (v.quantity || 0) > 0).length || 0);
+      }, 0),
+      lowStockVariants: data.reduce((sum, item) => {
+        return sum + (item.variants?.filter(v => (v.quantity || 0) > 0 && (v.quantity || 0) < 3).length || 0);
+      }, 0),
+      outOfStockVariants: data.reduce((sum, item) => {
+        return sum + (item.variants?.filter(v => (v.quantity || 0) === 0).length || 0);
+      }, 0)
+    };
+
+    // حساب نسب دقيقة للرسم البياني
     const stockPercentages = {
       good: totalProducts > 0 ? Math.round((goodStockItems / totalProducts) * 100) : 0,
+      medium: totalProducts > 0 ? Math.round((mediumStockItems / totalProducts) * 100) : 0,
       low: totalProducts > 0 ? Math.round((lowStockItems / totalProducts) * 100) : 0,
       out: totalProducts > 0 ? Math.round((outOfStockItems / totalProducts) * 100) : 0
     };
@@ -186,29 +210,35 @@ const InventoryPDFGenerator = ({
           </h3>
           <div style="display: flex; gap: 10px; align-items: center; direction: rtl;">
             <div style="flex: 1; background: #f8fafc; border-radius: 6px; padding: 8px;">
-              <div style="display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #e2e8f0; direction: ltr;">
-                <div style="background: #10b981; width: ${stockPercentages.good}%;"></div>
-                <div style="background: #f59e0b; width: ${stockPercentages.low}%;"></div>
-                <div style="background: #ef4444; width: ${stockPercentages.out}%;"></div>
+              <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #e2e8f0; direction: ltr;">
+                <div style="background: #10b981; width: ${stockPercentages.good}%; transition: all 0.3s;"></div>
+                <div style="background: #f59e0b; width: ${stockPercentages.medium}%; transition: all 0.3s;"></div>
+                <div style="background: #ef4444; width: ${stockPercentages.low}%; transition: all 0.3s;"></div>
+                <div style="background: #64748b; width: ${stockPercentages.out}%; transition: all 0.3s;"></div>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 8px; color: #64748b; direction: rtl;">
-                <span>جيد: ${stockPercentages.good}%</span>
-                <span>منخفض: ${stockPercentages.low}%</span>
-                <span>نافد: ${stockPercentages.out}%</span>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 8px; font-size: 8px; color: #64748b; direction: rtl;">
+                <span style="text-align: center;">جيد: ${stockPercentages.good}%</span>
+                <span style="text-align: center;">متوسط: ${stockPercentages.medium}%</span>
+                <span style="text-align: center;">منخفض: ${stockPercentages.low}%</span>
+                <span style="text-align: center;">نافد: ${stockPercentages.out}%</span>
               </div>
             </div>
             <div style="display: flex; flex-direction: column; gap: 4px; direction: rtl;">
               <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
-                <div style="width: 10px; height: 10px; background: #10b981; border-radius: 2px;"></div>
-                <span style="color: #374151;">مخزون جيد (${goodStockItems})</span>
+                <div style="width: 12px; height: 12px; background: #10b981; border-radius: 3px; box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3);"></div>
+                <span style="color: #374151; font-weight: 600;">مخزون جيد (${goodStockItems} منتج)</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
-                <div style="width: 10px; height: 10px; background: #f59e0b; border-radius: 2px;"></div>
-                <span style="color: #374151;">مخزون منخفض (${lowStockItems})</span>
+                <div style="width: 12px; height: 12px; background: #f59e0b; border-radius: 3px; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.3);"></div>
+                <span style="color: #374151; font-weight: 600;">مخزون متوسط (${mediumStockItems} منتج)</span>
               </div>
               <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
-                <div style="width: 10px; height: 10px; background: #ef4444; border-radius: 2px;"></div>
-                <span style="color: #374151;">نافد من المخزون (${outOfStockItems})</span>
+                <div style="width: 12px; height: 12px; background: #ef4444; border-radius: 3px; box-shadow: 0 1px 3px rgba(239, 68, 68, 0.3);"></div>
+                <span style="color: #374151; font-weight: 600;">مخزون منخفض (${lowStockItems} منتج)</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
+                <div style="width: 12px; height: 12px; background: #64748b; border-radius: 3px; box-shadow: 0 1px 3px rgba(100, 116, 139, 0.3);"></div>
+                <span style="color: #374151; font-weight: 600;">نافد من المخزون (${outOfStockItems} منتج)</span>
               </div>
             </div>
           </div>
@@ -222,246 +252,260 @@ const InventoryPDFGenerator = ({
             </h2>
           </div>
           
-          <table style="width: 100%; border-collapse: collapse; font-size: 10px; direction: rtl;">
-            <thead>
-              <tr style="background: #f8fafc;">
-                <th style="padding: 10px 6px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 30%;">اسم المنتج</th>
-                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">المتغيرات</th>
-                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">إجمالي المخزون</th>
-                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">محجوز</th>
-                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">متاح</th>
-                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">متوسط السعر</th>
-                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 10%;">الحالة</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.map((item, index) => {
-                const itemStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
-                const itemReserved = item.variants?.reduce((sum, v) => sum + (v.reserved_quantity || 0), 0) || 0;
-                const itemAvailable = itemStock - itemReserved;
-                const avgPrice = item.variants?.length > 0 
-                  ? item.variants.reduce((sum, v) => sum + (v.price || 0), 0) / item.variants.length 
-                  : 0;
-                
-                let status = 'ممتاز';
-                let statusColor = '#10b981';
-                let statusBg = '#10b98120';
-                if (itemStock === 0) {
-                  status = 'نافد';
-                  statusColor = '#ef4444';
-                  statusBg = '#ef444420';
-                } else if (itemStock < 5) {
-                  status = 'منخفض';
-                  statusColor = '#f59e0b';
-                  statusBg = '#f59e0b20';
-                }
+          <div style="direction: rtl;">
+            ${data.map((item, index) => {
+              const itemStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
+              const itemReserved = item.variants?.reduce((sum, v) => sum + (v.reserved_quantity || 0), 0) || 0;
+              const itemAvailable = itemStock - itemReserved;
+              const avgPrice = item.variants?.length > 0 
+                ? item.variants.reduce((sum, v) => sum + (v.price || 0), 0) / item.variants.length 
+                : 0;
+              
+              let status = 'جيد';
+              let statusColor = '#10b981';
+              let statusBg = '#10b98120';
+              if (itemStock === 0) {
+                status = 'نافد';
+                statusColor = '#ef4444';
+                statusBg = '#ef444420';
+              } else if (itemStock < 5) {
+                status = 'منخفض';
+                statusColor = '#ef4444';
+                statusBg = '#ef444420';
+              } else if (itemStock < 15) {
+                status = 'متوسط';
+                statusColor = '#f59e0b';
+                statusBg = '#f59e0b20';
+              }
 
-                // عرض تفاصيل جميع المتغيرات بشكل مفصل ومنظم (متضمنة النافدة أيضاً)
-                const allVariants = item.variants || [];
+              // عرض تفاصيل جميع المتغيرات بشكل مفصل وكبير وواضح
+              const allVariants = item.variants || [];
+              
+              let variantDetails = '';
+              if (allVariants.length > 0) {
+                // تجميع المتغيرات حسب اللون والقياس
+                const variantsByColor = {};
+                const variantsBySize = {};
+                const generalVariants = [];
                 
-                let variantDetails = '';
-                if (allVariants.length > 0) {
-                  // تجميع المتغيرات حسب اللون والقياس
-                  const variantsByColor = {};
-                  const variantsBySize = {};
-                  const generalVariants = [];
+                allVariants.forEach(variant => {
+                  const variantStock = variant.quantity || 0;
+                  const variantReserved = variant.reserved_quantity || 0;
+                  const variantAvailable = variantStock - variantReserved;
                   
-                  allVariants.forEach(variant => {
-                    const variantStock = variant.quantity || 0;
-                    const variantReserved = variant.reserved_quantity || 0;
-                    const variantAvailable = variantStock - variantReserved;
-                    
-                    // تحديد حالة المخزون للمتغير (بدون عرض النافد)
-                    let variantStatus = '';
-                    let statusColor = '#10b981';
-                    if (variantStock === 0) {
-                      return; // تخطي المتغيرات النافدة
-                    } else if (variantStock < 3) {
-                      variantStatus = 'منخفض';
-                      statusColor = '#ef4444';
-                    } else if (variantStock < 10) {
-                      variantStatus = 'متوسط';
-                      statusColor = '#f59e0b';
-                    } else {
-                      variantStatus = 'جيد';
-                      statusColor = '#10b981';
+                  // تحديد حالة المخزون للمتغير (بدون عرض النافد)
+                  let variantStatus = '';
+                  let statusColor = '#10b981';
+                  if (variantStock === 0) {
+                    return; // تخطي المتغيرات النافدة
+                  } else if (variantStock < 3) {
+                    variantStatus = 'منخفض';
+                    statusColor = '#ef4444';
+                  } else if (variantStock < 10) {
+                    variantStatus = 'متوسط';
+                    statusColor = '#f59e0b';
+                  } else {
+                    variantStatus = 'جيد';
+                    statusColor = '#10b981';
+                  }
+                  
+                  if (variant.color && variant.size) {
+                    // منتج له لون وقياس
+                    if (!variantsByColor[variant.color]) {
+                      variantsByColor[variant.color] = [];
                     }
-                    
-                    if (variant.color && variant.size) {
-                      // منتج له لون وقياس
-                      if (!variantsByColor[variant.color]) {
-                        variantsByColor[variant.color] = [];
-                      }
-                      variantsByColor[variant.color].push({
-                        ...variant,
-                        available: variantAvailable,
-                        status: variantStatus,
-                        statusColor: statusColor
-                      });
-                    } else if (variant.size && !variant.color) {
-                      // منتج له قياس فقط
-                      variantsBySize[variant.size] = {
-                        ...variant,
-                        available: variantAvailable,
-                        status: variantStatus,
-                        statusColor: statusColor
-                      };
-                    } else if (variant.color && !variant.size) {
-                      // منتج له لون فقط
-                      if (!variantsByColor[variant.color]) {
-                        variantsByColor[variant.color] = [];
-                      }
-                      variantsByColor[variant.color].push({
-                        ...variant,
-                        available: variantAvailable,
-                        status: variantStatus,
-                        statusColor: statusColor
-                      });
-                    } else {
-                      // متغير عام
-                      generalVariants.push({
-                        ...variant,
-                        available: variantAvailable,
-                        status: variantStatus,
-                        statusColor: statusColor
-                      });
+                    variantsByColor[variant.color].push({
+                      ...variant,
+                      available: variantAvailable,
+                      status: variantStatus,
+                      statusColor: statusColor
+                    });
+                  } else if (variant.size && !variant.color) {
+                    // منتج له قياس فقط
+                    variantsBySize[variant.size] = {
+                      ...variant,
+                      available: variantAvailable,
+                      status: variantStatus,
+                      statusColor: statusColor
+                    };
+                  } else if (variant.color && !variant.size) {
+                    // منتج له لون فقط
+                    if (!variantsByColor[variant.color]) {
+                      variantsByColor[variant.color] = [];
                     }
-                  });
+                    variantsByColor[variant.color].push({
+                      ...variant,
+                      available: variantAvailable,
+                      status: variantStatus,
+                      statusColor: statusColor
+                    });
+                  } else {
+                    // متغير عام
+                    generalVariants.push({
+                      ...variant,
+                      available: variantAvailable,
+                      status: variantStatus,
+                      statusColor: statusColor
+                    });
+                  }
+                });
 
-                  // عرض المنتجات التي لها ألوان
-                  if (Object.keys(variantsByColor).length > 0) {
-                    variantDetails += `
-                      <div style="margin: 8px 0; direction: rtl;">
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px; direction: rtl;">
-                          ${Object.entries(variantsByColor).map(([color, variants]) => {
-                            if (variants.length > 1 && variants[0].size) {
-                              // لون مع عدة أقياس - عرض مفصل في مربعات صغيرة
-                              return `
-                                <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 8px; margin: 2px; min-width: 140px; direction: rtl;">
-                                  <div style="font-weight: 800; color: #1e293b; font-size: 11px; margin-bottom: 6px; text-align: center; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 4px 8px; border-radius: 8px;">
-                                    🎨 ${color}
-                                  </div>
-                                  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px;">
-                                    ${variants.map(v => `
-                                      <div style="background: ${v.statusColor}15; border: 1px solid ${v.statusColor}30; border-radius: 6px; padding: 4px; text-align: center; direction: rtl;">
-                                        <div style="font-weight: 700; font-size: 9px; color: #1e293b; margin-bottom: 1px;">${v.size}</div>
-                                        <div style="font-size: 8px; color: ${v.statusColor}; font-weight: 600;">
-                                          ${v.quantity || 0}
-                                        </div>
-                                        <div style="font-size: 7px; color: #64748b;">
-                                          محجوز: ${v.reserved_quantity || 0}
-                                        </div>
-                                        <div style="font-size: 7px; color: ${v.statusColor}; font-weight: 600; margin-top: 1px;">
-                                          ${v.status}
-                                        </div>
+                // عرض المنتجات التي لها ألوان بشكل كبير وواضح
+                if (Object.keys(variantsByColor).length > 0) {
+                  variantDetails += `
+                    <div style="margin: 12px 0; direction: rtl;">
+                      <div style="display: flex; flex-wrap: wrap; gap: 10px; direction: rtl;">
+                        ${Object.entries(variantsByColor).map(([color, variants]) => {
+                          if (variants.length > 1 && variants[0].size) {
+                            // لون مع عدة أقياس - عرض مفصل في مربعات كبيرة
+                            return `
+                              <div style="background: linear-gradient(135deg, #f8fafc, #e2e8f0); border: 3px solid #cbd5e1; border-radius: 16px; padding: 16px; margin: 4px; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); direction: rtl;">
+                                <div style="font-weight: 900; color: white; font-size: 14px; margin-bottom: 12px; text-align: center; background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 8px 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);">
+                                  🎨 ${color}
+                                  <div style="font-size: 10px; margin-top: 2px; opacity: 0.9;">${variants.length} قياس</div>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px;">
+                                  ${variants.map(v => `
+                                    <div style="background: white; border: 2px solid ${v.statusColor}40; border-radius: 12px; padding: 10px; text-align: center; direction: rtl; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                                      <div style="font-weight: 800; font-size: 12px; color: #1e293b; margin-bottom: 4px; padding: 4px; background: #f1f5f9; border-radius: 6px;">${v.size}</div>
+                                      <div style="font-size: 11px; color: ${v.statusColor}; font-weight: 700; margin-bottom: 2px;">
+                                        الكلي: ${v.quantity || 0}
                                       </div>
-                                    `).join('')}
-                                  </div>
+                                      <div style="font-size: 9px; color: #64748b; margin-bottom: 2px;">
+                                        محجوز: ${v.reserved_quantity || 0}
+                                      </div>
+                                      <div style="font-size: 9px; color: ${v.statusColor}; font-weight: 700; margin-bottom: 2px;">
+                                        متاح: ${v.available}
+                                      </div>
+                                      <div style="font-size: 8px; color: white; font-weight: 600; padding: 2px 6px; border-radius: 8px; background: ${v.statusColor};">
+                                        ${v.status}
+                                      </div>
+                                    </div>
+                                  `).join('')}
                                 </div>
-                              `;
-                            } else {
-                              // لون واحد بدون أقياس
-                              const variant = variants[0];
-                              return `
-                                <div style="background: ${variant.statusColor}15; border: 2px solid ${variant.statusColor}30; border-radius: 10px; padding: 6px 10px; margin: 2px; direction: rtl; min-width: 100px; text-align: center;">
-                                  <div style="font-weight: 700; color: #1e293b; font-size: 10px; margin-bottom: 2px;">🎨 ${color}</div>
-                                  <div style="font-size: 9px; color: ${variant.statusColor}; font-weight: 600; margin-bottom: 1px;">
-                                    الكمية: ${variant.quantity || 0}
-                                  </div>
-                                  <div style="font-size: 8px; color: #64748b;">
-                                    محجوز: ${variant.reserved_quantity || 0}
-                                  </div>
-                                  <div style="font-size: 8px; color: ${variant.statusColor}; font-weight: 600; margin-top: 1px;">
-                                    ${variant.status}
-                                  </div>
+                              </div>
+                            `;
+                          } else {
+                            // لون واحد بدون أقياس
+                            const variant = variants[0];
+                            return `
+                              <div style="background: white; border: 3px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; margin: 4px; direction: rtl; min-width: 160px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                                <div style="font-weight: 800; color: white; font-size: 12px; margin-bottom: 8px; background: linear-gradient(135deg, ${variant.statusColor}, ${variant.statusColor}dd); padding: 6px 10px; border-radius: 10px;">🎨 ${color}</div>
+                                <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                                  الكلي: ${variant.quantity || 0}
                                 </div>
-                              `;
-                            }
-                          }).join('')}
-                        </div>
+                                <div style="font-size: 9px; color: #64748b; margin-bottom: 3px;">
+                                  محجوز: ${variant.reserved_quantity || 0}
+                                </div>
+                                <div style="font-size: 9px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 4px;">
+                                  متاح: ${variant.available}
+                                </div>
+                                <div style="font-size: 8px; color: white; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: ${variant.statusColor};">
+                                  ${variant.status}
+                                </div>
+                              </div>
+                            `;
+                          }
+                        }).join('')}
                       </div>
-                    `;
-                  }
-
-                  // عرض المنتجات التي لها أقياس فقط
-                  if (Object.keys(variantsBySize).length > 0) {
-                    variantDetails += `
-                      <div style="margin: 8px 0; direction: rtl;">
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px; direction: rtl;">
-                          ${Object.entries(variantsBySize).map(([size, variant]) => `
-                            <div style="background: ${variant.statusColor}15; border: 2px solid ${variant.statusColor}30; border-radius: 10px; padding: 6px 10px; margin: 2px; direction: rtl; min-width: 100px; text-align: center;">
-                              <div style="font-weight: 700; color: #1e293b; font-size: 10px; margin-bottom: 2px;">📏 ${size}</div>
-                              <div style="font-size: 9px; color: ${variant.statusColor}; font-weight: 600; margin-bottom: 1px;">
-                                الكمية: ${variant.quantity || 0}
-                              </div>
-                              <div style="font-size: 8px; color: #64748b;">
-                                محجوز: ${variant.reserved_quantity || 0}
-                              </div>
-                              <div style="font-size: 8px; color: ${variant.statusColor}; font-weight: 600; margin-top: 1px;">
-                                ${variant.status}
-                              </div>
-                            </div>
-                          `).join('')}
-                        </div>
-                      </div>
-                    `;
-                  }
-
-                  // عرض المتغيرات العامة
-                  if (generalVariants.length > 0) {
-                    variantDetails += `
-                      <div style="margin: 8px 0; direction: rtl;">
-                        <div style="display: flex; flex-wrap: wrap; gap: 6px; direction: rtl;">
-                          ${generalVariants.map((variant, idx) => `
-                            <div style="background: ${variant.statusColor}15; border: 2px solid ${variant.statusColor}30; border-radius: 10px; padding: 6px 10px; margin: 2px; direction: rtl; min-width: 100px; text-align: center;">
-                              <div style="font-weight: 700; color: #1e293b; font-size: 10px; margin-bottom: 2px;">📦 منتج عام</div>
-                              <div style="font-size: 9px; color: ${variant.statusColor}; font-weight: 600; margin-bottom: 1px;">
-                                الكمية: ${variant.quantity || 0}
-                              </div>
-                              <div style="font-size: 8px; color: #64748b;">
-                                محجوز: ${variant.reserved_quantity || 0}
-                              </div>
-                              <div style="font-size: 8px; color: ${variant.statusColor}; font-weight: 600; margin-top: 1px;">
-                                ${variant.status}
-                              </div>
-                            </div>
-                          `).join('')}
-                        </div>
-                      </div>
-                    `;
-                  }
-                  
-                  if (variantDetails === '') {
-                    variantDetails = '<div style="font-size: 10px; color: #64748b; padding: 6px; text-align: center; direction: rtl; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db;">جميع المتغيرات نافدة من المخزون</div>';
-                  }
-                } else {
-                  variantDetails = '<div style="font-size: 10px; color: #64748b; padding: 6px; text-align: center; direction: rtl; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db;">لا توجد متغيرات</div>';
+                    </div>
+                  `;
                 }
 
-                return `
-                  <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'};">
-                    <td style="padding: 10px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; direction: rtl;">
-                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                        <div style="font-weight: 800; color: #1e293b; font-size: 12px; direction: rtl;">${item.name || 'منتج بدون اسم'}</div>
-                        ${avgPrice > 0 ? `<div style="font-size: 9px; color: #059669; font-weight: 600; background: #10b98115; padding: 2px 6px; border-radius: 6px; border: 1px solid #10b98130;">${Math.round(avgPrice).toLocaleString()} د.ع</div>` : ''}
+                // عرض المنتجات التي لها أقياس فقط
+                if (Object.keys(variantsBySize).length > 0) {
+                  variantDetails += `
+                    <div style="margin: 12px 0; direction: rtl;">
+                      <div style="display: flex; flex-wrap: wrap; gap: 10px; direction: rtl;">
+                        ${Object.entries(variantsBySize).map(([size, variant]) => `
+                          <div style="background: white; border: 3px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; margin: 4px; direction: rtl; min-width: 160px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <div style="font-weight: 800; color: white; font-size: 12px; margin-bottom: 8px; background: linear-gradient(135deg, ${variant.statusColor}, ${variant.statusColor}dd); padding: 6px 10px; border-radius: 10px;">📏 ${size}</div>
+                            <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                              الكلي: ${variant.quantity || 0}
+                            </div>
+                            <div style="font-size: 9px; color: #64748b; margin-bottom: 3px;">
+                              محجوز: ${variant.reserved_quantity || 0}
+                            </div>
+                            <div style="font-size: 9px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 4px;">
+                              متاح: ${variant.available}
+                            </div>
+                            <div style="font-size: 8px; color: white; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: ${variant.statusColor};">
+                              ${variant.status}
+                            </div>
+                          </div>
+                        `).join('')}
                       </div>
-                      ${variantDetails}
-                    </td>
-                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #6366f1;">${allVariants.filter(v => (v.quantity || 0) > 0).length}</td>
-                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b;">${itemStock.toLocaleString()}</td>
-                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #f59e0b;">${itemReserved.toLocaleString()}</td>
-                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #10b981;">${itemAvailable.toLocaleString()}</td>
-                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 500;">${Math.round(avgPrice).toLocaleString()}</td>
-                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: ${statusColor}; font-weight: 600; padding: 3px 6px; background: ${statusBg}; border-radius: 8px; font-size: 8px; border: 1px solid ${statusColor}30;">
-                        ${status}
-                      </span>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
+                    </div>
+                  `;
+                }
+
+                // عرض المتغيرات العامة
+                if (generalVariants.length > 0) {
+                  variantDetails += `
+                    <div style="margin: 12px 0; direction: rtl;">
+                      <div style="display: flex; flex-wrap: wrap; gap: 10px; direction: rtl;">
+                        ${generalVariants.map((variant, idx) => `
+                          <div style="background: white; border: 3px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; margin: 4px; direction: rtl; min-width: 160px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <div style="font-weight: 800; color: white; font-size: 12px; margin-bottom: 8px; background: linear-gradient(135deg, ${variant.statusColor}, ${variant.statusColor}dd); padding: 6px 10px; border-radius: 10px;">📦 منتج عام</div>
+                            <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                              الكلي: ${variant.quantity || 0}
+                            </div>
+                            <div style="font-size: 9px; color: #64748b; margin-bottom: 3px;">
+                              محجوز: ${variant.reserved_quantity || 0}
+                            </div>
+                            <div style="font-size: 9px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 4px;">
+                              متاح: ${variant.available}
+                            </div>
+                            <div style="font-size: 8px; color: white; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: ${variant.statusColor};">
+                              ${variant.status}
+                            </div>
+                          </div>
+                        `).join('')}
+                      </div>
+                    </div>
+                  `;
+                }
+                
+                if (variantDetails === '') {
+                  variantDetails = '<div style="font-size: 12px; color: #64748b; padding: 20px; text-align: center; direction: rtl; background: #f9fafb; border-radius: 12px; border: 2px dashed #d1d5db; margin: 10px 0;">جميع المتغيرات نافدة من المخزون</div>';
+                }
+              } else {
+                variantDetails = '<div style="font-size: 12px; color: #64748b; padding: 20px; text-align: center; direction: rtl; background: #f9fafb; border-radius: 12px; border: 2px dashed #d1d5db; margin: 10px 0;">لا توجد متغيرات</div>';
+              }
+
+              return `
+                <div style="background: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'}; border-bottom: 2px solid #e2e8f0; padding: 20px; direction: rtl;">
+                  <!-- عنوان المنتج مع التفاصيل الأساسية -->
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(30, 41, 59, 0.3);">
+                    <div style="direction: rtl;">
+                      <div style="font-weight: 900; font-size: 16px; margin-bottom: 4px;">${item.name || 'منتج بدون اسم'}</div>
+                      ${avgPrice > 0 ? `<div style="font-size: 11px; opacity: 0.9;">متوسط السعر: ${Math.round(avgPrice).toLocaleString()} د.ع</div>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                      <div style="text-align: center; padding: 8px 12px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+                        <div style="font-size: 14px; font-weight: 800; color: #10b981;">${itemStock.toLocaleString()}</div>
+                        <div style="font-size: 8px; opacity: 0.9;">إجمالي</div>
+                      </div>
+                      <div style="text-align: center; padding: 8px 12px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+                        <div style="font-size: 14px; font-weight: 800; color: #f59e0b;">${itemReserved.toLocaleString()}</div>
+                        <div style="font-size: 8px; opacity: 0.9;">محجوز</div>
+                      </div>
+                      <div style="text-align: center; padding: 8px 12px; background: rgba(255,255,255,0.15); border-radius: 10px;">
+                        <div style="font-size: 14px; font-weight: 800; color: #06b6d4;">${itemAvailable.toLocaleString()}</div>
+                        <div style="font-size: 8px; opacity: 0.9;">متاح</div>
+                      </div>
+                      <div style="padding: 8px 12px; background: ${statusBg}; border: 2px solid ${statusColor}40; border-radius: 10px;">
+                        <span style="color: ${statusColor}; font-weight: 700; font-size: 10px;">${status}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- تفاصيل المتغيرات -->
+                  ${variantDetails}
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
 
         <!-- التذييل المبسط -->
