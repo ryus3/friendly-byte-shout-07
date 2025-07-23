@@ -16,12 +16,10 @@ import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
 import CategoryFilterCards from '@/components/inventory/CategoryFilterCards';
-import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent } from '@/components/ui/card';
 import InventoryItem from '@/components/inventory/InventoryItem';
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
@@ -131,7 +129,6 @@ const InventoryPage = () => {
     seasonOccasion: 'all'
   });
   const [categoryFilter, setCategoryFilter] = useState(null);
-  const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
@@ -324,14 +321,7 @@ const InventoryPage = () => {
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
-    // تطبيق فلتر الأقسام من الكروت العلوية
-    if (selectedDepartment) {
-      items = items.filter(p => 
-        p.product_departments?.some(pd => pd.department_id === selectedDepartment.id)
-      );
-    }
-
-    // تطبيق فلتر الأقسام/التصنيفات من الكروت الجانبية
+    // تطبيق فلتر الأقسام/التصنيفات من الكروت
     if (categoryFilter) {
       switch (categoryFilter.type) {
         case 'department':
@@ -410,7 +400,7 @@ const InventoryPage = () => {
     }
 
     return items;
-  }, [inventoryItems, filters, categoryFilter, selectedDepartment]);
+  }, [inventoryItems, filters, categoryFilter]);
 
   const inventoryStats = useMemo(() => {
       if (!Array.isArray(inventoryItems)) return {
@@ -529,14 +519,6 @@ const InventoryPage = () => {
             <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
           </div>
           
-          <div className="flex gap-3">
-            <InventoryPDFGenerator 
-              inventoryData={filteredItems}
-              selectedItems={selectedItemsForExport}
-              filters={filters}
-              isLoading={loading}
-            />
-          </div>
         </div>
         
         <InventoryStats
@@ -548,60 +530,42 @@ const InventoryPage = () => {
           onRestoreProduct={() => console.log('restore product')}
         />
 
-        {/* كروت أرشيف المنتجات والأقسام */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-          {/* كارت أرشيف المنتجات */}
-          <Card className="lg:col-span-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700">
-            <CardContent className="p-6">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto">
-                  <Package className="w-8 h-8 text-slate-300" />
+        <div className="grid lg:grid-cols-2 gap-4">
+          <CategoryFilterCards 
+            onFilterChange={setCategoryFilter}
+            currentFilters={categoryFilter}
+          />
+          <div className="bg-gradient-to-br from-card/90 to-card border rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <Package className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">أرشيف المنتجات</h3>
-                  <p className="text-slate-400 text-sm mb-4">المنتجات النافذة والمؤرشفة</p>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-white mb-1">{filteredItems.filter(item => item.stockLevel === 'out-of-stock').length}</div>
-                    <div className="text-slate-400 text-xs">منتج مؤرشف</div>
-                  </div>
-                </div>
-                <div className="flex justify-center gap-4 pt-2">
-                  <button className="text-slate-400 hover:text-slate-200 transition-colors">
-                    استعادة
-                  </button>
-                  <button className="text-slate-400 hover:text-slate-200 transition-colors">
-                    عرض الأرشيف
-                  </button>
+                  <h3 className="font-semibold text-foreground">أرشيف المنتجات</h3>
+                  <p className="text-sm text-muted-foreground">{filteredItems.length} منتج</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* كروت الأقسام */}
-          <div className="lg:col-span-3">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-foreground">الأقسام الرئيسية</h3>
-              <p className="text-sm text-muted-foreground">اختر قسماً لعرض منتجاته</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedItemsForExport([])}
+                  disabled={selectedItemsForExport.length === 0}
+                  className="text-xs"
+                >
+                  إلغاء التحديد ({selectedItemsForExport.length})
+                </Button>
+              </div>
             </div>
-            <DepartmentOverviewCards 
-              onFilterSelect={setSelectedDepartment}
-              selectedDepartment={selectedDepartment}
-            />
           </div>
         </div>
-
-        <CategoryFilterCards 
-          onFilterChange={setCategoryFilter}
-          currentFilters={categoryFilter}
-        />
 
         <InventoryFilters
           filters={filters}
           setFilters={setFilters}
           categories={allCategories}
           onBarcodeSearch={() => setIsBarcodeScannerOpen(true)}
-          selectedDepartment={selectedDepartment}
-          onDepartmentSelect={setSelectedDepartment}
         />
 
         <InventoryList

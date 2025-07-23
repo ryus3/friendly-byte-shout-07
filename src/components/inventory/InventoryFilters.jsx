@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, QrCode, SlidersHorizontal, X, Package } from 'lucide-react';
+import { Search, QrCode, SlidersHorizontal, X } from 'lucide-react';
 import { useVariants } from '@/contexts/VariantsContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/lib/customSupabaseClient';
 
-const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch, selectedDepartment, onDepartmentSelect }) => {
+const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) => {
   const { colors, sizes, categories: allCategories } = useVariants();
   const { user } = useAuth();
   
@@ -144,7 +144,6 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch, se
       department: 'all',
       seasonOccasion: 'all'
     });
-    onDepartmentSelect(null);
   };
 
   return (
