@@ -57,7 +57,7 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
     { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
     { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-orange-400 to-yellow-500', delay: 0.3, onClick: () => onFilterChange('medium') },
     { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-orange-500', delay: 0.4, onClick: () => onFilterChange('low') },
-    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-red-600 to-red-800', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
+    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-gray-600 to-gray-800', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
   ];
 
   return (

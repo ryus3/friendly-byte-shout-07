@@ -119,7 +119,7 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
                         <div className="flex flex-col items-center gap-1">
                           <span>{variant.size}</span>
                           {variant.quantity === 0 ? (
-                            <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">نافذ</span>
+                            <span className="bg-gray-500/20 text-gray-400 px-2 py-0.5 rounded text-xs">نافذ</span>
                           ) : variant.stockLevel === 'low' ? (
                             <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">منخفض</span>
                           ) : variant.stockLevel === 'medium' ? (
