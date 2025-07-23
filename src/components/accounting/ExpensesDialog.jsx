@@ -26,9 +26,9 @@ import React, { useState, useEffect } from 'react';
         dateRange: { from: undefined, to: undefined }
       });
     
-      const [expenseCategories, setExpenseCategories] = useState([
-        'مشتريات', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'مصاريف بنكية', 'أخرى'
-      ]);
+  const [expenseCategories, setExpenseCategories] = useState([
+    'شراء', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف تحويل', 'مصاريف بنكية', 'أخرى'
+  ]);
       const [newCategory, setNewCategory] = useState('');
 
       // تحميل فئات المصاريف من قاعدة البيانات
@@ -57,18 +57,18 @@ import React, { useState, useEffect } from 'react';
         }
       }, [open]);
     
-      // فلترة المصاريف لإظهار المصاريف الفعلية فقط (ليس الفئات النظامية)
-      const filteredExpenses = expenses.filter(expense => {
-        // استبعاد الفئات النظامية فقط وإظهار جميع المصاريف التشغيلية
-        if (expense.expense_type === 'system' || expense.category === 'فئات_المصاريف') {
-          return false;
-        }
-        
-        const categoryMatch = filters.category === 'all' || expense.category === filters.category || expense.related_data?.category === filters.category;
-        const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
-        
-        return categoryMatch && dateMatch;
-      });
+  // فلترة المصاريف لإظهار المصاريف الفعلية فقط (ليس الفئات النظامية)
+  const filteredExpenses = expenses.filter(expense => {
+    // استبعاد الفئات النظامية فقط وإظهار جميع المصاريف التشغيلية بما في ذلك مصاريف الشراء
+    if (expense.category === 'فئات_المصاريف') {
+      return false;
+    }
+    
+    const categoryMatch = filters.category === 'all' || expense.category === filters.category || expense.related_data?.category === filters.category;
+    const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
+    
+    return categoryMatch && dateMatch;
+  });
     
       const handleInputChange = (e) => {
         const { name, value } = e.target;

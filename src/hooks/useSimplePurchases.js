@@ -82,8 +82,24 @@ export const useSimplePurchases = () => {
         await processProductSimple(item, newPurchase, user.id);
       }
 
-      // 4. إنشاء المصاريف المنفصلة وتحديث رصيد مصدر النقد
+      // 4. خصم المبلغ الكلي مرة واحدة من مصدر النقد
       if (purchaseData.cashSourceId) {
+        const result = await supabase.rpc('update_cash_source_balance', {
+          p_cash_source_id: purchaseData.cashSourceId,
+          p_amount: grandTotal,
+          p_movement_type: 'out',
+          p_reference_type: 'purchase',
+          p_reference_id: newPurchase.id,
+          p_description: `شراء فاتورة رقم ${newPurchase.purchase_number}`,
+          p_created_by: user.id
+        });
+
+        if (result.error) {
+          console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
+          throw result.error;
+        }
+
+        // 5. إنشاء سجلات المصاريف المنفصلة (بدون خصم إضافي من مصدر النقد)
         // مصروف الشراء (تكلفة المنتجات)
         if (itemsTotal > 0) {
           await createExpenseRecord({
@@ -93,9 +109,9 @@ export const useSimplePurchases = () => {
             description: `شراء مواد - فاتورة رقم ${newPurchase.purchase_number}`,
             receipt_number: newPurchase.purchase_number,
             vendor_name: purchaseData.supplier,
-            cashSourceId: purchaseData.cashSourceId,
             userId: user.id,
-            referenceId: newPurchase.id
+            referenceId: newPurchase.id,
+            skipCashDeduction: true // تجاهل خصم مصدر النقد
           });
         }
 
@@ -108,9 +124,9 @@ export const useSimplePurchases = () => {
             description: `مصاريف شحن - فاتورة رقم ${newPurchase.purchase_number}`,
             receipt_number: `${newPurchase.purchase_number}-SHIP`,
             vendor_name: purchaseData.supplier,
-            cashSourceId: purchaseData.cashSourceId,
             userId: user.id,
-            referenceId: newPurchase.id
+            referenceId: newPurchase.id,
+            skipCashDeduction: true // تجاهل خصم مصدر النقد
           });
         }
 
@@ -123,9 +139,9 @@ export const useSimplePurchases = () => {
             description: `تكاليف تحويل - فاتورة رقم ${newPurchase.purchase_number}`,
             receipt_number: `${newPurchase.purchase_number}-TRANSFER`,
             vendor_name: purchaseData.supplier,
-            cashSourceId: purchaseData.cashSourceId,
             userId: user.id,
-            referenceId: newPurchase.id
+            referenceId: newPurchase.id,
+            skipCashDeduction: true // تجاهل خصم مصدر النقد
           });
         }
       }
@@ -460,9 +476,9 @@ const createExpenseRecord = async ({
   description, 
   receipt_number, 
   vendor_name, 
-  cashSourceId, 
   userId, 
-  referenceId 
+  referenceId,
+  skipCashDeduction = false
 }) => {
   try {
     // 1. إنشاء سجل المصروف
@@ -488,22 +504,6 @@ const createExpenseRecord = async ({
       .single();
 
     if (expenseError) throw expenseError;
-
-    // 2. تحديث رصيد مصدر النقد
-    const result = await supabase.rpc('update_cash_source_balance', {
-      p_cash_source_id: cashSourceId,
-      p_amount: amount,
-      p_movement_type: 'out',
-      p_reference_type: 'expense',
-      p_reference_id: expense.id,
-      p_description: description,
-      p_created_by: userId
-    });
-
-    if (result.error) {
-      console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
-      throw result.error;
-    }
 
     console.log(`✅ تم إنشاء مصروف ${category} بمبلغ ${amount}`);
     return expense;
