@@ -59,8 +59,17 @@ import React, { useState, useEffect } from 'react';
     
   // فلترة المصاريف لإظهار جميع المصاريف التشغيلية بما في ذلك مصاريف الشراء
   const filteredExpenses = expenses.filter(expense => {
+    console.log('🔍 [TRACE] فحص مصروف:', {
+      id: expense.id,
+      category: expense.category,
+      expense_type: expense.expense_type,
+      description: expense.description,
+      amount: expense.amount
+    });
+    
     // استبعاد فقط الفئات النظامية للنظام وإظهار جميع المصاريف التشغيلية
     if (expense.expense_type === 'system' && expense.category === 'فئات_المصاريف') {
+      console.log('🚫 [TRACE] تم استبعاد مصروف نظامي');
       return false;
     }
     
@@ -69,8 +78,13 @@ import React, { useState, useEffect } from 'react';
       (new Date(expense.created_at || expense.transaction_date) >= filters.dateRange.from && 
        new Date(expense.created_at || expense.transaction_date) <= (filters.dateRange.to || new Date()));
     
-    return categoryMatch && dateMatch;
+    const result = categoryMatch && dateMatch;
+    console.log('✅ [TRACE] نتيجة الفلترة:', result);
+    return result;
   });
+  
+  console.log('📊 [TRACE] إجمالي المصاريف قبل الفلترة:', expenses.length);
+  console.log('📊 [TRACE] إجمالي المصاريف بعد الفلترة:', filteredExpenses.length);
     
       const handleInputChange = (e) => {
         const { name, value } = e.target;

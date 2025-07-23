@@ -31,7 +31,9 @@ export const useSimplePurchases = () => {
 
   // إضافة فاتورة شراء جديدة
   const addPurchase = async (purchaseData) => {
-    console.log('🛒 بدء إضافة فاتورة شراء جديدة:', purchaseData);
+    console.log('🛒 [TRACE] بدء إضافة فاتورة شراء جديدة - عدد الاستدعاءات:', Date.now());
+    console.log('🛒 [TRACE] بيانات الفاتورة المرسلة:', purchaseData);
+    console.log('🛒 [TRACE] Stack trace:', new Error().stack);
     setLoading(true);
     
     try {
