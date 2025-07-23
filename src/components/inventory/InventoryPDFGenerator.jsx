@@ -11,12 +11,20 @@ const InventoryPDFGenerator = ({
   isLoading = false 
 }) => {
   const generatePDF = async () => {
+    console.log('🖨️ بدء إنشاء PDF...', { 
+      inventoryData: inventoryData?.length,
+      selectedItems: selectedItems?.length 
+    });
+    
     try {
       const dataToExport = selectedItems.length > 0 ? 
         inventoryData.filter(item => selectedItems.includes(item.id)) : 
         inventoryData;
       
+      console.log('📊 البيانات للتصدير:', dataToExport?.length);
+      
       if (!dataToExport || dataToExport.length === 0) {
+        console.log('❌ لا توجد بيانات للتصدير');
         toast({
           title: "لا توجد بيانات للتصدير",
           description: "لم يتم العثور على منتجات للتصدير",
@@ -24,6 +32,8 @@ const InventoryPDFGenerator = ({
         });
         return;
       }
+
+      console.log('✅ إنشاء PDF بدأ...', dataToExport.length, 'منتج');
 
       // إنشاء PDF جديد
       const pdf = new jsPDF('p', 'mm', 'a4');
