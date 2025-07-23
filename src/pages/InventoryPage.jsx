@@ -470,9 +470,10 @@ const InventoryPage = () => {
       items = items.filter(p => p?.categories?.product_type === filters.productType);
     }
     
-    if (filters.department !== 'all') {
-      items = items.filter(p => p?.categories?.department === filters.department);
-    }
+    // تم إزالة فلترة القسم المضاعفة لأنها تعارض الفلترة الصحيحة أعلاه
+    // if (filters.department !== 'all') {
+    //   items = items.filter(p => p?.categories?.department === filters.department);
+    // }
     
     if (filters.seasonOccasion !== 'all') {
       items = items.filter(p => p?.categories?.season_occasion === filters.seasonOccasion);
