@@ -132,37 +132,8 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
 
   return (
     <div className="space-y-4">
-      {/* كارت أرشيف المنتجات الأصلي */}
+      {/* كروت الأقسام فقط */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {/* كارت أرشيف المنتجات */}
-        <Card className="relative overflow-hidden bg-gradient-to-br from-slate-600 to-slate-800 text-white">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-white/10 rounded-lg backdrop-blur-sm">
-                <Archive className="w-8 h-8" />
-              </div>
-              <Badge variant="secondary" className="bg-white/20 text-white border-0">
-                أرشيف
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold">أرشيف المنتجات</h3>
-              <p className="text-white/80 text-sm">المنتجات النافذة والمؤرشفة</p>
-            </div>
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-right">
-                <p className="text-2xl font-bold">{totalProducts}</p>
-                <p className="text-white/70 text-sm">منتج مؤرشف</p>
-              </div>
-              <div className="flex items-center gap-2 text-white/60">
-                <span className="text-sm">لا يوجد</span>
-                <div className="w-2 h-2 bg-white/40 rounded-full"></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* كروت الأقسام */}
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
           
