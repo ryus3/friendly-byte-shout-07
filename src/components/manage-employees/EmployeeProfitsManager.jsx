@@ -12,13 +12,17 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Users, TrendingUp, Calculator, Settings, Loader2 } from 'lucide-react';
+import ProfitCalculatorResult from './ProfitCalculatorResult';
 
 const EmployeeProfitsManager = ({ open, onOpenChange }) => {
-  const { products, employeeProfitRules, setEmployeeProfitRule, getEmployeeProfitRules } = useInventory();
+  const { products, employeeProfitRules, setEmployeeProfitRule, getEmployeeProfitRules, calculateProfit } = useInventory();
   const { allUsers } = useAuth();
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showEmployeeDialog, setShowEmployeeDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedEmployeeForCalculator, setSelectedEmployeeForCalculator] = useState('');
+  const [selectedProductForCalculator, setSelectedProductForCalculator] = useState('');
+  const [calculatorQuantity, setCalculatorQuantity] = useState(1);
 
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
@@ -227,13 +231,16 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                 <TabsContent value="calculator" className="space-y-3 sm:space-y-4 mt-0 pb-4">
                   <Card>
                     <CardHeader className="pb-2 sm:pb-3">
-                      <CardTitle className="text-base sm:text-lg">حاسبة الأرباح المباشرة</CardTitle>
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        <Calculator className="w-4 h-4" />
+                        حاسبة الأرباح المباشرة
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3 sm:space-y-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                         <div>
                           <Label className="text-xs sm:text-sm">اختر موظف</Label>
-                          <Select>
+                          <Select value={selectedEmployeeForCalculator} onValueChange={setSelectedEmployeeForCalculator}>
                             <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
                               <SelectValue placeholder="اختر موظف..." />
                             </SelectTrigger>
@@ -254,7 +261,7 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                         
                         <div>
                           <Label className="text-xs sm:text-sm">اختر منتج</Label>
-                          <Select>
+                          <Select value={selectedProductForCalculator} onValueChange={setSelectedProductForCalculator}>
                             <SelectTrigger className="text-xs sm:text-sm h-8 sm:h-10">
                               <SelectValue placeholder="اختر منتج..." />
                             </SelectTrigger>
@@ -273,15 +280,31 @@ const EmployeeProfitsManager = ({ open, onOpenChange }) => {
                         
                         <div>
                           <Label className="text-xs sm:text-sm">الكمية</Label>
-                          <Input type="number" placeholder="1" className="text-xs sm:text-sm h-8 sm:h-10" />
+                          <Input 
+                            type="number" 
+                            placeholder="1" 
+                            value={calculatorQuantity}
+                            onChange={(e) => setCalculatorQuantity(parseInt(e.target.value) || 1)}
+                            className="text-xs sm:text-sm h-8 sm:h-10" 
+                          />
                         </div>
                       </div>
                       
                       <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-secondary/50 rounded-lg">
-                        <div className="text-center">
-                          <div className="text-xl sm:text-2xl font-bold text-green-600">0 د.ع</div>
-                          <div className="text-xs sm:text-sm text-muted-foreground">ربح الموظف المتوقع</div>
-                        </div>
+                        {selectedEmployeeForCalculator && selectedProductForCalculator ? (
+                          <ProfitCalculatorResult 
+                            employee={employees.find(e => e.user_id === selectedEmployeeForCalculator || e.id === selectedEmployeeForCalculator)}
+                            product={products.find(p => p.id === selectedProductForCalculator)}
+                            quantity={calculatorQuantity}
+                            employeeProfitRules={employeeProfitRules}
+                            calculateProfit={calculateProfit}
+                          />
+                        ) : (
+                          <div className="text-center text-muted-foreground text-sm">
+                            <Calculator className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p>اختر موظف ومنتج لعرض حساب الربح</p>
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
