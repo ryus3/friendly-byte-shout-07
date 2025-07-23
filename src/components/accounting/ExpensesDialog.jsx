@@ -57,15 +57,17 @@ import React, { useState, useEffect } from 'react';
         }
       }, [open]);
     
-  // فلترة المصاريف لإظهار المصاريف الفعلية فقط (ليس الفئات النظامية)
+  // فلترة المصاريف لإظهار جميع المصاريف التشغيلية بما في ذلك مصاريف الشراء
   const filteredExpenses = expenses.filter(expense => {
-    // استبعاد الفئات النظامية فقط وإظهار جميع المصاريف التشغيلية بما في ذلك مصاريف الشراء
-    if (expense.category === 'فئات_المصاريف') {
+    // استبعاد فقط الفئات النظامية للنظام وإظهار جميع المصاريف التشغيلية
+    if (expense.expense_type === 'system' && expense.category === 'فئات_المصاريف') {
       return false;
     }
     
-    const categoryMatch = filters.category === 'all' || expense.category === filters.category || expense.related_data?.category === filters.category;
-    const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
+    const categoryMatch = filters.category === 'all' || expense.category === filters.category;
+    const dateMatch = !filters.dateRange.from || 
+      (new Date(expense.created_at || expense.transaction_date) >= filters.dateRange.from && 
+       new Date(expense.created_at || expense.transaction_date) <= (filters.dateRange.to || new Date()));
     
     return categoryMatch && dateMatch;
   });
