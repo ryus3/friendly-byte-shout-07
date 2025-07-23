@@ -195,7 +195,7 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
               <SelectContent>
                 <SelectItem value="all">جميع الأقسام</SelectItem>
                 {allowedData.allowedDepartments.map(dept => (
-                  <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                  <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -236,7 +236,7 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                       <SelectTrigger><SelectValue placeholder="القسم" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الأقسام</SelectItem>
-                        {allowedData.allowedDepartments.map(dept => <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>)}
+                        {allowedData.allowedDepartments.map(dept => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     
