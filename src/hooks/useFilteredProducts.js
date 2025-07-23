@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 /**
@@ -6,11 +6,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
-  // التحقق من وجود React أولاً
-  if (!React || !React.useMemo) {
-    console.warn('React context is not available');
-    return products || [];
-  }
 
   const auth = useAuth();
   
@@ -154,12 +149,6 @@ export const useFilteredProducts = (products) => {
  * Hook لفلترة متغيرات منتج واحد
  */
 export const useFilteredVariants = (variants) => {
-  // التحقق من وجود React أولاً
-  if (!React || !React.useMemo) {
-    console.warn('React context is not available in useFilteredVariants');
-    return variants || [];
-  }
-
   const auth = useAuth();
   
   // التحقق من وجود Auth context أولاً
