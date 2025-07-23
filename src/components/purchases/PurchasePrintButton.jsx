@@ -20,10 +20,10 @@ const PurchasePrintButton = ({ purchase }) => {
 
   const generatePrintHTML = (purchase) => {
     const items = purchase.items || [];
-    const totalCost = purchase.total_amount || 0;
+    const itemsTotal = items.reduce((sum, item) => sum + ((item.costPrice || 0) * (item.quantity || 0)), 0);
     const shippingCost = purchase.shipping_cost || 0;
     const transferCost = purchase.transfer_cost || 0;
-    const grandTotal = totalCost + shippingCost + transferCost;
+    const grandTotal = itemsTotal + shippingCost + transferCost;
 
     return `
       <!DOCTYPE html>
@@ -42,125 +42,183 @@ const PurchasePrintButton = ({ purchase }) => {
           
           body {
             font-family: 'Tajawal', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            line-height: 1.4;
+            color: #1a1a1a;
             direction: rtl;
-            background: white;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
           }
           
           .container {
-            max-width: 800px;
+            max-width: 700px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 30px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+            overflow: hidden;
+          }
+          
+          .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
           }
           
           .header {
             text-align: center;
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding: 0 0 25px 0;
+            margin-bottom: 35px;
+            position: relative;
+          }
+          
+          .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 2px;
           }
           
           .title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 10px;
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -0.02em;
           }
           
           .company {
-            font-size: 16px;
-            color: #666;
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
           }
           
           .info-section {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 30px;
+            gap: 20px;
+            margin-bottom: 35px;
+          }
+          
+          .info-box {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            border-radius: 16px;
             padding: 20px;
-            background: #f8fafc;
-            border-radius: 8px;
+            border: 1px solid #e2e8f0;
           }
           
           .info-box h3 {
-            font-size: 16px;
-            font-weight: bold;
-            color: #374151;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 5px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #cbd5e1;
           }
           
           .info-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 14px;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 13px;
           }
           
           .info-label {
-            font-weight: bold;
-            color: #6b7280;
-            min-width: 120px;
+            font-weight: 500;
+            color: #64748b;
+            min-width: 100px;
           }
           
           .info-value {
-            color: #111827;
+            color: #0f172a;
+            font-weight: 600;
           }
           
           .table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 25px 0;
             background: white;
-            border-radius: 8px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
           }
           
           .table th {
-            background: #2563eb;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             color: white;
-            padding: 15px 10px;
-            font-weight: bold;
-            font-size: 14px;
+            padding: 12px 8px;
+            font-weight: 600;
+            font-size: 12px;
             text-align: center;
           }
           
           .table td {
-            padding: 12px 10px;
+            padding: 10px 8px;
             text-align: center;
-            border-bottom: 1px solid #e5e7eb;
-            font-size: 13px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 12px;
           }
           
           .table tr:nth-child(even) {
-            background: #f9fafb;
+            background: #f8fafc;
+          }
+          
+          .table tr:hover {
+            background: #f1f5f9;
           }
           
           .totals {
-            margin-top: 30px;
+            margin-top: 35px;
             padding: 25px;
-            background: #f0f9ff;
-            border-radius: 8px;
-            border: 2px solid #2563eb;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 16px;
+            border: 2px solid #3b82f6;
+            position: relative;
+          }
+          
+          .totals::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 16px 16px 0 0;
           }
           
           .total-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 16px;
-            font-weight: bold;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #334155;
           }
           
           .grand-total {
-            font-size: 20px;
+            font-size: 18px;
             color: #1e40af;
-            border-top: 2px solid #2563eb;
+            border-top: 2px solid #3b82f6;
             padding-top: 15px;
             margin-top: 15px;
+            font-weight: 700;
           }
           
           .footer {
@@ -173,9 +231,24 @@ const PurchasePrintButton = ({ purchase }) => {
           }
           
           @media print {
-            body { font-size: 12px; }
-            .container { padding: 10px; }
+            body { 
+              background: white !important;
+              font-size: 11px;
+            }
+            .container { 
+              padding: 15px !important;
+              margin: 0 !important;
+              box-shadow: none !important;
+              border-radius: 0 !important;
+            }
+            .container::before {
+              display: none !important;
+            }
             .no-print { display: none; }
+            .table th {
+              background: #334155 !important;
+              color: white !important;
+            }
           }
         </style>
       </head>
@@ -250,7 +323,7 @@ const PurchasePrintButton = ({ purchase }) => {
           <div class="totals">
             <div class="total-row">
               <span>إجمالي المنتجات:</span>
-              <span>${formatCurrency(totalCost)}</span>
+              <span>${formatCurrency(itemsTotal)}</span>
             </div>
             ${shippingCost > 0 ? `
               <div class="total-row">

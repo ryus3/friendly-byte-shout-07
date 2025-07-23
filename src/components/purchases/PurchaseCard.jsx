@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import PurchasePrintButton from './PurchasePrintButton';
-import PurchaseExportButton from './PurchaseExportButton';
+
 
 const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
   const totalCost = (purchase.total_amount || 0); // المبلغ الأساسي فقط
@@ -143,7 +143,7 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
             </Button>
             
             <PurchasePrintButton purchase={purchase} />
-            <PurchaseExportButton purchase={purchase} />
+            
             
             <Button 
               variant="ghost" 

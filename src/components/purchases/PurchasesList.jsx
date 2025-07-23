@@ -8,7 +8,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import Loader from '@/components/ui/loader';
 import PurchasePrintButton from './PurchasePrintButton';
-import PurchaseExportButton from './PurchaseExportButton';
+
 
 const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
   if (isLoading) {
@@ -59,7 +59,7 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
                      <span className="sr-only">عرض التفاصيل</span>
                    </Button>
                     <PurchasePrintButton purchase={purchase} />
-                    <PurchaseExportButton purchase={purchase} />
+                    
                    <Button variant="ghost" size="sm" onClick={() => onDelete?.(purchase)} className="text-red-600 hover:text-red-700">
                      <Trash2 className="w-4 h-4" />
                      <span className="sr-only">حذف</span>
