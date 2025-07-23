@@ -98,51 +98,87 @@ export const useSimplePurchases = () => {
           console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
           throw result.error;
         }
+      }
 
-        // 5. إنشاء سجلات المصاريف المنفصلة (بدون خصم إضافي من مصدر النقد)
-        // مصروف الشراء (تكلفة المنتجات)
-        if (itemsTotal > 0) {
-          await createExpenseRecord({
+      // 5. إنشاء سجلات المصاريف للتتبع فقط (بدون خصم مصدر النقد)
+      const expensePromises = [];
+      
+      // مصروف الشراء (تكلفة المنتجات)
+      if (itemsTotal > 0) {
+        expensePromises.push(supabase
+          .from('expenses')
+          .insert({
             category: 'شراء',
             expense_type: 'purchase',
             amount: itemsTotal,
             description: `شراء مواد - فاتورة رقم ${newPurchase.purchase_number}`,
             receipt_number: newPurchase.purchase_number,
             vendor_name: purchaseData.supplier,
-            userId: user.id,
-            referenceId: newPurchase.id,
-            skipCashDeduction: true // تجاهل خصم مصدر النقد
-          });
-        }
+            status: 'approved',
+            created_by: user.id,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            metadata: {
+              purchase_reference_id: newPurchase.id,
+              auto_approved: true,
+              cash_deducted_via_purchase: true
+            }
+          }));
+      }
 
-        // مصروف الشحن
-        if (shippingCost > 0) {
-          await createExpenseRecord({
+      // مصروف الشحن
+      if (shippingCost > 0) {
+        expensePromises.push(supabase
+          .from('expenses')
+          .insert({
             category: 'شحن ونقل',
             expense_type: 'shipping',
             amount: shippingCost,
             description: `مصاريف شحن - فاتورة رقم ${newPurchase.purchase_number}`,
             receipt_number: `${newPurchase.purchase_number}-SHIP`,
             vendor_name: purchaseData.supplier,
-            userId: user.id,
-            referenceId: newPurchase.id,
-            skipCashDeduction: true // تجاهل خصم مصدر النقد
-          });
-        }
+            status: 'approved',
+            created_by: user.id,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            metadata: {
+              purchase_reference_id: newPurchase.id,
+              auto_approved: true,
+              cash_deducted_via_purchase: true
+            }
+          }));
+      }
 
-        // مصروف التحويل
-        if (transferCost > 0) {
-          await createExpenseRecord({
+      // مصروف التحويل
+      if (transferCost > 0) {
+        expensePromises.push(supabase
+          .from('expenses')
+          .insert({
             category: 'تكاليف تحويل',
             expense_type: 'transfer',
             amount: transferCost,
             description: `تكاليف تحويل - فاتورة رقم ${newPurchase.purchase_number}`,
             receipt_number: `${newPurchase.purchase_number}-TRANSFER`,
             vendor_name: purchaseData.supplier,
-            userId: user.id,
-            referenceId: newPurchase.id,
-            skipCashDeduction: true // تجاهل خصم مصدر النقد
-          });
+            status: 'approved',
+            created_by: user.id,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            metadata: {
+              purchase_reference_id: newPurchase.id,
+              auto_approved: true,
+              cash_deducted_via_purchase: true
+            }
+          }));
+      }
+
+      // تنفيذ جميع المصاريف مرة واحدة
+      if (expensePromises.length > 0) {
+        const expenseResults = await Promise.all(expensePromises);
+        for (const result of expenseResults) {
+          if (result.error) {
+            console.error('خطأ في إنشاء مصروف:', result.error);
+          }
         }
       }
 
