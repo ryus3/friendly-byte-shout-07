@@ -63,9 +63,7 @@ export const useSimplePurchases = () => {
           paid_amount: grandTotal,
           shipping_cost: shippingCost,
           transfer_cost: transferCost,
-          purchase_date: purchaseData.purchaseDate ? 
-            new Date(purchaseData.purchaseDate + 'T' + new Date().toTimeString().split(' ')[0]).toISOString() : 
-            new Date().toISOString(),
+          purchase_date: purchaseData.purchaseDate || new Date().toISOString().split('T')[0],
           cash_source_id: purchaseData.cashSourceId,
           status: 'completed',
           items: purchaseData.items,
