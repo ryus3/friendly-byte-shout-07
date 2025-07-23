@@ -1,14 +1,32 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
+import { registerArabicFont } from '@/utils/arabicPdfFont';
 
-// تسجيل خط يدعم العربية
-Font.register({
-  family: 'NotoSansArabic',
-  src: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf'
-});
+// حالة تسجيل الخط
+let fontRegistered = false;
+
+// تسجيل خط عربي محسّن
+const initializeFont = async () => {
+  if (!fontRegistered) {
+    try {
+      // تجربة تسجيل خط محلي أولاً
+      await registerArabicFont(Font);
+      console.log('✅ تم تسجيل الخط العربي بنجاح');
+      fontRegistered = true;
+    } catch (error) {
+      console.error('❌ فشل في تسجيل الخط العربي:', error);
+      // خط احتياطي - Tajawal من Google Fonts
+      Font.register({
+        family: 'NotoSansArabic',
+        src: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf'
+      });
+      fontRegistered = true;
+    }
+  }
+};
 
 const styles = StyleSheet.create({
   page: {
@@ -358,7 +376,32 @@ const PurchaseInvoicePDF = ({ purchase }) => {
 };
 
 const PurchaseInvoicePDFButton = ({ purchase }) => {
+  const [fontReady, setFontReady] = useState(false);
+  
+  useEffect(() => {
+    const setupFont = async () => {
+      await initializeFont();
+      setFontReady(true);
+    };
+    setupFont();
+  }, []);
+  
   const fileName = `فاتورة_شراء_${purchase.purchase_number || purchase.id}.pdf`;
+  
+  // لا نعرض الـ PDF حتى يتم تحضير الخط
+  if (!fontReady) {
+    return (
+      <Button 
+        variant="outline" 
+        size="sm" 
+        disabled={true}
+        className="gap-1 text-gray-400 border-gray-200"
+      >
+        <FileText className="h-4 w-4" />
+        تحضير الخط...
+      </Button>
+    );
+  }
   
   return (
     <PDFDownloadLink 

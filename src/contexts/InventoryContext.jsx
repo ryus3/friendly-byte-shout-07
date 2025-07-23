@@ -69,6 +69,7 @@ export const InventoryProvider = ({ children }) => {
   // الطلبات - بدون hooks مشكوك بها
   const [orders, setOrders] = useState([]);
   const [aiOrders, setAiOrders] = useState([]);
+  const [purchases, setPurchases] = useState([]);
   
   // وظائف الطلبات المبسطة
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => {
@@ -686,6 +687,71 @@ export const InventoryProvider = ({ children }) => {
       )
       .subscribe();
 
+    // قناة تحديث المصاريف (realtime)
+    const expensesChannel = supabase
+      .channel('expenses-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'expenses' },
+        (payload) => {
+          console.log('💰 تم إضافة مصروف جديد:', payload.new);
+          setAccounting(prev => ({
+            ...prev,
+            expenses: [payload.new, ...prev.expenses]
+          }));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'expenses' },
+        (payload) => {
+          console.log('💰 تم تحديث مصروف:', payload.new);
+          setAccounting(prev => ({
+            ...prev,
+            expenses: prev.expenses.map(exp => 
+              exp.id === payload.new.id ? payload.new : exp
+            )
+          }));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'expenses' },
+        (payload) => {
+          console.log('💰 تم حذف مصروف:', payload.old);
+          setAccounting(prev => ({
+            ...prev,
+            expenses: prev.expenses.filter(exp => exp.id !== payload.old.id)
+          }));
+        }
+      )
+      .subscribe();
+
+    // قناة تحديث المشتريات (realtime)
+    const purchasesChannel = supabase
+      .channel('purchases-changes')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'purchases' },
+        (payload) => {
+          console.log('🛒 تم إضافة مشترى جديد:', payload.new);
+          setPurchases(prev => [payload.new, ...prev]);
+        }
+      )
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'purchases' },
+        (payload) => {
+          console.log('🛒 تم تحديث مشترى:', payload.new);
+          setPurchases(prev => prev.map(purchase => 
+            purchase.id === payload.new.id ? payload.new : purchase
+          ));
+        }
+      )
+      .on('postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'purchases' },
+        (payload) => {
+          console.log('🛒 تم حذف مشترى:', payload.old);
+          setPurchases(prev => prev.filter(purchase => purchase.id !== payload.old.id));
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(productsChannel);
       supabase.removeChannel(inventoryChannel);
@@ -694,6 +760,8 @@ export const InventoryProvider = ({ children }) => {
       supabase.removeChannel(sizesChannel);
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(aiOrdersChannel);
+      supabase.removeChannel(expensesChannel);
+      supabase.removeChannel(purchasesChannel);
     };
   }, [user, fetchInitialData]);
 
