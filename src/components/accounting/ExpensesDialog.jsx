@@ -26,9 +26,9 @@ import React, { useState, useEffect } from 'react';
         dateRange: { from: undefined, to: undefined }
       });
     
-      const [expenseCategories, setExpenseCategories] = useState([
-        'مشتريات', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف التحويل', 'مصاريف بنكية', 'أخرى'
-      ]);
+  const [expenseCategories, setExpenseCategories] = useState([
+    'شراء', 'تسويق', 'رواتب', 'إيجار', 'فواتير', 'صيانة', 'شحن ونقل', 'تكاليف تحويل', 'مصاريف بنكية', 'أخرى'
+  ]);
       const [newCategory, setNewCategory] = useState('');
 
       // تحميل فئات المصاريف من قاعدة البيانات
@@ -57,18 +57,34 @@ import React, { useState, useEffect } from 'react';
         }
       }, [open]);
     
-      // فلترة المصاريف لإظهار المصاريف الفعلية فقط (ليس الفئات النظامية)
-      const filteredExpenses = expenses.filter(expense => {
-        // استبعاد الفئات النظامية فقط وإظهار جميع المصاريف التشغيلية
-        if (expense.expense_type === 'system' || expense.category === 'فئات_المصاريف') {
-          return false;
-        }
-        
-        const categoryMatch = filters.category === 'all' || expense.category === filters.category || expense.related_data?.category === filters.category;
-        const dateMatch = !filters.dateRange.from || (new Date(expense.transaction_date) >= filters.dateRange.from && new Date(expense.transaction_date) <= (filters.dateRange.to || new Date()));
-        
-        return categoryMatch && dateMatch;
-      });
+  // فلترة المصاريف لإظهار جميع المصاريف التشغيلية بما في ذلك مصاريف الشراء
+  const filteredExpenses = expenses.filter(expense => {
+    console.log('🔍 [TRACE] فحص مصروف:', {
+      id: expense.id,
+      category: expense.category,
+      expense_type: expense.expense_type,
+      description: expense.description,
+      amount: expense.amount
+    });
+    
+    // استبعاد فقط الفئات النظامية للنظام وإظهار جميع المصاريف التشغيلية
+    if (expense.expense_type === 'system' && expense.category === 'فئات_المصاريف') {
+      console.log('🚫 [TRACE] تم استبعاد مصروف نظامي');
+      return false;
+    }
+    
+    const categoryMatch = filters.category === 'all' || expense.category === filters.category;
+    const dateMatch = !filters.dateRange.from || 
+      (new Date(expense.created_at || expense.transaction_date) >= filters.dateRange.from && 
+       new Date(expense.created_at || expense.transaction_date) <= (filters.dateRange.to || new Date()));
+    
+    const result = categoryMatch && dateMatch;
+    console.log('✅ [TRACE] نتيجة الفلترة:', result);
+    return result;
+  });
+  
+  console.log('📊 [TRACE] إجمالي المصاريف قبل الفلترة:', expenses.length);
+  console.log('📊 [TRACE] إجمالي المصاريف بعد الفلترة:', filteredExpenses.length);
     
       const handleInputChange = (e) => {
         const { name, value } = e.target;

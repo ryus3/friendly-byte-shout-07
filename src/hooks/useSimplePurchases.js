@@ -31,7 +31,9 @@ export const useSimplePurchases = () => {
 
   // إضافة فاتورة شراء جديدة
   const addPurchase = async (purchaseData) => {
-    console.log('🛒 بدء إضافة فاتورة شراء جديدة:', purchaseData);
+    console.log('🛒 [TRACE] بدء إضافة فاتورة شراء جديدة - عدد الاستدعاءات:', Date.now());
+    console.log('🛒 [TRACE] بيانات الفاتورة المرسلة:', purchaseData);
+    console.log('🛒 [TRACE] Stack trace:', new Error().stack);
     setLoading(true);
     
     try {
@@ -82,7 +84,7 @@ export const useSimplePurchases = () => {
         await processProductSimple(item, newPurchase, user.id);
       }
 
-      // 4. تحديث رصيد مصدر النقد
+      // 4. خصم المبلغ الكلي مرة واحدة من مصدر النقد
       if (purchaseData.cashSourceId) {
         const result = await supabase.rpc('update_cash_source_balance', {
           p_cash_source_id: purchaseData.cashSourceId,
@@ -96,6 +98,89 @@ export const useSimplePurchases = () => {
 
         if (result.error) {
           console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
+          throw result.error;
+        }
+      }
+
+      // 5. إنشاء سجلات المصاريف للتتبع فقط (بدون خصم مصدر النقد)
+      const expensePromises = [];
+      
+      // مصروف الشراء (تكلفة المنتجات)
+      if (itemsTotal > 0) {
+        expensePromises.push(supabase
+          .from('expenses')
+          .insert({
+            category: 'شراء',
+            expense_type: 'purchase',
+            amount: itemsTotal,
+            description: `شراء مواد - فاتورة رقم ${newPurchase.purchase_number}`,
+            receipt_number: newPurchase.purchase_number,
+            vendor_name: purchaseData.supplier,
+            status: 'approved',
+            created_by: user.id,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            metadata: {
+              purchase_reference_id: newPurchase.id,
+              auto_approved: true,
+              cash_deducted_via_purchase: true
+            }
+          }));
+      }
+
+      // مصروف الشحن
+      if (shippingCost > 0) {
+        expensePromises.push(supabase
+          .from('expenses')
+          .insert({
+            category: 'شحن ونقل',
+            expense_type: 'shipping',
+            amount: shippingCost,
+            description: `مصاريف شحن - فاتورة رقم ${newPurchase.purchase_number}`,
+            receipt_number: `${newPurchase.purchase_number}-SHIP`,
+            vendor_name: purchaseData.supplier,
+            status: 'approved',
+            created_by: user.id,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            metadata: {
+              purchase_reference_id: newPurchase.id,
+              auto_approved: true,
+              cash_deducted_via_purchase: true
+            }
+          }));
+      }
+
+      // مصروف التحويل
+      if (transferCost > 0) {
+        expensePromises.push(supabase
+          .from('expenses')
+          .insert({
+            category: 'تكاليف تحويل',
+            expense_type: 'transfer',
+            amount: transferCost,
+            description: `تكاليف تحويل - فاتورة رقم ${newPurchase.purchase_number}`,
+            receipt_number: `${newPurchase.purchase_number}-TRANSFER`,
+            vendor_name: purchaseData.supplier,
+            status: 'approved',
+            created_by: user.id,
+            approved_by: user.id,
+            approved_at: new Date().toISOString(),
+            metadata: {
+              purchase_reference_id: newPurchase.id,
+              auto_approved: true,
+              cash_deducted_via_purchase: true
+            }
+          }));
+      }
+
+      // تنفيذ جميع المصاريف مرة واحدة
+      if (expensePromises.length > 0) {
+        const expenseResults = await Promise.all(expensePromises);
+        for (const result of expenseResults) {
+          if (result.error) {
+            console.error('خطأ في إنشاء مصروف:', result.error);
+          }
         }
       }
 
@@ -420,3 +505,4 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
   if (error) throw error;
   console.log('✅ تم إضافة سجل التكلفة');
 };
+
