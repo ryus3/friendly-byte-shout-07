@@ -427,16 +427,24 @@ const InventoryPage = () => {
     if (filters.department && filters.department !== 'all') {
       console.log("🎯 تطبيق فلتر القسم:", filters.department);
       
-      items = items.filter(p => {
-        // البحث في علاقات الأقسام
-        const hasDepartment = p.product_departments?.some(pd => {
-          const deptMatch = pd.departments?.name === filters.department ||
-                           pd.department_id === filters.department;
-          console.log("📦 فحص المنتج:", p.name, "قسم:", pd.departments?.name, "مطابق:", deptMatch);
-          return deptMatch;
+      items = items.filter(product => {
+        // البحث في علاقات الأقسام عبر product_departments
+        const hasDepartmentRelation = product.product_departments?.some(pd => 
+          pd.department_id === filters.department
+        );
+        
+        // للتوافق: البحث في الحقل المباشر أيضاً
+        const hasDirectDepartment = product.department_id === filters.department;
+        
+        console.log("📦 فحص المنتج:", product.name, {
+          productDepts: product.product_departments?.map(pd => pd.department_id),
+          directDept: product.department_id,
+          targetDept: filters.department,
+          hasRelation: hasDepartmentRelation,
+          hasDirect: hasDirectDepartment
         });
         
-        return hasDepartment;
+        return hasDepartmentRelation || hasDirectDepartment;
       });
       
       console.log("✅ نتائج فلتر القسم:", items.length, "منتج");
@@ -672,13 +680,14 @@ const InventoryPage = () => {
                 key={dept.id}
                 className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
                 onClick={() => {
-                  console.log("🔍 تم الضغط على القسم:", dept.name);
+                  console.log("🔍 تم الضغط على القسم:", dept.name, "معرف:", dept.id);
                   setFilters(prev => ({ 
                     ...prev, 
-                    department: dept.name,
+                    department: dept.id, // استخدام معرف القسم بدلاً من الاسم
                     searchTerm: '', // مسح البحث عند تغيير القسم
                     stockFilter: 'all' // إعادة تعيين فلتر المخزون
                   }));
+                  setCategoryFilter(dept.id); // حفظ معرف القسم للفلترة
                 }}
               >
                 <CardContent className="p-6">

@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const InventoryPDFGenerator = ({ 
   inventoryData = [], 
@@ -31,79 +31,214 @@ const InventoryPDFGenerator = ({
         format: 'a4'
       });
       
-      let yPosition = 20;
+      // إعداد الخط العربي
+      pdf.setFont('helvetica');
+      pdf.setLanguage('ar');
       
-      // العنوان
-      pdf.setFontSize(20);
-      pdf.text('تقرير المخزون', 105, yPosition, { align: 'center' });
-      yPosition += 15;
+      let yPosition = 25;
+      const pageWidth = pdf.internal.pageSize.width;
+      const margin = 15;
       
-      // التاريخ
+      // === رأس التقرير الاحترافي ===
+      // خلفية رأس التقرير
+      pdf.setFillColor(41, 128, 185); // لون أزرق احترافي
+      pdf.rect(0, 0, pageWidth, 45, 'F');
+      
+      // العنوان الرئيسي
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text('تقرير جرد المخزون', pageWidth / 2, 20, { align: 'center' });
+      
+      // معلومات التقرير
       pdf.setFontSize(12);
-      const currentDate = new Date().toLocaleDateString('ar-EG');
-      pdf.text(`تاريخ التقرير: ${currentDate}`, 20, yPosition);
-      yPosition += 10;
+      const currentDate = new Date();
+      const arabicDate = currentDate.toLocaleDateString('ar-EG', {
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric',
+        weekday: 'long'
+      });
       
-      // عدد المنتجات
-      pdf.text(`عدد المنتجات: ${dataToExport.length}`, 20, yPosition);
-      yPosition += 20;
+      pdf.text(`التاريخ: ${arabicDate}`, pageWidth - margin, 32, { align: 'right' });
+      pdf.text(`الوقت: ${currentDate.toLocaleTimeString('ar-EG')}`, pageWidth - margin, 38, { align: 'right' });
       
-      // الجدول
-      const tableHeader = ['المنتج', 'الكمية', 'السعر', 'الحالة'];
-      const rowHeight = 8;
-      const colWidth = 45;
+      yPosition = 60;
+      
+      // === إحصائيات سريعة ===
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFillColor(248, 249, 250);
+      pdf.rect(margin, yPosition, pageWidth - (margin * 2), 25, 'F');
+      
+      // خط حدودي للإحصائيات
+      pdf.setDrawColor(41, 128, 185);
+      pdf.setLineWidth(0.5);
+      pdf.rect(margin, yPosition, pageWidth - (margin * 2), 25);
+      
+      pdf.setFontSize(14);
+      pdf.setTextColor(52, 73, 94);
+      pdf.text(`📊 إجمالي المنتجات: ${dataToExport.length}`, margin + 5, yPosition + 8);
+      
+      // حساب الإحصائيات
+      let totalStock = 0;
+      let lowStockItems = 0;
+      let outOfStockItems = 0;
+      
+      dataToExport.forEach(item => {
+        const itemStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
+        totalStock += itemStock;
+        if (itemStock === 0) outOfStockItems++;
+        else if (itemStock < 5) lowStockItems++;
+      });
+      
+      pdf.text(`📦 إجمالي المخزون: ${totalStock.toLocaleString()}`, margin + 5, yPosition + 15);
+      pdf.text(`⚠️ منتجات منخفضة: ${lowStockItems}`, margin + 5, yPosition + 22);
+      pdf.text(`❌ منتجات نافذة: ${outOfStockItems}`, pageWidth - margin - 50, yPosition + 15, { align: 'right' });
+      
+      yPosition += 40;
+      
+      // === جدول المنتجات الاحترافي ===
+      const tableHeaders = ['المنتج', 'الكمية المتاحة', 'السعر المتوسط', 'حالة المخزون'];
+      const colWidths = [60, 35, 40, 35];
+      const tableWidth = colWidths.reduce((sum, width) => sum + width, 0);
+      const startX = (pageWidth - tableWidth) / 2;
       
       // رأس الجدول
-      pdf.setFillColor(200, 200, 200);
-      pdf.rect(20, yPosition, 180, rowHeight, 'F');
+      pdf.setFillColor(52, 73, 94);
+      pdf.rect(startX, yPosition, tableWidth, 12, 'F');
       
-      pdf.setFontSize(10);
-      tableHeader.forEach((header, index) => {
-        pdf.text(header, 25 + (index * colWidth), yPosition + 5);
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(11);
+      
+      let currentX = startX;
+      tableHeaders.forEach((header, index) => {
+        pdf.text(header, currentX + (colWidths[index] / 2), yPosition + 8, { align: 'center' });
+        currentX += colWidths[index];
       });
-      yPosition += rowHeight;
+      
+      yPosition += 12;
       
       // بيانات الجدول
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFontSize(9);
+      
       dataToExport.forEach((item, index) => {
-        if (yPosition > 280) {
+        // التحقق من الصفحة الجديدة
+        if (yPosition > 260) {
           pdf.addPage();
-          yPosition = 20;
+          yPosition = 30;
+          
+          // إعادة رسم رأس الجدول في الصفحة الجديدة
+          pdf.setFillColor(52, 73, 94);
+          pdf.rect(startX, yPosition, tableWidth, 10, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(10);
+          
+          currentX = startX;
+          tableHeaders.forEach((header, index) => {
+            pdf.text(header, currentX + (colWidths[index] / 2), yPosition + 6, { align: 'center' });
+            currentX += colWidths[index];
+          });
+          
+          yPosition += 10;
+          pdf.setTextColor(0, 0, 0);
+          pdf.setFontSize(9);
         }
         
-        const totalStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
+        // خلفية السطر المتناوبة
+        if (index % 2 === 0) {
+          pdf.setFillColor(248, 249, 250);
+          pdf.rect(startX, yPosition, tableWidth, 10, 'F');
+        }
+        
+        // حساب البيانات
+        const itemTotalStock = item.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0;
         const avgPrice = item.variants?.length > 0 ? 
           item.variants.reduce((sum, v) => sum + (v.price || 0), 0) / item.variants.length : 0;
         
-        let status = 'متوفر';
-        if (totalStock === 0) status = 'نافذ';
-        else if (totalStock < 5) status = 'منخفض';
+        // تحديد حالة المخزون مع الألوان
+        let stockStatus = '✅ متوفر';
+        let statusColor = [46, 125, 50]; // أخضر
         
-        const rowData = [
-          item.name?.substring(0, 15) || 'بدون اسم',
-          totalStock.toString(),
-          Math.round(avgPrice).toString() + ' د.ع',
-          status
-        ];
-        
-        // خلفية السطر
-        if (index % 2 === 0) {
-          pdf.setFillColor(240, 240, 240);
-          pdf.rect(20, yPosition, 180, rowHeight, 'F');
+        if (itemTotalStock === 0) {
+          stockStatus = '❌ نافذ';
+          statusColor = [211, 47, 47]; // أحمر
+        } else if (itemTotalStock < 5) {
+          stockStatus = '⚠️ منخفض';
+          statusColor = [255, 152, 0]; // برتقالي
         }
         
-        rowData.forEach((cell, colIndex) => {
-          pdf.text(cell, 25 + (colIndex * colWidth), yPosition + 5);
+        // إضافة حدود للخلايا
+        pdf.setDrawColor(224, 224, 224);
+        pdf.setLineWidth(0.2);
+        
+        currentX = startX;
+        const rowData = [
+          item.name?.substring(0, 25) || 'بدون اسم',
+          itemTotalStock.toLocaleString(),
+          `${Math.round(avgPrice).toLocaleString()} د.ع`,
+          stockStatus
+        ];
+        
+        rowData.forEach((cellData, colIndex) => {
+          // رسم حدود الخلية
+          pdf.rect(currentX, yPosition, colWidths[colIndex], 10);
+          
+          // تلوين نص حالة المخزون
+          if (colIndex === 3) {
+            pdf.setTextColor(...statusColor);
+          } else {
+            pdf.setTextColor(0, 0, 0);
+          }
+          
+          pdf.text(
+            cellData, 
+            currentX + (colWidths[colIndex] / 2), 
+            yPosition + 6, 
+            { align: 'center' }
+          );
+          
+          currentX += colWidths[colIndex];
         });
         
-        yPosition += rowHeight;
+        yPosition += 10;
       });
+      
+      // === تذييل التقرير ===
+      if (yPosition > 250) {
+        pdf.addPage();
+        yPosition = 30;
+      }
+      
+      yPosition += 20;
+      
+      // خط فاصل
+      pdf.setDrawColor(41, 128, 185);
+      pdf.setLineWidth(1);
+      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
+      
+      yPosition += 15;
+      
+      // معلومات إضافية
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFontSize(10);
+      pdf.text('تم إنشاء هذا التقرير بواسطة نظام إدارة المخزون', pageWidth / 2, yPosition, { align: 'center' });
+      pdf.text(`📅 ${new Date().toLocaleString('ar-EG')}`, pageWidth / 2, yPosition + 6, { align: 'center' });
+      
+      // إضافة أرقام الصفحات
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`صفحة ${i} من ${pageCount}`, pageWidth - margin, pdf.internal.pageSize.height - 10, { align: 'right' });
+      }
 
-      const fileName = `inventory_report_${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `تقرير_المخزون_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
 
       toast({
-        title: "✅ تم إنشاء التقرير!",
-        description: `تقرير لـ ${dataToExport.length} منتج`,
+        title: "✅ تم إنشاء التقرير بنجاح!",
+        description: `تقرير احترافي لـ ${dataToExport.length} منتج`,
         variant: "default"
       });
 
