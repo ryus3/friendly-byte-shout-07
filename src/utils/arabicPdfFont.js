@@ -1,18 +1,35 @@
-// تحميل خط عربي للـ PDF من Google Fonts
+// تحميل خط عربي للـ PDF بطرق متعددة
 export const loadArabicFont = async () => {
   try {
-    // تحميل خط Noto Sans Arabic من Google Fonts
-    const fontResponse = await fetch('https://fonts.gstatic.com/s/notosansarabic/v18/nwpxtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyGyvu3CBFQLaig.woff2');
-    
-    if (!fontResponse.ok) {
-      throw new Error('Failed to fetch font');
+    // خطوط متعددة للاختبار
+    const fontUrls = [
+      // خط Noto Sans Arabic الداعم للعربية بشكل ممتاز
+      'https://fonts.gstatic.com/s/notosansarabic/v18/nwpBtLGrOAZMl5nJ_wfgRg3DrWFZWsnVBJ_sS6tlqHHFlhQ5l3sQWIHPqzCfyGy7u3CBFQLaigJqUw.ttf',
+      // خط Tajawal كبديل
+      'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf',
+      // خط Cairo كبديل ثالث
+      'https://fonts.gstatic.com/s/cairo/v28/SLXVc1nY6HkvalIhTp2mxdt0UX8gfxJkuDvF.ttf'
+    ];
+
+    for (const fontUrl of fontUrls) {
+      try {
+        console.log('🔄 محاولة تحميل الخط من:', fontUrl);
+        const fontResponse = await fetch(fontUrl);
+        
+        if (fontResponse.ok) {
+          const fontBuffer = await fontResponse.arrayBuffer();
+          console.log('✅ تم تحميل الخط بنجاح من:', fontUrl);
+          return fontBuffer;
+        }
+      } catch (error) {
+        console.warn('⚠️ فشل تحميل الخط من:', fontUrl, error);
+        continue;
+      }
     }
     
-    const fontBuffer = await fontResponse.arrayBuffer();
-    return fontBuffer;
+    throw new Error('فشل في تحميل جميع الخطوط المتاحة');
   } catch (error) {
-    console.error('Error loading Arabic font:', error);
-    // في حال فشل التحميل، نستخدم خط احتياطي
+    console.error('❌ خطأ في تحميل الخط العربي:', error);
     return null;
   }
 };
@@ -28,12 +45,14 @@ export const registerArabicFont = async (Font) => {
         fontStyle: 'normal',
         fontWeight: 'normal',
       });
+      console.log('✅ تم تسجيل الخط العربي: NotoSansArabic');
       return 'NotoSansArabic';
     }
   } catch (error) {
-    console.error('Error registering Arabic font:', error);
+    console.error('❌ خطأ في تسجيل الخط العربي:', error);
   }
   
-  // خط احتياطي
-  return 'Times-Roman';
+  // خط احتياطي - استخدام خط النظام
+  console.log('⚠️ استخدام خط احتياطي: Helvetica');
+  return 'Helvetica';
 };
