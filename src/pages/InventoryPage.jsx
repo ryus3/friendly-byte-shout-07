@@ -15,7 +15,7 @@ import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
-import CategoryFilterCards from '@/components/inventory/CategoryFilterCards';
+import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -538,9 +538,10 @@ const InventoryPage = () => {
           onRestoreProduct={() => console.log('restore product')}
         />
 
-        <CategoryFilterCards 
-          onFilterChange={setCategoryFilter}
-          currentFilters={categoryFilter}
+        <DepartmentOverviewCards 
+          onDepartmentFilter={(dept) => {
+            setFilters(prev => ({ ...prev, department: dept.name }));
+          }}
         />
 
         <InventoryFilters

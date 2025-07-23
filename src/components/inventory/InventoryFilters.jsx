@@ -186,6 +186,19 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                 <SelectItem value="archived">منتجات مؤرشفة</SelectItem>
               </SelectContent>
             </Select>
+            
+            {/* فلتر الأقسام */}
+            <Select value={filters.department || 'all'} onValueChange={(value) => handleFilterChange('department', value)}>
+              <SelectTrigger className="w-full flex-grow">
+                <SelectValue placeholder="القسم" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الأقسام</SelectItem>
+                {allowedData.allowedDepartments.map(dept => (
+                  <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             <Popover>
               <PopoverTrigger asChild>
