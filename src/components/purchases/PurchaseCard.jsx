@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import PurchaseInvoicePDFButton from './PurchaseInvoicePDF';
+import PurchasePrintButton from './PurchasePrintButton';
+import PurchaseExportButton from './PurchaseExportButton';
 
 const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
   const totalCost = (purchase.total_amount || 0); // المبلغ الأساسي فقط
@@ -141,7 +142,8 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
               <span className="text-xs">عرض</span>
             </Button>
             
-            <PurchaseInvoicePDFButton purchase={purchase} />
+            <PurchasePrintButton purchase={purchase} />
+            <PurchaseExportButton purchase={purchase} />
             
             <Button 
               variant="ghost" 
