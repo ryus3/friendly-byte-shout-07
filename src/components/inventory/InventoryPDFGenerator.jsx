@@ -364,7 +364,15 @@ const InventoryPDFGenerator = ({
       { label: '📊 الحالة', width: contentWidth * 0.1 }
     ];
 
-    // رأس الجدول بلون أنيق
+    // رأس الجدول بتدرج ساحر
+    const gradient = pdf.LinearGradient({
+      startingPoint: { x: margin, y: currentY },
+      endingPoint: { x: margin + contentWidth, y: currentY },
+      colors: [
+        { offset: 0, color: [colors.primary[0], colors.primary[1], colors.primary[2]] },
+        { offset: 1, color: [colors.secondary[0], colors.secondary[1], colors.secondary[2]] }
+      ]
+    });
     
     pdf.setFillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.roundedRect(margin, currentY, contentWidth, headerHeight, 5, 5, 'F');
