@@ -13,18 +13,32 @@ const InventoryPDFGenerator = ({
 }) => {
   const generatePDF = async () => {
     try {
-      const dataToExport = selectedItems.length > 0 ? 
-        inventoryData.filter(item => selectedItems.includes(item.id)) : 
-        inventoryData;
+      // إزالة التكرارات وتصفية البيانات بشكل صحيح
+      const uniqueDataToExport = selectedItems.length > 0 ? 
+        inventoryData.filter((item, index, self) => 
+          selectedItems.includes(item.id) && 
+          self.findIndex(i => i.id === item.id) === index
+        ) : 
+        inventoryData.filter((item, index, self) => 
+          self.findIndex(i => i.id === item.id) === index
+        );
       
       console.log('البيانات المختارة للتصدير:', {
         selectedItems,
         totalInventoryData: inventoryData.length,
-        dataToExport: dataToExport.length,
-        itemNames: dataToExport.map(item => item.name)
+        dataToExport: uniqueDataToExport.length,
+        itemNames: uniqueDataToExport.map(item => item.name),
+        duplicateCheck: uniqueDataToExport.map(item => ({ id: item.id, name: item.name }))
       });
+
+      // فحص التكرار في البيانات
+      const itemIds = uniqueDataToExport.map(item => item.id);
+      const duplicateIds = itemIds.filter((id, index) => itemIds.indexOf(id) !== index);
+      if (duplicateIds.length > 0) {
+        console.log('منتجات مكررة:', duplicateIds);
+      }
       
-      if (!dataToExport || dataToExport.length === 0) {
+      if (!uniqueDataToExport || uniqueDataToExport.length === 0) {
         toast({
           title: "لا توجد بيانات للتصدير",
           description: "لم يتم العثور على منتجات للتصدير",
@@ -34,7 +48,7 @@ const InventoryPDFGenerator = ({
       }
 
       // إنشاء HTML تقرير احترافي
-      const reportHTML = createReportHTML(dataToExport);
+      const reportHTML = createReportHTML(uniqueDataToExport);
       
       // إنشاء عنصر مؤقت
       const tempDiv = document.createElement('div');
@@ -88,7 +102,7 @@ const InventoryPDFGenerator = ({
 
       toast({
         title: "✅ تم إنشاء التقرير بنجاح!",
-        description: `تقرير احترافي لـ ${dataToExport.length} منتج`,
+        description: `تقرير احترافي لـ ${uniqueDataToExport.length} منتج`,
         variant: "default"
       });
 
@@ -334,16 +348,16 @@ const InventoryPDFGenerator = ({
 
                 // تدرج لوني احترافي عالمي مثل ألوان الذكاء الاصطناعي
                 const getColorGradient = (colorName) => {
-                  // تدرجات AI جميلة واحترافية
+                  // ألوان جميلة جداً ومتميزة
                   const aiGradients = [
-                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Purple Blue
-                    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Pink Red
-                    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // Blue Cyan
-                    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', // Green Mint
-                    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // Pink Yellow
-                    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // Mint Pink
-                    'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', // Peach Orange
-                    'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', // Rose Pink
+                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // بنفسجي أزرق
+                    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // وردي أحمر  
+                    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // أزرق سماوي
+                    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', // أخضر نعناعي
+                    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // وردي ذهبي
+                    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // تركوازي وردي
+                    'linear-gradient(135deg, #d299c2 0%, #fef9d3 100%)', // لافندر كريمي
+                    'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)', // سماوي فاتح
                   ];
                   // اختيار تدرج بناء على hash اللون لضمان الثبات
                   const index = colorName.length % aiGradients.length;
@@ -357,46 +371,45 @@ const InventoryPDFGenerator = ({
                     
                     variantDetails += `
                       <!-- سطر كامل للون -->
-                      <div style="margin: 16px 0; background: ${colorGradient}; border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 2px solid rgba(0,0,0,0.1); direction: rtl;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
-                          <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: rgba(255,255,255,0.9); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                      <div style="margin: 12px 0; background: ${colorGradient}; border-radius: 16px; padding: 14px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); border: 1px solid rgba(0,0,0,0.08); direction: rtl;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                          <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="background: rgba(255,255,255,0.9); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                               🎨
                             </div>
                              <div>
-                               <div style="font-weight: 900; font-size: 16px; color: #1e293b; text-shadow: 0 1px 3px rgba(255,255,255,0.8);">${item.name} - لون ${color}</div>
-                               <div style="font-size: 12px; color: #64748b; font-weight: 600;">${variants.length} ${variants.length > 1 ? 'قياس متوفر' : 'قياس متوفر'}</div>
+                               <div style="font-weight: 800; font-size: 14px; color: #1e293b; text-shadow: 0 1px 2px rgba(255,255,255,0.8);">${item.name} - لون ${color}</div>
+                               <div style="font-size: 10px; color: #64748b; font-weight: 600;">${variants.length} ${variants.length > 1 ? 'قياس متوفر' : 'قياس متوفر'}</div>
                              </div>
                           </div>
-                          <div style="background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                            <span style="font-size: 12px; color: #1e293b; font-weight: 700;">
+                          <div style="background: rgba(255,255,255,0.9); padding: 6px 12px; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+                            <span style="font-size: 10px; color: #1e293b; font-weight: 700;">
                               إجمالي: ${variants.reduce((sum, v) => sum + (v.quantity || 0), 0)} قطعة
                             </span>
                           </div>
                         </div>
                         
-                        <!-- عرض القياسات في شبكة أنيقة -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; direction: rtl;">
+                        <!-- عرض القياسات في شبكة مصغرة -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; direction: rtl;">
                           ${variants.map(variant => `
-                            <div style="background: rgba(255,255,255,0.95); border: 2px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
-                               <!-- تأثير بصري في الخلفية -->
-                               <div style="position: absolute; top: -10px; left: -10px; width: 30px; height: 30px; background: ${variant.statusColor}20; border-radius: 50%; opacity: 0.6;"></div>
-                               <div style="position: absolute; bottom: -10px; right: -10px; width: 20px; height: 20px; background: ${variant.statusColor}15; border-radius: 50%; opacity: 0.8;"></div>
+                            <div style="background: rgba(255,255,255,0.95); border: 1px solid ${variant.statusColor}30; border-radius: 12px; padding: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); position: relative; overflow: hidden; height: 80px;">
+                               <!-- تأثير بصري مصغر -->
+                               <div style="position: absolute; top: -5px; left: -5px; width: 20px; height: 20px; background: ${variant.statusColor}15; border-radius: 50%; opacity: 0.5;"></div>
                                
-                               <!-- محتوى القياس -->
+                               <!-- محتوى القياس مصغر -->
                                <div style="position: relative; z-index: 2;">
-                                 <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: ${variant.statusColor}15; border-radius: 12px; border: 1px solid ${variant.statusColor}30;">
+                                 <div style="font-weight: 700; font-size: 11px; color: #1e293b; margin-bottom: 4px; padding: 3px 8px; background: ${variant.statusColor}10; border-radius: 8px;">
                                    📏 ${variant.size}
                                  </div>
                                  
-                                 <div style="margin: 8px 0;">
-                                   <div style="font-size: 13px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                                 <div style="margin: 4px 0;">
+                                   <div style="font-size: 10px; color: ${variant.statusColor}; font-weight: 600; margin-bottom: 1px;">
                                      الكلي: ${variant.quantity || 0}
                                    </div>
-                                   <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">
+                                   <div style="font-size: 8px; color: #64748b; margin-bottom: 1px;">
                                      محجوز: ${variant.reserved_quantity || 0}
                                    </div>
-                                   <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
+                                   <div style="font-size: 8px; color: ${variant.statusColor}; font-weight: 600;">
                                      متاح: ${variant.available}
                                    </div>
                                  </div>
