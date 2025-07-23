@@ -423,4 +423,4 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
   console.log('✅ تم إضافة سجل التكلفة');
 };
 
-export default useSimplePurchases;
+export { useSimplePurchases };
