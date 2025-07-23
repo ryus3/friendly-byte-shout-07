@@ -67,8 +67,8 @@ const CashManagementPage = () => {
           setMainCashBalance(mainBalance);
           
           console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
-            baseCapital: 15000000,
-            realizedProfits: 21000,
+            baseCapital: systemFinancials.baseCapital,
+            realizedProfits: systemFinancials.realizedProfits,
             totalMainCashBalance: mainBalance
           });
         }
@@ -255,8 +255,8 @@ const CashManagementPage = () => {
       format: 'currency',
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
-      change: mainCashBalance > 15000000 
-        ? `رأس المال: 15,000,000 + أرباح: ${(mainCashBalance - 15000000).toLocaleString()}` 
+      change: mainCashBalance > systemFinancials.capitalAmount 
+        ? `رأس المال: ${systemFinancials.capitalAmount.toLocaleString()} + أرباح: ${(mainCashBalance - systemFinancials.capitalAmount).toLocaleString()}` 
         : 'رأس المال فقط (لا توجد أرباح حقيقية بعد)'
     },
     {
