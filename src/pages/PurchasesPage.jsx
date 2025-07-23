@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useSimplePurchases } from '@/hooks/useSimplePurchases';
+import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const PurchasesPage = () => {
   const { purchases: inventoryPurchases, loading: inventoryLoading } = useInventory();
-  const { purchases: hookPurchases, loading: hookLoading, fetchPurchases, deletePurchase } = useSimplePurchases();
+  const { purchases: hookPurchases, loading: hookLoading, fetchPurchases, deletePurchase } = useImprovedPurchases();
   const { hasPermission } = usePermissions();
 
   // استخدام البيانات من الهوك إذا كانت متوفرة، وإلا استخدام بيانات الإنفنتوري
