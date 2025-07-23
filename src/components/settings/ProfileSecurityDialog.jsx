@@ -207,23 +207,33 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
     }
   };
 
-  const getRoleColor = (role) => {
+  const getRoleColor = (roles) => {
+    if (!roles || !Array.isArray(roles) || roles.length === 0) return 'bg-gray-500';
+    const role = roles[0]; // أول دور في القائمة
     switch (role) {
+      case 'super_admin': return 'bg-red-500';
       case 'admin': return 'bg-red-500';
       case 'deputy': return 'bg-orange-500';
-      case 'manager': return 'bg-blue-500';
-      case 'employee': return 'bg-green-500';
+      case 'department_manager': return 'bg-blue-500';
+      case 'sales_employee': return 'bg-green-500';
+      case 'warehouse_employee': return 'bg-purple-500';
+      case 'cashier': return 'bg-yellow-500';
       default: return 'bg-gray-500';
     }
   };
 
-  const getRoleLabel = (role) => {
+  const getRoleLabel = (roles) => {
+    if (!roles || !Array.isArray(roles) || roles.length === 0) return 'غير محدد';
+    const role = roles[0]; // أول دور في القائمة
     switch (role) {
-      case 'admin': return 'مدير عام';
+      case 'super_admin': return 'مدير عام';
+      case 'admin': return 'مدير';
       case 'deputy': return 'نائب مدير';
-      case 'manager': return 'مدير';
-      case 'employee': return 'موظف';
-      default: return 'غير محدد';
+      case 'department_manager': return 'مدير قسم';
+      case 'sales_employee': return 'موظف مبيعات';
+      case 'warehouse_employee': return 'موظف مخازن';
+      case 'cashier': return 'أمين صندوق';
+      default: return roles[0] || 'غير محدد';
     }
   };
 
@@ -299,11 +309,11 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
                     <h3 className="text-xl font-semibold">{user?.full_name}</h3>
                     <p className="text-muted-foreground">{user?.email}</p>
                     <div className="flex items-center gap-2 mt-2">
-                      <Badge className={getRoleColor(user?.role)}>
-                        {getRoleLabel(user?.role)}
+                      <Badge className={getRoleColor(user?.roles)}>
+                        {getRoleLabel(user?.roles)}
                       </Badge>
                       <Badge variant="outline">
-                        {user?.status === 'active' ? 'نشط' : 'معطل'}
+                        {user?.status === 'active' ? 'نشط' : user?.status === 'pending' ? 'في الانتظار' : 'معطل'}
                       </Badge>
                     </div>
                   </div>

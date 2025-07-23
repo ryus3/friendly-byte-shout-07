@@ -1267,6 +1267,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
+          avatar_url: string | null
+          bio: string | null
           created_at: string
           default_customer_name: string | null
           default_page: string | null
@@ -1276,12 +1279,16 @@ export type Database = {
           id: string
           is_active: boolean
           order_creation_mode: string | null
+          phone: string | null
           status: string
           updated_at: string
           user_id: string
           username: string
         }
         Insert: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
@@ -1291,12 +1298,16 @@ export type Database = {
           id?: string
           is_active?: boolean
           order_creation_mode?: string | null
+          phone?: string | null
           status?: string
           updated_at?: string
           user_id: string
           username: string
         }
         Update: {
+          address?: string | null
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string
           default_customer_name?: string | null
           default_page?: string | null
@@ -1306,6 +1317,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           order_creation_mode?: string | null
+          phone?: string | null
           status?: string
           updated_at?: string
           user_id?: string
