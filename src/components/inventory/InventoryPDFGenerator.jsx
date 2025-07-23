@@ -341,9 +341,9 @@ const InventoryPDFGenerator = ({
                   Object.entries(variantsByColor).forEach(([color, variants]) => {
                     const colorGradient = getColorGradient(color);
                     
-                    variantDetails += \`
+                    variantDetails += `
                       <!-- سطر كامل للون -->
-                      <div style="margin: 16px 0; background: \${colorGradient}; border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 2px solid rgba(0,0,0,0.1); direction: rtl;">
+                      <div style="margin: 16px 0; background: ${colorGradient}; border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 2px solid rgba(0,0,0,0.1); direction: rtl;">
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                           <div style="display: flex; align-items: center; gap: 12px;">
                             <div style="background: rgba(255,255,255,0.9); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -363,45 +363,45 @@ const InventoryPDFGenerator = ({
                         
                         <!-- عرض القياسات في شبكة أنيقة -->
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; direction: rtl;">
-                          \${variants.map(variant => \`
-                            <div style="background: rgba(255,255,255,0.95); border: 2px solid \${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
+                          ${variants.map(variant => `
+                            <div style="background: rgba(255,255,255,0.95); border: 2px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
                               <!-- تأثير بصري في الخلفية -->
-                              <div style="position: absolute; top: -10px; left: -10px; width: 30px; height: 30px; background: \${variant.statusColor}20; border-radius: 50%; opacity: 0.6;"></div>
-                              <div style="position: absolute; bottom: -10px; right: -10px; width: 20px; height: 20px; background: \${variant.statusColor}15; border-radius: 50%; opacity: 0.8;"></div>
+                              <div style="position: absolute; top: -10px; left: -10px; width: 30px; height: 30px; background: ${variant.statusColor}20; border-radius: 50%; opacity: 0.6;"></div>
+                              <div style="position: absolute; bottom: -10px; right: -10px; width: 20px; height: 20px; background: ${variant.statusColor}15; border-radius: 50%; opacity: 0.8;"></div>
                               
                               <!-- محتوى القياس -->
                               <div style="position: relative; z-index: 2;">
-                                <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: \${variant.statusColor}15; border-radius: 12px; border: 1px solid \${variant.statusColor}30;">
+                                <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: ${variant.statusColor}15; border-radius: 12px; border: 1px solid ${variant.statusColor}30;">
                                   📏 ${variant.size}
                                 </div>
                                 
                                 <div style="margin: 8px 0;">
-                                  <div style="font-size: 13px; color: \${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                                  <div style="font-size: 13px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
                                     الكلي: ${variant.quantity || 0}
                                   </div>
                                   <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">
                                     محجوز: ${variant.reserved_quantity || 0}
                                   </div>
-                                  <div style="font-size: 11px; color: \${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
+                                  <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
                                     متاح: ${variant.available}
                                   </div>
                                 </div>
                                 
-                                <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: \${variant.statusColor}; box-shadow: 0 2px 6px \${variant.statusColor}40;">
+                                <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: ${variant.statusColor}; box-shadow: 0 2px 6px ${variant.statusColor}40;">
                                   ${variant.status}
                                 </div>
                               </div>
                             </div>
-                          \`).join('')}
+                          `).join('')}
                         </div>
                       </div>
-                    \`;
+                    `;
                   });
                 }
 
                 // عرض المنتجات التي لها أقياس فقط (بدون ألوان)
                 if (Object.keys(variantsBySize).length > 0) {
-                  variantDetails += \`
+                  variantDetails += `
                     <div style="margin: 16px 0; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 2px solid rgba(100, 116, 139, 0.2); direction: rtl;">
                       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
                         <div style="background: rgba(100, 116, 139, 0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
@@ -414,33 +414,33 @@ const InventoryPDFGenerator = ({
                       </div>
                       
                       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; direction: rtl;">
-                        \${Object.entries(variantsBySize).map(([size, variant]) => \`
-                          <div style="background: white; border: 2px solid \${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                            <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: \${variant.statusColor}15; border-radius: 12px;">
+                        ${Object.entries(variantsBySize).map(([size, variant]) => `
+                          <div style="background: white; border: 2px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: ${variant.statusColor}15; border-radius: 12px;">
                               📏 ${size}
                             </div>
-                            <div style="font-size: 13px; color: \${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                            <div style="font-size: 13px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
                               الكلي: ${variant.quantity || 0}
                             </div>
                             <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">
                               محجوز: ${variant.reserved_quantity || 0}
                             </div>
-                            <div style="font-size: 11px; color: \${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
+                            <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
                               متاح: ${variant.available}
                             </div>
-                            <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: \${variant.statusColor};">
+                            <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: ${variant.statusColor};">
                               ${variant.status}
                             </div>
                           </div>
-                        \`).join('')}
+                        `).join('')}
                       </div>
                     </div>
-                  \`;
+                  `;
                 }
 
                 // عرض المتغيرات العامة
                 if (generalVariants.length > 0) {
-                  variantDetails += \`
+                  variantDetails += `
                     <div style="margin: 16px 0; background: linear-gradient(135deg, #fef7ed, #fed7aa); border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border: 2px solid rgba(217, 119, 6, 0.2); direction: rtl;">
                       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
                         <div style="background: rgba(217, 119, 6, 0.1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
@@ -453,28 +453,28 @@ const InventoryPDFGenerator = ({
                       </div>
                       
                       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; direction: rtl;">
-                        \${generalVariants.map((variant, idx) => \`
-                          <div style="background: white; border: 2px solid \${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-                            <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: \${variant.statusColor}15; border-radius: 12px;">
+                        ${generalVariants.map((variant, idx) => `
+                          <div style="background: white; border: 2px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                            <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: ${variant.statusColor}15; border-radius: 12px;">
                               📦 عام ${idx + 1}
                             </div>
-                            <div style="font-size: 13px; color: \${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                            <div style="font-size: 13px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
                               الكلي: ${variant.quantity || 0}
                             </div>
                             <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">
                               محجوز: ${variant.reserved_quantity || 0}
                             </div>
-                            <div style="font-size: 11px; color: \${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
+                            <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
                               متاح: ${variant.available}
                             </div>
-                            <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: \${variant.statusColor};">
+                            <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: ${variant.statusColor};">
                               ${variant.status}
                             </div>
                           </div>
-                        \`).join('')}
+                        `).join('')}
                       </div>
                     </div>
-                  \`;
+                  `;
                 }
                 
                 if (variantDetails === '') {
