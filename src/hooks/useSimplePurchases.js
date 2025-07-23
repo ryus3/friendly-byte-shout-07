@@ -177,14 +177,27 @@ export const useSimplePurchases = () => {
 // دالة بسيطة ومضمونة لمعالجة المنتجات
 async function processProductSimple(item, purchase, userId) {
   try {
-    console.log('📦 معالجة المنتج:', item.productName, '- SKU:', item.variantSku);
+    console.log('🔍 بدء معالجة المنتج:', {
+      productName: item.productName,
+      variantSku: item.variantSku,
+      quantity: item.quantity,
+      costPrice: item.costPrice
+    });
     
     // البحث عن المنتج الموجود بالاسم أولاً
-    const { data: existingProducts } = await supabase
+    console.log('🔍 البحث عن المنتج بالاسم:', item.productName.trim());
+    const { data: existingProducts, error: searchError } = await supabase
       .from('products')
       .select('id, name')
       .ilike('name', `%${item.productName.trim()}%`)
       .limit(1);
+
+    if (searchError) {
+      console.error('❌ خطأ في البحث عن المنتج:', searchError);
+      throw searchError;
+    }
+
+    console.log('🔍 نتائج البحث:', existingProducts);
 
     let productId;
     let variantId;
@@ -192,14 +205,22 @@ async function processProductSimple(item, purchase, userId) {
     if (existingProducts?.length > 0) {
       // المنتج موجود - البحث عن متغير مناسب أو إنشاء جديد
       productId = existingProducts[0].id;
-      console.log('📦 المنتج موجود:', existingProducts[0].name);
+      console.log('✅ المنتج موجود:', existingProducts[0].name, 'ID:', existingProducts[0].id);
       
       // البحث عن متغير مناسب (نفس اللون والحجم إن أمكن)
-      const { data: existingVariants } = await supabase
+      console.log('🔍 البحث عن متغيرات للمنتج:', productId);
+      const { data: existingVariants, error: variantsError } = await supabase
         .from('product_variants')
         .select('id, barcode')
         .eq('product_id', productId)
         .limit(5);
+
+      if (variantsError) {
+        console.error('❌ خطأ في البحث عن المتغيرات:', variantsError);
+        throw variantsError;
+      }
+
+      console.log('🔍 المتغيرات الموجودة:', existingVariants);
 
       // استخدام أول متغير موجود أو إنشاء جديد
       if (existingVariants?.length > 0) {
@@ -266,12 +287,20 @@ async function processProductSimple(item, purchase, userId) {
     await supabase.from('product_variants').update({ cost_price: item.costPrice }).eq('id', variantId);
 
     // تحديث/إنشاء المخزون
-    const { data: inventory } = await supabase
+    console.log('🔍 البحث عن المخزون للمنتج:', productId, 'المتغير:', variantId);
+    const { data: inventory, error: inventoryError } = await supabase
       .from('inventory')
       .select('id, quantity')
       .eq('product_id', productId)
       .eq('variant_id', variantId)
-      .single();
+      .maybeSingle();
+
+    if (inventoryError) {
+      console.error('❌ خطأ في البحث عن المخزون:', inventoryError);
+      throw inventoryError;
+    }
+
+    console.log('🔍 نتيجة البحث عن المخزون:', inventory);
 
     if (inventory) {
       // تحديث الكمية الموجودة
