@@ -203,47 +203,66 @@ async function processProductSimple(item, purchase, userId) {
     let variantId;
 
     if (existingProducts?.length > 0) {
-      // المنتج موجود - البحث عن متغير مناسب أو إنشاء جديد
+      // المنتج موجود - البحث عن متغير مناسب بنفس الباركود أولاً
       productId = existingProducts[0].id;
       console.log('✅ المنتج موجود:', existingProducts[0].name, 'ID:', existingProducts[0].id);
       
-      // البحث عن متغير مناسب (نفس اللون والحجم إن أمكن)
-      console.log('🔍 البحث عن متغيرات للمنتج:', productId);
-      const { data: existingVariants, error: variantsError } = await supabase
+      // البحث عن متغير بنفس الباركود أولاً
+      console.log('🔍 البحث عن متغير بالباركود:', item.variantSku);
+      const { data: exactVariant, error: exactError } = await supabase
         .from('product_variants')
-        .select('id, barcode')
+        .select('id, barcode, sku')
         .eq('product_id', productId)
-        .limit(5);
+        .or(`barcode.eq.${item.variantSku},sku.eq.${item.variantSku}`)
+        .limit(1);
 
-      if (variantsError) {
-        console.error('❌ خطأ في البحث عن المتغيرات:', variantsError);
-        throw variantsError;
+      if (exactError) {
+        console.error('❌ خطأ في البحث عن المتغير المحدد:', exactError);
+        throw exactError;
       }
 
-      console.log('🔍 المتغيرات الموجودة:', existingVariants);
-
-      // استخدام أول متغير موجود أو إنشاء جديد
-      if (existingVariants?.length > 0) {
-        variantId = existingVariants[0].id;
-        console.log('🎨 استخدام متغير موجود:', existingVariants[0].barcode);
+      if (exactVariant?.length > 0) {
+        // وجد نفس المتغير تماماً
+        variantId = exactVariant[0].id;
+        console.log('✅ تم العثور على نفس المتغير:', exactVariant[0].barcode);
       } else {
-        // إنشاء متغير جديد للمنتج الموجود
-        const { data: newVariant, error } = await supabase
+        // البحث عن أي متغير للمنتج لاستخدامه
+        console.log('🔍 البحث عن أي متغير للمنتج:', productId);
+        const { data: existingVariants, error: variantsError } = await supabase
           .from('product_variants')
-          .insert({
-            product_id: productId,
-            barcode: item.variantSku,
-            sku: item.variantSku,
-            price: item.costPrice * 1.3,
-            cost_price: item.costPrice,
-            is_active: true
-          })
-          .select('id')
-          .single();
+          .select('id, barcode')
+          .eq('product_id', productId)
+          .limit(1);
 
-        if (error) throw error;
-        variantId = newVariant.id;
-        console.log('🎨 تم إنشاء متغير جديد');
+        if (variantsError) {
+          console.error('❌ خطأ في البحث عن المتغيرات:', variantsError);
+          throw variantsError;
+        }
+
+        if (existingVariants?.length > 0) {
+          // استخدام أول متغير موجود
+          variantId = existingVariants[0].id;
+          console.log('🎨 استخدام متغير موجود:', existingVariants[0].barcode);
+        } else {
+          // إنشاء متغير جديد للمنتج الموجود
+          console.log('🆕 إنشاء متغير جديد للمنتج الموجود');
+          const { data: newVariant, error } = await supabase
+            .from('product_variants')
+            .insert({
+              product_id: productId,
+              barcode: item.variantSku,
+              sku: item.variantSku,
+              price: item.costPrice * 1.3,
+              cost_price: item.costPrice,
+              is_active: true
+            })
+            .select('id')
+            .single();
+
+          if (error) throw error;
+          variantId = newVariant.id;
+          console.log('✅ تم إنشاء متغير جديد');
+        }
       }
     } else {
       // إنشاء منتج جديد تماماً
