@@ -5,34 +5,35 @@ import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
 import { registerArabicFont } from '@/utils/arabicPdfFont';
 
-// حالة تسجيل الخط
+// حالة تسجيل الخط - مبسطة
 let fontRegistered = false;
 
-// تسجيل خط عربي محسّن
-const initializeFont = async () => {
+// تسجيل خط عربي مبسط وموثوق
+const initializeFont = () => {
   if (!fontRegistered) {
     try {
-      // تجربة تسجيل خط محلي أولاً
-      await registerArabicFont(Font);
-      console.log('✅ تم تسجيل الخط العربي بنجاح');
-      fontRegistered = true;
-    } catch (error) {
-      console.error('❌ فشل في تسجيل الخط العربي:', error);
-      // خط احتياطي - Tajawal من Google Fonts
+      // خط Tajawal موثوق من Google Fonts
       Font.register({
-        family: 'NotoSansArabic',
+        family: 'ArabicFont',
         src: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf'
       });
+      console.log('✅ تم تسجيل الخط العربي');
       fontRegistered = true;
+      return true;
+    } catch (error) {
+      console.error('❌ فشل في تسجيل الخط:', error);
+      fontRegistered = false;
+      return false;
     }
   }
+  return true;
 };
 
 const styles = StyleSheet.create({
   page: {
     backgroundColor: '#ffffff',
     padding: 30,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     fontSize: 12,
     lineHeight: 1.5,
     color: '#1a202c',
@@ -51,14 +52,14 @@ const styles = StyleSheet.create({
     color: '#2563eb',
     marginBottom: 15,
     textAlign: 'center',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
   },
   companyName: {
     fontSize: 14,
     color: '#64748b',
     marginBottom: 20,
     textAlign: 'center',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
   },
   invoiceInfo: {
     flexDirection: 'row',
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
     borderBottom: 1,
     borderBottomColor: '#e5e7eb',
     paddingBottom: 5,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   row: {
@@ -94,14 +95,14 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     width: 120,
     fontWeight: 'bold',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   value: {
     fontSize: 11,
     color: '#111827',
     flex: 1,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   table: {
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
     color: '#374151',
     textAlign: 'center',
     paddingHorizontal: 5,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
   },
   col1: { width: '8%' },
   col2: { width: '32%' },
@@ -168,14 +169,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#374151',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   totalValue: {
     fontSize: 12,
     fontWeight: 'bold',
     color: '#1e40af',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   grandTotal: {
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTop: 2,
     borderTopColor: '#2563eb',
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   footer: {
@@ -199,7 +200,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#6b7280',
     marginBottom: 5,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'center',
   },
   notes: {
@@ -215,14 +216,14 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#92400e',
     marginBottom: 8,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   },
   notesText: {
     fontSize: 10,
     color: '#a16207',
     lineHeight: 1.4,
-    fontFamily: 'NotoSansArabic',
+    fontFamily: 'ArabicFont',
     textAlign: 'right',
   }
 });
@@ -379,11 +380,9 @@ const PurchaseInvoicePDFButton = ({ purchase }) => {
   const [fontReady, setFontReady] = useState(false);
   
   useEffect(() => {
-    const setupFont = async () => {
-      await initializeFont();
-      setFontReady(true);
-    };
-    setupFont();
+    // تهيئة الخط بشكل مبسط
+    const fontSuccess = initializeFont();
+    setFontReady(fontSuccess);
   }, []);
   
   const fileName = `فاتورة_شراء_${purchase.purchase_number || purchase.id}.pdf`;
