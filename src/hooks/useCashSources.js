@@ -186,20 +186,25 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الرئيسية الحقيقي المحسوب بدقة
+  // الحصول على رصيد القاصة الرئيسية الحقيقي من قاعدة البيانات مباشرة
   const getMainCashBalance = async () => {
     try {
-      // استخدام الدالة الجديدة لحساب الرصيد الصحيح
-      const { data, error } = await supabase.rpc('calculate_main_cash_balance');
+      // جلب الرصيد الفعلي من قاعدة البيانات مباشرة (نفس طريقة صفحة المحاسبة)
+      const { data, error } = await supabase
+        .from('cash_sources')
+        .select('current_balance')
+        .eq('name', 'القاصة الرئيسية')
+        .eq('is_active', true)
+        .single();
 
       if (error) {
-        console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
+        console.error('خطأ في جلب رصيد القاصة الرئيسية:', error);
         return 0;
       }
 
-      const realBalance = Number(data || 0);
+      const realBalance = Number(data?.current_balance || 0);
       
-      console.log('💰 رصيد القاصة الرئيسية المحسوب بدقة:', {
+      console.log('💰 رصيد القاصة الرئيسية من قاعدة البيانات:', {
         realBalance,
         formatted: realBalance.toLocaleString()
       });
