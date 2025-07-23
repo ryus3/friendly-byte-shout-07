@@ -2,7 +2,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { toast } from '@/components/ui/use-toast';
 
 const InventoryPDFGenerator = ({ 
@@ -26,46 +25,13 @@ const InventoryPDFGenerator = ({
         return;
       }
 
-      // إنشاء عنصر HTML مؤقت للطباعة
-      const printElement = document.createElement('div');
-      printElement.innerHTML = generateInventoryHTML(dataToExport, filters, selectedItems.length > 0);
-      printElement.style.position = 'absolute';
-      printElement.style.left = '-9999px';
-      printElement.style.top = '0';
-      printElement.style.width = '210mm';
-      document.body.appendChild(printElement);
-
-      // تحويل HTML إلى صورة عالية الجودة
-      const canvas = await html2canvas(printElement, {
-        scale: 3,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 794,
-        height: Math.max(1123, printElement.scrollHeight)
-      });
-
-      // إنشاء PDF متعدد الصفحات
+      // إنشاء PDF جديد
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png', 1.0);
       
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      // إضافة الصفحة الأولى
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // إضافة صفحات إضافية إذا لزم الأمر
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
+      // إضافة خط عربي (استخدام خط افتراضي يدعم العربية)
+      pdf.setFont('helvetica');
+      
+      await createPDFContent(pdf, dataToExport, filters, selectedItems.length > 0);
 
       // حفظ PDF
       const fileName = selectedItems.length > 0 
@@ -75,7 +41,6 @@ const InventoryPDFGenerator = ({
           : `تقرير_الجرد_الشامل_${new Date().toISOString().split('T')[0]}.pdf`;
 
       pdf.save(fileName);
-      document.body.removeChild(printElement);
 
       toast({
         title: "✅ تم إنشاء التقرير بنجاح",
@@ -93,331 +58,247 @@ const InventoryPDFGenerator = ({
     }
   };
 
-  const generateInventoryHTML = (data, filters, isFiltered) => {
+  const createPDFContent = async (pdf, data, filters, isFiltered) => {
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    const contentWidth = pageWidth - (margin * 2);
+    
+    // ألوان الموقع
+    const colors = {
+      primary: [59, 130, 246],      // أزرق
+      secondary: [147, 51, 234],    // بنفسجي
+      success: [34, 197, 94],       // أخضر
+      warning: [251, 146, 60],      // برتقالي
+      danger: [239, 68, 68],        // أحمر
+      dark: [30, 41, 59],           // رمادي داكن
+      light: [248, 250, 252]        // رمادي فاتح
+    };
+
+    let currentY = margin;
+
+    // غلاف التقرير
+    currentY = await createCoverPage(pdf, pageWidth, pageHeight, margin, colors, isFiltered);
+    
+    // صفحة جديدة للمحتوى
+    pdf.addPage();
+    currentY = margin;
+
+    // الإحصائيات
     const stats = calculateInventoryStats(data);
+    currentY = await createStatsSection(pdf, stats, margin, contentWidth, currentY, colors);
+    
+    // الجدول
+    currentY = await createInventoryTable(pdf, data, margin, contentWidth, currentY, colors, pageHeight);
+    
+    // التوقيع
+    await createSignatureSection(pdf, margin, contentWidth, pageHeight - 60, colors);
+  };
+
+  const createCoverPage = async (pdf, pageWidth, pageHeight, margin, colors, isFiltered) => {
+    // خلفية متدرجة (محاكاة)
+    pdf.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
+    pdf.rect(0, 0, pageWidth, pageHeight / 2, 'F');
+    
+    pdf.setFillColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+    pdf.rect(0, pageHeight / 2, pageWidth, pageHeight / 2, 'F');
+
+    // العنوان الرئيسي
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(28);
+    pdf.text('تقرير الجرد الاحترافي', pageWidth / 2, 80, { align: 'center' });
+
+    // التاريخ
     const currentDate = new Date().toLocaleDateString('ar-EG', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       weekday: 'long'
     });
+    
+    pdf.setFontSize(16);
+    pdf.text(currentDate, pageWidth / 2, 100, { align: 'center' });
 
-    return `
-      <div style="
-        font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 100vh;
-        padding: 0;
-        margin: 0;
-        direction: rtl;
-      ">
-        <!-- الغلاف الأمامي -->
-        <div style="
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 80px 60px;
-          text-align: center;
-          min-height: 90vh;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          position: relative;
-          overflow: hidden;
-        ">
-          <!-- عناصر تزيينية -->
-          <div style="
-            position: absolute;
-            top: -50px;
-            right: -50px;
-            width: 200px;
-            height: 200px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-          "></div>
-          <div style="
-            position: absolute;
-            bottom: -30px;
-            left: -30px;
-            width: 150px;
-            height: 150px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 50%;
-          "></div>
-          
-          <!-- الشعار -->
-          <div style="
-            width: 120px;
-            height: 120px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            margin: 0 auto 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 3px solid rgba(255,255,255,0.3);
-            backdrop-filter: blur(10px);
-          ">
-            <div style="
-              font-size: 48px;
-              font-weight: bold;
-              background: linear-gradient(45deg, #ffd700, #ffed4a);
-              -webkit-background-clip: text;
-              -webkit-text-fill-color: transparent;
-              background-clip: text;
-            ">📊</div>
-          </div>
+    // مربع المعلومات
+    const boxY = 120;
+    const boxHeight = 80;
+    
+    pdf.setFillColor(255, 255, 255, 0.9);
+    pdf.roundedRect(margin + 20, boxY, contentWidth - 40, boxHeight, 5, 5, 'F');
+    
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.setFontSize(20);
+    pdf.text('ملخص التقرير', pageWidth / 2, boxY + 20, { align: 'center' });
 
-          <h1 style="
-            font-size: 48px;
-            font-weight: 800;
-            margin: 0 0 20px 0;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            letter-spacing: 2px;
-          ">تقرير الجرد الاحترافي</h1>
-          
-          <p style="
-            font-size: 20px;
-            margin: 0 0 40px 0;
-            opacity: 0.9;
-            font-weight: 300;
-          ">${currentDate}</p>
+    if (isFiltered) {
+      pdf.setFontSize(12);
+      pdf.text('📋 تقرير مفلتر - تم تطبيق فلاتر مخصصة', pageWidth / 2, boxY + 40, { align: 'center' });
+    }
 
-          <div style="
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin: 40px auto;
-            max-width: 500px;
-            border: 1px solid rgba(255,255,255,0.3);
-          ">
-            <h2 style="
-              font-size: 24px;
-              margin: 0 0 20px 0;
-              font-weight: 600;
-            ">ملخص الجرد</h2>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
-              <div style="text-align: center;">
-                <div style="font-size: 32px; font-weight: bold; color: #10b981;">${stats.good}</div>
-                <div style="font-size: 14px; opacity: 0.8;">متوفر جيد</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 32px; font-weight: bold; color: #f59e0b;">${stats.medium}</div>
-                <div style="font-size: 14px; opacity: 0.8;">متوسط</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 32px; font-weight: bold; color: #ef4444;">${stats.low}</div>
-                <div style="font-size: 14px; opacity: 0.8;">منخفض</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 32px; font-weight: bold; color: #9ca3af;">${stats.outOfStock}</div>
-                <div style="font-size: 14px; opacity: 0.8;">نافذ</div>
-              </div>
-            </div>
-          </div>
-          
-          ${isFiltered ? `
-            <div style="
-              background: rgba(59, 130, 246, 0.3);
-              border: 1px solid rgba(59, 130, 246, 0.5);
-              border-radius: 15px;
-              padding: 20px;
-              margin: 20px auto;
-              max-width: 400px;
-              backdrop-filter: blur(10px);
-            ">
-              <div style="font-size: 18px; font-weight: 600;">📋 تقرير مفلتر</div>
-              <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">تم تطبيق فلاتر مخصصة على البيانات</div>
-            </div>
-          ` : ''}
-        </div>
-
-        <!-- صفحة التفاصيل -->
-        <div style="
-          background: white;
-          padding: 60px;
-          min-height: 100vh;
-        ">
-          <!-- رأس التفاصيل -->
-          <div style="
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 20px;
-            margin-bottom: 40px;
-            text-align: center;
-          ">
-            <h2 style="font-size: 28px; margin: 0; font-weight: 700;">التفاصيل الكاملة للمخزون</h2>
-          </div>
-
-          <!-- جدول المنتجات المحسن -->
-          <div style="
-            background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e5e7eb;
-          ">
-            <table style="
-              width: 100%;
-              border-collapse: collapse;
-              font-size: 13px;
-            ">
-              <thead>
-                <tr style="
-                  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-                  color: white;
-                ">
-                  <th style="
-                    padding: 20px 15px;
-                    text-align: center;
-                    font-weight: 700;
-                    font-size: 14px;
-                    letter-spacing: 0.5px;
-                  ">اسم المنتج</th>
-                  <th style="
-                    padding: 20px 15px;
-                    text-align: center;
-                    font-weight: 700;
-                    font-size: 14px;
-                    letter-spacing: 0.5px;
-                  ">الرمز</th>
-                  <th style="
-                    padding: 20px 15px;
-                    text-align: center;
-                    font-weight: 700;
-                    font-size: 14px;
-                    letter-spacing: 0.5px;
-                  ">المتغيرات</th>
-                  <th style="
-                    padding: 20px 15px;
-                    text-align: center;
-                    font-weight: 700;
-                    font-size: 14px;
-                    letter-spacing: 0.5px;
-                  ">إجمالي المخزون</th>
-                  <th style="
-                    padding: 20px 15px;
-                    text-align: center;
-                    font-weight: 700;
-                    font-size: 14px;
-                    letter-spacing: 0.5px;
-                  ">حالة المخزون</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${data.map((product, index) => {
-                  const totalStock = calculateTotalStock(product.variants);
-                  const isEven = index % 2 === 0;
-                  
-                  return `
-                    <tr style="
-                      background: ${isEven ? '#ffffff' : '#f8fafc'};
-                      border-bottom: 1px solid #e2e8f0;
-                      transition: all 0.3s ease;
-                    ">
-                      <td style="
-                        padding: 16px;
-                        text-align: center;
-                        font-weight: 600;
-                        color: #1e293b;
-                        border-right: 4px solid ${getStockColor(totalStock)};
-                      ">
-                        ${product.name || 'غير محدد'}
-                      </td>
-                      <td style="
-                        padding: 16px;
-                        text-align: center;
-                        color: #64748b;
-                        font-family: 'Monaco', 'Menlo', monospace;
-                        background: #f1f5f9;
-                        font-size: 12px;
-                      ">
-                        ${product.sku || 'N/A'}
-                      </td>
-                      <td style="padding: 16px; text-align: center;">
-                        ${formatVariantsModern(product.variants)}
-                      </td>
-                      <td style="
-                        padding: 16px;
-                        text-align: center;
-                        font-weight: 700;
-                        font-size: 16px;
-                        color: ${getStockColor(totalStock)};
-                      ">
-                        ${totalStock.toLocaleString()}
-                      </td>
-                      <td style="padding: 16px; text-align: center;">
-                        ${getStockStatusModern(totalStock)}
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-
-          <!-- التوقيع والختم -->
-          <div style="
-            margin-top: 60px;
-            padding: 40px;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            border-radius: 20px;
-            border-top: 4px solid #3b82f6;
-          ">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
-              <div style="text-align: center;">
-                <div style="
-                  height: 80px;
-                  border-bottom: 2px solid #94a3b8;
-                  margin-bottom: 10px;
-                "></div>
-                <p style="color: #64748b; font-weight: 600;">توقيع المسؤول</p>
-              </div>
-              <div style="text-align: center;">
-                <div style="
-                  height: 80px;
-                  border-bottom: 2px solid #94a3b8;
-                  margin-bottom: 10px;
-                "></div>
-                <p style="color: #64748b; font-weight: 600;">ختم الشركة</p>
-              </div>
-            </div>
-            
-            <div style="
-              text-align: center;
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 1px solid #cbd5e1;
-              color: #64748b;
-              font-size: 12px;
-            ">
-              <p style="margin: 0;">تم إنشاء هذا التقرير آلياً بواسطة نظام إدارة المخزون المتقدم</p>
-              <p style="margin: 5px 0 0 0;">${new Date().toLocaleString('ar-EG')}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
+    return pageHeight;
   };
 
-  // دوال مساعدة محسنة
-  const calculateInventoryStats = (data) => {
-    let good = 0, medium = 0, low = 0, outOfStock = 0;
+  const createStatsSection = async (pdf, stats, margin, contentWidth, startY, colors) => {
+    let currentY = startY + 20;
+    
+    // عنوان القسم
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.setFontSize(18);
+    pdf.text('إحصائيات المخزون', margin, currentY);
+    currentY += 15;
 
-    data.forEach(product => {
-      const totalStock = calculateTotalStock(product.variants);
-      if (totalStock === 0) {
-        outOfStock++;
-      } else if (totalStock <= 5) {
-        low++;
-      } else if (totalStock <= 20) {
-        medium++;
-      } else {
-        good++;
-      }
+    // الإحصائيات في صفوف
+    const statsData = [
+      { label: 'متوفر جيد', value: stats.good, color: colors.success },
+      { label: 'متوسط', value: stats.medium, color: colors.warning },
+      { label: 'منخفض', value: stats.low, color: colors.danger },
+      { label: 'نافذ', value: stats.outOfStock, color: colors.dark }
+    ];
+
+    const boxWidth = contentWidth / 4 - 5;
+    const boxHeight = 30;
+
+    statsData.forEach((stat, index) => {
+      const x = margin + (index * (boxWidth + 6.67));
+      
+      // صندوق الإحصائية
+      pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
+      pdf.roundedRect(x, currentY, boxWidth, boxHeight, 3, 3, 'F');
+      
+      // النص
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.text(stat.value.toString(), x + boxWidth/2, currentY + 12, { align: 'center' });
+      
+      pdf.setFontSize(10);
+      pdf.text(stat.label, x + boxWidth/2, currentY + 22, { align: 'center' });
     });
 
+    return currentY + boxHeight + 20;
+  };
+
+  const createInventoryTable = async (pdf, data, margin, contentWidth, startY, colors, pageHeight) => {
+    let currentY = startY;
+    
+    // عنوان الجدول
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.setFontSize(16);
+    pdf.text('تفاصيل المخزون', margin, currentY);
+    currentY += 10;
+
+    // رأس الجدول
+    const headerHeight = 12;
+    const rowHeight = 10;
+    const columns = [
+      { label: 'المنتج', width: contentWidth * 0.3 },
+      { label: 'الرمز', width: contentWidth * 0.2 },
+      { label: 'المتغيرات', width: contentWidth * 0.25 },
+      { label: 'المخزون', width: contentWidth * 0.15 },
+      { label: 'الحالة', width: contentWidth * 0.1 }
+    ];
+
+    // خلفية رأس الجدول
+    pdf.setFillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.rect(margin, currentY, contentWidth, headerHeight, 'F');
+    
+    // نص رأس الجدول
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(10);
+    
+    let xPos = margin;
+    columns.forEach(col => {
+      pdf.text(col.label, xPos + col.width/2, currentY + 8, { align: 'center' });
+      xPos += col.width;
+    });
+    
+    currentY += headerHeight;
+
+    // بيانات الجدول
+    pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.setFontSize(8);
+
+    data.forEach((product, index) => {
+      // فحص إذا كنا بحاجة لصفحة جديدة
+      if (currentY > pageHeight - 40) {
+        pdf.addPage();
+        currentY = margin;
+      }
+
+      const totalStock = calculateTotalStock(product.variants);
+      const isEven = index % 2 === 0;
+      
+      // خلفية الصف
+      if (isEven) {
+        pdf.setFillColor(colors.light[0], colors.light[1], colors.light[2]);
+        pdf.rect(margin, currentY, contentWidth, rowHeight, 'F');
+      }
+
+      // البيانات
+      let xPos = margin;
+      
+      // اسم المنتج
+      pdf.text(truncateText(product.name || 'غير محدد', 25), xPos + 2, currentY + 6);
+      xPos += columns[0].width;
+      
+      // الرمز
+      pdf.text(product.sku || 'N/A', xPos + 2, currentY + 6);
+      xPos += columns[1].width;
+      
+      // المتغيرات
+      const variantsText = formatVariantsForPDF(product.variants);
+      pdf.text(truncateText(variantsText, 20), xPos + 2, currentY + 6);
+      xPos += columns[2].width;
+      
+      // المخزون
+      pdf.text(totalStock.toString(), xPos + columns[3].width/2, currentY + 6, { align: 'center' });
+      xPos += columns[3].width;
+      
+      // الحالة
+      const status = getStockStatusText(totalStock);
+      pdf.text(status, xPos + columns[4].width/2, currentY + 6, { align: 'center' });
+
+      currentY += rowHeight;
+    });
+
+    return currentY + 10;
+  };
+
+  const createSignatureSection = async (pdf, margin, contentWidth, startY, colors) => {
+    // خط فاصل
+    pdf.setDrawColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.line(margin, startY, margin + contentWidth, startY);
+    
+    // التوقيعات
+    const signatureY = startY + 20;
+    const signatureWidth = contentWidth / 2 - 10;
+    
+    pdf.setFontSize(12);
+    pdf.text('توقيع المسؤول', margin + signatureWidth/2, signatureY, { align: 'center' });
+    pdf.text('ختم الشركة', margin + contentWidth/2 + 10 + signatureWidth/2, signatureY, { align: 'center' });
+    
+    // خطوط التوقيع
+    pdf.line(margin, signatureY + 10, margin + signatureWidth, signatureY + 10);
+    pdf.line(margin + contentWidth/2 + 10, signatureY + 10, margin + contentWidth, signatureY + 10);
+    
+    // تاريخ الإنشاء
+    pdf.setFontSize(8);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(`تم إنشاؤه آلياً في ${new Date().toLocaleString('ar-EG')}`, 
+             margin + contentWidth/2, signatureY + 25, { align: 'center' });
+  };
+
+  // دوال مساعدة
+  const calculateInventoryStats = (data) => {
+    let good = 0, medium = 0, low = 0, outOfStock = 0;
+    
+    data.forEach(product => {
+      const totalStock = calculateTotalStock(product.variants);
+      if (totalStock === 0) outOfStock++;
+      else if (totalStock <= 5) low++;
+      else if (totalStock <= 20) medium++;
+      else good++;
+    });
+    
     return { good, medium, low, outOfStock };
   };
 
@@ -426,16 +307,9 @@ const InventoryPDFGenerator = ({
     return variants.reduce((total, variant) => total + (parseInt(variant.stock_quantity) || 0), 0);
   };
 
-  const getStockColor = (stock) => {
-    if (stock === 0) return '#ef4444';
-    if (stock <= 5) return '#f59e0b';
-    if (stock <= 20) return '#eab308';
-    return '#10b981';
-  };
-
-  const formatVariantsModern = (variants) => {
+  const formatVariantsForPDF = (variants) => {
     if (!variants || !Array.isArray(variants) || variants.length === 0) {
-      return '<span style="color: #9ca3af; font-style: italic;">لا توجد متغيرات</span>';
+      return 'لا توجد متغيرات';
     }
 
     return variants.map(variant => {
@@ -444,99 +318,26 @@ const InventoryPDFGenerator = ({
       if (variant.color_name) parts.push(variant.color_name);
       const variantName = parts.join(' × ') || 'أساسي';
       const stock = parseInt(variant.stock_quantity) || 0;
-      
-      return `
-        <div style="
-          display: inline-block;
-          background: ${stock === 0 ? 'linear-gradient(135deg, #fee2e2, #fecaca)' : 
-                       stock <= 5 ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 
-                       'linear-gradient(135deg, #dcfce7, #bbf7d0)'};
-          color: ${stock === 0 ? '#dc2626' : stock <= 5 ? '#d97706' : '#059669'};
-          padding: 6px 12px;
-          margin: 3px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 600;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-          border: 1px solid ${stock === 0 ? '#fca5a5' : stock <= 5 ? '#f9d71c' : '#86efac'};
-        ">
-          ${variantName}: <span style="font-weight: 700;">${stock}</span>
-        </div>
-      `;
-    }).join('');
+      return `${variantName}: ${stock}`;
+    }).join(', ');
   };
 
-  const getStockStatusModern = (totalStock) => {
-    if (totalStock === 0) {
-      return `
-        <div style="
-          background: linear-gradient(135deg, #fee2e2, #fecaca);
-          color: #dc2626;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 12px;
-          display: inline-block;
-          box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
-          border: 2px solid #fca5a5;
-        ">
-          🚫 نافذ
-        </div>
-      `;
-    } else if (totalStock <= 5) {
-      return `
-        <div style="
-          background: linear-gradient(135deg, #fef3c7, #fde68a);
-          color: #d97706;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 12px;
-          display: inline-block;
-          box-shadow: 0 4px 6px rgba(217, 119, 6, 0.2);
-          border: 2px solid #f9d71c;
-        ">
-          ⚠️ منخفض
-        </div>
-      `;
-    } else if (totalStock <= 20) {
-      return `
-        <div style="
-          background: linear-gradient(135deg, #fef3c7, #fbbf24);
-          color: #92400e;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 12px;
-          display: inline-block;
-          box-shadow: 0 4px 6px rgba(146, 64, 14, 0.2);
-          border: 2px solid #f59e0b;
-        ">
-          📊 متوسط
-        </div>
-      `;
-    } else {
-      return `
-        <div style="
-          background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-          color: #059669;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: 700;
-          font-size: 12px;
-          display: inline-block;
-          box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);
-          border: 2px solid #86efac;
-        ">
-          ✅ جيد
-        </div>
-      `;
-    }
+  const getStockStatusText = (totalStock) => {
+    if (totalStock === 0) return 'نافذ';
+    if (totalStock <= 5) return 'منخفض';
+    if (totalStock <= 20) return 'متوسط';
+    return 'جيد';
+  };
+
+  const truncateText = (text, maxLength) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + '...';
   };
 
   return (
     <Button
       onClick={generatePDF}
+      disabled={isLoading || !inventoryData.length}
       className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0 shadow-lg"
       size="sm"
     >
