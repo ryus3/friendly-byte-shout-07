@@ -39,7 +39,7 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
   if (!inventoryItems) {
     return null; // or a loader/skeleton component
   }
-  const totalVariants = inventoryItems.reduce((acc, item) => acc + (item.variants?.length || 0), 0);
+  const totalProducts = inventoryItems.length; // عدد المنتجات الفعلي
   const allVariants = inventoryItems.flatMap(i => i.variants || []);
   const highStockCount = allVariants.filter(v => v.stockLevel === 'high').length;
   const mediumStockCount = allVariants.filter(v => v.stockLevel === 'medium').length;
@@ -52,12 +52,12 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
   ).length;
 
   const stats = [
-    { title: 'إجمالي الأصناف', value: totalVariants, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
+    { title: 'إجمالي المنتجات', value: totalProducts, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
     { title: 'مخزون محجوز', value: reservedStockCount, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
     { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
     { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-yellow-500 to-orange-400', delay: 0.3, onClick: () => onFilterChange('medium') },
-    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-orange-600 to-red-500', delay: 0.4, onClick: () => onFilterChange('low') },
-    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-red-600 to-red-800', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
+    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-amber-500 to-orange-600', delay: 0.4, onClick: () => onFilterChange('low') },
+    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-red-700 to-red-900', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
   ];
 
   return (
