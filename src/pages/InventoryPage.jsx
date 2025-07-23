@@ -16,6 +16,7 @@ import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
 import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
+import ArchivedProductsCard from '@/components/inventory/ArchivedProductsCard';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -321,7 +322,18 @@ const InventoryPage = () => {
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
-    // تطبيق فلتر الأقسام/التصنيفات من الكروت
+    // تطبيق فلتر الأقسام من الكروت والفلاتر العادية
+    if (filters.department && filters.department !== 'all') {
+      items = items.filter(p => 
+        p.product_departments?.some(pd => {
+          // البحث بالاسم أو المعرف
+          return pd.departments?.name === filters.department ||
+                 pd.department_id === filters.department;
+        })
+      );
+    }
+
+    // تطبيق فلتر التصنيفات من الكروت القديمة (إذا كان موجود)
     if (categoryFilter) {
       switch (categoryFilter.type) {
         case 'department':
@@ -538,11 +550,29 @@ const InventoryPage = () => {
           onRestoreProduct={() => console.log('restore product')}
         />
 
-        <DepartmentOverviewCards 
-          onDepartmentFilter={(dept) => {
-            setFilters(prev => ({ ...prev, department: dept.name }));
-          }}
-        />
+        {/* صف موحد للأرشيف وكروت الأقسام */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* كارت الأرشيف على اليمين */}
+          <div className="lg:order-1">
+            <ArchivedProductsCard
+              archivedCount={inventoryItems.filter(item => 
+                item.variants && item.variants.length > 0 && 
+                item.variants.every(v => (v.quantity || 0) === 0)
+              ).length}
+              onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
+              onRestoreProduct={() => console.log('restore product')}
+            />
+          </div>
+          
+          {/* كروت الأقسام بجانب الأرشيف */}
+          <div className="lg:col-span-3 lg:order-2">
+            <DepartmentOverviewCards 
+              onDepartmentFilter={(dept) => {
+                setFilters(prev => ({ ...prev, department: dept.name }));
+              }}
+            />
+          </div>
+        </div>
 
         <InventoryFilters
           filters={filters}

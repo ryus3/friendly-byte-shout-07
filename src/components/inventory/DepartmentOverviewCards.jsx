@@ -101,16 +101,16 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
     return Package;
   };
 
-  // ألوان متدرجة للكروت
+  // ألوان متدرجة للكروت مع تنويع أكبر
   const getGradientForIndex = (index) => {
     const gradients = [
-      'from-blue-500 to-blue-700',     // ملابس
-      'from-purple-500 to-purple-700', // أحذية  
-      'from-pink-500 to-pink-700',     // مواد عامة
-      'from-indigo-500 to-indigo-700',
-      'from-cyan-500 to-cyan-700',
-      'from-emerald-500 to-emerald-700',
-      'from-orange-500 to-orange-700'
+      'from-blue-500 to-blue-700',     // ملابس - أزرق
+      'from-orange-500 to-red-600',    // أحذية - برتقالي لأحمر  
+      'from-emerald-500 to-teal-600',  // مواد عامة - أخضر لتيل
+      'from-purple-500 to-indigo-600', // قسم رابع - بنفسجي
+      'from-yellow-500 to-orange-600', // قسم خامس - أصفر لبرتقالي
+      'from-pink-500 to-rose-600',     // قسم سادس - وردي
+      'from-cyan-500 to-blue-600'      // قسم سابع - سماوي
     ];
     
     return gradients[index % gradients.length];
@@ -132,8 +132,8 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
 
   return (
     <div className="space-y-4">
-      {/* كروت الأقسام فقط */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {/* كروت الأقسام */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
           

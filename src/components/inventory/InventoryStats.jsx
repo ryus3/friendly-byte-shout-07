@@ -56,8 +56,8 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
     { title: 'مخزون محجوز', value: reservedStockCount, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
     { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
     { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-yellow-500 to-orange-400', delay: 0.3, onClick: () => onFilterChange('medium') },
-    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-rose-400', delay: 0.4, onClick: () => onFilterChange('low') },
-    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-gray-500 to-gray-600', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
+    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-orange-600 to-red-500', delay: 0.4, onClick: () => onFilterChange('low') },
+    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-red-600 to-red-800', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
   ];
 
   return (
@@ -68,14 +68,7 @@ const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onF
         ))}
       </div>
       
-      {/* كارت الأرشيف */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <ArchivedProductsCard
-          archivedCount={archivedProductsCount}
-          onViewArchive={onViewArchive}
-          onRestoreProduct={onRestoreProduct}
-        />
-      </div>
+      {/* إزالة كارت الأرشيف من هنا لأنه سيظهر في الصف الموحد */}
     </div>
   );
 };
