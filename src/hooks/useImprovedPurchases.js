@@ -404,11 +404,40 @@ const createNewProduct = async (productName, item, userId) => {
   return newProduct.id;
 };
 
-// إنشاء متغير لمنتج بطريقة ذكية
+// إنشاء متغير لمنتج بطريقة ذكية مع فحص التكرار
 const createVariantForProduct = async (productId, item) => {
   // استخراج اللون والقياس من اسم المنتج الكامل
   const { colorId, sizeId } = await extractAndCreateColorAndSize(item.productName);
   
+  // البحث عن متغير موجود بنفس المنتج واللون والقياس
+  const { data: existingVariantByColorSize } = await supabase
+    .from('product_variants')
+    .select('id')
+    .eq('product_id', productId)
+    .eq('color_id', colorId)
+    .eq('size_id', sizeId)
+    .limit(1);
+
+  if (existingVariantByColorSize?.length > 0) {
+    // المتغير موجود، تحديث الباركود والأسعار
+    const variantId = existingVariantByColorSize[0].id;
+    console.log('✅ وجد متغير بنفس اللون والقياس، سيتم تحديثه:', variantId);
+    
+    await supabase
+      .from('product_variants')
+      .update({
+        barcode: item.variantSku,
+        sku: item.variantSku,
+        price: Math.max(item.costPrice * 1.3, item.salePrice || 0),
+        cost_price: item.costPrice,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', variantId);
+      
+    return variantId;
+  }
+  
+  // إنشاء متغير جديد
   const { data: newVariant, error } = await supabase
     .from('product_variants')
     .insert({
@@ -424,7 +453,11 @@ const createVariantForProduct = async (productId, item) => {
     .select('id')
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('خطأ في إنشاء المتغير:', error);
+    throw error;
+  }
+  
   console.log('✅ تم إنشاء متغير جديد:', newVariant.id);
   return newVariant.id;
 };
