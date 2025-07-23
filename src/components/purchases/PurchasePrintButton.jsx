@@ -12,10 +12,20 @@ const PurchasePrintButton = ({ purchase }) => {
   };
 
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('ar-IQ', {
+    return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount || 0) + ' د.ع';
+    }).format(amount || 0) + ' IQD';
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const generatePrintHTML = (purchase) => {
@@ -50,12 +60,12 @@ const PurchasePrintButton = ({ purchase }) => {
           }
           
           .container {
-            max-width: 700px;
+            max-width: 600px;
             margin: 0 auto;
-            padding: 30px;
+            padding: 25px;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
             position: relative;
             overflow: hidden;
           }
@@ -66,14 +76,14 @@ const PurchasePrintButton = ({ purchase }) => {
             top: 0;
             left: 0;
             right: 0;
-            height: 5px;
+            height: 4px;
             background: linear-gradient(90deg, #3b82f6, #8b5cf6, #06b6d4);
           }
           
           .header {
             text-align: center;
-            padding: 0 0 25px 0;
-            margin-bottom: 35px;
+            padding: 0 0 20px 0;
+            margin-bottom: 25px;
             position: relative;
           }
           
@@ -83,64 +93,66 @@ const PurchasePrintButton = ({ purchase }) => {
             bottom: 0;
             left: 50%;
             transform: translateX(-50%);
-            width: 100px;
-            height: 3px;
+            width: 80px;
+            height: 2px;
             background: linear-gradient(90deg, #3b82f6, #8b5cf6);
             border-radius: 2px;
           }
           
           .title {
-            font-size: 32px;
+            font-size: 24px;
             font-weight: 700;
             background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 8px;
-            letter-spacing: -0.02em;
+            margin-bottom: 5px;
           }
           
           .company {
-            font-size: 14px;
+            font-size: 12px;
             color: #64748b;
             font-weight: 500;
           }
           
           .info-section {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 35px;
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 12px;
+            padding: 18px;
           }
           
           .info-box {
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            border-radius: 16px;
-            padding: 20px;
+            flex: 1;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
             border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
           }
           
           .info-box h3 {
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 600;
             color: #334155;
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #cbd5e1;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
           }
           
-          .info-row {
+          .info-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
-            font-size: 13px;
+            margin-bottom: 6px;
+            font-size: 11px;
           }
           
           .info-label {
             font-weight: 500;
             color: #64748b;
-            min-width: 100px;
           }
           
           .info-value {
@@ -151,73 +163,57 @@ const PurchasePrintButton = ({ purchase }) => {
           .table {
             width: 100%;
             border-collapse: collapse;
-            margin: 25px 0;
+            margin: 20px 0;
             background: white;
-            border-radius: 12px;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
           }
           
           .table th {
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             color: white;
-            padding: 12px 8px;
+            padding: 10px 6px;
             font-weight: 600;
-            font-size: 12px;
+            font-size: 11px;
             text-align: center;
           }
           
           .table td {
-            padding: 10px 8px;
+            padding: 8px 6px;
             text-align: center;
             border-bottom: 1px solid #f1f5f9;
-            font-size: 12px;
+            font-size: 11px;
           }
           
           .table tr:nth-child(even) {
             background: #f8fafc;
           }
           
-          .table tr:hover {
-            background: #f1f5f9;
-          }
-          
           .totals {
-            margin-top: 35px;
-            padding: 25px;
+            margin-top: 25px;
+            padding: 18px;
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border-radius: 16px;
-            border: 2px solid #3b82f6;
-            position: relative;
-          }
-          
-          .totals::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            border-radius: 16px 16px 0 0;
+            border-radius: 12px;
+            border: 1px solid #3b82f6;
           }
           
           .total-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            font-size: 15px;
+            margin-bottom: 8px;
+            font-size: 13px;
             font-weight: 600;
             color: #334155;
           }
           
           .grand-total {
-            font-size: 18px;
+            font-size: 16px;
             color: #1e40af;
             border-top: 2px solid #3b82f6;
-            padding-top: 15px;
-            margin-top: 15px;
+            padding-top: 12px;
+            margin-top: 12px;
             font-weight: 700;
           }
           
@@ -255,40 +251,40 @@ const PurchasePrintButton = ({ purchase }) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1 class="title">فاتورة شراء</h1>
-            <p class="company">نظام إدارة المخزون</p>
+            <h1 class="title">Purchase Invoice</h1>
+            <p class="company">RYUS BRAND - Inventory Management & Order Tracking</p>
           </div>
           
           <div class="info-section">
             <div class="info-box">
-              <h3>معلومات الفاتورة</h3>
-              <div class="info-row">
-                <span class="info-label">رقم الفاتورة:</span>
-                <span class="info-value">${purchase.purchase_number || 'غير محدد'}</span>
+              <h3>Invoice Details</h3>
+              <div class="info-item">
+                <span class="info-label">Invoice #:</span>
+                <span class="info-value">${purchase.purchase_number || 'N/A'}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">تاريخ الشراء:</span>
-                <span class="info-value">${new Date(purchase.purchase_date || purchase.created_at).toLocaleDateString('ar-SA')}</span>
+              <div class="info-item">
+                <span class="info-label">Date:</span>
+                <span class="info-value">${formatDate(purchase.purchase_date || purchase.created_at)}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">حالة الفاتورة:</span>
-                <span class="info-value">${purchase.status === 'completed' ? 'مكتملة' : 'معلقة'}</span>
+              <div class="info-item">
+                <span class="info-label">Status:</span>
+                <span class="info-value">${purchase.status === 'completed' ? 'Completed' : 'Pending'}</span>
               </div>
             </div>
             
             <div class="info-box">
-              <h3>معلومات المورد</h3>
-              <div class="info-row">
-                <span class="info-label">اسم المورد:</span>
-                <span class="info-value">${purchase.supplier_name || 'غير محدد'}</span>
+              <h3>Supplier Info</h3>
+              <div class="info-item">
+                <span class="info-label">Name:</span>
+                <span class="info-value">${purchase.supplier_name || 'N/A'}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">التواصل:</span>
-                <span class="info-value">${purchase.supplier_contact || 'غير متوفر'}</span>
+              <div class="info-item">
+                <span class="info-label">Contact:</span>
+                <span class="info-value">${purchase.supplier_contact || 'N/A'}</span>
               </div>
-              <div class="info-row">
-                <span class="info-label">طريقة الدفع:</span>
-                <span class="info-value">${purchase.payment_method === 'cash' ? 'نقداً' : 'تحويل'}</span>
+              <div class="info-item">
+                <span class="info-label">Payment:</span>
+                <span class="info-value">${purchase.payment_method === 'cash' ? 'Cash' : 'Transfer'}</span>
               </div>
             </div>
           </div>
@@ -297,21 +293,21 @@ const PurchasePrintButton = ({ purchase }) => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>اسم المنتج</th>
-                <th>اللون</th>
-                <th>القياس</th>
-                <th>الكمية</th>
-                <th>سعر الوحدة</th>
-                <th>الإجمالي</th>
+                <th>Product</th>
+                <th>Color</th>
+                <th>Size</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
               </tr>
             </thead>
             <tbody>
               ${items.map((item, index) => `
                 <tr>
                   <td>${index + 1}</td>
-                  <td>${item.productName || 'غير محدد'}</td>
-                  <td>${item.color || 'غير محدد'}</td>
-                  <td>${item.size || 'غير محدد'}</td>
+                  <td>${item.productName || 'N/A'}</td>
+                  <td>${item.color || 'N/A'}</td>
+                  <td>${item.size || 'N/A'}</td>
                   <td>${item.quantity || 0}</td>
                   <td>${formatCurrency(item.costPrice || 0)}</td>
                   <td>${formatCurrency((item.costPrice || 0) * (item.quantity || 0))}</td>
@@ -322,30 +318,30 @@ const PurchasePrintButton = ({ purchase }) => {
 
           <div class="totals">
             <div class="total-row">
-              <span>إجمالي المنتجات:</span>
+              <span>Products Total:</span>
               <span>${formatCurrency(itemsTotal)}</span>
             </div>
             ${shippingCost > 0 ? `
               <div class="total-row">
-                <span>تكلفة الشحن:</span>
+                <span>Shipping:</span>
                 <span>${formatCurrency(shippingCost)}</span>
               </div>
             ` : ''}
             ${transferCost > 0 ? `
               <div class="total-row">
-                <span>تكلفة التحويل:</span>
+                <span>Transfer Fee:</span>
                 <span>${formatCurrency(transferCost)}</span>
               </div>
             ` : ''}
             <div class="total-row grand-total">
-              <span>المجموع الكلي:</span>
+              <span>Grand Total:</span>
               <span>${formatCurrency(grandTotal)}</span>
             </div>
           </div>
 
           <div class="footer">
-            <p>هذه وثيقة رسمية - يرجى الاحتفاظ بها للمراجعة</p>
-            <p>تم الإنشاء في: ${new Date().toLocaleString('ar-SA')}</p>
+            <p>Official Document - Please keep for your records</p>
+            <p>Generated: ${formatDate(new Date())}</p>
           </div>
         </div>
       </body>
@@ -361,7 +357,7 @@ const PurchasePrintButton = ({ purchase }) => {
       className="gap-1 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
     >
       <Printer className="h-4 w-4" />
-      طباعة
+      Print
     </Button>
   );
 };
