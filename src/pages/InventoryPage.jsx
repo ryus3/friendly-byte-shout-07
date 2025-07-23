@@ -14,8 +14,7 @@ import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import InventoryPDF from '@/components/pdf/InventoryPDF';
+import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -124,6 +123,9 @@ const InventoryPage = () => {
     price: [0, 500000],
     color: 'all',
     size: 'all',
+    productType: 'all',
+    department: 'all',
+    seasonOccasion: 'all'
   });
   const [editingItem, setEditingItem] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -330,6 +332,18 @@ const InventoryPage = () => {
       items = items.filter(p => p?.categories?.main_category === filters.category);
     }
     
+    if (filters.productType !== 'all') {
+      items = items.filter(p => p?.categories?.product_type === filters.productType);
+    }
+    
+    if (filters.department !== 'all') {
+      items = items.filter(p => p?.categories?.department === filters.department);
+    }
+    
+    if (filters.seasonOccasion !== 'all') {
+      items = items.filter(p => p?.categories?.season_occasion === filters.seasonOccasion);
+    }
+    
     if (filters.color !== 'all') {
       items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.color === filters.color));
     }
@@ -478,21 +492,12 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
-            
-            <PDFDownloadLink
-              document={<InventoryPDF products={selectedItemsForExport.length > 0 
-                ? inventoryItems.filter(item => selectedItemsForExport.includes(item.id))
-                : inventoryItems} />}
-              fileName={`تقرير-الجرد-${new Date().toLocaleDateString('ar-EG')}.pdf`}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-            >
-              {({ loading }) => (
-                <>
-                  <Download className="w-4 h-4 ml-2" />
-                  {loading ? 'جاري التجهيز...' : `تصدير PDF ${selectedItemsForExport.length > 0 ? `(${selectedItemsForExport.length})` : '(الكل)'}`}
-                </>
-              )}
-            </PDFDownloadLink>
+            <InventoryPDFGenerator 
+              inventoryData={filteredItems}
+              selectedItems={selectedItemsForExport}
+              filters={filters}
+              isLoading={loading}
+            />
           </div>
         </div>
         
