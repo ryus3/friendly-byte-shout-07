@@ -16,10 +16,12 @@ import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
 import CategoryFilterCards from '@/components/inventory/CategoryFilterCards';
+import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent } from '@/components/ui/card';
 import InventoryItem from '@/components/inventory/InventoryItem';
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
@@ -129,6 +131,7 @@ const InventoryPage = () => {
     seasonOccasion: 'all'
   });
   const [categoryFilter, setCategoryFilter] = useState(null);
+  const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
@@ -321,7 +324,14 @@ const InventoryPage = () => {
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
-    // تطبيق فلتر الأقسام/التصنيفات من الكروت
+    // تطبيق فلتر الأقسام من الكروت العلوية
+    if (selectedDepartment) {
+      items = items.filter(p => 
+        p.product_departments?.some(pd => pd.department_id === selectedDepartment.id)
+      );
+    }
+
+    // تطبيق فلتر الأقسام/التصنيفات من الكروت الجانبية
     if (categoryFilter) {
       switch (categoryFilter.type) {
         case 'department':
@@ -400,7 +410,7 @@ const InventoryPage = () => {
     }
 
     return items;
-  }, [inventoryItems, filters, categoryFilter]);
+  }, [inventoryItems, filters, categoryFilter, selectedDepartment]);
 
   const inventoryStats = useMemo(() => {
       if (!Array.isArray(inventoryItems)) return {
@@ -538,6 +548,48 @@ const InventoryPage = () => {
           onRestoreProduct={() => console.log('restore product')}
         />
 
+        {/* كروت أرشيف المنتجات والأقسام */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          {/* كارت أرشيف المنتجات */}
+          <Card className="lg:col-span-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700">
+            <CardContent className="p-6">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 bg-slate-700/50 rounded-2xl flex items-center justify-center mx-auto">
+                  <Package className="w-8 h-8 text-slate-300" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white mb-2">أرشيف المنتجات</h3>
+                  <p className="text-slate-400 text-sm mb-4">المنتجات النافذة والمؤرشفة</p>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white mb-1">{filteredItems.filter(item => item.stockLevel === 'out-of-stock').length}</div>
+                    <div className="text-slate-400 text-xs">منتج مؤرشف</div>
+                  </div>
+                </div>
+                <div className="flex justify-center gap-4 pt-2">
+                  <button className="text-slate-400 hover:text-slate-200 transition-colors">
+                    استعادة
+                  </button>
+                  <button className="text-slate-400 hover:text-slate-200 transition-colors">
+                    عرض الأرشيف
+                  </button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* كروت الأقسام */}
+          <div className="lg:col-span-3">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-foreground">الأقسام الرئيسية</h3>
+              <p className="text-sm text-muted-foreground">اختر قسماً لعرض منتجاته</p>
+            </div>
+            <DepartmentOverviewCards 
+              onFilterSelect={setSelectedDepartment}
+              selectedDepartment={selectedDepartment}
+            />
+          </div>
+        </div>
+
         <CategoryFilterCards 
           onFilterChange={setCategoryFilter}
           currentFilters={categoryFilter}
@@ -548,6 +600,8 @@ const InventoryPage = () => {
           setFilters={setFilters}
           categories={allCategories}
           onBarcodeSearch={() => setIsBarcodeScannerOpen(true)}
+          selectedDepartment={selectedDepartment}
+          onDepartmentSelect={setSelectedDepartment}
         />
 
         <InventoryList
