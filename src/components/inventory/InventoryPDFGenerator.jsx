@@ -17,6 +17,13 @@ const InventoryPDFGenerator = ({
         inventoryData.filter(item => selectedItems.includes(item.id)) : 
         inventoryData;
       
+      console.log('البيانات المختارة للتصدير:', {
+        selectedItems,
+        totalInventoryData: inventoryData.length,
+        dataToExport: dataToExport.length,
+        itemNames: dataToExport.map(item => item.name)
+      });
+      
       if (!dataToExport || dataToExport.length === 0) {
         toast({
           title: "لا توجد بيانات للتصدير",
@@ -51,15 +58,29 @@ const InventoryPDFGenerator = ({
       // إزالة العنصر المؤقت
       document.body.removeChild(tempDiv);
 
-      // إنشاء PDF
+      // إنشاء PDF مع صفحات متعددة
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/png');
       
-      // حساب الأبعاد للحصول على جودة عالية
+      // حساب الأبعاد
       const imgWidth = 210; // عرض A4
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pageHeight = 297; // ارتفاع A4
       
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      let position = 0;
+      
+      // إضافة الصفحة الأولى
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      
+      // إضافة صفحات إضافية إذا كان المحتوى أطول من صفحة واحدة
+      let remainingHeight = imgHeight - pageHeight;
+      
+      while (remainingHeight > 0) {
+        position = -pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        remainingHeight -= pageHeight;
+      }
       
       // حفظ الملف
       const fileName = `تقرير_المخزون_${new Date().toISOString().split('T')[0]}.pdf`;
@@ -366,12 +387,14 @@ const InventoryPDFGenerator = ({
                                   <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
                                     متاح: ${variant.available}
                                   </div>
-                                </div>
-                                
-                                <div style="font-size: 9px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 10px; background: ${variant.statusColor}; box-shadow: 0 2px 6px ${variant.statusColor}40; text-align: center;">
-                                  ${variant.status}
-                                </div>
-                              </div>
+                                 </div>
+                                 
+                                 <div style="background: ${variant.statusColor}; border-radius: 8px; padding: 6px 8px; margin-top: 8px;">
+                                   <div style="font-size: 9px; color: white; font-weight: 700; text-align: center; letter-spacing: 0.5px;">
+                                     ${variant.status}
+                                   </div>
+                                 </div>
+                               </div>
                             </div>
                           `).join('')}
                         </div>
