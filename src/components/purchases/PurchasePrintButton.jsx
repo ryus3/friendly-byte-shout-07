@@ -15,17 +15,11 @@ const PurchasePrintButton = ({ purchase }) => {
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
-    }).format(amount || 0) + ' IQD';
+    }).format(amount || 0) + ' د.ع';
   };
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-GB', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return new Date(date).toLocaleDateString('ar-SA');
   };
 
   const generatePrintHTML = (purchase) => {
@@ -251,40 +245,40 @@ const PurchasePrintButton = ({ purchase }) => {
       <body>
         <div class="container">
           <div class="header">
-            <h1 class="title">Purchase Invoice</h1>
-            <p class="company">RYUS BRAND - Inventory Management & Order Tracking</p>
+            <h1 class="title">فاتورة شراء</h1>
+            <p class="company">RYUS BRAND - إدارة المخزون ومتابعة الطلبات</p>
           </div>
           
           <div class="info-section">
             <div class="info-box">
-              <h3>Invoice Details</h3>
+              <h3>معلومات الفاتورة</h3>
               <div class="info-item">
-                <span class="info-label">Invoice #:</span>
-                <span class="info-value">${purchase.purchase_number || 'N/A'}</span>
+                <span class="info-label">رقم الفاتورة:</span>
+                <span class="info-value">${purchase.purchase_number || 'غير محدد'}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">Date:</span>
+                <span class="info-label">التاريخ:</span>
                 <span class="info-value">${formatDate(purchase.purchase_date || purchase.created_at)}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">Status:</span>
-                <span class="info-value">${purchase.status === 'completed' ? 'Completed' : 'Pending'}</span>
+                <span class="info-label">الحالة:</span>
+                <span class="info-value">${purchase.status === 'completed' ? 'مكتملة' : 'معلقة'}</span>
               </div>
             </div>
             
             <div class="info-box">
-              <h3>Supplier Info</h3>
+              <h3>معلومات المورد</h3>
               <div class="info-item">
-                <span class="info-label">Name:</span>
-                <span class="info-value">${purchase.supplier_name || 'N/A'}</span>
+                <span class="info-label">اسم المورد:</span>
+                <span class="info-value">${purchase.supplier_name || 'غير محدد'}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">Contact:</span>
-                <span class="info-value">${purchase.supplier_contact || 'N/A'}</span>
+                <span class="info-label">التواصل:</span>
+                <span class="info-value">${purchase.supplier_contact || 'غير متوفر'}</span>
               </div>
               <div class="info-item">
-                <span class="info-label">Payment:</span>
-                <span class="info-value">${purchase.payment_method === 'cash' ? 'Cash' : 'Transfer'}</span>
+                <span class="info-label">طريقة الدفع:</span>
+                <span class="info-value">${purchase.payment_method === 'cash' ? 'نقداً' : 'تحويل'}</span>
               </div>
             </div>
           </div>
@@ -293,21 +287,21 @@ const PurchasePrintButton = ({ purchase }) => {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Product</th>
-                <th>Color</th>
-                <th>Size</th>
-                <th>Qty</th>
-                <th>Unit Price</th>
-                <th>Total</th>
+                <th>اسم المنتج</th>
+                <th>اللون</th>
+                <th>القياس</th>
+                <th>الكمية</th>
+                <th>سعر الوحدة</th>
+                <th>الإجمالي</th>
               </tr>
             </thead>
             <tbody>
               ${items.map((item, index) => `
                 <tr>
                   <td>${index + 1}</td>
-                  <td>${item.productName || 'N/A'}</td>
-                  <td>${item.color || 'N/A'}</td>
-                  <td>${item.size || 'N/A'}</td>
+                  <td>${item.productName || 'غير محدد'}</td>
+                  <td>${item.color || 'غير محدد'}</td>
+                  <td>${item.size || 'غير محدد'}</td>
                   <td>${item.quantity || 0}</td>
                   <td>${formatCurrency(item.costPrice || 0)}</td>
                   <td>${formatCurrency((item.costPrice || 0) * (item.quantity || 0))}</td>
@@ -318,30 +312,25 @@ const PurchasePrintButton = ({ purchase }) => {
 
           <div class="totals">
             <div class="total-row">
-              <span>Products Total:</span>
+              <span>إجمالي المنتجات:</span>
               <span>${formatCurrency(itemsTotal)}</span>
             </div>
             ${shippingCost > 0 ? `
               <div class="total-row">
-                <span>Shipping:</span>
+                <span>تكلفة الشحن:</span>
                 <span>${formatCurrency(shippingCost)}</span>
               </div>
             ` : ''}
             ${transferCost > 0 ? `
               <div class="total-row">
-                <span>Transfer Fee:</span>
+                <span>تكلفة التحويل:</span>
                 <span>${formatCurrency(transferCost)}</span>
               </div>
             ` : ''}
             <div class="total-row grand-total">
-              <span>Grand Total:</span>
+              <span>المجموع الكلي:</span>
               <span>${formatCurrency(grandTotal)}</span>
             </div>
-          </div>
-
-          <div class="footer">
-            <p>Official Document - Please keep for your records</p>
-            <p>Generated: ${formatDate(new Date())}</p>
           </div>
         </div>
       </body>
@@ -357,7 +346,7 @@ const PurchasePrintButton = ({ purchase }) => {
       className="gap-1 text-blue-600 hover:text-blue-700 border-blue-200 hover:border-blue-300 hover:bg-blue-50"
     >
       <Printer className="h-4 w-4" />
-      Print
+      طباعة
     </Button>
   );
 };
