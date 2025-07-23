@@ -243,17 +243,17 @@ const InventoryPDFGenerator = ({
                   ? item.variants.reduce((sum, v) => sum + (v.price || 0), 0) / item.variants.length 
                   : 0;
                 
-                let status = 'جيد';
+                let status = 'ممتاز';
                 let statusColor = '#10b981';
-                let statusBg = '#10b98115';
+                let statusBg = '#10b98120';
                 if (itemStock === 0) {
                   status = 'نافد';
                   statusColor = '#ef4444';
-                  statusBg = '#ef444415';
+                  statusBg = '#ef444420';
                 } else if (itemStock < 5) {
                   status = 'منخفض';
                   statusColor = '#f59e0b';
-                  statusBg = '#f59e0b15';
+                  statusBg = '#f59e0b20';
                 }
 
                 // عرض تفاصيل المتغيرات المتوفرة بشكل مفصل ومنظم
@@ -267,51 +267,82 @@ const InventoryPDFGenerator = ({
                   const generalVariants = [];
                   
                   availableVariants.forEach(variant => {
+                    const variantStock = variant.quantity || 0;
+                    const variantReserved = variant.reserved_quantity || 0;
+                    const variantAvailable = variantStock - variantReserved;
+                    
+                    // تحديد حالة المخزون للمتغير
+                    let variantStatus = '';
+                    if (variantStock === 0) {
+                      variantStatus = ' (نافد)';
+                    } else if (variantStock < 3) {
+                      variantStatus = ' (منخفض)';
+                    } else {
+                      variantStatus = ' (ممتاز)';
+                    }
+                    
                     if (variant.color && variant.size) {
                       // منتج له لون وقياس
                       if (!variantsByColor[variant.color]) {
                         variantsByColor[variant.color] = [];
                       }
-                      variantsByColor[variant.color].push(variant);
+                      variantsByColor[variant.color].push({
+                        ...variant,
+                        available: variantAvailable,
+                        status: variantStatus
+                      });
                     } else if (variant.size && !variant.color) {
                       // منتج له قياس فقط
-                      variantsBySize[variant.size] = variant;
+                      variantsBySize[variant.size] = {
+                        ...variant,
+                        available: variantAvailable,
+                        status: variantStatus
+                      };
                     } else if (variant.color && !variant.size) {
                       // منتج له لون فقط
-                      variantsByColor[variant.color] = [variant];
+                      if (!variantsByColor[variant.color]) {
+                        variantsByColor[variant.color] = [];
+                      }
+                      variantsByColor[variant.color].push({
+                        ...variant,
+                        available: variantAvailable,
+                        status: variantStatus
+                      });
                     } else {
                       // متغير عام
-                      generalVariants.push(variant);
+                      generalVariants.push({
+                        ...variant,
+                        available: variantAvailable,
+                        status: variantStatus
+                      });
                     }
                   });
 
-                  // عرض المنتجات التي لها ألوان وأقياس
+                  // عرض المنتجات التي لها ألوان
                   if (Object.keys(variantsByColor).length > 0) {
                     variantDetails += Object.entries(variantsByColor).map(([color, variants]) => {
                       if (variants.length > 1 && variants[0].size) {
-                        // لون مع عدة أقياس
+                        // لون مع عدة أقياس - عرض مفصل
+                        const sizesCount = variants.length;
                         const sizesInfo = variants.map(v => {
-                          const stock = v.quantity || 0;
-                          const reserved = v.reserved_quantity || 0;
-                          const available = stock - reserved;
-                          return `${v.size}: ${available} متاح (${stock} إجمالي، ${reserved} محجوز)`;
-                        }).join(' | ');
+                          return `${v.size}: ${v.available} متاح${v.status}`;
+                        }).join(' • ');
                         return `
-                          <div style="margin: 3px 0; padding: 6px 8px; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border-radius: 6px; font-size: 10px; border-right: 4px solid #3b82f6; direction: rtl;">
-                            <div style="font-weight: 700; color: #1e40af; margin-bottom: 2px;">🎨 لون: ${color}</div>
-                            <div style="color: #334155; font-weight: 500;">${sizesInfo}</div>
+                          <div style="margin: 4px 0; padding: 8px 10px; background: linear-gradient(135deg, #eff6ff, #dbeafe); border-radius: 8px; font-size: 11px; border-right: 4px solid #3b82f6; direction: rtl;">
+                            <div style="font-weight: 700; color: #1e40af; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                              🎨 <span>${color}</span> 
+                              <span style="font-size: 9px; background: #3b82f620; padding: 2px 6px; border-radius: 12px;">${sizesCount} أقياس</span>
+                            </div>
+                            <div style="color: #1e40af; font-weight: 500; font-size: 10px; line-height: 1.4;">${sizesInfo}</div>
                           </div>
                         `;
                       } else {
-                        // لون واحد بدون أقياس أو قياس واحد
+                        // لون واحد بدون أقياس
                         const variant = variants[0];
-                        const stock = variant.quantity || 0;
-                        const reserved = variant.reserved_quantity || 0;
-                        const available = stock - reserved;
                         return `
-                          <div style="margin: 3px 0; padding: 6px 8px; background: linear-gradient(135deg, #f1f5f9, #e2e8f0); border-radius: 6px; font-size: 10px; border-right: 4px solid #10b981; direction: rtl;">
-                            <div style="font-weight: 700; color: #047857;">🎨 ${color}</div>
-                            <div style="color: #334155; font-weight: 500;">متاح: ${available} | إجمالي: ${stock} | محجوز: ${reserved} | سعر: ${Math.round(variant.price || 0).toLocaleString()} د.ع</div>
+                          <div style="margin: 4px 0; padding: 8px 10px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 8px; font-size: 11px; border-right: 4px solid #10b981; direction: rtl;">
+                            <div style="font-weight: 700; color: #047857; margin-bottom: 2px;">🎨 ${color}</div>
+                            <div style="color: #059669; font-weight: 500; font-size: 10px;">متاح: ${variant.available} | محجوز: ${variant.reserved_quantity || 0}${variant.status}</div>
                           </div>
                         `;
                       }
@@ -321,13 +352,10 @@ const InventoryPDFGenerator = ({
                   // عرض المنتجات التي لها أقياس فقط
                   if (Object.keys(variantsBySize).length > 0) {
                     variantDetails += Object.entries(variantsBySize).map(([size, variant]) => {
-                      const stock = variant.quantity || 0;
-                      const reserved = variant.reserved_quantity || 0;
-                      const available = stock - reserved;
                       return `
-                        <div style="margin: 3px 0; padding: 6px 8px; background: linear-gradient(135deg, #fefce8, #fef3c7); border-radius: 6px; font-size: 10px; border-right: 4px solid #f59e0b; direction: rtl;">
-                          <div style="font-weight: 700; color: #d97706;">📏 قياس: ${size}</div>
-                          <div style="color: #334155; font-weight: 500;">متاح: ${available} | إجمالي: ${stock} | محجوز: ${reserved} | سعر: ${Math.round(variant.price || 0).toLocaleString()} د.ع</div>
+                        <div style="margin: 4px 0; padding: 8px 10px; background: linear-gradient(135deg, #fefce8, #fef3c7); border-radius: 8px; font-size: 11px; border-right: 4px solid #f59e0b; direction: rtl;">
+                          <div style="font-weight: 700; color: #d97706; margin-bottom: 2px;">📏 قياس: ${size}</div>
+                          <div style="color: #d97706; font-weight: 500; font-size: 10px;">متاح: ${variant.available} | محجوز: ${variant.reserved_quantity || 0}${variant.status}</div>
                         </div>
                       `;
                     }).join('');
@@ -336,26 +364,25 @@ const InventoryPDFGenerator = ({
                   // عرض المتغيرات العامة
                   if (generalVariants.length > 0) {
                     variantDetails += generalVariants.map((variant, idx) => {
-                      const stock = variant.quantity || 0;
-                      const reserved = variant.reserved_quantity || 0;
-                      const available = stock - reserved;
                       return `
-                        <div style="margin: 3px 0; padding: 6px 8px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 6px; font-size: 10px; border-right: 4px solid #10b981; direction: rtl;">
-                          <div style="font-weight: 700; color: #047857;">📦 متغير ${idx + 1}</div>
-                          <div style="color: #334155; font-weight: 500;">متاح: ${available} | إجمالي: ${stock} | محجوز: ${reserved} | سعر: ${Math.round(variant.price || 0).toLocaleString()} د.ع</div>
+                        <div style="margin: 4px 0; padding: 8px 10px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 8px; font-size: 11px; border-right: 4px solid #64748b; direction: rtl;">
+                          <div style="font-weight: 700; color: #475569; margin-bottom: 2px;">📦 منتج عام</div>
+                          <div style="color: #475569; font-weight: 500; font-size: 10px;">متاح: ${variant.available} | محجوز: ${variant.reserved_quantity || 0}${variant.status}</div>
                         </div>
                       `;
                     }).join('');
                   }
                 } else {
-                  variantDetails = '<div style="font-size: 10px; color: #64748b; padding: 4px; direction: rtl;">لا توجد متغيرات متوفرة</div>';
+                  variantDetails = '<div style="font-size: 10px; color: #64748b; padding: 6px; text-align: center; direction: rtl; background: #f9fafb; border-radius: 6px; border: 1px dashed #d1d5db;">لا توجد متغيرات متوفرة</div>';
                 }
 
                 return `
                   <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'};">
                     <td style="padding: 10px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; direction: rtl;">
-                      <div style="font-weight: 700; color: #1e293b; margin-bottom: 3px; direction: rtl;">${item.name || 'منتج بدون اسم'}</div>
-                      <div style="font-size: 8px; color: #64748b; margin-bottom: 4px; direction: rtl;">${item.category || 'بدون تصنيف'}</div>
+                      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <div style="font-weight: 800; color: #1e293b; font-size: 12px; direction: rtl;">${item.name || 'منتج بدون اسم'}</div>
+                        ${avgPrice > 0 ? `<div style="font-size: 9px; color: #059669; font-weight: 600; background: #10b98115; padding: 2px 6px; border-radius: 6px; border: 1px solid #10b98130;">${Math.round(avgPrice).toLocaleString()} د.ع</div>` : ''}
+                      </div>
                       ${variantDetails}
                     </td>
                     <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #6366f1;">${availableVariants.length}</td>
