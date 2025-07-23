@@ -114,10 +114,20 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
                         variant={selectedVariant.id === variant.id ? 'default' : 'outline'}
                         onClick={() => handleVariantSelect(variant)}
                         disabled={variant.quantity === 0}
-                        className="relative"
+                        className={`relative ${variant.quantity === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        {variant.size}
-                        {variant.quantity === 0 && <span className="absolute -top-1 -right-1 block h-2 w-2 rounded-full bg-red-500 border border-background"></span>}
+                        <div className="flex flex-col items-center gap-1">
+                          <span>{variant.size}</span>
+                          {variant.quantity === 0 ? (
+                            <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">نافذ</span>
+                          ) : variant.stockLevel === 'low' ? (
+                            <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">منخفض</span>
+                          ) : variant.stockLevel === 'medium' ? (
+                            <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">متوسط</span>
+                          ) : (
+                            <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">جيد</span>
+                          )}
+                        </div>
                       </Button>
                     ))}
                   </div>
