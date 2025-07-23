@@ -1,32 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
-  // إضافة حماية للتأكد من وجود React
-  if (!React || !React.useState) {
-    console.error('useUnifiedPermissions: React hooks not available');
-    return {
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {},
-      loading: false,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      hasRole: () => false,
-      hasPermission: () => false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: (data) => data || [],
-      filterProductsByPermissions: (products) => products || [],
-      getEmployeeStats: () => ({ total: 0, personal: 0 })
-    };
-  }
-
+  // الحصول على الـ auth context
   const auth = useAuth();
   
   // Defensive programming - ensure we have React context
