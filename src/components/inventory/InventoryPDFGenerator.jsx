@@ -36,20 +36,17 @@ const InventoryPDFGenerator = ({
       console.log('✅ إنشاء PDF بدأ...', dataToExport.length, 'منتج');
 
       // إنشاء PDF جديد
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
       
-      // إضافة خط عربي (استخدام خط افتراضي يدعم العربية)
-      pdf.setFont('helvetica');
-      
-      await createPDFContent(pdf, dataToExport, filters, selectedItems.length > 0);
+      // إنشاء المحتوى
+      await createProfessionalPDF(pdf, dataToExport, filters, selectedItems.length > 0);
 
       // حفظ PDF
-      const fileName = selectedItems.length > 0 
-        ? `تقرير_الجرد_المحدد_${new Date().toISOString().split('T')[0]}.pdf`
-        : Object.keys(filters).some(key => filters[key] && filters[key] !== 'all' && filters[key] !== '')
-          ? `تقرير_الجرد_المفلتر_${new Date().toISOString().split('T')[0]}.pdf`
-          : `تقرير_الجرد_الشامل_${new Date().toISOString().split('T')[0]}.pdf`;
-
+      const fileName = getFileName(selectedItems.length > 0, filters);
       pdf.save(fileName);
 
       toast({
@@ -59,105 +56,132 @@ const InventoryPDFGenerator = ({
       });
 
     } catch (error) {
-      console.error('خطأ في إنشاء PDF:', error);
+      console.error('❌ خطأ في إنشاء PDF:', error);
       toast({
         title: "خطأ في إنشاء التقرير",
-        description: "حدث خطأ أثناء إنشاء PDF",
+        description: `حدث خطأ: ${error.message}`,
         variant: "destructive"
       });
     }
   };
 
-  const createPDFContent = async (pdf, data, filters, isFiltered) => {
+  const createProfessionalPDF = async (pdf, data, filters, isFiltered) => {
     const pageWidth = 210;
     const pageHeight = 297;
-    const margin = 20;
+    const margin = 15;
     const contentWidth = pageWidth - (margin * 2);
     
-    // ألوان الموقع
+    // الألوان المطابقة للموقع
     const colors = {
-      primary: [59, 130, 246],      // أزرق
-      secondary: [147, 51, 234],    // بنفسجي
-      success: [34, 197, 94],       // أخضر
-      warning: [251, 146, 60],      // برتقالي
-      danger: [239, 68, 68],        // أحمر
-      dark: [30, 41, 59],           // رمادي داكن
-      light: [248, 250, 252]        // رمادي فاتح
+      primary: [59, 130, 246],
+      secondary: [147, 51, 234], 
+      success: [34, 197, 94],
+      warning: [251, 146, 60],
+      danger: [239, 68, 68],
+      dark: [30, 41, 59],
+      light: [248, 250, 252],
+      white: [255, 255, 255]
     };
 
     let currentY = margin;
 
-    // غلاف التقرير
-    currentY = await createCoverPage(pdf, pageWidth, pageHeight, margin, colors, isFiltered);
+    // الغلاف
+    currentY = createCoverPage(pdf, pageWidth, pageHeight, margin, colors, isFiltered);
     
-    // صفحة جديدة للمحتوى
+    // صفحة جديدة
     pdf.addPage();
     currentY = margin;
 
     // الإحصائيات
     const stats = calculateInventoryStats(data);
-    currentY = await createStatsSection(pdf, stats, margin, contentWidth, currentY, colors);
+    currentY = createStatsCards(pdf, stats, margin, contentWidth, currentY, colors);
     
     // الجدول
-    currentY = await createInventoryTable(pdf, data, margin, contentWidth, currentY, colors, pageHeight);
+    currentY = createDataTable(pdf, data, margin, contentWidth, currentY, colors, pageHeight);
     
     // التوقيع
-    await createSignatureSection(pdf, margin, contentWidth, pageHeight - 60, colors);
+    createFooter(pdf, margin, contentWidth, pageHeight - 40, colors);
   };
 
-  const createCoverPage = async (pdf, pageWidth, pageHeight, margin, colors, isFiltered) => {
-    // خلفية متدرجة (محاكاة)
-    pdf.setFillColor(colors.primary[0], colors.primary[1], colors.primary[2]);
-    pdf.rect(0, 0, pageWidth, pageHeight / 2, 'F');
-    
-    pdf.setFillColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
-    pdf.rect(0, pageHeight / 2, pageWidth, pageHeight / 2, 'F');
+  const createCoverPage = (pdf, pageWidth, pageHeight, margin, colors, isFiltered) => {
+    // خلفية متدرجة (تقليد التدرج بألوان متعددة)
+    for (let i = 0; i < pageHeight; i += 5) {
+      const ratio = i / pageHeight;
+      const r = Math.round(colors.primary[0] + (colors.secondary[0] - colors.primary[0]) * ratio);
+      const g = Math.round(colors.primary[1] + (colors.secondary[1] - colors.primary[1]) * ratio);
+      const b = Math.round(colors.primary[2] + (colors.secondary[2] - colors.primary[2]) * ratio);
+      
+      pdf.setFillColor(r, g, b);
+      pdf.rect(0, i, pageWidth, 5, 'F');
+    }
 
     // العنوان الرئيسي
     pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(28);
-    pdf.text('تقرير الجرد الاحترافي', pageWidth / 2, 80, { align: 'center' });
+    pdf.setFontSize(32);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('تقرير الجرد الاحترافي', pageWidth / 2, 70, { align: 'center' });
 
-    // التاريخ
-    const currentDate = new Date().toLocaleDateString('ar-EG', {
+    // التاريخ والوقت بالميلادي والأرقام الإنجليزية
+    const now = new Date();
+    const dateOptions = {
       year: 'numeric',
-      month: 'long',
+      month: 'long', 
       day: 'numeric',
       weekday: 'long'
-    });
+    };
+    const timeOptions = {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    };
+    
+    const arabicDate = now.toLocaleDateString('ar-EG', dateOptions);
+    const englishTime = now.toLocaleTimeString('en-US', timeOptions);
     
     pdf.setFontSize(16);
-    pdf.text(currentDate, pageWidth / 2, 100, { align: 'center' });
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${arabicDate}`, pageWidth / 2, 90, { align: 'center' });
+    pdf.text(`${englishTime}`, pageWidth / 2, 105, { align: 'center' });
 
-    // مربع المعلومات
-    const boxY = 120;
-    const boxHeight = 80;
+    // مربع المعلومات مع تدرج
+    const boxY = 130;
+    const boxHeight = 60;
+    const boxX = margin + 20;
+    const boxWidth = contentWidth - 40;
     
-    pdf.setFillColor(255, 255, 255, 0.9);
-    pdf.roundedRect(margin + 20, boxY, contentWidth - 40, boxHeight, 5, 5, 'F');
+    // خلفية المربع بلون شفاف
+    pdf.setFillColor(255, 255, 255);
+    pdf.setGState(new pdf.GState({opacity: 0.9}));
+    pdf.roundedRect(boxX, boxY, boxWidth, boxHeight, 8, 8, 'F');
+    pdf.setGState(new pdf.GState({opacity: 1}));
     
+    // نص المربع
     pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(20);
-    pdf.text('ملخص التقرير', pageWidth / 2, boxY + 20, { align: 'center' });
-
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('تقرير شامل للمخزون', pageWidth / 2, boxY + 25, { align: 'center' });
+    
     if (isFiltered) {
       pdf.setFontSize(12);
-      pdf.text('📋 تقرير مفلتر - تم تطبيق فلاتر مخصصة', pageWidth / 2, boxY + 40, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('📋 تم تطبيق فلاتر مخصصة على البيانات', pageWidth / 2, boxY + 45, { align: 'center' });
     }
 
     return pageHeight;
   };
 
-  const createStatsSection = async (pdf, stats, margin, contentWidth, startY, colors) => {
+  const createStatsCards = (pdf, stats, margin, contentWidth, startY, colors) => {
     let currentY = startY + 20;
     
-    // عنوان القسم
+    // عنوان الإحصائيات
     pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(18);
-    pdf.text('إحصائيات المخزون', margin, currentY);
-    currentY += 15;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('ملخص الإحصائيات', margin, currentY);
+    currentY += 20;
 
-    // الإحصائيات في صفوف
+    // بطاقات الإحصائيات
     const statsData = [
       { label: 'متوفر جيد', value: stats.good, color: colors.success },
       { label: 'متوسط', value: stats.medium, color: colors.warning },
@@ -165,55 +189,58 @@ const InventoryPDFGenerator = ({
       { label: 'نافذ', value: stats.outOfStock, color: colors.dark }
     ];
 
-    const boxWidth = contentWidth / 4 - 5;
-    const boxHeight = 30;
+    const cardWidth = (contentWidth - 15) / 4; // 15 = spacing between cards
+    const cardHeight = 35;
 
     statsData.forEach((stat, index) => {
-      const x = margin + (index * (boxWidth + 6.67));
+      const x = margin + (index * (cardWidth + 5));
       
-      // صندوق الإحصائية
+      // خلفية البطاقة
       pdf.setFillColor(stat.color[0], stat.color[1], stat.color[2]);
-      pdf.roundedRect(x, currentY, boxWidth, boxHeight, 3, 3, 'F');
+      pdf.roundedRect(x, currentY, cardWidth, cardHeight, 5, 5, 'F');
       
       // النص
       pdf.setTextColor(255, 255, 255);
-      pdf.setFontSize(16);
-      pdf.text(stat.value.toString(), x + boxWidth/2, currentY + 12, { align: 'center' });
+      pdf.setFontSize(20);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(stat.value.toString(), x + cardWidth/2, currentY + 15, { align: 'center' });
       
       pdf.setFontSize(10);
-      pdf.text(stat.label, x + boxWidth/2, currentY + 22, { align: 'center' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(stat.label, x + cardWidth/2, currentY + 28, { align: 'center' });
     });
 
-    return currentY + boxHeight + 20;
+    return currentY + cardHeight + 25;
   };
 
-  const createInventoryTable = async (pdf, data, margin, contentWidth, startY, colors, pageHeight) => {
+  const createDataTable = (pdf, data, margin, contentWidth, startY, colors, pageHeight) => {
     let currentY = startY;
     
     // عنوان الجدول
     pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(16);
-    pdf.text('تفاصيل المخزون', margin, currentY);
-    currentY += 10;
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('تفاصيل المنتجات', margin, currentY);
+    currentY += 15;
 
-    // رأس الجدول
+    // إعدادات الجدول
     const headerHeight = 12;
-    const rowHeight = 10;
+    const rowHeight = 8;
     const columns = [
-      { label: 'المنتج', width: contentWidth * 0.3 },
-      { label: 'الرمز', width: contentWidth * 0.2 },
-      { label: 'المتغيرات', width: contentWidth * 0.25 },
-      { label: 'المخزون', width: contentWidth * 0.15 },
+      { label: 'اسم المنتج', width: contentWidth * 0.35 },
+      { label: 'الكود', width: contentWidth * 0.15 },
+      { label: 'المتغيرات', width: contentWidth * 0.3 },
+      { label: 'المخزون', width: contentWidth * 0.1 },
       { label: 'الحالة', width: contentWidth * 0.1 }
     ];
 
-    // خلفية رأس الجدول
+    // رأس الجدول
     pdf.setFillColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.rect(margin, currentY, contentWidth, headerHeight, 'F');
     
-    // نص رأس الجدول
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
     
     let xPos = margin;
     columns.forEach(col => {
@@ -223,13 +250,14 @@ const InventoryPDFGenerator = ({
     
     currentY += headerHeight;
 
-    // بيانات الجدول
+    // صفوف البيانات
     pdf.setTextColor(colors.dark[0], colors.dark[1], colors.dark[2]);
     pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
 
     data.forEach((product, index) => {
       // فحص إذا كنا بحاجة لصفحة جديدة
-      if (currentY > pageHeight - 40) {
+      if (currentY > pageHeight - 50) {
         pdf.addPage();
         currentY = margin;
       }
@@ -244,57 +272,60 @@ const InventoryPDFGenerator = ({
       }
 
       // البيانات
-      let xPos = margin;
+      xPos = margin;
       
       // اسم المنتج
-      pdf.text(truncateText(product.name || 'غير محدد', 25), xPos + 2, currentY + 6);
+      const productName = truncateText(product.name || 'غير محدد', 30);
+      pdf.text(productName, xPos + 5, currentY + 5);
       xPos += columns[0].width;
       
-      // الرمز
-      pdf.text(product.sku || 'N/A', xPos + 2, currentY + 6);
+      // الكود
+      pdf.text(product.sku || 'N/A', xPos + 5, currentY + 5);
       xPos += columns[1].width;
       
       // المتغيرات
-      const variantsText = formatVariantsForPDF(product.variants);
-      pdf.text(truncateText(variantsText, 20), xPos + 2, currentY + 6);
+      const variantsText = formatVariantsSimple(product.variants);
+      pdf.text(truncateText(variantsText, 25), xPos + 5, currentY + 5);
       xPos += columns[2].width;
       
-      // المخزون
-      pdf.text(totalStock.toString(), xPos + columns[3].width/2, currentY + 6, { align: 'center' });
+      // المخزون (أرقام إنجليزية)
+      pdf.text(totalStock.toString(), xPos + columns[3].width/2, currentY + 5, { align: 'center' });
       xPos += columns[3].width;
       
       // الحالة
-      const status = getStockStatusText(totalStock);
-      pdf.text(status, xPos + columns[4].width/2, currentY + 6, { align: 'center' });
+      const status = getStockStatusSimple(totalStock);
+      pdf.text(status, xPos + columns[4].width/2, currentY + 5, { align: 'center' });
 
       currentY += rowHeight;
     });
 
-    return currentY + 10;
+    return currentY + 15;
   };
 
-  const createSignatureSection = async (pdf, margin, contentWidth, startY, colors) => {
+  const createFooter = (pdf, margin, contentWidth, startY, colors) => {
     // خط فاصل
     pdf.setDrawColor(colors.dark[0], colors.dark[1], colors.dark[2]);
+    pdf.setLineWidth(0.5);
     pdf.line(margin, startY, margin + contentWidth, startY);
     
     // التوقيعات
-    const signatureY = startY + 20;
+    const signatureY = startY + 15;
     const signatureWidth = contentWidth / 2 - 10;
     
-    pdf.setFontSize(12);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
     pdf.text('توقيع المسؤول', margin + signatureWidth/2, signatureY, { align: 'center' });
     pdf.text('ختم الشركة', margin + contentWidth/2 + 10 + signatureWidth/2, signatureY, { align: 'center' });
     
     // خطوط التوقيع
-    pdf.line(margin, signatureY + 10, margin + signatureWidth, signatureY + 10);
-    pdf.line(margin + contentWidth/2 + 10, signatureY + 10, margin + contentWidth, signatureY + 10);
+    pdf.line(margin, signatureY + 8, margin + signatureWidth, signatureY + 8);
+    pdf.line(margin + contentWidth/2 + 10, signatureY + 8, margin + contentWidth, signatureY + 8);
     
     // تاريخ الإنشاء
-    pdf.setFontSize(8);
+    pdf.setFontSize(7);
     pdf.setTextColor(100, 100, 100);
-    pdf.text(`تم إنشاؤه آلياً في ${new Date().toLocaleString('ar-EG')}`, 
-             margin + contentWidth/2, signatureY + 25, { align: 'center' });
+    const createdAt = new Date().toLocaleString('en-US');
+    pdf.text(`تم الإنشاء: ${createdAt}`, margin + contentWidth/2, signatureY + 20, { align: 'center' });
   };
 
   // دوال مساعدة
@@ -317,7 +348,7 @@ const InventoryPDFGenerator = ({
     return variants.reduce((total, variant) => total + (parseInt(variant.stock_quantity) || 0), 0);
   };
 
-  const formatVariantsForPDF = (variants) => {
+  const formatVariantsSimple = (variants) => {
     if (!variants || !Array.isArray(variants) || variants.length === 0) {
       return 'لا توجد متغيرات';
     }
@@ -326,13 +357,13 @@ const InventoryPDFGenerator = ({
       const parts = [];
       if (variant.size_name) parts.push(variant.size_name);
       if (variant.color_name) parts.push(variant.color_name);
-      const variantName = parts.join(' × ') || 'أساسي';
+      const variantName = parts.join('×') || 'أساسي';
       const stock = parseInt(variant.stock_quantity) || 0;
-      return `${variantName}: ${stock}`;
+      return `${variantName}:${stock}`;
     }).join(', ');
   };
 
-  const getStockStatusText = (totalStock) => {
+  const getStockStatusSimple = (totalStock) => {
     if (totalStock === 0) return 'نافذ';
     if (totalStock <= 5) return 'منخفض';
     if (totalStock <= 20) return 'متوسط';
@@ -342,6 +373,15 @@ const InventoryPDFGenerator = ({
   const truncateText = (text, maxLength) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength - 3) + '...';
+  };
+
+  const getFileName = (isSelected, filters) => {
+    const date = new Date().toISOString().split('T')[0];
+    if (isSelected) return `تقرير_الجرد_المحدد_${date}.pdf`;
+    if (Object.keys(filters).some(key => filters[key] && filters[key] !== 'all' && filters[key] !== '')) {
+      return `تقرير_الجرد_المفلتر_${date}.pdf`;
+    }
+    return `تقرير_الجرد_الشامل_${date}.pdf`;
   };
 
   return (
