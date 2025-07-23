@@ -519,14 +519,6 @@ const InventoryPage = () => {
             <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
           </div>
           
-          <div className="flex gap-3">
-            <InventoryPDFGenerator 
-              inventoryData={filteredItems}
-              selectedItems={selectedItemsForExport}
-              filters={filters}
-              isLoading={loading}
-            />
-          </div>
         </div>
         
         <InventoryStats
@@ -538,10 +530,36 @@ const InventoryPage = () => {
           onRestoreProduct={() => console.log('restore product')}
         />
 
-        <CategoryFilterCards 
-          onFilterChange={setCategoryFilter}
-          currentFilters={categoryFilter}
-        />
+        <div className="grid lg:grid-cols-2 gap-4">
+          <CategoryFilterCards 
+            onFilterChange={setCategoryFilter}
+            currentFilters={categoryFilter}
+          />
+          <div className="bg-gradient-to-br from-card/90 to-card border rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                  <Package className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">أرشيف المنتجات</h3>
+                  <p className="text-sm text-muted-foreground">{filteredItems.length} منتج</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedItemsForExport([])}
+                  disabled={selectedItemsForExport.length === 0}
+                  className="text-xs"
+                >
+                  إلغاء التحديد ({selectedItemsForExport.length})
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <InventoryFilters
           filters={filters}
