@@ -31,14 +31,7 @@ export const useSimplePurchases = () => {
 
   // إضافة فاتورة شراء جديدة
   const addPurchase = async (purchaseData) => {
-    console.log('🛒 بدء إضافة فاتورة شراء جديدة');
-    
-    // منع الاستدعاءات المتكررة
-    if (loading) {
-      console.log('⚠️ تم تجاهل الاستدعاء - عملية قيد التنفيذ');
-      return { success: false, error: 'عملية إضافة فاتورة قيد التنفيذ بالفعل' };
-    }
-    
+    console.log('🛒 بدء إضافة فاتورة شراء جديدة:', purchaseData);
     setLoading(true);
     
     try {
@@ -89,15 +82,9 @@ export const useSimplePurchases = () => {
         await processProductSimple(item, newPurchase, user.id);
       }
 
-      // 4. خصم المبلغ الكلي مرة واحدة من مصدر النقد
+      // 4. تحديث رصيد مصدر النقد
       if (purchaseData.cashSourceId) {
-        console.log('💳 خصم المبلغ من مصدر النقد:', {
-          amount: grandTotal,
-          cashSourceId: purchaseData.cashSourceId,
-          purchaseId: newPurchase.id
-        });
-        
-        const { data: cashResult, error: cashError } = await supabase.rpc('update_cash_source_balance', {
+        const result = await supabase.rpc('update_cash_source_balance', {
           p_cash_source_id: purchaseData.cashSourceId,
           p_amount: grandTotal,
           p_movement_type: 'out',
@@ -107,93 +94,8 @@ export const useSimplePurchases = () => {
           p_created_by: user.id
         });
 
-        if (cashError) {
-          console.error('خطأ في تحديث رصيد مصدر النقد:', cashError);
-          throw cashError;
-        }
-        
-        console.log('✅ تم خصم المبلغ من مصدر النقد بنجاح:', cashResult);
-      }
-
-      // 5. إنشاء سجلات المصاريف للتتبع فقط (بدون خصم مصدر النقد)
-      const expensePromises = [];
-      
-      // مصروف الشراء (تكلفة المنتجات)
-      if (itemsTotal > 0) {
-        expensePromises.push(supabase
-          .from('expenses')
-          .insert({
-            category: 'شراء',
-            expense_type: 'purchase',
-            amount: itemsTotal,
-            description: `شراء مواد - فاتورة رقم ${newPurchase.purchase_number}`,
-            receipt_number: newPurchase.purchase_number,
-            vendor_name: purchaseData.supplier,
-            status: 'approved',
-            created_by: user.id,
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            metadata: {
-              purchase_reference_id: newPurchase.id,
-              auto_approved: true,
-              cash_deducted_via_purchase: true
-            }
-          }));
-      }
-
-      // مصروف الشحن
-      if (shippingCost > 0) {
-        expensePromises.push(supabase
-          .from('expenses')
-          .insert({
-            category: 'شحن ونقل',
-            expense_type: 'shipping',
-            amount: shippingCost,
-            description: `مصاريف شحن - فاتورة رقم ${newPurchase.purchase_number}`,
-            receipt_number: `${newPurchase.purchase_number}-SHIP`,
-            vendor_name: purchaseData.supplier,
-            status: 'approved',
-            created_by: user.id,
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            metadata: {
-              purchase_reference_id: newPurchase.id,
-              auto_approved: true,
-              cash_deducted_via_purchase: true
-            }
-          }));
-      }
-
-      // مصروف التحويل
-      if (transferCost > 0) {
-        expensePromises.push(supabase
-          .from('expenses')
-          .insert({
-            category: 'تكاليف تحويل',
-            expense_type: 'transfer',
-            amount: transferCost,
-            description: `تكاليف تحويل - فاتورة رقم ${newPurchase.purchase_number}`,
-            receipt_number: `${newPurchase.purchase_number}-TRANSFER`,
-            vendor_name: purchaseData.supplier,
-            status: 'approved',
-            created_by: user.id,
-            approved_by: user.id,
-            approved_at: new Date().toISOString(),
-            metadata: {
-              purchase_reference_id: newPurchase.id,
-              auto_approved: true,
-              cash_deducted_via_purchase: true
-            }
-          }));
-      }
-
-      // تنفيذ جميع المصاريف مرة واحدة
-      if (expensePromises.length > 0) {
-        const expenseResults = await Promise.all(expensePromises);
-        for (const result of expenseResults) {
-          if (result.error) {
-            console.error('خطأ في إنشاء مصروف:', result.error);
-          }
+        if (result.error) {
+          console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
         }
       }
 
@@ -380,8 +282,8 @@ const createNewProduct = async (productName, item, userId) => {
 
 // إنشاء متغير لمنتج
 const createVariantForProduct = async (productId, item) => {
-  // استخراج اللون والقياس من اسم المنتج بدلاً من القيم الافتراضية
-  const { colorId, sizeId } = await extractOrCreateColorAndSize(item.productName);
+  // الحصول على أو إنشاء لون وقياس افتراضي
+  const { colorId, sizeId } = await getOrCreateDefaultColorSize();
   
   const { data: newVariant, error } = await supabase
     .from('product_variants')
@@ -403,156 +305,44 @@ const createVariantForProduct = async (productId, item) => {
   return newVariant.id;
 };
 
-// استخراج اللون والقياس من اسم المنتج وإنشاؤهما إذا لم يكونا موجودين
-const extractOrCreateColorAndSize = async (productName) => {
-  console.log('🎨 استخراج اللون والقياس من:', productName);
-  
-  // قوائم الألوان والقياسات المعروفة
-  const colorMap = {
-    'ليموني': { name: 'ليموني', hex: '#FFFF00' },
-    'سمائي': { name: 'سمائي', hex: '#87CEEB' },
-    'سماوي': { name: 'سمائي', hex: '#87CEEB' },
-    'جوزي': { name: 'جوزي', hex: '#8B4513' },
-    'أسود': { name: 'أسود', hex: '#000000' },
-    'أبيض': { name: 'أبيض', hex: '#FFFFFF' },
-    'أحمر': { name: 'أحمر', hex: '#FF0000' },
-    'أزرق': { name: 'أزرق', hex: '#0000FF' },
-    'ازرق': { name: 'أزرق', hex: '#0000FF' },
-    'أخضر': { name: 'أخضر', hex: '#008000' },
-    'وردي': { name: 'وردي', hex: '#FFC0CB' },
-    'بنفسجي': { name: 'بنفسجي', hex: '#8A2BE2' },
-    'بني': { name: 'بني', hex: '#A52A2A' },
-    'رمادي': { name: 'رمادي', hex: '#808080' },
-    'بيج': { name: 'بيج', hex: '#F5F5DC' }
-  };
-  
-  const sizeMap = {
-    'S': { name: 'S', type: 'letter' },
-    'M': { name: 'M', type: 'letter' },
-    'L': { name: 'L', type: 'letter' },
-    'XL': { name: 'XL', type: 'letter' },
-    'XXL': { name: 'XXL', type: 'letter' },
-    'فري': { name: 'فري', type: 'letter' },
-    'صغير': { name: 'صغير', type: 'letter' },
-    'متوسط': { name: 'متوسط', type: 'letter' },
-    'كبير': { name: 'كبير', type: 'letter' },
-    '36': { name: '36', type: 'number' },
-    '38': { name: '38', type: 'number' },
-    '40': { name: '40', type: 'number' },
-    '42': { name: '42', type: 'number' },
-    '44': { name: '44', type: 'number' },
-    '46': { name: '46', type: 'number' },
-    '48': { name: '48', type: 'number' },
-    '50': { name: '50', type: 'number' }
-  };
-  
-  const words = productName.split(' ');
-  let detectedColor = null;
-  let detectedSize = null;
-  
-  // البحث عن اللون في اسم المنتج
-  for (const word of words) {
-    if (colorMap[word]) {
-      detectedColor = colorMap[word];
-      break;
-    }
-  }
-  
-  // البحث عن القياس في اسم المنتج
-  for (const word of words) {
-    if (sizeMap[word]) {
-      detectedSize = sizeMap[word];
-      break;
-    }
-  }
-  
-  console.log('🔍 تم اكتشاف:', { detectedColor, detectedSize });
-  
-  // الحصول على أو إنشاء اللون
-  let colorId;
-  if (detectedColor) {
-    let { data: existingColor } = await supabase
+// الحصول على أو إنشاء لون وقياس افتراضي
+const getOrCreateDefaultColorSize = async () => {
+  // البحث عن اللون الافتراضي أو إنشاؤه
+  let { data: defaultColor } = await supabase
+    .from('colors')
+    .select('id')
+    .eq('name', 'افتراضي')
+    .limit(1);
+
+  if (!defaultColor?.length) {
+    const { data: newColor } = await supabase
       .from('colors')
+      .insert({ name: 'افتراضي', hex_code: '#808080' })
       .select('id')
-      .eq('name', detectedColor.name)
-      .limit(1);
-      
-    if (existingColor?.length > 0) {
-      colorId = existingColor[0].id;
-      console.log('✅ اللون موجود:', detectedColor.name);
-    } else {
-      const { data: newColor } = await supabase
-        .from('colors')
-        .insert({ name: detectedColor.name, hex_code: detectedColor.hex })
-        .select('id')
-        .single();
-      colorId = newColor.id;
-      console.log('🆕 تم إنشاء لون جديد:', detectedColor.name);
-    }
-  } else {
-    // إنشاء لون افتراضي إذا لم يتم العثور على أي لون
-    let { data: defaultColor } = await supabase
-      .from('colors')
-      .select('id')
-      .eq('name', 'افتراضي')
-      .limit(1);
-      
-    if (!defaultColor?.length) {
-      const { data: newColor } = await supabase
-        .from('colors')
-        .insert({ name: 'افتراضي', hex_code: '#808080' })
-        .select('id')
-        .single();
-      colorId = newColor.id;
-    } else {
-      colorId = defaultColor[0].id;
-    }
-    console.log('⚠️ لم يتم العثور على لون، استخدام الافتراضي');
+      .single();
+    defaultColor = [newColor];
   }
-  
-  // الحصول على أو إنشاء القياس
-  let sizeId;
-  if (detectedSize) {
-    let { data: existingSize } = await supabase
+
+  // البحث عن القياس الافتراضي أو إنشاؤه  
+  let { data: defaultSize } = await supabase
+    .from('sizes')
+    .select('id')
+    .eq('name', 'افتراضي')
+    .limit(1);
+
+  if (!defaultSize?.length) {
+    const { data: newSize } = await supabase
       .from('sizes')
+      .insert({ name: 'افتراضي', type: 'letter' })
       .select('id')
-      .eq('name', detectedSize.name)
-      .limit(1);
-      
-    if (existingSize?.length > 0) {
-      sizeId = existingSize[0].id;
-      console.log('✅ القياس موجود:', detectedSize.name);
-    } else {
-      const { data: newSize } = await supabase
-        .from('sizes')
-        .insert({ name: detectedSize.name, type: detectedSize.type })
-        .select('id')
-        .single();
-      sizeId = newSize.id;
-      console.log('🆕 تم إنشاء قياس جديد:', detectedSize.name);
-    }
-  } else {
-    // إنشاء قياس افتراضي إذا لم يتم العثور على أي قياس
-    let { data: defaultSize } = await supabase
-      .from('sizes')
-      .select('id')
-      .eq('name', 'افتراضي')
-      .limit(1);
-      
-    if (!defaultSize?.length) {
-      const { data: newSize } = await supabase
-        .from('sizes')
-        .insert({ name: 'افتراضي', type: 'letter' })
-        .select('id')
-        .single();
-      sizeId = newSize.id;
-    } else {
-      sizeId = defaultSize[0].id;
-    }
-    console.log('⚠️ لم يتم العثور على قياس، استخدام الافتراضي');
+      .single();
+    defaultSize = [newSize];
   }
-  
-  return { colorId, sizeId };
+
+  return {
+    colorId: defaultColor[0].id,
+    sizeId: defaultSize[0].id
+  };
 };
 
 // إضافة عنصر للفاتورة
@@ -630,4 +420,3 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
   if (error) throw error;
   console.log('✅ تم إضافة سجل التكلفة');
 };
-
