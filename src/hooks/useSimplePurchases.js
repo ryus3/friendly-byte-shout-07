@@ -203,49 +203,93 @@ async function processProductSimple(item, purchase, userId) {
     let variantId;
 
     if (existingProducts?.length > 0) {
-      // المنتج موجود - البحث عن متغير مناسب بنفس الباركود أولاً
+      // المنتج موجود - البحث عن المتغير المحدد بناءً على اللون والقياس
       productId = existingProducts[0].id;
       console.log('✅ المنتج موجود:', existingProducts[0].name, 'ID:', existingProducts[0].id);
       
-      // البحث عن متغير بنفس الباركود أولاً
-      console.log('🔍 البحث عن متغير بالباركود:', item.variantSku);
-      const { data: exactVariant, error: exactError } = await supabase
-        .from('product_variants')
-        .select('id, barcode, sku')
-        .eq('product_id', productId)
-        .or(`barcode.eq.${item.variantSku},sku.eq.${item.variantSku}`)
-        .limit(1);
-
-      if (exactError) {
-        console.error('❌ خطأ في البحث عن المتغير المحدد:', exactError);
-        throw exactError;
+      // استخراج اللون والقياس من اسم المنتج الكامل
+      const fullProductName = item.productName; // مثال: "سوت شيك ليموني 36"
+      const baseProductName = existingProducts[0].name; // مثال: "سوت شيك"
+      const variantInfo = fullProductName.replace(baseProductName, '').trim(); // "ليموني 36"
+      
+      console.log('🔍 معلومات المتغير:', variantInfo);
+      
+      // البحث عن اللون والقياس في قاعدة البيانات
+      let colorId = null;
+      let sizeId = null;
+      
+      // البحث عن اللون (ليموني)
+      const colorWords = variantInfo.split(' ').filter(word => isNaN(word));
+      if (colorWords.length > 0) {
+        const { data: colors } = await supabase
+          .from('colors')
+          .select('id, name')
+          .ilike('name', `%${colorWords[0]}%`)
+          .limit(1);
+        if (colors?.length > 0) colorId = colors[0].id;
       }
-
-      if (exactVariant?.length > 0) {
-        // وجد نفس المتغير تماماً
-        variantId = exactVariant[0].id;
-        console.log('✅ تم العثور على نفس المتغير:', exactVariant[0].barcode);
-      } else {
-        // البحث عن أي متغير للمنتج لاستخدامه
-        console.log('🔍 البحث عن أي متغير للمنتج:', productId);
-        const { data: existingVariants, error: variantsError } = await supabase
+      
+      // البحث عن القياس (36)
+      const sizeWords = variantInfo.split(' ').filter(word => !isNaN(word) || ['S', 'M', 'L', 'XL', 'XXL', 'فري'].includes(word.toUpperCase()));
+      if (sizeWords.length > 0) {
+        const { data: sizes } = await supabase
+          .from('sizes')
+          .select('id, name')
+          .eq('name', sizeWords[0])
+          .limit(1);
+        if (sizes?.length > 0) sizeId = sizes[0].id;
+      }
+      
+      console.log('🎨 معرف اللون:', colorId, '🔢 معرف القياس:', sizeId);
+      
+      // البحث عن المتغير بناءً على اللون والقياس
+      if (colorId && sizeId) {
+        const { data: existingVariant } = await supabase
           .from('product_variants')
-          .select('id, barcode')
+          .select('id')
+          .eq('product_id', productId)
+          .eq('color_id', colorId)
+          .eq('size_id', sizeId)
+          .limit(1);
+          
+        if (existingVariant?.length > 0) {
+          variantId = existingVariant[0].id;
+          console.log('✅ تم العثور على المتغير المطلوب');
+        } else {
+          // إنشاء متغير جديد بنفس اللون والقياس
+          console.log('🆕 إنشاء متغير جديد بنفس اللون والقياس');
+          const { data: newVariant, error } = await supabase
+            .from('product_variants')
+            .insert({
+              product_id: productId,
+              color_id: colorId,
+              size_id: sizeId,
+              barcode: item.variantSku,
+              sku: item.variantSku,
+              price: item.costPrice * 1.3,
+              cost_price: item.costPrice,
+              is_active: true
+            })
+            .select('id')
+            .single();
+
+          if (error) throw error;
+          variantId = newVariant.id;
+          console.log('✅ تم إنشاء متغير جديد');
+        }
+      } else {
+        // في حالة عدم العثور على اللون أو القياس، استخدام أول متغير موجود
+        const { data: existingVariants } = await supabase
+          .from('product_variants')
+          .select('id')
           .eq('product_id', productId)
           .limit(1);
 
-        if (variantsError) {
-          console.error('❌ خطأ في البحث عن المتغيرات:', variantsError);
-          throw variantsError;
-        }
-
         if (existingVariants?.length > 0) {
-          // استخدام أول متغير موجود
           variantId = existingVariants[0].id;
-          console.log('🎨 استخدام متغير موجود:', existingVariants[0].barcode);
+          console.log('🎨 استخدام أول متغير موجود');
         } else {
-          // إنشاء متغير جديد للمنتج الموجود
-          console.log('🆕 إنشاء متغير جديد للمنتج الموجود');
+          // إنشاء متغير افتراضي
           const { data: newVariant, error } = await supabase
             .from('product_variants')
             .insert({
@@ -261,7 +305,7 @@ async function processProductSimple(item, purchase, userId) {
 
           if (error) throw error;
           variantId = newVariant.id;
-          console.log('✅ تم إنشاء متغير جديد');
+          console.log('✅ تم إنشاء متغير افتراضي');
         }
       }
     } else {
