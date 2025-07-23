@@ -332,10 +332,22 @@ const InventoryPDFGenerator = ({
                   }
                 });
 
-                // تدرج لوني ثابت وأنيق مطابق للموقع
+                // تدرج لوني احترافي عالمي مثل ألوان الذكاء الاصطناعي
                 const getColorGradient = (colorName) => {
-                  // تدرجات ثابتة وأنيقة بنفس ألوان الموقع
-                  return 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%)';
+                  // تدرجات AI جميلة واحترافية
+                  const aiGradients = [
+                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', // Purple Blue
+                    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Pink Red
+                    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', // Blue Cyan
+                    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', // Green Mint
+                    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', // Pink Yellow
+                    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', // Mint Pink
+                    'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', // Peach Orange
+                    'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', // Rose Pink
+                  ];
+                  // اختيار تدرج بناء على hash اللون لضمان الثبات
+                  const index = colorName.length % aiGradients.length;
+                  return aiGradients[index];
                 };
 
                 // عرض المنتجات التي لها ألوان - كل لون في سطر منفصل
@@ -351,10 +363,10 @@ const InventoryPDFGenerator = ({
                             <div style="background: rgba(255,255,255,0.9); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
                               🎨
                             </div>
-                            <div>
-                              <div style="font-weight: 900; font-size: 18px; color: #1e293b; text-shadow: 0 1px 3px rgba(255,255,255,0.8);">لون ${color}</div>
-                              <div style="font-size: 12px; color: #64748b; font-weight: 600;">${variants.length} ${variants.length > 1 ? 'قياس متوفر' : 'قياس متوفر'}</div>
-                            </div>
+                             <div>
+                               <div style="font-weight: 900; font-size: 16px; color: #1e293b; text-shadow: 0 1px 3px rgba(255,255,255,0.8);">${item.name} - لون ${color}</div>
+                               <div style="font-size: 12px; color: #64748b; font-weight: 600;">${variants.length} ${variants.length > 1 ? 'قياس متوفر' : 'قياس متوفر'}</div>
+                             </div>
                           </div>
                           <div style="background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                             <span style="font-size: 12px; color: #1e293b; font-weight: 700;">
@@ -367,31 +379,25 @@ const InventoryPDFGenerator = ({
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; direction: rtl;">
                           ${variants.map(variant => `
                             <div style="background: rgba(255,255,255,0.95); border: 2px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
-                              <!-- تأثير بصري في الخلفية -->
-                              <div style="position: absolute; top: -10px; left: -10px; width: 30px; height: 30px; background: ${variant.statusColor}20; border-radius: 50%; opacity: 0.6;"></div>
-                              <div style="position: absolute; bottom: -10px; right: -10px; width: 20px; height: 20px; background: ${variant.statusColor}15; border-radius: 50%; opacity: 0.8;"></div>
-                              
-                              <!-- محتوى القياس -->
-                              <div style="position: relative; z-index: 2;">
-                                <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: ${variant.statusColor}15; border-radius: 12px; border: 1px solid ${variant.statusColor}30;">
-                                  📏 ${variant.size}
-                                </div>
-                                
-                                <div style="margin: 8px 0;">
-                                  <div style="font-size: 13px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
-                                    الكلي: ${variant.quantity || 0}
-                                  </div>
-                                  <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">
-                                    محجوز: ${variant.reserved_quantity || 0}
-                                  </div>
-                                  <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
-                                    متاح: ${variant.available}
-                                  </div>
+                               <!-- تأثير بصري في الخلفية -->
+                               <div style="position: absolute; top: -10px; left: -10px; width: 30px; height: 30px; background: ${variant.statusColor}20; border-radius: 50%; opacity: 0.6;"></div>
+                               <div style="position: absolute; bottom: -10px; right: -10px; width: 20px; height: 20px; background: ${variant.statusColor}15; border-radius: 50%; opacity: 0.8;"></div>
+                               
+                               <!-- محتوى القياس -->
+                               <div style="position: relative; z-index: 2;">
+                                 <div style="font-weight: 800; font-size: 14px; color: #1e293b; margin-bottom: 8px; padding: 6px 12px; background: ${variant.statusColor}15; border-radius: 12px; border: 1px solid ${variant.statusColor}30;">
+                                   📏 ${variant.size}
                                  </div>
                                  
-                                 <div style="background: ${variant.statusColor}; border-radius: 8px; padding: 6px 8px; margin-top: 8px;">
-                                   <div style="font-size: 9px; color: white; font-weight: 700; text-align: center; letter-spacing: 0.5px;">
-                                     ${variant.status}
+                                 <div style="margin: 8px 0;">
+                                   <div style="font-size: 13px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 3px;">
+                                     الكلي: ${variant.quantity || 0}
+                                   </div>
+                                   <div style="font-size: 11px; color: #64748b; margin-bottom: 3px;">
+                                     محجوز: ${variant.reserved_quantity || 0}
+                                   </div>
+                                   <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
+                                     متاح: ${variant.available}
                                    </div>
                                  </div>
                                </div>
@@ -432,9 +438,6 @@ const InventoryPDFGenerator = ({
                             <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
                               متاح: ${variant.available}
                             </div>
-                            <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: ${variant.statusColor};">
-                              ${variant.status}
-                            </div>
                           </div>
                         `).join('')}
                       </div>
@@ -470,12 +473,9 @@ const InventoryPDFGenerator = ({
                             </div>
                             <div style="font-size: 11px; color: ${variant.statusColor}; font-weight: 700; margin-bottom: 6px;">
                               متاح: ${variant.available}
-                            </div>
-                            <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: ${variant.statusColor};">
-                              ${variant.status}
-                            </div>
-                          </div>
-                        `).join('')}
+                             </div>
+                           </div>
+                         `).join('')}
                       </div>
                     </div>
                   `;
