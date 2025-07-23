@@ -38,14 +38,14 @@ const InventoryPDFGenerator = ({
       tempDiv.style.width = '210mm'; // عرض A4
       document.body.appendChild(tempDiv);
 
-      // تحويل HTML إلى canvas
+      // تحويل HTML إلى canvas بحجم ديناميكي
       const canvas = await html2canvas(tempDiv, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 794, // عرض A4 بالبيكسل
-        height: 1123 // ارتفاع A4 بالبيكسل
+        height: tempDiv.scrollHeight // ارتفاع ديناميكي حسب المحتوى
       });
 
       // إزالة العنصر المؤقت
@@ -311,29 +311,10 @@ const InventoryPDFGenerator = ({
                   }
                 });
 
-                // دالة لتحديد لون التدرج حسب اسم اللون
+                // تدرج لوني ثابت وأنيق مطابق للموقع
                 const getColorGradient = (colorName) => {
-                  const colorMap = {
-                    'أحمر': 'linear-gradient(135deg, #fee2e2, #fecaca, #f87171)',
-                    'أزرق': 'linear-gradient(135deg, #dbeafe, #bfdbfe, #60a5fa)',
-                    'أخضر': 'linear-gradient(135deg, #dcfce7, #bbf7d0, #4ade80)',
-                    'أصفر': 'linear-gradient(135deg, #fefce8, #fef3c7, #facc15)',
-                    'بنفسجي': 'linear-gradient(135deg, #f3e8ff, #e9d5ff, #a855f7)',
-                    'برتقالي': 'linear-gradient(135deg, #fed7aa, #fdba74, #fb923c)',
-                    'وردي': 'linear-gradient(135deg, #fce7f3, #fbcfe8, #f472b6)',
-                    'بني': 'linear-gradient(135deg, #fef7ed, #fed7aa, #d97706)',
-                    'رمادي': 'linear-gradient(135deg, #f9fafb, #e5e7eb, #6b7280)',
-                    'أسود': 'linear-gradient(135deg, #f9fafb, #d1d5db, #374151)',
-                    'أبيض': 'linear-gradient(135deg, #ffffff, #f9fafb, #e5e7eb)',
-                    'ذهبي': 'linear-gradient(135deg, #fefce8, #fde047, #eab308)',
-                    'فضي': 'linear-gradient(135deg, #f8fafc, #cbd5e1, #94a3b8)',
-                    'سمائي': 'linear-gradient(135deg, #e0f2fe, #bae6fd, #0ea5e9)',
-                    'ليموني': 'linear-gradient(135deg, #f7fee7, #ecfccb, #84cc16)',
-                    'جوزي': 'linear-gradient(135deg, #fef7ed, #fed7aa, #ea580c)',
-                    'كحلي': 'linear-gradient(135deg, #eff6ff, #dbeafe, #1d4ed8)',
-                    'زيتي': 'linear-gradient(135deg, #f7fee7, #d9f99d, #65a30d)'
-                  };
-                  return colorMap[colorName] || 'linear-gradient(135deg, #f8fafc, #e2e8f0, #94a3b8)';
+                  // تدرجات ثابتة وأنيقة بنفس ألوان الموقع
+                  return 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 50%, #cbd5e1 100%)';
                 };
 
                 // عرض المنتجات التي لها ألوان - كل لون في سطر منفصل
@@ -362,7 +343,7 @@ const InventoryPDFGenerator = ({
                         </div>
                         
                         <!-- عرض القياسات في شبكة أنيقة -->
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; direction: rtl;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; direction: rtl;">
                           ${variants.map(variant => `
                             <div style="background: rgba(255,255,255,0.95); border: 2px solid ${variant.statusColor}40; border-radius: 16px; padding: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
                               <!-- تأثير بصري في الخلفية -->
@@ -387,7 +368,7 @@ const InventoryPDFGenerator = ({
                                   </div>
                                 </div>
                                 
-                                <div style="font-size: 10px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 12px; background: ${variant.statusColor}; box-shadow: 0 2px 6px ${variant.statusColor}40;">
+                                <div style="font-size: 9px; color: white; font-weight: 700; padding: 4px 10px; border-radius: 10px; background: ${variant.statusColor}; box-shadow: 0 2px 6px ${variant.statusColor}40; text-align: center;">
                                   ${variant.status}
                                 </div>
                               </div>
