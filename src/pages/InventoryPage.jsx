@@ -15,6 +15,7 @@ import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
+import CategoryFilterCards from '@/components/inventory/CategoryFilterCards';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -127,6 +128,7 @@ const InventoryPage = () => {
     department: 'all',
     seasonOccasion: 'all'
   });
+  const [categoryFilter, setCategoryFilter] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
@@ -319,6 +321,32 @@ const InventoryPage = () => {
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
+    // تطبيق فلتر الأقسام/التصنيفات من الكروت
+    if (categoryFilter) {
+      switch (categoryFilter.type) {
+        case 'department':
+          items = items.filter(p => 
+            p.product_departments?.some(pd => pd.department_id === categoryFilter.id)
+          );
+          break;
+        case 'category':
+          items = items.filter(p => 
+            p.product_categories?.some(pc => pc.category_id === categoryFilter.id)
+          );
+          break;
+        case 'product_type':
+          items = items.filter(p => 
+            p.product_product_types?.some(ppt => ppt.product_type_id === categoryFilter.id)
+          );
+          break;
+        case 'season_occasion':
+          items = items.filter(p => 
+            p.product_seasons_occasions?.some(pso => pso.season_occasion_id === categoryFilter.id)
+          );
+          break;
+      }
+    }
+
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
       items = items.filter(p =>
@@ -372,7 +400,7 @@ const InventoryPage = () => {
     }
 
     return items;
-  }, [inventoryItems, filters]);
+  }, [inventoryItems, filters, categoryFilter]);
 
   const inventoryStats = useMemo(() => {
       if (!Array.isArray(inventoryItems)) return {
@@ -508,6 +536,11 @@ const InventoryPage = () => {
           onFilterChange={handleFilterChange}
           onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
           onRestoreProduct={() => console.log('restore product')}
+        />
+
+        <CategoryFilterCards 
+          onFilterChange={setCategoryFilter}
+          currentFilters={categoryFilter}
         />
 
         <InventoryFilters
