@@ -32,16 +32,21 @@ export const useImprovedPurchases = () => {
 
   // إضافة فاتورة شراء جديدة - محسّنة ومضمونة
   const addPurchase = async (purchaseData) => {
-    console.log('🛒 بدء إضافة فاتورة شراء محسّنة');
+    const startTime = Date.now();
+    const uniqueId = `purchase_${startTime}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // منع الاستدعاءات المتكررة
+    console.log(`🛒 [${uniqueId}] بدء إضافة فاتورة شراء محسّنة`);
+    
+    // منع الاستدعاءات المتكررة بطرق متعددة
     if (loading || processingPurchaseId) {
-      console.log('⚠️ تم تجاهل الاستدعاء - عملية قيد التنفيذ');
+      console.log(`⚠️ [${uniqueId}] تم تجاهل الاستدعاء - عملية قيد التنفيذ:`, {
+        loading,
+        processingPurchaseId
+      });
       return { success: false, error: 'عملية إضافة فاتورة قيد التنفيذ بالفعل' };
     }
     
-    const tempProcessingId = Date.now().toString();
-    setProcessingPurchaseId(tempProcessingId);
+    setProcessingPurchaseId(uniqueId);
     setLoading(true);
     
     try {
@@ -56,12 +61,18 @@ export const useImprovedPurchases = () => {
       const transferCost = Number(purchaseData.transferCost) || 0;
       const grandTotal = itemsTotal + shippingCost + transferCost;
 
-      console.log('💰 حساب التكاليف:', {
+      console.log(`💰 [${uniqueId}] حساب التكاليف:`, {
         itemsTotal,
         shippingCost,
         transferCost,
-        grandTotal
+        grandTotal,
+        supplier: purchaseData.supplier
       });
+
+      // التحقق من صحة البيانات
+      if (grandTotal <= 0) {
+        throw new Error('إجمالي المبلغ يجب أن يكون أكبر من الصفر');
+      }
 
       // 2. إنشاء الفاتورة
       const { data: newPurchase, error: purchaseError } = await supabase
@@ -83,14 +94,14 @@ export const useImprovedPurchases = () => {
         .single();
 
       if (purchaseError) throw purchaseError;
-      console.log('✅ تم إنشاء الفاتورة:', newPurchase);
+      console.log(`✅ [${uniqueId}] تم إنشاء الفاتورة:`, newPurchase.purchase_number);
 
       // 3. معالجة كل منتج بشكل محسّن
-      console.log('📦 بدء معالجة المنتجات - عدد:', purchaseData.items.length);
+      console.log(`📦 [${uniqueId}] بدء معالجة المنتجات - عدد:`, purchaseData.items.length);
       
       const productProcessingPromises = purchaseData.items.map(async (item, index) => {
-        console.log(`🔄 معالجة منتج ${index + 1}:`, item.productName, 'SKU:', item.variantSku);
-        return await processProductImproved(item, newPurchase, user.id);
+        console.log(`🔄 [${uniqueId}] معالجة منتج ${index + 1}:`, item.productName, 'SKU:', item.variantSku);
+        return await processProductImproved(item, newPurchase, user.id, uniqueId);
       });
 
       // انتظار معالجة جميع المنتجات
@@ -98,10 +109,11 @@ export const useImprovedPurchases = () => {
 
       // 4. خصم المبلغ الكلي مرة واحدة من مصدر النقد
       if (purchaseData.cashSourceId && grandTotal > 0) {
-        console.log('💳 خصم المبلغ من مصدر النقد:', {
+        console.log(`💳 [${uniqueId}] خصم المبلغ من مصدر النقد:`, {
           amount: grandTotal,
           cashSourceId: purchaseData.cashSourceId,
-          purchaseId: newPurchase.id
+          purchaseId: newPurchase.id,
+          purchaseNumber: newPurchase.purchase_number
         });
         
         const { data: cashResult, error: cashError } = await supabase.rpc('update_cash_source_balance', {
@@ -115,18 +127,21 @@ export const useImprovedPurchases = () => {
         });
 
         if (cashError) {
-          console.error('خطأ في تحديث رصيد مصدر النقد:', cashError);
+          console.error(`❌ [${uniqueId}] خطأ في تحديث رصيد مصدر النقد:`, cashError);
           throw cashError;
         }
         
-        console.log('✅ تم خصم المبلغ من مصدر النقد بنجاح:', cashResult);
+        console.log(`✅ [${uniqueId}] تم خصم المبلغ من مصدر النقد بنجاح:`, cashResult);
       }
 
-      // 5. إنشاء سجلات المصاريف المفصلة للتتبع
+      // 5. إنشاء سجلات المصاريف المفصلة للتتبع (بدون خصم إضافي)
+      console.log(`📊 [${uniqueId}] بدء إنشاء سجلات المصاريف المفصلة`);
       const expensePromises = [];
-      
+      let expenseCount = 0;
       // مصروف الشراء (تكلفة المنتجات)
       if (itemsTotal > 0) {
+        expenseCount++;
+        console.log(`📝 [${uniqueId}] إضافة مصروف الشراء: ${itemsTotal.toLocaleString()} د.ع`);
         expensePromises.push(
           supabase.from('expenses').insert({
             category: 'شراء',
@@ -142,7 +157,8 @@ export const useImprovedPurchases = () => {
             metadata: {
               purchase_reference_id: newPurchase.id,
               auto_approved: true,
-              expense_component: 'main_purchase'
+              expense_component: 'main_purchase',
+              unique_processing_id: uniqueId
             }
           })
         );
@@ -150,6 +166,8 @@ export const useImprovedPurchases = () => {
 
       // مصروف الشحن
       if (shippingCost > 0) {
+        expenseCount++;
+        console.log(`📝 [${uniqueId}] إضافة مصروف الشحن: ${shippingCost.toLocaleString()} د.ع`);
         expensePromises.push(
           supabase.from('expenses').insert({
             category: 'شحن ونقل',
@@ -165,7 +183,8 @@ export const useImprovedPurchases = () => {
             metadata: {
               purchase_reference_id: newPurchase.id,
               auto_approved: true,
-              expense_component: 'shipping'
+              expense_component: 'shipping',
+              unique_processing_id: uniqueId
             }
           })
         );
@@ -173,6 +192,8 @@ export const useImprovedPurchases = () => {
 
       // مصروف التحويل
       if (transferCost > 0) {
+        expenseCount++;
+        console.log(`📝 [${uniqueId}] إضافة مصروف التحويل: ${transferCost.toLocaleString()} د.ع`);
         expensePromises.push(
           supabase.from('expenses').insert({
             category: 'تكاليف تحويل',
@@ -188,7 +209,8 @@ export const useImprovedPurchases = () => {
             metadata: {
               purchase_reference_id: newPurchase.id,
               auto_approved: true,
-              expense_component: 'transfer'
+              expense_component: 'transfer',
+              unique_processing_id: uniqueId
             }
           })
         );
@@ -196,20 +218,26 @@ export const useImprovedPurchases = () => {
 
       // تنفيذ جميع المصاريف
       if (expensePromises.length > 0) {
+        console.log(`📊 [${uniqueId}] تنفيذ ${expensePromises.length} مصروف`);
         const expenseResults = await Promise.all(expensePromises);
+        let successCount = 0;
         for (const result of expenseResults) {
           if (result.error) {
-            console.error('خطأ في إنشاء مصروف:', result.error);
+            console.error(`❌ [${uniqueId}] خطأ في إنشاء مصروف:`, result.error);
           } else {
-            console.log('✅ تم إنشاء مصروف بنجاح');
+            successCount++;
+            console.log(`✅ [${uniqueId}] تم إنشاء مصروف بنجاح`);
           }
         }
+        console.log(`📈 [${uniqueId}] تم إنشاء ${successCount} من ${expensePromises.length} مصروف بنجاح`);
       }
 
-      console.log('🎉 تمت إضافة الفاتورة بنجاح - رقم:', newPurchase.purchase_number);
+      const processingTime = Date.now() - startTime;
+      console.log(`🎉 [${uniqueId}] تمت إضافة الفاتورة بنجاح في ${processingTime}ms - رقم:`, newPurchase.purchase_number);
+      
       toast({
         title: "نجح الحفظ",
-        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع`,
+        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع مع ${expenseCount} مصروف`,
       });
 
       // إعادة جلب البيانات
@@ -218,7 +246,7 @@ export const useImprovedPurchases = () => {
       return { success: true, purchase: newPurchase };
 
     } catch (error) {
-      console.error('❌ خطأ في إضافة فاتورة الشراء:', error);
+      console.error(`❌ [${uniqueId}] خطأ في إضافة فاتورة الشراء:`, error);
       toast({
         title: "فشل في الحفظ",
         description: error.message,
@@ -282,8 +310,8 @@ export const useImprovedPurchases = () => {
 // ============ دوال المساعدة المحسّنة ============
 
 // دالة معالجة المنتج - محسّنة ومضمونة
-const processProductImproved = async (item, purchase, userId) => {
-  console.log('🔄 بدء معالجة منتج محسّن:', {
+const processProductImproved = async (item, purchase, userId, uniqueId) => {
+  console.log(`🔄 [${uniqueId}] بدء معالجة منتج محسّن:`, {
     productName: item.productName,
     variantSku: item.variantSku,
     quantity: item.quantity,
