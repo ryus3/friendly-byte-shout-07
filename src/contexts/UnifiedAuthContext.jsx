@@ -476,14 +476,14 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
   };
 
-  const updateUserProfile = async (profileData) => {
+  const updateProfile = async (profileData) => {
     if (!user) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .update({ full_name: profileData.full_name, username: profileData.username })
-        .eq('user_id', user.id)
+        .update(profileData)
+        .eq('user_id', user.user_id || user.id)
         .select()
         .single();
 
@@ -494,9 +494,15 @@ export const UnifiedAuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Error updating profile:", error);
       toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+      throw error; // إعادة طرح الخطأ لمعالجته في المكون
     } finally {
       setLoading(false);
     }
+  };
+
+  // دالة منفصلة للتوافق مع الكود القديم
+  const updateUserProfile = async (profileData) => {
+    return updateProfile({ full_name: profileData.full_name, username: profileData.username });
   };
 
   const changePassword = async (newPassword) => {
@@ -631,6 +637,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     pendingRegistrations,
     allUsers,
     updateUser,
+    updateProfile,
     updateUserProfile,
     changePassword,
     refetchAdminData: fetchAdminData,

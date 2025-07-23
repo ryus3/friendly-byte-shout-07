@@ -31,6 +31,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
@@ -43,18 +44,40 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   
   // Profile States
   const [profileData, setProfileData] = useState({
-    username: user?.username || '',
-    full_name: user?.full_name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
-    address: user?.address || '',
-    bio: user?.bio || ''
+    username: '',
+    full_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    bio: ''
   });
 
   const [originalData, setOriginalData] = useState({
-    username: user?.username || '',
-    email: user?.email || ''
+    username: '',
+    email: ''
   });
+
+  // تحديث البيانات عند فتح النافذة أو تغيير المستخدم
+  useEffect(() => {
+    if (user && open) {
+      console.log('🔄 تحديث بيانات المستخدم في النافذة:', user);
+      const newProfileData = {
+        username: user?.username || '',
+        full_name: user?.full_name || '',
+        email: user?.email || '',
+        phone: user?.phone || '',
+        address: user?.address || '',
+        bio: user?.bio || ''
+      };
+      setProfileData(newProfileData);
+      
+      const newOriginalData = {
+        username: user?.username || '',
+        email: user?.email || ''
+      };
+      setOriginalData(newOriginalData);
+    }
+  }, [user, open]);
 
   // Security States
   const [passwordData, setPasswordData] = useState({
@@ -71,12 +94,23 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   });
 
   const handleProfileSave = async () => {
+    console.log('🔄 بدء حفظ الملف الشخصي:', profileData);
+    
     try {
       // Check if username or email changed - require admin approval
       const usernameChanged = profileData.username !== originalData.username;
       const emailChanged = profileData.email !== originalData.email;
       
+      console.log('📊 تحليل التغييرات:', {
+        usernameChanged,
+        emailChanged,
+        originalData,
+        profileData
+      });
+      
       if (usernameChanged || emailChanged) {
+        console.log('⚠️ تغيير بيانات حساسة - إرسال للمدير');
+        
         // Send notification to admin for approval
         addNotification({
           type: 'profile_change_request',
@@ -107,6 +141,8 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
           address: profileData.address,
           bio: profileData.bio
         };
+        
+        console.log('💾 حفظ البيانات الآمنة:', safeUpdates);
         await updateProfile(safeUpdates);
         
         toast({
@@ -115,6 +151,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
           variant: "default"
         });
       } else {
+        console.log('✅ تحديث عادي للبيانات');
         // Normal update for non-sensitive data
         await updateProfile(profileData);
         toast({
@@ -123,11 +160,13 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
         });
       }
       
+      console.log('✅ تم حفظ الملف الشخصي بنجاح');
       setIsEditing(false);
     } catch (error) {
+      console.error('❌ خطأ في حفظ الملف الشخصي:', error);
       toast({
         title: "خطأ في التحديث",
-        description: "فشل في حفظ البيانات، يرجى المحاولة مرة أخرى",
+        description: `فشل في حفظ البيانات: ${error.message}`,
         variant: "destructive"
       });
     }
