@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useInventory } from '@/contexts/InventoryContext';
 import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import { useCashSources } from '@/hooks/useCashSources';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Wallet } from 'lucide-react';
 import SelectProductForPurchaseDialog from './SelectProductForPurchaseDialog';
 import PurchaseItemsPreview from './PurchaseItemsPreview';

@@ -1,33 +1,14 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Document, Page, Text, View, StyleSheet, PDFDownloadLink, Font } from '@react-pdf/renderer';
 import { Button } from '@/components/ui/button';
 import { Download, FileText } from 'lucide-react';
-import { registerArabicFont } from '@/utils/arabicPdfFont';
 
-// حالة تسجيل الخط - مبسطة
-let fontRegistered = false;
-
-// تسجيل خط عربي مبسط وموثوق
-const initializeFont = () => {
-  if (!fontRegistered) {
-    try {
-      // خط Tajawal موثوق من Google Fonts
-      Font.register({
-        family: 'ArabicFont',
-        src: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf'
-      });
-      console.log('✅ تم تسجيل الخط العربي');
-      fontRegistered = true;
-      return true;
-    } catch (error) {
-      console.error('❌ فشل في تسجيل الخط:', error);
-      fontRegistered = false;
-      return false;
-    }
-  }
-  return true;
-};
+// تسجيل خط عربي واحد فقط - مبسط
+Font.register({
+  family: 'ArabicFont',
+  src: 'https://fonts.gstatic.com/s/tajawal/v9/Iura6YBj_oCad4k1l_6gLuvPDQ.ttf'
+});
 
 const styles = StyleSheet.create({
   page: {
@@ -377,30 +358,7 @@ const PurchaseInvoicePDF = ({ purchase }) => {
 };
 
 const PurchaseInvoicePDFButton = ({ purchase }) => {
-  const [fontReady, setFontReady] = useState(false);
-  
-  useEffect(() => {
-    // تهيئة الخط بشكل مبسط
-    const fontSuccess = initializeFont();
-    setFontReady(fontSuccess);
-  }, []);
-  
   const fileName = `فاتورة_شراء_${purchase.purchase_number || purchase.id}.pdf`;
-  
-  // لا نعرض الـ PDF حتى يتم تحضير الخط
-  if (!fontReady) {
-    return (
-      <Button 
-        variant="outline" 
-        size="sm" 
-        disabled={true}
-        className="gap-1 text-gray-400 border-gray-200"
-      >
-        <FileText className="h-4 w-4" />
-        تحضير الخط...
-      </Button>
-    );
-  }
   
   return (
     <PDFDownloadLink 
@@ -416,8 +374,13 @@ const PurchaseInvoicePDFButton = ({ purchase }) => {
         >
           {loading ? (
             <>
-              <FileText className="h-4 w-4" />
+              <FileText className="h-4 w-4 animate-pulse" />
               تحضير...
+            </>
+          ) : error ? (
+            <>
+              <FileText className="h-4 w-4" />
+              خطأ
             </>
           ) : (
             <>
