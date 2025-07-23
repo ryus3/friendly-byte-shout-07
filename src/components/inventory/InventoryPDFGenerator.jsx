@@ -6,14 +6,16 @@ import html2canvas from 'html2canvas';
 import { toast } from '@/components/ui/use-toast';
 
 const InventoryPDFGenerator = ({ 
-  products = [], 
-  selectedProducts = [], 
+  inventoryData = [], 
+  selectedItems = [], 
   filters = {},
-  isFiltered = false 
+  isLoading = false 
 }) => {
   const generatePDF = async () => {
     try {
-      const dataToExport = selectedProducts.length > 0 ? selectedProducts : products;
+      const dataToExport = selectedItems.length > 0 ? 
+        inventoryData.filter(item => selectedItems.includes(item.id)) : 
+        inventoryData;
       
       if (!dataToExport || dataToExport.length === 0) {
         toast({
@@ -26,7 +28,7 @@ const InventoryPDFGenerator = ({
 
       // إنشاء عنصر HTML مؤقت للطباعة
       const printElement = document.createElement('div');
-      printElement.innerHTML = generateInventoryHTML(dataToExport, filters, isFiltered);
+      printElement.innerHTML = generateInventoryHTML(dataToExport, filters, selectedItems.length > 0);
       printElement.style.position = 'absolute';
       printElement.style.left = '-9999px';
       printElement.style.top = '0';
@@ -66,9 +68,9 @@ const InventoryPDFGenerator = ({
       }
 
       // حفظ PDF
-      const fileName = selectedProducts.length > 0 
+      const fileName = selectedItems.length > 0 
         ? `تقرير_الجرد_المحدد_${new Date().toISOString().split('T')[0]}.pdf`
-        : isFiltered 
+        : Object.keys(filters).some(key => filters[key] && filters[key] !== 'all' && filters[key] !== '')
           ? `تقرير_الجرد_المفلتر_${new Date().toISOString().split('T')[0]}.pdf`
           : `تقرير_الجرد_الشامل_${new Date().toISOString().split('T')[0]}.pdf`;
 
