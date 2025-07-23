@@ -434,8 +434,22 @@ const createNewProduct = async (productName, item, userId) => {
 
 // إنشاء متغير لمنتج بطريقة ذكية مع فحص التكرار
 const createVariantForProduct = async (productId, item) => {
-  // استخراج اللون والقياس من اسم المنتج الكامل
-  const { colorId, sizeId } = await extractAndCreateColorAndSize(item.productName);
+  // استخدام اللون والقياس المختارين من المستخدم (إذا كانوا متوفرين)
+  // بدلاً من الاستخراج من اسم المنتج
+  let colorId, sizeId;
+  
+  if (item.colorId && item.sizeId) {
+    // استخدام البيانات المختارة من المستخدم
+    colorId = item.colorId;
+    sizeId = item.sizeId;
+    console.log('✅ استخدام اللون والقياس المختارين:', { colorId, sizeId });
+  } else {
+    // استخراج اللون والقياس من اسم المنتج كخيار احتياطي
+    const extracted = await extractAndCreateColorAndSize(item.productName);
+    colorId = extracted.colorId;
+    sizeId = extracted.sizeId;
+    console.log('⚠️ استخراج اللون والقياس من اسم المنتج:', { colorId, sizeId });
+  }
   
   // البحث عن متغير موجود بنفس المنتج واللون والقياس
   const { data: existingVariantByColorSize } = await supabase
