@@ -82,20 +82,51 @@ export const useSimplePurchases = () => {
         await processProductSimple(item, newPurchase, user.id);
       }
 
-      // 4. تحديث رصيد مصدر النقد
+      // 4. إنشاء المصاريف المنفصلة وتحديث رصيد مصدر النقد
       if (purchaseData.cashSourceId) {
-        const result = await supabase.rpc('update_cash_source_balance', {
-          p_cash_source_id: purchaseData.cashSourceId,
-          p_amount: grandTotal,
-          p_movement_type: 'out',
-          p_reference_type: 'purchase',
-          p_reference_id: newPurchase.id,
-          p_description: `شراء فاتورة رقم ${newPurchase.purchase_number}`,
-          p_created_by: user.id
-        });
+        // مصروف الشراء (تكلفة المنتجات)
+        if (itemsTotal > 0) {
+          await createExpenseRecord({
+            category: 'شراء',
+            expense_type: 'purchase',
+            amount: itemsTotal,
+            description: `شراء مواد - فاتورة رقم ${newPurchase.purchase_number}`,
+            receipt_number: newPurchase.purchase_number,
+            vendor_name: purchaseData.supplier,
+            cashSourceId: purchaseData.cashSourceId,
+            userId: user.id,
+            referenceId: newPurchase.id
+          });
+        }
 
-        if (result.error) {
-          console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
+        // مصروف الشحن
+        if (shippingCost > 0) {
+          await createExpenseRecord({
+            category: 'شحن ونقل',
+            expense_type: 'shipping',
+            amount: shippingCost,
+            description: `مصاريف شحن - فاتورة رقم ${newPurchase.purchase_number}`,
+            receipt_number: `${newPurchase.purchase_number}-SHIP`,
+            vendor_name: purchaseData.supplier,
+            cashSourceId: purchaseData.cashSourceId,
+            userId: user.id,
+            referenceId: newPurchase.id
+          });
+        }
+
+        // مصروف التحويل
+        if (transferCost > 0) {
+          await createExpenseRecord({
+            category: 'تكاليف تحويل',
+            expense_type: 'transfer',
+            amount: transferCost,
+            description: `تكاليف تحويل - فاتورة رقم ${newPurchase.purchase_number}`,
+            receipt_number: `${newPurchase.purchase_number}-TRANSFER`,
+            vendor_name: purchaseData.supplier,
+            cashSourceId: purchaseData.cashSourceId,
+            userId: user.id,
+            referenceId: newPurchase.id
+          });
         }
       }
 
@@ -419,4 +450,66 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
 
   if (error) throw error;
   console.log('✅ تم إضافة سجل التكلفة');
+};
+
+// إنشاء سجل مصروف وتحديث رصيد مصدر النقد
+const createExpenseRecord = async ({ 
+  category, 
+  expense_type, 
+  amount, 
+  description, 
+  receipt_number, 
+  vendor_name, 
+  cashSourceId, 
+  userId, 
+  referenceId 
+}) => {
+  try {
+    // 1. إنشاء سجل المصروف
+    const { data: expense, error: expenseError } = await supabase
+      .from('expenses')
+      .insert({
+        category,
+        expense_type,
+        amount,
+        description,
+        receipt_number,
+        vendor_name,
+        status: 'approved', // معتمد تلقائياً للمشتريات
+        created_by: userId,
+        approved_by: userId,
+        approved_at: new Date().toISOString(),
+        metadata: {
+          purchase_reference_id: referenceId,
+          auto_approved: true
+        }
+      })
+      .select()
+      .single();
+
+    if (expenseError) throw expenseError;
+
+    // 2. تحديث رصيد مصدر النقد
+    const result = await supabase.rpc('update_cash_source_balance', {
+      p_cash_source_id: cashSourceId,
+      p_amount: amount,
+      p_movement_type: 'out',
+      p_reference_type: 'expense',
+      p_reference_id: expense.id,
+      p_description: description,
+      p_created_by: userId
+    });
+
+    if (result.error) {
+      console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
+      throw result.error;
+    }
+
+    console.log(`✅ تم إنشاء مصروف ${category} بمبلغ ${amount}`);
+    return expense;
+
+  } catch (error) {
+    console.error(`❌ خطأ في إنشاء مصروف ${category}:`, error);
+    throw error;
+  }
 };
