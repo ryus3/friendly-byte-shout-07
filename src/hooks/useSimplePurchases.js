@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 
-const useSimplePurchases = () => {
+export const useSimplePurchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -422,5 +422,3 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
   if (error) throw error;
   console.log('✅ تم إضافة سجل التكلفة');
 };
-
-export { useSimplePurchases };
