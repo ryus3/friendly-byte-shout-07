@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -8,91 +8,18 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { supabase } from '@/lib/customSupabaseClient';
 
 const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) => {
   const { colors, sizes, categories: allCategories } = useVariants();
   const { user } = useAuth();
-  
-  // حالة لتخزين البيانات الحقيقية من قاعدة البيانات
-  const [realData, setRealData] = useState({
-    productTypes: [],
-    departments: [],
-    seasonsOccasions: [],
-    categories: [],
-    colors: [],
-    sizes: []
-  });
-
-  
-  // جلب البيانات الحقيقية من قاعدة البيانات
-  useEffect(() => {
-    const fetchRealData = async () => {
-      try {
-        // جلب أنواع المنتجات
-        const { data: productTypes } = await supabase
-          .from('product_types')
-          .select('id, name')
-          .order('name');
-
-        // جلب الأقسام
-        const { data: departments } = await supabase
-          .from('departments')
-          .select('id, name')
-          .eq('is_active', true)
-          .order('name');
-
-        // جلب المواسم والمناسبات
-        const { data: seasonsOccasions } = await supabase
-          .from('seasons_occasions')
-          .select('id, name, type')
-          .order('name');
-
-        // جلب التصنيفات
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('id, name, type')
-          .order('name');
-
-        // جلب الألوان المستخدمة فعلياً
-        const { data: usedColors } = await supabase
-          .from('colors')
-          .select('id, name, hex_code')
-          .order('name');
-
-        // جلب الأحجام المستخدمة فعلياً  
-        const { data: usedSizes } = await supabase
-          .from('sizes')
-          .select('id, name, type, display_order')
-          .order('display_order', { ascending: true });
-
-        setRealData({
-          productTypes: productTypes || [],
-          departments: departments || [],
-          seasonsOccasions: seasonsOccasions || [],
-          categories: categories || [],
-          colors: usedColors || [],
-          sizes: usedSizes || []
-        });
-
-      } catch (error) {
-        console.error('خطأ في جلب بيانات الفلاتر:', error);
-      }
-    };
-
-    fetchRealData();
-  }, []);
 
   // الحصول على الفئات والألوان والأحجام المسموحة للمستخدم
   const allowedData = useMemo(() => {
     if (!user || user.role === 'admin' || user.role === 'deputy' || user?.permissions?.includes('*')) {
       return {
         allowedCategories: categories,
-        allowedColors: realData.colors,
-        allowedSizes: realData.sizes,
-        allowedProductTypes: realData.productTypes,
-        allowedDepartments: realData.departments,
-        allowedSeasonsOccasions: realData.seasonsOccasions
+        allowedColors: colors,
+        allowedSizes: sizes
       };
     }
 
@@ -104,29 +31,23 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
       return {
         allowedCategories: categoryPermissions.includes('all') 
           ? categories
-          : realData.categories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
+          : allCategories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
         allowedColors: colorPermissions.includes('all')
-          ? realData.colors
-          : realData.colors.filter(c => colorPermissions.includes(c.id)),
+          ? colors
+          : colors.filter(c => colorPermissions.includes(c.id)),
         allowedSizes: sizePermissions.includes('all')
-          ? realData.sizes
-          : realData.sizes.filter(s => sizePermissions.includes(s.id)),
-        allowedProductTypes: realData.productTypes,
-        allowedDepartments: realData.departments,
-        allowedSeasonsOccasions: realData.seasonsOccasions
+          ? sizes
+          : sizes.filter(s => sizePermissions.includes(s.id))
       };
     } catch (e) {
       console.error('Error parsing permissions:', e);
       return {
         allowedCategories: [],
         allowedColors: [],
-        allowedSizes: [],
-        allowedProductTypes: [],
-        allowedDepartments: [],
-        allowedSeasonsOccasions: []
+        allowedSizes: []
       };
     }
-  }, [categories, realData, user]);
+  }, [categories, colors, sizes, user, allCategories]);
   
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -140,9 +61,6 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
       color: 'all',
       size: 'all',
       price: [0, 500000],
-      productType: 'all',
-      department: 'all',
-      seasonOccasion: 'all'
     });
   };
 
@@ -204,58 +122,17 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                   </div>
                   <div className="grid gap-3">
                     <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
-                      <SelectTrigger><SelectValue placeholder="التصنيف" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="الفئة" /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">جميع التصنيفات</SelectItem>
+                        <SelectItem value="all">جميع الفئات</SelectItem>
                         {allowedData.allowedCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    
-                    <Select value={filters.productType || 'all'} onValueChange={(value) => handleFilterChange('productType', value)}>
-                      <SelectTrigger><SelectValue placeholder="نوع المنتج" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">جميع الأنواع</SelectItem>
-                        {allowedData.allowedProductTypes.map(pt => <SelectItem key={pt.id} value={pt.name}>{pt.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select value={filters.department || 'all'} onValueChange={(value) => handleFilterChange('department', value)}>
-                      <SelectTrigger><SelectValue placeholder="القسم" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">جميع الأقسام</SelectItem>
-                        {allowedData.allowedDepartments.map(dept => <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    
-                    <Select value={filters.seasonOccasion || 'all'} onValueChange={(value) => handleFilterChange('seasonOccasion', value)}>
-                      <SelectTrigger><SelectValue placeholder="الموسم/المناسبة" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">جميع المواسم والمناسبات</SelectItem>
-                        {allowedData.allowedSeasonsOccasions.map(so => (
-                          <SelectItem key={so.id} value={so.name}>
-                            {so.name} ({so.type === 'season' ? 'موسم' : 'مناسبة'})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    
                     <Select value={filters.color} onValueChange={(value) => handleFilterChange('color', value)}>
                       <SelectTrigger><SelectValue placeholder="اللون" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الألوان</SelectItem>
-                        {allowedData.allowedColors.map(c => (
-                          <SelectItem key={c.id} value={c.name}>
-                            <div className="flex items-center gap-2">
-                              {c.hex_code && (
-                                <div 
-                                  className="w-4 h-4 rounded-full border border-gray-300" 
-                                  style={{ backgroundColor: c.hex_code }}
-                                />
-                              )}
-                              {c.name}
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {allowedData.allowedColors.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <Select value={filters.size} onValueChange={(value) => handleFilterChange('size', value)}>
