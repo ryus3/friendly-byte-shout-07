@@ -1,20 +1,43 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/hooks/use-toast';
-import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { toast } from '@/components/ui/use-toast';
 
-export const useSimplePurchases = () => {
+const useSimplePurchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { addExpense, refetchData } = useInventory();
-  const { user } = useAuth();
 
-  const addPurchase = useCallback(async (purchaseData) => {
-    setLoading(true);
+  // جلب جميع فواتير الشراء
+  const fetchPurchases = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('purchases')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPurchases(data || []);
+    } catch (error) {
+      console.error('خطأ في جلب فواتير الشراء:', error);
+      toast({
+        title: "خطأ في جلب البيانات",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // إضافة فاتورة شراء جديدة
+  const addPurchase = async (purchaseData) => {
     console.log('🛒 بدء إضافة فاتورة شراء جديدة:', purchaseData);
+    setLoading(true);
     
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('المستخدم غير مصرح له');
+
       // 1. حساب التكاليف
       const itemsTotal = purchaseData.items.reduce((sum, item) => 
         sum + (Number(item.costPrice) * Number(item.quantity)), 0
@@ -30,14 +53,14 @@ export const useSimplePurchases = () => {
         grandTotal
       });
 
-      // 2. إنشاء الفاتورة (total_amount = فقط تكلفة المنتجات)
+      // 2. إنشاء الفاتورة
       const { data: newPurchase, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
           supplier_name: purchaseData.supplier,
           supplier_contact: purchaseData.supplierContact || null,
-          total_amount: itemsTotal, // فقط تكلفة المنتجات
-          paid_amount: grandTotal, // المبلغ المدفوع الكامل
+          total_amount: itemsTotal,
+          paid_amount: grandTotal,
           shipping_cost: shippingCost,
           transfer_cost: transferCost,
           purchase_date: purchaseData.purchaseDate ? 
@@ -46,7 +69,7 @@ export const useSimplePurchases = () => {
           cash_source_id: purchaseData.cashSourceId,
           status: 'completed',
           items: purchaseData.items,
-          created_by: user?.user_id
+          created_by: user.id
         })
         .select()
         .single();
@@ -54,115 +77,91 @@ export const useSimplePurchases = () => {
       if (purchaseError) throw purchaseError;
       console.log('✅ تم إنشاء الفاتورة:', newPurchase);
 
-      // 3. معالجة كل منتج بشكل بسيط ومضمون
+      // 3. معالجة كل منتج
+      console.log('📦 بدء معالجة المنتجات - عدد:', purchaseData.items.length);
       for (const item of purchaseData.items) {
-        await processProductSimple(item, newPurchase, user?.user_id);
+        console.log('🔄 معالجة منتج:', item.productName, 'SKU:', item.variantSku);
+        await processProductSimple(item, newPurchase, user.id);
       }
 
-      // 4. خصم المبلغ الكامل من مصدر النقد
-      if (purchaseData.cashSourceId && grandTotal > 0) {
-        const { error: cashError } = await supabase.rpc('update_cash_source_balance', {
+      // 4. تحديث رصيد مصدر النقد
+      if (purchaseData.cashSourceId) {
+        const result = await supabase.rpc('update_cash_source_balance', {
           p_cash_source_id: purchaseData.cashSourceId,
           p_amount: grandTotal,
           p_movement_type: 'out',
           p_reference_type: 'purchase',
           p_reference_id: newPurchase.id,
-          p_description: `فاتورة شراء ${newPurchase.purchase_number} - ${purchaseData.supplier}`,
-          p_created_by: user?.user_id
+          p_description: `شراء فاتورة رقم ${newPurchase.purchase_number}`,
+          p_created_by: user.id
         });
 
-        if (cashError) throw new Error(`فشل خصم المبلغ: ${cashError.message}`);
-        console.log('✅ تم خصم المبلغ من مصدر النقد');
+        if (result.error) {
+          console.error('خطأ في تحديث رصيد مصدر النقد:', result.error);
+        }
       }
 
-      // 5. إضافة المصاريف
-      await addExpensesForPurchase(newPurchase, itemsTotal, shippingCost, transferCost, purchaseData.supplier, addExpense);
-
-      // 6. تحديث قائمة المشتريات
-      setPurchases(prev => [newPurchase, ...prev]);
-      
-      // إعادة تحميل البيانات
-      setTimeout(() => refetchData?.(), 500);
-
-      console.log('🎉 تمت العملية بنجاح');
-      toast({ 
-        title: 'نجح', 
-        description: `تمت إضافة فاتورة الشراء رقم ${newPurchase.purchase_number} بمبلغ ${grandTotal.toLocaleString()} د.ع`,
-        variant: 'success'
+      console.log('🎉 تمت إضافة الفاتورة بنجاح');
+      toast({
+        title: "نجح الحفظ",
+        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number}`,
       });
 
+      // إعادة جلب البيانات
+      await fetchPurchases();
+      
       return { success: true, purchase: newPurchase };
+
     } catch (error) {
-      console.error("❌ خطأ في إضافة فاتورة الشراء:", error);
-      toast({ 
-        title: 'خطأ', 
-        description: `فشل إضافة الفاتورة: ${error.message}`, 
-        variant: 'destructive' 
+      console.error('❌ خطأ في إضافة فاتورة الشراء:', error);
+      toast({
+        title: "فشل في الحفظ",
+        description: error.message,
+        variant: "destructive",
       });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
-  }, [addExpense, refetchData, user]);
+  };
 
-  const fetchPurchases = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('purchases')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPurchases(data || []);
-    } catch (error) {
-      console.error("خطأ في جلب المشتريات:", error);
-      toast({ 
-        title: 'خطأ', 
-        description: 'فشل في جلب بيانات المشتريات', 
-        variant: 'destructive' 
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const deletePurchase = useCallback(async (purchaseId) => {
+  // حذف فاتورة شراء
+  const deletePurchase = async (purchaseId) => {
     try {
       setLoading(true);
-      console.log('🗑️ بدء حذف الفاتورة:', purchaseId);
       
-      const { data: result, error: deleteError } = await supabase.rpc('delete_purchase_completely', {
+      const { data, error } = await supabase.rpc('delete_purchase_completely', {
         p_purchase_id: purchaseId
       });
 
-      if (deleteError) throw new Error(`فشل في حذف الفاتورة: ${deleteError.message}`);
-      if (!result?.success) throw new Error(result?.error || 'فشل غير محدد في حذف الفاتورة');
+      if (error) throw error;
 
-      console.log('✅ نتيجة الحذف:', result);
-      setPurchases(prev => prev.filter(p => p.id !== purchaseId));
-      
-      setTimeout(() => refetchData?.(), 500);
-      
-      toast({ 
-        title: 'تم الحذف بنجاح', 
-        description: result.message || 'تم حذف الفاتورة وجميع متعلقاتها بنجاح',
-        variant: 'success'
-      });
-      
-      return { success: true, purchase: { id: purchaseId, purchase_number: result.purchase_number } };
+      if (data.success) {
+        toast({
+          title: "تم الحذف بنجاح",
+          description: data.message,
+        });
+        await fetchPurchases();
+        return { success: true };
+      } else {
+        throw new Error(data.error);
+      }
     } catch (error) {
-      console.error("❌ خطأ في حذف فاتورة الشراء:", error);
-      toast({ 
-        title: 'خطأ في الحذف', 
-        description: `فشل حذف الفاتورة: ${error.message}`, 
-        variant: 'destructive' 
+      console.error('خطأ في حذف فاتورة الشراء:', error);
+      toast({
+        title: "فشل الحذف",
+        description: error.message,
+        variant: "destructive",
       });
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
     }
-  }, [refetchData]);
+  };
+
+  useEffect(() => {
+    fetchPurchases();
+  }, []);
 
   return {
     purchases,
@@ -174,302 +173,254 @@ export const useSimplePurchases = () => {
   };
 };
 
-// دالة بسيطة ومضمونة لمعالجة المنتجات
-async function processProductSimple(item, purchase, userId) {
+// ============ دوال المساعدة ============
+
+// دالة معالجة المنتج - مبسطة ومضمونة
+const processProductSimple = async (item, purchase, userId) => {
+  console.log('🔄 بدء معالجة منتج:', {
+    productName: item.productName,
+    variantSku: item.variantSku,
+    quantity: item.quantity,
+    costPrice: item.costPrice
+  });
+
   try {
-    console.log('🔍 بدء معالجة المنتج:', {
-      productName: item.productName,
-      variantSku: item.variantSku,
-      quantity: item.quantity,
-      costPrice: item.costPrice
-    });
+    // 1. استخراج اسم المنتج الأساسي
+    const baseProductName = extractBaseProductName(item.productName);
+    console.log('📝 اسم المنتج الأساسي:', baseProductName);
     
-    // البحث عن المنتج الموجود بالاسم أولاً
-    console.log('🔍 البحث عن المنتج بالاسم:', item.productName.trim());
+    // 2. البحث عن المنتج الأساسي
     const { data: existingProducts, error: searchError } = await supabase
       .from('products')
       .select('id, name')
-      .ilike('name', `%${item.productName.trim()}%`)
+      .ilike('name', `%${baseProductName}%`)
       .limit(1);
 
-    if (searchError) {
-      console.error('❌ خطأ في البحث عن المنتج:', searchError);
-      throw searchError;
-    }
-
-    console.log('🔍 نتائج البحث:', existingProducts);
+    if (searchError) throw searchError;
 
     let productId;
     let variantId;
 
     if (existingProducts?.length > 0) {
-      // المنتج موجود - البحث عن المتغير المحدد بناءً على اللون والقياس
+      // المنتج موجود
       productId = existingProducts[0].id;
-      console.log('✅ المنتج موجود:', existingProducts[0].name, 'ID:', existingProducts[0].id);
+      console.log('✅ المنتج موجود:', existingProducts[0].name);
       
-      // استخراج اللون والقياس من اسم المنتج الكامل
-      const fullProductName = item.productName; // مثال: "سوت شيك ليموني 36"
-      const baseProductName = existingProducts[0].name; // مثال: "سوت شيك"
-      const variantInfo = fullProductName.replace(baseProductName, '').trim(); // "ليموني 36"
-      
-      console.log('🔍 معلومات المتغير:', variantInfo);
-      
-      // البحث عن اللون والقياس في قاعدة البيانات
-      let colorId = null;
-      let sizeId = null;
-      
-      // البحث عن اللون (ليموني)
-      const colorWords = variantInfo.split(' ').filter(word => isNaN(word));
-      if (colorWords.length > 0) {
-        const { data: colors } = await supabase
-          .from('colors')
-          .select('id, name')
-          .ilike('name', `%${colorWords[0]}%`)
-          .limit(1);
-        if (colors?.length > 0) colorId = colors[0].id;
-      }
-      
-      // البحث عن القياس (36)
-      const sizeWords = variantInfo.split(' ').filter(word => !isNaN(word) || ['S', 'M', 'L', 'XL', 'XXL', 'فري'].includes(word.toUpperCase()));
-      if (sizeWords.length > 0) {
-        const { data: sizes } = await supabase
-          .from('sizes')
-          .select('id, name')
-          .eq('name', sizeWords[0])
-          .limit(1);
-        if (sizes?.length > 0) sizeId = sizes[0].id;
-      }
-      
-      console.log('🎨 معرف اللون:', colorId, '🔢 معرف القياس:', sizeId);
-      
-      // البحث عن المتغير بناءً على اللون والقياس
-      if (colorId && sizeId) {
-        const { data: existingVariant } = await supabase
-          .from('product_variants')
-          .select('id')
-          .eq('product_id', productId)
-          .eq('color_id', colorId)
-          .eq('size_id', sizeId)
-          .limit(1);
-          
-        if (existingVariant?.length > 0) {
-          variantId = existingVariant[0].id;
-          console.log('✅ تم العثور على المتغير المطلوب');
-        } else {
-          // إنشاء متغير جديد بنفس اللون والقياس
-          console.log('🆕 إنشاء متغير جديد بنفس اللون والقياس');
-          const { data: newVariant, error } = await supabase
-            .from('product_variants')
-            .insert({
-              product_id: productId,
-              color_id: colorId,
-              size_id: sizeId,
-              barcode: item.variantSku,
-              sku: item.variantSku,
-              price: item.costPrice * 1.3,
-              cost_price: item.costPrice,
-              is_active: true
-            })
-            .select('id')
-            .single();
+      // البحث عن متغير موجود بنفس الباركود/SKU
+      const { data: existingVariant } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('product_id', productId)
+        .or(`barcode.eq.${item.variantSku},sku.eq.${item.variantSku}`)
+        .limit(1);
 
-          if (error) throw error;
-          variantId = newVariant.id;
-          console.log('✅ تم إنشاء متغير جديد');
-        }
+      if (existingVariant?.length > 0) {
+        // وجد نفس المتغير
+        variantId = existingVariant[0].id;
+        console.log('✅ وجد نفس المتغير');
       } else {
-        // في حالة عدم العثور على اللون أو القياس، استخدام أول متغير موجود
-        const { data: existingVariants } = await supabase
-          .from('product_variants')
-          .select('id')
-          .eq('product_id', productId)
-          .limit(1);
-
-        if (existingVariants?.length > 0) {
-          variantId = existingVariants[0].id;
-          console.log('🎨 استخدام أول متغير موجود');
-        } else {
-          // إنشاء متغير افتراضي
-          const { data: newVariant, error } = await supabase
-            .from('product_variants')
-            .insert({
-              product_id: productId,
-              barcode: item.variantSku,
-              sku: item.variantSku,
-              price: item.costPrice * 1.3,
-              cost_price: item.costPrice,
-              is_active: true
-            })
-            .select('id')
-            .single();
-
-          if (error) throw error;
-          variantId = newVariant.id;
-          console.log('✅ تم إنشاء متغير افتراضي');
-        }
+        // إنشاء متغير جديد للمنتج الموجود
+        console.log('🆕 إنشاء متغير جديد للمنتج الموجود');
+        variantId = await createVariantForProduct(productId, item);
       }
     } else {
       // إنشاء منتج جديد تماماً
-      console.log('🆕 إنشاء منتج جديد:', item.productName);
-      
-      const { data: newProduct, error: productError } = await supabase
-        .from('products')
-        .insert({
-          name: item.productName.trim(),
-          cost_price: item.costPrice,
-          base_price: item.costPrice * 1.3,
-          is_active: true,
-          created_by: userId
-        })
-        .select('id')
-        .single();
-
-      if (productError) throw productError;
-      productId = newProduct.id;
-
-      // إنشاء متغير للمنتج الجديد
-      const { data: newVariant, error: variantError } = await supabase
-        .from('product_variants')
-        .insert({
-          product_id: productId,
-          barcode: item.variantSku,
-          sku: item.variantSku,
-          price: item.costPrice * 1.3,
-          cost_price: item.costPrice,
-          is_active: true
-        })
-        .select('id')
-        .single();
-
-      if (variantError) throw variantError;
-      variantId = newVariant.id;
+      console.log('🆕 إنشاء منتج جديد تماماً');
+      productId = await createNewProduct(baseProductName, item, userId);
+      variantId = await createVariantForProduct(productId, item);
     }
 
-    // تحديث أسعار التكلفة
-    await supabase.from('products').update({ cost_price: item.costPrice }).eq('id', productId);
-    await supabase.from('product_variants').update({ cost_price: item.costPrice }).eq('id', variantId);
+    // 3. إضافة عنصر للفاتورة
+    await addPurchaseItem(purchase.id, productId, variantId, item);
 
-    // تحديث/إنشاء المخزون
-    console.log('🔍 البحث عن المخزون للمنتج:', productId, 'المتغير:', variantId);
-    const { data: inventory, error: inventoryError } = await supabase
-      .from('inventory')
-      .select('id, quantity')
-      .eq('product_id', productId)
-      .eq('variant_id', variantId)
-      .maybeSingle();
+    // 4. تحديث المخزون
+    await updateInventory(productId, variantId, item.quantity, userId);
 
-    if (inventoryError) {
-      console.error('❌ خطأ في البحث عن المخزون:', inventoryError);
-      throw inventoryError;
-    }
+    // 5. إضافة سجل تكلفة (للـ FIFO)
+    await addCostRecord(productId, variantId, purchase.id, item, purchase.purchase_date);
 
-    console.log('🔍 نتيجة البحث عن المخزون:', inventory);
+    console.log('✅ تمت معالجة المنتج بنجاح');
 
-    if (inventory) {
-      // تحديث الكمية الموجودة
-      await supabase
-        .from('inventory')
-        .update({
-          quantity: inventory.quantity + item.quantity,
-          updated_at: new Date().toISOString(),
-          last_updated_by: userId
-        })
-        .eq('id', inventory.id);
-      console.log(`📈 تم تحديث المخزون: ${inventory.quantity} + ${item.quantity} = ${inventory.quantity + item.quantity}`);
-    } else {
-      // إنشاء سجل مخزون جديد
-      await supabase
-        .from('inventory')
-        .insert({
-          product_id: productId,
-          variant_id: variantId,
-          quantity: item.quantity,
-          min_stock: 0,
-          reserved_quantity: 0,
-          last_updated_by: userId
-        });
-      console.log(`📈 تم إنشاء مخزون جديد: ${item.quantity}`);
-    }
-
-    // إضافة سجل تكلفة الشراء
-    await supabase
-      .from('purchase_cost_history')
-      .insert({
-        product_id: productId,
-        variant_id: variantId,
-        purchase_id: purchase.id,
-        quantity: item.quantity,
-        remaining_quantity: item.quantity,
-        unit_cost: item.costPrice,
-        purchase_date: purchase.purchase_date
-      });
-
-    // إضافة سجل في purchase_items
-    await supabase
-      .from('purchase_items')
-      .insert({
-        purchase_id: purchase.id,
-        product_id: productId,
-        variant_id: variantId,
-        quantity: item.quantity,
-        unit_cost: item.costPrice,
-        total_cost: item.costPrice * item.quantity
-      });
-
-    console.log(`✅ تم معالجة المنتج ${item.productName} بنجاح`);
   } catch (error) {
-    console.error(`❌ فشل معالجة المنتج ${item.productName}:`, error);
+    console.error('❌ خطأ في معالجة المنتج:', error);
     throw error;
   }
-}
+};
 
-// دالة لإضافة المصاريف
-async function addExpensesForPurchase(purchase, itemsTotal, shippingCost, transferCost, supplier, addExpenseFunction) {
+// استخراج اسم المنتج الأساسي
+const extractBaseProductName = (fullName) => {
+  // مثال: "سوت شيك ليموني 36" -> "سوت شيك"
+  const words = fullName.split(' ');
   
-  try {
-    // 1. مصروف المنتجات
-    if (itemsTotal > 0) {
-      await addExpenseFunction({
-        category: 'مشتريات',
-        expense_type: 'operational',
-        description: `شراء بضاعة - فاتورة ${purchase.purchase_number} من ${supplier}`,
-        amount: itemsTotal,
-        vendor_name: supplier,
-        receipt_number: purchase.purchase_number,
-        status: 'approved'
-      });
-      console.log(`✅ مصروف المشتريات: ${itemsTotal} د.ع`);
-    }
+  // إزالة الألوان والقياسات المعروفة
+  const colorWords = ['ليموني', 'سمائي', 'جوزي', 'أسود', 'أبيض', 'أحمر', 'أزرق', 'أخضر', 'وردي', 'بنفسجي'];
+  const sizeWords = ['S', 'M', 'L', 'XL', 'XXL', 'فري', 'صغير', 'متوسط', 'كبير'];
+  
+  return words.filter(word => 
+    !colorWords.includes(word) && 
+    !sizeWords.includes(word) && 
+    isNaN(word) // ليس رقم
+  ).join(' ').trim() || fullName.split(' ')[0]; // إذا لم يبق شيء، خذ أول كلمة
+};
 
-    // 2. مصروف الشحن
-    if (shippingCost > 0) {
-      await addExpenseFunction({
-        category: 'شحن ونقل',
-        expense_type: 'operational',
-        description: `تكلفة شحن فاتورة شراء ${purchase.purchase_number} - ${supplier}`,
-        amount: shippingCost,
-        vendor_name: supplier,
-        receipt_number: purchase.purchase_number + '-SHIP',
-        status: 'approved'
-      });
-      console.log(`✅ مصروف الشحن: ${shippingCost} د.ع`);
-    }
+// إنشاء منتج جديد
+const createNewProduct = async (productName, item, userId) => {
+  const { data: newProduct, error } = await supabase
+    .from('products')
+    .insert({
+      name: productName,
+      cost_price: item.costPrice,
+      base_price: item.costPrice * 1.3,
+      is_active: true,
+      created_by: userId
+    })
+    .select('id')
+    .single();
 
-    // 3. مصروف التحويل
-    if (transferCost > 0) {
-      await addExpenseFunction({
-        category: 'تكاليف التحويل',
-        expense_type: 'operational',
-        description: `تكلفة تحويل مالي فاتورة شراء ${purchase.purchase_number} - ${supplier}`,
-        amount: transferCost,
-        vendor_name: supplier,
-        receipt_number: purchase.purchase_number + '-TRANSFER',
-        status: 'approved'
-      });
-      console.log(`✅ مصروف التحويل: ${transferCost} د.ع`);
-    }
-  } catch (error) {
-    console.error('❌ خطأ في إضافة المصاريف:', error);
-    // لا نرمي خطأ هنا لأن الفاتورة تمت بنجاح
+  if (error) throw error;
+  console.log('✅ تم إنشاء منتج جديد:', newProduct.id);
+  return newProduct.id;
+};
+
+// إنشاء متغير لمنتج
+const createVariantForProduct = async (productId, item) => {
+  // الحصول على أو إنشاء لون وقياس افتراضي
+  const { colorId, sizeId } = await getOrCreateDefaultColorSize();
+  
+  const { data: newVariant, error } = await supabase
+    .from('product_variants')
+    .insert({
+      product_id: productId,
+      color_id: colorId,
+      size_id: sizeId,
+      barcode: item.variantSku,
+      sku: item.variantSku,
+      price: item.costPrice * 1.3,
+      cost_price: item.costPrice,
+      is_active: true
+    })
+    .select('id')
+    .single();
+
+  if (error) throw error;
+  console.log('✅ تم إنشاء متغير جديد:', newVariant.id);
+  return newVariant.id;
+};
+
+// الحصول على أو إنشاء لون وقياس افتراضي
+const getOrCreateDefaultColorSize = async () => {
+  // البحث عن اللون الافتراضي أو إنشاؤه
+  let { data: defaultColor } = await supabase
+    .from('colors')
+    .select('id')
+    .eq('name', 'افتراضي')
+    .limit(1);
+
+  if (!defaultColor?.length) {
+    const { data: newColor } = await supabase
+      .from('colors')
+      .insert({ name: 'افتراضي', hex_code: '#808080' })
+      .select('id')
+      .single();
+    defaultColor = [newColor];
   }
-}
+
+  // البحث عن القياس الافتراضي أو إنشاؤه  
+  let { data: defaultSize } = await supabase
+    .from('sizes')
+    .select('id')
+    .eq('name', 'افتراضي')
+    .limit(1);
+
+  if (!defaultSize?.length) {
+    const { data: newSize } = await supabase
+      .from('sizes')
+      .insert({ name: 'افتراضي', type: 'letter' })
+      .select('id')
+      .single();
+    defaultSize = [newSize];
+  }
+
+  return {
+    colorId: defaultColor[0].id,
+    sizeId: defaultSize[0].id
+  };
+};
+
+// إضافة عنصر للفاتورة
+const addPurchaseItem = async (purchaseId, productId, variantId, item) => {
+  const { error } = await supabase
+    .from('purchase_items')
+    .insert({
+      purchase_id: purchaseId,
+      product_id: productId,
+      variant_id: variantId,
+      quantity: item.quantity,
+      unit_cost: item.costPrice,
+      total_cost: item.costPrice * item.quantity
+    });
+
+  if (error) throw error;
+  console.log('✅ تم إضافة عنصر للفاتورة');
+};
+
+// تحديث المخزون
+const updateInventory = async (productId, variantId, quantity, userId) => {
+  const { data: existingInventory } = await supabase
+    .from('inventory')
+    .select('quantity')
+    .eq('product_id', productId)
+    .eq('variant_id', variantId)
+    .maybeSingle();
+
+  if (existingInventory) {
+    // تحديث الكمية الموجودة
+    const { error } = await supabase
+      .from('inventory')
+      .update({
+        quantity: existingInventory.quantity + quantity,
+        updated_at: new Date().toISOString(),
+        last_updated_by: userId
+      })
+      .eq('product_id', productId)
+      .eq('variant_id', variantId);
+
+    if (error) throw error;
+    console.log('✅ تم تحديث المخزون من', existingInventory.quantity, 'إلى', existingInventory.quantity + quantity);
+  } else {
+    // إنشاء سجل مخزون جديد
+    const { error } = await supabase
+      .from('inventory')
+      .insert({
+        product_id: productId,
+        variant_id: variantId,
+        quantity: quantity,
+        min_stock: 0,
+        reserved_quantity: 0,
+        last_updated_by: userId
+      });
+
+    if (error) throw error;
+    console.log('✅ تم إنشاء سجل مخزون جديد بكمية:', quantity);
+  }
+};
+
+// إضافة سجل التكلفة
+const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDate) => {
+  const { error } = await supabase
+    .from('purchase_cost_history')
+    .insert({
+      product_id: productId,
+      variant_id: variantId,
+      purchase_id: purchaseId,
+      quantity: item.quantity,
+      remaining_quantity: item.quantity,
+      unit_cost: item.costPrice,
+      purchase_date: purchaseDate
+    });
+
+  if (error) throw error;
+  console.log('✅ تم إضافة سجل التكلفة');
+};
+
+export default useSimplePurchases;
