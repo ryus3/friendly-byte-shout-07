@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 const InventoryPDFGenerator = ({ 
   products = [], 
@@ -539,7 +539,7 @@ const InventoryPDFGenerator = ({
       size="sm"
     >
       <Download className="w-4 h-4" />
-      تحميل PDF احترافي
+      تحميل PDF
     </Button>
   );
 };
