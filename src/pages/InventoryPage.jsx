@@ -15,7 +15,7 @@ import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
-import CategoryOverviewCards from '@/components/inventory/CategoryOverviewCards';
+import CategoryFilterCards from '@/components/inventory/CategoryFilterCards';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -529,36 +529,25 @@ const InventoryPage = () => {
           </div>
         </div>
         
-        {/* كروت الإحصائيات والأقسام */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* كارت أرشيف المنتجات */}
-          <div className="lg:col-span-1">
-            <InventoryStats
-              inventoryItems={inventoryItems}
-              lowStockCount={inventoryStats.lowStockCount}
-              reservedStockCount={inventoryStats.reservedStockCount}
-              onFilterChange={handleFilterChange}
-              onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
-              onRestoreProduct={() => console.log('restore product')}
-            />
-          </div>
+        <InventoryStats
+          inventoryItems={inventoryItems}
+          lowStockCount={inventoryStats.lowStockCount}
+          reservedStockCount={inventoryStats.reservedStockCount}
+          onFilterChange={handleFilterChange}
+          onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
+          onRestoreProduct={() => console.log('restore product')}
+        />
 
-          {/* كروت الأقسام والتصنيفات */}
-          <div className="lg:col-span-3">
-            <CategoryOverviewCards 
-              onFilterChange={setCategoryFilter}
-              currentFilter={categoryFilter}
-            />
-          </div>
-        </div>
+        <CategoryFilterCards 
+          onFilterChange={setCategoryFilter}
+          currentFilters={categoryFilter}
+        />
 
         <InventoryFilters
           filters={filters}
           setFilters={setFilters}
           categories={allCategories}
           onBarcodeSearch={() => setIsBarcodeScannerOpen(true)}
-          categoryFilter={categoryFilter}
-          onCategoryFilterChange={setCategoryFilter}
         />
 
         <InventoryList
