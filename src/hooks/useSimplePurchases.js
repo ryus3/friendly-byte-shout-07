@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 
@@ -7,7 +7,7 @@ export const useSimplePurchases = () => {
   const [loading, setLoading] = useState(false);
 
   // جلب جميع فواتير الشراء
-  const fetchPurchases = async () => {
+  const fetchPurchases = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -27,7 +27,7 @@ export const useSimplePurchases = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // إضافة فاتورة شراء جديدة
   const addPurchase = async (purchaseData) => {
