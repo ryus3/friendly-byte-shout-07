@@ -82,7 +82,7 @@ const InventoryPDFGenerator = ({
   };
 
   const createReportHTML = (data) => {
-    // حساب الإحصائيات المتقدمة
+    // حساب الإحصائيات المتقدمة - البيانات المحلية فقط (لا يستخدم قاعدة البيانات)
     const totalProducts = data.length;
     const totalStock = data.reduce((sum, item) => {
       return sum + (item.variants?.reduce((vSum, v) => vSum + (v.quantity || 0), 0) || 0);
@@ -105,115 +105,133 @@ const InventoryPDFGenerator = ({
 
     const goodStockItems = totalProducts - lowStockItems - outOfStockItems;
 
-    // حساب نسب للرسم البياني
+    // حساب نسب للرسم البياني المبسط
     const stockPercentages = {
       good: totalProducts > 0 ? Math.round((goodStockItems / totalProducts) * 100) : 0,
       low: totalProducts > 0 ? Math.round((lowStockItems / totalProducts) * 100) : 0,
       out: totalProducts > 0 ? Math.round((outOfStockItems / totalProducts) * 100) : 0
     };
 
-    // تاريخ باللغة الإنجليزية
+    // حساب القيمة الإجمالية للمخزون
+    const totalInventoryValue = data.reduce((sum, item) => {
+      return sum + (item.variants?.reduce((vSum, v) => vSum + ((v.quantity || 0) * (v.price || 0)), 0) || 0);
+    }, 0);
+
+    // التاريخ بالعربية والميلادي
     const currentDate = new Date();
-    const englishDate = currentDate.toLocaleDateString('en-US', {
+    const arabicDate = currentDate.toLocaleDateString('ar-SA', {
       year: 'numeric',
-      month: 'long',
+      month: 'long', 
       day: 'numeric',
       weekday: 'long'
     });
+    const gregorianDate = currentDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
 
     return `
-      <div style="font-family: 'Inter', 'system-ui', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; padding: 20px; background: #ffffff; color: #0f172a; line-height: 1.5; font-size: 13px;">
+      <div style="font-family: 'Noto Sans Arabic', 'Cairo', 'Amiri', 'Inter', system-ui, -apple-system, sans-serif; padding: 15px; background: #ffffff; color: #0f172a; line-height: 1.6; font-size: 12px; direction: rtl;">
         
-        <!-- Brand Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%); color: white; padding: 25px; border-radius: 16px; text-align: center; margin-bottom: 20px; position: relative; overflow: hidden;">
-          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><circle cx=\"20\" cy=\"20\" r=\"2\" fill=\"rgba(255,255,255,0.1)\"/><circle cx=\"80\" cy=\"80\" r=\"2\" fill=\"rgba(255,255,255,0.1)\"/><circle cx=\"40\" cy=\"60\" r=\"1.5\" fill=\"rgba(255,255,255,0.08)\"/><circle cx=\"60\" cy=\"30\" r=\"1.5\" fill=\"rgba(255,255,255,0.08)\"/></svg>'); opacity: 0.3;"></div>
-          <div style="position: relative; z-index: 1;">
-            <div style="font-size: 28px; font-weight: 800; letter-spacing: 3px; margin-bottom: 5px; text-shadow: 0 2px 8px rgba(0,0,0,0.3);">RYUS BRAND</div>
-            <div style="font-size: 16px; font-weight: 600; opacity: 0.95; margin-bottom: 8px;">Inventory Management System</div>
-            <div style="font-size: 12px; opacity: 0.8;">${englishDate} • ${currentDate.toLocaleTimeString('en-US')}</div>
-            <div style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 40px; opacity: 0.2;">📊</div>
+        <!-- العنوان الاحترافي -->
+        <div style="background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 30%, #a855f7 60%, #ec4899 100%); color: white; padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 15px; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(124, 58, 237, 0.25);">
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 0%, transparent 40%), radial-gradient(circle at 75% 75%, rgba(255,255,255,0.08) 0%, transparent 40%); opacity: 0.6;"></div>
+          <div style="position: relative; z-index: 2;">
+            <div style="font-size: 24px; font-weight: 900; letter-spacing: 2px; margin-bottom: 4px; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">RYUS BRAND</div>
+            <div style="font-size: 14px; font-weight: 600; opacity: 0.95; margin-bottom: 6px;">نظام إدارة المخزون المتقدم</div>
+            <div style="font-size: 11px; opacity: 0.85; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <span>📅 ${arabicDate}</span>
+              <span>•</span>
+              <span>${gregorianDate}</span>
+              <span>•</span>
+              <span>⏰ ${currentDate.toLocaleTimeString('ar-SA')}</span>
+            </div>
+            <div style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 35px; opacity: 0.15;">📊</div>
           </div>
         </div>
 
-        <!-- Advanced Statistics Dashboard -->
-        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px;">
-          <div style="background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);">
-            <div style="font-size: 22px; font-weight: 700;">${totalProducts}</div>
-            <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">Products</div>
+        <!-- بطاقات الإحصائيات الأساسية -->
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 15px;">
+          <div style="background: linear-gradient(135deg, #3b82f6, #1e40af); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);">
+            <div style="font-size: 18px; font-weight: 800;">${totalProducts}</div>
+            <div style="font-size: 9px; opacity: 0.9; margin-top: 1px;">إجمالي المنتجات</div>
           </div>
-          <div style="background: linear-gradient(135deg, #10b981, #047857); color: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);">
-            <div style="font-size: 22px; font-weight: 700;">${totalStock.toLocaleString()}</div>
-            <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">Total Stock</div>
+          <div style="background: linear-gradient(135deg, #10b981, #047857); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);">
+            <div style="font-size: 18px; font-weight: 800;">${totalStock.toLocaleString()}</div>
+            <div style="font-size: 9px; opacity: 0.9; margin-top: 1px;">إجمالي المخزون</div>
           </div>
-          <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);">
-            <div style="font-size: 22px; font-weight: 700;">${totalVariants}</div>
-            <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">Variants</div>
+          <div style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 10px rgba(139, 92, 246, 0.3);">
+            <div style="font-size: 18px; font-weight: 800;">${totalVariants}</div>
+            <div style="font-size: 9px; opacity: 0.9; margin-top: 1px;">المتغيرات</div>
           </div>
-          <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);">
-            <div style="font-size: 22px; font-weight: 700;">${totalReservedStock}</div>
-            <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">Reserved</div>
+          <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.3);">
+            <div style="font-size: 18px; font-weight: 800;">${totalReservedStock.toLocaleString()}</div>
+            <div style="font-size: 9px; opacity: 0.9; margin-top: 1px;">محجوز</div>
           </div>
-          <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; padding: 16px; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);">
-            <div style="font-size: 22px; font-weight: 700;">${(totalStock - totalReservedStock).toLocaleString()}</div>
-            <div style="font-size: 10px; opacity: 0.9; margin-top: 2px;">Available</div>
+          <div style="background: linear-gradient(135deg, #06b6d4, #0891b2); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 10px rgba(6, 182, 212, 0.3);">
+            <div style="font-size: 18px; font-weight: 800;">${(totalStock - totalReservedStock).toLocaleString()}</div>
+            <div style="font-size: 9px; opacity: 0.9; margin-top: 1px;">متاح</div>
+          </div>
+          <div style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 12px; border-radius: 8px; text-align: center; box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3);">
+            <div style="font-size: 18px; font-weight: 800;">${Math.round(totalInventoryValue).toLocaleString()}</div>
+            <div style="font-size: 9px; opacity: 0.9; margin-top: 1px;">القيمة (د.ع)</div>
           </div>
         </div>
 
-        <!-- Stock Distribution Chart -->
-        <div style="background: white; border-radius: 16px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
-          <h3 style="margin: 0 0 15px 0; font-size: 16px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px;">
-            📈 Stock Distribution Analysis
+        <!-- مخطط توزيع المخزون المبسط -->
+        <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 15px; box-shadow: 0 3px 15px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+          <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; direction: rtl;">
+            📊 تحليل توزيع المخزون
           </h3>
-          <div style="display: flex; gap: 15px; align-items: center;">
-            <!-- Mini Chart -->
-            <div style="flex: 1; background: #f8fafc; border-radius: 8px; padding: 12px; position: relative; overflow: hidden;">
-              <div style="display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #e2e8f0;">
-                <div style="background: #10b981; width: ${stockPercentages.good}%; transition: all 0.3s;"></div>
-                <div style="background: #f59e0b; width: ${stockPercentages.low}%; transition: all 0.3s;"></div>
-                <div style="background: #ef4444; width: ${stockPercentages.out}%; transition: all 0.3s;"></div>
+          <div style="display: flex; gap: 10px; align-items: center; direction: rtl;">
+            <div style="flex: 1; background: #f8fafc; border-radius: 6px; padding: 8px;">
+              <div style="display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: #e2e8f0; direction: ltr;">
+                <div style="background: #10b981; width: ${stockPercentages.good}%;"></div>
+                <div style="background: #f59e0b; width: ${stockPercentages.low}%;"></div>
+                <div style="background: #ef4444; width: ${stockPercentages.out}%;"></div>
               </div>
-              <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: #64748b;">
-                <span>Good: ${stockPercentages.good}%</span>
-                <span>Low: ${stockPercentages.low}%</span>
-                <span>Out: ${stockPercentages.out}%</span>
+              <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 8px; color: #64748b; direction: rtl;">
+                <span>جيد: ${stockPercentages.good}%</span>
+                <span>منخفض: ${stockPercentages.low}%</span>
+                <span>نافد: ${stockPercentages.out}%</span>
               </div>
             </div>
-            <!-- Legend -->
-            <div style="display: flex; flex-direction: column; gap: 6px;">
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
-                <div style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></div>
-                <span style="color: #374151;">Good Stock (${goodStockItems})</span>
+            <div style="display: flex; flex-direction: column; gap: 4px; direction: rtl;">
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
+                <div style="width: 10px; height: 10px; background: #10b981; border-radius: 2px;"></div>
+                <span style="color: #374151;">مخزون جيد (${goodStockItems})</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
-                <div style="width: 12px; height: 12px; background: #f59e0b; border-radius: 2px;"></div>
-                <span style="color: #374151;">Low Stock (${lowStockItems})</span>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
+                <div style="width: 10px; height: 10px; background: #f59e0b; border-radius: 2px;"></div>
+                <span style="color: #374151;">مخزون منخفض (${lowStockItems})</span>
               </div>
-              <div style="display: flex; align-items: center; gap: 6px; font-size: 11px;">
-                <div style="width: 12px; height: 12px; background: #ef4444; border-radius: 2px;"></div>
-                <span style="color: #374151;">Out of Stock (${outOfStockItems})</span>
+              <div style="display: flex; align-items: center; gap: 4px; font-size: 9px;">
+                <div style="width: 10px; height: 10px; background: #ef4444; border-radius: 2px;"></div>
+                <span style="color: #374151;">نافد من المخزون (${outOfStockItems})</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Detailed Products Table -->
-        <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
-          <div style="background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 16px;">
-            <h2 style="margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-              📋 Detailed Product Inventory
+        <!-- جدول المنتجات التفصيلي -->
+        <div style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 3px 15px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+          <div style="background: linear-gradient(135deg, #1e293b, #334155); color: white; padding: 12px; direction: rtl;">
+            <h2 style="margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+              📋 تفاصيل مخزون المنتجات
             </h2>
           </div>
           
-          <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 10px; direction: rtl;">
             <thead>
               <tr style="background: #f8fafc;">
-                <th style="padding: 12px 8px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 25%;">Product Name</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 15%;">Variants</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">Total Stock</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">Reserved</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">Available</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">Avg. Price</th>
-                <th style="padding: 12px 8px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">Status</th>
+                <th style="padding: 10px 6px; text-align: right; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 30%;">اسم المنتج</th>
+                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">المتغيرات</th>
+                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">إجمالي المخزون</th>
+                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">محجوز</th>
+                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">متاح</th>
+                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 12%;">متوسط السعر</th>
+                <th style="padding: 10px 6px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e2e8f0; width: 10%;">الحالة</th>
               </tr>
             </thead>
             <tbody>
@@ -225,46 +243,49 @@ const InventoryPDFGenerator = ({
                   ? item.variants.reduce((sum, v) => sum + (v.price || 0), 0) / item.variants.length 
                   : 0;
                 
-                let status = 'Good';
+                let status = 'جيد';
                 let statusColor = '#10b981';
-                let statusBg = '#10b98110';
+                let statusBg = '#10b98115';
                 if (itemStock === 0) {
-                  status = 'Out';
+                  status = 'نافد';
                   statusColor = '#ef4444';
-                  statusBg = '#ef444410';
+                  statusBg = '#ef444415';
                 } else if (itemStock < 5) {
-                  status = 'Low';
+                  status = 'منخفض';
                   statusColor = '#f59e0b';
-                  statusBg = '#f59e0b10';
+                  statusBg = '#f59e0b15';
                 }
 
-                // عرض تفاصيل المتغيرات
-                const variantDetails = item.variants?.map(variant => {
-                  const variantStock = variant.quantity || 0;
-                  const variantReserved = variant.reserved_quantity || 0;
-                  const variantAvailable = variantStock - variantReserved;
-                  
-                  return `
-                    <div style="margin: 2px 0; padding: 4px 6px; background: #f8fafc; border-radius: 4px; font-size: 9px; border-left: 3px solid ${variantStock === 0 ? '#ef4444' : variantStock < 3 ? '#f59e0b' : '#10b981'};">
-                      <strong>${variant.size || variant.color || 'Default'}</strong> - Stock: ${variantStock}, Reserved: ${variantReserved}, Available: ${variantAvailable}, Price: ${Math.round(variant.price || 0).toLocaleString()}
-                    </div>
-                  `;
-                }).join('') || '<div style="font-size: 9px; color: #64748b;">No variants</div>';
+                // عرض تفاصيل المتغيرات المتوفرة فقط
+                const availableVariants = item.variants?.filter(variant => (variant.quantity || 0) > 0) || [];
+                const variantDetails = availableVariants.length > 0 
+                  ? availableVariants.map(variant => {
+                      const variantStock = variant.quantity || 0;
+                      const variantReserved = variant.reserved_quantity || 0;
+                      const variantAvailable = variantStock - variantReserved;
+                      
+                      return `
+                        <div style="margin: 1px 0; padding: 3px 5px; background: #f1f5f9; border-radius: 3px; font-size: 8px; border-right: 2px solid ${variantStock < 3 ? '#f59e0b' : '#10b981'}; direction: rtl;">
+                          <strong>${variant.size || variant.color || 'افتراضي'}</strong> - مخزون: ${variantStock} | محجوز: ${variantReserved} | متاح: ${variantAvailable} | سعر: ${Math.round(variant.price || 0).toLocaleString()} د.ع
+                        </div>
+                      `;
+                    }).join('')
+                  : '<div style="font-size: 8px; color: #64748b; direction: rtl;">لا توجد متغيرات متوفرة</div>';
 
                 return `
                   <tr style="background: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'};">
-                    <td style="padding: 12px 8px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
-                      <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">${item.name || 'Unnamed Product'}</div>
-                      <div style="font-size: 9px; color: #64748b; margin-bottom: 6px;">${item.category || 'No Category'}</div>
+                    <td style="padding: 10px 6px; border-bottom: 1px solid #e2e8f0; vertical-align: top; direction: rtl;">
+                      <div style="font-weight: 700; color: #1e293b; margin-bottom: 3px; direction: rtl;">${item.name || 'منتج بدون اسم'}</div>
+                      <div style="font-size: 8px; color: #64748b; margin-bottom: 4px; direction: rtl;">${item.category || 'بدون تصنيف'}</div>
                       ${variantDetails}
                     </td>
-                    <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #6366f1;">${item.variants?.length || 0}</td>
-                    <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b;">${itemStock.toLocaleString()}</td>
-                    <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #f59e0b;">${itemReserved.toLocaleString()}</td>
-                    <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #10b981;">${itemAvailable.toLocaleString()}</td>
-                    <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 500;">${Math.round(avgPrice).toLocaleString()}</td>
-                    <td style="padding: 12px 8px; text-align: center; border-bottom: 1px solid #e2e8f0;">
-                      <span style="color: ${statusColor}; font-weight: 600; padding: 4px 8px; background: ${statusBg}; border-radius: 12px; font-size: 10px; border: 1px solid ${statusColor}20;">
+                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #6366f1;">${availableVariants.length}</td>
+                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1e293b;">${itemStock.toLocaleString()}</td>
+                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #f59e0b;">${itemReserved.toLocaleString()}</td>
+                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #10b981;">${itemAvailable.toLocaleString()}</td>
+                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #64748b; font-weight: 500;">${Math.round(avgPrice).toLocaleString()}</td>
+                    <td style="padding: 10px 6px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+                      <span style="color: ${statusColor}; font-weight: 600; padding: 3px 6px; background: ${statusBg}; border-radius: 8px; font-size: 8px; border: 1px solid ${statusColor}30;">
                         ${status}
                       </span>
                     </td>
@@ -275,11 +296,12 @@ const InventoryPDFGenerator = ({
           </table>
         </div>
 
-        <!-- Professional Footer -->
-        <div style="margin-top: 20px; padding: 16px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 12px; text-align: center; color: #64748b; border: 1px solid #e2e8f0;">
-          <div style="font-size: 11px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">Generated by RYUS Brand Inventory Management System</div>
-          <div style="font-size: 10px; color: #94a3b8;">📅 ${englishDate} at ${currentDate.toLocaleTimeString('en-US')} • Confidential Report</div>
-          <div style="margin-top: 8px; font-size: 9px; color: #94a3b8;">This report contains ${totalProducts} products with ${totalVariants} variants • Total inventory value: ${Math.round(data.reduce((sum, item) => sum + (item.variants?.reduce((vSum, v) => vSum + ((v.quantity || 0) * (v.price || 0)), 0) || 0), 0)).toLocaleString()} IQD</div>
+        <!-- التذييل الاحترافي -->
+        <div style="margin-top: 15px; padding: 12px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 8px; text-align: center; color: #64748b; border: 1px solid #e2e8f0; direction: rtl;">
+          <div style="font-size: 10px; font-weight: 600; color: #1e293b; margin-bottom: 3px;">تم إنشاؤه بواسطة نظام إدارة المخزون RYUS BRAND</div>
+          <div style="font-size: 9px; color: #94a3b8;">📅 ${arabicDate} • ${gregorianDate} • ${currentDate.toLocaleTimeString('ar-SA')} • تقرير سري</div>
+          <div style="margin-top: 6px; font-size: 8px; color: #94a3b8;">يحتوي هذا التقرير على ${totalProducts} منتج مع ${totalVariants} متغير • القيمة الإجمالية للمخزون: ${Math.round(totalInventoryValue).toLocaleString()} دينار عراقي</div>
+          <div style="margin-top: 4px; font-size: 8px; color: #94a3b8; font-weight: 500;">⚠️ ملاحظة: البيانات محلية فقط - لا يتم استخدام قاعدة البيانات</div>
         </div>
       </div>
     `;
