@@ -391,12 +391,58 @@ class SystemOptimizer {
         });
       }
 
+      // 3. حذف المنتجات بدون متغيرات نشطة
+      const { data: productsWithoutVariants } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('is_active', true)
+        .not('id', 'in', `(SELECT DISTINCT product_id FROM product_variants WHERE is_active = true)`);
+
+      if (productsWithoutVariants?.length > 0) {
+        for (const product of productsWithoutVariants) {
+          await supabase
+            .from('products')
+            .update({ is_active: false })
+            .eq('id', product.id);
+        }
+        
+        repairs.push({
+          type: 'deactivated_orphaned_products',
+          count: productsWithoutVariants.length,
+          message: `تم إلغاء تفعيل ${productsWithoutVariants.length} منتج بدون متغيرات نشطة`
+        });
+      }
+
+      // 4. حذف النسخ الاحتياطية القديمة
+      const { data: oldBackups } = await supabase
+        .from('system_backups')
+        .delete()
+        .lt('created_at', new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString())
+        .eq('is_auto_backup', true)
+        .select('id');
+
+      if (oldBackups?.length > 0) {
+        repairs.push({
+          type: 'cleaned_old_backups',
+          count: oldBackups.length,
+          message: `تم حذف ${oldBackups.length} نسخة احتياطية قديمة`
+        });
+      }
+
       console.log('✅ انتهى الإصلاح التلقائي:', repairs);
-      return repairs;
+      return {
+        success: true,
+        repairs,
+        message: `تم الإصلاح بنجاح. ${repairs.length} عملية إصلاح تمت.`
+      };
 
     } catch (error) {
       console.error('❌ خطأ في الإصلاح التلقائي:', error);
-      return { error: error.message };
+      return { 
+        success: false, 
+        error: error.message,
+        message: 'فشل في الإصلاح التلقائي'
+      };
     }
   }
 }
