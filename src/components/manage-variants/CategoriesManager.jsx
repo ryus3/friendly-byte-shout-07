@@ -71,7 +71,7 @@ const CategoryList = React.memo(({ categoryType, title }) => {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <Button onClick={handleAdd} size="sm">
+        <Button onClick={handleAdd} size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0">
           <Plus className="w-4 h-4 ml-2" />
           إضافة
         </Button>

@@ -151,7 +151,7 @@ const ProductTypesManager = () => {
           <h3 className="text-lg font-semibold">أنواع المنتجات</h3>
           <Badge variant="secondary">{productTypes.length}</Badge>
         </div>
-        <Button onClick={handleAdd} size="sm" className="gap-2">
+        <Button onClick={handleAdd} size="sm" className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
           <Plus className="h-4 w-4" />
           إضافة نوع جديد
         </Button>

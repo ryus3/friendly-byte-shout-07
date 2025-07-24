@@ -179,6 +179,8 @@ const SizesManagerNew = () => {
   };
 
   const handleDelete = async (sizeId) => {
+    console.log('🗑️ محاولة حذف القياس:', sizeId);
+    
     try {
       // التحقق من استخدام القياس في المنتجات
       const { data: variants, error: checkError } = await supabase
@@ -187,9 +189,15 @@ const SizesManagerNew = () => {
         .eq('size_id', sizeId)
         .limit(1);
 
-      if (checkError) throw checkError;
+      console.log('🔍 نتيجة البحث عن متغيرات القياس:', { variants, checkError });
+
+      if (checkError) {
+        console.error('❌ خطأ في فحص متغيرات القياس:', checkError);
+        throw checkError;
+      }
 
       if (variants && variants.length > 0) {
+        console.log('⚠️ القياس مستخدم في منتجات:', variants.length);
         toast({
           title: "لا يمكن الحذف",
           description: "هذا القياس مستخدم في منتجات موجودة",
@@ -198,14 +206,24 @@ const SizesManagerNew = () => {
         return;
       }
 
-      await supabase.from('sizes').delete().eq('id', sizeId);
+      console.log('✅ القياس غير مستخدم، جاري الحذف...');
+      
+      const { error } = await supabase.from('sizes').delete().eq('id', sizeId);
+      
+      if (error) {
+        console.error('❌ خطأ في حذف القياس:', error);
+        throw error;
+      }
+      
+      console.log('🎉 تم حذف القياس بنجاح');
+      
       toast({ title: 'تم الحذف', description: 'تم حذف القياس بنجاح' });
       await fetchSizes();
     } catch (error) {
-      console.error('خطأ في حذف القياس:', error);
+      console.error('💥 خطأ عام في حذف القياس:', error);
       toast({
         title: 'خطأ',
-        description: 'فشل في حذف القياس',
+        description: `فشل في حذف القياس: ${error.message}`,
         variant: 'destructive'
       });
     }
@@ -233,7 +251,7 @@ const SizesManagerNew = () => {
             إدارة القياسات
             <Badge variant="secondary">{sizes.length}</Badge>
           </CardTitle>
-          <Button onClick={() => setIsAddingSize(true)}>
+          <Button onClick={() => setIsAddingSize(true)} className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0">
             <Plus className="h-4 w-4 mr-2" />
             إضافة قياس
           </Button>

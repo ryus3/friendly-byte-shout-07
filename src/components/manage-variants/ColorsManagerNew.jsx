@@ -10,7 +10,7 @@ import {
   Plus, Edit, Trash2, GripVertical, Palette
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import AddEditColorDialog from './AddEditColorDialog';
 
 // مكون قابل للسحب للون واحد
@@ -115,7 +115,7 @@ const ColorsManager = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingColor, setEditingColor] = useState(null);
-  const { toast } = useToast();
+  // لا نحتاج لـ useToast هنا، نستخدم toast مباشرة
 
   const fetchColors = async () => {
     try {
@@ -143,6 +143,8 @@ const ColorsManager = () => {
   }, []);
 
   const handleDelete = async (id) => {
+    console.log('🗑️ محاولة حذف اللون:', id);
+    
     try {
       // التحقق من استخدام اللون في المنتجات
       const { data: variants, error: checkError } = await supabase
@@ -151,9 +153,15 @@ const ColorsManager = () => {
         .eq('color_id', id)
         .limit(1);
 
-      if (checkError) throw checkError;
+      console.log('🔍 نتيجة البحث عن متغيرات:', { variants, checkError });
+
+      if (checkError) {
+        console.error('❌ خطأ في فحص المتغيرات:', checkError);
+        throw checkError;
+      }
 
       if (variants && variants.length > 0) {
+        console.log('⚠️ اللون مستخدم في منتجات:', variants.length);
         toast({
           title: "لا يمكن الحذف",
           description: "هذا اللون مستخدم في منتجات موجودة",
@@ -162,13 +170,20 @@ const ColorsManager = () => {
         return;
       }
 
+      console.log('✅ اللون غير مستخدم، جاري الحذف...');
+      
       const { error } = await supabase
         .from('colors')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ خطأ في حذف اللون:', error);
+        throw error;
+      }
 
+      console.log('🎉 تم حذف اللون بنجاح');
+      
       toast({
         title: "تم الحذف",
         description: "تم حذف اللون بنجاح",
@@ -176,10 +191,10 @@ const ColorsManager = () => {
       
       fetchColors();
     } catch (error) {
-      console.error('خطأ في حذف اللون:', error);
+      console.error('💥 خطأ عام في حذف اللون:', error);
       toast({
         title: "خطأ",
-        description: "فشل في حذف اللون",
+        description: `فشل في حذف اللون: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -240,7 +255,7 @@ const ColorsManager = () => {
           <h2 className="text-2xl font-bold text-foreground">إدارة الألوان</h2>
           <p className="text-muted-foreground">إضافة وتعديل وحذف ألوان المنتجات - يمكنك سحب الألوان لإعادة ترتيبها</p>
         </div>
-        <Button onClick={handleAdd} className="gap-2">
+        <Button onClick={handleAdd} className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
           <Plus className="h-4 w-4" />
           إضافة لون جديد
         </Button>
@@ -278,7 +293,7 @@ const ColorsManager = () => {
               <Palette className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">لا توجد ألوان</h3>
               <p className="text-muted-foreground mb-4">ابدأ بإضافة أول لون</p>
-              <Button onClick={handleAdd} className="gap-2">
+              <Button onClick={handleAdd} className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
                 <Plus className="h-4 w-4" />
                 إضافة لون جديد
               </Button>

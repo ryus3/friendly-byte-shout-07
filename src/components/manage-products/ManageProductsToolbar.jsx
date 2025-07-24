@@ -86,7 +86,7 @@ const ManageProductsToolbar = ({
             <Button variant="outline" size="sm" onClick={onManageCategories} className="w-full col-span-1">
               إدارة المتغيرات
             </Button>
-            <Button size="sm" onClick={onAddProduct} className="w-full col-span-2 sm:col-span-1">
+            <Button size="sm" onClick={onAddProduct} className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 w-full col-span-2 sm:col-span-1">
               <Plus className="w-4 h-4 ml-2" />
               إضافة منتج
             </Button>

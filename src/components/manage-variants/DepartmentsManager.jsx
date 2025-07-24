@@ -135,7 +135,7 @@ const DepartmentsManager = () => {
           <h2 className="text-2xl font-bold text-foreground">إدارة الأقسام الرئيسية</h2>
           <p className="text-muted-foreground">إضافة وتعديل وحذف الأقسام الرئيسية للمنتجات</p>
         </div>
-        <Button onClick={handleAdd} className="gap-2">
+        <Button onClick={handleAdd} className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
           <Plus className="h-4 w-4" />
           إضافة قسم جديد
         </Button>
