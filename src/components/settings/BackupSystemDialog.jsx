@@ -274,53 +274,46 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden z-[9900] focus:outline-none">
-        <DialogHeader className="p-4 sm:p-6 pb-2 relative">
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute left-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none bg-white dark:bg-gray-800 p-2 shadow-md z-10"
-          >
-            <X className="h-4 w-4" />
-            <span className="sr-only">إغلاق</span>
-          </button>
-          <DialogTitle className="flex items-center gap-3 pr-12">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-              <Database className="w-6 h-6 text-white" />
+      <DialogContent className="max-w-4xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none">
+        <DialogHeader className="p-3 sm:p-4 md:p-6 pb-2 relative">
+          <DialogTitle className="flex items-center gap-2 sm:gap-3 pr-8 sm:pr-12">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+              <Database className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg sm:text-xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
+              <h2 className="text-base sm:text-lg md:text-xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
               <p className="text-xs sm:text-sm text-muted-foreground">إدارة شاملة وآمنة لبيانات النظام</p>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4">
+        <div className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 space-y-3 sm:space-y-4">
           {/* التبويبات المحسنة */}
-          <div className="flex flex-col sm:flex-row gap-2 p-1 sm:p-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+          <div className="flex flex-row gap-1 sm:gap-2 p-1 sm:p-2 bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl overflow-x-auto">
             <button
               onClick={() => setActiveTab('list')}
-              className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+              className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
                 activeTab === 'list' 
                   ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
                   : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
               }`}
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">النسخ الاحتياطية</span>
-              <span className="sm:hidden">القائمة</span>
+              <span className="sm:hidden text-xs">القائمة</span>
             </button>
             
             <button
               onClick={() => setActiveTab('create')}
-              className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+              className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
                 activeTab === 'create' 
                   ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
                   : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Database className="w-4 h-4" />
+              <Database className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">إنشاء نسخة</span>
-              <span className="sm:hidden">إنشاء</span>
+              <span className="sm:hidden text-xs">إنشاء</span>
             </button>
             
             <button
@@ -329,15 +322,15 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                 console.log('selectedBackup:', selectedBackup);
                 setActiveTab('restore');
               }}
-              className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+              className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
                 activeTab === 'restore'
                   ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
                   : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
               }`}
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">استعادة البيانات</span>
-              <span className="sm:hidden">استعادة</span>
+              <span className="sm:hidden text-xs">استعادة</span>
             </button>
           </div>
 
