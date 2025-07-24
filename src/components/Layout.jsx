@@ -291,14 +291,17 @@ const Layout = ({ children }) => {
                      if (window.refreshInventory) {
                        await window.refreshInventory();
                      }
+
+                     // تحديث الإشعارات أيضاً
+                     window.dispatchEvent(new CustomEvent('refresh-notifications'));
                      
-                     await new Promise(resolve => setTimeout(resolve, 500));
+                     await new Promise(resolve => setTimeout(resolve, 800));
                      
                      toast({ 
-                       title: "✅ تم التحديث بنجاح", 
-                       description: "تم تحديث البيانات الجديدة بنجاح",
-                       className: "z-[9999] text-right",
-                       variant: "default"
+                       title: "✅ تم التحديث بنجاح!", 
+                       description: "تم تحديث جميع البيانات والطلبات والإشعارات بنجاح",
+                       className: "z-[9999] text-right bg-green-500 text-white border-green-600",
+                       duration: 3000
                      });
                   } catch (error) {
                     console.error('خطأ في تحديث البيانات:', error);

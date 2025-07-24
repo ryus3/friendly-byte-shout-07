@@ -21,13 +21,40 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
   ];
 
   const provinceStats = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
+    if (!orders || orders.length === 0) {
+      console.log('❌ لا توجد طلبات متاحة للمحافظات');
+      return [];
+    }
 
-    // فلترة الطلبات حسب الفترة المحددة والطلبات المُوصَّلة فقط
-    const filteredOrders = filterOrdersByPeriod(orders, selectedPeriod)
-      .filter(order => order.status === 'delivered');
+    // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
+    const filteredOrders = orders.filter(order => {
+      // التأكد من أن الطلب مكتمل فقط
+      const isDelivered = order.delivery_status === 'delivered' || 
+                         order.status === 'delivered' || 
+                         order.order_status === 'delivered' ||
+                         order.delivery_status === 'completed' ||
+                         order.status === 'completed';
+      
+      if (!isDelivered) return false;
 
-    console.log('Filtered delivered orders:', filteredOrders.length);
+      const orderDate = new Date(order.created_at || order.order_date);
+      const now = new Date();
+      
+      switch (selectedPeriod) {
+        case 'today':
+          return orderDate.toDateString() === now.toDateString();
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return orderDate >= weekAgo;
+        case 'month':
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          return orderDate >= monthAgo;
+        default:
+          return true;
+      }
+    });
+
+    console.log('✅ طلبات مكتملة للمحافظات:', filteredOrders.length);
 
     // تجميع البيانات حسب المحافظة
     const provinceMap = new Map();

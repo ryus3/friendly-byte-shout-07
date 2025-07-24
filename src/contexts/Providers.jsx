@@ -9,27 +9,30 @@ import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
+import NotificationsRealtimeProvider from '@/contexts/NotificationsRealtimeContext.jsx';
 
 export const AppProviders = ({ children }) => {
   return (
     <ThemeProvider>
       <SupabaseProvider>
         <UnifiedAuthProvider>
-          <NotificationsProvider>
-            <NotificationsSystemProvider>
-              <VariantsProvider>
-                <InventoryProvider>
-                  <ProfitsProvider>
-                    <AlWaseetProvider>
-                        <AiChatProvider>
-                          {children}
-                        </AiChatProvider>
-                    </AlWaseetProvider>
-                  </ProfitsProvider>
-                </InventoryProvider>
-              </VariantsProvider>
-            </NotificationsSystemProvider>
-          </NotificationsProvider>
+          <NotificationsRealtimeProvider>
+            <NotificationsProvider>
+              <NotificationsSystemProvider>
+                <VariantsProvider>
+                  <InventoryProvider>
+                    <ProfitsProvider>
+                      <AlWaseetProvider>
+                          <AiChatProvider>
+                            {children}
+                          </AiChatProvider>
+                      </AlWaseetProvider>
+                    </ProfitsProvider>
+                  </InventoryProvider>
+                </VariantsProvider>
+              </NotificationsSystemProvider>
+            </NotificationsProvider>
+          </NotificationsRealtimeProvider>
         </UnifiedAuthProvider>
       </SupabaseProvider>
     </ThemeProvider>

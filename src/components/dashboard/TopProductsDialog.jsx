@@ -19,14 +19,42 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
+  // حساب إحصائيات المنتجات بناءً على الطلبات المكتملة
   const productStats = useMemo(() => {
-    if (!orders || orders.length === 0) return [];
+    if (!orders || orders.length === 0) {
+      console.log('❌ لا توجد طلبات متاحة');
+      return [];
+    }
 
-    // فلترة الطلبات حسب الفترة المحددة والطلبات المُوصَّلة فقط
-    const filteredOrders = filterOrdersByPeriod(orders, selectedPeriod)
-      .filter(order => order.status === 'delivered');
+    // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
+    const filteredOrders = orders.filter(order => {
+      // التأكد من أن الطلب مكتمل فقط
+      const isDelivered = order.delivery_status === 'delivered' || 
+                         order.status === 'delivered' || 
+                         order.order_status === 'delivered' ||
+                         order.delivery_status === 'completed' ||
+                         order.status === 'completed';
+      
+      if (!isDelivered) return false;
 
-    console.log('Filtered delivered orders for products:', filteredOrders.length);
+      const orderDate = new Date(order.created_at || order.order_date);
+      const now = new Date();
+      
+      switch (selectedPeriod) {
+        case 'today':
+          return orderDate.toDateString() === now.toDateString();
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return orderDate >= weekAgo;
+        case 'month':
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          return orderDate >= monthAgo;
+        default:
+          return true;
+      }
+    });
+
+    console.log('✅ طلبات مكتملة تم العثور عليها:', filteredOrders.length);
 
     // تجميع البيانات حسب المنتج
     const productMap = new Map();
@@ -51,8 +79,19 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
         } else if (order.product_details && Array.isArray(order.product_details)) {
           orderItems = order.product_details;
         }
+        
+        // إذا لم نجد أي عناصر، جرب استخراج البيانات من حقول الطلب المباشرة
+        if ((!orderItems || orderItems.length === 0) && order.product_name) {
+          orderItems = [{
+            product_name: order.product_name,
+            name: order.product_name,
+            quantity: order.quantity || 1,
+            price: order.unit_price || order.selling_price || (order.total_price ? order.total_price / (order.quantity || 1) : 0),
+            total_price: order.total_price || 0
+          }];
+        }
       } catch (e) {
-        console.warn('Error parsing order items for order', order.id, ':', e);
+        console.warn('خطأ في تحليل عناصر الطلب للطلب', order.id, ':', e);
         // محاولة استخراج البيانات من الحقول المباشرة
         if (order.product_name && order.quantity) {
           orderItems = [{
@@ -63,6 +102,8 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
           }];
         }
       }
+
+      console.log(`📦 الطلب ${order.id}: تم العثور على ${orderItems.length} منتج`);
 
       if (Array.isArray(orderItems) && orderItems.length > 0) {
         orderItems.forEach(item => {
