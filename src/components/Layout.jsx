@@ -277,29 +277,29 @@ const Layout = ({ children }) => {
                   const refreshBtn = e.currentTarget.querySelector('.refresh-icon');
                   if (refreshBtn) {
                     refreshBtn.classList.add('animate-spin');
-                  }
-                  
-                  try {
+                   }
+                   
+                   try {
+                     // إظهار إشعار فوري بدء التحديث
+                     toast({ 
+                       title: "🔄 جاري التحديث...", 
+                       description: "يتم تحديث الطلبات والبيانات الجديدة (المخزون محفوظ)",
+                       className: "z-[9999] text-right",
+                     });
+
                      // استدعاء تحديث واحد فقط بدلاً من multiple events
                      if (window.refreshInventory) {
                        await window.refreshInventory();
                      }
-                    
-                    // إظهار إشعار فوري بدء التحديث
-                    toast({ 
-                      title: "🔄 جاري التحديث...", 
-                      description: "يتم تحديث جميع البيانات الآن",
-                      className: "z-[9999] text-right",
-                    });
-                    
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    
-                    toast({ 
-                      title: "✅ تم التحديث بنجاح!", 
-                      description: "تم تحديث جميع البيانات والإشعارات والطلبات بنجاح",
-                      className: "z-[9999] text-right",
-                      duration: 4000,
-                    });
+                     
+                     await new Promise(resolve => setTimeout(resolve, 500));
+                     
+                     toast({ 
+                       title: "✅ تم التحديث بنجاح", 
+                       description: "تم تحديث البيانات الجديدة بنجاح",
+                       className: "z-[9999] text-right",
+                       variant: "default"
+                     });
                   } catch (error) {
                     console.error('خطأ في تحديث البيانات:', error);
                     toast({ 

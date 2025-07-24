@@ -245,6 +245,109 @@ export const InventoryProvider = ({ children }) => {
 
   // استخدام البيانات من useOrders و usePurchases
 
+  // دوال تحديث محددة للطلبات والمخزون فقط
+  const refreshOrders = useCallback(async () => {
+    try {
+      console.log('🔄 تحديث الطلبات الجديدة...');
+      const { data: ordersData, error } = await supabase.from('orders').select(`
+        *,
+        order_items (
+          id,
+          product_id,
+          variant_id,
+          quantity,
+          unit_price,
+          total_price,
+          products (
+            id,
+            name,
+            images,
+            base_price
+          ),
+          product_variants (
+            id,
+            price,
+            cost_price,
+            images,
+            colors (name, hex_code),
+            sizes (name)
+          )
+        )
+      `).order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // معالجة وتحويل بيانات الطلبات
+      const processedOrders = (ordersData || []).map(order => {
+        const items = (order.order_items || []).map(item => ({
+          id: item.id,
+          productId: item.product_id,
+          variantId: item.variant_id,
+          productName: item.products?.name || 'منتج غير محدد',
+          product_name: item.products?.name || 'منتج غير محدد',
+          name: item.products?.name || 'منتج غير محدد',
+          quantity: item.quantity,
+          price: item.unit_price,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          costPrice: item.product_variants?.cost_price || 0,
+          cost_price: item.product_variants?.cost_price || 0,
+          color: item.product_variants?.colors?.name || null,
+          size: item.product_variants?.sizes?.name || null,
+          image: item.product_variants?.images?.[0] || item.products?.images?.[0] || null
+        }));
+
+        return {
+          ...order,
+          items,
+          total: order.final_amount || order.total_amount,
+          order_items: order.order_items
+        };
+      });
+
+      setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
+      console.log('✅ تم تحديث الطلبات بنجاح');
+    } catch (error) {
+      console.error('❌ خطأ في تحديث الطلبات:', error);
+    }
+  }, []);
+
+  const refreshInventoryData = useCallback(async () => {
+    try {
+      console.log('🔄 تحديث بيانات المخزون للمنتجات الموجودة...');
+      const { data: inventoryData, error } = await supabase
+        .from('inventory')
+        .select('*');
+
+      if (error) throw error;
+
+      // تحديث المخزون في المنتجات الموجودة دون إعادة تحميلها
+      setProducts(prevProducts => 
+        prevProducts.map(product => ({
+          ...product,
+          variants: product.variants?.map(variant => {
+            const variantInventory = inventoryData.find(inv => inv.variant_id === variant.id);
+            if (variantInventory) {
+              return {
+                ...variant,
+                quantity: variantInventory.quantity || 0,
+                reserved: variantInventory.reserved_quantity || 0,
+                min_stock: variantInventory.min_stock || 5,
+                location: variantInventory.location || null,
+                inventoryId: variantInventory.id
+              };
+            }
+            return variant;
+          })
+        }))
+      );
+      
+      console.log('✅ تم تحديث بيانات المخزون بنجاح');
+    } catch (error) {
+      console.error('❌ خطأ في تحديث بيانات المخزون:', error);
+    }
+  }, [setProducts]);
+
   const fetchInitialData = useCallback(async () => {
     if (!user) {
       setLoading(false);
@@ -509,11 +612,11 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [user, setProducts]);
 
-  // تعريف الدوال العامة للتحديث مع حماية من التحديث المتكرر
+  // تعريف الدوال العامة للتحديث - فقط للبيانات الجديدة وليس المخزون
   useEffect(() => {
     let isRefreshing = false;
     
-    const handleRefreshInventory = async () => {
+    const handleRefreshData = async () => {
       if (isRefreshing) {
         console.log('⏳ تحديث قيد التنفيذ بالفعل، تم تجاهل الطلب');
         return;
@@ -521,13 +624,18 @@ export const InventoryProvider = ({ children }) => {
       
       try {
         isRefreshing = true;
-        console.log('🔄 بدء تحديث بيانات الجرد...');
-        await refreshProducts();
-        console.log('✅ تم تحديث بيانات الجرد بنجاح');
+        console.log('🔄 تحديث البيانات الجديدة فقط (بدون المساس بالمخزون)...');
+        
+        // تحديث الطلبات الجديدة فقط
+        await refreshOrders();
+        
+        // تحديث بيانات المخزون للمنتجات الموجودة (دون إعادة تحميل المنتجات)
+        await refreshInventoryData();
+        
+        console.log('✅ تم تحديث البيانات الجديدة بنجاح (المخزون محفوظ)');
       } catch (error) {
-        console.error('❌ خطأ في تحديث بيانات الجرد:', error);
+        console.error('❌ خطأ في تحديث البيانات:', error);
       } finally {
-        // إعادة تعيين العلامة بعد تأخير قصير
         setTimeout(() => {
           isRefreshing = false;
         }, 1000);
@@ -535,16 +643,16 @@ export const InventoryProvider = ({ children }) => {
     };
 
     // جعل دوال التحديث متاحة عالمياً
-    window.refreshInventory = handleRefreshInventory;
-    window.refreshOrders = handleRefreshInventory;
-    window.refreshProducts = handleRefreshInventory;
+    window.refreshInventory = handleRefreshData;
+    window.refreshOrders = refreshOrders;
+    window.refreshData = handleRefreshData;
     
     return () => {
       delete window.refreshInventory;
       delete window.refreshOrders;
-      delete window.refreshProducts;
+      delete window.refreshData;
     };
-  }, [refreshProducts]);
+  }, [refreshOrders]);
 
   useEffect(() => {
     const initializeData = async () => {
