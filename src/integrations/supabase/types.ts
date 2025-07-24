@@ -1964,6 +1964,45 @@ export type Database = {
         }
         Relationships: []
       }
+      system_backups: {
+        Row: {
+          backup_data: Json
+          backup_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          filename: string
+          id: string
+          is_auto_backup: boolean | null
+          size_mb: number
+          updated_at: string
+        }
+        Insert: {
+          backup_data: Json
+          backup_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filename: string
+          id?: string
+          is_auto_backup?: boolean | null
+          size_mb?: number
+          updated_at?: string
+        }
+        Update: {
+          backup_data?: Json
+          backup_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          filename?: string
+          id?: string
+          is_auto_backup?: boolean | null
+          size_mb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       telegram_employee_codes: {
         Row: {
           created_at: string
@@ -2137,6 +2176,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_deleted_purchases: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      cleanup_old_backups: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
