@@ -678,10 +678,12 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                 </motion.div>
                 )}
               </AnimatePresence>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      );
-    };
+            </div>
+          </ScrollArea>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
-  export default BackupSystemDialog;
+export default BackupSystemDialog;
