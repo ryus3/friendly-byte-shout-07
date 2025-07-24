@@ -35,8 +35,8 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
       let orderItems = [];
       
       try {
-        // محاولة استخراج العناصر من مصادر مختلفة
-        if (order.items && typeof order.items === 'string') {
+        // جرب جميع التنسيقات المحتملة للطلبات
+        if (typeof order.items === 'string' && order.items.trim()) {
           orderItems = JSON.parse(order.items);
         } else if (order.items && Array.isArray(order.items)) {
           orderItems = order.items;
@@ -44,19 +44,31 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
           orderItems = order.order_items;
         } else if (order.products && Array.isArray(order.products)) {
           orderItems = order.products;
+        } else if (order.item_details && Array.isArray(order.item_details)) {
+          orderItems = order.item_details;
+        } else if (typeof order.product_details === 'string' && order.product_details.trim()) {
+          orderItems = JSON.parse(order.product_details);
+        } else if (order.product_details && Array.isArray(order.product_details)) {
+          orderItems = order.product_details;
         }
       } catch (e) {
-        console.error('Error parsing order items:', e);
-        return;
+        console.warn('Error parsing order items for order', order.id, ':', e);
+        // محاولة استخراج البيانات من الحقول المباشرة
+        if (order.product_name && order.quantity) {
+          orderItems = [{
+            product_name: order.product_name,
+            name: order.product_name,
+            quantity: order.quantity,
+            price: order.total_price ? order.total_price / order.quantity : 0
+          }];
+        }
       }
-
-      console.log('Order items found:', orderItems.length, 'for order:', order.id);
 
       if (Array.isArray(orderItems) && orderItems.length > 0) {
         orderItems.forEach(item => {
-          const productKey = item.product_name || item.name || item.productName || item.title || 'منتج غير محدد';
-          const quantity = parseInt(item.quantity) || parseInt(item.qty) || 1;
-          const price = parseFloat(item.price) || parseFloat(item.unit_price) || parseFloat(item.selling_price) || 0;
+          const productKey = item.product_name || item.name || item.productName || item.title || item.product_id || 'منتج غير محدد';
+          const quantity = parseInt(item.quantity) || parseInt(item.qty) || parseInt(item.amount) || 1;
+          const price = parseFloat(item.price) || parseFloat(item.unit_price) || parseFloat(item.selling_price) || parseFloat(item.total_price) || 0;
           const totalItemValue = quantity * price;
 
           if (!productMap.has(productKey)) {
@@ -66,7 +78,7 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
               totalRevenue: 0,
               orderCount: 0,
               avgPrice: 0,
-              image: item.image || item.product_image || item.images?.[0] || null
+              image: item.image || item.product_image || item.images?.[0] || item.img || null
             });
           }
 

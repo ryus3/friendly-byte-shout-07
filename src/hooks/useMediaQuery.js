@@ -8,6 +8,7 @@ export const useMediaQuery = (query) => {
       try {
         return window.matchMedia(query).matches;
       } catch (error) {
+        console.warn('useMediaQuery hook called outside React context, using fallback');
         return false;
       }
     }
@@ -49,7 +50,7 @@ export const useMediaQuery = (query) => {
     } catch (error) {
       console.warn('Error setting up media query listener:', error);
     }
-  }, [query, matches]);
+  }, [query]);
 
   return matches;
 };

@@ -340,13 +340,6 @@ export const InventoryProvider = ({ children }) => {
         const variants = (product.product_variants || []).map(variant => {
           const variantInventory = productInventory.find(inv => inv.variant_id === variant.id);
           
-          // إضافة تسجيل لمراقبة البيانات
-          console.log(`🔍 Processing variant ${variant.id} for product ${product.name}:`, {
-            variantId: variant.id,
-            inventoryFound: !!variantInventory,
-            quantity: variantInventory?.quantity || 0,
-            reserved: variantInventory?.reserved_quantity || 0
-          });
           
           return {
             ...variant,
@@ -369,8 +362,6 @@ export const InventoryProvider = ({ children }) => {
         const totalStock = variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0);
         const totalReserved = variants.reduce((sum, variant) => sum + (variant.reserved || 0), 0);
 
-        // تسجيل إجمالي المخزون للمنتج
-        console.log(`📦 Product ${product.name}: Total stock = ${totalStock}, Variants count = ${variants.length}`);
 
         return {
           ...product,
@@ -520,15 +511,25 @@ export const InventoryProvider = ({ children }) => {
 
   // تعريف الدوال العامة للتحديث
   useEffect(() => {
+    const handleRefreshInventory = async () => {
+      try {
+        // تحديث البيانات بدون إعادة تعيين loading
+        await refreshProducts();
+        console.log('✅ تم تحديث بيانات الجرد بنجاح');
+      } catch (error) {
+        console.error('❌ خطأ في تحديث بيانات الجرد:', error);
+      }
+    };
+
     // جعل دوال التحديث متاحة عالمياً
-    window.refreshInventory = fetchInitialData;
-    window.refreshOrders = fetchInitialData; // نفس الدالة تحدث كل شيء
+    window.refreshInventory = handleRefreshInventory;
+    window.refreshOrders = refreshProducts; // نفس الدالة لأنها تحدث كل شيء
     
     return () => {
       delete window.refreshInventory;
       delete window.refreshOrders;
     };
-  }, [fetchInitialData]);
+  }, [refreshProducts]);
 
   useEffect(() => {
     const initializeData = async () => {
