@@ -199,115 +199,93 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background">
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto bg-background">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-xl">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-500" />
+          <DialogTitle className="flex items-center gap-3 text-lg">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <Users className="w-4 h-4 text-blue-500" />
             </div>
-            إحصائيات الزبائن الأكثر طلباً
+            الزبائن الأكثر طلباً
           </DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-6">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-              <p className="text-muted-foreground">جاري تحميل البيانات...</p>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">جاري التحليل...</p>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* معلومات التشخيص */}
-            <div className="bg-muted/50 rounded-lg p-4 text-sm">
-              <p><strong>إجمالي الطلبات:</strong> {allOrders.length}</p>
-              <p><strong>الطلبات المكتملة:</strong> {allOrders.filter(o => o.status === 'completed').length}</p>
-              <p><strong>عدد الزبائن المعالجين:</strong> {customerStats.length}</p>
-            </div>
-
+          <div className="space-y-4">
             {/* فلترة الفترة الزمنية */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {periods.map((period) => (
                 <Button
                   key={period.key}
                   variant={selectedPeriod === period.key ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedPeriod(period.key)}
-                  className="text-sm"
+                  className="text-xs px-2 py-1 h-8"
                 >
-                  <Calendar className="w-4 h-4 mr-2" />
                   {period.label}
                 </Button>
               ))}
             </div>
 
             {/* الإحصائيات العامة */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
-                <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg p-4 text-white relative overflow-hidden">
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
                 <div className="flex items-center justify-between relative z-10">
                   <div>
-                    <p className="text-sm font-medium text-white/90 mb-1">إجمالي الطلبات</p>
-                    <p className="text-3xl font-bold text-white">{totalOrders}</p>
-                    <p className="text-xs text-white/70 mt-1">طلب مكتمل</p>
+                    <p className="text-xs font-medium text-white/90 mb-1">إجمالي الطلبات</p>
+                    <p className="text-xl font-bold text-white">{totalOrders}</p>
                   </div>
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <TrendingUp className="w-7 h-7 text-white" />
-                  </div>
+                  <TrendingUp className="w-5 h-5 text-white/80" />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl p-6 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
-                <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="bg-gradient-to-br from-green-500 to-emerald-400 rounded-lg p-4 text-white relative overflow-hidden">
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
                 <div className="flex items-center justify-between relative z-10">
                   <div>
-                    <p className="text-sm font-medium text-white/90 mb-1">إجمالي الإيرادات</p>
-                    <p className="text-3xl font-bold text-white">
-                      {totalRevenue.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-white/70 mt-1">دينار عراقي</p>
+                    <p className="text-xs font-medium text-white/90 mb-1">إجمالي الإيرادات</p>
+                    <p className="text-xl font-bold text-white">{totalRevenue.toLocaleString()}</p>
                   </div>
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <DollarSign className="w-7 h-7 text-white" />
-                  </div>
+                  <DollarSign className="w-5 h-5 text-white/80" />
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-500 to-violet-400 rounded-xl p-6 border border-purple-200/50 dark:border-purple-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
-                <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="bg-gradient-to-br from-purple-500 to-violet-400 rounded-lg p-4 text-white relative overflow-hidden">
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
                 <div className="flex items-center justify-between relative z-10">
                   <div>
-                    <p className="text-sm font-medium text-white/90 mb-1">عدد الزبائن</p>
-                    <p className="text-3xl font-bold text-white">{customerStats.length}</p>
-                    <p className="text-xs text-white/70 mt-1">زبون نشط</p>
+                    <p className="text-xs font-medium text-white/90 mb-1">عدد الزبائن</p>
+                    <p className="text-xl font-bold text-white">{customerStats.length}</p>
                   </div>
-                  <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                    <Users className="w-7 h-7 text-white" />
-                  </div>
+                  <Users className="w-5 h-5 text-white/80" />
                 </div>
               </div>
             </div>
 
             {/* قائمة الزبائن */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Eye className="w-5 h-5" />
-                تفاصيل الزبائن ({customerStats.length} زبون)
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                تفاصيل الزبائن ({customerStats.length})
               </h3>
               
               {customerStats.length > 0 ? (
-                <div className="grid gap-3">
+                <div className="grid gap-2 max-h-60 overflow-y-auto">
                   {customerStats.map((customer, index) => (
                     <motion.div
                       key={customer.normalizedPhone}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
+                      transition={{ delay: index * 0.03 }}
                     >
-                      <div className="bg-gradient-to-br from-card to-card/60 hover:from-card/80 hover:to-card/40 rounded-xl p-6 border border-border/60 hover:border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
+                      <div className="bg-gradient-to-br from-card to-card/60 rounded-lg p-3 border border-border/60 hover:border-primary/30 transition-all duration-200">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-lg font-bold shadow-lg">
