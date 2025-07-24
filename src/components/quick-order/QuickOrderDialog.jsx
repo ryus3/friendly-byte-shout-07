@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { X, Loader2 } from 'lucide-react';
+import { X, Loader2, Zap } from 'lucide-react';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useInventory } from '@/contexts/InventoryContext';
 
@@ -27,10 +27,26 @@ const QuickOrderDialog = ({ open, onOpenChange, onOrderCreated }) => {
   return (
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="gradient-text">إتمام الطلب</DialogTitle>
+        <DialogContent 
+          className="max-w-4xl h-[90vh] flex flex-col animate-scale-in"
+          onPointerDownOutside={() => handleOpenChange(false)}
+          onInteractOutside={() => handleOpenChange(false)}
+        >
+          <DialogHeader className="relative">
+            <DialogTitle className="flex items-center gap-3 pr-10">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                <Zap className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="gradient-text">إتمام الطلب</span>
+            </DialogTitle>
             <DialogDescription>إنشاء طلب جديد وإرساله لشركة التوصيل مباشرة.</DialogDescription>
+            <button
+              onClick={() => handleOpenChange(false)}
+              className="absolute top-0 right-0 w-8 h-8 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 flex items-center justify-center group shadow-sm hover:shadow-md"
+              aria-label="إغلاق"
+            >
+              <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            </button>
           </DialogHeader>
 
           <div className="flex-grow overflow-y-auto py-4 pr-2 -mr-2">
