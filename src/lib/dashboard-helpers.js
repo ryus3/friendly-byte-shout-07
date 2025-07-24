@@ -134,13 +134,31 @@ export const getUniqueCustomerCount = (orders) => {
 
 export const getTopCustomers = (orders) => {
   if (!orders) return [];
-  const customerCounts = orders.reduce((acc, order) => {
-    const customerInfo = order.customerinfo || {};
-    if (!customerInfo.phone) {
-      return acc; // Skip orders without customer info
-    }
-    const phone = customerInfo.phone;
-    const name = customerInfo.name || 'زبون غير معروف';
+  
+  // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
+  const deliveredOrders = orders.filter(order => {
+    const isDeliveredOrCompleted = order.delivery_status === 'delivered' || 
+                                   order.status === 'delivered' || 
+                                   order.order_status === 'delivered' ||
+                                   order.delivery_status === 'completed' ||
+                                   order.status === 'completed' ||
+                                   order.order_status === 'completed';
+    
+    const isReturnedOrCancelled = order.status === 'returned' || 
+                                 order.status === 'cancelled' ||
+                                 order.delivery_status === 'returned' ||
+                                 order.delivery_status === 'cancelled' ||
+                                 order.order_status === 'returned' ||
+                                 order.order_status === 'cancelled';
+    
+    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+  });
+  
+  const customerCounts = deliveredOrders.reduce((acc, order) => {
+    const phone = order.customer_phone;
+    const name = order.customer_name || 'زبون غير معروف';
+    if (!phone) return acc;
+    
     if (!acc[phone]) {
       acc[phone] = { count: 0, name };
     }
@@ -156,12 +174,28 @@ export const getTopCustomers = (orders) => {
 
 export const getTopProvinces = (orders) => {
   if (!orders) return [];
-  const provinceCounts = orders.reduce((acc, order) => {
-    const customerInfo = order.customerinfo || {};
-    if (!customerInfo.city) {
-      return acc; // Skip orders without city info
-    }
-    const city = customerInfo.city;
+  
+  // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
+  const deliveredOrders = orders.filter(order => {
+    const isDeliveredOrCompleted = order.delivery_status === 'delivered' || 
+                                   order.status === 'delivered' || 
+                                   order.order_status === 'delivered' ||
+                                   order.delivery_status === 'completed' ||
+                                   order.status === 'completed' ||
+                                   order.order_status === 'completed';
+    
+    const isReturnedOrCancelled = order.status === 'returned' || 
+                                 order.status === 'cancelled' ||
+                                 order.delivery_status === 'returned' ||
+                                 order.delivery_status === 'cancelled' ||
+                                 order.order_status === 'returned' ||
+                                 order.order_status === 'cancelled';
+    
+    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+  });
+  
+  const provinceCounts = deliveredOrders.reduce((acc, order) => {
+    const city = order.customer_city || order.customer_province || 'غير محدد';
     acc[city] = (acc[city] || 0) + 1;
     return acc;
   }, {});
@@ -174,10 +208,33 @@ export const getTopProvinces = (orders) => {
 
 export const getTopProducts = (orders) => {
   if (!orders) return [];
-  const productCounts = orders.reduce((acc, order) => {
-    if (!order.items) return acc;
-    order.items.forEach(item => {
-      acc[item.productName] = (acc[item.productName] || 0) + item.quantity;
+  
+  // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
+  const deliveredOrders = orders.filter(order => {
+    const isDeliveredOrCompleted = order.delivery_status === 'delivered' || 
+                                   order.status === 'delivered' || 
+                                   order.order_status === 'delivered' ||
+                                   order.delivery_status === 'completed' ||
+                                   order.status === 'completed' ||
+                                   order.order_status === 'completed';
+    
+    const isReturnedOrCancelled = order.status === 'returned' || 
+                                 order.status === 'cancelled' ||
+                                 order.delivery_status === 'returned' ||
+                                 order.delivery_status === 'cancelled' ||
+                                 order.order_status === 'returned' ||
+                                 order.order_status === 'cancelled';
+    
+    return isDeliveredOrCompleted && !isReturnedOrCancelled;
+  });
+  
+  const productCounts = deliveredOrders.reduce((acc, order) => {
+    if (!order.order_items || !Array.isArray(order.order_items)) return acc;
+    
+    order.order_items.forEach(item => {
+      const productName = item.products?.name || item.product_name || 'منتج غير محدد';
+      const quantity = parseInt(item.quantity) || 1;
+      acc[productName] = (acc[productName] || 0) + quantity;
     });
     return acc;
   }, {});
