@@ -359,6 +359,80 @@ const SettingsPage = () => {
             </ModernCard>
           </div>
 
+          <SectionHeader 
+            icon={Database} 
+            title="إدارة النظام والأمان"
+            description="النسخ الاحتياطي، الأمان، وصيانة النظام"
+          />
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* النسخ الاحتياطي - للمديرين فقط */}
+            {canManageSettings && (
+              <ModernCard
+                icon={Database}
+                title="النسخ الاحتياطي والاستعادة"
+                description="حماية شاملة لبياناتك مع إمكانية الاستعادة الفورية في حالات الطوارئ"
+                iconColor="from-green-500 to-emerald-600"
+                onClick={() => setIsBackupSystemOpen(true)}
+              >
+                <div className="space-y-3 mt-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                      <div className="text-lg font-bold text-green-600">+20</div>
+                      <div className="text-xs text-muted-foreground">جدول محمي</div>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30">
+                      <div className="text-lg font-bold text-blue-600">100%</div>
+                      <div className="text-xs text-muted-foreground">استعادة آمنة</div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-1 text-xs">
+                      <Download className="w-3 h-3 text-green-500" />
+                      <span>تصدير</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <Upload className="w-3 h-3 text-blue-500" />
+                      <span>استعادة</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs">
+                      <Shield className="w-3 h-3 text-purple-500" />
+                      <span>حماية</span>
+                    </div>
+                  </div>
+                </div>
+              </ModernCard>
+            )}
+
+            {/* معلومات النظام */}
+            <ModernCard
+              icon={SettingsIcon}
+              title="معلومات النظام"
+              description="حالة النظام، الإحصائيات، والصيانة"
+              iconColor="from-gray-500 to-gray-600"
+            >
+              <div className="space-y-3 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">إصدار النظام:</span>
+                  <Badge variant="secondary">RYUS v2.0</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">حالة قاعدة البيانات:</span>
+                  <Badge variant="default" className="bg-green-500">متصلة</Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">آخر نسخة احتياطية:</span>
+                  <span className="text-sm font-medium">تحقق من الصفحة</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">حالة النظام:</span>
+                  <Badge variant="default" className="bg-blue-500">نشط</Badge>
+                </div>
+              </div>
+            </ModernCard>
+          </div>
+
         </div>
       </div>
 
