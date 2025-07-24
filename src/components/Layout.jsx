@@ -115,12 +115,12 @@ const SidebarContent = ({ onClose }) => {
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
             </Button>
-            {onClose && (
+            {onClose && isMobile && (
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={onClose} 
-                className="rounded-full w-10 h-10 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
+                className="rounded-md w-10 h-10 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
               >
                 <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
               </Button>
@@ -230,7 +230,7 @@ const Layout = ({ children }) => {
   return (
     <div className="flex h-dvh bg-background">
       <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-[60] bg-card border-l border-border">
-        <SidebarContent onClose={() => setSidebarOpen(false)} />
+        <SidebarContent />
       </div>
 
       <AnimatePresence>

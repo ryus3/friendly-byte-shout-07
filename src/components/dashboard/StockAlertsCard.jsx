@@ -42,7 +42,7 @@ const StockAlertsCard = () => {
     };
   }, [refetchProducts]);
   
-  // حساب المتغيرات منخفضة المخزون - عرض المتغيرات الفردية وليس المنتج كاملاً
+  // حساب المتغيرات منخفضة المخزون فقط (استبعاد النافذ تماماً)
   const lowStockProducts = React.useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
     
@@ -51,10 +51,10 @@ const StockAlertsCard = () => {
     
     products.forEach(product => {
       if (product.variants && product.variants.length > 0) {
-        // البحث عن المتغيرات منخفضة المخزون
+        // البحث عن المتغيرات منخفضة المخزون (أكبر من 0 وأقل من أو يساوي العتبة)
         const lowStockVariants = product.variants.filter(variant => {
           const variantQuantity = variant.quantity || 0;
-          return variantQuantity <= threshold;
+          return variantQuantity > 0 && variantQuantity <= threshold;
         });
         
         // إذا كان هناك متغيرات منخفضة، إضافة المنتج مع تفاصيل المتغيرات المنخفضة
@@ -118,7 +118,7 @@ const StockAlertsCard = () => {
           )}
         </div>
         {lowStockProducts && lowStockProducts.length > 0 && (
-          <p className="text-sm text-muted-foreground">المتغيرات التي وصل مخزونها للحد الأدنى ≤ {settings?.lowStockThreshold || 5}</p>
+          <p className="text-sm text-muted-foreground">المتغيرات منخفضة المخزون (1 - {settings?.lowStockThreshold || 5})</p>
         )}
       </CardHeader>
 
@@ -151,8 +151,8 @@ const StockAlertsCard = () => {
                       <span className="text-xs text-muted-foreground">
                         {product.lowStockVariantsCount} من {product.allVariantsCount} متغيرات منخفضة
                       </span>
-                      <span className="text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full">
-                        ≤ {settings?.lowStockThreshold || 5}
+                      <span className="text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
+                        منخفض
                       </span>
                     </div>
                   </div>
@@ -181,7 +181,7 @@ const StockAlertsCard = () => {
             </div>
             <p className="text-primary font-medium text-sm">مخزون ممتاز ✅</p>
             <p className="text-muted-foreground text-xs mt-0.5">
-              {isRefreshing ? "جاري فحص المخزون..." : "جميع المتغيرات فوق الحد الأدنى"}
+              {isRefreshing ? "جاري فحص المخزون..." : "لا توجد متغيرات منخفضة المخزون"}
             </p>
           </div>
         )}
