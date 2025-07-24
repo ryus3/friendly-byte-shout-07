@@ -41,14 +41,22 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
       const now = new Date();
       
       switch (selectedPeriod) {
-        case 'today':
-          return orderDate.toDateString() === now.toDateString();
         case 'week':
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           return orderDate >= weekAgo;
         case 'month':
           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           return orderDate >= monthAgo;
+        case '3months':
+          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          return orderDate >= threeMonthsAgo;
+        case '6months':
+          const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          return orderDate >= sixMonthsAgo;
+        case 'year':
+          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          return orderDate >= yearAgo;
+        case 'all':
         default:
           return true;
       }
@@ -132,12 +140,22 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
       }
     });
 
-    console.log('Product map:', Array.from(productMap.entries()));
+    console.log('✅ خريطة المنتجات النهائية:', Array.from(productMap.entries()).length, 'منتج');
+    
+    // طباعة عينة من البيانات للتحقق
+    if (productMap.size > 0) {
+      const sampleProduct = Array.from(productMap.values())[0];
+      console.log('🔍 عينة منتج:', sampleProduct);
+    }
 
-    // تحويل البيانات إلى مصفوفة
-    return Array.from(productMap.values())
+    // تحويل البيانات إلى مصفوفة وترتيبها
+    const sortedProducts = Array.from(productMap.values())
+      .filter(product => product.totalQuantity > 0) // فقط المنتجات التي لها كمية
       .sort((a, b) => b.totalQuantity - a.totalQuantity)
       .slice(0, 15);
+
+    console.log('📊 المنتجات المرتبة:', sortedProducts.length);
+    return sortedProducts;
   }, [orders, selectedPeriod]);
 
   const totalQuantity = productStats.reduce((sum, product) => sum + product.totalQuantity, 0);
