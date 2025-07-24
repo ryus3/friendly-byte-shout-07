@@ -66,12 +66,10 @@ async function listBackups(supabase: any) {
   console.log('📋 Listing backups...');
   
   try {
+    // جلب النسخ الاحتياطية مع أسماء المستخدمين
     const { data: backups, error } = await supabase
       .from('system_backups')
-      .select(`
-        *,
-        profiles!created_by(full_name)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -79,12 +77,25 @@ async function listBackups(supabase: any) {
       throw error;
     }
 
-    console.log(`✅ Found ${backups?.length || 0} backups`);
+    // جلب أسماء المستخدمين
+    const userIds = [...new Set(backups?.map(b => b.created_by).filter(Boolean))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, full_name')
+      .in('user_id', userIds);
+
+    // دمج البيانات
+    const backupsWithNames = backups?.map(backup => ({
+      ...backup,
+      creator_name: profiles?.find(p => p.user_id === backup.created_by)?.full_name || 'غير معروف'
+    })) || [];
+
+    console.log(`✅ Found ${backupsWithNames.length} backups`);
     
     return new Response(
       JSON.stringify({
         success: true,
-        backups: backups || []
+        backups: backupsWithNames || []
       }),
       {
         headers: { 
