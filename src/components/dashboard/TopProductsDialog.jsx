@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const TopProductsDialog = ({ open, onOpenChange }) => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [productStats, setProductStats] = useState([]);
   const [allOrders, setAllOrders] = useState([]);

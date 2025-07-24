@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const TopProvincesDialog = ({ open, onOpenChange }) => {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [provinceStats, setProvinceStats] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
