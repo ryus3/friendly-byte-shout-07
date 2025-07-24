@@ -131,7 +131,7 @@ const SystemHealthDashboard = ({ open, onOpenChange }) => {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none bg-background border border-border shadow-xl">
         <DialogHeader className="p-4 sm:p-6 pb-4 relative border-b border-border/50">
-          <DialogTitle className="flex items-center gap-3 pr-10 sm:pr-12">
+          <DialogTitle className="flex items-center gap-3">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
               <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
             </div>
