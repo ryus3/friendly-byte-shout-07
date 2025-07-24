@@ -657,24 +657,32 @@ const InventoryPage = () => {
           <div className="flex gap-3">
             <Button 
               onClick={async () => {
-                try {
-                  // تحضير البيانات للتصدير بالتنسيق الصحيح
-                  const productsToExport = selectedItemsForExport.length > 0 ? selectedItemsForExport : filteredItems;
-                  
-                  // تحويل المنتجات إلى متغيرات مسطحة
-                  const exportData = productsToExport.flatMap(product => {
-                    if (!product?.variants || !Array.isArray(product.variants)) {
-                      return [];
-                    }
-                    
-                    return product.variants.map(variant => ({
-                      name: product.name || product.product_name || 'غير محدد',
-                      color: variant.color_name || variant.color || 'غير محدد',
-                      size: variant.size_name || variant.size || 'غير محدد', 
-                      quantity: variant.quantity || 0,
-                      price: variant.selling_price || variant.sale_price || variant.price || 0
-                    }));
-                  });
+                 try {
+                   // تحضير البيانات للتصدير بالتنسيق الصحيح
+                   let productsToExport = [];
+                   
+                   if (selectedItemsForExport.length > 0) {
+                     // إذا كان هناك عناصر محددة، نأخذها من المخزون
+                     productsToExport = inventoryItems.filter(item => selectedItemsForExport.includes(item.id));
+                   } else {
+                     // وإلا نأخذ جميع العناصر المفلترة
+                     productsToExport = filteredItems;
+                   }
+                   
+                   // تحويل المنتجات إلى متغيرات مسطحة
+                   const exportData = productsToExport.flatMap(product => {
+                     if (!product?.variants || !Array.isArray(product.variants)) {
+                       return [];
+                     }
+                     
+                     return product.variants.map(variant => ({
+                       name: product.name || product.product_name || 'غير محدد',
+                       color: variant.color_name || variant.color || 'غير محدد',
+                       size: variant.size_name || variant.size || 'غير محدد', 
+                       quantity: variant.quantity || 0,
+                       price: variant.selling_price || variant.sale_price || variant.price || 0
+                     }));
+                   });
 
                   if (!exportData.length) {
                     toast({
