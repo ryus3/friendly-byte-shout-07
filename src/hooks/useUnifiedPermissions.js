@@ -3,6 +3,11 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
+  const [userRoles, setUserRoles] = useState([]);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [productPermissions, setProductPermissions] = useState({});
+  const [loading, setLoading] = useState(true);
+
   // الحصول على الـ auth context بأمان
   let auth = null;
   try {
@@ -11,38 +16,15 @@ export const useUnifiedPermissions = (passedUser) => {
     console.warn('useUnifiedPermissions: Auth context not available, using fallback');
   }
   
-  // Defensive programming - ensure we have React context
-  if (!auth) {
-    return {
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {},
-      loading: false,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      hasRole: () => false,
-      hasPermission: () => false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: (data) => data || [],
-      filterProductsByPermissions: (products) => products || [],
-      getEmployeeStats: () => ({ total: 0, personal: 0 })
-    };
-  }
-  
   const user = passedUser || auth?.user;
-  const [userRoles, setUserRoles] = useState([]);
-  const [userPermissions, setUserPermissions] = useState([]);
-  const [productPermissions, setProductPermissions] = useState({});
-  const [loading, setLoading] = useState(true);
+
+  // إذا لم يكن لدينا auth context أو user، نعيد قيم افتراضية
+  const hasValidContext = auth || passedUser;
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
-    if (!user?.user_id) {
+    // إذا لم يكن لدينا سياق صحيح أو مستخدم، نتوقف
+    if (!hasValidContext || !user?.user_id) {
       setLoading(false);
       return;
     }
@@ -227,6 +209,29 @@ export const useUnifiedPermissions = (passedUser) => {
       return { total, personal };
     };
   }, [user?.user_id, user?.id]);
+
+  // إذا لم يكن لدينا سياق صحيح، نعيد قيم افتراضية آمنة
+  if (!hasValidContext) {
+    return {
+      userRoles: [],
+      userPermissions: [],
+      productPermissions: {},
+      loading: false,
+      isAdmin: false,
+      isDepartmentManager: false,
+      isSalesEmployee: false,
+      isWarehouseEmployee: false,
+      isCashier: false,
+      hasRole: () => false,
+      hasPermission: () => false,
+      canViewAllData: false,
+      canManageEmployees: false,
+      canManageFinances: false,
+      filterDataByUser: (data) => data || [],
+      filterProductsByPermissions: (products) => products || [],
+      getEmployeeStats: () => ({ total: 0, personal: 0 })
+    };
+  }
 
   return {
     // بيانات
