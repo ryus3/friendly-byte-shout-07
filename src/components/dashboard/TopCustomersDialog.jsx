@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const TopCustomersDialog = ({ open, onOpenChange }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [customerStats, setCustomerStats] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
@@ -23,31 +23,33 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
   // جلب الطلبات من قاعدة البيانات مباشرة
   const fetchOrders = async () => {
     try {
-      setLoading(true);
       console.log('🔄 جاري جلب الطلبات من قاعدة البيانات...');
       
       const { data: orders, error } = await supabase
         .from('orders')
         .select('*')
+        .in('status', ['completed', 'delivered'])
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ خطأ في جلب الطلبات:', error);
+        setAllOrders([]);
         return;
       }
 
       console.log('✅ تم جلب الطلبات بنجاح:', orders?.length || 0);
       setAllOrders(orders || []);
+      setLoading(false);
     } catch (error) {
       console.error('❌ خطأ غير متوقع:', error);
-    } finally {
+      setAllOrders([]);
       setLoading(false);
     }
   };
 
   // جلب البيانات عند فتح النافذة
   useEffect(() => {
-    if (open) {
+    if (open && allOrders.length === 0) {
       fetchOrders();
     }
   }, [open]);

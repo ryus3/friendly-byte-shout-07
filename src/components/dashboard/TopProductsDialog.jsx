@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const TopProductsDialog = ({ open, onOpenChange }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [productStats, setProductStats] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
@@ -23,7 +23,6 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
   // جلب الطلبات مع العناصر من قاعدة البيانات مباشرة
   const fetchOrdersWithItems = async () => {
     try {
-      setLoading(true);
       console.log('🔄 جاري جلب الطلبات مع المنتجات...');
       
       const { data: orders, error } = await supabase
@@ -42,25 +41,28 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
             )
           )
         `)
+        .in('status', ['completed', 'delivered'])
         .order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ خطأ في جلب الطلبات:', error);
+        setAllOrders([]);
         return;
       }
 
       console.log('✅ تم جلب الطلبات مع المنتجات بنجاح:', orders?.length || 0);
       setAllOrders(orders || []);
+      setLoading(false);
     } catch (error) {
       console.error('❌ خطأ غير متوقع:', error);
-    } finally {
+      setAllOrders([]);
       setLoading(false);
     }
   };
 
   // جلب البيانات عند فتح النافذة
   useEffect(() => {
-    if (open) {
+    if (open && allOrders.length === 0) {
       fetchOrdersWithItems();
     }
   }, [open]);
