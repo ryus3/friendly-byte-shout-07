@@ -73,8 +73,16 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
     const customerMap = new Map();
 
     filteredOrders.forEach(order => {
-      const customerPhone = order.customer_phone || 'غير محدد';
-      const customerName = order.customer_name || 'زبون غير محدد';
+      // البحث عن رقم الهاتف في جميع الحقول المحتملة
+      const customerPhone = order.customer_phone || 
+                           order.phone_number || 
+                           order.client_mobile || 
+                           order.phone || 
+                           'غير محدد';
+      const customerName = order.customer_name || 
+                          order.client_name || 
+                          order.name || 
+                          'زبون غير محدد';
       
       console.log(`📞 الطلب ${order.id}: الهاتف = "${customerPhone}", الاسم = "${customerName}"`);
 

@@ -155,8 +155,15 @@ export const getTopCustomers = (orders) => {
   });
   
   const customerCounts = deliveredOrders.reduce((acc, order) => {
-    const phone = order.customer_phone;
-    const name = order.customer_name || 'زبون غير معروف';
+    // البحث عن رقم الهاتف في جميع الحقول المحتملة
+    const phone = order.customer_phone || 
+                  order.phone_number || 
+                  order.client_mobile || 
+                  order.phone;
+    const name = order.customer_name || 
+                 order.client_name || 
+                 order.name || 
+                 'زبون غير معروف';
     if (!phone) return acc;
     
     if (!acc[phone]) {
