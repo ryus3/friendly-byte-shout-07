@@ -17,7 +17,8 @@ import {
   FileText,
   RefreshCw,
   Calendar,
-  User
+  User,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
@@ -273,22 +274,29 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden z-[9900]">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="flex items-center gap-3">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden z-[9900] focus:outline-none">
+        <DialogHeader className="p-4 sm:p-6 pb-2 relative">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="absolute left-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none bg-white dark:bg-gray-800 p-2 shadow-md z-10"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">إغلاق</span>
+          </button>
+          <DialogTitle className="flex items-center gap-3 pr-12">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
               <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
-              <p className="text-sm text-muted-foreground">إدارة شاملة وآمنة لبيانات النظام</p>
+              <h2 className="text-lg sm:text-xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">إدارة شاملة وآمنة لبيانات النظام</p>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-6 pb-6 space-y-4">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4">
           {/* التبويبات المحسنة */}
-          <div className="flex flex-col sm:flex-row gap-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+          <div className="flex flex-col sm:flex-row gap-2 p-1 sm:p-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
             <button
               onClick={() => setActiveTab('list')}
               className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
@@ -333,7 +341,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
             </button>
           </div>
 
-          <ScrollArea className="h-[400px] sm:h-[500px]">
+          <ScrollArea className="h-[300px] sm:h-[400px] md:h-[500px]">
             <AnimatePresence mode="wait">
               {/* قائمة النسخ الاحتياطية */}
               {activeTab === 'list' && (
@@ -371,37 +379,50 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                       {backups.map((backup) => (
                         <motion.div
                           key={backup.id}
-                          whileHover={{ scale: 1.02 }}
-                          className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                            selectedBackup?.id === backup.id ? 'border-primary bg-primary/5' : 'border-border'
+                          whileHover={{ scale: 1.01 }}
+                          className={`border rounded-lg p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            selectedBackup?.id === backup.id 
+                              ? 'border-primary bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 shadow-md' 
+                              : 'border-border hover:border-primary/30'
                           }`}
-                          onClick={() => setSelectedBackup(backup)}
+                          onClick={() => {
+                            console.log('تم اختيار النسخة:', backup);
+                            setSelectedBackup(backup);
+                          }}
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <HardDrive className="w-5 h-5 text-blue-600" />
+                              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${
+                                selectedBackup?.id === backup.id 
+                                  ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
+                                  : 'bg-blue-100 dark:bg-blue-900/30'
+                              }`}>
+                                <HardDrive className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                                  selectedBackup?.id === backup.id ? 'text-white' : 'text-blue-600'
+                                }`} />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h4 className="font-semibold text-sm sm:text-base truncate">{backup.filename}</h4>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                                <div className="flex flex-col gap-1 text-xs sm:text-sm text-muted-foreground">
                                   <span className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
                                     {formatDate(backup.created_at)}
                                   </span>
-                                  <span className="flex items-center gap-1">
-                                    <HardDrive className="w-3 h-3" />
-                                    {formatFileSize(backup.size_mb)}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {backup.creator_name || 'مجهول'}
-                                  </span>
+                                  <div className="flex items-center gap-3">
+                                    <span className="flex items-center gap-1">
+                                      <HardDrive className="w-3 h-3" />
+                                      {formatFileSize(backup.size_mb)}
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {backup.creator_name || 'مجهول'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center justify-between gap-2">
                               <Badge variant={backup.backup_type === 'full' ? 'default' : 'secondary'} className="text-xs">
                                 {backup.backup_type === 'full' ? 'كاملة' : 'جزئية'}
                               </Badge>
@@ -411,9 +432,9 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                                     e.stopPropagation();
                                     downloadBackup(backup);
                                   }}
-                                  className="h-8 w-8 p-0 rounded-md bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transition-all duration-200 flex items-center justify-center"
+                                  className="h-7 w-7 sm:h-8 sm:w-8 p-0 rounded-md bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md"
                                 >
-                                  <Download className="w-3 h-3" />
+                                  <Download className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                 </button>
                                 
                                 <button
@@ -433,7 +454,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                                   {deleting === backup.id ? (
                                     <RefreshCw className="w-3 h-3 animate-spin" />
                                   ) : (
-                                    <Trash2 className="w-3 h-3" />
+                                    <Trash2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                                   )}
                                 </button>
                               </div>
