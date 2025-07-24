@@ -24,7 +24,7 @@ export const generateInventoryReportPDF = async (inventoryData) => {
     reportElement.style.direction = 'rtl';
     
     // إنشاء HTML للتقرير مع التصميم الجميل
-    const totalValue = inventoryData.reduce((sum, item) => sum + ((item.quantity || 0) * (item.sale_price || 0)), 0);
+    const totalValue = inventoryData.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || item.selling_price || item.sale_price || 0)), 0);
     const totalItems = inventoryData.length;
     
     reportElement.innerHTML = `
@@ -119,19 +119,19 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                   border-bottom: 1px solid #e2e8f0;
                   font-weight: 600;
                   color: #1a202c;
-                ">${item.product_name || 'غير محدد'}</td>
+                ">${item.name || item.product_name || 'غير محدد'}</td>
                 <td style="
                   padding: 18px 15px;
                   text-align: center;
                   border-bottom: 1px solid #e2e8f0;
                   color: #4a5568;
-                ">${item.color_name || 'غير محدد'}</td>
+                ">${item.color || item.color_name || 'غير محدد'}</td>
                 <td style="
                   padding: 18px 15px;
                   text-align: center;
                   border-bottom: 1px solid #e2e8f0;
                   color: #4a5568;
-                ">${item.size_name || 'غير محدد'}</td>
+                ">${item.size || item.size_name || 'غير محدد'}</td>
                 <td style="
                   padding: 18px 15px;
                   text-align: center;
@@ -146,7 +146,7 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                   border-bottom: 1px solid #e2e8f0;
                   font-weight: 600;
                   color: #2b6cb0;
-                ">${formatCurrency(item.sale_price || 0)}</td>
+                ">${formatCurrency(item.price || item.selling_price || item.sale_price || 0)}</td>
                 <td style="
                   padding: 18px 15px;
                   text-align: center;
@@ -154,7 +154,7 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                   font-weight: bold;
                   color: #276749;
                   background: linear-gradient(135deg, #f0fff4, #c6f6d5);
-                ">${formatCurrency((item.quantity || 0) * (item.sale_price || 0))}</td>
+                ">${formatCurrency((item.quantity || 0) * (item.price || item.selling_price || item.sale_price || 0))}</td>
               </tr>
             `).join('')}
           </tbody>
