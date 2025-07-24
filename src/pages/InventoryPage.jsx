@@ -16,7 +16,7 @@ import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
-import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
+
 import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
 import ArchivedProductsCard from '@/components/inventory/ArchivedProductsCard';
 import Loader from '@/components/ui/loader';
@@ -56,56 +56,73 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
   return (
     <div className="w-full space-y-2 max-w-none">
-      {items.map(product => (
-        <div key={product.id} className="bg-card rounded-lg border">
-          <div className="p-4">
-            <div className="flex items-center gap-4 mb-4">
-              <Checkbox
-                checked={selectedItems.includes(product.id)}
-                onCheckedChange={(checked) => onSelectionChange(product.id, checked)}
-              />
-              {product.images?.[0] ? (
-                <img src={product.images[0]} alt={product.name} className="w-16 h-16 rounded-md object-cover" />
-              ) : (
-                <div className="w-16 h-16 rounded-md bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-                  </svg>
-                </div>
-              )}
-              <div className="flex-1">
-                <h3 className="font-bold text-lg text-foreground">{product.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {product.variants?.length || 0} متغيرات • إجمالي المخزون: {product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0}
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="grid grid-cols-12 items-center gap-4 p-2 text-sm font-medium text-muted-foreground border-b">
-                <div className="col-span-4">المتغير</div>
-                <div className="col-span-2 text-center">المخزون</div>
-                <div className="col-span-2 text-center">محجوز</div>
-                <div className="col-span-2 text-center">متاح</div>
-                <div className="col-span-2 text-center">الحالة</div>
-              </div>
-              {(product.variants || []).map(variant => (
-                <InventoryItem
-                  key={variant.id}
-                  variant={variant}
-                  product={product}
-                  onEditStock={canEdit ? () => onEditStock(product, variant) : null}
+      <Accordion type="multiple" className="w-full">
+        {items.map(product => (
+          <AccordionItem key={product.id} value={product.id} className="bg-card rounded-lg border mb-2">
+            <AccordionTrigger className="px-4 py-3 hover:no-underline">
+              <div className="flex items-center gap-4 w-full">
+                <Checkbox
+                  checked={selectedItems.includes(product.id)}
+                  onCheckedChange={(checked) => {
+                    onSelectionChange(product.id, checked);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
                 />
-              ))}
-              {(!product.variants || product.variants.length === 0) && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p>لا توجد متغيرات لهذا المنتج</p>
+                {product.images?.[0] ? (
+                  <img src={product.images[0]} alt={product.name} className="w-12 h-12 rounded-md object-cover" />
+                ) : (
+                  <div className="w-12 h-12 rounded-md bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex-1 text-right">
+                  <h3 className="font-bold text-lg text-foreground">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {product.variants?.length || 0} متغيرات • إجمالي المخزون: {product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0}
+                  </p>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      ))}
+                <div className="flex gap-2">
+                  <Badge variant={
+                    product.stockLevel === 'out-of-stock' ? 'destructive' : 
+                    product.stockLevel === 'low' ? 'secondary' : 
+                    'default'
+                  }>
+                    {product.stockLevel === 'out-of-stock' ? 'نفد المخزون' : 
+                     product.stockLevel === 'low' ? 'منخفض' : 
+                     product.stockLevel === 'medium' ? 'متوسط' : 'جيد'}
+                  </Badge>
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-4 pb-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-12 items-center gap-4 p-2 text-sm font-medium text-muted-foreground border-b">
+                  <div className="col-span-4">المتغير</div>
+                  <div className="col-span-2 text-center">المخزون</div>
+                  <div className="col-span-2 text-center">محجوز</div>
+                  <div className="col-span-2 text-center">متاح</div>
+                  <div className="col-span-2 text-center">الحالة</div>
+                </div>
+                {(product.variants || []).map(variant => (
+                  <InventoryItem
+                    key={variant.id}
+                    variant={variant}
+                    product={product}
+                    onEditStock={canEdit ? () => onEditStock(product, variant) : null}
+                  />
+                ))}
+                {(!product.variants || product.variants.length === 0) && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <p>لا توجد متغيرات لهذا المنتج</p>
+                  </div>
+                )}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 };
@@ -634,12 +651,10 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
-            <InventoryPDFGenerator 
-              inventoryData={filteredItems}
-              selectedItems={selectedItemsForExport}
-              filters={filters}
-              isLoading={loading}
-            />
+            <Button onClick={() => setIsBarcodeScannerOpen(true)} variant="outline">
+              <Download className="w-4 h-4 mr-2" />
+              مسح QR
+            </Button>
           </div>
         </div>
         

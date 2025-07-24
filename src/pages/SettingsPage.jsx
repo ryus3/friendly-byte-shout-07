@@ -29,7 +29,7 @@ import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 import PermissionBasedStockSettings from '@/components/settings/PermissionBasedStockSettings';
-import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
+import ComprehensiveReportsSystem from '@/components/analytics/ComprehensiveReportsSystem';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
@@ -458,10 +458,21 @@ const SettingsPage = () => {
         onOpenChange={setIsCustomerSettingsOpen}
       />
 
-      <ReportsSettingsDialog
-        open={isReportsOpen}
-        onOpenChange={setIsReportsOpen}
-      />
+      {isReportsOpen && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm">
+          <div className="fixed left-[50%] top-[50%] z-50 w-[95vw] max-w-7xl translate-x-[-50%] translate-y-[-50%] bg-background border rounded-lg shadow-lg">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-lg font-semibold">نظام التقارير الشامل</h2>
+              <Button variant="ghost" size="sm" onClick={() => setIsReportsOpen(false)}>
+                ×
+              </Button>
+            </div>
+            <div className="p-6 max-h-[80vh] overflow-y-auto">
+              <ComprehensiveReportsSystem />
+            </div>
+          </div>
+        </div>
+      )}
 
       <PermissionBasedStockSettings
         open={isStockSettingsOpen}
