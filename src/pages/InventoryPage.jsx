@@ -16,7 +16,7 @@ import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
-import InventoryPDFGenerator from '@/components/inventory/InventoryPDFGenerator';
+// تم حذف InventoryPDFGenerator - نستخدم النظام الجديد
 import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
 import ArchivedProductsCard from '@/components/inventory/ArchivedProductsCard';
 import Loader from '@/components/ui/loader';
@@ -634,12 +634,7 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
-            <InventoryPDFGenerator 
-              inventoryData={filteredItems}
-              selectedItems={selectedItemsForExport}
-              filters={filters}
-              isLoading={loading}
-            />
+            {/* تم استبدال نظام PDF القديم بنظام التقارير الجديد */}
           </div>
         </div>
         
