@@ -28,13 +28,10 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
 import { useOrders } from '@/hooks/useOrders';
 
 const CustomerAnalyticsSystem = () => {
   const { orders } = useOrders();
-  const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -231,7 +228,14 @@ const CustomerAnalyticsSystem = () => {
 
   // إحصائيات عامة
   const stats = useMemo(() => {
-    if (filteredCustomers.length === 0) return {};
+    if (filteredCustomers.length === 0) return {
+      totalCustomers: 0,
+      activeCustomers: 0,
+      totalRevenue: 0,
+      averageOrderValue: 0,
+      topSpender: null,
+      loyalCustomers: 0
+    };
 
     return {
       totalCustomers: filteredCustomers.length,
@@ -293,6 +297,19 @@ const CustomerAnalyticsSystem = () => {
     });
   };
 
+  // إذا لم توجد طلبات، اعرض رسالة
+  if (!orders || orders.length === 0) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center py-12">
+          <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-xl font-semibold text-muted-foreground mb-2">لا توجد طلبات متاحة</h3>
+          <p className="text-muted-foreground">لا يمكن تحليل العملاء بدون وجود طلبات في النظام</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -317,7 +334,7 @@ const CustomerAnalyticsSystem = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">إجمالي العملاء</p>
-                <p className="text-2xl font-bold">{stats.totalCustomers || 0}</p>
+                <p className="text-2xl font-bold">{stats.totalCustomers}</p>
               </div>
             </div>
           </CardContent>
@@ -331,7 +348,7 @@ const CustomerAnalyticsSystem = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">العملاء النشطون</p>
-                <p className="text-2xl font-bold">{stats.activeCustomers || 0}</p>
+                <p className="text-2xl font-bold">{stats.activeCustomers}</p>
               </div>
             </div>
           </CardContent>
@@ -345,7 +362,7 @@ const CustomerAnalyticsSystem = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
-                <p className="text-2xl font-bold">{(stats.totalRevenue || 0).toLocaleString()}</p>
+                <p className="text-2xl font-bold">{stats.totalRevenue.toLocaleString()}</p>
               </div>
             </div>
           </CardContent>
@@ -359,7 +376,7 @@ const CustomerAnalyticsSystem = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">العملاء المخلصون</p>
-                <p className="text-2xl font-bold">{stats.loyalCustomers || 0}</p>
+                <p className="text-2xl font-bold">{stats.loyalCustomers}</p>
               </div>
             </div>
           </CardContent>
@@ -379,10 +396,10 @@ const CustomerAnalyticsSystem = () => {
             <div>
               <Label>الفترة الزمنية</Label>
               <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border border-border z-50">
                   <SelectItem value="all">كل الفترات</SelectItem>
                   <SelectItem value="week">الأسبوع الماضي</SelectItem>
                   <SelectItem value="month">الشهر الماضي</SelectItem>
@@ -395,10 +412,10 @@ const CustomerAnalyticsSystem = () => {
             <div>
               <Label>ترتيب حسب</Label>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border border-border z-50">
                   <SelectItem value="totalSpent">إجمالي المبالغ</SelectItem>
                   <SelectItem value="totalOrders">عدد الطلبات</SelectItem>
                   <SelectItem value="lastOrder">آخر طلب</SelectItem>
@@ -413,6 +430,7 @@ const CustomerAnalyticsSystem = () => {
                 placeholder="ابحث باسم العميل أو رقم الهاتف أو المدينة..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-background"
               />
             </div>
           </div>
@@ -501,7 +519,7 @@ const CustomerAnalyticsSystem = () => {
       {/* Customer Details Dialog */}
       {selectedCustomer && (
         <Dialog open={!!selectedCustomer} onOpenChange={() => setSelectedCustomer(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center text-white font-bold">
