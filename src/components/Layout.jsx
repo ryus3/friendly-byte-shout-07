@@ -271,37 +271,60 @@ const Layout = ({ children }) => {
                 variant="ghost" 
                 size="icon" 
                 onClick={async () => {
-                  const refreshBtn = document.querySelector('[title="مزامنة البيانات"]');
+                  const refreshBtn = document.querySelector('[title="مزامنة البيانات"] .refresh-icon');
                   if (refreshBtn) {
                     refreshBtn.classList.add('animate-spin');
                   }
                   
-                  // مزامنة البيانات من جميع المصادر
-                  window.dispatchEvent(new CustomEvent('refresh-data'));
-                  window.dispatchEvent(new CustomEvent('refresh-notifications'));
-                  window.dispatchEvent(new CustomEvent('refresh-inventory'));
-                  window.dispatchEvent(new CustomEvent('refresh-orders'));
-                  
-                  // إعادة جلب الإشعارات
-                  if (window.refreshNotifications) {
-                    await window.refreshNotifications();
-                  }
-                  
-                  setTimeout(() => {
+                  try {
+                    // مزامنة البيانات من جميع المصادر
+                    window.dispatchEvent(new CustomEvent('refresh-data'));
+                    window.dispatchEvent(new CustomEvent('refresh-notifications'));
+                    window.dispatchEvent(new CustomEvent('refresh-inventory'));
+                    window.dispatchEvent(new CustomEvent('refresh-orders'));
+                    window.dispatchEvent(new CustomEvent('refresh-products'));
+                    window.dispatchEvent(new CustomEvent('refresh-dashboard'));
+                    
+                    // إعادة جلب الإشعارات
+                    if (window.refreshNotifications) {
+                      await window.refreshNotifications();
+                    }
+                    
+                    // إعادة جلب المنتجات والمخزون
+                    if (window.refreshInventory) {
+                      await window.refreshInventory();
+                    }
+                    
+                    // إعادة جلب الطلبات
+                    if (window.refreshOrders) {
+                      await window.refreshOrders();
+                    }
+                    
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    
+                    toast({ 
+                      title: "✅ تم التحديث", 
+                      description: "تم تحديث جميع البيانات والإشعارات بنجاح",
+                      className: "z-[9999] text-right",
+                    });
+                  } catch (error) {
+                    console.error('خطأ في تحديث البيانات:', error);
+                    toast({ 
+                      title: "❌ خطأ في التحديث", 
+                      description: "فشل في تحديث بعض البيانات",
+                      variant: "destructive",
+                      className: "z-[9999] text-right",
+                    });
+                  } finally {
                     if (refreshBtn) {
                       refreshBtn.classList.remove('animate-spin');
                     }
-                    toast({ 
-                      title: "تم التحديث", 
-                      description: "تم تحديث جميع البيانات بنجاح",
-                      variant: "success"
-                    });
-                  }, 1000);
+                  }
                 }} 
                 className="text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                 title="مزامنة البيانات"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className="w-5 h-5 refresh-icon" />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
                 <Bot className="w-5 h-5" />

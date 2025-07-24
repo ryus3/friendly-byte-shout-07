@@ -501,6 +501,18 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [user, setProducts]);
 
+  // تعريف الدوال العامة للتحديث
+  useEffect(() => {
+    // جعل دوال التحديث متاحة عالمياً
+    window.refreshInventory = fetchInitialData;
+    window.refreshOrders = fetchInitialData; // نفس الدالة تحدث كل شيء
+    
+    return () => {
+      delete window.refreshInventory;
+      delete window.refreshOrders;
+    };
+  }, [fetchInitialData]);
+
   useEffect(() => {
     const initializeData = async () => {
       if (user) {
@@ -1101,6 +1113,7 @@ export const InventoryProvider = ({ children }) => {
     updateProduct, 
     deleteProducts, 
     refreshProducts,
+    refetchProducts: refreshProducts, // إضافة alias للسهولة
     addPurchase: () => {}, deletePurchase: () => {}, deletePurchases: () => {},
     createOrder: (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => createOrder(customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData),
     updateOrder, deleteOrders, updateSettings, addToCart, removeFromCart, updateCartItemQuantity,
