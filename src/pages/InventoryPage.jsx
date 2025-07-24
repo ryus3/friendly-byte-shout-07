@@ -659,18 +659,33 @@ const InventoryPage = () => {
               onClick={async () => {
                 try {
                   // تحضير البيانات للتصدير بالتنسيق الصحيح
-                  const itemsToExport = selectedItemsForExport.length > 0 ? selectedItemsForExport : filteredItems;
+                  const productsToExport = selectedItemsForExport.length > 0 ? selectedItemsForExport : filteredItems;
                   
-                  const exportData = itemsToExport.map(item => ({
-                    name: item.name || item.product_name || 'غير محدد',
-                    color: item.color_name || item.color || 'غير محدد',
-                    size: item.size_name || item.size || 'غير محدد', 
-                    quantity: item.quantity || 0,
-                    price: item.selling_price || item.price || 0,
-                    totalValue: (item.quantity || 0) * (item.selling_price || item.price || 0)
-                  }));
+                  // تحويل المنتجات إلى متغيرات مسطحة
+                  const exportData = productsToExport.flatMap(product => {
+                    if (!product?.variants || !Array.isArray(product.variants)) {
+                      return [];
+                    }
+                    
+                    return product.variants.map(variant => ({
+                      name: product.name || product.product_name || 'غير محدد',
+                      color: variant.color_name || variant.color || 'غير محدد',
+                      size: variant.size_name || variant.size || 'غير محدد', 
+                      quantity: variant.quantity || 0,
+                      price: variant.selling_price || variant.sale_price || variant.price || 0
+                    }));
+                  });
 
-                  console.log('تصدير PDF:', exportData.length, 'عنصر');
+                  if (!exportData.length) {
+                    toast({
+                      title: "تنبيه",
+                      description: "لا توجد متغيرات للتصدير",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+
+                  console.log('تصدير PDF:', exportData.length, 'متغير');
                   
                   // استدعاء مولد PDF
                   const { generateInventoryReportPDF } = await import('@/utils/pdfGenerator');
@@ -678,7 +693,7 @@ const InventoryPage = () => {
                   
                   toast({
                     title: "تم تصدير التقرير",
-                    description: `تم تصدير ${exportData.length} عنصر بنجاح`,
+                    description: `تم تصدير ${exportData.length} متغير بنجاح`,
                   });
                 } catch (error) {
                   console.error('خطأ في تصدير PDF:', error);

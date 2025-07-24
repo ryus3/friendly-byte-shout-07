@@ -20,7 +20,7 @@ export const generateInventoryReportPDF = async (inventoryData) => {
     reportElement.style.top = '0';
     reportElement.style.width = '210mm';
     reportElement.style.backgroundColor = 'white';
-    reportElement.style.fontFamily = 'Arial, sans-serif';
+    reportElement.style.fontFamily = '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
     reportElement.style.direction = 'rtl';
     
     // إنشاء HTML للتقرير مع التصميم الجميل
@@ -29,48 +29,50 @@ export const generateInventoryReportPDF = async (inventoryData) => {
     
     reportElement.innerHTML = `
       <div style="
-        padding: 40px;
+        padding: 50px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         text-align: center;
-        margin-bottom: 30px;
-        border-radius: 15px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        margin-bottom: 40px;
+        border-radius: 20px;
+        box-shadow: 0 25px 50px rgba(0,0,0,0.15);
       ">
         <h1 style="
-          font-size: 36px;
-          font-weight: bold;
-          margin: 0 0 10px 0;
-          text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+          font-size: 42px;
+          font-weight: 900;
+          margin: 0 0 15px 0;
+          text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
+          letter-spacing: 1px;
         ">تقرير الجرد التفصيلي</h1>
         <div style="
-          background: rgba(255,255,255,0.2);
-          border-radius: 10px;
-          padding: 15px;
-          margin-top: 20px;
+          background: rgba(255,255,255,0.25);
+          border-radius: 15px;
+          padding: 20px;
+          margin-top: 25px;
+          backdrop-filter: blur(10px);
         ">
-          <p style="font-size: 18px; margin: 5px 0;">RYUS BRAND - نظام إدارة المخزون</p>
-          <p style="font-size: 14px; margin: 5px 0; opacity: 0.9;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
+          <p style="font-size: 20px; margin: 8px 0; font-weight: 600;">RYUS BRAND - نظام إدارة المخزون</p>
+          <p style="font-size: 16px; margin: 8px 0; opacity: 0.95;">تاريخ التقرير: ${new Date().toLocaleDateString('en-GB')} - ${new Date().toLocaleTimeString('en-GB', { hour12: false })}</p>
         </div>
       </div>
 
       <div style="
         background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         color: white;
-        padding: 25px;
-        border-radius: 15px;
-        margin-bottom: 30px;
+        padding: 35px;
+        border-radius: 20px;
+        margin-bottom: 40px;
         display: flex;
         justify-content: space-around;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        box-shadow: 0 20px 45px rgba(240, 147, 251, 0.3);
       ">
-        <div style="text-align: center;">
-          <div style="font-size: 32px; font-weight: bold; margin-bottom: 5px;">${totalItems}</div>
-          <div style="font-size: 16px; opacity: 0.9;">إجمالي العناصر</div>
+        <div style="text-align: center; padding: 10px;">
+          <div style="font-size: 38px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${totalItems}</div>
+          <div style="font-size: 18px; opacity: 0.95; font-weight: 500;">إجمالي العناصر</div>
         </div>
-        <div style="text-align: center;">
-          <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">${formatCurrency(totalValue)}</div>
-          <div style="font-size: 16px; opacity: 0.9;">إجمالي القيمة</div>
+        <div style="text-align: center; padding: 10px;">
+          <div style="font-size: 28px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${formatCurrency(totalValue)}</div>
+          <div style="font-size: 18px; opacity: 0.95; font-weight: 500;">إجمالي القيمة</div>
         </div>
       </div>
 
