@@ -252,36 +252,57 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
         </DialogHeader>
 
         <div className="px-6 pb-6 space-y-4">
-          {/* التبويبات */}
-          <div className="flex flex-col sm:flex-row gap-2 p-1 bg-muted rounded-lg">
-            <Button
-              variant={activeTab === 'list' ? 'default' : 'ghost'}
+          {/* التبويبات مع تدرج لوني جميل */}
+          <div className="flex flex-col sm:flex-row gap-2 p-2 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <button
               onClick={() => setActiveTab('list')}
-              className="flex-1 text-sm"
+              className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTab === 'list' 
+                  ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
+                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <FileText className="w-4 h-4 mr-2" />
+              <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">النسخ الاحتياطية</span>
               <span className="sm:hidden">القائمة</span>
-            </Button>
-            <Button
-              variant={activeTab === 'create' ? 'default' : 'ghost'}
+            </button>
+            <button
               onClick={() => setActiveTab('create')}
-              className="flex-1 text-sm"
+              className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTab === 'create' 
+                  ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
+                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Database className="w-4 h-4 mr-2" />
+              <Database className="w-4 h-4" />
               <span className="hidden sm:inline">إنشاء نسخة</span>
               <span className="sm:hidden">إنشاء</span>
-            </Button>
-            <Button
-              variant={activeTab === 'restore' ? 'default' : 'ghost'}
-              onClick={() => setActiveTab('restore')}
-              className="flex-1 text-sm"
-              disabled={!selectedBackup}
+            </button>
+            <button
+              onClick={() => {
+                if (selectedBackup) {
+                  setActiveTab('restore');
+                } else {
+                  toast({
+                    title: "تنبيه",
+                    description: "يجب اختيار نسخة احتياطية أولاً من قائمة النسخ",
+                    variant: "destructive"
+                  });
+                  setActiveTab('list');
+                }
+              }}
+              className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+                activeTab === 'restore' 
+                  ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
+                  : !selectedBackup
+                  ? 'opacity-60 cursor-not-allowed text-muted-foreground'
+                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+              }`}
             >
-              <Upload className="w-4 h-4 mr-2" />
+              <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">استعادة البيانات</span>
               <span className="sm:hidden">استعادة</span>
-            </Button>
+            </button>
           </div>
 
           <ScrollArea className="h-[400px] sm:h-[500px]">
@@ -351,29 +372,25 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                                <Badge variant={backup.backup_type === 'full' ? 'default' : 'secondary'} className="text-xs">
                                  {backup.backup_type === 'full' ? 'كاملة' : 'جزئية'}
                                </Badge>
-                               <div className="flex gap-1">
-                                 <Button
-                                   variant="outline"
-                                   size="sm"
-                                   onClick={(e) => {
-                                     e.stopPropagation();
-                                     downloadBackup(backup);
-                                   }}
-                                   className="h-8 w-8 p-0"
-                                 >
-                                   <Download className="w-3 h-3" />
-                                 </Button>
-                                 <AlertDialog>
-                                   <AlertDialogTrigger asChild>
-                                     <Button
-                                       variant="outline"
-                                       size="sm"
-                                       onClick={(e) => e.stopPropagation()}
-                                       className="h-8 w-8 p-0"
-                                     >
-                                       <Trash2 className="w-3 h-3 text-red-500" />
-                                     </Button>
-                                   </AlertDialogTrigger>
+                                <div className="flex gap-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      downloadBackup(backup);
+                                    }}
+                                    className="h-8 w-8 p-0 rounded-md bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white transition-all duration-200 flex items-center justify-center"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                  </button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <button
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="h-8 w-8 p-0 rounded-md bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white transition-all duration-200 flex items-center justify-center"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </AlertDialogTrigger>
                                    <AlertDialogContent className="max-w-[90vw]">
                                      <AlertDialogHeader>
                                        <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
@@ -449,24 +466,23 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                         </div>
                       </div>
 
-                      <Button 
+                      <button 
                         onClick={createBackup} 
                         disabled={creating}
-                        className="w-full"
-                        size="lg"
+                        className="w-full py-4 px-6 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {creating ? (
                           <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            <RefreshCw className="w-5 h-5 animate-spin" />
                             جاري إنشاء النسخة الاحتياطية...
                           </>
                         ) : (
                           <>
-                            <Database className="w-4 h-4 mr-2" />
+                            <Database className="w-5 h-5" />
                             إنشاء نسخة احتياطية الآن
                           </>
                         )}
-                      </Button>
+                      </button>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -546,25 +562,23 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
                       <Separator />
 
-                      <Button 
+                      <button 
                         onClick={restoreBackup} 
                         disabled={restoring || !restoreOptions.confirmRestore}
-                        variant="destructive"
-                        className="w-full"
-                        size="lg"
+                        className="w-full py-4 px-6 rounded-lg bg-gradient-to-r from-red-500 via-pink-500 to-red-600 hover:from-red-600 hover:via-pink-600 hover:to-red-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
                         {restoring ? (
                           <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                            <RefreshCw className="w-5 h-5 animate-spin" />
                             جاري استعادة البيانات...
                           </>
                         ) : (
                           <>
-                            <Upload className="w-4 h-4 mr-2" />
+                            <Upload className="w-5 h-5" />
                             بدء عملية الاستعادة
                           </>
                         )}
-                      </Button>
+                      </button>
                     </CardContent>
                   </Card>
                 </motion.div>
