@@ -38,27 +38,21 @@ const ManageProductsPage = () => {
   // استخدام hook الفلترة المحسن
   const filteredProducts = useFilteredProducts(products);
   
-  // فلترة إضافية للبحث
+  // فلترة إضافية للبحث - محسنة للأداء
   const searchFilteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return filteredProducts;
     
+    const lowerSearchTerm = searchTerm.toLowerCase();
     return filteredProducts.filter(product => 
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.name.toLowerCase().includes(lowerSearchTerm) ||
+      product.description?.toLowerCase().includes(lowerSearchTerm) ||
       product.variants?.some(variant => 
-        variant.barcode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        variant.sku?.toLowerCase().includes(searchTerm.toLowerCase())
+        variant.barcode?.toLowerCase().includes(lowerSearchTerm) ||
+        variant.sku?.toLowerCase().includes(lowerSearchTerm)
       )
     );
   }, [filteredProducts, searchTerm]);
   
-  console.log('ManageProductsPage Debug:', {
-    isMobile,
-    viewMode,
-    searchFilteredProductsLength: searchFilteredProducts.length,
-    filteredProductsLength: filteredProducts.length,
-    productsLength: products.length
-  });
 
   // إزالة الإجبار على وضع الشبكة في الهاتف - دع المستخدم يختار
 

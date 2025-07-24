@@ -536,7 +536,7 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'products' },
         (payload) => {
-          console.log('🆕 منتج جديد تم إضافته:', payload.new);
+          
           // إعادة تحميل البيانات للحصول على المنتج الكامل
           fetchInitialData();
         }
@@ -544,7 +544,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'products' },
         (payload) => {
-          console.log('📝 تم تحديث منتج:', payload.new);
           setProducts(prev => prev.map(product => 
             product.id === payload.new.id ? { ...product, ...payload.new } : product
           ));
@@ -553,7 +552,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'products' },
         (payload) => {
-          console.log('🗑️ تم حذف منتج:', payload.old);
           setProducts(prev => prev.filter(product => product.id !== payload.old.id));
         }
       )
@@ -565,7 +563,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'inventory' },
         (payload) => {
-          console.log('📦 تم تحديث المخزون:', payload);
           // تحديث المخزون في المنتجات المحلية
           setProducts(prev => prev.map(product => ({
             ...product,
@@ -592,7 +589,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'product_variants' },
         (payload) => {
-          console.log('🎨 تم تحديث متغير:', payload);
           // إعادة تحميل البيانات للحصول على التحديثات الكاملة
           fetchInitialData();
         }
@@ -605,7 +601,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'colors' },
         (payload) => {
-          console.log('🌈 تم تحديث الألوان:', payload);
           if (payload.eventType === 'INSERT') {
             setAllColors(prev => [...prev, payload.new]);
           } else if (payload.eventType === 'UPDATE') {
@@ -625,7 +620,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'sizes' },
         (payload) => {
-          console.log('📏 تم تحديث الأحجام:', payload);
           if (payload.eventType === 'INSERT') {
             setAllSizes(prev => [...prev, payload.new]);
           } else if (payload.eventType === 'UPDATE') {
@@ -693,7 +687,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'expenses' },
         (payload) => {
-          console.log('💰 تم إضافة مصروف جديد:', payload.new);
           setAccounting(prev => ({
             ...prev,
             expenses: [payload.new, ...prev.expenses]
@@ -703,7 +696,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'expenses' },
         (payload) => {
-          console.log('💰 تم تحديث مصروف:', payload.new);
           setAccounting(prev => ({
             ...prev,
             expenses: prev.expenses.map(exp => 
@@ -715,7 +707,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'expenses' },
         (payload) => {
-          console.log('💰 تم حذف مصروف:', payload.old);
           setAccounting(prev => ({
             ...prev,
             expenses: prev.expenses.filter(exp => exp.id !== payload.old.id)
@@ -730,14 +721,12 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'purchases' },
         (payload) => {
-          console.log('🛒 تم إضافة مشترى جديد:', payload.new);
           setPurchases(prev => [payload.new, ...prev]);
         }
       )
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'purchases' },
         (payload) => {
-          console.log('🛒 تم تحديث مشترى:', payload.new);
           setPurchases(prev => prev.map(purchase => 
             purchase.id === payload.new.id ? payload.new : purchase
           ));
@@ -746,7 +735,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'purchases' },
         (payload) => {
-          console.log('🛒 تم حذف مشترى:', payload.old);
           setPurchases(prev => prev.filter(purchase => purchase.id !== payload.old.id));
         }
       )
@@ -1001,7 +989,6 @@ export const InventoryProvider = ({ children }) => {
 
   const updateCapital = async (newCapital) => {
     try {
-      console.log('💰 تحديث رأس المال إلى:', newCapital);
       
       // البحث عن إعداد رأس المال الموجود
       const { data: existingSettings, error: fetchError } = await supabase
@@ -1018,7 +1005,6 @@ export const InventoryProvider = ({ children }) => {
       let updateError;
       if (existingSettings) {
         // تحديث الإعدادات الموجودة
-        console.log('📝 تحديث الإعدادات الموجودة');
         const { error } = await supabase
           .from('settings')
           .update({ 
@@ -1031,7 +1017,6 @@ export const InventoryProvider = ({ children }) => {
         updateError = error;
       } else {
         // إنشاء إعدادات جديدة
-        console.log('➕ إنشاء إعدادات جديدة');
         const { error } = await supabase
           .from('settings')
           .insert({ 
@@ -1051,7 +1036,6 @@ export const InventoryProvider = ({ children }) => {
       setAccounting(prev => ({ ...prev, capital: parseFloat(newCapital) }));
       setSettings(prev => ({ ...prev, capital: parseFloat(newCapital) }));
       
-      console.log('✅ تم تحديث رأس المال بنجاح');
       toast({ 
         title: "نجاح", 
         description: `تم تحديث رأس المال إلى ${parseFloat(newCapital).toLocaleString()} د.ع`, 
@@ -1070,8 +1054,6 @@ export const InventoryProvider = ({ children }) => {
 
   const deleteExpense = async (expenseId) => {
     try {
-      console.log('🗑️ حذف المصروف:', expenseId);
-      
       const { error } = await supabase
         .from('expenses')
         .delete()
@@ -1090,8 +1072,6 @@ export const InventoryProvider = ({ children }) => {
         description: "تم حذف المصروف بنجاح", 
         variant: "default" 
       });
-
-      console.log('✅ تم حذف المصروف بنجاح');
     } catch (error) {
       console.error('❌ فشل حذف المصروف:', error);
       toast({ 

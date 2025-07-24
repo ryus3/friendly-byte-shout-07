@@ -17,27 +17,12 @@ export const useFilteredProducts = (products) => {
   
   const { user, productPermissions, isAdmin } = auth;
   
-  // إضافة تسجيل للتشخيص
-  console.log('🔍 useFilteredProducts Debug:', {
-    products: products?.length || 0,
-    user: user?.full_name,
-    isAdmin,
-    productPermissions,
-    hasPermissions: !!productPermissions && Object.keys(productPermissions).length > 0
-  });
 
   const filteredProducts = useMemo(() => {
     if (!products || !Array.isArray(products)) return [];
     
-    console.log('🔍 فلترة المنتجات:', {
-      totalProducts: products.length,
-      isAdmin,
-      productPermissions: Object.keys(productPermissions || {}).length
-    });
-    
     // المديرون يرون كل المنتجات (بما في ذلك غير النشطة)
     if (isAdmin) {
-      console.log('✅ المدير - عرض جميع المنتجات');
       return products;
     }
 
@@ -46,7 +31,6 @@ export const useFilteredProducts = (products) => {
 
     // إذا لم تكن هناك صلاحيات محددة، عرض المنتجات النشطة فقط (للموظفين الجدد)
     if (!productPermissions || Object.keys(productPermissions).length === 0) {
-      console.log('⚠️ لا توجد صلاحيات محددة - عرض المنتجات النشطة فقط');
       return activeProducts;
     }
 
@@ -57,7 +41,6 @@ export const useFilteredProducts = (products) => {
       if (categoryPerm && !categoryPerm.has_full_access) {
         // إذا لم يكن للمنتج تصنيفات، فهو مرفوض
         if (!product.product_categories || product.product_categories.length === 0) {
-          console.log('❌ منتج مرفوض - لا يحتوي على تصنيفات:', product.name);
           return false;
         }
         
@@ -66,7 +49,6 @@ export const useFilteredProducts = (products) => {
           categoryPerm.allowed_items.includes(pc.category_id)
         );
         if (!hasAllowedCategory) {
-          console.log('❌ منتج مرفوض بسبب التصنيف:', product.name);
           return false;
         }
       }
@@ -76,7 +58,6 @@ export const useFilteredProducts = (products) => {
       if (departmentPerm && !departmentPerm.has_full_access) {
         // إذا لم يكن للمنتج أقسام، فهو مرفوض
         if (!product.product_departments || product.product_departments.length === 0) {
-          console.log('❌ منتج مرفوض - لا يحتوي على أقسام:', product.name);
           return false;
         }
         
@@ -85,7 +66,6 @@ export const useFilteredProducts = (products) => {
           departmentPerm.allowed_items.includes(pd.department_id)
         );
         if (!hasAllowedDepartment) {
-          console.log('❌ منتج مرفوض بسبب القسم:', product.name);
           return false;
         }
       }
@@ -95,7 +75,6 @@ export const useFilteredProducts = (products) => {
       if (productTypePerm && !productTypePerm.has_full_access) {
         // إذا لم يكن للمنتج أنواع، فهو مرفوض
         if (!product.product_product_types || product.product_product_types.length === 0) {
-          console.log('❌ منتج مرفوض - لا يحتوي على أنواع منتجات:', product.name);
           return false;
         }
         
@@ -104,7 +83,6 @@ export const useFilteredProducts = (products) => {
           productTypePerm.allowed_items.includes(ppt.product_type_id)
         );
         if (!hasAllowedProductType) {
-          console.log('❌ منتج مرفوض بسبب نوع المنتج:', product.name);
           return false;
         }
       }
@@ -114,7 +92,6 @@ export const useFilteredProducts = (products) => {
       if (seasonPerm && !seasonPerm.has_full_access) {
         // إذا لم يكن للمنتج مواسم، فهو مرفوض
         if (!product.product_seasons_occasions || product.product_seasons_occasions.length === 0) {
-          console.log('❌ منتج مرفوض - لا يحتوي على مواسم:', product.name);
           return false;
         }
         
@@ -123,20 +100,11 @@ export const useFilteredProducts = (products) => {
           seasonPerm.allowed_items.includes(pso.season_occasion_id)
         );
         if (!hasAllowedSeason) {
-          console.log('❌ منتج مرفوض بسبب الموسم:', product.name);
           return false;
         }
       }
 
-      console.log('✅ منتج مقبول:', product.name);
       return true;
-    });
-    
-    console.log('🔍 نتيجة الفلترة:', {
-      originalCount: products.length,
-      filteredCount: filtered.length,
-      difference: products.length - filtered.length,
-      permissionTypes: Object.keys(productPermissions || {})
     });
     
     return filtered;
