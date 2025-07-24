@@ -28,15 +28,20 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
 
     // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
     const filteredOrders = orders.filter(order => {
-      // التأكد من أن الطلب مكتمل - تم توسيع شروط الحالة
-      const isCompleted = order.delivery_status === 'delivered' || 
+      // التأكد من أن الطلب مكتمل (تم التوصيل فقط) - يخصم من المخزون عندما يكون delivered
+      const isDelivered = order.delivery_status === 'delivered' || 
                          order.status === 'delivered' || 
-                         order.order_status === 'delivered' ||
-                         order.delivery_status === 'completed' ||
-                         order.status === 'completed' || // هذا هو الشرط المهم!
-                         order.order_status === 'completed';
+                         order.order_status === 'delivered';
       
-      if (!isCompleted) return false;
+      // استبعاد الطلبات المرجعة أو الملغية
+      const isReturnedOrCancelled = order.status === 'returned' || 
+                                   order.status === 'cancelled' ||
+                                   order.delivery_status === 'returned' ||
+                                   order.delivery_status === 'cancelled' ||
+                                   order.order_status === 'returned' ||
+                                   order.order_status === 'cancelled';
+      
+      if (!isDelivered || isReturnedOrCancelled) return false;
 
       const orderDate = new Date(order.created_at || order.order_date);
       const now = new Date();
