@@ -321,23 +321,15 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                 console.log('selectedBackup:', selectedBackup);
                 setActiveTab('restore');
               }}
-              disabled={!selectedBackup}
               className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
                 activeTab === 'restore'
                   ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
-                  : selectedBackup
-                  ? 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
-                  : 'opacity-50 cursor-not-allowed text-muted-foreground bg-gray-100 dark:bg-gray-800'
+                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
               }`}
             >
               <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">استعادة البيانات</span>
               <span className="sm:hidden">استعادة</span>
-              {!selectedBackup && (
-                <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                  اختر نسخة
-                </span>
-              )}
             </button>
           </div>
 
@@ -505,7 +497,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
               )}
 
               {/* استعادة البيانات */}
-              {activeTab === 'restore' && selectedBackup && (
+              {activeTab === 'restore' && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -520,81 +512,152 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* معلومات النسخة المحددة */}
-                      <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
-                        <h4 className="font-semibold mb-2 text-sm sm:text-base">النسخة المحددة للاستعادة:</h4>
-                        <div className="text-xs sm:text-sm space-y-1">
-                          <p><strong>الملف:</strong> <span className="break-all">{selectedBackup.filename}</span></p>
-                          <p><strong>التاريخ:</strong> {formatDate(selectedBackup.created_at)}</p>
-                          <p><strong>الحجم:</strong> {formatFileSize(selectedBackup.size_mb)}</p>
-                          <p><strong>المنشئ:</strong> {selectedBackup.creator_name || 'مجهول'}</p>
-                        </div>
-                      </div>
-
-                      {/* خيارات الاستعادة */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id="clearExisting"
-                            checked={restoreOptions.clearExisting}
-                            onCheckedChange={(checked) => 
-                              setRestoreOptions(prev => ({ ...prev, clearExisting: checked }))
-                            }
-                          />
-                          <Label htmlFor="clearExisting" className="text-sm flex-1">
-                            مسح البيانات الموجودة قبل الاستعادة (موصى به)
-                          </Label>
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            id="confirmRestore"
-                            checked={restoreOptions.confirmRestore}
-                            onCheckedChange={(checked) => 
-                              setRestoreOptions(prev => ({ ...prev, confirmRestore: checked }))
-                            }
-                          />
-                          <Label htmlFor="confirmRestore" className="text-sm font-semibold text-red-600 flex-1">
-                            أؤكد أنني أفهم أن هذا الإجراء سيؤثر على البيانات الحالية
-                          </Label>
-                        </div>
-                      </div>
-
-                      {/* تحذيرات مهمة */}
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/30 rounded-lg">
-                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
-                          <div className="text-sm">
-                            <strong>تحذير مهم:</strong> ستؤثر عملية الاستعادة على جميع البيانات الحالية في النظام.
+                      {!selectedBackup ? (
+                        /* عرض اختيار النسخة */
+                        <div className="text-center space-y-4">
+                          <div className="w-16 h-16 mx-auto rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                            <Upload className="w-8 h-8 text-blue-600" />
                           </div>
-                        </div>
-                        <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg">
-                          <Clock className="w-5 h-5 text-yellow-600 mt-0.5" />
-                          <div className="text-sm">
-                            يُنصح بإنشاء نسخة احتياطية من البيانات الحالية قبل الاستعادة.
+                          <div>
+                            <h3 className="text-lg font-semibold mb-2">اختر النسخة الاحتياطية</h3>
+                            <p className="text-muted-foreground">يجب اختيار نسخة احتياطية أولاً من قائمة النسخ المتاحة لبدء عملية الاستعادة</p>
                           </div>
+                          <button
+                            onClick={() => setActiveTab('list')}
+                            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg transition-all duration-300 flex items-center gap-2 mx-auto"
+                          >
+                            <FileText className="w-4 h-4" />
+                            اذهب لقائمة النسخ
+                          </button>
                         </div>
-                      </div>
+                      ) : (
+                        /* عرض شروط الاستعادة */
+                        <>
+                          {/* معلومات النسخة المحددة */}
+                          <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <h4 className="font-semibold mb-3 text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                              <HardDrive className="w-5 h-5" />
+                              النسخة الاحتياطية المحددة:
+                            </h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1">
+                                <strong className="text-blue-800 dark:text-blue-200">اسم الملف:</strong> 
+                                <span className="break-all bg-white dark:bg-gray-800 px-2 py-1 rounded text-xs font-mono">{selectedBackup.filename}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-blue-600" />
+                                <strong className="text-blue-800 dark:text-blue-200">تاريخ الإنشاء:</strong> 
+                                <span>{formatDate(selectedBackup.created_at)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <HardDrive className="w-4 h-4 text-blue-600" />
+                                <strong className="text-blue-800 dark:text-blue-200">حجم الملف:</strong> 
+                                <span>{formatFileSize(selectedBackup.size_mb)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-blue-600" />
+                                <strong className="text-blue-800 dark:text-blue-200">منشئ النسخة:</strong> 
+                                <span>{selectedBackup.creator_name || 'مجهول'}</span>
+                              </div>
+                            </div>
+                          </div>
 
-                      <Separator />
+                          {/* شروط الاستعادة */}
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-lg">شروط وأحكام الاستعادة:</h4>
+                            
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-3">
+                                <Checkbox
+                                  id="clearExisting"
+                                  checked={restoreOptions.clearExisting}
+                                  onCheckedChange={(checked) => 
+                                    setRestoreOptions(prev => ({ ...prev, clearExisting: checked }))
+                                  }
+                                />
+                                <Label htmlFor="clearExisting" className="text-sm flex-1 leading-relaxed">
+                                  <strong>مسح البيانات الموجودة قبل الاستعادة</strong>
+                                  <br />
+                                  <span className="text-muted-foreground text-xs">موصى به لضمان عدم تضارب البيانات</span>
+                                </Label>
+                              </div>
 
-                      <button 
-                        onClick={restoreBackup} 
-                        disabled={restoring || !restoreOptions.confirmRestore}
-                        className="w-full py-4 px-6 rounded-lg bg-gradient-to-r from-red-500 via-pink-500 to-red-600 hover:from-red-600 hover:via-pink-600 hover:to-red-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                      >
-                        {restoring ? (
-                          <>
-                            <RefreshCw className="w-5 h-5 animate-spin" />
-                            جاري استعادة البيانات...
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-5 h-5" />
-                            بدء عملية الاستعادة
-                          </>
-                        )}
-                      </button>
+                              <div className="flex items-start gap-3">
+                                <Checkbox
+                                  id="confirmRestore"
+                                  checked={restoreOptions.confirmRestore}
+                                  onCheckedChange={(checked) => 
+                                    setRestoreOptions(prev => ({ ...prev, confirmRestore: checked }))
+                                  }
+                                />
+                                <Label htmlFor="confirmRestore" className="text-sm flex-1 leading-relaxed">
+                                  <strong className="text-red-600">أؤكد فهمي للمخاطر</strong>
+                                  <br />
+                                  <span className="text-red-500 text-xs">أفهم أن هذا الإجراء سيؤثر على البيانات الحالية ولا يمكن التراجع عنه</span>
+                                </Label>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* تحذيرات مهمة */}
+                          <div className="space-y-3">
+                            <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border-l-4 border-red-500">
+                              <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-sm">
+                                <strong className="text-red-800 dark:text-red-200">تحذير مهم:</strong>
+                                <p className="text-red-700 dark:text-red-300 mt-1">
+                                  ستؤثر عملية الاستعادة على جميع البيانات الحالية في النظام. تأكد من أنك تريد المتابعة.
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-start gap-3 p-4 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border-l-4 border-yellow-500">
+                              <Clock className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-sm">
+                                <strong className="text-yellow-800 dark:text-yellow-200">نصيحة:</strong>
+                                <p className="text-yellow-700 dark:text-yellow-300 mt-1">
+                                  يُنصح بشدة بإنشاء نسخة احتياطية من البيانات الحالية قبل عملية الاستعادة.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <Separator />
+
+                          {/* أزرار العمل */}
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                              onClick={() => {
+                                setSelectedBackup(null);
+                                setActiveTab('list');
+                                setRestoreOptions({ clearExisting: false, confirmRestore: false });
+                              }}
+                              className="flex-1 py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <FileText className="w-4 h-4" />
+                              اختيار نسخة أخرى
+                            </button>
+                            
+                            <button 
+                              onClick={restoreBackup} 
+                              disabled={restoring || !restoreOptions.confirmRestore}
+                              className="flex-1 py-3 px-4 rounded-lg bg-gradient-to-r from-red-500 via-pink-500 to-red-600 hover:from-red-600 hover:via-pink-600 hover:to-red-700 text-white font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                              {restoring ? (
+                                <>
+                                  <RefreshCw className="w-5 h-5 animate-spin" />
+                                  جاري الاستعادة...
+                                </>
+                              ) : (
+                                <>
+                                  <Upload className="w-5 h-5" />
+                                  تأكيد الاستعادة
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </motion.div>
