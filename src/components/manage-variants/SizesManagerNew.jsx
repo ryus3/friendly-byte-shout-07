@@ -180,6 +180,24 @@ const SizesManagerNew = () => {
 
   const handleDelete = async (sizeId) => {
     try {
+      // التحقق من استخدام القياس في المنتجات
+      const { data: variants, error: checkError } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('size_id', sizeId)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (variants && variants.length > 0) {
+        toast({
+          title: "لا يمكن الحذف",
+          description: "هذا القياس مستخدم في منتجات موجودة",
+          variant: "destructive",
+        });
+        return;
+      }
+
       await supabase.from('sizes').delete().eq('id', sizeId);
       toast({ title: 'تم الحذف', description: 'تم حذف القياس بنجاح' });
       await fetchSizes();

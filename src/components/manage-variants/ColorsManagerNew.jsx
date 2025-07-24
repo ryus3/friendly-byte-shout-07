@@ -144,6 +144,24 @@ const ColorsManager = () => {
 
   const handleDelete = async (id) => {
     try {
+      // التحقق من استخدام اللون في المنتجات
+      const { data: variants, error: checkError } = await supabase
+        .from('product_variants')
+        .select('id')
+        .eq('color_id', id)
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (variants && variants.length > 0) {
+        toast({
+          title: "لا يمكن الحذف",
+          description: "هذا اللون مستخدم في منتجات موجودة",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('colors')
         .delete()
@@ -158,6 +176,7 @@ const ColorsManager = () => {
       
       fetchColors();
     } catch (error) {
+      console.error('خطأ في حذف اللون:', error);
       toast({
         title: "خطأ",
         description: "فشل في حذف اللون",
