@@ -11,9 +11,12 @@ const InventoryHeader = ({ onExport }) => {
       </div>
       
       <div className="flex gap-3">
-        <Button onClick={onExport} variant="outline">
+        <Button 
+          onClick={onExport} 
+          className="bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 hover:from-purple-700 hover:via-blue-700 hover:to-cyan-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
+        >
           <Download className="w-4 h-4 ml-2" />
-          تصدير
+          تصدير تقرير PDF
         </Button>
       </div>
     </div>
