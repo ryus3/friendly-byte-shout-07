@@ -7,11 +7,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { User, UserCheck, UserX, Settings, X } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import UnifiedEmployeePermissionsDialog from '../manage-employees/UnifiedEmployeePermissionsDialog';
 
 const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
-  const { toast } = useToast();
+  // نستخدم toast مباشرة
 
   const handleDirectApprove = async () => {
     try {
@@ -154,7 +154,7 @@ const UserCard = ({ user, onApprove, onReject, onDetailedReview }) => {
 const PendingRegistrations = ({ onClose }) => {
   const { pendingRegistrations, updateUser, refetchAdminData } = useAuth();
   const { addNotification } = useNotifications();
-  const { toast } = useToast();
+  // نستخدم toast مباشرة
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [showUnifiedDialog, setShowUnifiedDialog] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

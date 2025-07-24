@@ -21,13 +21,13 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const BackupSystemDialog = ({ open, onOpenChange }) => {
-  const { toast } = useToast();
+  // نستخدم toast مباشرة
   
   // States محسنة ومبسطة
   const [activeTab, setActiveTab] = useState('list');

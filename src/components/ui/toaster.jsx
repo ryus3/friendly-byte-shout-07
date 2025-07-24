@@ -69,8 +69,8 @@ export function Toaster() {
 	let toasts = [];
 	
 	try {
-		const { toasts: hookToasts } = useToast();
-		toasts = hookToasts || [];
+		const result = useToast();
+		toasts = result?.toasts || [];
 	} catch (error) {
 		console.warn('Toaster component failed to get toasts, using empty array');
 		toasts = [];

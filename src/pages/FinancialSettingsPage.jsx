@@ -6,11 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Coins, TrendingUp, Settings, Save, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { useCashSources } from '@/hooks/useCashSources';
 
 const FinancialSettingsPage = () => {
-  const { toast } = useToast();
+  // نستخدم toast مباشرة
   const { getMainCashBalance, fetchCashSources } = useCashSources();
   
   const [initialCapital, setInitialCapital] = useState(0);

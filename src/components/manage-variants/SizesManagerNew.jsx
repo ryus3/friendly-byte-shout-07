@@ -182,12 +182,18 @@ const SizesManagerNew = () => {
     console.log('🗑️ محاولة حذف القياس:', sizeId);
     
     try {
-      // التحقق من استخدام القياس في المنتجات
+      // التحقق من استخدام القياس في المنتجات النشطة
       const { data: variants, error: checkError } = await supabase
         .from('product_variants')
-        .select('id')
-        .eq('size_id', sizeId)
-        .limit(1);
+        .select(`
+          id,
+          products!inner(
+            id,
+            name,
+            is_active
+          )
+        `)
+        .eq('size_id', sizeId);
 
       console.log('🔍 نتيجة البحث عن متغيرات القياس:', { variants, checkError });
 
@@ -196,28 +202,24 @@ const SizesManagerNew = () => {
         throw checkError;
       }
 
-      if (variants && variants.length > 0) {
-        console.log('⚠️ القياس مستخدم في منتجات:', variants.length);
+      // فلترة المنتجات النشطة فقط
+      const activeVariants = variants?.filter(v => v.products?.is_active) || [];
+
+      if (activeVariants.length > 0) {
+        console.log('⚠️ القياس مستخدم في منتجات نشطة:', activeVariants.length);
         
-        // الحصول على أسماء المنتجات التي تستخدم هذا القياس
-        const { data: productNames } = await supabase
-          .from('product_variants')
-          .select('products(name)')
-          .eq('size_id', sizeId)
-          .limit(3);
-        
-        const products = productNames?.map(pv => pv.products?.name).filter(Boolean) || [];
-        const productsList = products.length > 0 ? `في: ${products.join(', ')}` : '';
+        const productNames = [...new Set(activeVariants.map(v => v.products?.name).filter(Boolean))];
+        const productsList = productNames.length > 0 ? `في: ${productNames.slice(0, 3).join(', ')}${productNames.length > 3 ? '...' : ''}` : '';
         
         toast({
-          title: "لا يمكن الحذف",
-          description: `هذا القياس مستخدم في ${variants.length} منتج ${productsList}`,
+          title: "❌ لا يمكن الحذف",
+          description: `هذا القياس مستخدم في ${activeVariants.length} منتج نشط ${productsList}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log('✅ القياس غير مستخدم، جاري الحذف...');
+      console.log('✅ القياس غير مستخدم أو مستخدم في منتجات غير نشطة، جاري الحذف...');
       
       const { error } = await supabase.from('sizes').delete().eq('id', sizeId);
       
@@ -228,12 +230,16 @@ const SizesManagerNew = () => {
       
       console.log('🎉 تم حذف القياس بنجاح');
       
-      toast({ title: 'تم الحذف', description: 'تم حذف القياس بنجاح' });
+      toast({ 
+        title: '✅ تم الحذف بنجاح', 
+        description: 'تم حذف القياس نهائياً من النظام' 
+      });
+      
       await fetchSizes();
     } catch (error) {
       console.error('💥 خطأ عام في حذف القياس:', error);
       toast({
-        title: 'خطأ',
+        title: '❌ خطأ في الحذف',
         description: `فشل في حذف القياس: ${error.message}`,
         variant: 'destructive'
       });

@@ -149,39 +149,41 @@ const ColorsManager = () => {
       // التحقق من استخدام اللون في المنتجات
       const { data: variants, error: checkError } = await supabase
         .from('product_variants')
-        .select('id')
-        .eq('color_id', id)
-        .limit(1);
+        .select(`
+          id,
+          products!inner(
+            id,
+            name,
+            is_active
+          )
+        `)
+        .eq('color_id', id);
 
-      console.log('🔍 نتيجة البحث عن متغيرات:', { variants, checkError });
+      console.log('🔍 نتيجة البحث عن متغيرات اللون:', { variants, checkError });
 
       if (checkError) {
         console.error('❌ خطأ في فحص المتغيرات:', checkError);
         throw checkError;
       }
 
-      if (variants && variants.length > 0) {
-        console.log('⚠️ اللون مستخدم في منتجات:', variants.length);
+      // فلترة المنتجات النشطة فقط
+      const activeVariants = variants?.filter(v => v.products?.is_active) || [];
+      
+      if (activeVariants.length > 0) {
+        console.log('⚠️ اللون مستخدم في منتجات نشطة:', activeVariants.length);
         
-        // الحصول على أسماء المنتجات التي تستخدم هذا اللون
-        const { data: productNames } = await supabase
-          .from('product_variants')
-          .select('products(name)')
-          .eq('color_id', id)
-          .limit(3);
-        
-        const products = productNames?.map(pv => pv.products?.name).filter(Boolean) || [];
-        const productsList = products.length > 0 ? `في: ${products.join(', ')}` : '';
+        const productNames = [...new Set(activeVariants.map(v => v.products?.name).filter(Boolean))];
+        const productsList = productNames.length > 0 ? `في: ${productNames.slice(0, 3).join(', ')}${productNames.length > 3 ? '...' : ''}` : '';
         
         toast({
-          title: "لا يمكن الحذف",
-          description: `هذا اللون مستخدم في ${variants.length} منتج ${productsList}`,
+          title: "❌ لا يمكن الحذف",
+          description: `هذا اللون مستخدم في ${activeVariants.length} منتج نشط ${productsList}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log('✅ اللون غير مستخدم، جاري الحذف...');
+      console.log('✅ اللون غير مستخدم أو مستخدم في منتجات غير نشطة، جاري الحذف...');
       
       const { error } = await supabase
         .from('colors')
@@ -196,15 +198,15 @@ const ColorsManager = () => {
       console.log('🎉 تم حذف اللون بنجاح');
       
       toast({
-        title: "تم الحذف",
-        description: "تم حذف اللون بنجاح",
+        title: "✅ تم الحذف بنجاح",
+        description: "تم حذف اللون نهائياً من النظام",
       });
       
       fetchColors();
     } catch (error) {
       console.error('💥 خطأ عام في حذف اللون:', error);
       toast({
-        title: "خطأ",
+        title: "❌ خطأ في الحذف",
         description: `فشل في حذف اللون: ${error.message}`,
         variant: "destructive",
       });
