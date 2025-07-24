@@ -23,7 +23,7 @@ import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client.js';
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {
   const { orders, products, accounting, purchases } = useInventory();
