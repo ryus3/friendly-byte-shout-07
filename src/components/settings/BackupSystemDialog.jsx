@@ -682,5 +682,6 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
         </DialogContent>
       </Dialog>
     );
+  };
 
   export default BackupSystemDialog;
