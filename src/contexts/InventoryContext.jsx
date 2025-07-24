@@ -339,31 +339,45 @@ export const InventoryProvider = ({ children }) => {
         
         const variants = (product.product_variants || []).map(variant => {
           const variantInventory = productInventory.find(inv => inv.variant_id === variant.id);
+          
+          // إضافة تسجيل لمراقبة البيانات
+          console.log(`🔍 Processing variant ${variant.id} for product ${product.name}:`, {
+            variantId: variant.id,
+            inventoryFound: !!variantInventory,
+            quantity: variantInventory?.quantity || 0,
+            reserved: variantInventory?.reserved_quantity || 0
+          });
+          
           return {
             ...variant,
-            id: variant.id, // التأكد من وجود ID
-            sku: variant.barcode || `${product.id}-${variant.id}`, // إنشاء SKU إذا لم يكن موجود
+            id: variant.id,
+            sku: variant.barcode || `${product.id}-${variant.id}`,
             color: variant.colors?.name || 'Unknown',
             color_hex: variant.colors?.hex_code || '#000000',
             size: variant.sizes?.name || 'Unknown',
-            quantity: variantInventory?.quantity || 0,
+            quantity: variantInventory?.quantity || 0, // الكمية الحقيقية من inventory
             reserved: variantInventory?.reserved_quantity || 0,
-            min_stock: variantInventory?.min_stock || 0,
+            min_stock: variantInventory?.min_stock || 5,
             location: variantInventory?.location || null,
             inventoryId: variantInventory?.id || null,
-            image: variant.images?.[0] || product.images?.[0] || null
+            image: variant.images?.[0] || product.images?.[0] || null,
+            // إضافة مصفوفة المخزون للتوافق مع المكونات الأخرى
+            inventory: variantInventory ? [variantInventory] : []
           };
         });
 
         const totalStock = variants.reduce((sum, variant) => sum + (variant.quantity || 0), 0);
         const totalReserved = variants.reduce((sum, variant) => sum + (variant.reserved || 0), 0);
 
+        // تسجيل إجمالي المخزون للمنتج
+        console.log(`📦 Product ${product.name}: Total stock = ${totalStock}, Variants count = ${variants.length}`);
+
         return {
           ...product,
           variants,
           totalStock,
           totalReserved,
-          is_visible: true, // إظهار جميع المنتجات
+          is_visible: true,
           price: product.base_price || 0,
           
           categories: {
@@ -378,7 +392,10 @@ export const InventoryProvider = ({ children }) => {
           product_categories: product.product_categories,
           product_departments: product.product_departments,
           product_product_types: product.product_product_types,
-          product_seasons_occasions: product.product_seasons_occasions
+          product_seasons_occasions: product.product_seasons_occasions,
+          
+          // إضافة المخزون للمنتج الكامل
+          inventory: productInventory
         };
       });
 
