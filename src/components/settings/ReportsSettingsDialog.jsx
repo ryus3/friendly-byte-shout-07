@@ -112,7 +112,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       const pendingOrders = orders.filter(order => order.status === 'pending').length;
       const completedOrders = orders.filter(order => order.status === 'completed').length;
       const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
-      const returnedOrders = orders.filter(order => order.status === 'returned').length;
+      const returnedOrders = orders.filter(order => order.status === 'returned' || order.status === 'refunded').length;
       const processingOrders = orders.filter(order => order.status === 'processing').length;
 
       // إحصائيات المنتجات
@@ -221,14 +221,24 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
   const financialSummary = createFinancialSummary();
 
   const renderPDFDocument = (reportType) => {
+    const completeFinancialSummary = {
+      ...financialSummary,
+      totalOrders: analytics.totalOrders,
+      pendingOrders: analytics.pendingOrders,
+      completedOrders: analytics.completedOrders,
+      cancelledOrders: analytics.cancelledOrders,
+      returnedOrders: analytics.returnedOrders,
+      processingOrders: analytics.processingOrders
+    };
+
     switch (reportType) {
       case 'financial':
-        return <FinancialReportPDF summary={financialSummary} dateRange={dateRange} />;
+        return <FinancialReportPDF summary={completeFinancialSummary} dateRange={dateRange} />;
       case 'inventory':
         return <InventoryReportPDF products={products || []} settings={{}} />;
       case 'complete':
       default:
-        return <InventoryReportPDF products={products || []} summary={financialSummary} />;
+        return <InventoryReportPDF products={products || []} summary={completeFinancialSummary} />;
     }
   };
 
@@ -320,15 +330,10 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
         </div>
 
         <div className="p-6 space-y-8">
-          {/* مؤشرات الأداء الرئيسية مع تدرجات احترافية */}
+          {/* مؤشرات الأداء الرئيسية */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {kpis.map((kpi, index) => (
-              <Card key={index} className={`relative overflow-hidden border-0 shadow-lg bg-gradient-to-br ${
-                index === 0 ? 'from-emerald-50 via-emerald-100 to-teal-50' :
-                index === 1 ? 'from-blue-50 via-blue-100 to-indigo-50' :
-                index === 2 ? 'from-purple-50 via-purple-100 to-pink-50' :
-                'from-orange-50 via-orange-100 to-amber-50'
-              }`}>
+              <Card key={index} className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 border-0 shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
@@ -338,19 +343,14 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                       </p>
                       {kpi.change !== 0 && (
                         <div className={`flex items-center text-xs ${
-                          kpi.change > 0 ? 'text-green-600' : 'text-red-600'
+                          kpi.change > 0 ? 'text-emerald-600' : 'text-red-600'
                         }`}>
                           {kpi.change > 0 ? <ArrowUp className="w-3 h-3 mr-1" /> : <ArrowDown className="w-3 h-3 mr-1" />}
                           {Math.abs(kpi.change).toFixed(1)}% من أمس
                         </div>
                       )}
                     </div>
-                    <div className={`p-3 rounded-full shadow-lg bg-gradient-to-r ${
-                      index === 0 ? 'from-emerald-500 to-teal-600' :
-                      index === 1 ? 'from-blue-500 to-indigo-600' :
-                      index === 2 ? 'from-purple-500 to-pink-600' :
-                      'from-orange-500 to-amber-600'
-                    }`}>
+                    <div className={`p-3 rounded-full ${kpi.iconBg}`}>
                       <kpi.icon className="w-6 h-6 text-white" />
                     </div>
                   </div>
@@ -362,7 +362,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
           {/* الإحصائيات التفصيلية */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* إحصائيات المبيعات */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 border-0 shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-green-500" />
