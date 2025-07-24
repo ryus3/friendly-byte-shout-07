@@ -713,7 +713,7 @@ const InventoryPage = () => {
                 }
               }} 
               variant="outline"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
             >
               <Download className="w-4 h-4 mr-2" />
               تصدير PDF
