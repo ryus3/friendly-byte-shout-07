@@ -318,9 +318,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
             
             <button
               onClick={() => {
-                console.log('🔥 زر استعادة البيانات تم النقر عليه');
-                console.log('🔍 selectedBackup الحالي:', selectedBackup);
-                console.log('📋 backups المتاحة:', backups);
+                console.log('زر استعادة البيانات تم النقر عليه');
+                console.log('selectedBackup:', selectedBackup);
                 setActiveTab('restore');
               }}
               className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
@@ -380,9 +379,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                               : 'border-border hover:border-primary/30'
                           }`}
                           onClick={() => {
-                            console.log('🎯 تم اختيار النسخة:', backup);
+                            console.log('تم اختيار النسخة:', backup);
                             setSelectedBackup(backup);
-                            console.log('✅ selectedBackup تم تحديثه إلى:', backup);
                           }}
                         >
                           <div className="flex flex-col gap-3">
@@ -525,18 +523,10 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                       <CardTitle className="flex items-center gap-2">
                         <Upload className="w-5 h-5" />
                         استعادة البيانات
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">
-                          Debug: {selectedBackup ? '✅ محدد' : '❌ غير محدد'}
-                        </span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {(() => {
-                        console.log('🔍 Render check - selectedBackup:', selectedBackup);
-                        console.log('🔍 Render check - selectedBackup type:', typeof selectedBackup);
-                        console.log('🔍 Render check - selectedBackup truth:', !!selectedBackup);
-                        return !selectedBackup;
-                      })() ? (
+                      {!selectedBackup ? (
                         /* عرض اختيار النسخة */
                         <div className="text-center space-y-4">
                           <div className="w-16 h-16 mx-auto rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
