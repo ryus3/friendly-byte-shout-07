@@ -238,50 +238,53 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden">
+        <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
               <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
+              <h2 className="text-xl sm:text-2xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
               <p className="text-sm text-muted-foreground">إدارة شاملة وآمنة لبيانات النظام</p>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="px-6 pb-6 space-y-4">
           {/* التبويبات */}
-          <div className="flex gap-2 p-1 bg-muted rounded-lg">
+          <div className="flex flex-col sm:flex-row gap-2 p-1 bg-muted rounded-lg">
             <Button
               variant={activeTab === 'list' ? 'default' : 'ghost'}
               onClick={() => setActiveTab('list')}
-              className="flex-1"
+              className="flex-1 text-sm"
             >
               <FileText className="w-4 h-4 mr-2" />
-              النسخ الاحتياطية
+              <span className="hidden sm:inline">النسخ الاحتياطية</span>
+              <span className="sm:hidden">القائمة</span>
             </Button>
             <Button
               variant={activeTab === 'create' ? 'default' : 'ghost'}
               onClick={() => setActiveTab('create')}
-              className="flex-1"
+              className="flex-1 text-sm"
             >
               <Database className="w-4 h-4 mr-2" />
-              إنشاء نسخة
+              <span className="hidden sm:inline">إنشاء نسخة</span>
+              <span className="sm:hidden">إنشاء</span>
             </Button>
             <Button
               variant={activeTab === 'restore' ? 'default' : 'ghost'}
               onClick={() => setActiveTab('restore')}
-              className="flex-1"
+              className="flex-1 text-sm"
               disabled={!selectedBackup}
             >
               <Upload className="w-4 h-4 mr-2" />
-              استعادة البيانات
+              <span className="hidden sm:inline">استعادة البيانات</span>
+              <span className="sm:hidden">استعادة</span>
             </Button>
           </div>
 
-          <ScrollArea className="h-[500px]">
+          <ScrollArea className="h-[400px] sm:h-[500px]">
             <AnimatePresence mode="wait">
               {/* قائمة النسخ الاحتياطية */}
               {activeTab === 'list' && (
@@ -321,69 +324,73 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                           }`}
                           onClick={() => setSelectedBackup(backup)}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                                <HardDrive className="w-5 h-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold">{backup.filename}</h4>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {formatDate(backup.created_at)}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <HardDrive className="w-3 h-3" />
-                                    {formatFileSize(backup.size_mb)}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    {backup.creator_name || 'مجهول'}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={backup.backup_type === 'full' ? 'default' : 'secondary'}>
-                                {backup.backup_type === 'full' ? 'نسخة كاملة' : 'نسخة جزئية'}
-                              </Badge>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadBackup(backup);
-                                }}
-                              >
-                                <Download className="w-4 h-4" />
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Trash2 className="w-4 h-4 text-red-500" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      هل أنت متأكد من حذف هذه النسخة الاحتياطية؟ لا يمكن التراجع عن هذا الإجراء.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => deleteBackup(backup.id)}>
-                                      حذف
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
+                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                             <div className="flex items-center gap-3">
+                               <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                 <HardDrive className="w-5 h-5 text-blue-600" />
+                               </div>
+                               <div className="min-w-0 flex-1">
+                                 <h4 className="font-semibold text-sm sm:text-base truncate">{backup.filename}</h4>
+                                 <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
+                                   <span className="flex items-center gap-1">
+                                     <Calendar className="w-3 h-3" />
+                                     {formatDate(backup.created_at)}
+                                   </span>
+                                   <span className="flex items-center gap-1">
+                                     <HardDrive className="w-3 h-3" />
+                                     {formatFileSize(backup.size_mb)}
+                                   </span>
+                                   <span className="flex items-center gap-1">
+                                     <User className="w-3 h-3" />
+                                     {backup.creator_name || 'مجهول'}
+                                   </span>
+                                 </div>
+                               </div>
+                             </div>
+                             <div className="flex items-center gap-2 flex-wrap">
+                               <Badge variant={backup.backup_type === 'full' ? 'default' : 'secondary'} className="text-xs">
+                                 {backup.backup_type === 'full' ? 'كاملة' : 'جزئية'}
+                               </Badge>
+                               <div className="flex gap-1">
+                                 <Button
+                                   variant="outline"
+                                   size="sm"
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     downloadBackup(backup);
+                                   }}
+                                   className="h-8 w-8 p-0"
+                                 >
+                                   <Download className="w-3 h-3" />
+                                 </Button>
+                                 <AlertDialog>
+                                   <AlertDialogTrigger asChild>
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={(e) => e.stopPropagation()}
+                                       className="h-8 w-8 p-0"
+                                     >
+                                       <Trash2 className="w-3 h-3 text-red-500" />
+                                     </Button>
+                                   </AlertDialogTrigger>
+                                   <AlertDialogContent className="max-w-[90vw]">
+                                     <AlertDialogHeader>
+                                       <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+                                       <AlertDialogDescription>
+                                         هل أنت متأكد من حذف هذه النسخة الاحتياطية؟ لا يمكن التراجع عن هذا الإجراء.
+                                       </AlertDialogDescription>
+                                     </AlertDialogHeader>
+                                     <AlertDialogFooter>
+                                       <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                       <AlertDialogAction onClick={() => deleteBackup(backup.id)}>
+                                         حذف
+                                       </AlertDialogAction>
+                                     </AlertDialogFooter>
+                                   </AlertDialogContent>
+                                 </AlertDialog>
+                               </div>
+                             </div>
                           </div>
                         </motion.div>
                       ))}
@@ -481,45 +488,45 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      {/* معلومات النسخة المحددة */}
-                      <div className="p-4 bg-muted/50 rounded-lg">
-                        <h4 className="font-semibold mb-2">النسخة المحددة للاستعادة:</h4>
-                        <div className="text-sm space-y-1">
-                          <p><strong>الملف:</strong> {selectedBackup.filename}</p>
-                          <p><strong>التاريخ:</strong> {formatDate(selectedBackup.created_at)}</p>
-                          <p><strong>الحجم:</strong> {formatFileSize(selectedBackup.size_mb)}</p>
-                          <p><strong>المنشئ:</strong> {selectedBackup.creator_name || 'مجهول'}</p>
-                        </div>
-                      </div>
+                       {/* معلومات النسخة المحددة */}
+                       <div className="p-3 sm:p-4 bg-muted/50 rounded-lg">
+                         <h4 className="font-semibold mb-2 text-sm sm:text-base">النسخة المحددة للاستعادة:</h4>
+                         <div className="text-xs sm:text-sm space-y-1">
+                           <p><strong>الملف:</strong> <span className="break-all">{selectedBackup.filename}</span></p>
+                           <p><strong>التاريخ:</strong> {formatDate(selectedBackup.created_at)}</p>
+                           <p><strong>الحجم:</strong> {formatFileSize(selectedBackup.size_mb)}</p>
+                           <p><strong>المنشئ:</strong> {selectedBackup.creator_name || 'مجهول'}</p>
+                         </div>
+                       </div>
 
-                      {/* خيارات الاستعادة */}
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="clearExisting"
-                            checked={restoreOptions.clearExisting}
-                            onCheckedChange={(checked) => 
-                              setRestoreOptions(prev => ({ ...prev, clearExisting: checked }))
-                            }
-                          />
-                          <Label htmlFor="clearExisting" className="text-sm">
-                            مسح البيانات الموجودة قبل الاستعادة (موصى به)
-                          </Label>
-                        </div>
+                       {/* خيارات الاستعادة */}
+                       <div className="space-y-4">
+                         <div className="flex items-center gap-3">
+                           <Checkbox
+                             id="clearExisting"
+                             checked={restoreOptions.clearExisting}
+                             onCheckedChange={(checked) => 
+                               setRestoreOptions(prev => ({ ...prev, clearExisting: checked }))
+                             }
+                           />
+                           <Label htmlFor="clearExisting" className="text-sm flex-1">
+                             مسح البيانات الموجودة قبل الاستعادة (موصى به)
+                           </Label>
+                         </div>
 
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="confirmRestore"
-                            checked={restoreOptions.confirmRestore}
-                            onCheckedChange={(checked) => 
-                              setRestoreOptions(prev => ({ ...prev, confirmRestore: checked }))
-                            }
-                          />
-                          <Label htmlFor="confirmRestore" className="text-sm font-semibold text-red-600">
-                            أؤكد أنني أفهم أن هذا الإجراء سيؤثر على البيانات الحالية
-                          </Label>
-                        </div>
-                      </div>
+                         <div className="flex items-center gap-3">
+                           <Checkbox
+                             id="confirmRestore"
+                             checked={restoreOptions.confirmRestore}
+                             onCheckedChange={(checked) => 
+                               setRestoreOptions(prev => ({ ...prev, confirmRestore: checked }))
+                             }
+                           />
+                           <Label htmlFor="confirmRestore" className="text-sm font-semibold text-red-600 flex-1">
+                             أؤكد أنني أفهم أن هذا الإجراء سيؤثر على البيانات الحالية
+                           </Label>
+                         </div>
+                       </div>
 
                       {/* تحذيرات مهمة */}
                       <div className="space-y-3">
