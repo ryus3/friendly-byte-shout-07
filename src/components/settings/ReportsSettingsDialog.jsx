@@ -111,6 +111,9 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       const totalOrders = orders.length;
       const pendingOrders = orders.filter(order => order.status === 'pending').length;
       const completedOrders = orders.filter(order => order.status === 'completed').length;
+      const cancelledOrders = orders.filter(order => order.status === 'cancelled').length;
+      const returnedOrders = orders.filter(order => order.status === 'returned').length;
+      const processingOrders = orders.filter(order => order.status === 'processing').length;
 
       // إحصائيات المنتجات
       const totalProducts = products.length;
@@ -176,6 +179,9 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
         totalOrders,
         pendingOrders,
         completedOrders,
+        cancelledOrders,
+        returnedOrders,
+        processingOrders,
         totalProducts,
         activeProducts,
         lowStockItems,
@@ -314,10 +320,15 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
         </div>
 
         <div className="p-6 space-y-8">
-          {/* مؤشرات الأداء الرئيسية */}
+          {/* مؤشرات الأداء الرئيسية مع تدرجات احترافية */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {kpis.map((kpi, index) => (
-              <Card key={index} className={`relative overflow-hidden border-0 shadow-lg ${kpi.bgColor}`}>
+              <Card key={index} className={`relative overflow-hidden border-0 shadow-lg bg-gradient-to-br ${
+                index === 0 ? 'from-emerald-50 via-emerald-100 to-teal-50' :
+                index === 1 ? 'from-blue-50 via-blue-100 to-indigo-50' :
+                index === 2 ? 'from-purple-50 via-purple-100 to-pink-50' :
+                'from-orange-50 via-orange-100 to-amber-50'
+              }`}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
@@ -334,7 +345,12 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                         </div>
                       )}
                     </div>
-                    <div className={`p-3 rounded-full ${kpi.iconBg}`}>
+                    <div className={`p-3 rounded-full shadow-lg bg-gradient-to-r ${
+                      index === 0 ? 'from-emerald-500 to-teal-600' :
+                      index === 1 ? 'from-blue-500 to-indigo-600' :
+                      index === 2 ? 'from-purple-500 to-pink-600' :
+                      'from-orange-500 to-amber-600'
+                    }`}>
                       <kpi.icon className="w-6 h-6 text-white" />
                     </div>
                   </div>
@@ -485,24 +501,53 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="text-center space-y-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">{analytics.totalOrders}</div>
-                  <div className="text-sm text-muted-foreground">إجمالي الطلبات</div>
+                  <div className="text-xs text-muted-foreground">إجمالي الطلبات</div>
                 </div>
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg">
                   <div className="text-2xl font-bold text-yellow-600">{analytics.pendingOrders}</div>
-                  <div className="text-sm text-muted-foreground">في الانتظار</div>
+                  <div className="text-xs text-muted-foreground">في الانتظار</div>
                 </div>
-                <div className="text-center space-y-2">
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg">
+                  <div className="text-2xl font-bold text-indigo-600">{analytics.processingOrders}</div>
+                  <div className="text-xs text-muted-foreground">قيد المعالجة</div>
+                </div>
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
                   <div className="text-2xl font-bold text-green-600">{analytics.completedOrders}</div>
-                  <div className="text-sm text-muted-foreground">مكتملة</div>
+                  <div className="text-xs text-muted-foreground">مكتملة</div>
                 </div>
-                <div className="text-center space-y-2">
-                  <div className="text-2xl font-bold text-purple-600">
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-red-50 to-red-100 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">{analytics.cancelledOrders}</div>
+                  <div className="text-xs text-muted-foreground">ملغية</div>
+                </div>
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                  <div className="text-2xl font-bold text-orange-600">{analytics.returnedOrders}</div>
+                  <div className="text-xs text-muted-foreground">راجعة</div>
+                </div>
+              </div>
+              
+              <Separator className="my-6" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg">
+                  <div className="text-lg font-bold text-emerald-600">
                     {analytics.totalOrders > 0 ? ((analytics.completedOrders / analytics.totalOrders) * 100).toFixed(1) : 0}%
                   </div>
-                  <div className="text-sm text-muted-foreground">معدل الإنجاز</div>
+                  <div className="text-xs text-muted-foreground">معدل الإنجاز</div>
+                </div>
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-rose-50 to-rose-100 rounded-lg">
+                  <div className="text-lg font-bold text-rose-600">
+                    {analytics.totalOrders > 0 ? ((analytics.cancelledOrders / analytics.totalOrders) * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">معدل الإلغاء</div>
+                </div>
+                <div className="text-center space-y-2 p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg">
+                  <div className="text-lg font-bold text-amber-600">
+                    {analytics.totalOrders > 0 ? ((analytics.returnedOrders / analytics.totalOrders) * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-xs text-muted-foreground">معدل الإرجاع</div>
                 </div>
               </div>
             </CardContent>
@@ -518,28 +563,32 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* التقرير المالي */}
-                <div className="space-y-4 p-6 border rounded-lg hover:shadow-md transition-shadow">
+                {/* التقرير المالي - تدرج أخضر راقي */}
+                <div className="space-y-4 p-6 border-0 rounded-xl hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 hover:from-emerald-100 hover:via-green-100 hover:to-teal-100">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <DollarSign className="w-5 h-5 text-green-600" />
+                    <div className="p-3 bg-gradient-to-r from-emerald-500 to-green-600 rounded-xl shadow-lg">
+                      <DollarSign className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">التقرير المالي الشامل</h3>
-                      <p className="text-sm text-muted-foreground">
-                        تحليل مفصل للوضع المالي والأرباح
+                      <h3 className="font-bold text-lg text-emerald-700">التقرير المالي الشامل</h3>
+                      <p className="text-sm text-emerald-600">
+                        تحليل مفصل للوضع المالي والأرباح مع البيانات الحقيقية
                       </p>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex justify-between">
-                      <span>الإيرادات:</span>
-                      <span className="font-medium">{financialSummary.totalRevenue.toLocaleString()}</span>
+                  <div className="bg-white/60 p-3 rounded-lg space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">إجمالي الإيرادات:</span>
+                      <span className="font-bold text-emerald-700">{financialSummary.totalRevenue.toLocaleString()} د.ع</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>الربح:</span>
-                      <span className="font-medium text-green-600">{financialSummary.netProfit.toLocaleString()}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">صافي الربح:</span>
+                      <span className="font-bold text-green-600">{financialSummary.netProfit.toLocaleString()} د.ع</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">إجمالي الطلبات:</span>
+                      <span className="font-bold text-emerald-600">{analytics.totalOrders}</span>
                     </div>
                   </div>
 
@@ -549,7 +598,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   >
                     {({ loading }) => (
                       <Button 
-                        className="w-full" 
+                        className="w-full bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 text-white shadow-lg" 
                         disabled={loading || generatingReport === 'financial'}
                         onClick={() => handleGenerateReport('financial')}
                       >
@@ -560,28 +609,37 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   </PDFDownloadLink>
                 </div>
 
-                {/* تقرير المخزون */}
-                <div className="space-y-4 p-6 border rounded-lg hover:shadow-md transition-shadow">
+                {/* تقرير المخزون - تدرج أزرق راقي */}
+                <div className="space-y-4 p-6 border-0 rounded-xl hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-blue-50 via-cyan-50 to-indigo-50 hover:from-blue-100 hover:via-cyan-100 hover:to-indigo-100">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Package className="w-5 h-5 text-blue-600" />
+                    <div className="p-3 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl shadow-lg">
+                      <Package className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">تقرير المخزون المفصل</h3>
-                      <p className="text-sm text-muted-foreground">
-                        حالة المخزون والمنتجات بالتفصيل
+                      <h3 className="font-bold text-lg text-blue-700">تقرير المخزون المفصل</h3>
+                      <p className="text-sm text-blue-600">
+                        حالة المخزون والمنتجات مع تحليل شامل
                       </p>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex justify-between">
-                      <span>المنتجات:</span>
-                      <span className="font-medium">{analytics.totalProducts}</span>
+                  <div className="bg-white/60 p-3 rounded-lg space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">إجمالي المنتجات:</span>
+                      <span className="font-bold text-blue-700">{analytics.totalProducts}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>منخفض:</span>
-                      <span className="font-medium text-yellow-600">{analytics.lowStockItems}</span>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">مخزون منخفض:</span>
+                      <span className="font-bold text-yellow-600">{analytics.lowStockItems}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">معدل التوفر:</span>
+                      <span className="font-bold text-green-600">
+                        {analytics.totalProducts > 0 ? 
+                          (((analytics.totalProducts - analytics.outOfStockItems) / analytics.totalProducts) * 100).toFixed(1) + '%' 
+                          : '0%'
+                        }
+                      </span>
                     </div>
                   </div>
 
@@ -591,8 +649,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   >
                     {({ loading }) => (
                       <Button 
-                        variant="outline" 
-                        className="w-full" 
+                        className="w-full bg-gradient-to-r from-blue-600 to-cyan-700 hover:from-blue-700 hover:to-cyan-800 text-white shadow-lg" 
                         disabled={loading || generatingReport === 'inventory'}
                         onClick={() => handleGenerateReport('inventory')}
                       >
@@ -603,23 +660,41 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   </PDFDownloadLink>
                 </div>
 
-                {/* التقرير الشامل */}
-                <div className="space-y-4 p-6 border rounded-lg hover:shadow-md transition-shadow bg-gradient-to-br from-purple-50 to-blue-50">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Award className="w-5 h-5 text-purple-600" />
+                {/* التقرير الشامل - تدرج بنفسجي راقي */}
+                <div className="space-y-4 p-6 border-0 rounded-xl hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-purple-50 via-violet-50 to-fuchsia-50 hover:from-purple-100 hover:via-violet-100 hover:to-fuchsia-100 relative overflow-hidden">
+                  {/* تأثير لامع */}
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-white/30 to-transparent rounded-full blur-xl"></div>
+                  
+                  <div className="flex items-center gap-3 relative z-10">
+                    <div className="p-3 bg-gradient-to-r from-purple-600 to-fuchsia-700 rounded-xl shadow-lg">
+                      <Award className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">التقرير الشامل المتكامل</h3>
-                      <p className="text-sm text-muted-foreground">
-                        تقرير كامل يجمع كافة البيانات
+                      <h3 className="font-bold text-lg text-purple-700">التقرير الشامل المتكامل</h3>
+                      <p className="text-sm text-purple-600">
+                        تقرير كامل يجمع كافة البيانات بجودة احترافية
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="bg-white/70 p-3 rounded-lg space-y-2 text-xs relative z-10">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">المبيعات:</span>
+                      <span className="font-bold text-purple-700">{analytics.todaySales.toLocaleString()} د.ع</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">الطلبات:</span>
+                      <span className="font-bold text-blue-600">{analytics.totalOrders}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">المنتجات:</span>
+                      <span className="font-bold text-green-600">{analytics.totalProducts}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 relative z-10">
                     <Crown className="w-4 h-4 text-yellow-500" />
-                    <span className="text-xs font-medium text-purple-600">الأكثر شمولية</span>
+                    <span className="text-xs font-medium text-purple-600 bg-white/60 px-2 py-1 rounded-full">الأكثر شمولية</span>
                   </div>
 
                   <PDFDownloadLink
@@ -628,7 +703,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   >
                     {({ loading }) => (
                       <Button 
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700" 
+                        className="w-full bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-700 hover:from-purple-700 hover:via-violet-700 hover:to-fuchsia-800 text-white shadow-lg relative z-10" 
                         disabled={loading || generatingReport === 'complete'}
                         onClick={() => handleGenerateReport('complete')}
                       >
