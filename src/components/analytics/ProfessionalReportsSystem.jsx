@@ -73,89 +73,7 @@ const ProfessionalReportsSystem = () => {
     'revenue', 'profit', 'orders', 'products', 'lowStock'
   ]);
 
-  // البيانات المحسوبة والمعقدة
-  const analyticsData = useMemo(() => {
-    if (!products || !orders) return null;
-
-    const filteredProducts = products.filter(product => {
-      if (filters.department !== 'all' && product.department !== filters.department) return false;
-      if (filters.category !== 'all' && product.category !== filters.category) return false;
-      return true;
-    });
-
-    const filteredOrders = orders.filter(order => {
-      const orderDate = new Date(order.created_at);
-      return isWithinInterval(orderDate, { start: dateRange.from, end: dateRange.to });
-    });
-
-    // إحصائيات متقدمة للمخزون
-    const inventoryStats = {
-      totalProducts: filteredProducts.length,
-      totalVariants: filteredProducts.reduce((sum, p) => sum + (p.variants?.length || 0), 0),
-      totalStock: filteredProducts.reduce((sum, p) => 
-        sum + (p.variants?.reduce((vSum, v) => vSum + (v.quantity || 0), 0) || 0), 0
-      ),
-      lowStockCount: filteredProducts.filter(p => 
-        p.variants?.some(v => (v.quantity || 0) > 0 && (v.quantity || 0) <= 5)
-      ).length,
-      outOfStockCount: filteredProducts.filter(p => 
-        p.variants?.every(v => (v.quantity || 0) === 0)
-      ).length,
-      totalValue: filteredProducts.reduce((sum, p) => 
-        sum + (p.variants?.reduce((vSum, v) => vSum + ((v.quantity || 0) * (v.cost_price || 0)), 0) || 0), 0
-      ),
-      averageStockLevel: 0,
-      stockTurnoverRate: 0
-    };
-
-    // إحصائيات متقدمة للمبيعات
-    const salesStats = {
-      totalOrders: filteredOrders.length,
-      completedOrders: filteredOrders.filter(o => o.status === 'completed').length,
-      pendingOrders: filteredOrders.filter(o => o.status === 'pending').length,
-      cancelledOrders: filteredOrders.filter(o => o.status === 'cancelled').length,
-      totalRevenue: filteredOrders
-        .filter(o => o.status === 'completed')
-        .reduce((sum, o) => sum + (o.total_amount || 0), 0),
-      totalProfit: filteredOrders
-        .filter(o => o.status === 'completed')
-        .reduce((sum, o) => sum + (o.profit_amount || 0), 0),
-      averageOrderValue: 0,
-      conversionRate: 0
-    };
-
-    // حساب المعدلات
-    salesStats.averageOrderValue = salesStats.completedOrders > 0 
-      ? salesStats.totalRevenue / salesStats.completedOrders 
-      : 0;
-    
-    salesStats.conversionRate = salesStats.totalOrders > 0 
-      ? (salesStats.completedOrders / salesStats.totalOrders) * 100 
-      : 0;
-
-    inventoryStats.averageStockLevel = inventoryStats.totalProducts > 0 
-      ? inventoryStats.totalStock / inventoryStats.totalProducts 
-      : 0;
-
-    // تحليل الاتجاهات
-    const trendsData = generateTrendsData(filteredOrders, dateRange);
-    const categoryAnalysis = getCategoryAnalysis(filteredProducts);
-    const employeePerformance = getEmployeePerformance(filteredOrders, allUsers);
-    const stockAnalysis = getStockAnalysis(filteredProducts);
-    const profitabilityAnalysis = getProfitabilityAnalysis(filteredProducts, filteredOrders);
-
-    return {
-      inventory: inventoryStats,
-      sales: salesStats,
-      trends: trendsData,
-      categories: categoryAnalysis,
-      employees: employeePerformance,
-      stock: stockAnalysis,
-      profitability: profitabilityAnalysis
-    };
-  }, [products, orders, dateRange, filters, allUsers]);
-
-  // دوال مساعدة متقدمة
+  // دوال مساعدة متقدمة - يجب تعريفها قبل استخدامها في useMemo
   const generateTrendsData = (orders, range) => {
     const days = [];
     const current = new Date(range.from);
@@ -279,6 +197,89 @@ const ProfessionalReportsSystem = () => {
     
     return analysis;
   };
+
+  // البيانات المحسوبة والمعقدة
+  const analyticsData = useMemo(() => {
+    if (!products || !orders) return null;
+
+    const filteredProducts = products.filter(product => {
+      if (filters.department !== 'all' && product.department !== filters.department) return false;
+      if (filters.category !== 'all' && product.category !== filters.category) return false;
+      return true;
+    });
+
+    const filteredOrders = orders.filter(order => {
+      const orderDate = new Date(order.created_at);
+      return isWithinInterval(orderDate, { start: dateRange.from, end: dateRange.to });
+    });
+
+    // إحصائيات متقدمة للمخزون
+    const inventoryStats = {
+      totalProducts: filteredProducts.length,
+      totalVariants: filteredProducts.reduce((sum, p) => sum + (p.variants?.length || 0), 0),
+      totalStock: filteredProducts.reduce((sum, p) => 
+        sum + (p.variants?.reduce((vSum, v) => vSum + (v.quantity || 0), 0) || 0), 0
+      ),
+      lowStockCount: filteredProducts.filter(p => 
+        p.variants?.some(v => (v.quantity || 0) > 0 && (v.quantity || 0) <= 5)
+      ).length,
+      outOfStockCount: filteredProducts.filter(p => 
+        p.variants?.every(v => (v.quantity || 0) === 0)
+      ).length,
+      totalValue: filteredProducts.reduce((sum, p) => 
+        sum + (p.variants?.reduce((vSum, v) => vSum + ((v.quantity || 0) * (v.cost_price || 0)), 0) || 0), 0
+      ),
+      averageStockLevel: 0,
+      stockTurnoverRate: 0
+    };
+
+    // إحصائيات متقدمة للمبيعات
+    const salesStats = {
+      totalOrders: filteredOrders.length,
+      completedOrders: filteredOrders.filter(o => o.status === 'completed').length,
+      pendingOrders: filteredOrders.filter(o => o.status === 'pending').length,
+      cancelledOrders: filteredOrders.filter(o => o.status === 'cancelled').length,
+      totalRevenue: filteredOrders
+        .filter(o => o.status === 'completed')
+        .reduce((sum, o) => sum + (o.total_amount || 0), 0),
+      totalProfit: filteredOrders
+        .filter(o => o.status === 'completed')
+        .reduce((sum, o) => sum + (o.profit_amount || 0), 0),
+      averageOrderValue: 0,
+      conversionRate: 0
+    };
+
+    // حساب المعدلات
+    salesStats.averageOrderValue = salesStats.completedOrders > 0 
+      ? salesStats.totalRevenue / salesStats.completedOrders 
+      : 0;
+    
+    salesStats.conversionRate = salesStats.totalOrders > 0 
+      ? (salesStats.completedOrders / salesStats.totalOrders) * 100 
+      : 0;
+
+    inventoryStats.averageStockLevel = inventoryStats.totalProducts > 0 
+      ? inventoryStats.totalStock / inventoryStats.totalProducts 
+      : 0;
+
+    // تحليل الاتجاهات
+    const trendsData = generateTrendsData(filteredOrders, dateRange);
+    const categoryAnalysis = getCategoryAnalysis(filteredProducts);
+    const employeePerformance = getEmployeePerformance(filteredOrders, allUsers);
+    const stockAnalysis = getStockAnalysis(filteredProducts);
+    const profitabilityAnalysis = getProfitabilityAnalysis(filteredProducts, filteredOrders);
+
+    return {
+      inventory: inventoryStats,
+      sales: salesStats,
+      trends: trendsData,
+      categories: categoryAnalysis,
+      employees: employeePerformance,
+      stock: stockAnalysis,
+      profitability: profitabilityAnalysis
+    };
+  }, [products, orders, dateRange, filters, allUsers]);
+
 
   const handleDateRangeChange = (range) => {
     setDateRange(range);
