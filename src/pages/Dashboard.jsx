@@ -114,6 +114,8 @@ const Dashboard = () => {
         pendingRegs: false,
         aiOrders: false,
     });
+    
+    const [topProvincesOpen, setTopProvincesOpen] = useState(false);
 
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
