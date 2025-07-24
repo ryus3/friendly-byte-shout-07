@@ -16,6 +16,7 @@ import PendingRegistrations from '@/components/dashboard/PendingRegistrations';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
 import TopListCard from '@/components/dashboard/TopListCard';
 import TopProvincesDialog from '@/components/dashboard/TopProvincesDialog';
+import TopProductsDialog from '@/components/dashboard/TopProductsDialog';
 import Loader from '@/components/ui/loader';
 import { filterOrdersByPeriod, getTopCustomers, getTopProducts, getTopProvinces } from '@/lib/dashboard-helpers';
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
@@ -116,6 +117,7 @@ const Dashboard = () => {
     });
     
     const [topProvincesOpen, setTopProvincesOpen] = useState(false);
+    const [topProductsOpen, setTopProductsOpen] = useState(false);
 
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
@@ -586,7 +588,13 @@ const Dashboard = () => {
                       itemIcon={MapPin}
                       onViewAll={() => setTopProvincesOpen(true)}
                     />
-                    <TopListCard title="المنتجات الأكثر طلباً" items={dashboardData.topProducts} titleIcon={Package} itemIcon={TrendingUp} />
+                    <TopListCard 
+                      title="المنتجات الأكثر طلباً" 
+                      items={dashboardData.topProducts} 
+                      titleIcon={Package} 
+                      itemIcon={TrendingUp}
+                      onViewAll={() => setTopProductsOpen(true)}
+                    />
                 </div>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
                     <StockAlertsCard />
@@ -597,6 +605,11 @@ const Dashboard = () => {
             <TopProvincesDialog 
               open={topProvincesOpen} 
               onOpenChange={setTopProvincesOpen} 
+            />
+            
+            <TopProductsDialog 
+              open={topProductsOpen} 
+              onOpenChange={setTopProductsOpen} 
             />
         </>
     );

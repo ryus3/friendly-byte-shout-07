@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { MapPin, Calendar, Eye, TrendingUp } from 'lucide-react';
+import { MapPin, Calendar, Eye, TrendingUp, DollarSign, User as UserIcon } from 'lucide-react';
 import { useOrders } from '@/hooks/useOrders';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 import { motion } from 'framer-motion';
@@ -27,12 +27,46 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
     const filteredOrders = filterOrdersByPeriod(orders, selectedPeriod)
       .filter(order => order.status === 'delivered');
 
+    console.log('Filtered delivered orders:', filteredOrders.length);
+
     // تجميع البيانات حسب المحافظة
     const provinceMap = new Map();
 
     filteredOrders.forEach(order => {
-      const province = order.delivery_address?.province || order.customer_address?.province || 'غير محدد';
+      // محاولة الحصول على المحافظة من عدة مصادر
+      let province = null;
       
+      if (order.delivery_address && typeof order.delivery_address === 'string') {
+        try {
+          const parsed = JSON.parse(order.delivery_address);
+          province = parsed.province || parsed.city || parsed.governorate;
+        } catch (e) {
+          province = order.delivery_address;
+        }
+      } else if (order.delivery_address && typeof order.delivery_address === 'object') {
+        province = order.delivery_address.province || order.delivery_address.city || order.delivery_address.governorate;
+      }
+      
+      if (!province && order.customer_address) {
+        if (typeof order.customer_address === 'string') {
+          try {
+            const parsed = JSON.parse(order.customer_address);
+            province = parsed.province || parsed.city || parsed.governorate;
+          } catch (e) {
+            province = order.customer_address;
+          }
+        } else if (typeof order.customer_address === 'object') {
+          province = order.customer_address.province || order.customer_address.city || order.customer_address.governorate;
+        }
+      }
+      
+      // محاولة الحصول على المحافظة من بيانات أخرى
+      if (!province) {
+        province = order.governorate || order.city || order.province || order.address || 'غير محدد';
+      }
+      
+      console.log('Order province:', province, 'Order:', order);
+
       if (!provinceMap.has(province)) {
         provinceMap.set(province, {
           name: province,
@@ -46,8 +80,10 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
       const provinceData = provinceMap.get(province);
       provinceData.orderCount += 1;
       provinceData.totalRevenue += order.total_amount || 0;
-      provinceData.customerCount.add(order.customer_phone || order.phone_number);
+      provinceData.customerCount.add(order.customer_phone || order.phone_number || order.customer_name);
     });
+
+    console.log('Province map:', Array.from(provinceMap.entries()));
 
     // تحويل البيانات إلى مصفوفة وحساب المتوسط
     return Array.from(provinceMap.values())
@@ -57,7 +93,7 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
         avgOrderValue: province.orderCount > 0 ? province.totalRevenue / province.orderCount : 0
       }))
       .sort((a, b) => b.orderCount - a.orderCount)
-      .slice(0, 10);
+      .slice(0, 15);
   }, [orders, selectedPeriod]);
 
   const totalOrders = provinceStats.reduce((sum, province) => sum + province.orderCount, 0);
@@ -94,49 +130,46 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
 
           {/* الإحصائيات العامة */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-blue-600 dark:text-blue-400">إجمالي الطلبات</p>
-                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{totalOrders}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-800/30 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-blue-500" />
-                  </div>
+            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-400/10 dark:to-blue-500/20 rounded-xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">إجمالي الطلبات</p>
+                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{totalOrders}</p>
+                  <p className="text-xs text-blue-500/70 dark:text-blue-400/70 mt-1">طلب موصل</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <TrendingUp className="w-7 h-7 text-white" />
+                </div>
+              </div>
+            </div>
 
-            <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-green-600 dark:text-green-400">إجمالي الإيرادات</p>
-                    <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                      {totalRevenue.toLocaleString()} د.ع
-                    </p>
-                  </div>
-                  <div className="w-12 h-12 bg-green-100 dark:bg-green-800/30 rounded-lg flex items-center justify-center">
-                    <TrendingUp className="w-6 h-6 text-green-500" />
-                  </div>
+            <div className="bg-gradient-to-br from-green-500/10 to-green-600/20 dark:from-green-400/10 dark:to-green-500/20 rounded-xl p-6 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">إجمالي الإيرادات</p>
+                  <p className="text-3xl font-bold text-green-700 dark:text-green-300">
+                    {totalRevenue.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-green-500/70 dark:text-green-400/70 mt-1">دينار عراقي</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <TrendingUp className="w-7 h-7 text-white" />
+                </div>
+              </div>
+            </div>
 
-            <Card className="bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-purple-600 dark:text-purple-400">عدد المحافظات</p>
-                    <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">{provinceStats.length}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-purple-100 dark:bg-purple-800/30 rounded-lg flex items-center justify-center">
-                    <MapPin className="w-6 h-6 text-purple-500" />
-                  </div>
+            <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/20 dark:from-purple-400/10 dark:to-purple-500/20 rounded-xl p-6 border border-purple-200/50 dark:border-purple-700/50 shadow-lg backdrop-blur-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">عدد المحافظات</p>
+                  <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{provinceStats.length}</p>
+                  <p className="text-xs text-purple-500/70 dark:text-purple-400/70 mt-1">محافظة نشطة</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <MapPin className="w-7 h-7 text-white" />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* قائمة المحافظات */}
@@ -155,59 +188,68 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card className="hover:shadow-md transition-shadow border-border/60">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                              {index + 1}
-                            </div>
-                            <div>
-                              <h4 className="font-semibold text-foreground">{province.name}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {province.customerCount} زبون فريد
-                              </p>
-                            </div>
+                    <div className="bg-gradient-to-br from-card to-card/60 hover:from-card/80 hover:to-card/40 rounded-xl p-6 border border-border/60 hover:border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 backdrop-blur-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-lg font-bold shadow-lg">
+                            {index + 1}
                           </div>
-                          
-                          <div className="text-left space-y-1">
-                            <div className="flex items-center gap-4">
-                              <div className="text-right">
-                                <p className="text-sm text-muted-foreground">عدد الطلبات</p>
-                                <p className="font-bold text-lg">{province.orderCount}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-muted-foreground">إجمالي الإيرادات</p>
-                                <p className="font-bold text-lg text-green-600 dark:text-green-400">
-                                  {province.totalRevenue.toLocaleString()} د.ع
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-sm text-muted-foreground">متوسط الطلب</p>
-                                <p className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                                  {Math.round(province.avgOrderValue).toLocaleString()} د.ع
-                                </p>
-                              </div>
-                            </div>
+                          <div>
+                            <h4 className="font-bold text-lg text-foreground mb-1">{province.name}</h4>
+                            <p className="text-sm text-muted-foreground flex items-center gap-1">
+                              <UserIcon className="w-4 h-4" />
+                              {province.customerCount} زبون فريد
+                            </p>
                           </div>
                         </div>
                         
-                        {/* شريط التقدم */}
-                        <div className="mt-3">
-                          <div className="w-full bg-muted rounded-full h-2">
-                            <div 
-                              className="bg-primary h-2 rounded-full transition-all duration-300"
-                              style={{ 
-                                width: `${totalOrders > 0 ? (province.orderCount / totalOrders) * 100 : 0}%`
-                              }}
-                            />
+                        <div className="grid grid-cols-3 gap-6 text-left">
+                          <div className="text-center">
+                            <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center mb-2 mx-auto">
+                              <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-1">عدد الطلبات</p>
+                            <p className="font-bold text-lg text-blue-600 dark:text-blue-400">{province.orderCount}</p>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {totalOrders > 0 ? ((province.orderCount / totalOrders) * 100).toFixed(1) : 0}% من إجمالي الطلبات
-                          </p>
+                          <div className="text-center">
+                            <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-2 mx-auto">
+                              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-1">إجمالي الإيرادات</p>
+                            <p className="font-bold text-lg text-green-600 dark:text-green-400">
+                              {province.totalRevenue.toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="text-center">
+                            <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center mb-2 mx-auto">
+                              <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-1">متوسط الطلب</p>
+                            <p className="font-bold text-lg text-purple-600 dark:text-purple-400">
+                              {Math.round(province.avgOrderValue).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      
+                      {/* شريط التقدم */}
+                      <div className="mt-6">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-medium text-muted-foreground">نسبة المساهمة</span>
+                          <span className="text-xs font-bold text-primary">
+                            {totalOrders > 0 ? ((province.orderCount / totalOrders) * 100).toFixed(1) : 0}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted/50 rounded-full h-3 overflow-hidden">
+                          <div 
+                            className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 shadow-sm"
+                            style={{ 
+                              width: `${totalOrders > 0 ? (province.orderCount / totalOrders) * 100 : 0}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
                 ))}
               </div>

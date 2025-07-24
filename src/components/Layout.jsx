@@ -288,12 +288,20 @@ const Layout = ({ children }) => {
                     window.dispatchEvent(new CustomEvent('refresh-products'));
                     window.dispatchEvent(new CustomEvent('refresh-dashboard'));
                     
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    // إظهار إشعار فوري بدء التحديث
+                    toast({ 
+                      title: "🔄 جاري التحديث...", 
+                      description: "يتم تحديث جميع البيانات الآن",
+                      className: "z-[9999] text-right",
+                    });
+                    
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     
                     toast({ 
-                      title: "✅ تم التحديث", 
-                      description: "تم تحديث جميع البيانات بنجاح",
+                      title: "✅ تم التحديث بنجاح!", 
+                      description: "تم تحديث جميع البيانات والإشعارات والطلبات بنجاح",
                       className: "z-[9999] text-right",
+                      duration: 4000,
                     });
                   } catch (error) {
                     console.error('خطأ في تحديث البيانات:', error);
