@@ -108,6 +108,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
             grid-column: span 2;
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
           ">
             <div style="
               position: absolute;
@@ -118,9 +122,9 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.1);
               border-radius: 50%;
             "></div>
-            <div style="position: relative; z-index: 2;">
-              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">${formatCurrency(totalValue).replace('د.ع', '')}</div>
-              <div style="font-size: 14px; opacity: 0.95; font-weight: 600;">القيمة الإجمالية (د.ع)</div>
+            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 8px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">${formatCurrency(totalValue).replace('د.ع', '')}</div>
+              <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center;">القيمة الإجمالية (د.ع)</div>
             </div>
           </div>
           
@@ -133,6 +137,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
             box-shadow: 0 12px 30px rgba(79, 172, 254, 0.4);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
           ">
             <div style="
               position: absolute;
@@ -143,9 +151,9 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.1);
               border-radius: 50%;
             "></div>
-            <div style="position: relative; z-index: 2;">
-              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px;">${availableItems}</div>
-              <div style="font-size: 14px; opacity: 0.95; font-weight: 600;">متوفر</div>
+            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 8px;">${availableItems}</div>
+              <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center;">متوفر</div>
             </div>
           </div>
           
@@ -158,6 +166,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
             box-shadow: 0 12px 30px rgba(250, 112, 154, 0.4);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
           ">
             <div style="
               position: absolute;
@@ -168,9 +180,9 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.1);
               border-radius: 50%;
             "></div>
-            <div style="position: relative; z-index: 2;">
-              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">${reservedItems}</div>
-              <div style="font-size: 14px; opacity: 0.95; font-weight: 600;">محجوز</div>
+            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 8px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">${reservedItems}</div>
+              <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center;">محجوز</div>
             </div>
           </div>
           
@@ -183,6 +195,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
             box-shadow: 0 12px 30px rgba(168, 237, 234, 0.4);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
           ">
             <div style="
               position: absolute;
@@ -193,9 +209,9 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.3);
               border-radius: 50%;
             "></div>
-            <div style="position: relative; z-index: 2;">
-              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px;">${goodStock}</div>
-              <div style="font-size: 14px; font-weight: 600; opacity: 0.8;">ممتاز</div>
+            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 8px;">${goodStock}</div>
+              <div style="font-size: 14px; font-weight: 600; opacity: 0.8; text-align: center;">ممتاز</div>
             </div>
           </div>
           
@@ -208,6 +224,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
             box-shadow: 0 12px 30px rgba(255, 236, 210, 0.4);
             position: relative;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
           ">
             <div style="
               position: absolute;
@@ -218,9 +238,9 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.3);
               border-radius: 50%;
             "></div>
-            <div style="position: relative; z-index: 2;">
-              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px;">${mediumStock}</div>
-              <div style="font-size: 14px; font-weight: 600; opacity: 0.8;">متوسط</div>
+            <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 8px;">${mediumStock}</div>
+              <div style="font-size: 14px; font-weight: 600; opacity: 0.8; text-align: center;">متوسط</div>
             </div>
           </div>
         </div>
@@ -320,49 +340,58 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                       <!-- المقاسات -->
                       <div style="
                         display: grid;
-                        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-                        gap: 10px;
+                        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+                        gap: 12px;
                       ">
                         ${sizes.map(size => {
-                          let sizeGradient, statusText;
+                          let sizeGradient, textColor, statusInfo;
                           if (size.quantity > 10) {
                             sizeGradient = 'linear-gradient(135deg, #a8edea, #fed6e3)';
-                            statusText = 'ممتاز';
+                            textColor = '#2c3e50';
+                            statusInfo = 'متوفر';
                           } else if (size.quantity >= 5) {
                             sizeGradient = 'linear-gradient(135deg, #ffecd2, #fcb69f)';
-                            statusText = 'متوسط';
+                            textColor = '#2c3e50';
+                            statusInfo = 'متوفر';
                           } else if (size.quantity > 0) {
                             sizeGradient = 'linear-gradient(135deg, #fa709a, #fee140)';
-                            statusText = 'منخفض';
+                            textColor = 'white';
+                            statusInfo = 'متوفر';
                           } else {
-                            sizeGradient = 'linear-gradient(135deg, #c7c7c7, #9e9e9e)';
-                            statusText = 'محجوز';
+                            sizeGradient = 'linear-gradient(135deg, #e0e0e0, #bdbdbd)';
+                            textColor = '#666';
+                            statusInfo = 'محجوز';
                           }
                           
                           return `
                             <div style="
                               background: ${sizeGradient};
-                              color: ${size.quantity === 0 ? '#666' : size.quantity > 10 ? '#2c3e50' : 'white'};
-                              padding: 15px 8px;
-                              border-radius: 12px;
+                              color: ${textColor};
+                              padding: 18px 12px;
+                              border-radius: 16px;
                               text-align: center;
-                              box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                              box-shadow: 0 6px 20px rgba(0,0,0,0.15);
                               position: relative;
                               overflow: hidden;
+                              min-height: 100px;
+                              display: flex;
+                              flex-direction: column;
+                              justify-content: center;
+                              align-items: center;
                             ">
                               <div style="
                                 position: absolute;
-                                top: -20%;
-                                right: -20%;
-                                width: 60%;
-                                height: 60%;
+                                top: -30%;
+                                right: -30%;
+                                width: 80%;
+                                height: 80%;
                                 background: rgba(255,255,255,0.2);
                                 border-radius: 50%;
                               "></div>
-                              <div style="position: relative; z-index: 2;">
-                                <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">${size.size}</div>
-                                <div style="font-size: 20px; font-weight: 900; margin-bottom: 2px;">${size.quantity}</div>
-                                <div style="font-size: 11px; opacity: 0.8; font-weight: 600;">${statusText}</div>
+                              <div style="position: relative; z-index: 2; text-align: center;">
+                                <div style="font-size: 18px; font-weight: 800; margin-bottom: 6px;">${size.size}</div>
+                                <div style="font-size: 24px; font-weight: 900; margin-bottom: 4px;">${size.quantity}</div>
+                                <div style="font-size: 12px; opacity: 0.85; font-weight: 600;">${statusInfo}</div>
                               </div>
                             </div>
                           `;
