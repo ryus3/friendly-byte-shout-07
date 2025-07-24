@@ -132,8 +132,31 @@ export const getUniqueCustomerCount = (orders) => {
   return customerPhones.size;
 };
 
+// دالة تطبيع رقم الهاتف
+const normalizePhoneNumber = (phone) => {
+  if (!phone || typeof phone !== 'string') return null;
+  
+  // إزالة المسافات والرموز غير المرغوب فيها
+  let normalized = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // إزالة رمز الدولة +964 أو 00964
+  normalized = normalized.replace(/^(\+964|00964)/, '');
+  
+  // إزالة الصفر في البداية إذا كان رقم العراق
+  normalized = normalized.replace(/^0/, '');
+  
+  // التأكد من أن الرقم بين 10-11 رقم
+  if (normalized.length >= 10 && normalized.length <= 11) {
+    return normalized;
+  }
+  
+  return null;
+};
+
 export const getTopCustomers = (orders) => {
-  if (!orders) return [];
+  if (!orders || orders.length === 0) return [];
+  
+  console.log('📊 تحليل الزبائن - إجمالي الطلبات:', orders.length);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
@@ -154,29 +177,49 @@ export const getTopCustomers = (orders) => {
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
+  console.log('✅ الطلبات المكتملة:', deliveredOrders.length);
+  
   const customerCounts = deliveredOrders.reduce((acc, order) => {
     // البحث عن رقم الهاتف في جميع الحقول المحتملة
-    const phone = order.customer_phone || 
-                  order.phone_number || 
-                  order.client_mobile || 
-                  order.phone;
+    const rawPhone = order.customer_phone || 
+                     order.phone_number || 
+                     order.client_mobile || 
+                     order.phone ||
+                     order.customerinfo?.phone;
+    
+    const phone = normalizePhoneNumber(rawPhone);
     const name = order.customer_name || 
                  order.client_name || 
-                 order.name || 
-                 'زبون غير معروف';
-    if (!phone) return acc;
+                 order.name ||
+                 order.customerinfo?.name || 
+                 'زبون غير محدد';
+    
+    console.log(`📞 الطلب ${order.id}: الهاتف الخام = "${rawPhone}", المطبع = "${phone}", الاسم = "${name}"`);
+    
+    if (!phone) {
+      console.log('⚠️ رقم هاتف غير صالح، تجاهل الطلب');
+      return acc;
+    }
     
     if (!acc[phone]) {
-      acc[phone] = { count: 0, name };
+      acc[phone] = { count: 0, name, phone };
     }
     acc[phone].count++;
     return acc;
   }, {});
 
-  return Object.entries(customerCounts)
-    .map(([phone, data]) => ({ label: data.name, value: `${data.count} طلبات` }))
-    .sort((a, b) => parseInt(b.value) - parseInt(a.value))
+  const result = Object.entries(customerCounts)
+    .map(([phone, data]) => ({ 
+      label: data.name, 
+      value: `${data.count} طلب`,
+      phone: phone,
+      count: data.count
+    }))
+    .sort((a, b) => b.count - a.count)
     .slice(0, 3);
+    
+  console.log('📈 أفضل 3 زبائن:', result);
+  return result;
 };
 
 export const getTopProvinces = (orders) => {

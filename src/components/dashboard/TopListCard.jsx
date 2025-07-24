@@ -12,20 +12,12 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, s
 
   // إذا كان التصنيف حسب رقم الهاتف، نقوم بتجميع البيانات حسب رقم الهاتف
   const processedItems = sortByPhone && items.length > 0 ? 
-    Object.values(
-      items.reduce((acc, item) => {
-        const phone = item.phone || 'غير محدد';
-        if (!acc[phone]) {
-          acc[phone] = {
-            label: phone,
-            value: 0,
-            phone: phone
-          };
-        }
-        acc[phone].value += parseInt(item.value) || 1;
-        return acc;
-      }, {})
-    ).sort((a, b) => b.value - a.value) 
+    items.map(item => ({
+      ...item,
+      // إظهار رقم الهاتف بدلاً من الاسم كـ label إذا كان متوفراً
+      label: item.phone && item.phone !== 'غير محدد' ? item.phone : item.label,
+      phone: item.phone || 'غير محدد'
+    }))
     : items;
 
   return (

@@ -18,6 +18,27 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
+  // دالة تطبيع رقم الهاتف - نفس المنطق المستخدم في dashboard-helpers
+  const normalizePhoneNumber = (phone) => {
+    if (!phone || typeof phone !== 'string') return null;
+    
+    // إزالة المسافات والرموز غير المرغوب فيها
+    let normalized = phone.replace(/[\s\-\(\)]/g, '');
+    
+    // إزالة رمز الدولة +964 أو 00964
+    normalized = normalized.replace(/^(\+964|00964)/, '');
+    
+    // إزالة الصفر في البداية إذا كان رقم العراق
+    normalized = normalized.replace(/^0/, '');
+    
+    // التأكد من أن الرقم بين 10-11 رقم
+    if (normalized.length >= 10 && normalized.length <= 11) {
+      return normalized;
+    }
+    
+    return null;
+  };
+
   // حساب إحصائيات الزبائن بناءً على رقم الهاتف للطلبات الموصلة
   const customerStats = useMemo(() => {
     if (!orders || orders.length === 0) {
@@ -25,12 +46,17 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
       return [];
     }
 
+    console.log('📊 إجمالي الطلبات المتاحة:', orders.length);
+
     // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
     const filteredOrders = orders.filter(order => {
       // التأكد من أن الطلب مكتمل (تم التوصيل فقط) - يخصم من المخزون عندما يكون delivered
       const isDelivered = order.delivery_status === 'delivered' || 
                          order.status === 'delivered' || 
-                         order.order_status === 'delivered';
+                         order.order_status === 'delivered' ||
+                         order.delivery_status === 'completed' ||
+                         order.status === 'completed' ||
+                         order.order_status === 'completed';
       
       // استبعاد الطلبات المرجعة أو الملغية
       const isReturnedOrCancelled = order.status === 'returned' || 
@@ -74,21 +100,30 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
 
     filteredOrders.forEach(order => {
       // البحث عن رقم الهاتف في جميع الحقول المحتملة
-      const customerPhone = order.customer_phone || 
-                           order.phone_number || 
-                           order.client_mobile || 
-                           order.phone || 
-                           'غير محدد';
+      const rawPhone = order.customer_phone || 
+                       order.phone_number || 
+                       order.client_mobile || 
+                       order.phone ||
+                       order.customerinfo?.phone;
+      
+      const normalizedPhone = normalizePhoneNumber(rawPhone);
       const customerName = order.customer_name || 
                           order.client_name || 
-                          order.name || 
+                          order.name ||
+                          order.customerinfo?.name || 
                           'زبون غير محدد';
       
-      console.log(`📞 الطلب ${order.id}: الهاتف = "${customerPhone}", الاسم = "${customerName}"`);
+      console.log(`📞 الطلب ${order.id}: الهاتف الخام = "${rawPhone}", المطبع = "${normalizedPhone}", الاسم = "${customerName}"`);
 
-      if (!customerMap.has(customerPhone)) {
-        customerMap.set(customerPhone, {
-          phone: customerPhone,
+      // تجاهل الطلبات بدون رقم هاتف صالح
+      if (!normalizedPhone) {
+        console.log('⚠️ رقم هاتف غير صالح، تجاهل الطلب');
+        return;
+      }
+
+      if (!customerMap.has(normalizedPhone)) {
+        customerMap.set(normalizedPhone, {
+          phone: normalizedPhone,
           name: customerName,
           orderCount: 0,
           totalRevenue: 0,
@@ -98,7 +133,7 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
         });
       }
 
-      const customerData = customerMap.get(customerPhone);
+      const customerData = customerMap.get(normalizedPhone);
       customerData.orderCount += 1;
       customerData.totalRevenue += parseFloat(order.total_amount || order.final_amount || 0);
       
@@ -114,13 +149,16 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
     console.log('✅ خريطة الزبائن النهائية:', Array.from(customerMap.entries()).length, 'زبون');
 
     // تحويل البيانات إلى مصفوفة وحساب المتوسط
-    return Array.from(customerMap.values())
+    const result = Array.from(customerMap.values())
       .map(customer => ({
         ...customer,
         avgOrderValue: customer.orderCount > 0 ? customer.totalRevenue / customer.orderCount : 0
       }))
       .sort((a, b) => b.orderCount - a.orderCount)
       .slice(0, 15);
+      
+    console.log('🏆 أفضل 15 زبون:', result);
+    return result;
   }, [orders, selectedPeriod]);
 
   const totalOrders = customerStats.reduce((sum, customer) => sum + customer.orderCount, 0);
