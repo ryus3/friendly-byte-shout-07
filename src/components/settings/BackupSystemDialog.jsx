@@ -273,7 +273,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden z-[9998]">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden z-[9900]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
@@ -317,29 +317,27 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
             
             <button
               onClick={() => {
-                if (selectedBackup) {
-                  setActiveTab('restore');
-                } else {
-                  toast({
-                    title: "تنبيه",
-                    description: "يجب اختيار نسخة احتياطية أولاً من قائمة النسخ",
-                    variant: "destructive",
-                    className: "z-[9999] text-right",
-                  });
-                  setActiveTab('list');
-                }
+                console.log('زر استعادة البيانات تم النقر عليه');
+                console.log('selectedBackup:', selectedBackup);
+                setActiveTab('restore');
               }}
+              disabled={!selectedBackup}
               className={`flex-1 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-                activeTab === 'restore' && selectedBackup
+                activeTab === 'restore'
                   ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
-                  : !selectedBackup
-                  ? 'opacity-60 cursor-not-allowed text-muted-foreground'
-                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+                  : selectedBackup
+                  ? 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+                  : 'opacity-50 cursor-not-allowed text-muted-foreground bg-gray-100 dark:bg-gray-800'
               }`}
             >
               <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">استعادة البيانات</span>
               <span className="sm:hidden">استعادة</span>
+              {!selectedBackup && (
+                <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+                  اختر نسخة
+                </span>
+              )}
             </button>
           </div>
 
