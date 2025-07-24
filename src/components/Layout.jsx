@@ -270,14 +270,17 @@ const Layout = ({ children }) => {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={async () => {
-                  const refreshBtn = document.querySelector('[title="مزامنة البيانات"] .refresh-icon');
+                onClick={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  
+                  const refreshBtn = e.currentTarget.querySelector('.refresh-icon');
                   if (refreshBtn) {
                     refreshBtn.classList.add('animate-spin');
                   }
                   
                   try {
-                    // مزامنة البيانات من جميع المصادر
+                    // منع تحديث الصفحة وتحديث البيانات الداخلية فقط
                     window.dispatchEvent(new CustomEvent('refresh-data'));
                     window.dispatchEvent(new CustomEvent('refresh-notifications'));
                     window.dispatchEvent(new CustomEvent('refresh-inventory'));
@@ -285,26 +288,11 @@ const Layout = ({ children }) => {
                     window.dispatchEvent(new CustomEvent('refresh-products'));
                     window.dispatchEvent(new CustomEvent('refresh-dashboard'));
                     
-                    // إعادة جلب الإشعارات
-                    if (window.refreshNotifications) {
-                      await window.refreshNotifications();
-                    }
-                    
-                    // إعادة جلب المنتجات والمخزون
-                    if (window.refreshInventory) {
-                      await window.refreshInventory();
-                    }
-                    
-                    // إعادة جلب الطلبات
-                    if (window.refreshOrders) {
-                      await window.refreshOrders();
-                    }
-                    
                     await new Promise(resolve => setTimeout(resolve, 1500));
                     
                     toast({ 
                       title: "✅ تم التحديث", 
-                      description: "تم تحديث جميع البيانات والإشعارات بنجاح",
+                      description: "تم تحديث جميع البيانات بنجاح",
                       className: "z-[9999] text-right",
                     });
                   } catch (error) {

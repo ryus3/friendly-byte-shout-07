@@ -1,15 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { toast } from '@/components/ui/use-toast';
 import { motion } from 'framer-motion';
 
-const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, sortByPhone = false }) => {
+const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, sortByPhone = false, onViewAll }) => {
   const handleViewAll = () => {
-    toast({
-      title: "🚧 هذه الميزة غير مطبقة بعد",
-      description: "لكن لا تقلق! يمكنك طلبها في الرسالة التالية! 🚀"
-    });
+    if (onViewAll) {
+      onViewAll();
+    }
   };
 
   // إذا كان التصنيف حسب رقم الهاتف، نقوم بتجميع البيانات حسب رقم الهاتف
