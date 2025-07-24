@@ -376,11 +376,11 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            نظام التقارير والإحصائيات المتقدم
+            <Globe className="w-5 h-5" />
+            نظام التقارير والإحصائيات العالمي المتطور
           </DialogTitle>
           <DialogDescription>
-            إنشاء وتصدير تقارير PDF احترافية، جدولة التقارير التلقائية، وإرسالها عبر البريد الإلكتروني أو التليغرام
+            لوحة تحكم متقدمة مع رسوم بيانية احترافية، إنشاء وتصدير تقارير PDF، وإرسال تلقائي عبر التليغرام والبريد الإلكتروني
           </DialogDescription>
         </DialogHeader>
 
@@ -405,7 +405,6 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
           </TabsList>
 
           <TabsContent value="reports" className="space-y-6 mt-6">
-
             {/* ملخص سريع للبيانات */}
             <Card>
               <CardHeader>
@@ -536,48 +535,38 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label>تكرار الإرسال</Label>
+                        <Label htmlFor="frequency">تكرار الإرسال</Label>
                         <Select value={scheduledReports.frequency} onValueChange={(value) => handleScheduledReportUpdate('frequency', value)}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="daily">يومياً</SelectItem>
-                            <SelectItem value="weekly">أسبوعياً</SelectItem>
-                            <SelectItem value="monthly">شهرياً</SelectItem>
-                            <SelectItem value="quarterly">ربع سنوي</SelectItem>
+                            <SelectItem value="daily">يومي - 8:00 صباحاً</SelectItem>
+                            <SelectItem value="weekly">أسبوعي - الاثنين 8:00 صباحاً</SelectItem>
+                            <SelectItem value="monthly">شهري - اليوم الأول 8:00 صباحاً</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-
-                      <div>
-                        <Label>البريد الإلكتروني للإرسال</Label>
-                        <Input 
-                          type="email"
-                          placeholder="admin@company.com"
-                          value={scheduledReports.emailTo}
-                          onChange={(e) => handleScheduledReportUpdate('emailTo', e.target.value)}
-                        />
-                      </div>
                     </div>
 
-                    <div>
-                      <Label className="text-base font-medium">أنواع التقارير المجدولة</Label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                    <div className="space-y-3">
+                      <Label>أنواع التقارير المطلوبة</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         {reportTypes.map((report) => (
-                          <div key={report.id} className="flex items-center space-x-2 space-x-reverse">
-                            <Switch 
-                              id={`report-${report.id}`}
+                          <div key={report.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`scheduled-${report.id}`}
                               checked={scheduledReports.reportTypes.includes(report.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  handleScheduledReportUpdate('reportTypes', [...scheduledReports.reportTypes, report.id]);
-                                } else {
-                                  handleScheduledReportUpdate('reportTypes', scheduledReports.reportTypes.filter(type => type !== report.id));
-                                }
+                              onChange={(e) => {
+                                const newTypes = e.target.checked 
+                                  ? [...scheduledReports.reportTypes, report.id]
+                                  : scheduledReports.reportTypes.filter(t => t !== report.id);
+                                handleScheduledReportUpdate('reportTypes', newTypes);
                               }}
+                              className="rounded border-gray-300"
                             />
-                            <Label htmlFor={`report-${report.id}`} className="text-sm">{report.title}</Label>
+                            <Label htmlFor={`scheduled-${report.id}`} className="text-sm">{report.title}</Label>
                           </div>
                         ))}
                       </div>
@@ -594,64 +583,210 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
           </TabsContent>
 
           <TabsContent value="integration" className="space-y-6 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="w-5 h-5" />
-                    إرسال عبر البريد الإلكتروني
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    يمكن إرسال التقارير تلقائياً عبر البريد الإلكتروني
-                  </p>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>عنوان البريد</Label>
-                      <Input type="email" placeholder="reports@company.com" />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageCircle className="w-5 h-5 text-blue-500" />
+                  إعداد التليغرام المتطور
+                </CardTitle>
+                <DialogDescription>
+                  اربط حسابك بالتليغرام لاستقبال التقارير التلقائية مباشرة
+                </DialogDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-blue-500 text-white rounded-lg">
+                          <MessageCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">رمز التليغرام الخاص بك</h4>
+                          <p className="text-sm text-muted-foreground">استخدم هذا الرمز للربط مع البوت</p>
+                        </div>
+                      </div>
+                      
+                      {user?.telegram_code ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 p-3 bg-white dark:bg-gray-900 rounded-lg border">
+                            <code className="font-mono text-lg font-bold text-blue-600">{user.telegram_code}</code>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => {
+                                navigator.clipboard.writeText(user.telegram_code);
+                                toast({ title: "تم النسخ", description: "تم نسخ الرمز بنجاح" });
+                              }}
+                            >
+                              نسخ
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {user?.telegram_linked ? (
+                              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                                <CheckCircle className="w-3 h-3 ml-1" />
+                                مربوط بنجاح
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                <Clock className="w-3 h-3 ml-1" />
+                                في انتظار الربط
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <Button className="w-full">
+                          <Zap className="w-4 h-4 ml-2" />
+                          توليد رمز التليغرام
+                        </Button>
+                      )}
                     </div>
-                    <div>
-                      <Label>عنوان الرسالة</Label>
-                      <Input placeholder="التقرير الدوري" />
-                    </div>
-                    <Button className="w-full">
-                      اختبار الإرسال
-                    </Button>
                   </div>
-                </CardContent>
-              </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5" />
-                    إرسال عبر التليغرام
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    ربط مع بوت التليغرام لإرسال التقارير
-                  </p>
-                  <div className="space-y-3">
-                    <div>
-                      <Label>معرف القناة</Label>
-                      <Input placeholder="@channel_name أو -1001234567890" />
+                  <div className="space-y-4">
+                    <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 rounded-xl border border-purple-200 dark:border-purple-800">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-purple-500 text-white rounded-lg">
+                          <Settings className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">خطوات الإعداد</h4>
+                          <p className="text-sm text-muted-foreground">اتبع هذه الخطوات للربط</p>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold">1</div>
+                          <div>
+                            <p className="text-sm font-medium">افتح التليغرام</p>
+                            <p className="text-xs text-muted-foreground">ابحث عن البوت الخاص بالمحل</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center font-bold">2</div>
+                          <div>
+                            <p className="text-sm font-medium">أرسل الرمز</p>
+                            <p className="text-xs text-muted-foreground">أرسل رمز التليغرام الخاص بك للبوت</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold">3</div>
+                          <div>
+                            <p className="text-sm font-medium">تأكيد الربط</p>
+                            <p className="text-xs text-muted-foreground">ستحصل على رسالة تأكيد فورية</p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <Label>تفعيل إرسال التليغرام</Label>
-                      <Switch 
-                        checked={scheduledReports.telegramEnabled}
-                        onCheckedChange={(checked) => handleScheduledReportUpdate('telegramEnabled', checked)}
-                      />
-                    </div>
-                    <Button className="w-full" variant="outline">
-                      اختبار الاتصال
-                    </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+
+                {/* إعدادات البريد الإلكتروني */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-green-500" />
+                      إعداد البريد الإلكتروني المتقدم
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="emailTo">البريد الإلكتروني للإرسال</Label>
+                        <Input 
+                          id="emailTo"
+                          type="email"
+                          placeholder="admin@company.com"
+                          value={scheduledReports.emailTo}
+                          onChange={(e) => handleScheduledReportUpdate('emailTo', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="emailFrequency">تكرار الإرسال</Label>
+                        <Select value={scheduledReports.frequency} onValueChange={(value) => handleScheduledReportUpdate('frequency', value)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="daily">يومي</SelectItem>
+                            <SelectItem value="weekly">أسبوعي</SelectItem>
+                            <SelectItem value="monthly">شهري</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <Label>أنواع التقارير المطلوبة</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {reportTypes.map((report) => (
+                          <div key={report.id} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={report.id}
+                              checked={scheduledReports.reportTypes.includes(report.id)}
+                              onChange={(e) => {
+                                const newTypes = e.target.checked 
+                                  ? [...scheduledReports.reportTypes, report.id]
+                                  : scheduledReports.reportTypes.filter(t => t !== report.id);
+                                handleScheduledReportUpdate('reportTypes', newTypes);
+                              }}
+                              className="rounded border-gray-300"
+                            />
+                            <Label htmlFor={report.id} className="text-sm">{report.title}</Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* أزرار الحفظ والاختبار */}
+                <div className="flex flex-wrap gap-3">
+                  <Button onClick={saveScheduledReports} className="flex items-center gap-2">
+                    <Settings className="w-4 h-4" />
+                    حفظ الإعدادات
+                  </Button>
+                  <Button onClick={sendTestReport} variant="outline" className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    إرسال تقرير تجريبي (تليغرام)
+                  </Button>
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    إرسال تقرير تجريبي (بريد)
+                  </Button>
+                </div>
+
+                {/* معلومات تنسيق التقارير */}
+                <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/30 dark:to-blue-950/30 border-indigo-200 dark:border-indigo-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
+                      <Info className="w-5 h-5" />
+                      تنسيق التقارير في التليغرام
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-white dark:bg-gray-900 p-4 rounded-lg border font-mono text-sm">
+                      <div className="text-blue-600 font-bold">📊 التقرير المالي اليومي</div>
+                      <div className="text-gray-600">📅 التاريخ: 23/07/2025</div>
+                      <br />
+                      <div>💰 إجمالي المبيعات: {realData.totalRevenue.toLocaleString()} د.ع</div>
+                      <div>📦 عدد الطلبات: {realData.totalOrders} طلب</div>
+                      <div>📈 صافي الربح: {realData.netProfit.toLocaleString()} د.ع</div>
+                      <div>📊 هامش الربح: {realData.profitMargin}</div>
+                      <br />
+                      <div className="text-gray-500">🤖 تم إنشاء هذا التقرير تلقائياً</div>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-3">
+                      <strong>ملاحظة:</strong> التقارير تُرسل بتنسيق جميل مع رموز تعبيرية وبيانات حقيقية محدثة من نظامك
+                    </p>
+                  </CardContent>
+                </Card>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6 mt-6">
@@ -975,13 +1110,6 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
             </Card>
           </TabsContent>
         </Tabs>
-
-
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            إغلاق
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

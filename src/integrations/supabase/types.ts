@@ -1693,6 +1693,84 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_reports: {
+        Row: {
+          created_at: string | null
+          email_to: string | null
+          enabled: boolean | null
+          frequency: string
+          id: string
+          last_sent_at: string | null
+          next_scheduled_at: string | null
+          report_type: string
+          telegram_chat_id: number | null
+          telegram_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email_to?: string | null
+          enabled?: boolean | null
+          frequency?: string
+          id?: string
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          report_type: string
+          telegram_chat_id?: number | null
+          telegram_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email_to?: string | null
+          enabled?: boolean | null
+          frequency?: string
+          id?: string
+          last_sent_at?: string | null
+          next_scheduled_at?: string | null
+          report_type?: string
+          telegram_chat_id?: number | null
+          telegram_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      scheduled_reports_log: {
+        Row: {
+          created_at: string | null
+          email_sent: boolean | null
+          errors: string[] | null
+          id: string
+          report_type: string
+          scheduled_id: string | null
+          sent_at: string | null
+          telegram_sent: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_sent?: boolean | null
+          errors?: string[] | null
+          id?: string
+          report_type: string
+          scheduled_id?: string | null
+          sent_at?: string | null
+          telegram_sent?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          email_sent?: boolean | null
+          errors?: string[] | null
+          id?: string
+          report_type?: string
+          scheduled_id?: string | null
+          sent_at?: string | null
+          telegram_sent?: boolean | null
+        }
+        Relationships: []
+      }
       seasons_occasions: {
         Row: {
           created_at: string
