@@ -128,8 +128,13 @@ const AiOrdersManager = ({ onClose }) => {
                   </CardDescription>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose}>
-                <X className="w-4 h-4" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onClose}
+                className="rounded-full w-10 h-10 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
+              >
+                <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
               </Button>
             </div>
           </CardHeader>
@@ -215,8 +220,9 @@ const AiOrdersManager = ({ onClose }) => {
                     setQuickOrderDialogOpen(false);
                     setEditingOrder(null);
                   }}
+                  className="rounded-full w-10 h-10 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
                 </Button>
               </div>
               <div className="p-4 max-h-[calc(90vh-80px)] overflow-y-auto">
