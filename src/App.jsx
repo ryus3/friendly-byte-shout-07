@@ -1,9 +1,9 @@
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/components/ui/use-toast.js';
-import { AppProviders } from '@/contexts/Providers.jsx';
+
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { usePermissions } from '@/hooks/usePermissions.js';
 import Layout from '@/components/Layout.jsx';
@@ -124,9 +124,7 @@ function AppContent() {
 function App() {
   return (
     <HelmetProvider>
-        <Router>
-            <AppContent />
-        </Router>
+      <AppContent />
     </HelmetProvider>
   );
 }
