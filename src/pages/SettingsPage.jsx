@@ -18,7 +18,7 @@ import {
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
    Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
-   BarChart, TrendingUp, Activity, X
+   BarChart, TrendingUp, Activity
 } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
@@ -537,33 +537,20 @@ const SettingsPage = () => {
 
       {/* نافذة فحص النظام الشامل */}
       {canManageSettings && isSystemHealthOpen && (
-        <div 
-          className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm animate-fade-in"
-          onClick={() => setIsSystemHealthOpen(false)}
-        >
+        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm">
           <div className="fixed inset-0 z-[101] overflow-y-auto">
             <div className="min-h-full flex items-start justify-center p-2 sm:p-4 pt-8 sm:pt-4">
-              <div 
-                className="w-full max-w-4xl bg-background border rounded-lg shadow-2xl max-h-[85vh] overflow-hidden animate-scale-in"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="w-full max-w-4xl bg-background border rounded-lg shadow-2xl max-h-[85vh] overflow-hidden">
                 <div className="flex items-center justify-between p-4 sm:p-6 border-b sticky top-0 bg-background z-10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-                      <span className="text-lg sm:text-xl">🔍</span>
-                    </div>
-                    <div>
-                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">فحص النظام الشامل</h2>
-                      <p className="text-sm sm:text-base text-muted-foreground">مراقبة صحة النظام والأمان مع إصلاح تلقائي للمشاكل</p>
-                    </div>
-                  </div>
-                  <button
+                  <h2 className="text-xl sm:text-2xl font-bold">🔍 فحص النظام الشامل</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
                     onClick={() => setIsSystemHealthOpen(false)}
-                    className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 flex items-center justify-center group shadow-sm hover:shadow-md"
-                    aria-label="إغلاق"
+                    className="shrink-0"
                   >
-                    <X className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-                  </button>
+                    ✕
+                  </Button>
                 </div>
                 <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
                   <SystemHealthDashboard />

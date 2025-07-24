@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ShoppingCart, Trash2, Tag, PackagePlus, X } from 'lucide-react';
+import { ShoppingCart, Trash2, Tag, PackagePlus } from 'lucide-react';
 import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -101,37 +101,21 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-lg animate-scale-in"
-        onPointerDownOutside={() => onOpenChange(false)}
-        onInteractOutside={() => onOpenChange(false)}
-      >
-        <DialogHeader className="relative">
-          <DialogTitle className="flex items-center gap-3 pr-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-              <ShoppingCart className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div className="gradient-text flex items-center justify-between gap-2">
-              <span>سلة التسوق</span>
-              <div className='flex gap-2'>
-                <QRButton 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsScannerOpen(true)} 
-                  className="hover:bg-primary/10 border-primary/30" 
-                >
-                  <span className="sr-only">مسح</span>
-                </QRButton>
-              </div>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="gradient-text flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2"><ShoppingCart /> سلة التسوق</div>
+            <div className='flex gap-2'>
+              <QRButton 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setIsScannerOpen(true)} 
+                className="hover:bg-primary/10 border-primary/30" 
+              >
+                <span className="sr-only">مسح</span>
+              </QRButton>
             </div>
           </DialogTitle>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-0 right-0 w-8 h-8 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 flex items-center justify-center group shadow-sm hover:shadow-md"
-            aria-label="إغلاق"
-          >
-            <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          </button>
         </DialogHeader>
         <div className="space-y-4">
           {safeCart.length > 0 ? (

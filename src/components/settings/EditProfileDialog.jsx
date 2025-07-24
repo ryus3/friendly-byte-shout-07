@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, Home, X, User } from 'lucide-react';
+import { Loader2, Home } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -92,28 +92,12 @@ const EditProfileDialog = ({ open, onOpenChange }) => {
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-md animate-scale-in"
-        onPointerDownOutside={() => onOpenChange(false)}
-        onInteractOutside={() => onOpenChange(false)}
-      >
-        <DialogHeader className="relative">
-          <DialogTitle className="flex items-center gap-3 pr-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-              <User className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span>تعديل الملف الشخصي</span>
-          </DialogTitle>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>تعديل الملف الشخصي</DialogTitle>
           <DialogDescription>
             قم بتحديث معلوماتك الشخصية أو تغيير كلمة المرور.
           </DialogDescription>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-0 right-0 w-8 h-8 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 flex items-center justify-center group shadow-sm hover:shadow-md"
-            aria-label="إغلاق"
-          >
-            <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          </button>
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-4">
           <TabsList className="grid w-full grid-cols-3">

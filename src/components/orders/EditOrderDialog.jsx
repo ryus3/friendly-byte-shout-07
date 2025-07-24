@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, X, Edit } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
@@ -92,25 +92,9 @@ const EditOrderDialog = ({ order, open, onOpenChange, onOrderUpdated }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-2xl animate-scale-in"
-        onPointerDownOutside={() => onOpenChange(false)}
-        onInteractOutside={() => onOpenChange(false)}
-      >
-        <DialogHeader className="relative">
-          <DialogTitle className="flex items-center gap-3 pr-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-              <Edit className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="gradient-text">تعديل الطلب #{order.trackingnumber}</span>
-          </DialogTitle>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-0 right-0 w-8 h-8 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 flex items-center justify-center group shadow-sm hover:shadow-md"
-            aria-label="إغلاق"
-          >
-            <X className="w-4 h-4 group-hover:scale-110 transition-transform" />
-          </button>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="gradient-text">تعديل الطلب #{order.trackingnumber}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

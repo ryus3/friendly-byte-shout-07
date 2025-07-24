@@ -274,11 +274,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-w-4xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none bg-background border border-border shadow-xl"
-        onPointerDownOutside={() => onOpenChange(false)}
-        onInteractOutside={() => onOpenChange(false)}
-      >
+      <DialogContent className="max-w-4xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none bg-background border border-border shadow-xl">
         <DialogHeader className="p-4 sm:p-6 pb-4 relative border-b border-border/50">
           <DialogTitle className="flex items-center gap-3 pr-10 sm:pr-12">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
@@ -289,13 +285,6 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
               <p className="text-sm sm:text-base text-muted-foreground mt-1">إدارة شاملة وآمنة لبيانات النظام</p>
             </div>
           </DialogTitle>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 flex items-center justify-center group shadow-sm hover:shadow-md"
-            aria-label="إغلاق"
-          >
-            <X className="w-4 h-4 sm:w-5 sm:h-5 group-hover:scale-110 transition-transform" />
-          </button>
         </DialogHeader>
 
         <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
