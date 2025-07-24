@@ -35,6 +35,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [deleting, setDeleting] = useState(null); // إضافة حالة الحذف
   const [selectedBackup, setSelectedBackup] = useState(null);
   const [restoreOptions, setRestoreOptions] = useState({
     clearExisting: false,
@@ -192,6 +193,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   // حذف نسخة احتياطية
   const deleteBackup = async (backupId) => {
+    setDeleting(backupId); // تعيين حالة الحذف
     try {
       const { data, error } = await supabase.functions.invoke('backup-system', {
         body: { 
@@ -200,24 +202,40 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw new Error(error.message || 'خطأ في الاتصال بالخادم');
+      }
 
-      if (data.success) {
+      if (data && data.success) {
         toast({
           title: "تم الحذف ✅",
-          description: "تم حذف النسخة الاحتياطية بنجاح"
+          description: "تم حذف النسخة الاحتياطية بنجاح ونهائياً"
         });
-        fetchBackups();
+        
+        // إزالة النسخة من القائمة فوراً
+        setBackups(prev => prev.filter(backup => backup.id !== backupId));
+        
+        // إعادة تعيين النسخة المحددة إذا كانت هي المحذوفة
+        if (selectedBackup?.id === backupId) {
+          setSelectedBackup(null);
+          setActiveTab('list');
+        }
+        
+        // جلب القائمة المحدثة للتأكد
+        await fetchBackups();
       } else {
-        throw new Error(data.message);
+        throw new Error(data?.message || 'فشل في حذف النسخة الاحتياطية');
       }
     } catch (error) {
       console.error('خطأ في حذف النسخة الاحتياطية:', error);
       toast({
-        title: "خطأ",
-        description: "فشل في حذف النسخة الاحتياطية",
+        title: "خطأ في الحذف",
+        description: error.message || "فشل في حذف النسخة الاحتياطية",
         variant: "destructive"
       });
+    } finally {
+      setDeleting(null); // إعادة تعيين حالة الحذف
     }
   };
 
@@ -386,9 +404,18 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                                     <AlertDialogTrigger asChild>
                                       <button
                                         onClick={(e) => e.stopPropagation()}
-                                        className="h-8 w-8 p-0 rounded-md bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white transition-all duration-200 flex items-center justify-center"
+                                        disabled={deleting === backup.id}
+                                        className={`h-8 w-8 p-0 rounded-md transition-all duration-200 flex items-center justify-center ${
+                                          deleting === backup.id 
+                                            ? 'bg-gray-400 cursor-not-allowed' 
+                                            : 'bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white'
+                                        }`}
                                       >
-                                        <Trash2 className="w-3 h-3" />
+                                        {deleting === backup.id ? (
+                                          <RefreshCw className="w-3 h-3 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-3 h-3" />
+                                        )}
                                       </button>
                                     </AlertDialogTrigger>
                                    <AlertDialogContent className="max-w-[90vw]">
