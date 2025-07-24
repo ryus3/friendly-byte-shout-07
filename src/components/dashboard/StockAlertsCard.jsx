@@ -19,7 +19,8 @@ const StockAlertsCard = () => {
   // الاستماع لأحداث التحديث
   useEffect(() => {
     const handleRefresh = async () => {
-      setIsRefreshing(true);
+      // عدم إظهار حالة التحميل عند التحديث من الشريط العلوي
+      // setIsRefreshing(true);
       try {
         if (refetchProducts) {
           await refetchProducts();
@@ -27,7 +28,7 @@ const StockAlertsCard = () => {
       } catch (error) {
         console.error('خطأ في تحديث بيانات المخزون:', error);
       } finally {
-        setIsRefreshing(false);
+        // setIsRefreshing(false);
       }
     };
 

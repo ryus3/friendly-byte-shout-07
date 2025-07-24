@@ -26,6 +26,8 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
     const filteredOrders = filterOrdersByPeriod(orders, selectedPeriod)
       .filter(order => order.status === 'delivered');
 
+    console.log('Filtered delivered orders for products:', filteredOrders.length);
+
     // تجميع البيانات حسب المنتج
     const productMap = new Map();
 
@@ -33,23 +35,28 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
       let orderItems = [];
       
       try {
+        // محاولة استخراج العناصر من مصادر مختلفة
         if (order.items && typeof order.items === 'string') {
           orderItems = JSON.parse(order.items);
         } else if (order.items && Array.isArray(order.items)) {
           orderItems = order.items;
         } else if (order.order_items && Array.isArray(order.order_items)) {
           orderItems = order.order_items;
+        } else if (order.products && Array.isArray(order.products)) {
+          orderItems = order.products;
         }
       } catch (e) {
         console.error('Error parsing order items:', e);
         return;
       }
 
-      if (Array.isArray(orderItems)) {
+      console.log('Order items found:', orderItems.length, 'for order:', order.id);
+
+      if (Array.isArray(orderItems) && orderItems.length > 0) {
         orderItems.forEach(item => {
-          const productKey = item.product_name || item.name || item.productName || 'منتج غير محدد';
-          const quantity = parseInt(item.quantity) || 1;
-          const price = parseFloat(item.price) || parseFloat(item.unit_price) || 0;
+          const productKey = item.product_name || item.name || item.productName || item.title || 'منتج غير محدد';
+          const quantity = parseInt(item.quantity) || parseInt(item.qty) || 1;
+          const price = parseFloat(item.price) || parseFloat(item.unit_price) || parseFloat(item.selling_price) || 0;
           const totalItemValue = quantity * price;
 
           if (!productMap.has(productKey)) {
@@ -59,7 +66,7 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
               totalRevenue: 0,
               orderCount: 0,
               avgPrice: 0,
-              image: item.image || item.product_image || null
+              image: item.image || item.product_image || item.images?.[0] || null
             });
           }
 
@@ -71,6 +78,8 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
         });
       }
     });
+
+    console.log('Product map:', Array.from(productMap.entries()));
 
     // تحويل البيانات إلى مصفوفة
     return Array.from(productMap.values())
@@ -112,42 +121,48 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
 
           {/* الإحصائيات العامة */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/20 dark:from-orange-400/10 dark:to-orange-500/20 rounded-xl p-6 border border-orange-200/50 dark:border-orange-700/50 shadow-lg backdrop-blur-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-orange-400 to-yellow-500 rounded-xl p-6 border border-orange-200/50 dark:border-orange-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-1">إجمالي الكمية</p>
-                  <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">{totalQuantity}</p>
-                  <p className="text-xs text-orange-500/70 dark:text-orange-400/70 mt-1">قطعة مباعة</p>
+                  <p className="text-sm font-medium text-white/90 mb-1">إجمالي الكمية</p>
+                  <p className="text-3xl font-bold text-white">{totalQuantity}</p>
+                  <p className="text-xs text-white/70 mt-1">قطعة مباعة</p>
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <Package className="w-7 h-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500/10 to-green-600/20 dark:from-green-400/10 dark:to-green-500/20 rounded-xl p-6 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl p-6 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">إجمالي الإيرادات</p>
-                  <p className="text-3xl font-bold text-green-700 dark:text-green-300">
+                  <p className="text-sm font-medium text-white/90 mb-1">إجمالي الإيرادات</p>
+                  <p className="text-3xl font-bold text-white">
                     {totalRevenue.toLocaleString()}
                   </p>
-                  <p className="text-xs text-green-500/70 dark:text-green-400/70 mt-1">دينار عراقي</p>
+                  <p className="text-xs text-white/70 mt-1">دينار عراقي</p>
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <DollarSign className="w-7 h-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-400/10 dark:to-blue-500/20 rounded-xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-xl p-6 border border-red-200/50 dark:border-red-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">عدد المنتجات</p>
-                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{productStats.length}</p>
-                  <p className="text-xs text-blue-500/70 dark:text-blue-400/70 mt-1">منتج مختلف</p>
+                  <p className="text-sm font-medium text-white/90 mb-1">عدد المنتجات</p>
+                  <p className="text-3xl font-bold text-white">{productStats.length}</p>
+                  <p className="text-xs text-white/70 mt-1">منتج مختلف</p>
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <TrendingUp className="w-7 h-7 text-white" />
                 </div>
               </div>

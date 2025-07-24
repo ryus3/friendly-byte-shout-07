@@ -130,42 +130,48 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
 
           {/* الإحصائيات العامة */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/20 dark:from-blue-400/10 dark:to-blue-500/20 rounded-xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-xl p-6 border border-blue-200/50 dark:border-blue-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">إجمالي الطلبات</p>
-                  <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{totalOrders}</p>
-                  <p className="text-xs text-blue-500/70 dark:text-blue-400/70 mt-1">طلب موصل</p>
+                  <p className="text-sm font-medium text-white/90 mb-1">إجمالي الطلبات</p>
+                  <p className="text-3xl font-bold text-white">{totalOrders}</p>
+                  <p className="text-xs text-white/70 mt-1">طلب موصل</p>
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <TrendingUp className="w-7 h-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-green-500/10 to-green-600/20 dark:from-green-400/10 dark:to-green-500/20 rounded-xl p-6 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-green-500 to-emerald-400 rounded-xl p-6 border border-green-200/50 dark:border-green-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-medium text-green-600 dark:text-green-400 mb-1">إجمالي الإيرادات</p>
-                  <p className="text-3xl font-bold text-green-700 dark:text-green-300">
+                  <p className="text-sm font-medium text-white/90 mb-1">إجمالي الإيرادات</p>
+                  <p className="text-3xl font-bold text-white">
                     {totalRevenue.toLocaleString()}
                   </p>
-                  <p className="text-xs text-green-500/70 dark:text-green-400/70 mt-1">دينار عراقي</p>
+                  <p className="text-xs text-white/70 mt-1">دينار عراقي</p>
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <TrendingUp className="w-7 h-7 text-white" />
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                  <DollarSign className="w-7 h-7 text-white" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/20 dark:from-purple-400/10 dark:to-purple-500/20 rounded-xl p-6 border border-purple-200/50 dark:border-purple-700/50 shadow-lg backdrop-blur-sm">
-              <div className="flex items-center justify-between">
+            <div className="bg-gradient-to-br from-purple-500 to-violet-400 rounded-xl p-6 border border-purple-200/50 dark:border-purple-700/50 shadow-lg backdrop-blur-sm text-white relative overflow-hidden">
+              <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+              <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+              <div className="flex items-center justify-between relative z-10">
                 <div>
-                  <p className="text-sm font-medium text-purple-600 dark:text-purple-400 mb-1">عدد المحافظات</p>
-                  <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{provinceStats.length}</p>
-                  <p className="text-xs text-purple-500/70 dark:text-purple-400/70 mt-1">محافظة نشطة</p>
+                  <p className="text-sm font-medium text-white/90 mb-1">عدد المحافظات</p>
+                  <p className="text-3xl font-bold text-white">{provinceStats.length}</p>
+                  <p className="text-xs text-white/70 mt-1">محافظة نشطة</p>
                 </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <MapPin className="w-7 h-7 text-white" />
                 </div>
               </div>
