@@ -1,5 +1,5 @@
 import React from 'react';
-import Barcode from 'react-barcode';
+// سنستخدم QR codes بدلا من barcodes
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

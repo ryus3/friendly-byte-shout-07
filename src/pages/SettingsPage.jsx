@@ -29,7 +29,7 @@ import EditProfileDialog from '@/components/settings/EditProfileDialog';
 import CustomerSettingsDialog from '@/components/settings/CustomerSettingsDialog';
 import NotificationSettingsDialog from '@/components/settings/NotificationSettingsDialog';
 import PermissionBasedStockSettings from '@/components/settings/PermissionBasedStockSettings';
-import ReportsSettingsDialog from '@/components/settings/ReportsSettingsDialog';
+import AdvancedReportsSystem from '@/components/analytics/AdvancedReportsSystem';
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
@@ -458,7 +458,7 @@ const SettingsPage = () => {
         onOpenChange={setIsCustomerSettingsOpen}
       />
 
-      <ReportsSettingsDialog
+      <AdvancedReportsSystem
         open={isReportsOpen}
         onOpenChange={setIsReportsOpen}
       />

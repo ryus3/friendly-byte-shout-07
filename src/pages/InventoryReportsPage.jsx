@@ -3,8 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Printer } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
-import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
+// تم حذف PDF والتقارير القديمة - نستخدم النظام الجديد
 import { motion } from 'framer-motion';
 
 const InventoryReportsPage = () => {

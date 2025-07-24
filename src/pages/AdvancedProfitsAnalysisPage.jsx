@@ -24,8 +24,7 @@ import {
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { motion } from 'framer-motion';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import ProfitsAnalysisPDF from '@/components/pdf/ProfitsAnalysisPDF';
+// تم حذف PDF والتقارير القديمة - نستخدم النظام الجديد
 
 
 /**
