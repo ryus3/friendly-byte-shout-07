@@ -677,21 +677,14 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                     </div>
                   </div>
 
-                  <PDFDownloadLink
-                    document={renderPDFDocument('financial')}
-                    fileName={`تقرير-مالي-${format(new Date(), 'dd-MM-yyyy')}.pdf`}
+                  <Button 
+                    className="w-full bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 text-white shadow-lg transition-all duration-300 hover:scale-[1.02]" 
+                    disabled={generatingReport === 'financial'}
+                    onClick={() => handleGenerateReport('financial')}
                   >
-                    {({ loading }) => (
-                      <Button 
-                        className="w-full bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 text-white shadow-lg" 
-                        disabled={loading || generatingReport === 'financial'}
-                        onClick={() => handleGenerateReport('financial')}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {loading || generatingReport === 'financial' ? 'جاري التحضير...' : 'تحميل التقرير المالي'}
-                      </Button>
-                    )}
-                  </PDFDownloadLink>
+                    <Download className="w-4 h-4 mr-2" />
+                    {generatingReport === 'financial' ? 'جاري التحضير...' : 'تحميل التقرير المالي'}
+                  </Button>
                 </div>
 
                 {/* تقرير المخزون - تدرج أزرق راقي */}
@@ -728,21 +721,14 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                     </div>
                   </div>
 
-                  <PDFDownloadLink
-                    document={renderPDFDocument('inventory')}
-                    fileName={`تقرير-مخزون-${format(new Date(), 'dd-MM-yyyy')}.pdf`}
+                  <Button 
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-700 hover:from-blue-700 hover:to-cyan-800 text-white shadow-lg transition-all duration-300 hover:scale-[1.02]" 
+                    disabled={generatingReport === 'inventory'}
+                    onClick={() => handleGenerateReport('inventory')}
                   >
-                    {({ loading }) => (
-                      <Button 
-                        className="w-full bg-gradient-to-r from-blue-600 to-cyan-700 hover:from-blue-700 hover:to-cyan-800 text-white shadow-lg" 
-                        disabled={loading || generatingReport === 'inventory'}
-                        onClick={() => handleGenerateReport('inventory')}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        {loading || generatingReport === 'inventory' ? 'جاري التحضير...' : 'تحميل تقرير المخزون'}
-                      </Button>
-                    )}
-                  </PDFDownloadLink>
+                    <Download className="w-4 h-4 mr-2" />
+                    {generatingReport === 'inventory' ? 'جاري التحضير...' : 'تحميل تقرير المخزون'}
+                  </Button>
                 </div>
 
                 {/* التقرير الشامل - تدرج بنفسجي راقي */}
