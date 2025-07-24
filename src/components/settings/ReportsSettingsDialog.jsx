@@ -359,7 +359,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
 
   const handleGenerateReport = async (reportType) => {
     setGeneratingReport(reportType);
-    await generateReportPDF(reportType, analytics);
+    await generateReportPDF(reportType, filteredData);
     setGeneratingReport(null);
   };
 
@@ -936,7 +936,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">إجمالي الطلبات:</span>
-                      <span className="font-bold text-emerald-600">{analytics.totalOrders}</span>
+                      <span className="font-bold text-emerald-600">{filteredData.orders?.length || 0}</span>
                     </div>
                   </div>
 
@@ -967,17 +967,17 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   <div className="bg-white/60 p-3 rounded-lg space-y-2 text-xs">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">إجمالي المنتجات:</span>
-                      <span className="font-bold text-blue-700">{analytics.totalProducts}</span>
+                      <span className="font-bold text-blue-700">{filteredData.products?.length || 0}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">مخزون منخفض:</span>
-                      <span className="font-bold text-yellow-600">{analytics.lowStockItems}</span>
+                      <span className="font-bold text-yellow-600">{lowStockCount}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">معدل التوفر:</span>
                       <span className="font-bold text-green-600">
-                        {analytics.totalProducts > 0 ? 
-                          (((analytics.totalProducts - analytics.outOfStockItems) / analytics.totalProducts) * 100).toFixed(1) + '%' 
+                        {filteredData.products?.length > 0 ? 
+                          (((filteredData.products.length - outOfStockCount) / filteredData.products.length) * 100).toFixed(1) + '%' 
                           : '0%'
                         }
                       </span>
@@ -1014,15 +1014,15 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                   <div className="bg-white/70 p-3 rounded-lg space-y-2 text-xs relative z-10">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">المبيعات:</span>
-                      <span className="font-bold text-purple-700">{analytics.todaySales.toLocaleString()} د.ع</span>
+                      <span className="font-bold text-purple-700">{financialSummary.totalRevenue.toLocaleString()} د.ع</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">الطلبات:</span>
-                      <span className="font-bold text-blue-600">{analytics.totalOrders}</span>
+                      <span className="font-bold text-blue-600">{filteredData.orders?.length || 0}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600">المنتجات:</span>
-                      <span className="font-bold text-green-600">{analytics.totalProducts}</span>
+                      <span className="font-bold text-green-600">{filteredData.products?.length || 0}</span>
                     </div>
                   </div>
                   
