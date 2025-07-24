@@ -342,7 +342,7 @@ class SystemOptimizer {
     const repairs = [];
 
     try {
-      // إصلاح المتغيرات بدون مخزون
+      // 1. إصلاح المتغيرات بدون مخزون (يعمل بالفعل)
       const { data: variantsWithoutInventory } = await supabase
         .from('product_variants')
         .select('id, product_id')
@@ -350,8 +350,10 @@ class SystemOptimizer {
         .not('id', 'in', `(SELECT DISTINCT variant_id FROM inventory WHERE variant_id IS NOT NULL)`);
 
       if (variantsWithoutInventory?.length > 0) {
+        const currentUserId = '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير الافتراضي
+        
         for (const variant of variantsWithoutInventory) {
-          await supabase
+          const { error } = await supabase
             .from('inventory')
             .insert({
               product_id: variant.product_id,
@@ -359,13 +361,33 @@ class SystemOptimizer {
               quantity: 0,
               min_stock: 0,
               reserved_quantity: 0,
-              last_updated_by: '91484496-b887-44f7-9e5d-be9db5567604'
+              last_updated_by: currentUserId
             });
+          
+          if (!error) {
+            console.log(`✅ تم إنشاء مخزون للمتغير: ${variant.id}`);
+          }
         }
         
         repairs.push({
           type: 'created_missing_inventory',
-          count: variantsWithoutInventory.length
+          count: variantsWithoutInventory.length,
+          message: `تم إنشاء سجلات مخزون لـ ${variantsWithoutInventory.length} متغير`
+        });
+      }
+
+      // 2. تنظيف الإشعارات القديمة (يعمل بالفعل)
+      const { data: deletedNotifications } = await supabase
+        .from('notifications')
+        .delete()
+        .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .select('id');
+
+      if (deletedNotifications?.length > 0) {
+        repairs.push({
+          type: 'cleaned_old_notifications',
+          count: deletedNotifications.length,
+          message: `تم حذف ${deletedNotifications.length} إشعار قديم`
         });
       }
 
