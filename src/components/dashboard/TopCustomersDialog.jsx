@@ -1,13 +1,15 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Users, Calendar, Eye, TrendingUp, DollarSign, Phone } from 'lucide-react';
-import { useOrders } from '@/hooks/useOrders';
 import { motion } from 'framer-motion';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const TopCustomersDialog = ({ open, onOpenChange }) => {
-  const { orders: allOrders, loading } = useOrders();
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [loading, setLoading] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState('all');
+  const [customerStats, setCustomerStats] = useState([]);
+  const [allOrders, setAllOrders] = useState([]);
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -18,54 +20,87 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
+  // جلب الطلبات من قاعدة البيانات مباشرة
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      console.log('🔄 جاري جلب الطلبات من قاعدة البيانات...');
+      
+      const { data: orders, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('❌ خطأ في جلب الطلبات:', error);
+        return;
+      }
+
+      console.log('✅ تم جلب الطلبات بنجاح:', orders?.length || 0);
+      setAllOrders(orders || []);
+    } catch (error) {
+      console.error('❌ خطأ غير متوقع:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // جلب البيانات عند فتح النافذة
+  useEffect(() => {
+    if (open) {
+      fetchOrders();
+    }
+  }, [open]);
+
   // دالة تطبيع رقم الهاتف
   const normalizePhoneNumber = (phone) => {
-    if (!phone || typeof phone !== 'string') return null;
-    
-    // إزالة المسافات والرموز غير المرغوب فيها
-    let normalized = phone.replace(/[\s\-\(\)]/g, '');
-    
-    // إزالة رمز الدولة +964 أو 00964
+    if (!phone) return 'غير محدد';
+    let normalized = String(phone).replace(/[\s\-\(\)]/g, '');
     normalized = normalized.replace(/^(\+964|00964)/, '');
-    
-    // إزالة الصفر في البداية إذا كان رقم العراق
     normalized = normalized.replace(/^0/, '');
-    
-    // التأكد من أن الرقم بين 10-11 رقم
-    if (normalized.length >= 10 && normalized.length <= 11) {
-      return normalized;
-    }
-    
-    return null;
+    return normalized;
   };
 
   // حساب إحصائيات الزبائن
-  const customerStats = useMemo(() => {
+  useEffect(() => {
     console.log('🔍 بدء تحليل بيانات الزبائن...');
-    console.log('📊 إجمالي الطلبات المتاحة:', allOrders?.length || 0);
+    console.log('📊 إجمالي الطلبات:', allOrders.length);
 
     if (!allOrders || allOrders.length === 0) {
       console.log('❌ لا توجد طلبات متاحة');
-      return [];
+      setCustomerStats([]);
+      return;
     }
 
-    // فلترة الطلبات المكتملة فقط (منطق مبسط)
+    // فلترة الطلبات المكتملة فقط
     const completedOrders = allOrders.filter(order => {
-      const isCompleted = order.status === 'completed' || order.status === 'delivered';
-      const isNotCancelled = order.status !== 'cancelled' && order.status !== 'return_received';
-      return isCompleted && isNotCancelled;
+      const isCompleted = order.status === 'completed';
+      const isNotReturned = order.status !== 'return_received' && order.status !== 'cancelled';
+      console.log(`🔍 الطلب ${order.id}: الحالة=${order.status}, مكتمل=${isCompleted}, غير مرجع=${isNotReturned}`);
+      return isCompleted && isNotReturned;
     });
 
     console.log('✅ الطلبات المكتملة:', completedOrders.length);
+    console.log('📋 تفاصيل الطلبات المكتملة:', completedOrders.map(o => ({
+      id: o.id,
+      customer_name: o.customer_name,
+      customer_phone: o.customer_phone,
+      total_amount: o.total_amount,
+      final_amount: o.final_amount,
+      status: o.status
+    })));
 
     if (completedOrders.length === 0) {
       console.log('❌ لا توجد طلبات مكتملة');
-      return [];
+      setCustomerStats([]);
+      return;
     }
 
     // فلترة حسب الفترة الزمنية
     const now = new Date();
     const filteredOrders = completedOrders.filter(order => {
+      if (selectedPeriod === 'all') return true;
+      
       const orderDate = new Date(order.created_at);
       
       switch (selectedPeriod) {
@@ -84,7 +119,6 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
         case 'year':
           const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
           return orderDate >= yearAgo;
-        case 'all':
         default:
           return true;
       }
@@ -102,8 +136,8 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
       
       console.log(`📞 معالجة الطلب ${order.id}: الهاتف="${rawPhone}" -> المطبع="${normalizedPhone}" الاسم="${customerName}"`);
 
-      // استخدام رقم الهاتف الخام إذا فشل التطبيع
-      const phoneKey = normalizedPhone || rawPhone || 'غير محدد';
+      // استخدام رقم الهاتف المطبع كمفتاح
+      const phoneKey = normalizedPhone;
 
       if (!customerMap.has(phoneKey)) {
         customerMap.set(phoneKey, {
@@ -114,13 +148,19 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
           totalRevenue: 0,
           avgOrderValue: 0,
           firstOrderDate: order.created_at,
-          lastOrderDate: order.created_at
+          lastOrderDate: order.created_at,
+          orders: []
         });
       }
 
       const customerData = customerMap.get(phoneKey);
       customerData.orderCount += 1;
       customerData.totalRevenue += parseFloat(order.final_amount || order.total_amount || 0);
+      customerData.orders.push({
+        id: order.id,
+        amount: order.final_amount || order.total_amount,
+        date: order.created_at
+      });
       
       // تحديث اسم العميل إذا كان أفضل
       if (customerName && customerName !== 'زبون غير محدد' && customerData.name === 'زبون غير محدد') {
@@ -137,6 +177,7 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
     });
 
     console.log('👥 عدد الزبائن الفريدين:', customerMap.size);
+    console.log('📊 تفاصيل الزبائن:', Array.from(customerMap.entries()));
 
     // تحويل إلى مصفوفة وترتيب
     const result = Array.from(customerMap.values())
@@ -147,8 +188,8 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
       .sort((a, b) => b.orderCount - a.orderCount)
       .slice(0, 15);
       
-    console.log('🏆 أفضل الزبائن:', result);
-    return result;
+    console.log('🏆 أفضل الزبائن النهائي:', result);
+    setCustomerStats(result);
   }, [allOrders, selectedPeriod]);
 
   const totalOrders = customerStats.reduce((sum, customer) => sum + customer.orderCount, 0);
@@ -175,6 +216,13 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* معلومات التشخيص */}
+            <div className="bg-muted/50 rounded-lg p-4 text-sm">
+              <p><strong>إجمالي الطلبات:</strong> {allOrders.length}</p>
+              <p><strong>الطلبات المكتملة:</strong> {allOrders.filter(o => o.status === 'completed').length}</p>
+              <p><strong>عدد الزبائن المعالجين:</strong> {customerStats.length}</p>
+            </div>
+
             {/* فلترة الفترة الزمنية */}
             <div className="flex flex-wrap gap-2">
               {periods.map((period) => (
@@ -252,7 +300,7 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
                 <div className="grid gap-3">
                   {customerStats.map((customer, index) => (
                     <motion.div
-                      key={customer.phone}
+                      key={customer.normalizedPhone}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.05 }}
@@ -268,6 +316,9 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
                               <p className="text-sm text-muted-foreground flex items-center gap-1">
                                 <Phone className="w-4 h-4" />
                                 {customer.phone}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                الهاتف المطبع: {customer.normalizedPhone}
                               </p>
                             </div>
                           </div>
@@ -317,6 +368,17 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
                               }}
                             />
                           </div>
+                        </div>
+
+                        {/* تفاصيل الطلبات */}
+                        <div className="mt-4 text-xs text-muted-foreground">
+                          <p>طلبات هذا الزبون:</p>
+                          {customer.orders.map((order, i) => (
+                            <span key={order.id} className="inline-block mr-2">
+                              {order.amount.toLocaleString()} د.ع
+                              {i < customer.orders.length - 1 && ', '}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     </motion.div>
