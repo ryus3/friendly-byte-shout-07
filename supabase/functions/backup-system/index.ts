@@ -70,7 +70,7 @@ async function listBackups(supabase: any) {
       .from('system_backups')
       .select(`
         *,
-        profiles!system_backups_created_by_fkey(full_name)
+        profiles!created_by(full_name)
       `)
       .order('created_at', { ascending: false });
 
