@@ -9,14 +9,14 @@ import {
   ShoppingCart, Calendar, ArrowUp, ArrowDown, Activity, Target, Zap,
   Star, Award, Crown, CheckCircle, AlertTriangle, Sparkles
 } from 'lucide-react';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
-import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const ReportsSettingsDialog = ({ open, onOpenChange }) => {
   const { orders, products, accounting, purchases } = useInventory();
@@ -220,39 +220,111 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
 
   const financialSummary = createFinancialSummary();
 
-  const renderPDFDocument = (reportType) => {
-    const completeFinancialSummary = {
-      ...financialSummary,
-      totalOrders: analytics.totalOrders,
-      pendingOrders: analytics.pendingOrders,
-      completedOrders: analytics.completedOrders,
-      cancelledOrders: analytics.cancelledOrders,
-      returnedOrders: analytics.returnedOrders,
-      processingOrders: analytics.processingOrders
-    };
+  // وظيفة إنشاء PDF باستخدام html2canvas
+  const generateReportPDF = async (reportType, data) => {
+    const reportHTML = `
+      <div style="font-family: 'Arial', sans-serif; direction: rtl; padding: 30px; background: white; color: #000;">
+        <div style="text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1E40AF; padding-bottom: 20px;">
+          <h1 style="color: #1E40AF; font-size: 32px; margin: 0;">${
+            reportType === 'financial' ? 'التقرير المالي الشامل' :
+            reportType === 'inventory' ? 'تقرير المخزون التفصيلي' :
+            'التقرير الشامل للنظام'
+          }</h1>
+          <p style="color: #6B7280; font-size: 16px; margin: 10px 0;">
+            تاريخ التقرير: ${format(new Date(), 'dd/MM/yyyy - HH:mm')}
+          </p>
+        </div>
 
-    switch (reportType) {
-      case 'financial':
-        return <FinancialReportPDF summary={completeFinancialSummary} dateRange={dateRange} />;
-      case 'inventory':
-        return <InventoryReportPDF products={products || []} settings={{}} />;
-      case 'complete':
-      default:
-        return <InventoryReportPDF products={products || []} summary={completeFinancialSummary} />;
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+          <div style="background: linear-gradient(135deg, #10B981, #059669); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px;">مبيعات اليوم</h3>
+            <p style="margin: 10px 0; font-size: 24px; font-weight: bold;">${analytics.todaySales.toLocaleString()} د.ع</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #3B82F6, #1D4ED8); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px;">الطلبات النشطة</h3>
+            <p style="margin: 10px 0; font-size: 24px; font-weight: bold;">${analytics.pendingOrders}</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #8B5CF6, #7C3AED); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px;">إجمالي المنتجات</h3>
+            <p style="margin: 10px 0; font-size: 24px; font-weight: bold;">${analytics.activeProducts}</p>
+          </div>
+          <div style="background: linear-gradient(135deg, #F59E0B, #D97706); color: white; padding: 20px; border-radius: 10px; text-align: center;">
+            <h3 style="margin: 0; font-size: 14px;">هامش الربح</h3>
+            <p style="margin: 10px 0; font-size: 24px; font-weight: bold;">${analytics.profitMargin.toFixed(1)}%</p>
+          </div>
+        </div>
+
+        <div style="background: #F8FAFC; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+          <h2 style="color: #1E40AF; margin-bottom: 15px;">إحصائيات مفصلة</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <p><strong>مبيعات الأسبوع:</strong> ${analytics.weekSales.toLocaleString()} د.ع</p>
+              <p><strong>مبيعات الشهر:</strong> ${analytics.monthSales.toLocaleString()} د.ع</p>
+              <p><strong>متوسط قيمة الطلب:</strong> ${analytics.avgOrderValue.toLocaleString()} د.ع</p>
+            </div>
+            <div>
+              <p><strong>الطلبات المكتملة:</strong> ${analytics.completedOrders}</p>
+              <p><strong>الطلبات الراجعة:</strong> ${analytics.returnedOrders}</p>
+              <p><strong>الطلبات الملغية:</strong> ${analytics.cancelledOrders}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = reportHTML;
+    tempDiv.style.position = 'absolute';
+    tempDiv.style.top = '-9999px';
+    tempDiv.style.left = '-9999px';
+    tempDiv.style.width = '210mm';
+    document.body.appendChild(tempDiv);
+
+    try {
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        height: tempDiv.scrollHeight
+      });
+
+      document.body.removeChild(tempDiv);
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = 210;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      const fileName = `${
+        reportType === 'financial' ? 'تقرير-مالي' :
+        reportType === 'inventory' ? 'تقرير-مخزون' :
+        'تقرير-شامل'
+      }-${format(new Date(), 'dd-MM-yyyy')}.pdf`;
+      
+      pdf.save(fileName);
+      
+      toast({
+        title: "تم إنشاء التقرير بنجاح",
+        description: `تقرير ${reportType === 'financial' ? 'مالي' : reportType === 'inventory' ? 'المخزون' : 'شامل'} جاهز للتحميل`,
+      });
+    } catch (error) {
+      console.error('خطأ في إنشاء PDF:', error);
+      toast({
+        title: "خطأ في إنشاء التقرير",
+        description: "حدث خطأ أثناء إنشاء التقرير. يرجى المحاولة مرة أخرى.",
+        variant: "destructive"
+      });
     }
   };
 
   const handleGenerateReport = async (reportType) => {
     setGeneratingReport(reportType);
-    
-    // محاكاة وقت التحضير
-    setTimeout(() => {
-      setGeneratingReport(null);
-      toast({
-        title: "تم إنشاء التقرير بنجاح",
-        description: `تقرير ${reportType === 'financial' ? 'مالي' : reportType === 'inventory' ? 'المخزون' : 'شامل'} جاهز للتحميل`,
-      });
-    }, 2000);
+    await generateReportPDF(reportType, analytics);
+    setGeneratingReport(null);
   };
 
   // مؤشرات الأداء الرئيسية (KPIs)
@@ -333,11 +405,16 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
           {/* مؤشرات الأداء الرئيسية */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {kpis.map((kpi, index) => (
-              <Card key={index} className="overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 border-0 shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
+              <Card key={index} className={cn(
+                "overflow-hidden transition-all duration-500 hover:shadow-xl hover:shadow-primary/20 border-0",
+                "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+                "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm",
+                "hover:scale-[1.02] group cursor-pointer"
+              )}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">{kpi.title}</p>
+                      <p className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-primary">{kpi.title}</p>
                       <p className={`text-2xl font-bold ${kpi.color}`}>
                         {formatValue(kpi.value, kpi.format)}
                       </p>
@@ -350,8 +427,12 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                         </div>
                       )}
                     </div>
-                    <div className={`p-3 rounded-full ${kpi.iconBg}`}>
-                      <kpi.icon className="w-6 h-6 text-white" />
+                    <div className={cn(
+                      "p-3 rounded-full transition-all duration-300 group-hover:scale-110 group-hover:rotate-6",
+                      kpi.iconBg,
+                      "shadow-lg"
+                    )}>
+                      <kpi.icon className="w-6 h-6 text-white transition-transform duration-300 group-hover:scale-110" />
                     </div>
                   </div>
                 </CardContent>
@@ -362,7 +443,11 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
           {/* الإحصائيات التفصيلية */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* إحصائيات المبيعات */}
-            <Card className="lg:col-span-2 overflow-hidden transition-all duration-300 hover:shadow-xl hover:shadow-primary/20 border-0 shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm">
+            <Card className={cn(
+              "lg:col-span-2 overflow-hidden transition-all duration-500 hover:shadow-xl hover:shadow-primary/20 border-0",
+              "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+              "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm group"
+            )}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-green-500" />
@@ -697,41 +782,40 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
                     <span className="text-xs font-medium text-purple-600 bg-white/60 px-2 py-1 rounded-full">الأكثر شمولية</span>
                   </div>
 
-                  <PDFDownloadLink
-                    document={renderPDFDocument('complete')}
-                    fileName={`تقرير-شامل-${format(new Date(), 'dd-MM-yyyy')}.pdf`}
+                  <Button 
+                    className="w-full bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-700 hover:from-purple-700 hover:via-violet-700 hover:to-fuchsia-800 text-white shadow-lg transition-all duration-300 hover:scale-[1.02]" 
+                    disabled={generatingReport === 'complete'}
+                    onClick={() => handleGenerateReport('complete')}
                   >
-                    {({ loading }) => (
-                      <Button 
-                        className="w-full bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-700 hover:from-purple-700 hover:via-violet-700 hover:to-fuchsia-800 text-white shadow-lg relative z-10" 
-                        disabled={loading || generatingReport === 'complete'}
-                        onClick={() => handleGenerateReport('complete')}
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        {loading || generatingReport === 'complete' ? 'جاري التحضير...' : 'تحميل التقرير الشامل'}
-                      </Button>
-                    )}
-                  </PDFDownloadLink>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {generatingReport === 'complete' ? 'جاري التحضير...' : 'تحميل التقرير الشامل'}
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* معلومات النظام */}
-          <Card className="bg-gradient-to-r from-slate-50 to-gray-50">
+          <Card className={cn(
+            "overflow-hidden transition-all duration-500 hover:shadow-xl hover:shadow-primary/20 border-0",
+            "shadow-lg shadow-black/10 dark:shadow-lg dark:shadow-primary/20",
+            "bg-gradient-to-br from-card to-card/50 backdrop-blur-sm group"
+          )}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Activity className="w-5 h-5 text-blue-500" />
+                  <div className="p-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-transform duration-300 group-hover:scale-110">
+                    <Activity className="w-5 h-5 text-white" />
+                  </div>
                   <div>
-                    <h3 className="font-semibold">آخر تحديث للبيانات</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <h3 className="font-semibold transition-colors group-hover:text-primary">آخر تحديث للبيانات</h3>
+                    <p className="text-sm text-muted-foreground group-hover:text-primary/80 transition-colors">
                       {format(new Date(), 'dd/MM/yyyy - HH:mm')} | البيانات محدثة تلقائياً
                     </p>
                   </div>
                 </div>
-                <Badge variant="secondary" className="bg-green-100 text-green-700">
-                  <Zap className="w-3 h-3 mr-1" />
+                <Badge variant="secondary" className="bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border-emerald-200 transition-all duration-300 hover:scale-105">
+                  <Zap className="w-3 h-3 mr-1 animate-pulse" />
                   مباشر
                 </Badge>
               </div>
