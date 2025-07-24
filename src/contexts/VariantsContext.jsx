@@ -65,12 +65,17 @@ export const VariantsProvider = ({ children }) => {
   };
 
   const deleteVariant = async (table, id) => {
-    const { error } = await supabase.from(table).delete().eq('id', id);
+    console.log(`Attempting to delete from ${table} with id:`, id);
+    const { data, error } = await supabase.from(table).delete().eq('id', id).select();
+    console.log('Delete result:', { data, error });
     if (error) {
+      console.error('Delete error:', error);
       toast({ title: "فشل الحذف", description: error.message, variant: 'destructive' });
       return { success: false };
     }
+    console.log('Delete successful, refreshing data...');
     await refreshData();
+    toast({ title: "تم الحذف بنجاح", variant: 'default' });
     return { success: true };
   };
 

@@ -207,7 +207,7 @@ const SeasonsOccasionsManager = () => {
           <h3 className="text-lg font-semibold">المواسم والمناسبات</h3>
           <Badge variant="secondary">{seasonsOccasions.length}</Badge>
         </div>
-        <Button onClick={handleAdd} size="sm" className="bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
+        <Button onClick={handleAdd} size="sm" className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2">
           <Plus className="h-4 w-4" />
           إضافة عنصر جديد
         </Button>
