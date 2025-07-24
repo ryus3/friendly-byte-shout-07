@@ -16,6 +16,8 @@ import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
 
 import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
 import ArchivedProductsCard from '@/components/inventory/ArchivedProductsCard';
@@ -654,32 +656,21 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
-            <Button 
-              onClick={() => {
-                // إنشاء محتوى التقرير
-                const reportData = filteredItems.map(product => ({
-                  ...product,
-                  variants: product.variants || []
-                }));
-                
-                // إنشاء تقرير PDF
-                import('@/utils/pdfGenerator').then(({ generateInventoryReportPDF }) => {
-                  generateInventoryReportPDF(reportData);
-                }).catch(error => {
-                  console.error('خطأ في تحميل مولد PDF:', error);
-                  toast({
-                    title: "خطأ",
-                    description: "حدث خطأ في تصدير التقرير",
-                    variant: "destructive"
-                  });
-                });
-              }} 
-              variant="outline"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+            <PDFDownloadLink
+              document={<InventoryReportPDF products={filteredItems} settings={{ lowStockThreshold: 5 }} />}
+              fileName={`تقرير_الجرد_التفصيلي_${new Date().toLocaleDateString('ar-SA').replace(/\//g, '-')}.pdf`}
             >
-              <Download className="w-4 h-4 mr-2" />
-              تصدير PDF
-            </Button>
+              {({ blob, url, loading, error }) => (
+                <Button 
+                  variant="outline"
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                  disabled={loading}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {loading ? 'جاري التحضير...' : 'تصدير PDF'}
+                </Button>
+              )}
+            </PDFDownloadLink>
           </div>
         </div>
         
