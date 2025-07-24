@@ -656,24 +656,38 @@ const InventoryPage = () => {
           
           <div className="flex gap-3">
             <Button 
-              onClick={() => {
-                // إنشاء محتوى التقرير
-                const reportData = filteredItems.map(product => ({
-                  ...product,
-                  variants: product.variants || []
-                }));
-                
-                // إنشاء تقرير PDF
-                import('@/utils/pdfGenerator').then(({ generateInventoryReportPDF }) => {
-                  generateInventoryReportPDF(reportData);
-                }).catch(error => {
-                  console.error('خطأ في تحميل مولد PDF:', error);
+              onClick={async () => {
+                try {
+                  // تحضير البيانات للتصدير بالتنسيق الصحيح
+                  const itemsToExport = selectedItemsForExport.length > 0 ? selectedItemsForExport : filteredItems;
+                  
+                  const exportData = itemsToExport.map(item => ({
+                    name: item.name || item.product_name || 'غير محدد',
+                    color: item.color_name || item.color || 'غير محدد',
+                    size: item.size_name || item.size || 'غير محدد', 
+                    quantity: item.quantity || 0,
+                    price: item.selling_price || item.price || 0,
+                    totalValue: (item.quantity || 0) * (item.selling_price || item.price || 0)
+                  }));
+
+                  console.log('تصدير PDF:', exportData.length, 'عنصر');
+                  
+                  // استدعاء مولد PDF
+                  const { generateInventoryReportPDF } = await import('@/utils/pdfGenerator');
+                  await generateInventoryReportPDF(exportData);
+                  
+                  toast({
+                    title: "تم تصدير التقرير",
+                    description: `تم تصدير ${exportData.length} عنصر بنجاح`,
+                  });
+                } catch (error) {
+                  console.error('خطأ في تصدير PDF:', error);
                   toast({
                     title: "خطأ",
                     description: "حدث خطأ في تصدير التقرير",
                     variant: "destructive"
                   });
-                });
+                }
               }} 
               variant="outline"
               className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
