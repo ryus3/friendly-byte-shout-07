@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import { AnimatePresence, motion } from 'framer-motion';
-// سنستخدم QR codes بدلا من barcodes
+import Barcode from 'react-barcode';
 
 const DetailItem = ({ icon: Icon, label, value, isBadge = false }) => (
   <div className="flex items-start gap-4">
