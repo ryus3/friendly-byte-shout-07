@@ -28,14 +28,15 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
 
     // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
     const filteredOrders = orders.filter(order => {
-      // التأكد من أن الطلب مكتمل فقط
-      const isDelivered = order.delivery_status === 'delivered' || 
+      // التأكد من أن الطلب مكتمل - تم توسيع شروط الحالة
+      const isCompleted = order.delivery_status === 'delivered' || 
                          order.status === 'delivered' || 
                          order.order_status === 'delivered' ||
                          order.delivery_status === 'completed' ||
-                         order.status === 'completed';
+                         order.status === 'completed' || // هذا هو الشرط المهم!
+                         order.order_status === 'completed';
       
-      if (!isDelivered) return false;
+      if (!isCompleted) return false;
 
       const orderDate = new Date(order.created_at || order.order_date);
       const now = new Date();
@@ -71,13 +72,23 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
       let orderItems = [];
       
       try {
-        // جرب جميع التنسيقات المحتملة للطلبات
-        if (typeof order.items === 'string' && order.items.trim()) {
+        // أولاً: جرب استخراج البيانات من order_items (الطريقة الصحيحة)
+        if (order.order_items && Array.isArray(order.order_items) && order.order_items.length > 0) {
+          orderItems = order.order_items.map(item => ({
+            product_name: item.products?.name || item.product_name || 'منتج غير محدد',
+            name: item.products?.name || item.product_name || 'منتج غير محدد',
+            quantity: item.quantity || 1,
+            price: item.unit_price || item.price || 0,
+            unit_price: item.unit_price || item.price || 0,
+            total_price: item.total_price || (item.quantity * (item.unit_price || item.price || 0)),
+            image: item.products?.images?.[0] || item.product_variants?.images?.[0] || null
+          }));
+        }
+        // ثانياً: جرب التنسيقات القديمة للـ items
+        else if (typeof order.items === 'string' && order.items.trim()) {
           orderItems = JSON.parse(order.items);
         } else if (order.items && Array.isArray(order.items)) {
           orderItems = order.items;
-        } else if (order.order_items && Array.isArray(order.order_items)) {
-          orderItems = order.order_items;
         } else if (order.products && Array.isArray(order.products)) {
           orderItems = order.products;
         } else if (order.item_details && Array.isArray(order.item_details)) {
@@ -88,14 +99,14 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
           orderItems = order.product_details;
         }
         
-        // إذا لم نجد أي عناصر، جرب استخراج البيانات من حقول الطلب المباشرة
+        // ثالثاً: إذا لم نجد أي عناصر، جرب استخراج البيانات من حقول الطلب المباشرة
         if ((!orderItems || orderItems.length === 0) && order.product_name) {
           orderItems = [{
             product_name: order.product_name,
             name: order.product_name,
             quantity: order.quantity || 1,
-            price: order.unit_price || order.selling_price || (order.total_price ? order.total_price / (order.quantity || 1) : 0),
-            total_price: order.total_price || 0
+            price: order.unit_price || order.selling_price || (order.total_amount ? order.total_amount / (order.quantity || 1) : 0),
+            total_price: order.total_amount || 0
           }];
         }
       } catch (e) {
@@ -106,7 +117,7 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
             product_name: order.product_name,
             name: order.product_name,
             quantity: order.quantity,
-            price: order.total_price ? order.total_price / order.quantity : 0
+            price: order.total_amount ? order.total_amount / order.quantity : 0
           }];
         }
       }

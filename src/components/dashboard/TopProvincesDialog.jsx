@@ -28,27 +28,36 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
 
     // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
     const filteredOrders = orders.filter(order => {
-      // التأكد من أن الطلب مكتمل فقط
-      const isDelivered = order.delivery_status === 'delivered' || 
+      // التأكد من أن الطلب مكتمل - تم توسيع شروط الحالة
+      const isCompleted = order.delivery_status === 'delivered' || 
                          order.status === 'delivered' || 
                          order.order_status === 'delivered' ||
                          order.delivery_status === 'completed' ||
-                         order.status === 'completed';
+                         order.status === 'completed' || // هذا هو الشرط المهم!
+                         order.order_status === 'completed';
       
-      if (!isDelivered) return false;
+      if (!isCompleted) return false;
 
       const orderDate = new Date(order.created_at || order.order_date);
       const now = new Date();
       
       switch (selectedPeriod) {
-        case 'today':
-          return orderDate.toDateString() === now.toDateString();
         case 'week':
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           return orderDate >= weekAgo;
         case 'month':
           const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
           return orderDate >= monthAgo;
+        case '3months':
+          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          return orderDate >= threeMonthsAgo;
+        case '6months':
+          const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          return orderDate >= sixMonthsAgo;
+        case 'year':
+          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          return orderDate >= yearAgo;
+        case 'all':
         default:
           return true;
       }
@@ -63,14 +72,22 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
       // محاولة الحصول على المحافظة من عدة مصادر
       let province = null;
       
-      if (order.delivery_address && typeof order.delivery_address === 'string') {
+      // أولاً: جرب البيانات المباشرة من الجدول
+      if (order.customer_province) {
+        province = order.customer_province;
+      } else if (order.customer_city) {
+        province = order.customer_city;
+      }
+      
+      // ثانياً: جرب استخراج البيانات من العنوان
+      if (!province && order.delivery_address && typeof order.delivery_address === 'string') {
         try {
           const parsed = JSON.parse(order.delivery_address);
           province = parsed.province || parsed.city || parsed.governorate;
         } catch (e) {
           province = order.delivery_address;
         }
-      } else if (order.delivery_address && typeof order.delivery_address === 'object') {
+      } else if (!province && order.delivery_address && typeof order.delivery_address === 'object') {
         province = order.delivery_address.province || order.delivery_address.city || order.delivery_address.governorate;
       }
       
@@ -80,6 +97,7 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
             const parsed = JSON.parse(order.customer_address);
             province = parsed.province || parsed.city || parsed.governorate;
           } catch (e) {
+            // إذا لم تكن JSON، جرب استخراج المحافظة من النص
             province = order.customer_address;
           }
         } else if (typeof order.customer_address === 'object') {
@@ -87,12 +105,12 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
         }
       }
       
-      // محاولة الحصول على المحافظة من بيانات أخرى
+      // ثالثاً: جرب بيانات أخرى
       if (!province) {
         province = order.governorate || order.city || order.province || order.address || 'غير محدد';
       }
       
-      console.log('Order province:', province, 'Order:', order);
+      console.log(`📍 الطلب ${order.id}: المحافظة = "${province}"`);
 
       if (!provinceMap.has(province)) {
         provinceMap.set(province, {
@@ -106,11 +124,11 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
 
       const provinceData = provinceMap.get(province);
       provinceData.orderCount += 1;
-      provinceData.totalRevenue += order.total_amount || 0;
+      provinceData.totalRevenue += parseFloat(order.total_amount || order.final_amount || 0);
       provinceData.customerCount.add(order.customer_phone || order.phone_number || order.customer_name);
     });
 
-    console.log('Province map:', Array.from(provinceMap.entries()));
+    console.log('✅ خريطة المحافظات النهائية:', Array.from(provinceMap.entries()).length, 'محافظة');
 
     // تحويل البيانات إلى مصفوفة وحساب المتوسط
     return Array.from(provinceMap.values())
