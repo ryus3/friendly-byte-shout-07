@@ -83,14 +83,14 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                     {product.variants?.length || 0} متغيرات • إجمالي المخزون: {product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0}
                   </p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 flex-shrink-0 min-w-0">
                   <Badge 
                     variant={
                       product.stockLevel === 'out-of-stock' ? 'destructive' : 
                       product.stockLevel === 'low' ? 'secondary' : 
                       'default'
                     }
-                    className="text-xs whitespace-nowrap"
+                    className="text-xs px-2 py-1 truncate max-w-20"
                   >
                     {product.stockLevel === 'out-of-stock' ? 'نفد' : 
                      product.stockLevel === 'low' ? 'منخفض' : 
@@ -671,10 +671,6 @@ const InventoryPage = () => {
             >
               <Download className="w-4 h-4 mr-2" />
               تصدير PDF
-            </Button>
-            <Button onClick={() => setIsBarcodeScannerOpen(true)} variant="outline">
-              <QrCode className="w-4 h-4 mr-2" />
-              مسح QR
             </Button>
           </div>
         </div>
