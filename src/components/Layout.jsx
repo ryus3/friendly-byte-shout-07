@@ -280,13 +280,10 @@ const Layout = ({ children }) => {
                   }
                   
                   try {
-                    // منع تحديث الصفحة وتحديث البيانات الداخلية فقط
-                    window.dispatchEvent(new CustomEvent('refresh-data'));
-                    window.dispatchEvent(new CustomEvent('refresh-notifications'));
-                    window.dispatchEvent(new CustomEvent('refresh-inventory'));
-                    window.dispatchEvent(new CustomEvent('refresh-orders'));
-                    window.dispatchEvent(new CustomEvent('refresh-products'));
-                    window.dispatchEvent(new CustomEvent('refresh-dashboard'));
+                     // استدعاء تحديث واحد فقط بدلاً من multiple events
+                     if (window.refreshInventory) {
+                       await window.refreshInventory();
+                     }
                     
                     // إظهار إشعار فوري بدء التحديث
                     toast({ 

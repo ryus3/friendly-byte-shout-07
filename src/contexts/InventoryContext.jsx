@@ -509,25 +509,40 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [user, setProducts]);
 
-  // تعريف الدوال العامة للتحديث
+  // تعريف الدوال العامة للتحديث مع حماية من التحديث المتكرر
   useEffect(() => {
+    let isRefreshing = false;
+    
     const handleRefreshInventory = async () => {
+      if (isRefreshing) {
+        console.log('⏳ تحديث قيد التنفيذ بالفعل، تم تجاهل الطلب');
+        return;
+      }
+      
       try {
-        // تحديث البيانات بدون إعادة تعيين loading
+        isRefreshing = true;
+        console.log('🔄 بدء تحديث بيانات الجرد...');
         await refreshProducts();
         console.log('✅ تم تحديث بيانات الجرد بنجاح');
       } catch (error) {
         console.error('❌ خطأ في تحديث بيانات الجرد:', error);
+      } finally {
+        // إعادة تعيين العلامة بعد تأخير قصير
+        setTimeout(() => {
+          isRefreshing = false;
+        }, 1000);
       }
     };
 
     // جعل دوال التحديث متاحة عالمياً
     window.refreshInventory = handleRefreshInventory;
-    window.refreshOrders = refreshProducts; // نفس الدالة لأنها تحدث كل شيء
+    window.refreshOrders = handleRefreshInventory;
+    window.refreshProducts = handleRefreshInventory;
     
     return () => {
       delete window.refreshInventory;
       delete window.refreshOrders;
+      delete window.refreshProducts;
     };
   }, [refreshProducts]);
 

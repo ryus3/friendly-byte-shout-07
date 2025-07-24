@@ -19,29 +19,17 @@ const StockAlertsCard = () => {
   // الاستماع لأحداث التحديث
   useEffect(() => {
     const handleRefresh = async () => {
-      // عدم إظهار حالة التحميل عند التحديث من الشريط العلوي
-      // setIsRefreshing(true);
-      try {
-        if (refetchProducts) {
-          await refetchProducts();
-        }
-      } catch (error) {
-        console.error('خطأ في تحديث بيانات المخزون:', error);
-      } finally {
-        // setIsRefreshing(false);
-      }
+      // لا حاجة لإعادة تحديث المنتجات هنا - سيتم تحديثها تلقائياً من InventoryContext
+      console.log('📦 Stock alerts refreshed');
     };
 
+    // استمع لأحداث التحديث المخصصة فقط (للتوافق مع النظام القديم)
     window.addEventListener('refresh-inventory', handleRefresh);
-    window.addEventListener('refresh-data', handleRefresh);
-    window.addEventListener('refresh-dashboard', handleRefresh);
     
     return () => {
       window.removeEventListener('refresh-inventory', handleRefresh);
-      window.removeEventListener('refresh-data', handleRefresh);
-      window.removeEventListener('refresh-dashboard', handleRefresh);
     };
-  }, [refetchProducts]);
+  }, []);
   
   // حساب المتغيرات منخفضة المخزون فقط (استبعاد النافذ تماماً)
   const lowStockProducts = React.useMemo(() => {
