@@ -404,7 +404,7 @@ export const InventoryProvider = ({ children }) => {
         
         // تحديث البيانات المحاسبية مع رأس المال من قاعدة البيانات
         if (dbCapital && !isNaN(dbCapital)) {
-          console.log('💰 تم تحميل رأس المال من قاعدة البيانات:', dbCapital);
+          
           setAccounting(prev => ({ ...prev, capital: dbCapital }));
         }
       }
@@ -509,7 +509,7 @@ export const InventoryProvider = ({ children }) => {
           // تشغيل تحديث الباركود تلقائياً
           const barcodeUpdate = await autoUpdateBarcodes();
           if (barcodeUpdate.success) {
-            console.log('✅ تم فحص وتحديث الباركودات بنجاح');
+            
           }
           
           await fetchInitialData();

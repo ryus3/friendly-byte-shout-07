@@ -444,15 +444,6 @@ const Dashboard = () => {
         };
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 
-    // التحقق من اكتمال البيانات الأساسية فقط
-    console.log('Dashboard Debug:', { 
-        inventoryLoading, 
-        orders: orders?.length, 
-        user: user?.full_name,
-        permissionsLoading: loading,
-        canViewAllData,
-        isAdmin
-    });
     
     // إظهار loader فقط عند تحميل البيانات الأساسية
     if (inventoryLoading || loading || !user || isAdmin === undefined) {

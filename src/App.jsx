@@ -37,12 +37,14 @@ const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAn
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
   
+  // انتظار تحميل البيانات الأساسية أولاً
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
   }
   
+  // إذا لم يكن هناك مستخدم، انتقل لصفحة تسجيل الدخول
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -52,9 +54,14 @@ function ProtectedRoute({ children, permission }) {
     return <Navigate to="/login" replace />;
   }
 
-  // First check if user has the required permission for this route
+  // انتظار تحميل الصلاحيات بعد التأكد من وجود المستخدم
+  if (permissionsLoading) {
+    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
+  }
+
+  // فحص الصلاحيات إذا كانت مطلوبة
   if (permission && !hasPermission(permission)) {
-    // If user doesn't have permission, redirect to default page or dashboard silently
+    // إذا لم يملك المستخدم الصلاحية، انتقل للصفحة الافتراضية
     return <Navigate to={user.defaultPage || '/'} replace />;
   }
   
