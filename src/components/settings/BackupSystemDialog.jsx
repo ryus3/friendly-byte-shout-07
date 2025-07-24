@@ -274,44 +274,44 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none">
-        <DialogHeader className="p-3 sm:p-4 md:p-6 pb-2 relative">
-          <DialogTitle className="flex items-center gap-2 sm:gap-3 pr-8 sm:pr-12">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-              <Database className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
+      <DialogContent className="max-w-4xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none bg-background border border-border shadow-xl">
+        <DialogHeader className="p-4 sm:p-6 pb-4 relative border-b border-border/50">
+          <DialogTitle className="flex items-center gap-3 pr-10 sm:pr-12">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+              <Database className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg md:text-xl font-bold">نظام النسخ الاحتياطي والاستعادة</h2>
-              <p className="text-xs sm:text-sm text-muted-foreground">إدارة شاملة وآمنة لبيانات النظام</p>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">نظام النسخ الاحتياطي والاستعادة</h2>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">إدارة شاملة وآمنة لبيانات النظام</p>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="px-3 sm:px-4 md:px-6 pb-3 sm:pb-4 md:pb-6 space-y-3 sm:space-y-4">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6">
           {/* التبويبات المحسنة */}
-          <div className="flex flex-row gap-1 sm:gap-2 p-1 sm:p-2 bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl overflow-x-auto">
+          <div className="flex flex-row gap-2 p-2 bg-muted/50 rounded-xl border border-border/50 overflow-x-auto shadow-sm">
             <button
               onClick={() => setActiveTab('list')}
-              className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
+              className={`flex-shrink-0 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap font-medium ${
                 activeTab === 'list' 
-                  ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
-                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 transform scale-[1.02]' 
+                  : 'hover:bg-background text-muted-foreground hover:text-foreground border border-transparent hover:border-border'
               }`}
             >
-              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+              <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">النسخ الاحتياطية</span>
               <span className="sm:hidden text-xs">القائمة</span>
             </button>
             
             <button
               onClick={() => setActiveTab('create')}
-              className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
+              className={`flex-shrink-0 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap font-medium ${
                 activeTab === 'create' 
-                  ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
-                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 transform scale-[1.02]' 
+                  : 'hover:bg-background text-muted-foreground hover:text-foreground border border-transparent hover:border-border'
               }`}
             >
-              <Database className="w-3 h-3 sm:w-4 sm:h-4" />
+              <Database className="w-4 h-4" />
               <span className="hidden sm:inline">إنشاء نسخة</span>
               <span className="sm:hidden text-xs">إنشاء</span>
             </button>
@@ -322,67 +322,68 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                 console.log('selectedBackup:', selectedBackup);
                 setActiveTab('restore');
               }}
-              className={`flex-shrink-0 text-xs sm:text-sm py-2 sm:py-3 px-3 sm:px-4 rounded-md sm:rounded-lg transition-all duration-300 flex items-center justify-center gap-1 sm:gap-2 whitespace-nowrap ${
+              className={`flex-shrink-0 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap font-medium ${
                 activeTab === 'restore'
-                  ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 text-white shadow-lg transform scale-[1.02]' 
-                  : 'hover:bg-white/50 dark:hover:bg-slate-700 text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/25 transform scale-[1.02]' 
+                  : 'hover:bg-background text-muted-foreground hover:text-foreground border border-transparent hover:border-border'
               }`}
             >
-              <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
+              <Upload className="w-4 h-4" />
               <span className="hidden sm:inline">استعادة البيانات</span>
               <span className="sm:hidden text-xs">استعادة</span>
             </button>
           </div>
 
-          <ScrollArea className="h-[300px] sm:h-[400px] md:h-[500px]">
-            <AnimatePresence mode="wait">
-              {/* قائمة النسخ الاحتياطية */}
-              {activeTab === 'list' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="space-y-4"
-                >
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold">النسخ الاحتياطية المتاحة</h3>
-                    <button 
-                      onClick={fetchBackups} 
-                      disabled={loading}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all duration-200 disabled:opacity-60"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                      تحديث
-                    </button>
-                  </div>
+          <ScrollArea className="h-[350px] sm:h-[450px] md:h-[550px] rounded-lg border border-border/50 bg-background/50">
+            <div className="p-4">
+              <AnimatePresence mode="wait">
+                {/* قائمة النسخ الاحتياطية */}
+                {activeTab === 'list' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="space-y-4"
+                  >
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-semibold text-foreground">النسخ الاحتياطية المتاحة</h3>
+                      <button 
+                        onClick={fetchBackups} 
+                        disabled={loading}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 disabled:opacity-60 shadow-md"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        تحديث
+                      </button>
+                    </div>
 
-                  {loading ? (
-                    <div className="text-center py-8">
-                      <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-                      <p>جاري تحميل النسخ الاحتياطية...</p>
-                    </div>
-                  ) : backups.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Database className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">لا توجد نسخ احتياطية</h3>
-                      <p className="text-muted-foreground">ابدأ بإنشاء أول نسخة احتياطية لحماية بياناتك</p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-4">
-                      {backups.map((backup) => (
-                        <motion.div
-                          key={backup.id}
-                          whileHover={{ scale: 1.01 }}
-                          className={`border rounded-lg p-3 sm:p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                            selectedBackup?.id === backup.id 
-                              ? 'border-primary bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 shadow-md' 
-                              : 'border-border hover:border-primary/30'
-                          }`}
-                          onClick={() => {
-                            console.log('تم اختيار النسخة:', backup);
-                            setSelectedBackup(backup);
-                          }}
-                        >
+                    {loading ? (
+                      <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed border-border">
+                        <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-primary" />
+                        <p className="text-foreground font-medium">جاري تحميل النسخ الاحتياطية...</p>
+                      </div>
+                    ) : backups.length === 0 ? (
+                      <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed border-border">
+                        <Database className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2 text-foreground">لا توجد نسخ احتياطية</h3>
+                        <p className="text-muted-foreground">ابدأ بإنشاء أول نسخة احتياطية لحماية بياناتك</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-4">
+                        {backups.map((backup) => (
+                          <motion.div
+                            key={backup.id}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            className={`border rounded-xl p-4 cursor-pointer transition-all duration-300 hover:shadow-lg ${
+                              selectedBackup?.id === backup.id 
+                                ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10 ring-2 ring-primary/20' 
+                                : 'border-border hover:border-primary/50 bg-background hover:bg-muted/30'
+                            }`}
+                            onClick={() => {
+                              console.log('تم اختيار النسخة:', backup);
+                              setSelectedBackup(backup);
+                            }}
+                          >
                           <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-3">
                               <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center ${
