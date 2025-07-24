@@ -125,9 +125,7 @@ function App() {
   return (
     <HelmetProvider>
         <Router>
-          <AppProviders>
             <AppContent />
-          </AppProviders>
         </Router>
     </HelmetProvider>
   );
