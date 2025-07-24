@@ -10,7 +10,7 @@ import {
   HardHat, Paintbrush, Laptop, Smartphone, Headphones, Settings
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import AddEditDepartmentDialog from './AddEditDepartmentDialog';
 
 const DepartmentsManager = () => {
@@ -18,7 +18,7 @@ const DepartmentsManager = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
-  const { toast } = useToast();
+  // لا نحتاج لـ useToast هنا، نستخدم toast مباشرة
 
   // جميع الأيقونات المتاحة
   const iconOptions = {
@@ -77,14 +77,58 @@ const DepartmentsManager = () => {
   }, []);
 
   const handleDelete = async (id) => {
+    console.log('🗑️ محاولة حذف القسم:', id);
+    
     try {
+      // التحقق من استخدام القسم في المنتجات
+      const { data: products, error: checkError } = await supabase
+        .from('product_departments')
+        .select('id')
+        .eq('department_id', id)
+        .limit(1);
+
+      console.log('🔍 نتيجة البحث عن منتجات القسم:', { products, checkError });
+
+      if (checkError) {
+        console.error('❌ خطأ في فحص منتجات القسم:', checkError);
+        throw checkError;
+      }
+
+      if (products && products.length > 0) {
+        console.log('⚠️ القسم مستخدم في منتجات:', products.length);
+        
+        // الحصول على أسماء المنتجات التي تستخدم هذا القسم
+        const { data: productNames } = await supabase
+          .from('product_departments')
+          .select('products(name)')
+          .eq('department_id', id)
+          .limit(3);
+        
+        const productsList = productNames?.map(pd => pd.products?.name).filter(Boolean) || [];
+        const productsText = productsList.length > 0 ? `في: ${productsList.join(', ')}` : '';
+        
+        toast({
+          title: "لا يمكن الحذف",
+          description: `هذا القسم مستخدم في ${products.length} منتج ${productsText}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('✅ القسم غير مستخدم، جاري الحذف...');
+      
       const { error } = await supabase
         .from('departments')
         .delete()
         .eq('id', id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ خطأ في حذف القسم:', error);
+        throw error;
+      }
 
+      console.log('🎉 تم حذف القسم بنجاح');
+      
       toast({
         title: "تم الحذف",
         description: "تم حذف القسم بنجاح",
@@ -92,9 +136,10 @@ const DepartmentsManager = () => {
       
       fetchDepartments();
     } catch (error) {
+      console.error('💥 خطأ عام في حذف القسم:', error);
       toast({
         title: "خطأ",
-        description: "فشل في حذف القسم",
+        description: `فشل في حذف القسم: ${error.message}`,
         variant: "destructive",
       });
     }

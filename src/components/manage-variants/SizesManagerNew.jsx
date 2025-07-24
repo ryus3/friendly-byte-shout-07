@@ -198,9 +198,20 @@ const SizesManagerNew = () => {
 
       if (variants && variants.length > 0) {
         console.log('⚠️ القياس مستخدم في منتجات:', variants.length);
+        
+        // الحصول على أسماء المنتجات التي تستخدم هذا القياس
+        const { data: productNames } = await supabase
+          .from('product_variants')
+          .select('products(name)')
+          .eq('size_id', sizeId)
+          .limit(3);
+        
+        const products = productNames?.map(pv => pv.products?.name).filter(Boolean) || [];
+        const productsList = products.length > 0 ? `في: ${products.join(', ')}` : '';
+        
         toast({
           title: "لا يمكن الحذف",
-          description: "هذا القياس مستخدم في منتجات موجودة",
+          description: `هذا القياس مستخدم في ${variants.length} منتج ${productsList}`,
           variant: "destructive",
         });
         return;

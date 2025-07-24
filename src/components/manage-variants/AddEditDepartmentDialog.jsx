@@ -13,7 +13,7 @@ import {
   HardHat, Paintbrush, Laptop, Smartphone, Headphones
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 const AddEditDepartmentDialog = ({ isOpen, onClose, department, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -25,7 +25,7 @@ const AddEditDepartmentDialog = ({ isOpen, onClose, department, onSuccess }) => 
     is_active: true
   });
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  // لا نحتاج لـ useToast هنا، نستخدم toast مباشرة
 
   // خيارات الأيقونات المتنوعة
   const iconOptions = [
