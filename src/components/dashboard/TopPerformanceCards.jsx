@@ -10,11 +10,27 @@ import {
 } from 'lucide-react';
 
 const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false }) => {
-  // حساب أفضل العملاء حسب رقم الهاتف
+  // حساب أفضل العملاء حسب رقم الهاتف - فقط الطلبات الموصلة
   const topCustomers = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    const customerStats = orders.reduce((acc, order) => {
+    // فلترة الطلبات الموصلة واستبعاد المرجعة والملغية
+    const deliveredOrders = orders.filter(order => {
+      const isDelivered = order.delivery_status === 'delivered' || 
+                         order.status === 'delivered' || 
+                         order.order_status === 'delivered';
+      
+      const isReturnedOrCancelled = order.status === 'returned' || 
+                                   order.status === 'cancelled' ||
+                                   order.delivery_status === 'returned' ||
+                                   order.delivery_status === 'cancelled' ||
+                                   order.order_status === 'returned' ||
+                                   order.order_status === 'cancelled';
+      
+      return isDelivered && !isReturnedOrCancelled;
+    });
+    
+    const customerStats = deliveredOrders.reduce((acc, order) => {
       const customerPhone = order.customer_phone || 'غير محدد';
       const customerName = order.customer_name || 'غير محدد';
       if (!acc[customerPhone]) {
@@ -35,11 +51,27 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
       .slice(0, 3);
   }, [orders]);
 
-  // حساب أفضل المدن حسب عدد الطلبات
+  // حساب أفضل المدن حسب عدد الطلبات - فقط الطلبات الموصلة
   const topProvinces = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    const cityStats = orders.reduce((acc, order) => {
+    // فلترة الطلبات الموصلة واستبعاد المرجعة والملغية
+    const deliveredOrders = orders.filter(order => {
+      const isDelivered = order.delivery_status === 'delivered' || 
+                         order.status === 'delivered' || 
+                         order.order_status === 'delivered';
+      
+      const isReturnedOrCancelled = order.status === 'returned' || 
+                                   order.status === 'cancelled' ||
+                                   order.delivery_status === 'returned' ||
+                                   order.delivery_status === 'cancelled' ||
+                                   order.order_status === 'returned' ||
+                                   order.order_status === 'cancelled';
+      
+      return isDelivered && !isReturnedOrCancelled;
+    });
+    
+    const cityStats = deliveredOrders.reduce((acc, order) => {
       const city = order.customer_city || order.customer_province || 'غير محدد';
       if (!acc[city]) {
         acc[city] = {
@@ -58,16 +90,32 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
       .slice(0, 3);
   }, [orders]);
 
-  // حساب أفضل المنتجات (من خلال عناصر الطلبات)
+  // حساب أفضل المنتجات - فقط من الطلبات الموصلة
   const topProducts = React.useMemo(() => {
     if (!orders?.length) return [];
     
+    // فلترة الطلبات الموصلة واستبعاد المرجعة والملغية
+    const deliveredOrders = orders.filter(order => {
+      const isDelivered = order.delivery_status === 'delivered' || 
+                         order.status === 'delivered' || 
+                         order.order_status === 'delivered';
+      
+      const isReturnedOrCancelled = order.status === 'returned' || 
+                                   order.status === 'cancelled' ||
+                                   order.delivery_status === 'returned' ||
+                                   order.delivery_status === 'cancelled' ||
+                                   order.order_status === 'returned' ||
+                                   order.order_status === 'cancelled';
+      
+      return isDelivered && !isReturnedOrCancelled;
+    });
+    
     const productStats = {};
     
-    orders.forEach(order => {
-      if (order.order_items) {
+    deliveredOrders.forEach(order => {
+      if (order.order_items && Array.isArray(order.order_items)) {
         order.order_items.forEach(item => {
-          const productName = item.product?.name || `منتج ${item.product_id}`;
+          const productName = item.products?.name || item.product_name || `منتج ${item.product_id}`;
           if (!productStats[productName]) {
             productStats[productName] = {
               name: productName,
