@@ -311,7 +311,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
-              مركز التقارير والتحليلات المتقدم
+              مركز التقارير والتحليلات المتقدم v2.0
             </DialogTitle>
             <DialogDescription className="text-base">
               نظام شامل لإدارة وتحليل البيانات مع تقارير PDF احترافية
