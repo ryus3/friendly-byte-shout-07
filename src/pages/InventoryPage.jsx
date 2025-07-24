@@ -8,7 +8,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown } from 'lucide-react';
+import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import InventoryStats from '@/components/inventory/InventoryStats';
@@ -83,13 +83,16 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                     {product.variants?.length || 0} متغيرات • إجمالي المخزون: {product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <Badge variant={
-                    product.stockLevel === 'out-of-stock' ? 'destructive' : 
-                    product.stockLevel === 'low' ? 'secondary' : 
-                    'default'
-                  }>
-                    {product.stockLevel === 'out-of-stock' ? 'نفد المخزون' : 
+                <div className="flex gap-2 flex-shrink-0">
+                  <Badge 
+                    variant={
+                      product.stockLevel === 'out-of-stock' ? 'destructive' : 
+                      product.stockLevel === 'low' ? 'secondary' : 
+                      'default'
+                    }
+                    className="text-xs whitespace-nowrap"
+                  >
+                    {product.stockLevel === 'out-of-stock' ? 'نفد' : 
                      product.stockLevel === 'low' ? 'منخفض' : 
                      product.stockLevel === 'medium' ? 'متوسط' : 'جيد'}
                   </Badge>
@@ -651,8 +654,26 @@ const InventoryPage = () => {
           </div>
           
           <div className="flex gap-3">
-            <Button onClick={() => setIsBarcodeScannerOpen(true)} variant="outline">
+            <Button 
+              onClick={() => {
+                // إنشاء محتوى التقرير
+                const reportData = filteredItems.map(product => ({
+                  ...product,
+                  variants: product.variants || []
+                }));
+                
+                // إنشاء تقرير PDF
+                import('@/utils/pdfGenerator').then(({ generateInventoryReportPDF }) => {
+                  generateInventoryReportPDF(reportData);
+                });
+              }} 
+              variant="outline"
+            >
               <Download className="w-4 h-4 mr-2" />
+              تصدير PDF
+            </Button>
+            <Button onClick={() => setIsBarcodeScannerOpen(true)} variant="outline">
+              <QrCode className="w-4 h-4 mr-2" />
               مسح QR
             </Button>
           </div>
