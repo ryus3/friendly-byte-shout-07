@@ -3,12 +3,16 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
-  // الحصول على الـ auth context
-  const auth = useAuth();
+  // الحصول على الـ auth context بأمان
+  let auth = null;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.warn('useUnifiedPermissions: Auth context not available, using fallback');
+  }
   
   // Defensive programming - ensure we have React context
   if (!auth) {
-    console.error('useUnifiedPermissions: useAuth returned null - component may be rendered outside UnifiedAuthProvider');
     return {
       userRoles: [],
       userPermissions: [],
