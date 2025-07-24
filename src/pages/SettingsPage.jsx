@@ -536,30 +536,10 @@ const SettingsPage = () => {
       />
 
       {/* نافذة فحص النظام الشامل */}
-      {canManageSettings && isSystemHealthOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm">
-          <div className="fixed inset-0 z-[101] overflow-y-auto">
-            <div className="min-h-full flex items-start justify-center p-2 sm:p-4 pt-8 sm:pt-4">
-              <div className="w-full max-w-4xl bg-background border rounded-lg shadow-2xl max-h-[85vh] overflow-hidden">
-                <div className="flex items-center justify-between p-4 sm:p-6 border-b sticky top-0 bg-background z-10">
-                  <h2 className="text-xl sm:text-2xl font-bold">🔍 فحص النظام الشامل</h2>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    onClick={() => setIsSystemHealthOpen(false)}
-                    className="shrink-0"
-                  >
-                    ✕
-                  </Button>
-                </div>
-                <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-                  <SystemHealthDashboard />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <SystemHealthDashboard 
+        open={isSystemHealthOpen} 
+        onOpenChange={setIsSystemHealthOpen} 
+      />
     </>
   );
 };

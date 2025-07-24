@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +22,7 @@ import {
 import { toast } from '@/components/ui/use-toast';
 import { runSystemCheck, repairSystem } from '@/utils/systemOptimizer';
 
-const SystemHealthDashboard = () => {
+const SystemHealthDashboard = ({ open, onOpenChange }) => {
   const [healthReport, setHealthReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [repairing, setRepairing] = useState(false);
@@ -127,34 +128,42 @@ const SystemHealthDashboard = () => {
   }
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">لوحة مراقبة صحة النظام</h1>
-          <p className="text-muted-foreground">
-            آخر فحص: {healthReport?.timestamp ? new Date(healthReport.timestamp).toLocaleString('ar-SA') : 'لم يتم بعد'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={runHealthCheck} 
-            disabled={loading}
-            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
-          >
-            {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
-            إعادة الفحص
-          </Button>
-          <Button 
-            onClick={runAutoRepair} 
-            disabled={repairing || !healthReport}
-            variant="outline"
-          >
-            {repairing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Wrench className="h-4 w-4 mr-2" />}
-            إصلاح تلقائي
-          </Button>
-        </div>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-6xl w-[98vw] sm:w-[95vw] max-h-[92vh] sm:max-h-[95vh] p-0 overflow-hidden focus:outline-none bg-background border border-border shadow-xl">
+        <DialogHeader className="p-4 sm:p-6 pb-4 relative border-b border-border/50">
+          <DialogTitle className="flex items-center gap-3 pr-10 sm:pr-12">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">فحص صحة النظام الشامل</h2>
+              <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                آخر فحص: {healthReport?.timestamp ? new Date(healthReport.timestamp).toLocaleString('ar-SA') : 'لم يتم بعد'}
+              </p>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 sm:space-y-6 max-h-[calc(92vh-120px)] overflow-y-auto">
+          {/* Action Buttons */}
+          <div className="flex gap-2 justify-center">
+            <Button 
+              onClick={runHealthCheck} 
+              disabled={loading}
+              className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+            >
+              {loading ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Shield className="h-4 w-4 mr-2" />}
+              إعادة الفحص
+            </Button>
+            <Button 
+              onClick={runAutoRepair} 
+              disabled={repairing || !healthReport}
+              variant="outline"
+            >
+              {repairing ? <RefreshCw className="h-4 w-4 animate-spin mr-2" /> : <Wrench className="h-4 w-4 mr-2" />}
+              إصلاح تلقائي
+            </Button>
+          </div>
 
       {healthReport && (
         <>
@@ -542,7 +551,9 @@ const SystemHealthDashboard = () => {
           </Tabs>
         </>
       )}
-    </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
