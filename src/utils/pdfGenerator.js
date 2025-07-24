@@ -20,7 +20,7 @@ export const generateInventoryReportPDF = async (inventoryData) => {
     reportElement.style.top = '0';
     reportElement.style.width = '210mm';
     reportElement.style.backgroundColor = 'white';
-    reportElement.style.fontFamily = '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+    reportElement.style.fontFamily = '"Cairo", "Tajawal", "IBM Plex Sans Arabic", -apple-system, system-ui, sans-serif';
     reportElement.style.direction = 'rtl';
     
     // إنشاء HTML للتقرير مع التصميم الجميل
@@ -29,50 +29,106 @@ export const generateInventoryReportPDF = async (inventoryData) => {
     
     reportElement.innerHTML = `
       <div style="
-        padding: 50px;
+        padding: 60px 50px;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         text-align: center;
-        margin-bottom: 40px;
-        border-radius: 20px;
-        box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+        margin-bottom: 30px;
+        border-radius: 25px;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
       ">
         <h1 style="
-          font-size: 42px;
-          font-weight: 900;
-          margin: 0 0 15px 0;
-          text-shadow: 3px 3px 6px rgba(0,0,0,0.4);
-          letter-spacing: 1px;
-        ">تقرير الجرد التفصيلي</h1>
+          font-size: 48px;
+          font-weight: 800;
+          margin: 0 0 20px 0;
+          text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+          letter-spacing: -0.5px;
+        ">RYUS BRAND</h1>
         <div style="
-          background: rgba(255,255,255,0.25);
-          border-radius: 15px;
-          padding: 20px;
-          margin-top: 25px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 20px;
+          padding: 25px;
+          margin-top: 30px;
           backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
         ">
-          <p style="font-size: 20px; margin: 8px 0; font-weight: 600;">RYUS BRAND - نظام إدارة المخزون</p>
-          <p style="font-size: 16px; margin: 8px 0; opacity: 0.95;">تاريخ التقرير: ${new Date().toLocaleDateString('en-GB')} - ${new Date().toLocaleTimeString('en-GB', { hour12: false })}</p>
+          <p style="font-size: 24px; margin: 0 0 10px 0; font-weight: 700;">نظام إدارة المخزون المتقدم</p>
+          <p style="font-size: 18px; margin: 0; opacity: 0.9; font-weight: 500;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')} • ${new Date().toLocaleTimeString('ar-SA', { hour12: false })}</p>
         </div>
       </div>
 
       <div style="
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
-        padding: 35px;
-        border-radius: 20px;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 20px;
         margin-bottom: 40px;
-        display: flex;
-        justify-content: space-around;
-        box-shadow: 0 20px 45px rgba(240, 147, 251, 0.3);
       ">
-        <div style="text-align: center; padding: 10px;">
-          <div style="font-size: 38px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${totalItems}</div>
-          <div style="font-size: 18px; opacity: 0.95; font-weight: 500;">إجمالي العناصر</div>
+        <div style="
+          background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+          color: white;
+          padding: 30px 20px;
+          border-radius: 20px;
+          text-align: center;
+          box-shadow: 0 15px 35px rgba(255, 107, 107, 0.3);
+          grid-column: span 2;
+        ">
+          <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">${formatCurrency(totalValue).replace('د.ع', '')}</div>
+          <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">القيمة (د.ع)</div>
         </div>
-        <div style="text-align: center; padding: 10px;">
-          <div style="font-size: 28px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);">${formatCurrency(totalValue)}</div>
-          <div style="font-size: 18px; opacity: 0.95; font-weight: 500;">إجمالي القيمة</div>
+        <div style="
+          background: linear-gradient(135deg, #4ecdc4, #44a08d);
+          color: white;
+          padding: 30px 20px;
+          border-radius: 20px;
+          text-align: center;
+          box-shadow: 0 15px 35px rgba(78, 205, 196, 0.3);
+        ">
+          <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">${inventoryData.reduce((sum, item) => sum + (item.quantity || 0), 0)}</div>
+          <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">متاح</div>
+        </div>
+        <div style="
+          background: linear-gradient(135deg, #ffa726, #ff9800);
+          color: white;
+          padding: 30px 20px;
+          border-radius: 20px;
+          text-align: center;
+          box-shadow: 0 15px 35px rgba(255, 167, 38, 0.3);
+        ">
+          <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">${inventoryData.filter(item => (item.quantity || 0) === 0).length}</div>
+          <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">مخزون</div>
+        </div>
+        <div style="
+          background: linear-gradient(135deg, #ab47bc, #8e24aa);
+          color: white;
+          padding: 30px 20px;
+          border-radius: 20px;
+          text-align: center;
+          box-shadow: 0 15px 35px rgba(171, 71, 188, 0.3);
+        ">
+          <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">${inventoryData.filter(item => (item.quantity || 0) < 5 && (item.quantity || 0) > 0).length}</div>
+          <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">المنتجات</div>
+        </div>
+        <div style="
+          background: linear-gradient(135deg, #42a5f5, #1e88e5);
+          color: white;
+          padding: 30px 20px;
+          border-radius: 20px;
+          text-align: center;
+          box-shadow: 0 15px 35px rgba(66, 165, 245, 0.3);
+        ">
+          <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">${totalItems}</div>
+          <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">إجمالي العناصر</div>
+        </div>
+        <div style="
+          background: linear-gradient(135deg, #66bb6a, #43a047);
+          color: white;
+          padding: 30px 20px;
+          border-radius: 20px;
+          text-align: center;
+          box-shadow: 0 15px 35px rgba(102, 187, 106, 0.3);
+        ">
+          <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">${inventoryData.filter(item => (item.quantity || 0) >= 5).length}</div>
+          <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">إجمالي المنتجات</div>
         </div>
       </div>
 
