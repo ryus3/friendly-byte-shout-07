@@ -109,15 +109,15 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
     console.log('📅 الطلبات بعد فلترة الفترة:', filteredOrders.length);
 
     // تجميع البيانات حسب المحافظة
-    const provinceMap = new Map();
+    const provinceMap = {};
 
     filteredOrders.forEach(order => {
       const province = order.customer_city || order.customer_province || 'غير محدد';
       
       console.log(`🗺️ معالجة الطلب ${order.id}: المحافظة="${province}"`);
 
-      if (!provinceMap.has(province)) {
-        provinceMap.set(province, {
+      if (!provinceMap[province]) {
+        provinceMap[province] = {
           province: province,
           orderCount: 0,
           totalRevenue: 0,
@@ -125,10 +125,10 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
           firstOrderDate: order.created_at,
           lastOrderDate: order.created_at,
           orders: []
-        });
+        };
       }
 
-      const provinceData = provinceMap.get(province);
+      const provinceData = provinceMap[province];
       provinceData.orderCount += 1;
       provinceData.totalRevenue += parseFloat(order.final_amount || order.total_amount || 0);
       provinceData.orders.push({
@@ -146,10 +146,10 @@ const TopProvincesDialog = ({ open, onOpenChange }) => {
       if (orderDate > lastDate) provinceData.lastOrderDate = order.created_at;
     });
 
-    console.log('🏙️ عدد المحافظات الفريدة:', provinceMap.size);
+    console.log('🏙️ عدد المحافظات الفريدة:', Object.keys(provinceMap).length);
 
     // تحويل إلى مصفوفة وترتيب
-    const result = Array.from(provinceMap.values())
+    const result = Object.values(provinceMap)
       .map(province => ({
         ...province,
         avgOrderValue: province.orderCount > 0 ? province.totalRevenue / province.orderCount : 0
