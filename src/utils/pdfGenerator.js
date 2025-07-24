@@ -61,177 +61,174 @@ export const generateInventoryReportPDF = async (inventoryData) => {
     
     reportElement.innerHTML = `
       <div style="padding: 30px; background: white; min-height: 100vh;">
-        <!-- Header الرئيسي -->
+        <!-- Header مصغر وأنيق -->
         <div style="
-          padding: 60px 40px;
+          padding: 40px 30px;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           text-align: center;
-          margin-bottom: 30px;
-          border-radius: 25px;
-          box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
+          margin-bottom: 25px;
+          border-radius: 20px;
+          box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
         ">
           <h1 style="
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 800;
-            margin: 0 0 15px 0;
-            text-shadow: 2px 2px 8px rgba(0,0,0,0.3);
-            letter-spacing: -0.5px;
+            margin: 0 0 10px 0;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+            letter-spacing: -0.3px;
           ">RYUS BRAND</h1>
-          <p style="font-size: 24px; margin: 0 0 20px 0; font-weight: 600; opacity: 0.95;">نظام إدارة المخزون المتقدم</p>
+          <p style="font-size: 18px; margin: 0 0 15px 0; font-weight: 600; opacity: 0.95;">نظام إدارة المخزون المتقدم</p>
           <div style="
             background: rgba(255,255,255,0.2);
-            border-radius: 15px;
-            padding: 20px;
+            border-radius: 12px;
+            padding: 12px 20px;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
             display: inline-block;
           ">
-            <p style="font-size: 18px; margin: 0; font-weight: 500;">📅 ${formattedDate} • ⏰ ${formattedTime}</p>
+            <p style="font-size: 15px; margin: 0; font-weight: 500;">📅 ${formattedDate} • ⏰ ${formattedTime}</p>
           </div>
         </div>
 
-        <!-- الإحصائيات الرئيسية -->
+        <!-- الكروت الرئيسية - ثورة التصميم -->
         <div style="
           display: grid;
           grid-template-columns: repeat(6, 1fr);
-          gap: 20px;
-          margin-bottom: 40px;
+          gap: 15px;
+          margin-bottom: 35px;
         ">
           <div style="
-            background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
             color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
+            padding: 25px 15px;
+            border-radius: 16px;
             text-align: center;
-            box-shadow: 0 15px 35px rgba(255, 107, 107, 0.3);
+            box-shadow: 0 12px 30px rgba(255, 107, 157, 0.4);
             grid-column: span 2;
+            position: relative;
+            overflow: hidden;
           ">
-            <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px;">${formatCurrency(totalValue).replace('د.ع', '')}</div>
-            <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">القيمة (د.ع)</div>
+            <div style="
+              position: absolute;
+              top: -50%;
+              right: -50%;
+              width: 100%;
+              height: 100%;
+              background: rgba(255,255,255,0.1);
+              border-radius: 50%;
+            "></div>
+            <div style="position: relative; z-index: 2;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">${formatCurrency(totalValue).replace('د.ع', '')}</div>
+              <div style="font-size: 14px; opacity: 0.95; font-weight: 600;">القيمة الإجمالية (د.ع)</div>
+            </div>
           </div>
-          <div style="
-            background: linear-gradient(135deg, #4ecdc4, #44a08d);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(78, 205, 196, 0.3);
-          ">
-            <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px;">${availableItems}</div>
-            <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">متاح</div>
-          </div>
-          <div style="
-            background: linear-gradient(135deg, #ffa726, #ff9800);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(255, 167, 38, 0.3);
-          ">
-            <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px;">${reservedItems}</div>
-            <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">محجوز</div>
-          </div>
-          <div style="
-            background: linear-gradient(135deg, #ab47bc, #8e24aa);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(171, 71, 188, 0.3);
-          ">
-            <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px;">${goodStock}</div>
-            <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">جيد</div>
-          </div>
-          <div style="
-            background: linear-gradient(135deg, #42a5f5, #1e88e5);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(66, 165, 245, 0.3);
-          ">
-            <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px;">${mediumStock}</div>
-            <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">متوسط</div>
-          </div>
-          <div style="
-            background: linear-gradient(135deg, #66bb6a, #43a047);
-            color: white;
-            padding: 30px 20px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 15px 35px rgba(102, 187, 106, 0.3);
-          ">
-            <div style="font-size: 42px; font-weight: 900; margin-bottom: 8px;">${lowStock}</div>
-            <div style="font-size: 16px; opacity: 0.95; font-weight: 600;">منخفض</div>
-          </div>
-        </div>
-
-        <!-- قسم تفاصيل مخزون المنتجات -->
-        <div style="
-          background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-          color: white;
-          padding: 30px;
-          border-radius: 20px;
-          margin-bottom: 30px;
-          box-shadow: 0 20px 60px rgba(44, 62, 80, 0.3);
-        ">
-          <h2 style="font-size: 28px; margin: 0 0 20px 0; font-weight: 700; text-align: center;">
-            📊 تفاصيل مخزون المنتجات
-          </h2>
           
-          <!-- إحصائيات سريعة -->
           <div style="
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 30px;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 25px 15px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(79, 172, 254, 0.4);
+            position: relative;
+            overflow: hidden;
           ">
             <div style="
-              background: rgba(75, 192, 192, 0.2);
-              border: 2px solid #4bc0c0;
-              border-radius: 15px;
-              padding: 20px;
-              text-align: center;
-            ">
-              <div style="font-size: 24px; font-weight: 900; color: #4bc0c0;">جيد</div>
-              <div style="font-size: 32px; font-weight: 900; margin: 5px 0;">${goodStock}</div>
+              position: absolute;
+              top: -30%;
+              left: -30%;
+              width: 80%;
+              height: 80%;
+              background: rgba(255,255,255,0.1);
+              border-radius: 50%;
+            "></div>
+            <div style="position: relative; z-index: 2;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px;">${availableItems}</div>
+              <div style="font-size: 14px; opacity: 0.95; font-weight: 600;">متوفر</div>
             </div>
+          </div>
+          
+          <div style="
+            background: linear-gradient(135deg, #fa709a, #fee140);
+            color: white;
+            padding: 25px 15px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(250, 112, 154, 0.4);
+            position: relative;
+            overflow: hidden;
+          ">
             <div style="
-              background: rgba(255, 193, 7, 0.2);
-              border: 2px solid #ffc107;
-              border-radius: 15px;
-              padding: 20px;
-              text-align: center;
-            ">
-              <div style="font-size: 24px; font-weight: 900; color: #ffc107;">متوسط</div>
-              <div style="font-size: 32px; font-weight: 900; margin: 5px 0;">${mediumStock}</div>
+              position: absolute;
+              bottom: -40%;
+              right: -40%;
+              width: 90%;
+              height: 90%;
+              background: rgba(255,255,255,0.1);
+              border-radius: 50%;
+            "></div>
+            <div style="position: relative; z-index: 2;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);">${reservedItems}</div>
+              <div style="font-size: 14px; opacity: 0.95; font-weight: 600;">محجوز</div>
             </div>
+          </div>
+          
+          <div style="
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            color: #2c3e50;
+            padding: 25px 15px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(168, 237, 234, 0.4);
+            position: relative;
+            overflow: hidden;
+          ">
             <div style="
-              background: rgba(255, 99, 132, 0.2);
-              border: 2px solid #ff6384;
-              border-radius: 15px;
-              padding: 20px;
-              text-align: center;
-            ">
-              <div style="font-size: 24px; font-weight: 900; color: #ff6384;">منخفض</div>
-              <div style="font-size: 32px; font-weight: 900; margin: 5px 0;">${lowStock}</div>
+              position: absolute;
+              top: -20%;
+              left: -50%;
+              width: 100%;
+              height: 100%;
+              background: rgba(255,255,255,0.3);
+              border-radius: 50%;
+            "></div>
+            <div style="position: relative; z-index: 2;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px;">${goodStock}</div>
+              <div style="font-size: 14px; font-weight: 600; opacity: 0.8;">ممتاز</div>
             </div>
+          </div>
+          
+          <div style="
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            color: #2c3e50;
+            padding: 25px 15px;
+            border-radius: 16px;
+            text-align: center;
+            box-shadow: 0 12px 30px rgba(255, 236, 210, 0.4);
+            position: relative;
+            overflow: hidden;
+          ">
             <div style="
-              background: rgba(153, 102, 255, 0.2);
-              border: 2px solid #9966ff;
-              border-radius: 15px;
-              padding: 20px;
-              text-align: center;
-            ">
-              <div style="font-size: 24px; font-weight: 900; color: #9966ff;">إجمالي</div>
-              <div style="font-size: 32px; font-weight: 900; margin: 5px 0;">${Object.keys(productsByColor).length}</div>
+              position: absolute;
+              bottom: -30%;
+              left: -30%;
+              width: 80%;
+              height: 80%;
+              background: rgba(255,255,255,0.3);
+              border-radius: 50%;
+            "></div>
+            <div style="position: relative; z-index: 2;">
+              <div style="font-size: 36px; font-weight: 900; margin-bottom: 6px;">${mediumStock}</div>
+              <div style="font-size: 14px; font-weight: 600; opacity: 0.8;">متوسط</div>
             </div>
           </div>
         </div>
 
         <!-- تفاصيل المنتجات بالألوان والمقاسات -->
-        ${Object.entries(productsByColor).map(([productName, colors], productIndex) => `
+        ${Object.entries(productsByColor).map(([productName, colors], productIndex) => {
+          const productTotal = Object.values(colors).flat().reduce((sum, size) => sum + size.quantity, 0);
+          return `
           <div style="
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             border-radius: 20px;
@@ -245,12 +242,35 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               color: white;
               padding: 25px;
               text-align: center;
+              position: relative;
             ">
               <h3 style="font-size: 24px; margin: 0; font-weight: 700;">${productName}</h3>
-              <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 16px;">
-                إجمالي ${Object.values(colors).flat().reduce((sum, size) => sum + size.quantity, 0)} قطعة - 
-                ${Object.keys(colors).length} لون متوفر
-              </p>
+              <div style="
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin-top: 15px;
+                gap: 30px;
+              ">
+                <div style="
+                  background: rgba(255,255,255,0.2);
+                  padding: 10px 20px;
+                  border-radius: 25px;
+                  backdrop-filter: blur(10px);
+                ">
+                  <span style="font-size: 20px; font-weight: 800;">${productTotal}</span>
+                  <span style="font-size: 14px; opacity: 0.9; margin-right: 5px;">قطعة إجمالي</span>
+                </div>
+                <div style="
+                  background: rgba(255,255,255,0.2);
+                  padding: 10px 20px;
+                  border-radius: 25px;
+                  backdrop-filter: blur(10px);
+                ">
+                  <span style="font-size: 20px; font-weight: 800;">${Object.keys(colors).length}</span>
+                  <span style="font-size: 14px; opacity: 0.9; margin-right: 5px;">لون متوفر</span>
+                </div>
+              </div>
             </div>
 
             <!-- الألوان والمقاسات -->
@@ -262,7 +282,6 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               ">
                 ${Object.entries(colors).map(([colorName, sizes], colorIndex) => {
                   const colorTotal = sizes.reduce((sum, size) => sum + size.quantity, 0);
-                  const colorStatus = colorTotal > 10 ? '#4bc0c0' : colorTotal >= 5 ? '#ffc107' : colorTotal > 0 ? '#ff6384' : '#6c757d';
                   
                   return `
                     <div style="
@@ -270,7 +289,7 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                       border-radius: 15px;
                       padding: 20px;
                       box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-                      border-left: 5px solid ${colorStatus};
+                      border-top: 4px solid #667eea;
                     ">
                       <div style="
                         display: flex;
@@ -287,14 +306,14 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                           font-weight: 700;
                         ">${colorName}</h4>
                         <div style="
-                          background: ${colorStatus};
+                          background: linear-gradient(135deg, #667eea, #764ba2);
                           color: white;
                           padding: 8px 15px;
                           border-radius: 25px;
                           font-weight: 700;
                           font-size: 14px;
                         ">
-                          إجمالي ${colorTotal} قطعة
+                          ${colorTotal} قطعة
                         </div>
                       </div>
                       
@@ -305,19 +324,46 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                         gap: 10px;
                       ">
                         ${sizes.map(size => {
-                          const sizeStatus = size.quantity > 10 ? '#28a745' : size.quantity >= 5 ? '#ffc107' : size.quantity > 0 ? '#dc3545' : '#6c757d';
+                          let sizeGradient, statusText;
+                          if (size.quantity > 10) {
+                            sizeGradient = 'linear-gradient(135deg, #a8edea, #fed6e3)';
+                            statusText = 'ممتاز';
+                          } else if (size.quantity >= 5) {
+                            sizeGradient = 'linear-gradient(135deg, #ffecd2, #fcb69f)';
+                            statusText = 'متوسط';
+                          } else if (size.quantity > 0) {
+                            sizeGradient = 'linear-gradient(135deg, #fa709a, #fee140)';
+                            statusText = 'منخفض';
+                          } else {
+                            sizeGradient = 'linear-gradient(135deg, #c7c7c7, #9e9e9e)';
+                            statusText = 'محجوز';
+                          }
+                          
                           return `
                             <div style="
-                              background: linear-gradient(135deg, ${sizeStatus}, ${sizeStatus}dd);
-                              color: white;
-                              padding: 12px 8px;
+                              background: ${sizeGradient};
+                              color: ${size.quantity === 0 ? '#666' : size.quantity > 10 ? '#2c3e50' : 'white'};
+                              padding: 15px 8px;
                               border-radius: 12px;
                               text-align: center;
-                              box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+                              box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+                              position: relative;
+                              overflow: hidden;
                             ">
-                              <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">${size.size}</div>
-                              <div style="font-size: 20px; font-weight: 900;">${size.quantity}</div>
-                              <div style="font-size: 12px; opacity: 0.9;">قطعة</div>
+                              <div style="
+                                position: absolute;
+                                top: -20%;
+                                right: -20%;
+                                width: 60%;
+                                height: 60%;
+                                background: rgba(255,255,255,0.2);
+                                border-radius: 50%;
+                              "></div>
+                              <div style="position: relative; z-index: 2;">
+                                <div style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">${size.size}</div>
+                                <div style="font-size: 20px; font-weight: 900; margin-bottom: 2px;">${size.quantity}</div>
+                                <div style="font-size: 11px; opacity: 0.8; font-weight: 600;">${statusText}</div>
+                              </div>
                             </div>
                           `;
                         }).join('')}
@@ -328,7 +374,8 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               </div>
             </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
 
         <!-- Footer -->
         <div style="
