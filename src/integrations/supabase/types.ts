@@ -1975,6 +1975,8 @@ export type Database = {
           id: string
           is_auto_backup: boolean | null
           size_mb: number
+          tables_count: number | null
+          total_records: number | null
           updated_at: string
         }
         Insert: {
@@ -1987,6 +1989,8 @@ export type Database = {
           id?: string
           is_auto_backup?: boolean | null
           size_mb?: number
+          tables_count?: number | null
+          total_records?: number | null
           updated_at?: string
         }
         Update: {
@@ -1999,6 +2003,8 @@ export type Database = {
           id?: string
           is_auto_backup?: boolean | null
           size_mb?: number
+          tables_count?: number | null
+          total_records?: number | null
           updated_at?: string
         }
         Relationships: []
