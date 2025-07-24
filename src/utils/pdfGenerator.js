@@ -122,10 +122,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.1);
               border-radius: 50%;
             "></div>
-                             <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
-                               <div style="font-size: 36px; font-weight: 900; margin: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); line-height: 0.9; padding: 0;">${formatCurrency(totalValue).replace('د.ع', '')}</div>
-                               <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center; line-height: 1.2; margin: 4px 0 0 0; padding: 0;">القيمة الإجمالية (د.ع)</div>
-                             </div>
+                              <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
+                                <div style="font-size: 36px; font-weight: 900; margin: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); line-height: 1; padding: 0; transform: translateY(-2px);">${formatCurrency(totalValue).replace('د.ع', '')}</div>
+                                <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center; line-height: 1; margin: 8px 0 0 0; padding: 0; transform: translateY(-2px);">القيمة الإجمالية (د.ع)</div>
+                              </div>
           </div>
           
           <div style="
@@ -151,10 +151,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.1);
               border-radius: 50%;
             "></div>
-                             <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
-                               <div style="font-size: 36px; font-weight: 900; margin: 0; line-height: 0.9; padding: 0;">${availableItems}</div>
-                               <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center; line-height: 1.2; margin: 4px 0 0 0; padding: 0;">متوفر</div>
-                             </div>
+                              <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
+                                <div style="font-size: 36px; font-weight: 900; margin: 0; line-height: 1; padding: 0; transform: translateY(-2px);">${availableItems}</div>
+                                <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center; line-height: 1; margin: 8px 0 0 0; padding: 0; transform: translateY(-2px);">متوفر</div>
+                              </div>
           </div>
           
           <div style="
@@ -180,10 +180,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.1);
               border-radius: 50%;
             "></div>
-                             <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
-                               <div style="font-size: 36px; font-weight: 900; margin: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); line-height: 0.9; padding: 0;">${reservedItems}</div>
-                               <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center; line-height: 1.2; margin: 4px 0 0 0; padding: 0;">محجوز</div>
-                             </div>
+                              <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
+                                <div style="font-size: 36px; font-weight: 900; margin: 0; text-shadow: 1px 1px 3px rgba(0,0,0,0.2); line-height: 1; padding: 0; transform: translateY(-2px);">${reservedItems}</div>
+                                <div style="font-size: 14px; opacity: 0.95; font-weight: 600; text-align: center; line-height: 1; margin: 8px 0 0 0; padding: 0; transform: translateY(-2px);">محجوز</div>
+                              </div>
           </div>
           
           <div style="
@@ -209,10 +209,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.3);
               border-radius: 50%;
             "></div>
-                             <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
-                               <div style="font-size: 36px; font-weight: 900; margin: 0; line-height: 0.9; padding: 0;">${goodStock}</div>
-                               <div style="font-size: 14px; font-weight: 600; opacity: 0.8; text-align: center; line-height: 1.2; margin: 4px 0 0 0; padding: 0;">ممتاز</div>
-                             </div>
+                              <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
+                                <div style="font-size: 36px; font-weight: 900; margin: 0; line-height: 1; padding: 0; transform: translateY(-2px);">${goodStock}</div>
+                                <div style="font-size: 14px; font-weight: 600; opacity: 0.8; text-align: center; line-height: 1; margin: 8px 0 0 0; padding: 0; transform: translateY(-2px);">ممتاز</div>
+                              </div>
           </div>
           
           <div style="
@@ -238,10 +238,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
               background: rgba(255,255,255,0.3);
               border-radius: 50%;
             "></div>
-                             <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
-                               <div style="font-size: 36px; font-weight: 900; margin: 0; line-height: 0.9; padding: 0;">${mediumStock}</div>
-                               <div style="font-size: 14px; font-weight: 600; opacity: 0.8; text-align: center; line-height: 1.2; margin: 4px 0 0 0; padding: 0;">متوسط</div>
-                             </div>
+                              <div style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; padding: 0; margin: 0;">
+                                <div style="font-size: 36px; font-weight: 900; margin: 0; line-height: 1; padding: 0; transform: translateY(-2px);">${mediumStock}</div>
+                                <div style="font-size: 14px; font-weight: 600; opacity: 0.8; text-align: center; line-height: 1; margin: 8px 0 0 0; padding: 0; transform: translateY(-2px);">متوسط</div>
+                              </div>
           </div>
         </div>
 
@@ -389,10 +389,10 @@ export const generateInventoryReportPDF = async (inventoryData) => {
                                 border-radius: 50%;
                               "></div>
                                <div style="position: relative; z-index: 2; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 0; margin: 0;">
-                                 <div style="font-size: 18px; font-weight: 800; margin: 0; line-height: 0.9; padding: 0;">${size.size}</div>
-                                 <div style="font-size: 24px; font-weight: 900; margin: 2px 0; line-height: 0.9; padding: 0;">${size.quantity}</div>
-                                 <div style="font-size: 12px; opacity: 0.85; font-weight: 600; line-height: 1.2; margin: 2px 0 0 0; padding: 0;">${statusInfo}</div>
-                               </div>
+                                  <div style="font-size: 18px; font-weight: 800; margin: 0; line-height: 1; padding: 0; transform: translateY(-1px);">${size.size}</div>
+                                  <div style="font-size: 24px; font-weight: 900; margin: 4px 0; line-height: 1; padding: 0; transform: translateY(-1px);">${size.quantity}</div>
+                                  <div style="font-size: 12px; opacity: 0.85; font-weight: 600; line-height: 1; margin: 4px 0 0 0; padding: 0; transform: translateY(-1px);">${statusInfo}</div>
+                                </div>
                             </div>
                           `;
                         }).join('')}

@@ -13,7 +13,7 @@ const InventoryHeader = ({ onExport }) => {
       <div className="flex gap-3">
         <Button 
           onClick={onExport} 
-          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
+          className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
         >
           <Download className="w-4 h-4 ml-2" />
           تصدير تقرير PDF
