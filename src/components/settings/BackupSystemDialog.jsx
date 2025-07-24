@@ -339,7 +339,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <User className="w-3 h-3" />
-                                    {backup.profiles?.full_name || 'مجهول'}
+                                    {backup.creator_name || 'مجهول'}
                                   </span>
                                 </div>
                               </div>
@@ -488,7 +488,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                           <p><strong>الملف:</strong> {selectedBackup.filename}</p>
                           <p><strong>التاريخ:</strong> {formatDate(selectedBackup.created_at)}</p>
                           <p><strong>الحجم:</strong> {formatFileSize(selectedBackup.size_mb)}</p>
-                          <p><strong>المنشئ:</strong> {selectedBackup.profiles?.full_name || 'مجهول'}</p>
+                          <p><strong>المنشئ:</strong> {selectedBackup.creator_name || 'مجهول'}</p>
                         </div>
                       </div>
 
