@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { 
   FileText, Download, BarChart3, Send, Mail, MessageCircle, Clock,
   TrendingUp, DollarSign, Package, Users, ShoppingCart, Calendar, Settings,
-  Globe, Target, Zap, Activity, PieChart, LineChart, ArrowUp, ArrowDown,
+  Globe, Target, Zap, Activity, PieChart as PieChartIcon, LineChart as LineChartIcon, ArrowUp, ArrowDown,
   CheckCircle, AlertTriangle, Info, Star, Sparkles, Award, Crown, Gem
 } from 'lucide-react';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -865,7 +865,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <LineChart className="w-5 h-5 text-blue-500" />
+                    <LineChartIcon className="w-5 h-5 text-blue-500" />
                     اتجاه المبيعات (آخر 7 أيام)
                   </CardTitle>
                 </CardHeader>
@@ -904,7 +904,7 @@ const ReportsSettingsDialog = ({ open, onOpenChange }) => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <PieChart className="w-5 h-5 text-purple-500" />
+                    <PieChartIcon className="w-5 h-5 text-purple-500" />
                     توزيع المنتجات حسب الفئة
                   </CardTitle>
                 </CardHeader>
