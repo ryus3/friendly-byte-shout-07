@@ -665,17 +665,9 @@ const InventoryPage = () => {
                 // إنشاء تقرير PDF
                 import('@/utils/pdfGenerator').then(({ generateInventoryReportPDF }) => {
                   generateInventoryReportPDF(reportData);
-                }).catch(error => {
-                  console.error('خطأ في تحميل مولد PDF:', error);
-                  toast({
-                    title: "خطأ",
-                    description: "حدث خطأ في تصدير التقرير",
-                    variant: "destructive"
-                  });
                 });
               }} 
               variant="outline"
-              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
             >
               <Download className="w-4 h-4 mr-2" />
               تصدير PDF
