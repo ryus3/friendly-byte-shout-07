@@ -20,12 +20,14 @@ import {
   User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const BackupSystemDialog = ({ open, onOpenChange }) => {
+  const { toast } = useToast();
+  
   // States محسنة ومبسطة
   const [activeTab, setActiveTab] = useState('list');
   const [backups, setBackups] = useState([]);
@@ -61,7 +63,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       toast({
         title: "خطأ",
         description: "فشل في جلب النسخ الاحتياطية",
-        variant: "destructive"
+        variant: "destructive",
+        className: "z-[9999] text-right",
       });
     } finally {
       setLoading(false);
@@ -87,7 +90,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       if (data && data.success) {
         toast({
           title: "تم بنجاح ✅",
-          description: `تم إنشاء النسخة الاحتياطية\n${data.total_records} سجل من ${data.tables_count} جدول`
+          description: `تم إنشاء النسخة الاحتياطية\n${data.total_records} سجل من ${data.tables_count} جدول`,
+          className: "z-[9999] text-right",
         });
         await fetchBackups(); // إعادة جلب القائمة
         setActiveTab('list'); // التبديل للقائمة
@@ -99,7 +103,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       toast({
         title: "خطأ",
         description: error.message || "فشل في إنشاء النسخة الاحتياطية",
-        variant: "destructive"
+        variant: "destructive",
+        className: "z-[9999] text-right",
       });
     } finally {
       setCreating(false);
@@ -112,7 +117,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       toast({
         title: "تحذير",
         description: "يرجى تأكيد الاستعادة أولاً",
-        variant: "destructive"
+        variant: "destructive",
+        className: "z-[9999] text-right",
       });
       return;
     }
@@ -134,7 +140,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       if (data && data.success) {
         toast({
           title: "تم بنجاح ✅",
-          description: `تم استعادة النسخة الاحتياطية\n${data.total_records || 0} سجل تم استعادتها`
+          description: `تم استعادة النسخة الاحتياطية\n${data.total_records || 0} سجل تم استعادتها`,
+          className: "z-[9999] text-right",
         });
         
         // إعادة تعيين كل شيء
@@ -150,7 +157,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       toast({
         title: "خطأ",
         description: error.message || "فشل في استعادة النسخة الاحتياطية",
-        variant: "destructive"
+        variant: "destructive",
+        className: "z-[9999] text-right",
       });
     } finally {
       setRestoring(false);
@@ -182,14 +190,16 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
       toast({
         title: "تم التحميل ✅",
-        description: "تم تحميل النسخة الاحتياطية بنجاح"
+        description: "تم تحميل النسخة الاحتياطية بنجاح",
+        className: "z-[9999] text-right",
       });
     } catch (error) {
       console.error('خطأ في تحميل النسخة الاحتياطية:', error);
       toast({
         title: "خطأ",
         description: "فشل في تحميل النسخة الاحتياطية",
-        variant: "destructive"
+        variant: "destructive",
+        className: "z-[9999] text-right",
       });
     }
   };
@@ -218,8 +228,9 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
         }
         
         toast({
-          title: "تم الحذف ✅",
-          description: "تم حذف النسخة الاحتياطية نهائياً"
+          title: "تم الحذف بنجاح ✅",
+          description: "تم حذف النسخة الاحتياطية نهائياً من النظام",
+          className: "z-[9999] text-right",
         });
       } else {
         throw new Error(data?.message || 'فشل في حذف النسخة الاحتياطية');
@@ -229,7 +240,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
       toast({
         title: "خطأ",
         description: error.message || "فشل في حذف النسخة الاحتياطية",
-        variant: "destructive"
+        variant: "destructive",
+        className: "z-[9999] text-right",
       });
     } finally {
       setDeleting(null);
@@ -261,7 +273,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-0 overflow-hidden z-[9998]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
@@ -311,7 +323,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                   toast({
                     title: "تنبيه",
                     description: "يجب اختيار نسخة احتياطية أولاً من قائمة النسخ",
-                    variant: "destructive"
+                    variant: "destructive",
+                    className: "z-[9999] text-right",
                   });
                   setActiveTab('list');
                 }
