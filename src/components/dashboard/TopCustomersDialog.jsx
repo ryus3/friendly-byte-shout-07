@@ -6,7 +6,7 @@ import { useOrders } from '@/hooks/useOrders';
 import { motion } from 'framer-motion';
 
 const TopCustomersDialog = ({ open, onOpenChange }) => {
-  const { orders } = useOrders();
+  const { orders: allOrders, loading } = useOrders();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
 
   const periods = [
@@ -41,32 +41,28 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
 
   // حساب إحصائيات الزبائن بناءً على رقم الهاتف للطلبات الموصلة
   const customerStats = useMemo(() => {
-    if (!orders || orders.length === 0) {
+    if (!allOrders || allOrders.length === 0) {
       console.log('❌ لا توجد طلبات متاحة للزبائن');
       return [];
     }
 
-    console.log('📊 إجمالي الطلبات المتاحة:', orders.length);
+    console.log('📊 إجمالي الطلبات المتاحة:', allOrders.length);
 
     // فلترة الطلبات حسب الفترة المحددة والحالة المكتملة
-    const filteredOrders = orders.filter(order => {
-      // التأكد من أن الطلب مكتمل (تم التوصيل فقط) - يخصم من المخزون عندما يكون delivered
-      const isDelivered = order.delivery_status === 'delivered' || 
-                         order.status === 'delivered' || 
-                         order.order_status === 'delivered' ||
-                         order.delivery_status === 'completed' ||
-                         order.status === 'completed' ||
-                         order.order_status === 'completed';
+    const filteredOrders = allOrders.filter(order => {
+      // التأكد من أن الطلب مكتمل - استخدام الحالات الصحيحة من قاعدة البيانات
+      const isCompleted = order.status === 'completed' || 
+                         order.delivery_status === 'delivered' ||
+                         order.status === 'delivered';
       
       // استبعاد الطلبات المرجعة أو الملغية
       const isReturnedOrCancelled = order.status === 'returned' || 
                                    order.status === 'cancelled' ||
+                                   order.status === 'return_received' ||
                                    order.delivery_status === 'returned' ||
-                                   order.delivery_status === 'cancelled' ||
-                                   order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled';
+                                   order.delivery_status === 'cancelled';
       
-      if (!isDelivered || isReturnedOrCancelled) return false;
+      if (!isCompleted || isReturnedOrCancelled) return false;
 
       const orderDate = new Date(order.created_at || order.order_date);
       const now = new Date();
@@ -137,6 +133,11 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
       customerData.orderCount += 1;
       customerData.totalRevenue += parseFloat(order.total_amount || order.final_amount || 0);
       
+      // تحديث اسم العميل إذا كان أفضل من الموجود
+      if (customerName && customerName !== 'زبون غير محدد' && customerData.name === 'زبون غير محدد') {
+        customerData.name = customerName;
+      }
+      
       // تحديث تواريخ أول وآخر طلب
       const orderDate = new Date(order.created_at || order.order_date);
       const firstDate = new Date(customerData.firstOrderDate);
@@ -159,7 +160,7 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
       
     console.log('🏆 أفضل 15 زبون:', result);
     return result;
-  }, [orders, selectedPeriod]);
+  }, [allOrders, selectedPeriod]);
 
   const totalOrders = customerStats.reduce((sum, customer) => sum + customer.orderCount, 0);
   const totalRevenue = customerStats.reduce((sum, customer) => sum + customer.totalRevenue, 0);
@@ -175,6 +176,15 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
             إحصائيات الزبائن الأكثر طلباً
           </DialogTitle>
         </DialogHeader>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-muted-foreground">جاري تحميل البيانات...</p>
+            </div>
+          </div>
+        ) : (
 
         <div className="space-y-6">
           {/* فلترة الفترة الزمنية */}
@@ -333,8 +343,10 @@ const TopCustomersDialog = ({ open, onOpenChange }) => {
                 </div>
               </div>
             )}
+            )}
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

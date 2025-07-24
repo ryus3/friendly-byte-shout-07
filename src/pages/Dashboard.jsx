@@ -614,7 +614,6 @@ const Dashboard = () => {
             <TopCustomersDialog 
               open={topCustomersOpen} 
               onOpenChange={setTopCustomersOpen} 
-              orders={visibleOrders}
             />
             
             <TopProvincesDialog 
