@@ -155,11 +155,32 @@ export const getTopCustomers = (orders) => {
   });
   
   const customerCounts = deliveredOrders.reduce((acc, order) => {
-    // البحث عن رقم الهاتف في جميع الحقول المحتملة
-    const phone = order.customer_phone || 
-                  order.phone_number || 
-                  order.client_mobile || 
-                  order.phone;
+    // تطبيع رقم الهاتف - إزالة الأصفار الزائدة والمسافات
+    const normalizePhone = (phone) => {
+      if (!phone) return null;
+      
+      // إزالة المسافات والرموز الخاصة
+      let cleaned = phone.toString().replace(/[\s\-\(\)\+]/g, '');
+      
+      // إزالة 964 إذا كان موجوداً
+      if (cleaned.startsWith('964')) {
+        cleaned = cleaned.substring(3);
+      }
+      
+      // إزالة 0 من البداية إذا كان موجوداً
+      if (cleaned.startsWith('0')) {
+        cleaned = cleaned.substring(1);
+      }
+      
+      // التأكد من أن الرقم 10 أو 11 خانة
+      if (cleaned.length >= 10 && cleaned.length <= 11) {
+        return cleaned;
+      }
+      
+      return null; // إرجاع null إذا لم يكن صالحاً
+    };
+
+    const phone = normalizePhone(order.customer_phone);
     const name = order.customer_name || 
                  order.client_name || 
                  order.name || 

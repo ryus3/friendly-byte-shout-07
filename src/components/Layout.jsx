@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, TrendingUp, LogOut, User,
-  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell, Wallet
+  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell, Wallet, BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { toast } from '@/components/ui/use-toast.js';
@@ -38,6 +38,7 @@ const SidebarContent = ({ onClose }) => {
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
     { path: '/purchases', icon: TrendingUp, label: 'المشتريات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-emerald-500' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
+    { path: '/customer-analytics', icon: BarChart3, label: 'تحليل العملاء', roles: ['super_admin', 'admin'], color: 'text-violet-500' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-gray-500' }
   ];
@@ -115,7 +116,7 @@ const SidebarContent = ({ onClose }) => {
               <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
             </Button>
-            {onClose && isMobile && (
+            {onClose && (
               <Button 
                 variant="ghost" 
                 size="icon" 
