@@ -54,14 +54,55 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Order Status Colors - Professional Design
-        'status-pending': "hsl(var(--status-pending))",
-        'status-processing': "hsl(var(--status-processing))",
-        'status-shipped': "hsl(var(--status-shipped))",
-        'status-delivery': "hsl(var(--status-delivery))",
-        'status-delivered': "hsl(var(--status-delivered))",
-        'status-returned': "hsl(var(--status-returned))",
-        'status-cancelled': "hsl(var(--status-cancelled))",
+        // Order Status Colors - Beautiful gradients
+        'status-pending': {
+          'start': "hsl(var(--status-pending-start))",
+          'end': "hsl(var(--status-pending-end))",
+          'border': "hsl(var(--status-pending-border))",
+          'shadow': "hsl(var(--status-pending-shadow))",
+        },
+        'status-shipped': {
+          'start': "hsl(var(--status-shipped-start))",
+          'end': "hsl(var(--status-shipped-end))",
+          'border': "hsl(var(--status-shipped-border))",
+          'shadow': "hsl(var(--status-shipped-shadow))",
+        },
+        'status-delivery': {
+          'start': "hsl(var(--status-delivery-start))",
+          'end': "hsl(var(--status-delivery-end))",
+          'border': "hsl(var(--status-delivery-border))",
+          'shadow': "hsl(var(--status-delivery-shadow))",
+        },
+        'status-delivered': {
+          'start': "hsl(var(--status-delivered-start))",
+          'end': "hsl(var(--status-delivered-end))",
+          'border': "hsl(var(--status-delivered-border))",
+          'shadow': "hsl(var(--status-delivered-shadow))",
+        },
+        'status-completed': {
+          'start': "hsl(var(--status-completed-start))",
+          'end': "hsl(var(--status-completed-end))",
+          'border': "hsl(var(--status-completed-border))",
+          'shadow': "hsl(var(--status-completed-shadow))",
+        },
+        'status-returned': {
+          'start': "hsl(var(--status-returned-start))",
+          'end': "hsl(var(--status-returned-end))",
+          'border': "hsl(var(--status-returned-border))",
+          'shadow': "hsl(var(--status-returned-shadow))",
+        },
+        'status-returned-stock': {
+          'start': "hsl(var(--status-returned-stock-start))",
+          'end': "hsl(var(--status-returned-stock-end))",
+          'border': "hsl(var(--status-returned-stock-border))",
+          'shadow': "hsl(var(--status-returned-stock-shadow))",
+        },
+        'status-cancelled': {
+          'start': "hsl(var(--status-cancelled-start))",
+          'end': "hsl(var(--status-cancelled-end))",
+          'border': "hsl(var(--status-cancelled-border))",
+          'shadow': "hsl(var(--status-cancelled-shadow))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
