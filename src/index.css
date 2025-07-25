@@ -38,13 +38,23 @@
     --role-accountant: 45 93% 47%;          /* أصفر للمحاسب */
     --role-pending: 0 0% 60%;               /* رمادي للمعلق */
     
-    /* Order Status Colors - Updated Based on User Images */
-    --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
-    --status-shipped: 24 95% 53%;        /* برتقالي للشحن */
-    --status-delivery: 262 83% 58%;      /* بنفسجي فاتح لقيد التوصيل */
-    --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم - تم التسليم */
-    --status-returned: 46 93% 47%;       /* أصفر للراجعة */
-    --status-cancelled: 0 84% 60%;       /* أحمر للملغي */
+    /* Order status colors - bright and luminous */
+    --status-pending: 45 95% 55%;          /* Luminous amber */
+    --status-pending-bg: 45 100% 92%;       
+    --status-shipped: 24 100% 60%;         /* Luminous orange */
+    --status-shipped-bg: 24 100% 95%;
+    --status-delivery: 262 85% 65%;        /* Luminous purple */
+    --status-delivery-bg: 262 100% 95%;
+    --status-delivered: 140 75% 50%;       /* Luminous emerald */
+    --status-delivered-bg: 140 100% 93%;
+    --status-completed: 120 65% 55%;       /* Luminous green */
+    --status-completed-bg: 120 100% 93%;
+    --status-returned: 48 100% 60%;        /* Luminous yellow */
+    --status-returned-bg: 48 100% 95%;
+    --status-returned-stock: 239 85% 70%;  /* Luminous indigo */
+    --status-returned-stock-bg: 239 100% 95%;
+    --status-cancelled: 0 85% 65%;         /* Luminous red */
+    --status-cancelled-bg: 0 100% 95%;
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */

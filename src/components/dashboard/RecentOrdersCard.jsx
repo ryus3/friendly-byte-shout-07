@@ -27,52 +27,52 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Clock,
-        className: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-pending-bg text-status-pending border border-status-pending/30 shadow-lg shadow-status-pending/20'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        className: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-shipped-bg text-status-shipped border border-status-shipped/30 shadow-lg shadow-status-shipped/20'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        className: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-delivery-bg text-status-delivery border border-status-delivery/30 shadow-lg shadow-status-delivery/20'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: Package,
-        className: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-delivered-bg text-status-delivered border border-status-delivered/30 shadow-lg shadow-status-delivered/20'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: Package,
-        className: 'bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 border-green-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-completed-bg text-status-completed border border-status-completed/30 shadow-lg shadow-status-completed/20'
       },
       'returned': { 
         label: 'راجعة', 
         icon: Package,
-        className: 'bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 text-yellow-700 border-yellow-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-returned-bg text-status-returned border border-status-returned/30 shadow-lg shadow-status-returned/20'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: Package,
-        className: 'bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 text-indigo-700 border-indigo-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-returned-stock-bg text-status-returned-stock border border-status-returned-stock/30 shadow-lg shadow-status-returned-stock/20'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: Package,
-        className: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-status-cancelled-bg text-status-cancelled border border-status-cancelled/30 shadow-lg shadow-status-cancelled/20'
       }
     };
     const statusInfo = statusMap[status] || { 
       label: status, 
       icon: Package,
-      className: 'bg-gradient-to-r from-gray-50 to-slate-50 text-gray-700 border-gray-200 shadow-sm'
+      className: 'bg-muted text-muted-foreground border border-border shadow-sm'
     };
     const StatusIcon = statusInfo.icon;
     return (
-      <Badge className={cn("text-xs px-2 py-1 flex items-center gap-1.5 font-medium", statusInfo.className)}>
+      <Badge className={cn("text-xs px-3 py-1.5 flex items-center gap-2 font-medium", statusInfo.className)}>
         <StatusIcon className="w-3 h-3" />
         {statusInfo.label}
       </Badge>
@@ -179,16 +179,16 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       
                       <div className="h-3 w-px bg-border/50" />
                       
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                         {getDeliveryType(order) === 'شركة توصيل' ? (
                           <>
                             <Truck className="w-3 h-3 text-blue-500" />
-                            <span className="text-xs text-blue-600">شركة</span>
+                            <span className="text-xs text-blue-600 font-medium">شركة</span>
                           </>
                         ) : (
                           <>
                             <Home className="w-3 h-3 text-green-500" />
-                            <span className="text-xs text-green-600">محلي</span>
+                            <span className="text-xs text-green-600 font-medium">محلي</span>
                           </>
                         )}
                       </div>

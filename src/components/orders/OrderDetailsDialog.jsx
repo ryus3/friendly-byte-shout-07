@@ -10,15 +10,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const getStatusInfo = (status) => {
   switch (status) {
-    case 'pending': return { badge: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
-    case 'shipped': return { badge: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
-    case 'delivery': return { badge: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
-    case 'delivered': return { badge: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
-    case 'completed': return { badge: 'bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 border-green-300/50 shadow-sm backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
-    case 'cancelled': return { badge: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
-    case 'returned': return { badge: 'bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 text-yellow-700 border-yellow-300/50 shadow-sm backdrop-blur-sm', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 text-indigo-700 border-indigo-300/50 shadow-sm backdrop-blur-sm', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
-    default: return { badge: 'bg-gradient-to-r from-gray-500/10 to-gray-600/10 text-gray-700 border-gray-300/50 shadow-sm backdrop-blur-sm', icon: <AlertTriangle className="w-4 h-4" />, text: status };
+    case 'pending': return { badge: 'bg-status-pending-bg text-status-pending border border-status-pending/30 shadow-lg shadow-status-pending/20', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
+    case 'shipped': return { badge: 'bg-status-shipped-bg text-status-shipped border border-status-shipped/30 shadow-lg shadow-status-shipped/20', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
+    case 'delivery': return { badge: 'bg-status-delivery-bg text-status-delivery border border-status-delivery/30 shadow-lg shadow-status-delivery/20', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
+    case 'delivered': return { badge: 'bg-status-delivered-bg text-status-delivered border border-status-delivered/30 shadow-lg shadow-status-delivered/20', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
+    case 'completed': return { badge: 'bg-status-completed-bg text-status-completed border border-status-completed/30 shadow-lg shadow-status-completed/20', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
+    case 'cancelled': return { badge: 'bg-status-cancelled-bg text-status-cancelled border border-status-cancelled/30 shadow-lg shadow-status-cancelled/20', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
+    case 'returned': return { badge: 'bg-status-returned-bg text-status-returned border border-status-returned/30 shadow-lg shadow-status-returned/20', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
+    case 'returned_in_stock': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock border border-status-returned-stock/30 shadow-lg shadow-status-returned-stock/20', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    default: return { badge: 'bg-muted text-muted-foreground border border-border shadow-sm', icon: <AlertTriangle className="w-4 h-4" />, text: status };
   }
 };
 
@@ -100,7 +100,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 <h3 className="text-lg font-bold text-foreground break-all">#{order.tracking_number || order.trackingnumber || 'لا يوجد رقم تتبع'}</h3>
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
-              <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium border ${statusInfo.badge}`}>
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${statusInfo.badge}`}>
                 {statusInfo.icon} {statusInfo.text}
               </div>
             </div>
@@ -114,9 +114,9 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                             <span>البائع: {sellerName}</span>
                         </div>
                     )}
-                     <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
                          <Building className="w-3 h-3"/>
-                         <span>{order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
+                         <span className="font-medium">{order.delivery_partner === 'محلي' || !order.delivery_partner ? 'توصيل محلي' : order.delivery_partner}</span>
                      </div>
                 </div>
               </div>
