@@ -43,7 +43,7 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء مع بيانات الولاء والتليغرام والطلبات
+      // جلب العملاء مع بيانات الولاء
       const { data: customersData } = await supabase
         .from('customers')
         .select(`
@@ -60,12 +60,6 @@ const CustomersManagementPage = () => {
               icon,
               discount_percentage
             )
-          ),
-          customer_telegram_accounts (
-            telegram_chat_id,
-            telegram_username,
-            is_active,
-            linked_at
           )
         `)
         .order('created_at', { ascending: false });
@@ -221,7 +215,7 @@ const CustomersManagementPage = () => {
       'الطلبات': customer.customer_loyalty?.total_orders || 0,
       'المشتريات': customer.customer_loyalty?.total_spent || 0,
       'المستوى': customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
-      'التليغرام': customer.customer_telegram_accounts?.telegram_username || 'غير مربوط'
+      'الواتساب': customer.phone || 'غير مربوط'
     }));
 
     const csvContent = [
@@ -301,12 +295,12 @@ const CustomersManagementPage = () => {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">عملاء التليغرام</p>
+                <p className="text-sm text-muted-foreground">عملاء مع أرقام هواتف</p>
                 <p className="text-2xl font-bold">
-                  {customers.filter(c => c.customer_telegram_accounts?.telegram_chat_id).length}
+                  {customers.filter(c => c.phone).length}
                 </p>
               </div>
-              <MessageCircle className="h-8 w-8 text-blue-500" />
+              <Phone className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -415,7 +409,6 @@ const CustomersManagementPage = () => {
             {filteredCustomers.map((customer) => {
               const loyalty = customer.customer_loyalty;
               const tier = loyalty?.loyalty_tiers;
-              const telegram = customer.customer_telegram_accounts;
               const TierIcon = tier ? getTierIcon(tier.icon) : Star;
 
               return (
@@ -427,10 +420,10 @@ const CustomersManagementPage = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-lg">{customer.name}</h3>
-                            {telegram?.telegram_chat_id && (
+                            {customer.phone && (
                               <Badge variant="outline" className="text-xs">
-                                <MessageCircle className="h-3 w-3 mr-1" />
-                                تليغرام
+                                <Phone className="h-3 w-3 mr-1" />
+                                واتساب
                               </Badge>
                             )}
                           </div>
