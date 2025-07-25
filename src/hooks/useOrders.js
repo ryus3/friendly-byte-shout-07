@@ -272,6 +272,23 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           console.error('Error deleting profit record:', deleteProfitError);
         }
       }
+
+      // 5. عند وصول الطلب لحالة "راجع للمخزن" - إرسال للأرشيف تلقائياً
+      if (updatedOrder.status === 'returned_in_stock' && originalOrder.status !== 'returned_in_stock') {
+        console.log('Processing returned_in_stock status - archiving order...');
+        
+        // أرشفة الطلب تلقائياً
+        await supabase
+          .from('orders')
+          .update({ isArchived: true })
+          .eq('id', updatedOrder.id);
+          
+        toast({
+          title: "تم الإرسال للأرشيف",
+          description: "تم نقل الطلب إلى الأرشيف بعد استلامه للمخزن",
+          variant: "default"
+        });
+      }
     } catch (error) {
       console.error('Error in handleStatusChange:', error);
       throw error;

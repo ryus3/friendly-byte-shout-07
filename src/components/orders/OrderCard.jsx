@@ -92,11 +92,11 @@ const OrderCard = ({
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
   
-  // تحديد نوع التوصيل - ألوان أجمل
+  // تحديد نوع التوصيل - ألوان أجمل ومبهرة
   const isLocalOrder = order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
-    'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-700 border border-emerald-400/50 shadow-md shadow-emerald-500/20' : 
-    'bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-700 border border-blue-400/50 shadow-md shadow-blue-500/20';
+    'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
+    'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
   // التحقق من الصلاحيات
   const canEdit = order.status === 'pending';
@@ -187,35 +187,56 @@ const OrderCard = ({
             
             {/* Header العالمي */}
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}
                   className="shrink-0 scale-125 border-2"
                 />
-                <div className="space-y-1">
-                  <h3 className="font-black text-xl text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+                <div>
+                  <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
                     {order.tracking_number}
                   </h3>
-                  <p className="text-sm text-muted-foreground font-semibold">
-                    طلب #{order.order_number}
-                  </p>
                 </div>
               </div>
               
-              {/* Status Badge عالمي */}
-              <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
-                <StatusIcon className="h-4 w-4" />
-                <span className="font-bold">{statusConfig.label}</span>
-              </div>
+              {/* Status Badge عالمي - قابل للنقر للطلبات المحلية */}
+              {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // تحديد الحالة التالية
+                    const nextStatus = {
+                      'pending': 'shipped',
+                      'shipped': 'delivery', 
+                      'delivery': 'delivered',
+                      'delivered': 'completed',
+                      'returned': 'returned_in_stock'
+                    }[order.status];
+                    if (nextStatus) handleStatusChange(nextStatus);
+                  }}
+                  className={`${statusConfig.color} transform group-hover:scale-105 transition-all duration-300 hover:shadow-lg p-2 h-auto`}
+                  title="انقر لتحديث الحالة"
+                >
+                  <StatusIcon className="h-4 w-4" />
+                  <span className="font-bold ml-1">{statusConfig.label}</span>
+                </Button>
+              ) : (
+                <div className={`flex items-center gap-2 ${statusConfig.color} transform group-hover:scale-105 transition-transform duration-300`}>
+                  <StatusIcon className="h-4 w-4" />
+                  <span className="font-bold">{statusConfig.label}</span>
+                </div>
+              )}
             </div>
 
             {/* Customer Info مع الأيقونات في المنتصف */}
-            <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-2xl p-5 border border-muted/30 relative">
-              <div className="grid grid-cols-3 gap-4 items-center">
+            <div className="bg-gradient-to-r from-muted/20 via-muted/10 to-transparent rounded-xl p-3 border border-muted/30 relative">
+              <div className="grid grid-cols-3 gap-3 items-center">
                 
                 {/* Customer Info - يسار */}
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-primary" />
                     <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
@@ -231,17 +252,17 @@ const OrderCard = ({
                 </div>
                 
                 {/* Action Icons - منتصف */}
-                <div className="flex items-center justify-center gap-2">
+                <div className="flex items-center justify-center gap-1">
                   
                   {/* View */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onViewOrder?.(order)}
-                    className="h-10 w-10 p-0 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-lg"
+                    className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
                     title="معاينة"
                   >
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-3.5 w-3.5" />
                   </Button>
 
                   {/* Edit */}
@@ -250,10 +271,10 @@ const OrderCard = ({
                       variant="ghost"
                       size="sm"
                       onClick={() => onEditOrder?.(order)}
-                      className="h-10 w-10 p-0 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-600 hover:scale-110 transition-all duration-300 shadow-lg"
+                      className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:scale-110 transition-all duration-300 shadow-md"
                       title="تعديل"
                     >
-                      <Edit2 className="h-4 w-4" />
+                      <Edit2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
 
@@ -262,10 +283,10 @@ const OrderCard = ({
                     variant="ghost"
                     size="sm"
                     onClick={() => onViewOrder?.(order)}
-                    className="h-10 w-10 p-0 rounded-xl bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-lg"
+                    className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
                     title="تتبع"
                   >
-                    <ExternalLink className="h-4 w-4" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
 
                   {/* Delete */}
@@ -274,16 +295,16 @@ const OrderCard = ({
                       variant="ghost"
                       size="sm"
                       onClick={handleDelete}
-                      className="h-10 w-10 p-0 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-lg"
+                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
                       title="حذف"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   )}
                 </div>
                 
                 {/* Date & Delivery Info - يمين */}
-                <div className="space-y-2 text-left">
+                <div className="space-y-1 text-left">
                   <div className="flex items-center gap-2 justify-end">
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
                     <Calendar className="h-4 w-4 text-primary" />
@@ -292,7 +313,7 @@ const OrderCard = ({
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                     <Clock className="h-3 w-3 text-muted-foreground" />
                   </div>
-                  <Badge className={`${deliveryBadgeColor} px-3 py-1 text-xs rounded-full font-bold w-fit ml-auto shadow-sm`}>
+                  <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit ml-auto shadow-sm`}>
                     <Building className="h-3 w-3 ml-1" />
                     {order.delivery_partner}
                   </Badge>
@@ -311,88 +332,22 @@ const OrderCard = ({
                 )}
                 
                 <div className="flex items-center gap-2 text-left">
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1">
-                      <CreditCard className="h-4 w-4 text-primary" />
-                      <span className="font-bold text-lg text-primary">
-                        {order.final_amount?.toLocaleString()}
-                      </span>
-                      <span className="text-xs text-primary/70 font-bold">د.ع</span>
-                    </div>
+                  <div className="flex items-center gap-1">
                     {order.delivery_fee > 0 && (
                       <span className="text-xs text-muted-foreground font-medium">
                         شامل التوصيل
                       </span>
                     )}
+                    <CreditCard className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-lg text-primary">
+                      {order.final_amount?.toLocaleString()}
+                    </span>
+                    <span className="text-xs text-primary/70 font-bold">د.ع</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Status Actions للطلبات المحلية فقط */}
-            {isLocalOrder && (
-              <div className="flex flex-wrap gap-2 pt-3 border-t border-border/30">
-                {order.status === 'pending' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleStatusChange('shipped')}
-                    className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl"
-                  >
-                    <Truck className="h-4 w-4" />
-                    شحن
-                  </Button>
-                )}
-
-                {order.status === 'shipped' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleStatusChange('delivery')}
-                    className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl"
-                  >
-                    <Truck className="h-4 w-4" />
-                    قيد التوصيل
-                  </Button>
-                )}
-
-                {order.status === 'delivery' && (
-                  <>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleStatusChange('delivered')}
-                      className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      تم التسليم
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleStatusChange('returned')}
-                      className="flex items-center gap-2 border-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-all duration-300 font-bold"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                      راجعة
-                    </Button>
-                  </>
-                )}
-
-                {(order.status === 'cancelled' || order.status === 'returned') && hasPermission('manage_inventory') && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleStatusChange('returned_in_stock')}
-                    className="flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-bold shadow-lg hover:shadow-xl"
-                  >
-                    <PackageCheck className="h-4 w-4" />
-                    استلام للمخزن
-                  </Button>
-                )}
-              </div>
-            )}
 
             {/* Company Order Note */}
             {!isLocalOrder && (

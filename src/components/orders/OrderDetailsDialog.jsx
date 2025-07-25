@@ -85,14 +85,6 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
             <DialogTitle className="gradient-text">تفاصيل الطلب</DialogTitle>
             <DialogDescription className="text-right text-muted-foreground">معلومات كاملة عن الطلب والشحنة.</DialogDescription>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => onOpenChange(false)}
-            className="ml-auto rounded-lg w-8 h-8 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
-          >
-            <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
-          </Button>
         </DialogHeader>
         <ScrollArea className="flex-grow -mx-6 px-6">
           <div className="space-y-6 pb-6">
