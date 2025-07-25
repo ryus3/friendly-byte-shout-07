@@ -2299,6 +2299,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      release_stock_for_order: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
