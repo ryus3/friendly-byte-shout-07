@@ -812,6 +812,7 @@ export type Database = {
           discount_reason: string | null
           final_amount: number
           id: string
+          isarchived: boolean | null
           notes: string | null
           order_number: string
           payment_received_source_id: string | null
@@ -843,6 +844,7 @@ export type Database = {
           discount_reason?: string | null
           final_amount?: number
           id?: string
+          isarchived?: boolean | null
           notes?: string | null
           order_number: string
           payment_received_source_id?: string | null
@@ -874,6 +876,7 @@ export type Database = {
           discount_reason?: string | null
           final_amount?: number
           id?: string
+          isarchived?: boolean | null
           notes?: string | null
           order_number?: string
           payment_received_source_id?: string | null
