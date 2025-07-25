@@ -367,7 +367,7 @@ const CustomersManagementPage = () => {
         />
         <StatCard
           title="متوسط النقاط"
-          value={Math.round(filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.[0]?.total_points || 0), 0) / filteredCustomers.length || 0)}
+          value={Math.round((filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.[0]?.total_points || 0), 0) / (filteredCustomers.length || 1)))}
           icon={Gift}
           trend="positive"
           trendValue="15%"
