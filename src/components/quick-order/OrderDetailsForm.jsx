@@ -74,6 +74,18 @@ const OrderDetailsForm = ({
                 <span>{subtotal.toLocaleString()} د.ع</span>
               </div>
               
+              {deliveryFee > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span>رسوم التوصيل:</span>
+                  <span>{deliveryFee.toLocaleString()} د.ع</span>
+                </div>
+              )}
+              
+              <div className="flex justify-between text-sm font-medium border-t pt-2">
+                <span>المجموع الكلي:</span>
+                <span>{(subtotal + deliveryFee).toLocaleString()} د.ع</span>
+              </div>
+              
               {/* خانة الخصم */}
               {hasPermission('apply_order_discounts') && (
                 <div className="flex justify-between items-center">
@@ -100,17 +112,6 @@ const OrderDetailsForm = ({
                 </div>
               )}
               
-              <div className="flex justify-between text-sm">
-                <span>المجموع بعد الخصم:</span>
-                <span>{total.toLocaleString()} د.ع</span>
-              </div>
-              
-              {deliveryFee > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span>رسوم التوصيل:</span>
-                  <span>{deliveryFee.toLocaleString()} د.ع</span>
-                </div>
-              )}
               <div className="flex justify-between text-base font-semibold border-t pt-2">
                 <span>المجموع النهائي:</span>
                 <span className="text-primary">{finalTotal.toLocaleString()} د.ع</span>
