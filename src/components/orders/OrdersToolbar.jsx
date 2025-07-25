@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Grid3X3, List, LayoutGrid } from 'lucide-react';
+import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import QROrderScanner from './QROrderScanner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,9 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange }) => {
+const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, onOrderFound, onUpdateOrderStatus }) => {
   const { hasPermission } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const [showQRScanner, setShowQRScanner] = useState(false);
   
   const handleSearchChange = (e) => {
     onFiltersChange({ searchTerm: e.target.value });
@@ -78,6 +80,16 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange })
           </Button>
         </div>
 
+        {/* QR Scanner Button */}
+        <Button 
+          onClick={() => setShowQRScanner(true)}
+          variant="outline"
+          className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 border-primary/30"
+        >
+          <QrCode className="h-4 w-4" />
+          {!isMobile && 'مسح QR'}
+        </Button>
+
         {isMobile ? (
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -111,6 +123,14 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange })
           <Filter className="w-4 h-4 ml-2" /> مسح الفلاتر
         </Button>
       </div>
+
+      {/* QR Scanner Dialog */}
+      <QROrderScanner
+        isOpen={showQRScanner}
+        onClose={() => setShowQRScanner(false)}
+        onOrderFound={onOrderFound}
+        onUpdateOrderStatus={onUpdateOrderStatus}
+      />
     </div>
   );
 };

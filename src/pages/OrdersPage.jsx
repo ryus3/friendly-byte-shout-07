@@ -130,6 +130,8 @@ const OrdersPage = () => {
       const matchesSearch = (
         (customerInfo.name || order.customer_name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (order.trackingnumber || order.tracking_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.qr_id || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.order_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
         (customerInfo.phone || order.customer_phone || '').includes(searchTerm)
       );
       
@@ -293,6 +295,11 @@ const OrdersPage = () => {
           onFiltersChange={handleToolbarFilterChange}
           viewMode={viewMode}
           onViewModeChange={handleViewModeChange}
+          onOrderFound={(foundOrder) => {
+            setSelectedOrder(foundOrder);
+            setDialogs(prev => ({ ...prev, details: true }));
+          }}
+          onUpdateOrderStatus={handleUpdateOrderStatus}
         />
         
         {selectedOrders.length > 0 && hasPermission('manage_orders') && (

@@ -817,6 +817,7 @@ export type Database = {
           order_number: string
           payment_received_source_id: string | null
           payment_status: string
+          qr_id: string | null
           receipt_received: boolean | null
           receipt_received_at: string | null
           receipt_received_by: string | null
@@ -849,6 +850,7 @@ export type Database = {
           order_number: string
           payment_received_source_id?: string | null
           payment_status?: string
+          qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
           receipt_received_by?: string | null
@@ -881,6 +883,7 @@ export type Database = {
           order_number?: string
           payment_received_source_id?: string | null
           payment_status?: string
+          qr_id?: string | null
           receipt_received?: boolean | null
           receipt_received_at?: string | null
           receipt_received_by?: string | null
@@ -2215,6 +2218,10 @@ export type Database = {
         Returns: string
       }
       generate_order_number: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_order_qr_id: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

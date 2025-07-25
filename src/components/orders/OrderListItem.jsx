@@ -133,10 +133,10 @@ const OrderListItem = ({
           className="shrink-0"
         />
 
-        {/* Order Number */}
+        {/* QR ID */}
         <div className="min-w-0 flex-1">
           <div className="font-bold text-sm text-foreground">
-            #{order.order_number}
+            {order.qr_id || order.order_number}
           </div>
         </div>
 
