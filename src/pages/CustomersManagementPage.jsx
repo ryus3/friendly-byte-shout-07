@@ -204,19 +204,53 @@ const CustomersManagementPage = () => {
     }
   };
 
-  // تصدير بيانات العملاء
-  const exportCustomersData = () => {
-    const csvData = customers.map(customer => ({
+  // تصدير بيانات العملاء مع فلترة متقدمة
+  const exportCustomersData = (filterType = 'all', dateRange = null) => {
+    let filteredData = customers;
+    
+    // فلترة حسب النوع
+    if (filterType === 'with_points') {
+      filteredData = customers.filter(c => c.customer_loyalty?.total_points > 0);
+    } else if (filterType === 'no_points') {
+      filteredData = customers.filter(c => !c.customer_loyalty || c.customer_loyalty.total_points === 0);
+    } else if (filterType === 'active') {
+      filteredData = customers.filter(c => c.customer_loyalty?.total_orders > 0);
+    }
+    
+    // فلترة حسب الفترة الزمنية
+    if (dateRange) {
+      const { start, end } = dateRange;
+      filteredData = filteredData.filter(customer => {
+        const customerDate = new Date(customer.created_at);
+        return customerDate >= start && customerDate <= end;
+      });
+    }
+
+    const csvData = filteredData.map(customer => ({
       'الاسم': customer.name,
       'الهاتف': customer.phone || '',
       'المدينة': customer.city || '',
       'المحافظة': customer.province || '',
       'النقاط': customer.customer_loyalty?.total_points || 0,
-      'الطلبات': customer.customer_loyalty?.total_orders || 0,
+      'الطلبات_المكتملة': customer.customer_loyalty?.total_orders || 0,
       'المشتريات': customer.customer_loyalty?.total_spent || 0,
       'المستوى': customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
-      'الواتساب': customer.phone || 'غير مربوط'
+      'خصم_المستوى': customer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0,
+      'تاريخ_الانضمام': new Date(customer.created_at).toLocaleDateString('ar'),
+      'آخر_ترقية': customer.customer_loyalty?.last_tier_upgrade 
+        ? new Date(customer.customer_loyalty.last_tier_upgrade).toLocaleDateString('ar') 
+        : 'لا يوجد',
+      'حالة_الواتساب': customer.phone ? 'متوفر' : 'غير متوفر'
     }));
+
+    if (csvData.length === 0) {
+      toast({
+        title: 'لا توجد بيانات',
+        description: 'لا توجد عملاء مطابقون للفلتر المحدد',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const csvContent = [
       Object.keys(csvData[0]).join(','),
@@ -226,13 +260,63 @@ const CustomersManagementPage = () => {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `customers_data_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    const filterSuffix = filterType === 'with_points' ? '_with_points' : 
+                        filterType === 'no_points' ? '_no_points' : 
+                        filterType === 'active' ? '_active_customers' : '';
+    
+    link.download = `customers_data${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
 
     toast({
       title: 'تم التصدير',
-      description: 'تم تصدير بيانات العملاء بنجاح'
+      description: `تم تصدير ${csvData.length} عميل بنجاح`
     });
+  };
+
+  // عرض تفاصيل العميل
+  const viewCustomerDetails = async (customerId) => {
+    try {
+      // جلب تفاصيل العميل مع الطلبات والنقاط
+      const { data: customerData } = await supabase
+        .from('customers')
+        .select(`
+          *,
+          customer_loyalty (*,
+            loyalty_tiers (*)
+          )
+        `)
+        .eq('id', customerId)
+        .single();
+
+      // جلب تاريخ النقاط
+      const { data: pointsHistory } = await supabase
+        .from('loyalty_points_history')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+
+      // جلب الطلبات المكتملة
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_id', customerId)
+        .in('status', ['completed', 'delivered'])
+        .order('created_at', { ascending: false });
+
+      setSelectedCustomer({
+        ...customerData,
+        pointsHistory: pointsHistory || [],
+        completedOrders: orders || []
+      });
+
+    } catch (error) {
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في تحميل تفاصيل العميل',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (loading) {
@@ -265,11 +349,55 @@ const CustomersManagementPage = () => {
             إدارة شاملة للعملاء والولاء والإشعارات والخصومات
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={exportCustomersData} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-1" />
-            تصدير البيانات
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          {/* قائمة منسدلة للتصدير */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-1" />
+                تصدير البيانات
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>تصدير بيانات العملاء</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    onClick={() => exportCustomersData('all')}
+                    variant="outline"
+                  >
+                    جميع العملاء
+                  </Button>
+                  <Button 
+                    onClick={() => exportCustomersData('with_points')}
+                    variant="outline"
+                  >
+                    العملاء مع نقاط
+                  </Button>
+                  <Button 
+                    onClick={() => exportCustomersData('no_points')}
+                    variant="outline"
+                  >
+                    العملاء بدون نقاط
+                  </Button>
+                  <Button 
+                    onClick={() => exportCustomersData('active')}
+                    variant="outline"
+                  >
+                    العملاء النشطين
+                  </Button>
+                </div>
+                
+                <div className="text-sm text-muted-foreground">
+                  <p>• العملاء مع نقاط: الذين لديهم طلبات مكتملة/مُسلّمة</p>
+                  <p>• العملاء النشطين: الذين لديهم طلبات مُسجّلة</p>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
           <Button onClick={selectRandomCityDiscount} variant="outline" size="sm">
             <Gift className="h-4 w-4 mr-1" />
             اختيار مدينة للخصم
@@ -479,15 +607,16 @@ const CustomersManagementPage = () => {
                       )}
 
                       {/* Enhanced Action Buttons */}
-                      <div className="grid grid-cols-2 gap-2 pt-2">
+                      <div className="grid grid-cols-3 gap-1 pt-2">
                         <Button 
                           size="sm" 
                           variant="outline" 
                           onClick={() => applyLoyaltyDiscount(customer.id)}
-                          disabled={!loyalty}
+                          disabled={!loyalty || (loyalty.total_points === 0)}
+                          title={!loyalty || loyalty.total_points === 0 ? 'العميل لا يملك نقاط كافية' : 'تطبيق خصم الولاء'}
                         >
                           <Gift className="h-3 w-3 mr-1" />
-                          تطبيق خصم
+                          خصم
                         </Button>
                         <Button 
                           size="sm" 
@@ -495,13 +624,40 @@ const CustomersManagementPage = () => {
                           onClick={() => sendCustomerNotification(
                             customer.id, 
                             'manual',
-                            `مرحباً ${customer.name}، شكراً لك على ثقتك بنا! 🙏`
+                            `مرحباً ${customer.name}، شكراً لك على ثقتك بنا! 🙏${loyalty ? ` لديك ${loyalty.total_points} نقطة ولاء` : ''}`
                           )}
+                          disabled={!customer.phone}
+                          title={!customer.phone ? 'لا يوجد رقم هاتف' : 'إرسال رسالة واتساب'}
                         >
                           <Send className="h-3 w-3 mr-1" />
-                          إرسال رسالة
+                          رسالة
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => viewCustomerDetails(customer.id)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          تفاصيل
                         </Button>
                       </div>
+                      
+                      {/* Points Status Indicator */}
+                      {loyalty && loyalty.total_points > 0 && (
+                        <div className="mt-2 text-center">
+                          <Badge variant="secondary" className="text-xs">
+                            ✅ مؤهل لخصم الولاء ({tier?.discount_percentage || 0}%)
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {(!loyalty || loyalty.total_points === 0) && (
+                        <div className="mt-2 text-center">
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            بحاجة لطلبات مكتملة للحصول على نقاط
+                          </Badge>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -608,6 +764,190 @@ const CustomersManagementPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Customer Details Dialog */}
+      {selectedCustomer && (
+        <Dialog open={!!selectedCustomer} onOpenChange={() => setSelectedCustomer(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                تفاصيل العميل: {selectedCustomer.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6">
+              {/* Customer Info */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">معلومات العميل</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">الاسم:</span>
+                      <span className="font-medium">{selectedCustomer.name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">الهاتف:</span>
+                      <span className="font-medium">{selectedCustomer.phone || 'غير متوفر'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">المدينة:</span>
+                      <span className="font-medium">{selectedCustomer.city || 'غير محدد'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">المحافظة:</span>
+                      <span className="font-medium">{selectedCustomer.province || 'غير محدد'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">تاريخ الانضمام:</span>
+                      <span className="font-medium">
+                        {new Date(selectedCustomer.created_at).toLocaleDateString('ar')}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">إحصائيات الولاء</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">النقاط الحالية:</span>
+                      <span className="font-bold text-primary">
+                        {selectedCustomer.customer_loyalty?.total_points || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">الطلبات المكتملة:</span>
+                      <span className="font-medium text-green-600">
+                        {selectedCustomer.customer_loyalty?.total_orders || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">إجمالي المشتريات:</span>
+                      <span className="font-medium">
+                        {formatCurrency(selectedCustomer.customer_loyalty?.total_spent || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">المستوى الحالي:</span>
+                      <span className="font-medium">
+                        {selectedCustomer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">خصم المستوى:</span>
+                      <span className="font-medium">
+                        {selectedCustomer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0}%
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Points History */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    تاريخ النقاط
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedCustomer.pointsHistory && selectedCustomer.pointsHistory.length > 0 ? (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {selectedCustomer.pointsHistory.map((point, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 border rounded">
+                          <div>
+                            <p className="text-sm font-medium">{point.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(point.created_at).toLocaleDateString('ar')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-green-600">
+                              +{point.points_earned} نقطة
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      لا يوجد تاريخ نقاط لهذا العميل
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Completed Orders */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4" />
+                    الطلبات المكتملة ({selectedCustomer.completedOrders?.length || 0})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedCustomer.completedOrders && selectedCustomer.completedOrders.length > 0 ? (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {selectedCustomer.completedOrders.map((order, index) => (
+                        <div key={index} className="flex justify-between items-center p-2 border rounded">
+                          <div>
+                            <p className="text-sm font-medium">طلب #{order.order_number}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(order.created_at).toLocaleDateString('ar')}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-bold">
+                              {formatCurrency(order.final_amount)}
+                            </p>
+                            <Badge variant="secondary" className="text-xs">
+                              {order.status === 'completed' ? 'مكتمل' : 'مُسلّم'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      لا توجد طلبات مكتملة لهذا العميل
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => applyLoyaltyDiscount(selectedCustomer.id)}
+                  disabled={!selectedCustomer.customer_loyalty || selectedCustomer.customer_loyalty.total_points === 0}
+                >
+                  <Gift className="h-4 w-4 mr-1" />
+                  تطبيق خصم الولاء
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => sendCustomerNotification(
+                    selectedCustomer.id, 
+                    'loyalty_summary',
+                    `مرحباً ${selectedCustomer.name}! 🌟\n\nملخص حسابك:\n• النقاط: ${selectedCustomer.customer_loyalty?.total_points || 0}\n• الطلبات: ${selectedCustomer.customer_loyalty?.total_orders || 0}\n• المستوى: ${selectedCustomer.customer_loyalty?.loyalty_tiers?.name || 'غير محدد'}\n\nشكراً لثقتك بنا! 🙏`
+                  )}
+                  disabled={!selectedCustomer.phone}
+                >
+                  <Send className="h-4 w-4 mr-1" />
+                  إرسال ملخص الحساب
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
