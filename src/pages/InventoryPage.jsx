@@ -378,7 +378,7 @@ const InventoryPage = () => {
           : [];
 
         const totalStock = variantsWithLevels.reduce((acc, v) => acc + (v?.quantity || 0), 0);
-        const totalReserved = variantsWithLevels.reduce((acc, v) => acc + (v?.reserved_quantity || 0), 0);
+        const totalReserved = variantsWithLevels.reduce((acc, v) => acc + (v?.reserved_quantity || v?.reserved || 0), 0);
       
         const hasLowStockVariant = variantsWithLevels.some(v => v?.stockLevel === 'low');
         const hasMediumStockVariant = variantsWithLevels.some(v => v?.stockLevel === 'medium');
@@ -551,7 +551,11 @@ const InventoryPage = () => {
           lowStockCount: variants.filter(v => v?.stockLevel === 'low').length,
           mediumStockCount: variants.filter(v => v?.stockLevel === 'medium').length,
           highStockCount: variants.filter(v => v?.stockLevel === 'high').length,
-          reservedStockCount: inventoryItems.reduce((sum, item) => sum + (item?.totalReserved || 0), 0),
+          reservedStockCount: inventoryItems.reduce((sum, item) => {
+            return sum + (item?.variants || []).reduce((varSum, variant) => {
+              return varSum + (variant?.reserved_quantity || variant?.reserved || 0);
+            }, 0);
+          }, 0),
           totalVariants: variants.length,
       };
   }, [inventoryItems]);

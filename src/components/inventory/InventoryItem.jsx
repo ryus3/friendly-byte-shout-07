@@ -11,7 +11,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   }
 
   const stock = variant.quantity || 0;
-  const reserved = variant.reserved || 0;
+  const reserved = variant.reserved_quantity || variant.reserved || 0;
   const available = stock - reserved;
 
   const getStockStatus = () => {
