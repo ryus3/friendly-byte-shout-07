@@ -552,79 +552,49 @@ const CustomersManagementPage = () => {
 
                 <div className="space-y-2">
                   <Label>مستوى الولاء</Label>
-              <Select value={loyaltyTierFilter} onValueChange={setLoyaltyTierFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل المستويات</SelectItem>
-                  {loyaltyTiers.map(tier => (
-                    <SelectItem key={tier.id} value={tier.id}>
-                      {tier.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <Select value={loyaltyTierFilter} onValueChange={setLoyaltyTierFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل المستويات</SelectItem>
+                      {loyaltyTiers.map(tier => (
+                        <SelectItem key={tier.id} value={tier.id}>
+                          {tier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label>تقسيم الجنس</Label>
-              <Select value={genderSegmentation} onValueChange={setGenderSegmentation}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل التقسيمات</SelectItem>
-                  <SelectItem value="male">عملاء رجاليين</SelectItem>
-                  <SelectItem value="female">عملاء نسائيين</SelectItem>
-                  <SelectItem value="unisex">عملاء مختلطين</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label>نطاق التاريخ</Label>
+                  <DatePickerWithRange
+                    date={dateRange}
+                    setDate={setDateRange}
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label>فلتر القسم</Label>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الأقسام</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>نطاق التاريخ</Label>
-              <DatePickerWithRange
-                date={dateRange}
-                setDate={setDateRange}
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Button 
-                onClick={() => {
-                  setSearchTerm('');
-                  setTimeFilter('all');
-                  setPointsFilter('all');
-                  setLoyaltyTierFilter('all');
-                  setGenderSegmentation('all');
-                  setDepartmentFilter('all');
-                  setDateRange(null);
-                  setActiveFilter('all');
-                }}
-                variant="outline"
-                className="w-full"
-              >
-                مسح الفلاتر
-              </Button>
-            </div>
+                <div className="flex items-end">
+                  <Button 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setTimeFilter('all');
+                      setPointsFilter('all');
+                      setLoyaltyTierFilter('all');
+                      setGenderSegmentation('all');
+                      setDepartmentFilter('all');
+                      setDateRange(null);
+                      setActiveFilter('all');
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    مسح الفلاتر
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
