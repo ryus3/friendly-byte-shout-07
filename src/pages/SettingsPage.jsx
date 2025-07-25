@@ -32,7 +32,7 @@ import PermissionBasedStockSettings from '@/components/settings/PermissionBasedS
 
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
-import SystemHealthDashboard from '@/components/system/SystemHealthDashboard';
+
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import { Badge } from '@/components/ui/badge';
@@ -147,7 +147,6 @@ const SettingsPage = () => {
   const [isDeliverySettingsOpen, setIsDeliverySettingsOpen] = useState(false);
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
-  const [isSystemHealthOpen, setIsSystemHealthOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
   // جلب عدد رموز الموظفين للعرض في الكارت
@@ -406,44 +405,6 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* فحص النظام الشامل - للمديرين فقط */}
-            {canManageSettings && (
-              <ModernCard
-                icon={Activity}
-                title="فحص النظام الشامل"
-                description="مراقبة صحة النظام، الأداء، والأمان مع إصلاح تلقائي للمشاكل"
-                iconColor="from-indigo-500 to-purple-600"
-                onClick={() => setIsSystemHealthOpen(true)}
-              >
-                <div className="space-y-3 mt-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-indigo-50 dark:bg-indigo-950/30">
-                      <div className="text-lg font-bold text-indigo-600">100%</div>
-                      <div className="text-xs text-muted-foreground">صحة البيانات</div>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30">
-                      <div className="text-lg font-bold text-purple-600">ممتاز</div>
-                      <div className="text-xs text-muted-foreground">الأداء</div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border/50">
-                    <div className="flex items-center gap-1 text-xs">
-                      <Activity className="w-3 h-3 text-indigo-500" />
-                      <span>مراقبة</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <RefreshCw className="w-3 h-3 text-purple-500" />
-                      <span>إصلاح</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <BarChart className="w-3 h-3 text-blue-500" />
-                      <span>تحليل</span>
-                    </div>
-                  </div>
-                </div>
-              </ModernCard>
-            )}
 
             {/* معلومات النظام */}
             <ModernCard
@@ -534,11 +495,6 @@ const SettingsPage = () => {
         onOpenChange={setIsBackupSystemOpen} 
       />
 
-      {/* نافذة فحص النظام الشامل */}
-      <SystemHealthDashboard 
-        open={isSystemHealthOpen} 
-        onOpenChange={setIsSystemHealthOpen} 
-      />
     </>
   );
 };

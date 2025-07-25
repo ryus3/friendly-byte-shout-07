@@ -25,8 +25,6 @@ export const NotificationsRealtimeProvider = ({ children }) => {
     
     setIsLoading(true);
     try {
-      console.log('🔔 تحديث الإشعارات...');
-      
       // جلب جميع الإشعارات الحديثة
       const { data: notificationsData, error } = await supabase
         .from('notifications')
@@ -48,10 +46,8 @@ export const NotificationsRealtimeProvider = ({ children }) => {
       // حساب الإشعارات غير المقروءة
       const unread = processedNotifications.filter(n => !n.read).length;
       setUnreadCount(unread);
-      
-      console.log('✅ تم تحديث الإشعارات:', processedNotifications.length, 'إشعار، غير مقروءة:', unread);
     } catch (error) {
-      console.error('❌ خطأ في جلب الإشعارات:', error);
+      console.error('خطأ في جلب الإشعارات:', error);
     } finally {
       setIsLoading(false);
     }
@@ -100,8 +96,6 @@ export const NotificationsRealtimeProvider = ({ children }) => {
 
     // تحديث أولي
     refreshNotifications();
-
-    console.log('🔔 إعداد Real-time للإشعارات...');
     
     // إعداد قناة real-time للإشعارات
     const notificationsChannel = supabase
@@ -109,8 +103,6 @@ export const NotificationsRealtimeProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications' },
         (payload) => {
-          console.log('🆕 إشعار جديد:', payload.new);
-          
           const newNotification = {
             ...payload.new,
             read: false,
@@ -132,7 +124,6 @@ export const NotificationsRealtimeProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'notifications' },
         (payload) => {
-          console.log('🔄 تحديث إشعار:', payload.new);
           setNotifications(prev => 
             prev.map(n => n.id === payload.new.id ? { ...n, ...payload.new } : n)
           );
@@ -141,7 +132,6 @@ export const NotificationsRealtimeProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'DELETE', schema: 'public', table: 'notifications' },
         (payload) => {
-          console.log('🗑️ حذف إشعار:', payload.old);
           setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
           setUnreadCount(prev => Math.max(0, prev - 1));
         }
