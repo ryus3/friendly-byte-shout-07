@@ -22,11 +22,6 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
   const { isAdmin } = useAuth();
   const { canManageSettings } = usePermissionBasedData();
   
-  // منع الوصول للموظفين
-  if (!isAdmin && !canManageSettings) {
-    return null;
-  }
-  
   const [settings, setSettings] = useLocalStorage('inventorySettings', {
     enableLowStockNotifications: true,
     enableOutOfStockNotifications: true,
@@ -39,6 +34,11 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
     notificationFrequencyHours: 24,
     lastSavedAt: null
   });
+  
+  // منع الوصول للموظفين - بعد استدعاء جميع الhooks
+  if (!isAdmin && !canManageSettings) {
+    return null;
+  }
 
   const handleSettingChange = async (key, value) => {
     const updatedSettings = { 
