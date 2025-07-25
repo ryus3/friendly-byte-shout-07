@@ -92,11 +92,11 @@ const OrderCard = ({
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
   
-  // تحديد نوع التوصيل
+  // تحديد نوع التوصيل - ألوان أجمل
   const isLocalOrder = order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
-    'bg-emerald-500/10 text-emerald-700 border border-emerald-300/50' : 
-    'bg-blue-500/10 text-blue-700 border border-blue-300/50';
+    'bg-gradient-to-r from-emerald-500/20 to-emerald-600/20 text-emerald-700 border border-emerald-400/50 shadow-md shadow-emerald-500/20' : 
+    'bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-700 border border-blue-400/50 shadow-md shadow-blue-500/20';
 
   // التحقق من الصلاحيات
   const canEdit = order.status === 'pending';
@@ -136,14 +136,30 @@ const OrderCard = ({
     });
   };
 
-  // تحضير معلومات المنتجات
+  // تحضير معلومات المنتجات مع اسم المنتج
   const getProductSummary = () => {
     if (!order.items || order.items.length === 0) return null;
     
     const totalItems = order.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const firstProductType = order.items[0]?.producttype || order.items[0]?.product_type || 'منتج';
     
-    return { totalItems, firstProductType };
+    if (order.items.length === 1) {
+      // منتج واحد - اعرض الاسم والعدد
+      const item = order.items[0];
+      const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
+      return { 
+        totalItems, 
+        displayText: `${productName} (${item.quantity || 1})`,
+        isSingle: true
+      };
+    } else {
+      // عدة منتجات
+      const firstProductType = order.items[0]?.producttype || order.items[0]?.product_type || 'منتج';
+      return { 
+        totalItems, 
+        displayText: `${totalItems} قطعة - ${firstProductType}`,
+        isSingle: false
+      };
+    }
   };
 
   const productSummary = getProductSummary();
@@ -166,8 +182,8 @@ const OrderCard = ({
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-all duration-500" />
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-purple-500 to-blue-500 opacity-60" />
         
-        <CardContent className="relative p-6">
-          <div className="space-y-5">
+        <CardContent className="relative p-4">
+          <div className="space-y-3">
             
             {/* Header العالمي */}
             <div className="flex items-start justify-between">
@@ -284,29 +300,33 @@ const OrderCard = ({
               </div>
             </div>
 
-            {/* Product & Price مضغوط */}
-            <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-4 border border-primary/20">
+            {/* Product & Price مع توصيل في نفس السطر */}
+            <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
               <div className="flex items-center justify-between">
                 {productSummary && (
                   <div className="flex items-center gap-2 text-primary font-bold">
                     <Package className="h-4 w-4" />
-                    <span className="text-sm">{productSummary.totalItems} {productSummary.firstProductType}</span>
+                    <span className="text-sm">{productSummary.displayText}</span>
                   </div>
                 )}
                 
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                  <span className="font-bold text-lg text-primary">
-                    {order.final_amount?.toLocaleString()}
-                  </span>
-                  <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                <div className="flex items-center gap-2 text-left">
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      <span className="font-bold text-lg text-primary">
+                        {order.final_amount?.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                    </div>
+                    {order.delivery_fee > 0 && (
+                      <span className="text-xs text-muted-foreground font-medium">
+                        شامل التوصيل
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              {order.delivery_fee > 0 && (
-                <div className="text-xs text-muted-foreground mt-1 text-center">
-                  شامل التوصيل (+{order.delivery_fee?.toLocaleString()} د.ع)
-                </div>
-              )}
             </div>
 
             {/* Status Actions للطلبات المحلية فقط */}
