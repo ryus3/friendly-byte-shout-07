@@ -222,6 +222,57 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_loyalty: {
+        Row: {
+          created_at: string | null
+          current_tier_id: string | null
+          customer_id: string | null
+          id: string
+          last_tier_upgrade: string | null
+          total_orders: number | null
+          total_points: number | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_tier_id?: string | null
+          customer_id?: string | null
+          id?: string
+          last_tier_upgrade?: string | null
+          total_orders?: number | null
+          total_points?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_tier_id?: string | null
+          customer_id?: string | null
+          id?: string
+          last_tier_upgrade?: string | null
+          total_orders?: number | null
+          total_points?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_loyalty_current_tier_id_fkey"
+            columns: ["current_tier_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_loyalty_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -641,6 +692,141 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      loyalty_points_history: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          description: string | null
+          id: string
+          order_id: string | null
+          points_earned: number
+          points_used: number | null
+          transaction_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          points_earned: number
+          points_used?: number | null
+          transaction_type: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          points_earned?: number
+          points_used?: number | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_points_history_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_points_history_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards_used: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          description: string | null
+          id: string
+          order_id: string | null
+          reward_type: string
+          reward_value: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          reward_type: string
+          reward_value?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          reward_type?: string
+          reward_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_rewards_used_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_rewards_used_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_tiers: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          discount_percentage: number | null
+          free_delivery_threshold: number | null
+          icon: string | null
+          id: string
+          name: string
+          name_en: string
+          points_required: number
+          special_benefits: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          discount_percentage?: number | null
+          free_delivery_threshold?: number | null
+          icon?: string | null
+          id?: string
+          name: string
+          name_en: string
+          points_required: number
+          special_benefits?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          discount_percentage?: number | null
+          free_delivery_threshold?: number | null
+          icon?: string | null
+          id?: string
+          name?: string
+          name_en?: string
+          points_required?: number
+          special_benefits?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -2167,6 +2353,10 @@ export type Database = {
         }
         Returns: number
       }
+      calculate_loyalty_points: {
+        Args: { order_amount: number }
+        Returns: number
+      }
       calculate_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -2328,6 +2518,10 @@ export type Database = {
           p_created_by: string
         }
         Returns: Json
+      }
+      update_customer_tier: {
+        Args: { p_customer_id: string }
+        Returns: undefined
       }
       update_reserved_stock: {
         Args: {
