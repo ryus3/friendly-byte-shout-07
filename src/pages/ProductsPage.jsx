@@ -29,14 +29,6 @@ const ProductsPage = () => {
   const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
   const { hasPermission } = usePermissions();
   
-  console.log('🚀 تشخيص صفحة المنتجات:', {
-    step: 'البيانات الأساسية',
-    products: products?.length || 0,
-    productsArray: Array.isArray(products),
-    loading,
-    isAdmin,
-    userRole: user?.role || user?.full_name
-  });
   const { colors, categories: allCategories, departments: allDepartments } = useVariants();
   
   // فلتر خاص بالصلاحيات - محفوظ محلياً
@@ -136,19 +128,8 @@ const ProductsPage = () => {
   }, [location]);
 
   const filteredProducts = useMemo(() => {
-    console.log('🔍 فلترة المنتجات النهائية:', {
-      permissionFiltered: permissionFilteredProducts?.length || 0,
-      filters: filters
-    });
-    
     // للمدير: لا نطبق فلتر is_active، للموظفين نطبقه
     let tempProducts = isAdmin ? permissionFilteredProducts : permissionFilteredProducts.filter(p => p.is_active !== false);
-    
-    console.log('🔍 بعد فلتر is_active:', {
-      beforeActive: permissionFilteredProducts?.length || 0,
-      afterActive: tempProducts?.length || 0,
-      sampleProduct: tempProducts[0]?.name
-    });
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
@@ -227,7 +208,6 @@ const ProductsPage = () => {
   };
 
   const handleBarcodeScan = (scanData) => {
-    console.log("🔍 بيانات المسح في صفحة المنتجات:", scanData);
     
     let searchTerm = '';
     let foundProduct = null;
@@ -267,8 +247,6 @@ const ProductsPage = () => {
     
     // إذا تم العثور على المنتج، فتحه مباشرة
     if (foundProduct) {
-      console.log("📦 تم العثور على المنتج:", foundProduct.name, foundVariant ? `- ${foundVariant.color} ${foundVariant.size}` : '');
-      
       // إظهار تفاصيل المنتج
       handleProductSelect(foundProduct);
       

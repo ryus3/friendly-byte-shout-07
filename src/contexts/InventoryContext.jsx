@@ -703,8 +703,10 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'products' },
         (payload) => {
-          // إعادة تحميل البيانات للحصول على المنتج الكامل
-          fetchInitialData();
+          // إضافة المنتج الجديد فقط بدلاً من إعادة تحميل كل شيء
+          if (payload.new) {
+            setProducts(prev => [...prev, payload.new]);
+          }
         }
       )
       .on('postgres_changes',
@@ -755,8 +757,15 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'product_variants' },
         (payload) => {
-          // إعادة تحميل البيانات للحصول على التحديثات الكاملة
-          fetchInitialData();
+          // تحديث المتغير فقط بدلاً من إعادة تحميل كل شيء
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            setProducts(prev => prev.map(product => ({
+              ...product,
+              variants: product.variants?.map(variant => 
+                variant.id === payload.new.id ? { ...variant, ...payload.new } : variant
+              )
+            })));
+          }
         }
       )
       .subscribe();
