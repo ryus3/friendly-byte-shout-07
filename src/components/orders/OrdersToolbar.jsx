@@ -54,18 +54,17 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         <div className="flex items-center border rounded-lg p-1 bg-muted/30">
           <Button 
             onClick={() => setShowQRScanner(true)}
-            variant="default"
+            variant="ghost"
             size="sm"
-            className="h-8 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transition-all duration-200 border-0"
+            className="h-8 w-8 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg transition-all duration-200 border-0"
           >
-            <QrCode className="h-4 w-4 mr-1" />
-            {!isMobile && 'مسح QR'}
+            <QrCode className="h-4 w-4" />
           </Button>
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange?.('grid')}
-            className="h-8 px-3"
+            className="h-8 w-8 p-0"
           >
             <LayoutGrid className="h-4 w-4" />
           </Button>
@@ -73,7 +72,7 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
             variant={viewMode === 'list' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => onViewModeChange?.('list')}
-            className="h-8 px-3"
+            className="h-8 w-8 p-0"
           >
             <List className="h-4 w-4" />
           </Button>

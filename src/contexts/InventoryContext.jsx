@@ -134,8 +134,33 @@ export const InventoryProvider = ({ children }) => {
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
       }
 
+      // حجز المخزون للطلبات قيد التجهيز
+      try {
+        for (const item of cartItems) {
+          await supabase.rpc('update_reserved_stock', {
+            p_product_id: item.productId,
+            p_quantity_change: item.quantity,
+            p_sku: item.variantId || item.sku
+          });
+        }
+        console.log('تم حجز المخزون للطلب:', createdOrder.order_number);
+      } catch (stockError) {
+        console.error('خطأ في حجز المخزون:', stockError);
+        // لا نلغي الطلب لكن نسجل التحذير
+        toast({
+          title: "تحذير", 
+          description: "تم إنشاء الطلب لكن قد تكون هناك مشكلة في حجز المخزون",
+          variant: "destructive"
+        });
+      }
+
       setOrders(prev => [createdOrder, ...prev]);
-      return { success: true, trackingNumber: newOrder.tracking_number, orderId: createdOrder.id };
+      return { 
+        success: true, 
+        trackingNumber: newOrder.tracking_number, 
+        qr_id: createdOrder.qr_id,
+        orderId: createdOrder.id 
+      };
     } catch (error) {
       console.error('Error in createOrder:', error);
       return { success: false, error: error.message };

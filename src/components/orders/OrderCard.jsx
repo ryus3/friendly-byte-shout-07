@@ -136,27 +136,37 @@ const OrderCard = ({
     });
   };
 
-  // تحضير معلومات المنتجات مع اسم المنتج
+  // تحضير معلومات المنتجات مع اسم المنتج واللون والقياس
   const getProductSummary = () => {
     if (!order.items || order.items.length === 0) return null;
     
     const totalItems = order.items.reduce((sum, item) => sum + (item.quantity || 1), 0);
     
     if (order.items.length === 1) {
-      // منتج واحد - اعرض الاسم والعدد
+      // منتج واحد - اعرض الاسم والعدد واللون والقياس
       const item = order.items[0];
       const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
+      
+      // جمع معلومات اللون والقياس
+      const colorInfo = item.product_variants?.colors?.name || item.color || '';
+      const sizeInfo = item.product_variants?.sizes?.name || item.size || '';
+      const variantInfo = [colorInfo, sizeInfo].filter(Boolean).join(' - ');
+      
       return { 
         totalItems, 
-        displayText: `${productName} (${item.quantity || 1})`,
+        displayText: productName,
+        variantInfo: variantInfo || null,
+        quantity: item.quantity || 1,
         isSingle: true
       };
     } else {
-      // عدة منتجات
+      // عدة منتجات - اعرض ملخص
       const firstProductType = order.items[0]?.producttype || order.items[0]?.product_type || 'منتج';
       return { 
         totalItems, 
         displayText: `${totalItems} قطعة - ${firstProductType}`,
+        variantInfo: null,
+        quantity: totalItems,
         isSingle: false
       };
     }
@@ -325,9 +335,23 @@ const OrderCard = ({
             <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl p-3 border border-primary/20">
               <div className="flex items-center justify-between">
                 {productSummary && (
-                  <div className="flex items-center gap-2 text-primary font-bold">
-                    <Package className="h-4 w-4" />
-                    <span className="text-sm">{productSummary.displayText}</span>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-primary font-bold">
+                      <Package className="h-4 w-4" />
+                      <span className="text-sm">{productSummary.displayText}</span>
+                      {productSummary.isSingle && (
+                        <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full">
+                          × {productSummary.quantity}
+                        </span>
+                      )}
+                    </div>
+                    {productSummary.variantInfo && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mr-6">
+                        <span className="bg-secondary px-2 py-1 rounded-md font-medium">
+                          {productSummary.variantInfo}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
                 
