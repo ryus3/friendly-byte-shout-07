@@ -5,7 +5,21 @@ import { toast } from '@/components/ui/use-toast';
 
 const VariantsContext = createContext();
 
-export const useVariants = () => useContext(VariantsContext);
+export const useVariants = () => {
+  const context = useContext(VariantsContext);
+  if (!context) {
+    return {
+      categories: [],
+      colors: [],
+      sizes: [],
+      departments: [],
+      productTypes: [],
+      seasonsOccasions: [],
+      loading: true
+    };
+  }
+  return context;
+};
 
 export const VariantsProvider = ({ children }) => {
   const [categories, setCategories] = useState([]);

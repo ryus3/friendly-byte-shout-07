@@ -138,7 +138,7 @@ const InventoryPage = () => {
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
-  const { sizes } = useVariants();
+  const { sizes = [] } = useVariants() || {};
   const [departments, setDepartments] = useState([]);
   
   const [searchParams, setSearchParams] = useSearchParams();
