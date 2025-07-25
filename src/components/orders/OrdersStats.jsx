@@ -47,7 +47,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => 
   };
   
   const statsData = useMemo(() => [
-    { key: 'ai-orders', title: 'طلبات AI', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrders.length, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
+    { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrders.length, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
     { key: 'total', title: 'إجمالي الطلبات', icon: ShoppingCart, colors: ['blue-500', 'cyan-500'], value: getStats('all'), onPeriodChange: (p) => handlePeriodChange('total', p), onClick: createClickHandler('all'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'pending', title: 'قيد التجهيز', icon: Clock, colors: ['yellow-500', 'orange-500'], value: getStats('pending'), onPeriodChange: (p) => handlePeriodChange('pending', p), onClick: createClickHandler('pending'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'processing', title: 'يحتاج معالجة', icon: Package, colors: ['status-processing', 'orange-500'], value: getStats('processing'), onPeriodChange: (p) => handlePeriodChange('processing', p), onClick: createClickHandler('processing'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },

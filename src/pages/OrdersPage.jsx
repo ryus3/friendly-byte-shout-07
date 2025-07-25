@@ -138,7 +138,6 @@ const OrdersPage = () => {
         matchesStatus = order.status === status && !order.isArchived;
       }
 
-
       return matchesSearch && matchesStatus;
     });
   }, [userOrders, filters]);
