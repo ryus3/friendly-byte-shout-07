@@ -11,6 +11,7 @@ import Loader from '@/components/ui/loader.jsx';
 import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
+import MyOrdersPage from '@/pages/MyOrdersPage.jsx';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import ProfitSettlementPage from '@/pages/ProfitSettlementPage.jsx';
 
@@ -104,7 +105,7 @@ function AppContent() {
           <Route path="/inventory" element={<ProtectedRoute permission="view_inventory">{childrenWithProps(InventoryPage)}</ProtectedRoute>} />
           
           <Route path="/employee-follow-up" element={<ProtectedRoute permission="view_all_orders">{childrenWithProps(EmployeeFollowUpPage)}</ProtectedRoute>} />
-          <Route path="/my-orders" element={<ProtectedRoute permission="view_orders">{childrenWithProps(OrdersPage)}</ProtectedRoute>} />
+          <Route path="/my-orders" element={<ProtectedRoute permission="view_orders">{childrenWithProps(MyOrdersPage)}</ProtectedRoute>} />
 
           <Route path="/purchases" element={<ProtectedRoute permission="view_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute permission="view_settings">{childrenWithProps(SettingsPage)}</ProtectedRoute>} />
