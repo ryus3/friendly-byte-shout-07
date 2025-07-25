@@ -82,6 +82,64 @@ export type Database = {
           },
         ]
       }
+      applied_customer_discounts: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          customer_id: string | null
+          discount_amount: number
+          discount_percentage: number
+          discount_type: string
+          id: string
+          notes: string | null
+          order_id: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          customer_id?: string | null
+          discount_amount?: number
+          discount_percentage?: number
+          discount_type: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          customer_id?: string | null
+          discount_amount?: number
+          discount_percentage?: number
+          discount_type?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applied_customer_discounts_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "applied_customer_discounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applied_customer_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -2499,6 +2557,10 @@ export type Database = {
         Args: { order_amount: number }
         Returns: number
       }
+      calculate_loyalty_points_per_order: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       calculate_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -2595,6 +2657,14 @@ export type Database = {
       get_available_stock: {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
+      }
+      get_customer_auto_discount: {
+        Args: {
+          p_customer_phone: string
+          p_customer_city: string
+          p_order_subtotal: number
+        }
+        Returns: Json
       }
       get_default_cash_source: {
         Args: Record<PropertyKey, never>

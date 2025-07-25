@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Filter, Clock } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
 
@@ -18,6 +20,13 @@ const CustomersManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [cityDiscounts, setCityDiscounts] = useState([]);
   const [activeTab, setActiveTab] = useState('customers');
+  const [appliedDiscounts, setAppliedDiscounts] = useState([]);
+  
+  // فلاتر جديدة
+  const [dateRange, setDateRange] = useState(null);
+  const [pointsFilter, setPointsFilter] = useState('all'); // all, with_points, without_points
+  const [tierFilter, setTierFilter] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all'); // all, this_month, this_year, last_month
 
   const tierIcons = {
     'Award': Award,
@@ -85,6 +94,18 @@ const CustomersManagementPage = () => {
         
       setCityDiscounts(cityDiscountsData || []);
       
+      // جلب الخصومات المطبقة
+      const { data: appliedDiscountsData } = await supabase
+        .from('applied_customer_discounts')
+        .select(`
+          *,
+          customers (name, phone),
+          orders (order_number, final_amount)
+        `)
+        .order('applied_at', { ascending: false });
+        
+      setAppliedDiscounts(appliedDiscountsData || []);
+      
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -97,7 +118,50 @@ const CustomersManagementPage = () => {
     }
   };
 
-  const filteredCustomers = customers.filter(customer =>
+  // فلترة العملاء حسب المعايير المختلفة
+  const filteredCustomers = customers.filter(customer => {
+    // فلتر النص
+    const searchMatch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       customer.phone?.includes(searchTerm) ||
+                       customer.city?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!searchMatch) return false;
+    
+    // فلتر النقاط
+    const hasPoints = customer.customer_loyalty?.[0]?.total_points > 0;
+    if (pointsFilter === 'with_points' && !hasPoints) return false;
+    if (pointsFilter === 'without_points' && hasPoints) return false;
+    
+    // فلتر المستوى
+    const customerTierId = customer.customer_loyalty?.[0]?.current_tier_id;
+    if (tierFilter !== 'all' && customerTierId !== tierFilter) return false;
+    
+    // فلتر الوقت
+    const customerDate = new Date(customer.created_at);
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    
+    if (timeFilter === 'this_month') {
+      if (customerDate.getMonth() !== thisMonth || customerDate.getFullYear() !== thisYear) return false;
+    } else if (timeFilter === 'this_year') {
+      if (customerDate.getFullYear() !== thisYear) return false;
+    } else if (timeFilter === 'last_month') {
+      const lastMonth = thisMonth === 0 ? 11 : thisMonth - 1;
+      const lastMonthYear = thisMonth === 0 ? thisYear - 1 : thisYear;
+      if (customerDate.getMonth() !== lastMonth || customerDate.getFullYear() !== lastMonthYear) return false;
+    }
+    
+    // فلتر نطاق التاريخ
+    if (dateRange?.from && dateRange?.to) {
+      if (customerDate < dateRange.from || customerDate > dateRange.to) return false;
+    }
+    
+    return true;
+  });
+
+  const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0);
+  const customersWithPhones = filteredCustomers.filter(c => c.phone);
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone?.includes(searchTerm) ||
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -548,14 +612,105 @@ const CustomersManagementPage = () => {
 
         {/* Customers Tab */}
         <TabsContent value="customers" className="space-y-4">
-          {/* Search */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Input
-              placeholder="البحث بالاسم أو الهاتف أو البريد الإلكتروني..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1"
-            />
+          {/* Enhanced Search and Filters */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Input
+                placeholder="البحث بالاسم أو الهاتف أو المدينة..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+              <Button variant="outline" className="shrink-0">
+                <Filter className="h-4 w-4 mr-1" />
+                فلاتر متقدمة
+              </Button>
+            </div>
+
+            {/* Advanced Filters Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+              {/* Time Filter */}
+              <div>
+                <Label className="text-sm font-medium">فترة الانضمام</Label>
+                <Select value={timeFilter} onValueChange={setTimeFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر الفترة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">كل الفترات</SelectItem>
+                    <SelectItem value="this_month">هذا الشهر</SelectItem>
+                    <SelectItem value="last_month">الشهر الماضي</SelectItem>
+                    <SelectItem value="this_year">هذا العام</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Points Filter */}
+              <div>
+                <Label className="text-sm font-medium">النقاط</Label>
+                <Select value={pointsFilter} onValueChange={setPointsFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="فلتر النقاط" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">الكل</SelectItem>
+                    <SelectItem value="with_points">مع نقاط</SelectItem>
+                    <SelectItem value="without_points">بدون نقاط</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Tier Filter */}
+              <div>
+                <Label className="text-sm font-medium">المستوى</Label>
+                <Select value={tierFilter} onValueChange={setTierFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="فلتر المستوى" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع المستويات</SelectItem>
+                    {loyaltyTiers.map((tier) => (
+                      <SelectItem key={tier.id} value={tier.id}>
+                        {tier.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date Range Filter */}
+              <div>
+                <Label className="text-sm font-medium">نطاق التاريخ</Label>
+                <DateRangePicker
+                  date={dateRange}
+                  onDateChange={setDateRange}
+                />
+              </div>
+            </div>
+
+            {/* Filter Results Summary */}
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>النتائج: {filteredCustomers.length} عميل</span>
+              <span>•</span>
+              <span>مع نقاط: {customersWithPoints.length}</span>
+              <span>•</span>
+              <span>مع هواتف: {customersWithPhones.length}</span>
+              {(timeFilter !== 'all' || pointsFilter !== 'all' || tierFilter !== 'all' || dateRange) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTimeFilter('all');
+                    setPointsFilter('all');
+                    setTierFilter('all');
+                    setDateRange(null);
+                  }}
+                  className="ml-2"
+                >
+                  إزالة الفلاتر
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Loyalty Tiers Overview */}
@@ -704,22 +859,33 @@ const CustomersManagementPage = () => {
                         </Button>
                       </div>
                       
-                      {/* Points Status Indicator */}
-                      {loyalty && loyalty.total_points > 0 && (
-                        <div className="mt-2 text-center">
-                          <Badge variant="secondary" className="text-xs">
-                            ✅ مؤهل لخصم الولاء ({tier?.discount_percentage || 0}%)
-                          </Badge>
-                        </div>
-                      )}
-                      
-                      {(!loyalty || loyalty.total_points === 0) && (
-                        <div className="mt-2 text-center">
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
-                            بحاجة لطلبات مكتملة للحصول على نقاط
-                          </Badge>
-                        </div>
-                      )}
+                      {/* Enhanced Status Indicators */}
+                      <div className="mt-2 space-y-1">
+                        {loyalty && loyalty.total_points > 0 && (
+                          <div className="text-center">
+                            <Badge variant="secondary" className="text-xs">
+                              ✅ مؤهل لخصم الولاء ({tier?.discount_percentage || 0}%)
+                            </Badge>
+                          </div>
+                        )}
+                        
+                        {(!loyalty || loyalty.total_points === 0) && (
+                          <div className="text-center">
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              بحاجة لطلب مكتمل بقيمة 20,000+ د.ع للحصول على 200 نقطة
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* Discount Applied Indicator */}
+                        {appliedDiscounts.some(d => d.customer_id === customer.id) && (
+                          <div className="text-center">
+                            <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
+                              🏷️ تم تطبيق خصم مؤخراً
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

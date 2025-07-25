@@ -50,6 +50,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     defaultCustomerName: defaultCustomerName || user?.default_customer_name || ''
   }), [defaultCustomerName, user?.default_customer_name]);
   const [formData, setFormData] = useState(initialFormData);
+  const [autoDiscount, setAutoDiscount] = useState(null);
+  const [discountLoading, setDiscountLoading] = useState(false);
   
   // ملء البيانات من الطلب الذكي عند وجوده
   useEffect(() => {
@@ -395,10 +397,58 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
     
     validateField(name, value);
+    
+    // فحص الخصم التلقائي عند إدخال رقم الهاتف
+    if (name === 'phone' && value.length >= 10) {
+      checkAutoDiscount(value, formData.city);
+    }
   };
 
   const handleSelectChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // فحص الخصم التلقائي عند تغيير المدينة
+    if (name === 'city' && formData.phone) {
+      checkAutoDiscount(formData.phone, value);
+    }
+  };
+
+  // دالة فحص الخصم التلقائي
+  const checkAutoDiscount = async (phone, city) => {
+    if (!phone || phone.length < 10 || !city) return;
+    
+    setDiscountLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('get_customer_auto_discount', {
+        p_customer_phone: phone,
+        p_customer_city: city,
+        p_order_subtotal: subtotal
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.has_discount) {
+        setAutoDiscount(data);
+        setDiscount(data.discount_amount);
+        
+        toast({
+          title: "🎉 خصم تلقائي!",
+          description: `${data.discount_description} - تم تطبيق خصم ${data.discount_amount.toLocaleString()} د.ع`,
+          variant: "success",
+          duration: 5000
+        });
+      } else {
+        setAutoDiscount(null);
+        if (discount > 0) {
+          setDiscount(0);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking auto discount:', error);
+      setAutoDiscount(null);
+    } finally {
+      setDiscountLoading(false);
+    }
   };
   
   const validateForm = () => {
@@ -492,9 +542,19 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (isDialog && aiOrderData) {
         try {
           const result = await createOrder(orderData);
-          if (result.success) {
+        if (result.success) {
             // حذف الطلب الذكي بعد الموافقة عليه
             await approveAiOrder(aiOrderData.id);
+            
+            // تسجيل استخدام الخصم إن وجد
+            if (autoDiscount && autoDiscount.has_discount && autoDiscount.customer_id) {
+              await supabase.rpc('record_discount_usage', {
+                p_customer_id: autoDiscount.customer_id,
+                p_discount_type: autoDiscount.discount_type,
+                p_discount_amount: autoDiscount.discount_amount,
+                p_order_id: result.order?.id
+              });
+            }
             
             toast({
               title: "تم بنجاح!",
@@ -574,6 +634,31 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
+        // تسجيل استخدام الخصم إن وجد
+        if (autoDiscount && autoDiscount.has_discount && autoDiscount.customer_id) {
+          await supabase.rpc('record_discount_usage', {
+            p_customer_id: autoDiscount.customer_id,
+            p_discount_type: autoDiscount.discount_type,
+            p_discount_amount: autoDiscount.discount_amount,
+            p_order_id: result.order?.id
+          });
+          
+          // تسجيل الخصم المطبق
+          await supabase
+            .from('applied_customer_discounts')
+            .insert({
+              customer_id: autoDiscount.customer_id,
+              order_id: result.order?.id,
+              discount_type: autoDiscount.discount_type,
+              discount_amount: autoDiscount.discount_amount,
+              discount_percentage: autoDiscount.discount_type === 'loyalty' ? 
+                autoDiscount.loyalty_info?.discount_percentage : 
+                autoDiscount.city_info?.discount_percentage,
+              applied_by: user?.id,
+              notes: autoDiscount.discount_description
+            });
+        }
+        
         // إشعار محسن مع QR ID
         toast({ 
           title: (
@@ -587,6 +672,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               <p><strong>QR ID:</strong> {result.qr_id || result.trackingNumber}</p>
               <p><strong>العميل:</strong> {formData.name}</p>
               <p><strong>المبلغ:</strong> {Math.round(finalTotal).toLocaleString()} د.ع</p>
+              {autoDiscount?.has_discount && (
+                <p><strong>خصم مطبق:</strong> {autoDiscount.discount_description}</p>
+              )}
             </div>
           ),
           variant: 'success',

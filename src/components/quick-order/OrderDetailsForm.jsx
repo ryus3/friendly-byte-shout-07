@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle, Trash2, Tag } from 'lucide-react';
+import { PlusCircle, Trash2, Tag, Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -20,11 +21,13 @@ const OrderDetailsForm = ({
   loadingPackageSizes, 
   activePartner, 
   dataFetchError, 
-  settings,
-  discount,
-  setDiscount,
-  subtotal,
-  total
+  settings, 
+  discount, 
+  setDiscount, 
+  subtotal, 
+  total,
+  autoDiscount,
+  discountLoading 
 }) => {
   const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();
