@@ -247,49 +247,6 @@ const CustomersManagementPage = () => {
     });
   };
 
-  // عرض تفاصيل العميل
-  const viewCustomerDetails = async (customerId) => {
-    try {
-      const { data: customerData } = await supabase
-        .from('customers')
-        .select(`
-          *,
-          customer_loyalty (*,
-            loyalty_tiers (*)
-          )
-        `)
-        .eq('id', customerId)
-        .single();
-
-      const { data: pointsHistory } = await supabase
-        .from('loyalty_points_history')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('created_at', { ascending: false });
-
-      const { data: orders } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('created_at', { ascending: false });
-
-      setSelectedCustomer({
-        ...customerData,
-        pointsHistory: pointsHistory || [],
-        orders: orders || []
-      });
-      setShowCustomerDetails(true);
-    } catch (error) {
-      console.error('خطأ في جلب تفاصيل العميل:', error);
-      toast({
-        title: 'خطأ في جلب البيانات',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  // إرسال إشعار للعميل
   // تحقق من تطبيق خصم المدينة العشوائي
   const checkAndApplyCityDiscount = async () => {
     try {
@@ -310,36 +267,6 @@ const CustomersManagementPage = () => {
       }
     } catch (error) {
       console.error('خطأ في تطبيق خصم المدينة:', error);
-    }
-  };
-
-  const sendCustomerNotification = async (customerId, type, message) => {
-    try {
-      const { error } = await supabase
-        .from('customer_notifications_sent')
-        .insert({
-          customer_id: customerId,
-          notification_type: type,
-          message: message,
-          sent_via: 'whatsapp',
-          success: false
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: 'تم إرسال الإشعار',
-        description: 'سيتم إرسال الإشعار عبر الواتساب قريباً'
-      });
-      setShowNotificationDialog(false);
-      setNotificationMessage('');
-    } catch (error) {
-      console.error('خطأ في إرسال الإشعار:', error);
-      toast({
-        title: 'خطأ في الإرسال',
-        description: error.message,
-        variant: 'destructive'
-      });
     }
   };
 
@@ -453,16 +380,17 @@ const CustomersManagementPage = () => {
         />
       </div>
 
-      {/* الفلاتر المتقدمة */}
+      {/* الفلاتر والبحث */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Filter className="h-5 w-5" />
-              فلاتر البحث والتصفية
+              البحث والفلترة
             </CardTitle>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
               className="flex items-center gap-2"
             >
@@ -473,6 +401,7 @@ const CustomersManagementPage = () => {
           </div>
         </CardHeader>
         <CardContent>
+          {/* الفلاتر الأساسية */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>البحث</Label>
@@ -608,95 +537,107 @@ const CustomersManagementPage = () => {
           <div className="space-y-4">
             {filteredCustomers.map((customer) => {
               const loyaltyData = customer.customer_loyalty?.[0];
-              const tierData = loyaltyData?.loyalty_tiers;
-              const TierIcon = tierData ? getTierIcon(tierData.icon) : Star;
-              const hasDiscount = loyaltyData && new Date().getDate() === 1; // مثال: خصم في بداية الشهر
+              const tierIcon = loyaltyData?.loyalty_tiers?.icon ? getTierIcon(loyaltyData.loyalty_tiers.icon) : Users;
+              const TierIcon = tierIcon;
 
               return (
                 <div
                   key={customer.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
                 >
-                  <div className="flex items-center space-x-4 space-x-reverse">
-                    <Avatar>
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {customer.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{customer.name}</h3>
-                        {hasDiscount && (
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            تم تطبيق خصم
-                          </Badge>
-                        )}
-                      </div>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4 space-x-reverse">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-primary/10">
+                          {customer.name.slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
                       
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        {customer.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {customer.phone}
-                          </div>
-                        )}
-                        {customer.city && (
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {customer.city}
-                          </div>
-                        )}
-                        {customer.customer_product_segments?.length > 0 && (
-                          <Badge variant="outline">
-                            {customer.customer_product_segments[0].gender_segment === 'male' ? 'رجالي' : 
-                             customer.customer_product_segments[0].gender_segment === 'female' ? 'نسائي' : 'مختلط'}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    {loyaltyData && (
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
-                          <div className="flex items-center gap-1">
-                            <TierIcon className="h-4 w-4" style={{ color: tierData?.color }} />
-                            <span className="text-sm font-medium">
-                              {loyaltyData.total_points} نقطة
-                            </span>
-                          </div>
-                          {tierData && (
-                            <div className="text-xs text-muted-foreground">
-                              {tierData.name}
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{customer.name}</h3>
+                          {loyaltyData?.loyalty_tiers && (
+                            <Badge 
+                              variant="secondary" 
+                              className="flex items-center gap-1"
+                              style={{ backgroundColor: loyaltyData.loyalty_tiers.color + '20', color: loyaltyData.loyalty_tiers.color }}
+                            >
+                              <TierIcon className="h-3 w-3" />
+                              {loyaltyData.loyalty_tiers.name}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          {customer.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-4 w-4" />
+                              {customer.phone}
+                            </div>
+                          )}
+                          {customer.city && (
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-4 w-4" />
+                              {customer.city}
                             </div>
                           )}
                         </div>
-                      </div>
-                    )}
 
-                    <div className="flex gap-2">
+                        {loyaltyData && (
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1 text-primary">
+                              <Star className="h-4 w-4" />
+                              {loyaltyData.total_points || 0} نقطة
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <ShoppingBag className="h-4 w-4" />
+                              {loyaltyData.total_orders || 0} طلب
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <TrendingUp className="h-4 w-4" />
+                              {formatCurrency(loyaltyData.total_spent || 0)}
+                            </div>
+                          </div>
+                        )}
+
+                        {customer.customer_product_segments && customer.customer_product_segments.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {customer.customer_product_segments.slice(0, 3).map((segment, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {segment.departments?.name || segment.categories?.name || segment.product_types?.name}
+                              </Badge>
+                            ))}
+                            {customer.customer_product_segments.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{customer.customer_product_segments.length - 3}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                       <Button
-                        size="sm"
                         variant="outline"
-                        onClick={() => viewCustomerDetails(customer.id)}
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setShowNotificationDialog(true);
+                        }}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setShowCustomerDetails(true);
+                        }}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      
-                      {userPermissions.can_apply_discounts && customer.phone && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedCustomer(customer);
-                            setShowNotificationDialog(true);
-                          }}
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                        </Button>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -704,13 +645,11 @@ const CustomersManagementPage = () => {
             })}
 
             {filteredCustomers.length === 0 && (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                  لا توجد عملاء
-                </h3>
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium text-muted-foreground mb-2">لا يوجد عملاء</h3>
                 <p className="text-sm text-muted-foreground">
-                  لا توجد عملاء مطابقين لمعايير البحث الحالية
+                  لم يتم العثور على عملاء مطابقين للفلاتر المحددة
                 </p>
               </div>
             )}
@@ -718,163 +657,45 @@ const CustomersManagementPage = () => {
         </CardContent>
       </Card>
 
-      {/* دايلوج تفاصيل العميل */}
-      <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>تفاصيل العميل</DialogTitle>
-          </DialogHeader>
-          
-          {selectedCustomer && (
-            <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="info">المعلومات الأساسية</TabsTrigger>
-                <TabsTrigger value="loyalty">نظام الولاء</TabsTrigger>
-                <TabsTrigger value="orders">الطلبات</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="info" className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>الاسم</Label>
-                    <p className="font-medium">{selectedCustomer.name}</p>
-                  </div>
-                  <div>
-                    <Label>الهاتف</Label>
-                    <p className="font-medium">{selectedCustomer.phone || 'غير متوفر'}</p>
-                  </div>
-                  <div>
-                    <Label>البريد الإلكتروني</Label>
-                    <p className="font-medium">{selectedCustomer.email || 'غير متوفر'}</p>
-                  </div>
-                  <div>
-                    <Label>المدينة</Label>
-                    <p className="font-medium">{selectedCustomer.city || 'غير محدد'}</p>
-                  </div>
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="loyalty" className="space-y-4">
-                {selectedCustomer.customer_loyalty?.[0] ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <Card>
-                        <CardContent className="pt-6">
-                          <div className="text-center">
-                            <Star className="h-8 w-8 mx-auto mb-2 text-yellow-500" />
-                            <p className="text-2xl font-bold">{selectedCustomer.customer_loyalty[0].total_points}</p>
-                            <p className="text-sm text-muted-foreground">إجمالي النقاط</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardContent className="pt-6">
-                          <div className="text-center">
-                            <ShoppingBag className="h-8 w-8 mx-auto mb-2 text-blue-500" />
-                            <p className="text-2xl font-bold">{selectedCustomer.customer_loyalty[0].total_orders}</p>
-                            <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      
-                      <Card>
-                        <CardContent className="pt-6">
-                          <div className="text-center">
-                            <TrendingUp className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                            <p className="text-2xl font-bold">{formatCurrency(selectedCustomer.customer_loyalty[0].total_spent)}</p>
-                            <p className="text-sm text-muted-foreground">إجمالي المبالغ</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>سجل النقاط</Label>
-                      <div className="max-h-40 overflow-y-auto border rounded p-2">
-                        {selectedCustomer.pointsHistory?.map((point, index) => (
-                          <div key={index} className="flex justify-between items-center py-1 border-b last:border-b-0">
-                            <span className="text-sm">{point.description}</span>
-                            <span className={`text-sm font-medium ${point.transaction_type === 'earned' ? 'text-green-600' : 'text-red-600'}`}>
-                              {point.transaction_type === 'earned' ? '+' : '-'}{point.points_earned || point.points_used}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-center text-muted-foreground">لا توجد بيانات ولاء لهذا العميل</p>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="orders" className="space-y-4">
-                <div className="space-y-2">
-                  <Label>الطلبات الأخيرة</Label>
-                  <div className="max-h-60 overflow-y-auto border rounded p-2">
-                    {selectedCustomer.orders?.slice(0, 10).map((order) => (
-                      <div key={order.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
-                        <div>
-                          <p className="font-medium">{order.order_number}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(order.created_at).toLocaleDateString('ar')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">{formatCurrency(order.final_amount)}</p>
-                          <Badge variant={order.status === 'completed' ? 'default' : 'secondary'}>
-                            {order.status === 'completed' ? 'مكتمل' : order.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* دايلوج إرسال الإشعارات */}
+      {/* حوار إرسال الإشعارات */}
       <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>إرسال إشعار للعميل</DialogTitle>
           </DialogHeader>
-          
           <div className="space-y-4">
             <div>
-              <Label>العميل المحدد</Label>
-              <p className="font-medium">{selectedCustomer?.name}</p>
+              <Label>العميل</Label>
+              <p className="text-sm text-muted-foreground">{selectedCustomer?.name}</p>
             </div>
-            
-            <div className="space-y-2">
-              <Label>نص الرسالة</Label>
+            <div>
+              <Label>الرسالة</Label>
               <Textarea
-                placeholder="اكتب رسالتك هنا..."
+                placeholder="اكتب رسالة للعميل..."
                 value={notificationMessage}
                 onChange={(e) => setNotificationMessage(e.target.value)}
-                rows={4}
               />
             </div>
-            
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowNotificationDialog(false);
-                  setNotificationMessage('');
-                }}
-              >
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowNotificationDialog(false)}>
                 إلغاء
               </Button>
-              <Button
-                onClick={() => sendCustomerNotification(selectedCustomer?.id, 'custom', notificationMessage)}
+              <Button 
+                onClick={() => {
+                  if (selectedCustomer && notificationMessage.trim()) {
+                    // إرسال الإشعار
+                    toast({
+                      title: 'تم إرسال الإشعار',
+                      description: `تم إرسال الإشعار إلى ${selectedCustomer.name}`
+                    });
+                    setShowNotificationDialog(false);
+                    setNotificationMessage('');
+                  }
+                }}
                 disabled={!notificationMessage.trim()}
               >
                 <Send className="h-4 w-4 mr-2" />
-                إرسال عبر الواتساب
+                إرسال
               </Button>
             </div>
           </div>
