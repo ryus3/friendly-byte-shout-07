@@ -19,11 +19,11 @@ const OrdersToolbar = ({ filters, onFiltersChange }) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   const handleSearchChange = (e) => {
-    onFiltersChange(prev => ({ ...prev, searchTerm: e.target.value }));
+    onFiltersChange({ searchTerm: e.target.value });
   };
 
   const handleStatusChange = (value) => {
-    onFiltersChange(prev => ({ ...prev, status: value, period: 'all' }));
+    onFiltersChange({ status: value, period: 'all' });
   };
 
   const clearFilters = () => {

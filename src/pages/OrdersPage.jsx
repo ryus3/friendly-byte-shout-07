@@ -220,7 +220,7 @@ const OrdersPage = () => {
   }, []);
   
   const handleToolbarFilterChange = useCallback((newFilters) => {
-    setFilters(prev => ({...prev, ...newFilters }));
+    setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
 
   const handleReceiveReturn = useCallback((order) => {

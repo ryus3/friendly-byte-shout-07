@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle } from 'lucide-react';
+import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -78,7 +78,20 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md w-full sm:max-w-2xl flex flex-col max-h-[90vh]">
-        <DialogHeader><DialogTitle className="gradient-text">تفاصيل الطلب</DialogTitle></DialogHeader>
+        <DialogHeader className="flex-row items-center justify-between border-b pb-4">
+          <div>
+            <DialogTitle className="gradient-text">تفاصيل الطلب</DialogTitle>
+            <DialogDescription className="text-right text-muted-foreground">معلومات كاملة عن الطلب والشحنة.</DialogDescription>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => onOpenChange(false)}
+            className="rounded-full w-10 h-10 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
+          >
+            <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
+          </Button>
+        </DialogHeader>
         <ScrollArea className="flex-grow -mx-6 px-6">
           <div className="space-y-6 pb-6">
             <div className="flex items-center justify-between p-4 bg-secondary rounded-lg border border-border">

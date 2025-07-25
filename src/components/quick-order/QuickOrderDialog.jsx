@@ -28,9 +28,19 @@ const QuickOrderDialog = ({ open, onOpenChange, onOrderCreated }) => {
     <>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="gradient-text">إتمام الطلب</DialogTitle>
-            <DialogDescription>إنشاء طلب جديد وإرساله لشركة التوصيل مباشرة.</DialogDescription>
+          <DialogHeader className="flex-row items-center justify-between border-b pb-4">
+            <div>
+              <DialogTitle className="gradient-text">إتمام الطلب</DialogTitle>
+              <DialogDescription>إنشاء طلب جديد وإرساله لشركة التوصيل مباشرة.</DialogDescription>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => handleOpenChange(false)}
+              className="rounded-full w-10 h-10 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
+            >
+              <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
+            </Button>
           </DialogHeader>
 
           <div className="flex-grow overflow-y-auto py-4 pr-2 -mr-2">

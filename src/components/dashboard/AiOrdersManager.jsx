@@ -106,7 +106,7 @@ const AiOrdersManager = ({ onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <motion.div
@@ -209,7 +209,7 @@ const AiOrdersManager = ({ onClose }) => {
 
         {/* استخدام QuickOrderContent بدلاً من EditAiOrderDialog */}
         {quickOrderDialogOpen && editingOrder && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
             <div className="bg-background rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <div className="p-4 border-b flex items-center justify-between">
                 <h2 className="text-lg font-semibold">تعديل الطلب الذكي</h2>
