@@ -8,17 +8,15 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 export const useFilteredProducts = (products) => {
 
   const auth = useAuth();
-  
-  // التحقق من وجود Auth context أولاً
-  if (!auth) {
-    console.warn('useAuth context is null');
-    return products || [];
-  }
-  
-  const { user, productPermissions, isAdmin } = auth;
-  
+  const { user, productPermissions, isAdmin } = auth || {};
 
   const filteredProducts = useMemo(() => {
+    // التحقق من وجود Auth context أولاً
+    if (!auth) {
+      console.warn('useAuth context is null');
+      return products || [];
+    }
+    
     if (!products || !Array.isArray(products)) return [];
     
     // المديرون يرون كل المنتجات (بما في ذلك غير النشطة)
@@ -118,16 +116,15 @@ export const useFilteredProducts = (products) => {
  */
 export const useFilteredVariants = (variants) => {
   const auth = useAuth();
-  
-  // التحقق من وجود Auth context أولاً
-  if (!auth) {
-    console.warn('useAuth context is null in useFilteredVariants');
-    return variants || [];
-  }
-  
-  const { isAdmin, productPermissions } = auth;
+  const { isAdmin, productPermissions } = auth || {};
 
   const filteredVariants = useMemo(() => {
+    // التحقق من وجود Auth context أولاً
+    if (!auth) {
+      console.warn('useAuth context is null in useFilteredVariants');
+      return variants || [];
+    }
+    
     if (!variants || !Array.isArray(variants)) return [];
     
     // المديرون يرون كل المتغيرات
