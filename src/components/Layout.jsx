@@ -21,7 +21,7 @@ import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 
-const SidebarContent = ({ onClose }) => {
+const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
   const { hasPermission } = usePermissions();
   const { theme, setTheme } = useTheme();
@@ -230,7 +230,7 @@ const Layout = ({ children }) => {
   return (
     <div className="flex h-dvh bg-background">
       <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-[60] bg-card border-l border-border">
-        <SidebarContent />
+        <SidebarContent isMobile={isMobile} />
       </div>
 
       <AnimatePresence>
@@ -243,7 +243,7 @@ const Layout = ({ children }) => {
             className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
             dir="rtl"
           >
-            <SidebarContent onClose={() => setSidebarOpen(false)} />
+            <SidebarContent onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
           </motion.div>
         )}
       </AnimatePresence>
