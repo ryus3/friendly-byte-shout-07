@@ -432,6 +432,77 @@ export type Database = {
           },
         ]
       }
+      customer_product_segments: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          department_id: string | null
+          gender_segment: string | null
+          id: string
+          last_purchase_date: string | null
+          product_type_id: string | null
+          purchase_count: number | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          department_id?: string | null
+          gender_segment?: string | null
+          id?: string
+          last_purchase_date?: string | null
+          product_type_id?: string | null
+          purchase_count?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          department_id?: string | null
+          gender_segment?: string | null
+          id?: string
+          last_purchase_date?: string | null
+          product_type_id?: string | null
+          purchase_count?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_product_segments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_product_segments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_product_segments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_product_segments_product_type_id_fkey"
+            columns: ["product_type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -597,6 +668,39 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      employee_loyalty_permissions: {
+        Row: {
+          can_apply_discounts: boolean | null
+          can_manage_points: boolean | null
+          can_view_loyalty: boolean | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          can_apply_discounts?: boolean | null
+          can_manage_points?: boolean | null
+          can_view_loyalty?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          can_apply_discounts?: boolean | null
+          can_manage_points?: boolean | null
+          can_view_loyalty?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       employee_profit_rules: {
         Row: {
@@ -2544,6 +2648,10 @@ export type Database = {
           user_email: string
           error_message: string
         }[]
+      }
+      auto_select_monthly_city_discount: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       calculate_fifo_cost: {
         Args: {
