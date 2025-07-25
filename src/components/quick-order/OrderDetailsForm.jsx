@@ -29,8 +29,8 @@ const OrderDetailsForm = ({
   const { cart, removeFromCart } = useInventory();
   const { hasPermission } = useAuth();
   
-  const deliveryFee = settings?.deliveryFee || 0;
-  const finalTotal = total + (formData.type === 'توصيل' ? deliveryFee : 0);
+  const deliveryFee = activePartner === 'local' ? (settings?.deliveryFee || 0) : 0;
+  const finalTotal = total + deliveryFee;
 
   return (
     <Card>
