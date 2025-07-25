@@ -76,18 +76,21 @@ const CustomersManagementPage = () => {
     }
   };
 
-  // جلب مستويات الولاء والأقسام
+  // جلب مستويات الولاء والفئات للفلترة  
   const fetchSupportingData = async () => {
     try {
-      const [tiersRes, deptsRes, permsRes] = await Promise.all([
+      const [tiersRes, categoriesRes, permsRes] = await Promise.all([
         supabase.from('loyalty_tiers').select('*').order('points_required'),
-        supabase.from('departments').select('*').order('name'),
+        supabase.from('categories').select('*').order('name'),
         supabase.from('employee_loyalty_permissions').select('*').eq('user_id', (await supabase.auth.getUser()).data.user?.id).single()
       ]);
 
       if (tiersRes.data) setLoyaltyTiers(tiersRes.data);
-      if (deptsRes.data) setDepartments(deptsRes.data);
+      if (categoriesRes.data) setDepartments(categoriesRes.data); // استخدام الفئات كفلتر
       if (permsRes.data) setUserPermissions(permsRes.data);
+      
+      // تطبيق خصم المدينة العشوائي إذا لم يكن مطبق هذا الشهر
+      await checkAndApplyCityDiscount();
     } catch (error) {
       console.error('خطأ في جلب البيانات المساعدة:', error);
     }
@@ -120,16 +123,16 @@ const CustomersManagementPage = () => {
         if (customerTier !== loyaltyTierFilter) return false;
       }
 
-      // فلتر الجنس/التقسيم
+      // فلتر الجنس/التقسيم حسب الفئات
       if (genderSegmentation !== 'all') {
-        const hasSegment = customer.customer_product_segments?.some(seg => seg.gender_segment === genderSegmentation);
-        if (!hasSegment) return false;
+        const hasGenderSegment = customer.customer_product_segments?.some(seg => seg.gender_segment === genderSegmentation);
+        if (!hasGenderSegment) return false;
       }
 
-      // فلتر القسم
+      // فلتر القسم حسب الفئات المشتراة
       if (departmentFilter !== 'all') {
-        const hasDepartment = customer.customer_product_segments?.some(seg => seg.department_id === departmentFilter);
-        if (!hasDepartment) return false;
+        const hasCategorySegment = customer.customer_product_segments?.some(seg => seg.category_id === departmentFilter);
+        if (!hasCategorySegment) return false;
       }
 
       // فلتر الوقت
@@ -276,6 +279,29 @@ const CustomersManagementPage = () => {
   };
 
   // إرسال إشعار للعميل
+  // تحقق من تطبيق خصم المدينة العشوائي
+  const checkAndApplyCityDiscount = async () => {
+    try {
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      const { data: existingDiscount } = await supabase
+        .from('city_random_discounts')
+        .select('*')
+        .eq('discount_month', currentMonth)
+        .eq('discount_year', currentYear)
+        .single();
+        
+      if (!existingDiscount) {
+        // تطبيق اختيار المدينة العشوائية
+        const { data: result } = await supabase.rpc('select_random_city_for_monthly_discount');
+        console.log('نتيجة اختيار المدينة:', result);
+      }
+    } catch (error) {
+      console.error('خطأ في تطبيق خصم المدينة:', error);
+    }
+  };
+
   const sendCustomerNotification = async (customerId, type, message) => {
     try {
       const { error } = await supabase
@@ -362,7 +388,16 @@ const CustomersManagementPage = () => {
           trend="positive"
           trendValue="12%"
           trendPeriod="الشهر الماضي"
-          onClick={() => setActiveFilter('all')}
+          onClick={() => {
+            setActiveFilter('all');
+            setSearchTerm('');
+            setPointsFilter('all');
+            setLoyaltyTierFilter('all');
+            setGenderSegmentation('all');
+            setDepartmentFilter('all');
+            setTimeFilter('all');
+            setDateRange(null);
+          }}
           active={activeFilter === 'all'}
         />
         <StatCard
@@ -372,7 +407,10 @@ const CustomersManagementPage = () => {
           trend="positive"
           trendValue="8%"
           trendPeriod="الشهر الماضي"
-          onClick={() => setActiveFilter('with_points')}
+          onClick={() => {
+            setActiveFilter('with_points');
+            setPointsFilter('with_points');
+          }}
           active={activeFilter === 'with_points'}
         />
         <StatCard
@@ -382,7 +420,11 @@ const CustomersManagementPage = () => {
           trend="neutral"
           trendValue="3%"
           trendPeriod="الشهر الماضي"
-          onClick={() => setActiveFilter('with_phones')}
+          onClick={() => {
+            setActiveFilter('with_phones');
+            setSearchTerm('');
+            setPointsFilter('all');
+          }}
           active={activeFilter === 'with_phones'}
         />
         <StatCard
@@ -392,7 +434,10 @@ const CustomersManagementPage = () => {
           trend="positive"
           trendValue="15%"
           trendPeriod="الشهر الماضي"
-          onClick={() => setActiveFilter('high_points')}
+          onClick={() => {
+            setActiveFilter('high_points');
+            setPointsFilter('high_points');
+          }}
           active={activeFilter === 'high_points'}
         />
       </div>
@@ -442,6 +487,38 @@ const CustomersManagementPage = () => {
                   <SelectItem value="with_points">لديهم نقاط</SelectItem>
                   <SelectItem value="no_points">بدون نقاط</SelectItem>
                   <SelectItem value="high_points">نقاط عالية (+1000)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>التصنيف (رجالي/نسائي)</Label>
+              <Select value={genderSegmentation} onValueChange={setGenderSegmentation}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل التصنيفات</SelectItem>
+                  <SelectItem value="male">رجالي</SelectItem>
+                  <SelectItem value="female">نسائي</SelectItem>
+                  <SelectItem value="unisex">للجنسين</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>فئة المنتجات</Label>
+              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الفئات</SelectItem>
+                  {departments.map(dept => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
