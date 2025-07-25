@@ -17,7 +17,8 @@ import {
   CreditCard,
   Building,
   Phone,
-  User
+  User,
+  Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -35,53 +36,53 @@ const OrderCard = ({
 }) => {
   const { hasPermission } = useAuth();
   
-  // تحديد لون وأيقونة الحالة بالألوان المتناسقة
+  // تحديد لون وأيقونة الحالة بالألوان المتناسقة والمحدثة
   const getStatusConfig = (status) => {
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Package,
-        color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-md shadow-status-pending-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-md shadow-status-shipped-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-md shadow-status-delivery-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: CheckCircle,
-        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-md shadow-status-delivered-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: CheckCircle,
-        color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-md shadow-status-completed-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'returned': { 
         label: 'راجعة', 
         icon: RotateCcw,
-        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-md shadow-status-returned-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-md shadow-status-returned-stock-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
-        color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-md shadow-status-cancelled-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       },
       'return_received': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-md shadow-status-returned-stock-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
+        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-3 py-1.5 text-xs'
       }
     };
     return configs[status] || configs['pending'];
@@ -93,10 +94,10 @@ const OrderCard = ({
   // تحديد نوع التوصيل
   const isLocalOrder = order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
-    'bg-emerald-100 text-emerald-700 border border-emerald-300' : 
-    'bg-blue-100 text-blue-700 border border-blue-300';
+    'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm' : 
+    'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm';
 
-  // التحقق من الصلاحيات
+  // التحقق من الصلاحيات - قيد التجهيز فقط
   const canEdit = order.status === 'pending';
   const canDelete = order.status === 'pending';
 
@@ -120,8 +121,15 @@ const OrderCard = ({
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-IQ', {
+      year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('ar-IQ', {
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -144,104 +152,133 @@ const OrderCard = ({
       variants={cardVariants} 
       initial="rest" 
       whileHover="hover" 
-      transition={{ duration: 0.2 }}
+      transition={{ duration: 0.3 }}
       className="w-full"
     >
-      <Card className={`overflow-hidden bg-gradient-to-br from-card to-card/95 backdrop-blur-sm transition-all duration-300 border hover:shadow-md hover:shadow-primary/10 ${isSelected ? 'border-primary shadow-md shadow-primary/20 ring-1 ring-primary/20' : 'border-border/50 hover:border-primary/30'}`}>
-        <CardContent className="p-3">
-          <div className="space-y-2.5">
+      <Card className={`group relative overflow-hidden rounded-xl bg-card 
+                       shadow-lg shadow-black/10 
+                       hover:shadow-xl hover:shadow-primary/20 
+                       hover:border-primary/30 
+                       transition-all duration-300 ease-out
+                       dark:bg-card dark:shadow-white/5 dark:hover:shadow-primary/10
+                       ${isSelected ? 'border-primary shadow-xl shadow-primary/25 ring-2 ring-primary/20' : 'border-border/50'}`}>
+        
+        {/* خلفية متدرجة جميلة */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        <CardContent className="relative p-5">
+          <div className="space-y-4">
             
-            {/* Header - Very Compact */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            {/* Header - مثل فواتير المشتريات */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-90"
+                  className="shrink-0 scale-110"
                 />
-                <div className="min-w-0">
+                <div>
+                  <h3 className="font-bold text-lg text-foreground tracking-wide">
+                    {order.tracking_number}
+                  </h3>
+                  <p className="text-sm text-muted-foreground font-medium">
+                    طلب #{order.order_number}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Status Badge في الأعلى */}
+              <div className={`flex items-center gap-2 ${statusConfig.color}`}>
+                <StatusIcon className="h-4 w-4" />
+                <span className="font-semibold">{statusConfig.label}</span>
+              </div>
+            </div>
+
+            {/* Customer & Date Info */}
+            <div className="bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl p-4 border border-muted/20">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-sm text-foreground truncate">
-                      {order.tracking_number}
-                    </h3>
-                    <Badge className={`${deliveryBadgeColor} px-1.5 py-0.5 text-xs rounded-md`}>
-                      {order.delivery_partner}
-                    </Badge>
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-bold text-foreground">{order.customer_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="h-3 w-3" />
+                    <span>{order.customer_phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span className="truncate">{order.customer_address}</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2 text-left">
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-sm font-semibold text-foreground">{formatDate(order.created_at)}</span>
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex items-center gap-2 justify-end">
+                    <span className="text-sm text-muted-foreground">{formatTime(order.created_at)}</span>
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                  </div>
+                  <Badge className={`${deliveryBadgeColor} px-3 py-1 text-xs rounded-full font-semibold w-fit ml-auto`}>
+                    <Building className="h-3 w-3 ml-1" />
+                    {order.delivery_partner}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Product & Price Summary */}
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-4 border border-primary/20">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  {productSummary && (
+                    <div className="flex items-center gap-2 text-primary font-bold">
+                      <Package className="h-4 w-4" />
+                      <span>{productSummary.totalItems} قطعة - {productSummary.firstProductType}</span>
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {order.delivery_fee > 0 ? `شامل التوصيل (+${order.delivery_fee?.toLocaleString()} د.ع)` : 'بدون رسوم توصيل'}
+                  </div>
+                </div>
+                
+                <div className="text-left">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <span className="font-bold text-2xl text-primary">
+                      {order.final_amount?.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-primary/70 font-bold">د.ع</span>
                   </div>
                 </div>
               </div>
-              
-              {/* Status Badge */}
-              <div className={`flex items-center gap-1 shrink-0 ${statusConfig.color}`}>
-                <StatusIcon className="h-3 w-3" />
-                <span className="whitespace-nowrap">{statusConfig.label}</span>
-              </div>
             </div>
 
-            {/* Customer Info - Single Compact Row */}
-            <div className="bg-muted/15 rounded-md p-2">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <User className="h-3 w-3 text-primary shrink-0" />
-                  <span className="font-medium text-xs text-foreground truncate">{order.customer_name}</span>
-                </div>
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span className="text-xs">{formatDate(order.created_at)}</span>
-                </div>
-              </div>
+            {/* Action Buttons - منظمة بشكل احترافي */}
+            <div className="flex flex-wrap gap-2 pt-3 border-t-2 border-border/20">
               
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
-                  <Phone className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{order.customer_phone}</span>
-                </div>
-                {productSummary && (
-                  <div className="flex items-center gap-1 text-primary font-medium">
-                    <Package className="h-3 w-3" />
-                    <span>{productSummary.totalItems} {productSummary.firstProductType}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Price - Under Product Info */}
-            <div className="flex items-center justify-between">
-              <div className="text-xs text-muted-foreground">
-                {order.delivery_fee > 0 ? 'شامل التوصيل' : 'بدون توصيل'}
-              </div>
-              <div className="flex items-center gap-1">
-                <CreditCard className="h-3 w-3 text-primary" />
-                <span className="font-bold text-base text-primary">
-                  {order.final_amount?.toLocaleString()}
-                </span>
-                <span className="text-xs text-primary/70">د.ع</span>
-              </div>
-            </div>
-
-            {/* Actions - Compact Icons */}
-            <div className="flex flex-wrap gap-1 pt-1.5 border-t border-border/20">
-              
-              {/* View Details */}
+              {/* Primary Actions */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onViewOrder?.(order)}
-                className="flex items-center gap-1 text-xs h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
+                className="flex items-center gap-2 border-2 border-primary/30 text-primary hover:bg-primary/15 hover:border-primary/50 transition-all duration-300 font-semibold"
               >
-                <Eye className="h-3 w-3" />
+                <Eye className="h-4 w-4" />
                 معاينة
               </Button>
 
-              {/* Edit/Delete */}
+              {/* Edit/Delete - فقط في حالة قيد التجهيز */}
               {canEdit && hasPermission('edit_orders') && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onEditOrder?.(order)}
-                  className="flex items-center gap-1 text-xs h-7 px-2"
+                  className="flex items-center gap-2 border-2 border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-all duration-300 font-semibold"
                 >
-                  <Edit2 className="h-3 w-3" />
+                  <Edit2 className="h-4 w-4" />
                   تعديل
                 </Button>
               )}
@@ -251,14 +288,14 @@ const OrderCard = ({
                   variant="outline"
                   size="sm"
                   onClick={handleDelete}
-                  className="flex items-center gap-1 text-xs h-7 px-2 border-red-300 text-red-600 hover:bg-red-50"
+                  className="flex items-center gap-2 border-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-all duration-300 font-semibold"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
                   حذف
                 </Button>
               )}
 
-              {/* Status Actions - Only for local orders */}
+              {/* Status Actions - للطلبات المحلية فقط */}
               {isLocalOrder && (
                 <>
                   {order.status === 'pending' && (
@@ -266,9 +303,9 @@ const OrderCard = ({
                       variant="default"
                       size="sm"
                       onClick={() => handleStatusChange('shipped')}
-                      className="flex items-center gap-1 text-xs h-7 px-2 bg-orange-500 hover:bg-orange-600"
+                      className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 transition-all duration-300 font-semibold shadow-lg"
                     >
-                      <Truck className="h-3 w-3" />
+                      <Truck className="h-4 w-4" />
                       شحن
                     </Button>
                   )}
@@ -278,10 +315,10 @@ const OrderCard = ({
                       variant="default"
                       size="sm"
                       onClick={() => handleStatusChange('delivery')}
-                      className="flex items-center gap-1 text-xs h-7 px-2 bg-purple-500 hover:bg-purple-600"
+                      className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg"
                     >
-                      <Truck className="h-3 w-3" />
-                      توصيل
+                      <Truck className="h-4 w-4" />
+                      قيد التوصيل
                     </Button>
                   )}
 
@@ -291,45 +328,48 @@ const OrderCard = ({
                         variant="default"
                         size="sm"
                         onClick={() => handleStatusChange('delivered')}
-                        className="flex items-center gap-1 text-xs h-7 px-2 bg-green-500 hover:bg-green-600"
+                        className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transition-all duration-300 font-semibold shadow-lg"
                       >
-                        <CheckCircle className="h-3 w-3" />
-                        تسليم
+                        <CheckCircle className="h-4 w-4" />
+                        تم التسليم
                       </Button>
 
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleStatusChange('returned')}
-                        className="flex items-center gap-1 text-xs h-7 px-2 border-red-300 text-red-600 hover:bg-red-50"
+                        className="flex items-center gap-2 border-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400 transition-all duration-300 font-semibold"
                       >
-                        <RotateCcw className="h-3 w-3" />
+                        <RotateCcw className="h-4 w-4" />
                         راجعة
                       </Button>
                     </>
                   )}
 
+                  {/* استلام للمخزن */}
                   {(order.status === 'cancelled' || order.status === 'returned') && hasPermission('manage_inventory') && (
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => handleStatusChange('returned_in_stock')}
-                      className="flex items-center gap-1 text-xs h-7 px-2 bg-blue-500 hover:bg-blue-600"
+                      className="flex items-center gap-2 bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 transition-all duration-300 font-semibold shadow-lg"
                     >
-                      <PackageCheck className="h-3 w-3" />
-                      للمخزن
+                      <PackageCheck className="h-4 w-4" />
+                      استلام للمخزن
                     </Button>
                   )}
                 </>
               )}
             </div>
 
-            {/* Company Order Note - Very Compact */}
+            {/* Company Order Note */}
             {!isLocalOrder && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-1.5 text-center">
-                <div className="flex items-center justify-center gap-1 text-blue-700">
-                  <Building className="h-3 w-3" />
-                  <span className="text-xs">طلب شركة - حالة ثابتة</span>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                <div className="flex items-center justify-center gap-2 text-blue-700">
+                  <Building className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    طلب شركة توصيل - لا يمكن تغيير الحالة يدوياً
+                  </span>
                 </div>
               </div>
             )}

@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -35,7 +36,7 @@ const OrdersPage = () => {
   const location = useLocation();
   
   const [filters, setFilters] = useState({ searchTerm: '', status: 'all', period: 'all' });
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid'); // حفظ وضع العرض
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
     details: false,

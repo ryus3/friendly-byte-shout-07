@@ -69,10 +69,10 @@
     --status-returned-border: 0 84 60;
     --status-returned-shadow: 0 84 60;
     
-    --status-returned-stock-start: 220 100 60; /* Blue like department manager */
-    --status-returned-stock-end: 220 100 60;
-    --status-returned-stock-border: 220 100 60;
-    --status-returned-stock-shadow: 220 100 60;
+    --status-returned-stock-start: 0 0 60;        /* Gray like out of stock */
+    --status-returned-stock-end: 0 0 60;
+    --status-returned-stock-border: 0 0 60;
+    --status-returned-stock-shadow: 0 0 60;
     
     --status-cancelled-start: 0 0 60;        /* Gray for cancelled */
     --status-cancelled-end: 0 0 60;
