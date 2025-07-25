@@ -195,7 +195,7 @@ const OrderCard = ({
                 />
                 <div>
                   <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
-                    {order.tracking_number}
+                    #{order.order_number}
                   </h3>
                 </div>
               </div>

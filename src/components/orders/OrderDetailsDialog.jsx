@@ -79,18 +79,18 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md w-full sm:max-w-2xl flex flex-col max-h-[90vh]">
+      <DialogContent className="max-w-md w-full sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"">
         <DialogHeader className="flex-row items-center justify-between border-b pb-4">
           <div>
             <DialogTitle className="gradient-text">تفاصيل الطلب</DialogTitle>
             <DialogDescription className="text-right text-muted-foreground">معلومات كاملة عن الطلب والشحنة.</DialogDescription>
           </div>
         </DialogHeader>
-        <ScrollArea className="flex-grow -mx-6 px-6">
-          <div className="space-y-6 pb-6">
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="space-y-6 p-6">
             <div className="flex items-center justify-between p-4 bg-secondary rounded-lg border border-border">
               <div>
-                <h3 className="text-lg font-bold text-foreground break-all">#{order.tracking_number || order.trackingnumber || 'لا يوجد رقم تتبع'}</h3>
+                <h3 className="text-lg font-bold text-foreground break-all">#{order.order_number}</h3>
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
               <div className={`inline-flex items-center gap-2 text-sm font-medium ${statusInfo.badge}`}>
@@ -163,7 +163,32 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                  </div>
                </div>
             </div>
-          {canEditStatus && (
+            
+            {/* إضافة قسم تحديث حالة الطلب للطلبات المحلية */}
+            {order.delivery_partner === 'محلي' && canEditStatus && (
+              <div className="p-4 bg-secondary rounded-lg border border-border">
+                <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
+                <Select value={newStatus} onValueChange={setNewStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر الحالة الجديدة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions
+                      .filter(option => {
+                        // منع العودة للخلف في الحالات
+                        const currentIndex = statusOptions.findIndex(s => s.value === order.status);
+                        const optionIndex = statusOptions.findIndex(s => s.value === option.value);
+                        return optionIndex >= currentIndex;
+                      })
+                      .map(option => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {canEditStatus && order.delivery_partner !== 'محلي' && (
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
                 <Select value={newStatus} onValueChange={setNewStatus}>
