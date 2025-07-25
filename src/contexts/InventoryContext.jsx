@@ -140,7 +140,7 @@ export const InventoryProvider = ({ children }) => {
           await supabase.rpc('update_reserved_stock', {
             p_product_id: item.productId,
             p_quantity_change: item.quantity,
-            p_sku: item.variantId || item.sku
+            p_sku: item.variantId ? item.variantId.toString() : (item.sku || null)
           });
         }
         console.log('تم حجز المخزون للطلب:', createdOrder.order_number);

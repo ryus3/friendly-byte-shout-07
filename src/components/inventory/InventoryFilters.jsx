@@ -164,7 +164,7 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
               variant="outline"
               size="icon"
               onClick={onBarcodeSearch}
-              className="flex-shrink-0 bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 hover:from-violet-600 hover:via-purple-600 hover:to-indigo-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
+              className="flex-shrink-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
               title="قراءة QR Code"
             >
               <QrCode className="w-5 h-5" />

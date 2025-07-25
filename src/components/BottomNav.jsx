@@ -236,14 +236,15 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
               className="flex-1"
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             />
-            <Button 
+            <Button
               variant="outline"
               size="icon"
               onClick={() => setIsQRCodeOpen(true)}
-              className="shrink-0"
+              className="shrink-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
+              title="مسح QR Code"
             >
               <div className="w-5 h-5">
-                <svg viewBox="0 0 24 24" fill="currentColor">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="text-white">
                   <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm8-2v8h8V3h-8zm6 6h-4V5h4v4zM3 21h8v-8H3v8zm2-6h4v4H5v-4z"/>
                   <path d="M13 13h1.5v1.5H13V13zm0 3h1.5v1.5H13V16zm3 0h1.5v1.5H16V16zm1.5-3H19v1.5h-1.5V13zm0 3H19v1.5h-1.5V16zm3-3H22v1.5h-1.5V13z"/>
                 </svg>

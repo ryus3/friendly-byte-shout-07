@@ -552,9 +552,11 @@ const InventoryPage = () => {
           mediumStockCount: variants.filter(v => v?.stockLevel === 'medium').length,
           highStockCount: variants.filter(v => v?.stockLevel === 'high').length,
           reservedStockCount: inventoryItems.reduce((sum, item) => {
-            return sum + (item?.variants || []).reduce((varSum, variant) => {
-              return varSum + (variant?.reserved_quantity || variant?.reserved || 0);
+            const itemReserved = (item?.variants || []).reduce((varSum, variant) => {
+              const variantReserved = variant?.reserved_quantity || variant?.reserved || 0;
+              return varSum + variantReserved;
             }, 0);
+            return sum + itemReserved;
           }, 0),
           totalVariants: variants.length,
       };

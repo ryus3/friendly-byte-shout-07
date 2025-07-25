@@ -50,16 +50,21 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
   return (
     <div className="bg-card rounded-xl p-4 border">
       <div className="flex flex-col sm:flex-row items-center gap-4">
-        {/* QR Scanner & View Mode Toggle */}
-        <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+        {/* QR Scanner Button */}
+        <div className="flex items-center">
           <Button 
             onClick={() => setShowQRScanner(true)}
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg transition-all duration-200 border-0"
+            className="h-9 w-9 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl"
+            title="مسح QR Code"
           >
             <QrCode className="h-4 w-4" />
           </Button>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex items-center border rounded-lg p-1 bg-muted/30">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="sm"

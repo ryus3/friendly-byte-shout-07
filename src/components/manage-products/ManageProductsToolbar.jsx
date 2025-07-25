@@ -59,10 +59,10 @@ const ManageProductsToolbar = ({
                 variant="outline"
                 size="icon"
                 onClick={onBarcodeSearch}
-                className="glass-effect border-border/80 hover:bg-primary/10 relative w-10 h-10 rounded-lg bg-background/80 backdrop-blur-sm border"
+                className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl w-10 h-10"
                 title="مسح QR Code"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
                   <rect width="5" height="5" x="3" y="3" rx="1"/>
                   <rect width="5" height="5" x="16" y="3" rx="1"/>
                   <rect width="5" height="5" x="3" y="16" rx="1"/>
