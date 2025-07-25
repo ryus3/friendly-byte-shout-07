@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Filter, Clock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -76,17 +76,23 @@ const CustomersManagementPage = () => {
     }
   };
 
-  // جلب مستويات الولاء والفئات للفلترة  
+  // جلب مستويات الولاء والأقسام والتصنيفات للفلترة  
   const fetchSupportingData = async () => {
     try {
-      const [tiersRes, categoriesRes, permsRes] = await Promise.all([
+      const [tiersRes, categoriesRes, departmentsRes, permsRes] = await Promise.all([
         supabase.from('loyalty_tiers').select('*').order('points_required'),
         supabase.from('categories').select('*').order('name'),
+        supabase.from('departments').select('*').order('name'),
         supabase.from('employee_loyalty_permissions').select('*').eq('user_id', (await supabase.auth.getUser()).data.user?.id).single()
       ]);
 
       if (tiersRes.data) setLoyaltyTiers(tiersRes.data);
-      if (categoriesRes.data) setDepartments(categoriesRes.data); // استخدام الفئات كفلتر
+      // دمج الأقسام والتصنيفات في قائمة واحدة للفلترة
+      const allFilters = [
+        ...(departmentsRes.data || []).map(d => ({...d, type: 'department'})),
+        ...(categoriesRes.data || []).map(c => ({...c, type: 'category'}))
+      ];
+      setDepartments(allFilters);
       if (permsRes.data) setUserPermissions(permsRes.data);
       
       // تطبيق خصم المدينة العشوائي إذا لم يكن مطبق هذا الشهر
@@ -123,16 +129,20 @@ const CustomersManagementPage = () => {
         if (customerTier !== loyaltyTierFilter) return false;
       }
 
-      // فلتر الجنس/التقسيم حسب الفئات
+      // فلتر الجنس/التقسيم حسب القسم والتصنيف معاً
       if (genderSegmentation !== 'all') {
-        const hasGenderSegment = customer.customer_product_segments?.some(seg => seg.gender_segment === genderSegmentation);
+        const hasGenderSegment = customer.customer_product_segments?.some(seg => 
+          seg.gender_segment === genderSegmentation
+        );
         if (!hasGenderSegment) return false;
       }
 
-      // فلتر القسم حسب الفئات المشتراة
+      // فلتر حسب القسم (departments) والتصنيف (categories) معاً
       if (departmentFilter !== 'all') {
-        const hasCategorySegment = customer.customer_product_segments?.some(seg => seg.category_id === departmentFilter);
-        if (!hasCategorySegment) return false;
+        const hasSegment = customer.customer_product_segments?.some(seg => 
+          seg.department_id === departmentFilter || seg.category_id === departmentFilter
+        );
+        if (!hasSegment) return false;
       }
 
       // فلتر الوقت
@@ -507,16 +517,16 @@ const CustomersManagementPage = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>فئة المنتجات</Label>
+              <Label>الأقسام والتصنيفات</Label>
               <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">كل الفئات</SelectItem>
-                  {departments.map(dept => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.name}
+                  <SelectItem value="all">كل الأقسام والتصنيفات</SelectItem>
+                  {departments.map(item => (
+                    <SelectItem key={item.id} value={item.id}>
+                      {item.name} ({item.type === 'department' ? 'قسم' : 'تصنيف'})
                     </SelectItem>
                   ))}
                 </SelectContent>
