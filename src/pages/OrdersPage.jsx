@@ -77,7 +77,7 @@ const OrdersPage = () => {
   }, [location.search, orders, navigate, location.pathname]);
 
   const pageConfig = {
-    title: hasPermission('view_all_orders') ? 'متابعة الطلبات' : 'طلباتي',
+    title: 'متابعة الطلبات',
     description: 'إدارة ومتابعة جميع الطلبات والشحنات.',
     icon: ShoppingCart,
     permission: 'view_orders',
