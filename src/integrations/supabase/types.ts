@@ -198,6 +198,36 @@ export type Database = {
         }
         Relationships: []
       }
+      city_order_stats: {
+        Row: {
+          city_name: string
+          id: string
+          month: number
+          total_amount: number
+          total_orders: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          city_name: string
+          id?: string
+          month: number
+          total_amount?: number
+          total_orders?: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          city_name?: string
+          id?: string
+          month?: number
+          total_amount?: number
+          total_orders?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       city_random_discounts: {
         Row: {
           city_name: string
@@ -293,6 +323,91 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_loyalty_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_notifications_sent: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          error_message: string | null
+          id: string
+          message: string
+          notification_type: string
+          sent_at: string
+          sent_via: string
+          success: boolean
+          telegram_message_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          message: string
+          notification_type: string
+          sent_at?: string
+          sent_via: string
+          success?: boolean
+          telegram_message_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string
+          notification_type?: string
+          sent_at?: string
+          sent_via?: string
+          success?: boolean
+          telegram_message_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notifications_sent_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_telegram_accounts: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          id: string
+          is_active: boolean
+          linked_at: string
+          telegram_chat_id: number
+          telegram_username: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean
+          linked_at?: string
+          telegram_chat_id: number
+          telegram_username?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean
+          linked_at?: string
+          telegram_chat_id?: number
+          telegram_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_telegram_accounts_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: true
             referencedRelation: "customers"
@@ -2591,6 +2706,10 @@ export type Database = {
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: undefined
+      }
+      select_random_city_for_monthly_discount: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       update_cash_source_balance: {
         Args: {
