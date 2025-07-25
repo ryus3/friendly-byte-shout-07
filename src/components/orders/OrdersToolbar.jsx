@@ -84,10 +84,10 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         <Button 
           onClick={() => setShowQRScanner(true)}
           variant="outline"
-          className="flex items-center gap-2 bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 border-primary/30"
+          size="icon"
+          className="bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 border-primary/30"
         >
           <QrCode className="h-4 w-4" />
-          {!isMobile && 'مسح QR'}
         </Button>
 
         {isMobile ? (
