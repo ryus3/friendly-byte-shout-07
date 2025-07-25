@@ -38,23 +38,38 @@
     --role-accountant: 45 93% 47%;          /* أصفر للمحاسب */
     --role-pending: 0 0% 60%;               /* رمادي للمعلق */
     
-    /* Order status colors - bright and luminous */
-    --status-pending: 45 95% 55%;          /* Luminous amber */
-    --status-pending-bg: 45 100% 92%;       
-    --status-shipped: 24 100% 60%;         /* Luminous orange */
-    --status-shipped-bg: 24 100% 95%;
-    --status-delivery: 262 85% 65%;        /* Luminous purple */
-    --status-delivery-bg: 262 100% 95%;
-    --status-delivered: 140 75% 50%;       /* Luminous emerald */
-    --status-delivered-bg: 140 100% 93%;
-    --status-completed: 120 65% 55%;       /* Luminous green */
-    --status-completed-bg: 120 100% 93%;
-    --status-returned: 48 100% 60%;        /* Luminous yellow */
-    --status-returned-bg: 48 100% 95%;
-    --status-returned-stock: 239 85% 70%;  /* Luminous indigo */
-    --status-returned-stock-bg: 239 100% 95%;
-    --status-cancelled: 0 85% 65%;         /* Luminous red */
-    --status-cancelled-bg: 0 100% 95%;
+    /* Order status colors - beautiful gradients inspired by user design */
+    --status-pending: 43 96% 56%;          /* Beautiful warm amber */
+    --status-pending-bg: 43 100% 96%;
+    --status-pending-gradient: linear-gradient(135deg, hsl(43 96% 56%), hsl(45 98% 62%));
+    
+    --status-shipped: 20 100% 64%;         /* Vibrant orange */
+    --status-shipped-bg: 20 100% 96%;
+    --status-shipped-gradient: linear-gradient(135deg, hsl(20 100% 64%), hsl(25 100% 70%));
+    
+    --status-delivery: 259 94% 72%;        /* Beautiful purple */
+    --status-delivery-bg: 259 100% 96%;
+    --status-delivery-gradient: linear-gradient(135deg, hsl(259 94% 72%), hsl(265 95% 78%));
+    
+    --status-delivered: 138 76% 58%;       /* Fresh emerald */
+    --status-delivered-bg: 138 100% 95%;
+    --status-delivered-gradient: linear-gradient(135deg, hsl(138 76% 58%), hsl(142 80% 65%));
+    
+    --status-completed: 120 100% 40%;      /* Rich green */
+    --status-completed-bg: 120 100% 95%;
+    --status-completed-gradient: linear-gradient(135deg, hsl(120 100% 40%), hsl(125 100% 45%));
+    
+    --status-returned: 48 100% 67%;        /* Bright golden yellow */
+    --status-returned-bg: 48 100% 96%;
+    --status-returned-gradient: linear-gradient(135deg, hsl(48 100% 67%), hsl(52 100% 72%));
+    
+    --status-returned-stock: 239 100% 70%; /* Brilliant indigo */
+    --status-returned-stock-bg: 239 100% 96%;
+    --status-returned-stock-gradient: linear-gradient(135deg, hsl(239 100% 70%), hsl(245 100% 75%));
+    
+    --status-cancelled: 0 100% 67%;        /* Vibrant red */
+    --status-cancelled-bg: 0 100% 96%;
+    --status-cancelled-gradient: linear-gradient(135deg, hsl(0 100% 67%), hsl(5 100% 72%));
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */

@@ -27,52 +27,58 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Clock,
-        className: 'bg-status-pending-bg text-status-pending border border-status-pending/30 shadow-lg shadow-status-pending/20'
+        className: 'bg-status-pending-bg text-status-pending shadow-lg shadow-status-pending/30 border-2 border-status-pending/20 font-semibold'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        className: 'bg-status-shipped-bg text-status-shipped border border-status-shipped/30 shadow-lg shadow-status-shipped/20'
+        className: 'bg-status-shipped-bg text-status-shipped shadow-lg shadow-status-shipped/30 border-2 border-status-shipped/20 font-semibold'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        className: 'bg-status-delivery-bg text-status-delivery border border-status-delivery/30 shadow-lg shadow-status-delivery/20'
+        className: 'bg-status-delivery-bg text-status-delivery shadow-lg shadow-status-delivery/30 border-2 border-status-delivery/20 font-semibold'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: Package,
-        className: 'bg-status-delivered-bg text-status-delivered border border-status-delivered/30 shadow-lg shadow-status-delivered/20'
+        className: 'bg-status-delivered-bg text-status-delivered shadow-lg shadow-status-delivered/30 border-2 border-status-delivered/20 font-semibold'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: Package,
-        className: 'bg-status-completed-bg text-status-completed border border-status-completed/30 shadow-lg shadow-status-completed/20'
+        className: 'bg-status-completed-bg text-status-completed shadow-lg shadow-status-completed/30 border-2 border-status-completed/20 font-semibold'
       },
       'returned': { 
         label: 'راجعة', 
         icon: Package,
-        className: 'bg-status-returned-bg text-status-returned border border-status-returned/30 shadow-lg shadow-status-returned/20'
+        className: 'bg-status-returned-bg text-status-returned shadow-lg shadow-status-returned/30 border-2 border-status-returned/20 font-semibold'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: Package,
-        className: 'bg-status-returned-stock-bg text-status-returned-stock border border-status-returned-stock/30 shadow-lg shadow-status-returned-stock/20'
+        className: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: Package,
-        className: 'bg-status-cancelled-bg text-status-cancelled border border-status-cancelled/30 shadow-lg shadow-status-cancelled/20'
+        className: 'bg-status-cancelled-bg text-status-cancelled shadow-lg shadow-status-cancelled/30 border-2 border-status-cancelled/20 font-semibold'
+      },
+      // معالجة الحالات القديمة
+      'return_received': { 
+        label: 'راجع للمخزن', 
+        icon: Package,
+        className: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold'
       }
     };
     const statusInfo = statusMap[status] || { 
       label: status, 
       icon: Package,
-      className: 'bg-muted text-muted-foreground border border-border shadow-sm'
+      className: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium'
     };
     const StatusIcon = statusInfo.icon;
     return (
-      <Badge className={cn("text-xs px-3 py-1.5 flex items-center gap-2 font-medium", statusInfo.className)}>
+      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 rounded-lg backdrop-blur-sm", statusInfo.className)}>
         <StatusIcon className="w-3 h-3" />
         {statusInfo.label}
       </Badge>

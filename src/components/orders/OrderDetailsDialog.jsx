@@ -10,15 +10,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const getStatusInfo = (status) => {
   switch (status) {
-    case 'pending': return { badge: 'bg-status-pending-bg text-status-pending border border-status-pending/30 shadow-lg shadow-status-pending/20', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
-    case 'shipped': return { badge: 'bg-status-shipped-bg text-status-shipped border border-status-shipped/30 shadow-lg shadow-status-shipped/20', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
-    case 'delivery': return { badge: 'bg-status-delivery-bg text-status-delivery border border-status-delivery/30 shadow-lg shadow-status-delivery/20', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
-    case 'delivered': return { badge: 'bg-status-delivered-bg text-status-delivered border border-status-delivered/30 shadow-lg shadow-status-delivered/20', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
-    case 'completed': return { badge: 'bg-status-completed-bg text-status-completed border border-status-completed/30 shadow-lg shadow-status-completed/20', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
-    case 'cancelled': return { badge: 'bg-status-cancelled-bg text-status-cancelled border border-status-cancelled/30 shadow-lg shadow-status-cancelled/20', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
-    case 'returned': return { badge: 'bg-status-returned-bg text-status-returned border border-status-returned/30 shadow-lg shadow-status-returned/20', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock border border-status-returned-stock/30 shadow-lg shadow-status-returned-stock/20', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
-    default: return { badge: 'bg-muted text-muted-foreground border border-border shadow-sm', icon: <AlertTriangle className="w-4 h-4" />, text: status };
+    case 'pending': return { badge: 'bg-status-pending-bg text-status-pending shadow-lg shadow-status-pending/30 border-2 border-status-pending/20 font-semibold backdrop-blur-sm', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
+    case 'shipped': return { badge: 'bg-status-shipped-bg text-status-shipped shadow-lg shadow-status-shipped/30 border-2 border-status-shipped/20 font-semibold backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
+    case 'delivery': return { badge: 'bg-status-delivery-bg text-status-delivery shadow-lg shadow-status-delivery/30 border-2 border-status-delivery/20 font-semibold backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
+    case 'delivered': return { badge: 'bg-status-delivered-bg text-status-delivered shadow-lg shadow-status-delivered/30 border-2 border-status-delivered/20 font-semibold backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
+    case 'completed': return { badge: 'bg-status-completed-bg text-status-completed shadow-lg shadow-status-completed/30 border-2 border-status-completed/20 font-semibold backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
+    case 'cancelled': return { badge: 'bg-status-cancelled-bg text-status-cancelled shadow-lg shadow-status-cancelled/30 border-2 border-status-cancelled/20 font-semibold backdrop-blur-sm', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
+    case 'returned': return { badge: 'bg-status-returned-bg text-status-returned shadow-lg shadow-status-returned/30 border-2 border-status-returned/20 font-semibold backdrop-blur-sm', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
+    case 'returned_in_stock': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold backdrop-blur-sm', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    case 'return_received': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold backdrop-blur-sm', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    default: return { badge: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium', icon: <AlertTriangle className="w-4 h-4" />, text: status };
   }
 };
 
