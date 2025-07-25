@@ -158,19 +158,20 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
               className="pr-10 md:w-48"
             />
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto flex-grow">
+          
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
               onClick={onBarcodeSearch}
-              className="flex-shrink-0 hover:bg-primary/10"
+              className="flex-shrink-0 bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 hover:from-violet-600 hover:via-purple-600 hover:to-indigo-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               title="قراءة QR Code"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 4v16M10 4v16M14 4v16M18 4v16" />
-              </svg>
+              <QrCode className="w-5 h-5" />
             </Button>
+          </div>
+          
+          <div className="flex items-center gap-2 w-full md:w-auto flex-grow">
             
             <Select value={filters.stockFilter} onValueChange={(value) => handleFilterChange('stockFilter', value)}>
               <SelectTrigger className="w-full flex-grow">
