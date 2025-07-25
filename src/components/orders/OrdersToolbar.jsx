@@ -50,18 +50,16 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
   return (
     <div className="bg-card rounded-xl p-4 border">
       <div className="flex flex-col sm:flex-row items-center gap-4">
-        <div className="relative w-full sm:flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input 
-            placeholder="البحث في الطلبات..." 
-            value={filters.searchTerm} 
-            onChange={handleSearchChange} 
-            className="pr-10" 
-          />
-        </div>
-        
-        {/* View Mode Toggle */}
+        {/* QR Scanner & View Mode Toggle */}
         <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+          <Button 
+            onClick={() => setShowQRScanner(true)}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 border-primary/30"
+          >
+            <QrCode className="h-4 w-4" />
+          </Button>
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="sm"
@@ -80,15 +78,15 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
           </Button>
         </div>
 
-        {/* QR Scanner Button */}
-        <Button 
-          onClick={() => setShowQRScanner(true)}
-          variant="outline"
-          size="icon"
-          className="bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 border-primary/30"
-        >
-          <QrCode className="h-4 w-4" />
-        </Button>
+        <div className="relative w-full sm:flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input 
+            placeholder="البحث في الطلبات..." 
+            value={filters.searchTerm} 
+            onChange={handleSearchChange} 
+            className="pr-10" 
+          />
+        </div>
 
         {isMobile ? (
              <DropdownMenu>
