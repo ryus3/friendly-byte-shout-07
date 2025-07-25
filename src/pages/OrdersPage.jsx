@@ -35,6 +35,7 @@ const OrdersPage = () => {
   const location = useLocation();
   
   const [filters, setFilters] = useState({ searchTerm: '', status: 'all', period: 'all' });
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
     details: false,
@@ -222,6 +223,10 @@ const OrdersPage = () => {
     setFilters(prev => ({ ...prev, ...newFilters }));
   }, []);
 
+  const handleViewModeChange = useCallback((newViewMode) => {
+    setViewMode(newViewMode);
+  }, []);
+
   const handleReceiveReturn = useCallback((order) => {
     setSelectedOrder(order);
     setDialogs(d => ({ ...d, returnReceipt: true }));
@@ -282,7 +287,12 @@ const OrdersPage = () => {
             )}
         </div>
 
-        <OrdersToolbar filters={filters} onFiltersChange={handleToolbarFilterChange} />
+        <OrdersToolbar 
+          filters={filters} 
+          onFiltersChange={handleToolbarFilterChange}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+        />
         
         {selectedOrders.length > 0 && hasPermission('manage_orders') && (
           <Card className="p-4 bg-card rounded-lg border">
@@ -319,6 +329,7 @@ const OrdersPage = () => {
           selectedOrders={selectedOrders}
           setSelectedOrders={setSelectedOrders}
           onDeleteOrder={handleDeleteSelected}
+          viewMode={viewMode}
         />
 
         <OrderDetailsDialog

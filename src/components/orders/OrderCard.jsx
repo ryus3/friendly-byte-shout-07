@@ -35,54 +35,53 @@ const OrderCard = ({
 }) => {
   const { hasPermission } = useAuth();
   
-  // تحديد لون وأيقونة الحالة بالألوان الجميلة المتدرجة
+  // تحديد لون وأيقونة الحالة بالألوان المتناسقة
   const getStatusConfig = (status) => {
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Package,
-        color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-md shadow-status-pending-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-md shadow-status-shipped-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs animate-pulse'
+        color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-md shadow-status-delivery-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: CheckCircle,
-        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-md shadow-status-delivered-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: CheckCircle,
-        color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-md shadow-status-completed-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'returned': { 
         label: 'راجعة', 
         icon: RotateCcw,
-        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-md shadow-status-returned-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-md shadow-status-returned-stock-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
-        color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-md shadow-status-cancelled-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       },
-      // معالجة الحالات القديمة
       'return_received': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 backdrop-blur-sm font-bold rounded-lg px-3 py-1.5 text-xs'
+        color: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-md shadow-status-returned-stock-shadow/30 font-semibold rounded-lg px-2.5 py-1 text-xs'
       }
     };
     return configs[status] || configs['pending'];
@@ -94,10 +93,10 @@ const OrderCard = ({
   // تحديد نوع التوصيل
   const isLocalOrder = order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
-    'bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm font-medium' : 
-    'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm font-medium';
+    'bg-emerald-100 text-emerald-700 border border-emerald-300' : 
+    'bg-blue-100 text-blue-700 border border-blue-300';
 
-  // التحقق من الصلاحيات - يمكن التعديل/الحذف فقط في حالة "قيد التجهيز" 
+  // التحقق من الصلاحيات
   const canEdit = order.status === 'pending';
   const canDelete = order.status === 'pending';
 
@@ -128,7 +127,7 @@ const OrderCard = ({
     });
   };
 
-  // تحضير معلومات المنتجات المختصرة
+  // تحضير معلومات المنتجات
   const getProductSummary = () => {
     if (!order.items || order.items.length === 0) return null;
     
@@ -148,56 +147,52 @@ const OrderCard = ({
       transition={{ duration: 0.2 }}
       className="w-full"
     >
-      <Card className={`overflow-hidden bg-gradient-to-br from-card to-card/95 backdrop-blur-sm transition-all duration-300 border hover:shadow-lg hover:shadow-primary/15 ${isSelected ? 'border-primary shadow-lg shadow-primary/25 ring-1 ring-primary/30' : 'border-border/50 hover:border-primary/40'}`}>
-        <CardContent className="p-4">
-          <div className="space-y-3">
+      <Card className={`overflow-hidden bg-gradient-to-br from-card to-card/95 backdrop-blur-sm transition-all duration-300 border hover:shadow-md hover:shadow-primary/10 ${isSelected ? 'border-primary shadow-md shadow-primary/20 ring-1 ring-primary/20' : 'border-border/50 hover:border-primary/30'}`}>
+        <CardContent className="p-3">
+          <div className="space-y-2.5">
             
-            {/* Header - Compact */}
+            {/* Header - Very Compact */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0"
+                  className="shrink-0 scale-90"
                 />
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-base text-foreground truncate">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-foreground truncate">
                       {order.tracking_number}
                     </h3>
-                    <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full`}>
-                      <Building className="h-3 w-3 mr-1" />
+                    <Badge className={`${deliveryBadgeColor} px-1.5 py-0.5 text-xs rounded-md`}>
                       {order.delivery_partner}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground font-medium">
-                    #{order.order_number}
-                  </p>
                 </div>
               </div>
               
               {/* Status Badge */}
-              <div className={`flex items-center gap-1.5 shrink-0 ${statusConfig.color}`}>
+              <div className={`flex items-center gap-1 shrink-0 ${statusConfig.color}`}>
                 <StatusIcon className="h-3 w-3" />
                 <span className="whitespace-nowrap">{statusConfig.label}</span>
               </div>
             </div>
 
-            {/* Customer & Product Info - Single Row */}
-            <div className="bg-muted/20 rounded-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0">
+            {/* Customer Info - Single Compact Row */}
+            <div className="bg-muted/15 rounded-md p-2">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <User className="h-3 w-3 text-primary shrink-0" />
-                  <span className="font-semibold text-sm text-foreground truncate">{order.customer_name}</span>
+                  <span className="font-medium text-xs text-foreground truncate">{order.customer_name}</span>
                 </div>
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Calendar className="h-3 w-3" />
-                  <span className="text-xs font-medium">{formatDate(order.created_at)}</span>
+                  <span className="text-xs">{formatDate(order.created_at)}</span>
                 </div>
               </div>
               
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
                   <Phone className="h-3 w-3 shrink-0" />
                   <span className="truncate">{order.customer_phone}</span>
                 </div>
@@ -208,50 +203,43 @@ const OrderCard = ({
                   </div>
                 )}
               </div>
-
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3 shrink-0 text-primary" />
-                <span className="truncate">{order.customer_address}</span>
-              </div>
             </div>
 
-            {/* Price - Compact */}
-            <div className="bg-primary/5 rounded-lg p-2.5 flex items-center justify-between">
+            {/* Price - Under Product Info */}
+            <div className="flex items-center justify-between">
               <div className="text-xs text-muted-foreground">
-                {order.delivery_fee > 0 && (
-                  <span>شامل التوصيل</span>
-                )}
+                {order.delivery_fee > 0 ? 'شامل التوصيل' : 'بدون توصيل'}
               </div>
-              <div className="flex items-center gap-1.5">
-                <CreditCard className="h-4 w-4 text-primary" />
-                <span className="font-bold text-lg text-primary">
+              <div className="flex items-center gap-1">
+                <CreditCard className="h-3 w-3 text-primary" />
+                <span className="font-bold text-base text-primary">
                   {order.final_amount?.toLocaleString()}
                 </span>
-                <span className="text-xs text-primary/70 font-semibold">د.ع</span>
+                <span className="text-xs text-primary/70">د.ع</span>
               </div>
             </div>
 
-            {/* Actions - Compact Buttons */}
-            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/30">
+            {/* Actions - Compact Icons */}
+            <div className="flex flex-wrap gap-1 pt-1.5 border-t border-border/20">
               
               {/* View Details */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onViewOrder?.(order)}
-                className="flex items-center gap-1.5 text-xs h-8 px-3 border-primary/30 text-primary hover:bg-primary/10"
+                className="flex items-center gap-1 text-xs h-7 px-2 border-primary/30 text-primary hover:bg-primary/10"
               >
                 <Eye className="h-3 w-3" />
-                التفاصيل
+                معاينة
               </Button>
 
-              {/* Edit/Delete - Only for pending orders */}
+              {/* Edit/Delete */}
               {canEdit && hasPermission('edit_orders') && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => onEditOrder?.(order)}
-                  className="flex items-center gap-1.5 text-xs h-8 px-3"
+                  className="flex items-center gap-1 text-xs h-7 px-2"
                 >
                   <Edit2 className="h-3 w-3" />
                   تعديل
@@ -263,7 +251,7 @@ const OrderCard = ({
                   variant="outline"
                   size="sm"
                   onClick={handleDelete}
-                  className="flex items-center gap-1.5 text-xs h-8 px-3 border-red-300 text-red-600 hover:bg-red-50"
+                  className="flex items-center gap-1 text-xs h-7 px-2 border-red-300 text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="h-3 w-3" />
                   حذف
@@ -278,7 +266,7 @@ const OrderCard = ({
                       variant="default"
                       size="sm"
                       onClick={() => handleStatusChange('shipped')}
-                      className="flex items-center gap-1.5 text-xs h-8 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+                      className="flex items-center gap-1 text-xs h-7 px-2 bg-orange-500 hover:bg-orange-600"
                     >
                       <Truck className="h-3 w-3" />
                       شحن
@@ -290,7 +278,7 @@ const OrderCard = ({
                       variant="default"
                       size="sm"
                       onClick={() => handleStatusChange('delivery')}
-                      className="flex items-center gap-1.5 text-xs h-8 px-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700"
+                      className="flex items-center gap-1 text-xs h-7 px-2 bg-purple-500 hover:bg-purple-600"
                     >
                       <Truck className="h-3 w-3" />
                       توصيل
@@ -303,7 +291,7 @@ const OrderCard = ({
                         variant="default"
                         size="sm"
                         onClick={() => handleStatusChange('delivered')}
-                        className="flex items-center gap-1.5 text-xs h-8 px-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
+                        className="flex items-center gap-1 text-xs h-7 px-2 bg-green-500 hover:bg-green-600"
                       >
                         <CheckCircle className="h-3 w-3" />
                         تسليم
@@ -313,7 +301,7 @@ const OrderCard = ({
                         variant="outline"
                         size="sm"
                         onClick={() => handleStatusChange('returned')}
-                        className="flex items-center gap-1.5 text-xs h-8 px-3 border-red-300 text-red-600 hover:bg-red-50"
+                        className="flex items-center gap-1 text-xs h-7 px-2 border-red-300 text-red-600 hover:bg-red-50"
                       >
                         <RotateCcw className="h-3 w-3" />
                         راجعة
@@ -321,13 +309,12 @@ const OrderCard = ({
                     </>
                   )}
 
-                  {/* Receive to Stock */}
                   {(order.status === 'cancelled' || order.status === 'returned') && hasPermission('manage_inventory') && (
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => handleStatusChange('returned_in_stock')}
-                      className="flex items-center gap-1.5 text-xs h-8 px-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700"
+                      className="flex items-center gap-1 text-xs h-7 px-2 bg-blue-500 hover:bg-blue-600"
                     >
                       <PackageCheck className="h-3 w-3" />
                       للمخزن
@@ -337,14 +324,12 @@ const OrderCard = ({
               )}
             </div>
 
-            {/* Company Order Note */}
+            {/* Company Order Note - Very Compact */}
             {!isLocalOrder && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
-                <div className="flex items-center justify-center gap-2 text-blue-700">
+              <div className="bg-blue-50 border border-blue-200 rounded-md p-1.5 text-center">
+                <div className="flex items-center justify-center gap-1 text-blue-700">
                   <Building className="h-3 w-3" />
-                  <span className="text-xs font-medium">
-                    طلب شركة - لا يمكن تغيير الحالة يدوياً
-                  </span>
+                  <span className="text-xs">طلب شركة - حالة ثابتة</span>
                 </div>
               </div>
             )}

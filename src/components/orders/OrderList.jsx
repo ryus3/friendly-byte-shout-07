@@ -2,9 +2,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import OrderCard from '@/components/orders/OrderCard';
+import OrderListItem from '@/components/orders/OrderListItem';
 import Loader from '@/components/ui/loader';
 
 const MemoizedOrderCard = React.memo(OrderCard);
+const MemoizedOrderListItem = React.memo(OrderListItem);
 
 const OrderList = ({
   orders,
@@ -16,7 +18,7 @@ const OrderList = ({
   selectedOrders = [],
   setSelectedOrders = () => {},
   onDeleteOrder,
-  isCompact = false,
+  viewMode = 'grid', // 'grid' or 'list'
 }) => {
   if (isLoading) {
     return <div className="flex h-64 items-center justify-center"><Loader /></div>;
@@ -35,6 +37,28 @@ const OrderList = ({
       );
     }
   };
+
+  if (viewMode === 'list') {
+    return (
+      <div className="space-y-2">
+        <AnimatePresence>
+          {orders.map(order => (
+            <MemoizedOrderListItem
+              key={order.id}
+              order={order}
+              onViewOrder={() => onViewOrder(order)}
+              onEditOrder={() => onEditOrder && onEditOrder(order)}
+              onReceiveReturn={onReceiveReturn}
+              isSelected={selectedOrders?.includes(order.id) ?? false}
+              onSelect={() => handleSelect(order.id)}
+              onUpdateStatus={onUpdateStatus}
+              onDeleteOrder={onDeleteOrder}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4">

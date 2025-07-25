@@ -2,7 +2,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, Grid3X3, List, LayoutGrid } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-const OrdersToolbar = ({ filters, onFiltersChange }) => {
+const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange }) => {
   const { hasPermission } = useAuth();
   const isMobile = useMediaQuery('(max-width: 768px)');
   
@@ -57,6 +57,27 @@ const OrdersToolbar = ({ filters, onFiltersChange }) => {
             className="pr-10" 
           />
         </div>
+        
+        {/* View Mode Toggle */}
+        <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange?.('grid')}
+            className="h-8 px-3"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => onViewModeChange?.('list')}
+            className="h-8 px-3"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+
         {isMobile ? (
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
