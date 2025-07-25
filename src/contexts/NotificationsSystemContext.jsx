@@ -161,9 +161,11 @@ export const NotificationsSystemProvider = ({ children }) => {
     const statusLabels = {
       pending: 'قيد التجهيز',
       shipped: 'تم الشحن',
-      processing: 'قيد التسليم',
-      delivered: 'تم التوصيل',
-      returned: 'راجع',
+      delivery: 'قيد التوصيل',
+      delivered: 'تم التسليم',
+      completed: 'مكتمل',
+      returned: 'راجعة',
+      returned_in_stock: 'راجع للمخزن',
       cancelled: 'ملغي'
     };
 

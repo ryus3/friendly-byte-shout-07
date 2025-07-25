@@ -10,28 +10,28 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const getStatusInfo = (status) => {
   switch (status) {
-    case 'pending': return { badge: 'bg-[hsl(var(--status-pending)_/_0.2)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)_/_0.3)]', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
-    case 'shipped': return { badge: 'bg-[hsl(var(--status-shipped)_/_0.2)] text-[hsl(var(--status-shipped))] border-[hsl(var(--status-shipped)_/_0.3)]', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
-    case 'delivery': return { badge: 'bg-[hsl(var(--status-delivery)_/_0.2)] text-[hsl(var(--status-delivery))] border-[hsl(var(--status-delivery)_/_0.3)]', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
-    case 'delivered': return { badge: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
-    case 'completed': return { badge: 'bg-green-500/20 text-green-400 border-green-500/30', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
-    case 'cancelled': return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
-    case 'returned': return { badge: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
-    default: return { badge: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: <Clock className="w-4 h-4" />, text: 'غير محدد' };
+    case 'pending': return { badge: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
+    case 'shipped': return { badge: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
+    case 'delivery': return { badge: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
+    case 'delivered': return { badge: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
+    case 'completed': return { badge: 'bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 border-green-300/50 shadow-sm backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
+    case 'cancelled': return { badge: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
+    case 'returned': return { badge: 'bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 text-yellow-700 border-yellow-300/50 shadow-sm backdrop-blur-sm', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
+    case 'returned_in_stock': return { badge: 'bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 text-indigo-700 border-indigo-300/50 shadow-sm backdrop-blur-sm', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    default: return { badge: 'bg-gradient-to-r from-gray-500/10 to-gray-600/10 text-gray-700 border-gray-300/50 shadow-sm backdrop-blur-sm', icon: <AlertTriangle className="w-4 h-4" />, text: status };
   }
 };
 
-const statusOptions = [
-  { value: 'pending', label: 'قيد التجهيز' },
-  { value: 'shipped', label: 'تم الشحن' },
-  { value: 'delivery', label: 'قيد التوصيل' },
-  { value: 'delivered', label: 'تم التسليم' },
-  { value: 'completed', label: 'مكتمل' },
-  { value: 'cancelled', label: 'ملغي' },
-  { value: 'returned', label: 'راجعة' },
-  { value: 'returned_in_stock', label: 'راجع للمخزن' }
-];
+  const statusOptions = [
+    { value: 'pending', label: 'قيد التجهيز' },
+    { value: 'shipped', label: 'تم الشحن' },
+    { value: 'delivery', label: 'قيد التوصيل' },
+    { value: 'delivered', label: 'تم التسليم' },
+    { value: 'completed', label: 'مكتمل' },
+    { value: 'cancelled', label: 'ملغي' },
+    { value: 'returned', label: 'راجعة' },
+    { value: 'returned_in_stock', label: 'راجع للمخزن' }
+  ];
 
 const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus, sellerName }) => {
   const [newStatus, setNewStatus] = useState(order?.status);

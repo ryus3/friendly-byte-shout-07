@@ -37,7 +37,7 @@ export const InventoryProvider = ({ children }) => {
   // Stock update logic when order status changes
   function handleStockUpdate(oldOrder, newOrder) {
     const stockChanges = [];
-    if (['pending', 'processing'].includes(oldOrder.status) && ['shipped', 'delivered'].includes(newOrder.status)) {
+    if (['pending'].includes(oldOrder.status) && ['shipped', 'delivered'].includes(newOrder.status)) {
       // From reserved to sold
       oldOrder.items.forEach(item => {
         stockChanges.push(supabase.rpc('update_stock_on_sale', {

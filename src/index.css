@@ -40,12 +40,11 @@
     
     /* Order Status Colors - Updated Based on User Images */
     --status-pending: 45 93% 47%;        /* أصفر احترافي لقيد التجهيز */
-    --status-processing: 24 95% 53%;     /* برتقالي لقيد المعالجة - يحتاج معالجة */
-    --status-shipped: 262 83% 58%;       /* بنفسجي فاتح للشحن */
-    --status-delivery: 217 91% 60%;      /* أزرق فاتح لقيد التوصيل */
+    --status-shipped: 24 95% 53%;        /* برتقالي للشحن */
+    --status-delivery: 262 83% 58%;      /* بنفسجي فاتح لقيد التوصيل */
     --status-delivered: 142 76% 36%;     /* أخضر فاتح للتسليم - تم التسليم */
-    --status-returned: 0 84% 60%;        /* أحمر للراجعة - راجع */
-    --status-cancelled: 0 62% 30%;       /* أحمر داكن للملغي - تم الإرجاع */
+    --status-returned: 46 93% 47%;       /* أصفر للراجعة */
+    --status-cancelled: 0 84% 60%;       /* أحمر للملغي */
     
     /* Notification Colors - Professional Design */
     --notification-info: 217 91% 60%;    /* أزرق للمعلومات */

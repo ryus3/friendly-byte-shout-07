@@ -30,48 +30,48 @@ const OrderCard = ({
 }) => {
   const { hasPermission } = useAuth();
   
-  // تحديد لون وأيقونة الحالة الموحدة
+  // تحديد لون وأيقونة الحالة الموحدة مع الألوان الجميلة
   const getStatusConfig = (status) => {
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Package,
-        color: 'bg-blue-50 text-blue-700 border-blue-200'
+        color: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        color: 'bg-orange-50 text-orange-700 border-orange-200'
+        color: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        color: 'bg-purple-50 text-purple-700 border-purple-200'
+        color: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: CheckCircle,
-        color: 'bg-green-50 text-green-700 border-green-200'
+        color: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: CheckCircle,
-        color: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+        color: 'bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 border-green-300/50 shadow-sm backdrop-blur-sm'
       },
       'returned': { 
         label: 'راجعة', 
         icon: RotateCcw,
-        color: 'bg-orange-50 text-orange-700 border-orange-200'
+        color: 'bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 text-yellow-700 border-yellow-300/50 shadow-sm backdrop-blur-sm'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        color: 'bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 text-indigo-700 border-indigo-300/50 shadow-sm backdrop-blur-sm'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
-        color: 'bg-red-50 text-red-700 border-red-200'
+        color: 'bg-gradient-to-r from-red-500/10 to-red-600/10 text-red-700 border-red-300/50 shadow-sm backdrop-blur-sm'
       }
     };
     return configs[status] || configs['pending'];

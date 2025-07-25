@@ -29,25 +29,35 @@ const RecentOrdersCard = ({ recentOrders }) => {
         icon: Clock,
         className: 'bg-gradient-to-r from-amber-500/10 to-amber-600/10 text-amber-700 border-amber-300/50 shadow-sm backdrop-blur-sm'
       },
-      'processing': { 
-        label: 'قيد التسليم', 
-        icon: Package,
-        className: 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 text-blue-700 border-blue-300/50 shadow-sm backdrop-blur-sm'
-      },
       'shipped': { 
         label: 'تم الشحن', 
+        icon: Truck,
+        className: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'delivery': { 
+        label: 'قيد التوصيل', 
         icon: Truck,
         className: 'bg-gradient-to-r from-purple-500/10 to-purple-600/10 text-purple-700 border-purple-300/50 shadow-sm backdrop-blur-sm'
       },
       'delivered': { 
-        label: 'تم التوصيل', 
+        label: 'تم التسليم', 
         icon: Package,
         className: 'bg-gradient-to-r from-emerald-500/10 to-emerald-600/10 text-emerald-700 border-emerald-300/50 shadow-sm backdrop-blur-sm'
       },
-      'returned': { 
-        label: 'راجع', 
+      'completed': { 
+        label: 'مكتمل', 
         icon: Package,
-        className: 'bg-gradient-to-r from-orange-500/10 to-orange-600/10 text-orange-700 border-orange-300/50 shadow-sm backdrop-blur-sm'
+        className: 'bg-gradient-to-r from-green-500/10 to-green-600/10 text-green-700 border-green-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'returned': { 
+        label: 'راجعة', 
+        icon: Package,
+        className: 'bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 text-yellow-700 border-yellow-300/50 shadow-sm backdrop-blur-sm'
+      },
+      'returned_in_stock': { 
+        label: 'راجع للمخزن', 
+        icon: Package,
+        className: 'bg-gradient-to-r from-indigo-500/10 to-indigo-600/10 text-indigo-700 border-indigo-300/50 shadow-sm backdrop-blur-sm'
       },
       'cancelled': { 
         label: 'ملغي', 
