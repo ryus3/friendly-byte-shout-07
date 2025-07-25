@@ -33,63 +33,54 @@ const OrderCard = ({
 }) => {
   const { hasPermission } = useAuth();
   
-  // تحديد لون وأيقونة الحالة الموحدة مع الألوان الجميلة المتدرجة
+  // تحديد لون وأيقونة الحالة الموحدة مع الألوان الجميلة والمضيئة
   const getStatusConfig = (status) => {
     const configs = {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Package,
-        color: 'bg-status-pending-bg text-status-pending shadow-lg shadow-status-pending/30 border-2 border-status-pending/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-pending to-status-pending/80'
+        color: 'bg-status-pending-bg text-status-pending border-2 border-status-pending/30 shadow-lg shadow-status-pending-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        color: 'bg-status-shipped-bg text-status-shipped shadow-lg shadow-status-shipped/30 border-2 border-status-shipped/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-shipped to-status-shipped/80'
+        color: 'bg-status-shipped-bg text-status-shipped border-2 border-status-shipped/30 shadow-lg shadow-status-shipped-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        color: 'bg-status-delivery-bg text-status-delivery shadow-lg shadow-status-delivery/30 border-2 border-status-delivery/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-delivery to-status-delivery/80'
+        color: 'bg-status-delivery-bg text-status-delivery border-2 border-status-delivery/30 shadow-lg shadow-status-delivery-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: CheckCircle,
-        color: 'bg-status-delivered-bg text-status-delivered shadow-lg shadow-status-delivered/30 border-2 border-status-delivered/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-delivered to-status-delivered/80'
+        color: 'bg-status-delivered-bg text-status-delivered border-2 border-status-delivered/30 shadow-lg shadow-status-delivered-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: CheckCircle,
-        color: 'bg-status-completed-bg text-status-completed shadow-lg shadow-status-completed/30 border-2 border-status-completed/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-completed to-status-completed/80'
+        color: 'bg-status-completed-bg text-status-completed border-2 border-status-completed/30 shadow-lg shadow-status-completed-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'returned': { 
         label: 'راجعة', 
         icon: RotateCcw,
-        color: 'bg-status-returned-bg text-status-returned shadow-lg shadow-status-returned/30 border-2 border-status-returned/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-returned to-status-returned/80'
+        color: 'bg-status-returned-bg text-status-returned border-2 border-status-returned/30 shadow-lg shadow-status-returned-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-returned-stock to-status-returned-stock/80'
+        color: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
-        color: 'bg-status-cancelled-bg text-status-cancelled shadow-lg shadow-status-cancelled/30 border-2 border-status-cancelled/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-cancelled to-status-cancelled/80'
+        color: 'bg-status-cancelled-bg text-status-cancelled border-2 border-status-cancelled/30 shadow-lg shadow-status-cancelled-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       },
       // معالجة الحالات القديمة
       'return_received': { 
         label: 'راجع للمخزن', 
         icon: PackageCheck,
-        color: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold backdrop-blur-sm',
-        gradient: 'bg-gradient-to-r from-status-returned-stock to-status-returned-stock/80'
+        color: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 backdrop-blur-sm font-bold rounded-xl px-4 py-2'
       }
     };
     return configs[status] || configs['pending'];
@@ -170,7 +161,7 @@ const OrderCard = ({
                 </div>
               </div>
               
-              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg shrink-0 ${statusConfig.color}`}>
+              <div className={`flex items-center gap-2 shrink-0 ${statusConfig.color}`}>
                 <StatusIcon className="h-4 w-4" />
                 <span className="text-sm whitespace-nowrap">{statusConfig.label}</span>
               </div>

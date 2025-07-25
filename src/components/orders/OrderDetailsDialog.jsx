@@ -10,16 +10,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const getStatusInfo = (status) => {
   switch (status) {
-    case 'pending': return { badge: 'bg-status-pending-bg text-status-pending shadow-lg shadow-status-pending/30 border-2 border-status-pending/20 font-semibold backdrop-blur-sm', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
-    case 'shipped': return { badge: 'bg-status-shipped-bg text-status-shipped shadow-lg shadow-status-shipped/30 border-2 border-status-shipped/20 font-semibold backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
-    case 'delivery': return { badge: 'bg-status-delivery-bg text-status-delivery shadow-lg shadow-status-delivery/30 border-2 border-status-delivery/20 font-semibold backdrop-blur-sm', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
-    case 'delivered': return { badge: 'bg-status-delivered-bg text-status-delivered shadow-lg shadow-status-delivered/30 border-2 border-status-delivered/20 font-semibold backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
-    case 'completed': return { badge: 'bg-status-completed-bg text-status-completed shadow-lg shadow-status-completed/30 border-2 border-status-completed/20 font-semibold backdrop-blur-sm', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
-    case 'cancelled': return { badge: 'bg-status-cancelled-bg text-status-cancelled shadow-lg shadow-status-cancelled/30 border-2 border-status-cancelled/20 font-semibold backdrop-blur-sm', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
-    case 'returned': return { badge: 'bg-status-returned-bg text-status-returned shadow-lg shadow-status-returned/30 border-2 border-status-returned/20 font-semibold backdrop-blur-sm', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold backdrop-blur-sm', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
-    case 'return_received': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold backdrop-blur-sm', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
-    default: return { badge: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium', icon: <AlertTriangle className="w-4 h-4" />, text: status };
+    case 'pending': return { badge: 'bg-status-pending-bg text-status-pending border-2 border-status-pending/30 shadow-lg shadow-status-pending-shadow/25 font-bold rounded-xl px-4 py-2', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
+    case 'shipped': return { badge: 'bg-status-shipped-bg text-status-shipped border-2 border-status-shipped/30 shadow-lg shadow-status-shipped-shadow/25 font-bold rounded-xl px-4 py-2', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
+    case 'delivery': return { badge: 'bg-status-delivery-bg text-status-delivery border-2 border-status-delivery/30 shadow-lg shadow-status-delivery-shadow/25 font-bold rounded-xl px-4 py-2', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
+    case 'delivered': return { badge: 'bg-status-delivered-bg text-status-delivered border-2 border-status-delivered/30 shadow-lg shadow-status-delivered-shadow/25 font-bold rounded-xl px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
+    case 'completed': return { badge: 'bg-status-completed-bg text-status-completed border-2 border-status-completed/30 shadow-lg shadow-status-completed-shadow/25 font-bold rounded-xl px-4 py-2', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
+    case 'cancelled': return { badge: 'bg-status-cancelled-bg text-status-cancelled border-2 border-status-cancelled/30 shadow-lg shadow-status-cancelled-shadow/25 font-bold rounded-xl px-4 py-2', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
+    case 'returned': return { badge: 'bg-status-returned-bg text-status-returned border-2 border-status-returned/30 shadow-lg shadow-status-returned-shadow/25 font-bold rounded-xl px-4 py-2', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
+    case 'returned_in_stock': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 font-bold rounded-xl px-4 py-2', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    case 'return_received': return { badge: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 font-bold rounded-xl px-4 py-2', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
+    default: return { badge: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-xl px-4 py-2', icon: <AlertTriangle className="w-4 h-4" />, text: status };
   }
 };
 
@@ -101,7 +101,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 <h3 className="text-lg font-bold text-foreground break-all">#{order.tracking_number || order.trackingnumber || 'لا يوجد رقم تتبع'}</h3>
                 <p className="text-muted-foreground text-sm">{getOrderDate()}</p>
               </div>
-              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${statusInfo.badge}`}>
+              <div className={`inline-flex items-center gap-2 text-sm font-medium ${statusInfo.badge}`}>
                 {statusInfo.icon} {statusInfo.text}
               </div>
             </div>

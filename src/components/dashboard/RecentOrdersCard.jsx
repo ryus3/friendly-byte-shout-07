@@ -27,58 +27,58 @@ const RecentOrdersCard = ({ recentOrders }) => {
       'pending': { 
         label: 'قيد التجهيز', 
         icon: Clock,
-        className: 'bg-status-pending-bg text-status-pending shadow-lg shadow-status-pending/30 border-2 border-status-pending/20 font-semibold'
+        className: 'bg-status-pending-bg text-status-pending border-2 border-status-pending/30 shadow-lg shadow-status-pending-shadow/25 font-bold rounded-xl'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        className: 'bg-status-shipped-bg text-status-shipped shadow-lg shadow-status-shipped/30 border-2 border-status-shipped/20 font-semibold'
+        className: 'bg-status-shipped-bg text-status-shipped border-2 border-status-shipped/30 shadow-lg shadow-status-shipped-shadow/25 font-bold rounded-xl'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        className: 'bg-status-delivery-bg text-status-delivery shadow-lg shadow-status-delivery/30 border-2 border-status-delivery/20 font-semibold'
+        className: 'bg-status-delivery-bg text-status-delivery border-2 border-status-delivery/30 shadow-lg shadow-status-delivery-shadow/25 font-bold rounded-xl'
       },
       'delivered': { 
         label: 'تم التسليم', 
         icon: Package,
-        className: 'bg-status-delivered-bg text-status-delivered shadow-lg shadow-status-delivered/30 border-2 border-status-delivered/20 font-semibold'
+        className: 'bg-status-delivered-bg text-status-delivered border-2 border-status-delivered/30 shadow-lg shadow-status-delivered-shadow/25 font-bold rounded-xl'
       },
       'completed': { 
         label: 'مكتمل', 
         icon: Package,
-        className: 'bg-status-completed-bg text-status-completed shadow-lg shadow-status-completed/30 border-2 border-status-completed/20 font-semibold'
+        className: 'bg-status-completed-bg text-status-completed border-2 border-status-completed/30 shadow-lg shadow-status-completed-shadow/25 font-bold rounded-xl'
       },
       'returned': { 
         label: 'راجعة', 
         icon: Package,
-        className: 'bg-status-returned-bg text-status-returned shadow-lg shadow-status-returned/30 border-2 border-status-returned/20 font-semibold'
+        className: 'bg-status-returned-bg text-status-returned border-2 border-status-returned/30 shadow-lg shadow-status-returned-shadow/25 font-bold rounded-xl'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
         icon: Package,
-        className: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold'
+        className: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 font-bold rounded-xl'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: Package,
-        className: 'bg-status-cancelled-bg text-status-cancelled shadow-lg shadow-status-cancelled/30 border-2 border-status-cancelled/20 font-semibold'
+        className: 'bg-status-cancelled-bg text-status-cancelled border-2 border-status-cancelled/30 shadow-lg shadow-status-cancelled-shadow/25 font-bold rounded-xl'
       },
       // معالجة الحالات القديمة
       'return_received': { 
         label: 'راجع للمخزن', 
         icon: Package,
-        className: 'bg-status-returned-stock-bg text-status-returned-stock shadow-lg shadow-status-returned-stock/30 border-2 border-status-returned-stock/20 font-semibold'
+        className: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 font-bold rounded-xl'
       }
     };
     const statusInfo = statusMap[status] || { 
       label: status, 
       icon: Package,
-      className: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium'
+      className: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-xl'
     };
     const StatusIcon = statusInfo.icon;
     return (
-      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 rounded-lg backdrop-blur-sm", statusInfo.className)}>
+      <Badge className={cn("text-xs px-3 py-2 flex items-center gap-2 backdrop-blur-sm", statusInfo.className)}>
         <StatusIcon className="w-3 h-3" />
         {statusInfo.label}
       </Badge>
@@ -86,9 +86,16 @@ const RecentOrdersCard = ({ recentOrders }) => {
   };
 
   const getDeliveryType = (order) => {
-    // تحديد نوع التوصيل بناءً على بيانات الطلب
-    const isDeliveryCompany = order.customerinfo?.delivery_company || order.delivery_partner;
-    return isDeliveryCompany ? 'شركة توصيل' : 'محلي';
+    // تحديد نوع التوصيل بناءً على بيانات الطلب الفعلية
+    const deliveryPartner = order.delivery_partner;
+    
+    // إذا كان delivery_partner موجود وليس "محلي"، فهو شركة توصيل
+    if (deliveryPartner && deliveryPartner !== 'محلي') {
+      return deliveryPartner; // عرض اسم شركة التوصيل الفعلي
+    }
+    
+    // وإلا فهو توصيل محلي
+    return 'محلي';
   };
 
   const getOrderNumber = (index) => {
@@ -186,15 +193,15 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       <div className="h-3 w-px bg-border/50" />
                       
                       <div className="flex items-center gap-1.5">
-                        {getDeliveryType(order) === 'شركة توصيل' ? (
-                          <>
-                            <Truck className="w-3 h-3 text-blue-500" />
-                            <span className="text-xs text-blue-600 font-medium">شركة</span>
-                          </>
-                        ) : (
+                        {getDeliveryType(order) === 'محلي' ? (
                           <>
                             <Home className="w-3 h-3 text-green-500" />
                             <span className="text-xs text-green-600 font-medium">محلي</span>
+                          </>
+                        ) : (
+                          <>
+                            <Truck className="w-3 h-3 text-blue-500" />
+                            <span className="text-xs text-blue-600 font-medium">{getDeliveryType(order)}</span>
                           </>
                         )}
                       </div>
