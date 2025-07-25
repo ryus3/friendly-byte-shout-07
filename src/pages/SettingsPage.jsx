@@ -32,7 +32,6 @@ import PermissionBasedStockSettings from '@/components/settings/PermissionBasedS
 
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
-import SystemStatusDashboard from '@/components/dashboard/SystemStatusDashboard';
 import SystemHealthDashboard from '@/components/system/SystemHealthDashboard';
 import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';

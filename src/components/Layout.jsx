@@ -199,6 +199,8 @@ const Layout = ({ children }) => {
     if (sidebarOpen) {
       setSidebarOpen(false);
     }
+    // Scroll to top عند تغيير الصفحة
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location]);
 
   const childrenWithProps = React.Children.map(children, child => {

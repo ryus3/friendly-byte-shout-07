@@ -22,7 +22,10 @@ const BarcodeInventoryCard = () => {
                     <CardDescription>جرد المخزون بسرعة ودقة باستخدام قارئ QR Code.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={() => setIsModalOpen(true)}>
+                    <Button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
+                    >
                         <Play className="w-4 h-4 ml-2" />
                         بدء الجرد بـ QR Code
                     </Button>

@@ -166,7 +166,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
                 <Button
                   onClick={startScanning}
                   disabled={isScanning}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
                   variant={isScanning ? "secondary" : "default"}
                 >
                   <QrCode className="h-4 w-4" />

@@ -53,7 +53,7 @@ const QuickActionsPanel = ({ userPermissions, navigate }) => {
       title: "قارئ QR Code",
       description: "مسح المنتجات",
       icon: QrCode,
-      color: "bg-cyan-500 hover:bg-cyan-600",
+      color: "bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl",
       action: () => navigate('/barcode-inventory'),
       permission: userPermissions.canUseBarcode
     },

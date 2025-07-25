@@ -36,14 +36,14 @@ const QRButton = ({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex items-center gap-2 font-medium transition-all duration-200",
-        "hover:shadow-lg hover:scale-105 active:scale-95",
-        variant === "outline" && "border-primary/20 hover:border-primary/40",
+        "bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl",
+        "flex items-center gap-2 font-medium",
+        "hover:scale-105 active:scale-95",
         className
       )}
       {...props}
     >
-      <QRIcon size={size === "sm" ? 16 : size === "lg" ? 24 : 20} />
+      <QRIcon size={size === "sm" ? 16 : size === "lg" ? 24 : 20} className="text-white" />
       {children}
     </Button>
   );
