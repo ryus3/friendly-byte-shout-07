@@ -33,12 +33,13 @@ const OrdersToolbar = ({ filters, onFiltersChange }) => {
   const statusOptions = [
       { value: 'all', label: 'جميع الحالات' },
       { value: 'pending', label: 'قيد التجهيز' },
-      { value: 'processing', label: 'قيد المعالجة' },
       { value: 'shipped', label: 'تم الشحن' },
       { value: 'delivery', label: 'قيد التوصيل' },
       { value: 'delivered', label: 'تم التسليم' },
+      { value: 'completed', label: 'مكتمل' },
       { value: 'cancelled', label: 'ملغي' },
-      { value: 'returned', label: 'راجع' },
+      { value: 'returned', label: 'راجعة' },
+      { value: 'returned_in_stock', label: 'راجع للمخزن' },
       { value: 'archived', label: 'المؤرشفة' },
   ];
 

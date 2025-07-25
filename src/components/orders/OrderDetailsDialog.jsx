@@ -11,25 +11,26 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 const getStatusInfo = (status) => {
   switch (status) {
     case 'pending': return { badge: 'bg-[hsl(var(--status-pending)_/_0.2)] text-[hsl(var(--status-pending))] border-[hsl(var(--status-pending)_/_0.3)]', icon: <Clock className="w-4 h-4" />, text: 'قيد التجهيز' };
-    case 'processing': return { badge: 'bg-[hsl(var(--status-processing)_/_0.2)] text-[hsl(var(--status-processing))] border-[hsl(var(--status-processing)_/_0.3)]', icon: <Package className="w-4 h-4" />, text: 'قيد المعالجة' };
     case 'shipped': return { badge: 'bg-[hsl(var(--status-shipped)_/_0.2)] text-[hsl(var(--status-shipped))] border-[hsl(var(--status-shipped)_/_0.3)]', icon: <Truck className="w-4 h-4" />, text: 'تم الشحن' };
     case 'delivery': return { badge: 'bg-[hsl(var(--status-delivery)_/_0.2)] text-[hsl(var(--status-delivery))] border-[hsl(var(--status-delivery)_/_0.3)]', icon: <Truck className="w-4 h-4" />, text: 'قيد التوصيل' };
     case 'delivered': return { badge: 'bg-[hsl(var(--status-delivered)_/_0.2)] text-[hsl(var(--status-delivered))] border-[hsl(var(--status-delivered)_/_0.3)]', icon: <CheckCircle className="w-4 h-4" />, text: 'تم التسليم' };
+    case 'completed': return { badge: 'bg-green-500/20 text-green-400 border-green-500/30', icon: <CheckCircle className="w-4 h-4" />, text: 'مكتمل' };
     case 'cancelled': return { badge: 'bg-[hsl(var(--status-cancelled)_/_0.2)] text-[hsl(var(--status-cancelled))] border-[hsl(var(--status-cancelled)_/_0.3)]', icon: <XCircle className="w-4 h-4" />, text: 'ملغي' };
     case 'returned': return { badge: 'bg-[hsl(var(--status-returned)_/_0.2)] text-[hsl(var(--status-returned))] border-[hsl(var(--status-returned)_/_0.3)]', icon: <CornerDownLeft className="w-4 h-4" />, text: 'راجعة' };
-    case 'returned_in_stock': return { badge: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: <Package className="w-4 h-4" />, text: 'راجع في المخزن' };
+    case 'returned_in_stock': return { badge: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30', icon: <Package className="w-4 h-4" />, text: 'راجع للمخزن' };
     default: return { badge: 'bg-gray-500/20 text-gray-400 border-gray-500/30', icon: <Clock className="w-4 h-4" />, text: 'غير محدد' };
   }
 };
 
 const statusOptions = [
   { value: 'pending', label: 'قيد التجهيز' },
-  { value: 'processing', label: 'قيد المعالجة' },
   { value: 'shipped', label: 'تم الشحن' },
   { value: 'delivery', label: 'قيد التوصيل' },
   { value: 'delivered', label: 'تم التسليم' },
+  { value: 'completed', label: 'مكتمل' },
   { value: 'cancelled', label: 'ملغي' },
   { value: 'returned', label: 'راجعة' },
+  { value: 'returned_in_stock', label: 'راجع للمخزن' }
 ];
 
 const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus, sellerName }) => {

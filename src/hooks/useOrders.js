@@ -172,7 +172,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       }
 
       // التحقق من الصلاحيات - يمكن التعديل فقط في الحالات المسموحة
-      const allowedEditStates = ['pending', 'shipped', 'needs_processing'];
+      const allowedEditStates = ['pending', 'shipped'];
       if (!allowedEditStates.includes(originalOrder.status)) {
         return { success: false, error: 'لا يمكن تعديل هذا الطلب في حالته الحالية' };
       }
@@ -218,34 +218,17 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       // 1. pending (قيد التجهيز) - المخزون محجوز
       // لا حاجة لتغيير شيء هنا، المخزون محجوز من البداية
       
-      // 2. shipped (تم الشحن) - مبيعات معلقة، تحتاج معالجة
+      // 2. shipped (تم الشحن) - مبيعات معلقة  
       if (updatedOrder.status === 'shipped' && originalOrder.status !== 'shipped') {
         console.log('Processing shipped status...');
         
-        // تغيير الحالة إلى "تحتاج معالجة" لجعل المستخدم يعرف أن هناك خطوة أخرى
-        await supabase
-          .from('orders')
-          .update({ status: 'needs_processing' })
-          .eq('id', updatedOrder.id);
-          
-        // تحديث الطلب في الحالة المحلية
-        updatedOrder.status = 'needs_processing';
-        
         // تحديث حالة الأرباح إلى معلقة
-        const { error: profitError } = await supabase
-          .from('profits')
-          .update({ status: 'pending_sale' })
-          .eq('order_id', updatedOrder.id);
-          
-        if (profitError) {
-          console.error('Error updating profit status:', profitError);
+        if (user?.id) {
+          await supabase
+            .from('profits')
+            .update({ status: 'pending_receipt' })
+            .eq('order_id', updatedOrder.id);
         }
-        
-        toast({
-          title: "تم الشحن",
-          description: "تم تغيير حالة الطلب إلى 'تحتاج معالجة'. يمكنك الآن تحديثها إلى 'تم التوصيل'.",
-          variant: "success"
-        });
       }
       
       // 3. delivered (تم التوصيل) - خصم فعلي من المخزون، أرباح معلقة
@@ -298,9 +281,11 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     const statusNames = {
       'pending': 'قيد التجهيز',
       'shipped': 'تم الشحن', 
-      'needs_processing': 'تحتاج معالجة',
-      'delivered': 'تم التوصيل',
-      'returned': 'راجع',
+      'delivery': 'قيد التوصيل',
+      'delivered': 'تم التسليم',
+      'completed': 'مكتمل',
+      'returned': 'راجعة',
+      'returned_in_stock': 'راجع للمخزن',
       'cancelled': 'ملغي'
     };
 

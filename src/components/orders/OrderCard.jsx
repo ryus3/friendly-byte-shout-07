@@ -43,30 +43,35 @@ const OrderCard = ({
         icon: Truck,
         color: 'bg-orange-50 text-orange-700 border-orange-200'
       },
-      'needs_processing': { 
-        label: 'تحتاج معالجة', 
-        icon: AlertCircle,
-        color: 'bg-red-50 text-red-700 border-red-200'
+      'delivery': { 
+        label: 'قيد التوصيل', 
+        icon: Truck,
+        color: 'bg-purple-50 text-purple-700 border-purple-200'
       },
       'delivered': { 
-        label: 'تم التوصيل', 
+        label: 'تم التسليم', 
         icon: CheckCircle,
         color: 'bg-green-50 text-green-700 border-green-200'
       },
+      'completed': { 
+        label: 'مكتمل', 
+        icon: CheckCircle,
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      },
       'returned': { 
-        label: 'راجع', 
+        label: 'راجعة', 
         icon: RotateCcw,
         color: 'bg-orange-50 text-orange-700 border-orange-200'
+      },
+      'returned_in_stock': { 
+        label: 'راجع للمخزن', 
+        icon: PackageCheck,
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-200'
       },
       'cancelled': { 
         label: 'ملغي', 
         icon: XCircle,
         color: 'bg-red-50 text-red-700 border-red-200'
-      },
-      'return_received': { 
-        label: 'مستلم الراجع', 
-        icon: PackageCheck,
-        color: 'bg-purple-50 text-purple-700 border-purple-200'
       }
     };
     return configs[status] || configs['pending'];
@@ -213,41 +218,19 @@ const OrderCard = ({
               )}
 
               {order.status === 'shipped' && (
-                <>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleStatusChange('needs_processing')}
-                    className="flex items-center space-x-1 rtl:space-x-reverse"
-                  >
-                    <AlertCircle className="h-4 w-4" />
-                    <span>يحتاج معالجة</span>
-                  </Button>
-                  
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleStatusChange('delivered')}
-                    className="flex items-center space-x-1 rtl:space-x-reverse bg-green-600 hover:bg-green-700"
-                  >
-                    <CheckCircle className="h-4 w-4" />
-                    <span>تم التوصيل</span>
-                  </Button>
-                </>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => handleStatusChange('delivery')}
+                  className="flex items-center space-x-1 rtl:space-x-reverse bg-purple-600 hover:bg-purple-700"
+                >
+                  <Truck className="h-4 w-4" />
+                  <span>قيد التوصيل</span>
+                </Button>
               )}
 
-              {order.status === 'needs_processing' && (
+              {order.status === 'delivery' && (
                 <>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleStatusChange('shipped')}
-                    className="flex items-center space-x-1 rtl:space-x-reverse bg-orange-600 hover:bg-orange-700"
-                  >
-                    <Truck className="h-4 w-4" />
-                    <span>إعادة الشحن</span>
-                  </Button>
-                  
                   <Button
                     variant="default"
                     size="sm"
@@ -255,7 +238,7 @@ const OrderCard = ({
                     className="flex items-center space-x-1 rtl:space-x-reverse bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle className="h-4 w-4" />
-                    <span>تم التوصيل</span>
+                    <span>تم التسليم</span>
                   </Button>
 
                   <Button
@@ -265,21 +248,21 @@ const OrderCard = ({
                     className="flex items-center space-x-1 rtl:space-x-reverse"
                   >
                     <RotateCcw className="h-4 w-4" />
-                    <span>راجع</span>
+                    <span>راجعة</span>
                   </Button>
-                  </>
+                </>
               )}
 
-              {/* استلام الراجع */}
-              {order.status === 'returned' && hasPermission('manage_inventory') && (
+              {/* زر تحويل الطلبات الملغية والراجعة إلى "راجع للمخزن" */}
+              {(order.status === 'cancelled' || order.status === 'returned') && hasPermission('manage_inventory') && (
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={() => onReceiveReturn?.(order)}
-                  className="flex items-center space-x-1 rtl:space-x-reverse bg-purple-600 hover:bg-purple-700"
+                  onClick={() => handleStatusChange('returned_in_stock')}
+                  className="flex items-center space-x-1 rtl:space-x-reverse bg-indigo-600 hover:bg-indigo-700"
                 >
                   <PackageCheck className="h-4 w-4" />
-                  <span>استلام الراجع</span>
+                  <span>استلام للمخزن</span>
                 </Button>
               )}
             </div>

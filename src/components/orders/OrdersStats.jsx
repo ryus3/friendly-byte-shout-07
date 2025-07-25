@@ -12,7 +12,6 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => 
     pending: 'today',
     shipped: 'today',
     delivered: 'today',
-    processing: 'today',
     returned: 'today',
     archived: 'all',
   });
@@ -24,7 +23,6 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => 
       pending: 'pending',
       shipped: 'shipped',
       delivered: 'delivered',
-      processing: 'processing',
       returned: 'returned',
       archived: 'archived',
     };
@@ -50,11 +48,10 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => 
     { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrders.length, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
     { key: 'total', title: 'إجمالي الطلبات', icon: ShoppingCart, colors: ['blue-500', 'cyan-500'], value: getStats('all'), onPeriodChange: (p) => handlePeriodChange('total', p), onClick: createClickHandler('all'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'pending', title: 'قيد التجهيز', icon: Clock, colors: ['yellow-500', 'orange-500'], value: getStats('pending'), onPeriodChange: (p) => handlePeriodChange('pending', p), onClick: createClickHandler('pending'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'processing', title: 'يحتاج معالجة', icon: Package, colors: ['status-processing', 'orange-500'], value: getStats('processing'), onPeriodChange: (p) => handlePeriodChange('processing', p), onClick: createClickHandler('processing'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onPeriodChange: (p) => handlePeriodChange('shipped', p), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onPeriodChange: (p) => handlePeriodChange('delivery', p), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onPeriodChange: (p) => handlePeriodChange('delivered', p), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'returned', title: 'راجعة', icon: CornerDownLeft, colors: ['status-returned', 'red-600'], value: getStats('returned'), onPeriodChange: (p) => handlePeriodChange('returned', p), onClick: createClickHandler('returned'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'returned', title: 'راجع للمخزن', icon: CornerDownLeft, colors: ['status-returned', 'red-600'], value: getStats('returned_in_stock'), onPeriodChange: (p) => handlePeriodChange('returned', p), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'archived', title: 'الأرشيف', icon: Archive, colors: ['status-cancelled', 'red-800'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
   ], [orders, aiOrders, periods]);
 
