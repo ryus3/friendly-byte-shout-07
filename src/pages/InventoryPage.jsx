@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useVariants } from '@/contexts/VariantsContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
@@ -137,15 +138,9 @@ const InventoryPage = () => {
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
+  const { sizes } = useVariants();
   const [departments, setDepartments] = useState([]);
   
-  console.log("📊 صفحة الجرد:", { 
-    allProducts: allProducts?.length, 
-    filteredProducts: products?.length, 
-    loading, 
-    user: user?.full_name,
-    hasPermission: hasPermission('view_inventory')
-  });
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -329,26 +324,11 @@ const InventoryPage = () => {
   }, [products]);
 
   const inventoryItems = useMemo(() => {
-    console.log("🔍 إنشاء عناصر الجرد:", { 
-      allProductsCount: allProducts?.length,
-      filteredProductsCount: products?.length, 
-      settingsLoaded: !!settings,
-      userRole: user?.role,
-      firstProduct: allProducts?.[0]?.name,
-      hasVariants: allProducts?.[0]?.variants?.length,
-      userIsAdmin: isAdmin
-    });
-    
     // استخدام المنتجات المفلترة حسب صلاحيات المستخدم
     // للمدير: يرى كل المنتجات، للموظفين: فقط المنتجات المرئية
     const productsToUse = isAdmin ? products : products.filter(p => p.is_active !== false);
     
     if (!Array.isArray(productsToUse) || !settings) {
-      console.log("❌ بيانات غير مكتملة:", { 
-        productsToUse: !!productsToUse, 
-        productsToUseLength: productsToUse?.length,
-        settings: !!settings 
-      });
       return [];
     }
     
@@ -357,24 +337,30 @@ const InventoryPage = () => {
     // معالجة المنتجات مع التفاصيل
     const processedItems = productsToUse.map(product => {
         if (!product) {
-          console.log("❌ منتج فارغ");
           return null;
         }
         
-        console.log("📦 معالجة منتج:", product.name, "متغيرات:", product.variants?.length);
-        
         const variantsWithLevels = Array.isArray(product.variants) 
-          ? product.variants.map(variant => {
-              if (!variant) return null;
-              let stockLevel = 'high';
-              const quantity = variant.quantity || 0;
-              if (quantity === 0) stockLevel = 'out-of-stock';
-              else if (quantity > 0 && quantity <= lowStockThreshold) stockLevel = 'low';
-              else if (quantity > 0 && quantity <= mediumStockThreshold) stockLevel = 'medium';
-              
-              const stockPercentage = Math.min((quantity / (mediumStockThreshold + 5)) * 100, 100);
-              return { ...variant, stockLevel, stockPercentage };
-            }).filter(v => v !== null)
+          ? product.variants
+              .map(variant => {
+                if (!variant) return null;
+                let stockLevel = 'high';
+                const quantity = variant.quantity || 0;
+                if (quantity === 0) stockLevel = 'out-of-stock';
+                else if (quantity > 0 && quantity <= lowStockThreshold) stockLevel = 'low';
+                else if (quantity > 0 && quantity <= mediumStockThreshold) stockLevel = 'medium';
+                
+                const stockPercentage = Math.min((quantity / (mediumStockThreshold + 5)) * 100, 100);
+                return { ...variant, stockLevel, stockPercentage };
+              })
+              .filter(v => v !== null)
+              .sort((a, b) => {
+                // ترتيب حسب display_order للقياسات ثم حسب الألوان
+                const aOrder = sizes.find(s => s.id === a.size_id)?.display_order || 999;
+                const bOrder = sizes.find(s => s.id === b.size_id)?.display_order || 999;
+                if (aOrder !== bOrder) return aOrder - bOrder;
+                return (a.color || '').localeCompare(b.color || '');
+              })
           : [];
 
         const totalStock = variantsWithLevels.reduce((acc, v) => acc + (v?.quantity || 0), 0);
@@ -396,8 +382,6 @@ const InventoryPage = () => {
           variants: variantsWithLevels,
         };
     }).filter(item => item !== null);
-    
-    console.log("✅ تمت معالجة العناصر:", processedItems.length);
     return processedItems;
   }, [products, settings, user, isAdmin]);
   
@@ -442,19 +426,11 @@ const InventoryPage = () => {
   }, [orders, allUsers]);
 
   const filteredItems = useMemo(() => {
-    console.log("🔍 بدء الفلترة:", { 
-      filters, 
-      inventoryItemsCount: inventoryItems?.length,
-      departmentFilter: filters.department 
-    });
-    
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
     // تطبيق فلتر الأقسام من الكروت والفلاتر العادية
     if (filters.department && filters.department !== 'all') {
-      console.log("🎯 تطبيق فلتر القسم:", filters.department);
-      
       items = items.filter(product => {
         // البحث في علاقات الأقسام عبر product_departments
         const hasDepartmentRelation = product.product_departments?.some(pd => 
@@ -464,18 +440,8 @@ const InventoryPage = () => {
         // للتوافق: البحث في الحقل المباشر أيضاً
         const hasDirectDepartment = product.department_id === filters.department;
         
-        console.log("📦 فحص المنتج:", product.name, {
-          productDepts: product.product_departments?.map(pd => pd.department_id),
-          directDept: product.department_id,
-          targetDept: filters.department,
-          hasRelation: hasDepartmentRelation,
-          hasDirect: hasDirectDepartment
-        });
-        
         return hasDepartmentRelation || hasDirectDepartment;
       });
-      
-      console.log("✅ نتائج فلتر القسم:", items.length, "منتج");
     }
 
     // إزالة فلتر categoryFilter المضاعف
@@ -637,15 +603,8 @@ const InventoryPage = () => {
   };
 
   if (loading) {
-    console.log("⏳ جاري التحميل...");
     return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
   }
-
-  console.log("✅ عرض صفحة الجرد مع:", { 
-    inventoryItemsCount: inventoryItems?.length,
-    filteredItemsCount: filteredItems?.length,
-    statsReady: !!inventoryStats
-  });
 
   return (
     <>
@@ -748,7 +707,6 @@ const InventoryPage = () => {
                 key={dept.id}
                 className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
                 onClick={() => {
-                  console.log("🔍 تم الضغط على القسم:", dept.name, "معرف:", dept.id);
                   setFilters(prev => ({ 
                     ...prev, 
                     department: dept.id, // استخدام معرف القسم بدلاً من الاسم

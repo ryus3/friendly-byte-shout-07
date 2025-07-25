@@ -143,7 +143,7 @@ export const InventoryProvider = ({ children }) => {
             p_sku: item.variantId ? item.variantId.toString() : (item.sku || null)
           });
         }
-        console.log('تم حجز المخزون للطلب:', createdOrder.order_number);
+        // لا نلغي الطلب لكن نسجل التحذير
       } catch (stockError) {
         console.error('خطأ في حجز المخزون:', stockError);
         // لا نلغي الطلب لكن نسجل التحذير
@@ -208,13 +208,11 @@ export const InventoryProvider = ({ children }) => {
   }, []);
 
   const approveAiOrder = useCallback(async (orderId) => {
-    console.log('Approve AI order:', orderId);
     return { success: true };
   }, []);
   
   async function addExpense(expense) {
     try {
-      console.log('إضافة مصروف جديد:', expense);
       
       const { data: newExpense, error } = await supabase
         .from('expenses')
@@ -236,8 +234,6 @@ export const InventoryProvider = ({ children }) => {
         throw error;
       }
 
-      console.log('تم إضافة المصروف بنجاح:', newExpense);
-      
       // تحديث الحالة المحلية
       setAccounting(prev => ({ 
         ...prev, 
@@ -273,7 +269,6 @@ export const InventoryProvider = ({ children }) => {
   // دوال تحديث محددة للطلبات والمخزون فقط
   const refreshOrders = useCallback(async () => {
     try {
-      console.log('🔄 تحديث الطلبات الجديدة...');
       const { data: ordersData, error } = await supabase.from('orders').select(`
         *,
         order_items (
@@ -331,7 +326,6 @@ export const InventoryProvider = ({ children }) => {
       });
 
       setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
-      console.log('✅ تم تحديث الطلبات بنجاح');
     } catch (error) {
       console.error('❌ خطأ في تحديث الطلبات:', error);
     }
@@ -339,7 +333,6 @@ export const InventoryProvider = ({ children }) => {
 
   const refreshInventoryData = useCallback(async () => {
     try {
-      console.log('🔄 تحديث بيانات المخزون للمنتجات الموجودة...');
       const { data: inventoryData, error } = await supabase
         .from('inventory')
         .select('*');
@@ -367,7 +360,6 @@ export const InventoryProvider = ({ children }) => {
         }))
       );
       
-      console.log('✅ تم تحديث بيانات المخزون بنجاح');
     } catch (error) {
       console.error('❌ خطأ في تحديث بيانات المخزون:', error);
     }
@@ -643,13 +635,11 @@ export const InventoryProvider = ({ children }) => {
     
     const handleRefreshData = async () => {
       if (isRefreshing) {
-        console.log('⏳ تحديث قيد التنفيذ بالفعل، تم تجاهل الطلب');
         return;
       }
       
       try {
         isRefreshing = true;
-        console.log('🔄 تحديث البيانات الجديدة فقط (بدون المساس بالمخزون)...');
         
         // تحديث الطلبات الجديدة فقط
         await refreshOrders();
@@ -657,7 +647,6 @@ export const InventoryProvider = ({ children }) => {
         // تحديث بيانات المخزون للمنتجات الموجودة (دون إعادة تحميل المنتجات)
         await refreshInventoryData();
         
-        console.log('✅ تم تحديث البيانات الجديدة بنجاح (المخزون محفوظ)');
       } catch (error) {
         console.error('❌ خطأ في تحديث البيانات:', error);
       } finally {
@@ -714,7 +703,6 @@ export const InventoryProvider = ({ children }) => {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'products' },
         (payload) => {
-          
           // إعادة تحميل البيانات للحصول على المنتج الكامل
           fetchInitialData();
         }
@@ -1167,7 +1155,6 @@ export const InventoryProvider = ({ children }) => {
 
   const updateCapital = async (newCapital) => {
     try {
-      
       // البحث عن إعداد رأس المال الموجود
       const { data: existingSettings, error: fetchError } = await supabase
         .from('settings')

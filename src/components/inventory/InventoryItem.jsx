@@ -59,7 +59,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
         <p className="text-xs text-muted-foreground">متاح</p>
       </div>
       <div className="col-span-2 md:col-span-2 text-center">
-        <Badge className={cn("w-16 md:w-20 justify-center text-xs whitespace-nowrap", status.color)}>{status.text}</Badge>
+        <Badge className={cn("w-full max-w-20 justify-center text-xs px-2 py-1", status.color)}>{status.text}</Badge>
       </div>
       <div className="col-span-12 md:col-span-1 text-left">
         {onEditStock && (
