@@ -338,7 +338,6 @@ const OrderCard = ({
                         شامل التوصيل
                       </span>
                     )}
-                    <CreditCard className="h-4 w-4 text-primary" />
                     <span className="font-bold text-lg text-primary">
                       {order.final_amount?.toLocaleString()}
                     </span>

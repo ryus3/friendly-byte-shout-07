@@ -85,11 +85,11 @@ const OrderListItem = ({
   const statusConfig = getStatusConfig(order.status);
   const StatusIcon = statusConfig.icon;
   
-  // تحديد نوع التوصيل
+  // تحديد نوع التوصيل - ألوان متناسقة
   const isLocalOrder = order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
-    'bg-emerald-100 text-emerald-700 border border-emerald-300' : 
-    'bg-blue-100 text-blue-700 border border-blue-300';
+    'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
+    'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
   // التحقق من الصلاحيات
   const canEdit = order.status === 'pending';
@@ -136,37 +136,48 @@ const OrderListItem = ({
         {/* Order Number */}
         <div className="min-w-0 flex-1">
           <div className="font-bold text-sm text-foreground">
-            {order.tracking_number}
-          </div>
-          <div className="text-xs text-muted-foreground">
             #{order.order_number}
           </div>
         </div>
 
-        {/* Customer Name */}
+        {/* Customer Info & Products */}
         <div className="min-w-0 flex-1">
           <div className="font-medium text-sm text-foreground truncate">
             {order.customer_name}
           </div>
-          <Badge className={`${deliveryBadgeColor} px-1.5 py-0.5 text-xs rounded mt-1`}>
-            <Building className="h-3 w-3 ml-1" />
-            {order.delivery_partner}
-          </Badge>
-        </div>
-
-        {/* Phone */}
-        <div className="min-w-0 flex-1">
-          <div className="text-sm text-foreground font-medium">
+          <div className="text-xs text-muted-foreground mt-1">
             {order.customer_phone}
+          </div>
+          {/* Product Summary */}
+          <div className="text-xs text-primary font-medium mt-1">
+            {(() => {
+              const items = order.items || order.order_items || [];
+              if (items.length === 0) return 'لا توجد منتجات';
+              
+              const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              
+              if (items.length === 1) {
+                const item = items[0];
+                const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
+                return `${productName} (${item.quantity || 1})`;
+              } else {
+                const firstProductType = items[0]?.producttype || items[0]?.product_type || 'منتج';
+                return `${totalItems} قطعة - ${firstProductType}`;
+              }
+            })()}
           </div>
         </div>
 
-        {/* Date */}
+        {/* Date & Delivery */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3 w-3" />
             {formatDate(order.created_at)}
           </div>
+          <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full mt-1 w-fit shadow-sm`}>
+            <Building className="h-3 w-3 ml-1" />
+            {order.delivery_partner}
+          </Badge>
         </div>
 
         {/* Amount */}
@@ -179,25 +190,30 @@ const OrderListItem = ({
           </div>
         </div>
 
-        {/* Status */}
+        {/* Status - قابل للنقر للطلبات المحلية */}
         <div className="min-w-0 flex-1">
-          {isLocalOrder ? (
-            <select
-              value={order.status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="w-full text-xs border border-border rounded px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-              disabled={!hasPermission('manage_orders')}
+          {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                // تحديد الحالة التالية
+                const nextStatus = {
+                  'pending': 'shipped',
+                  'shipped': 'delivery', 
+                  'delivery': 'delivered',
+                  'delivered': 'completed',
+                  'returned': 'returned_in_stock'
+                }[order.status];
+                if (nextStatus) handleStatusChange(nextStatus);
+              }}
+              className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
+              title="انقر لتحديث الحالة"
             >
-              <option value="pending">قيد التجهيز</option>
-              <option value="shipped">تم الشحن</option>
-              <option value="delivery">قيد التوصيل</option>
-              <option value="delivered">تم التسليم</option>
-              <option value="returned">راجعة</option>
-              <option value="cancelled">ملغي</option>
-              {hasPermission('manage_inventory') && (
-                <option value="returned_in_stock">راجع للمخزن</option>
-              )}
-            </select>
+              <StatusIcon className="h-3 w-3" />
+              <span className="ml-1">{statusConfig.label}</span>
+            </Button>
           ) : (
             <div className={`flex items-center gap-1 ${statusConfig.color}`}>
               <StatusIcon className="h-3 w-3" />
@@ -206,17 +222,17 @@ const OrderListItem = ({
           )}
         </div>
 
-        {/* Actions */}
+        {/* Actions - مضغوطة كما في الكارت */}
         <div className="flex items-center gap-1 shrink-0">
           {/* View */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => onViewOrder?.(order)}
-            className="h-8 w-8 p-0 hover:bg-primary/10"
+            className="h-6 w-6 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary hover:scale-110 transition-all duration-300 shadow-md"
             title="معاينة"
           >
-            <Eye className="h-4 w-4 text-primary" />
+            <Eye className="h-3 w-3" />
           </Button>
 
           {/* Edit */}
@@ -225,23 +241,10 @@ const OrderListItem = ({
               variant="ghost"
               size="sm"
               onClick={() => onEditOrder?.(order)}
-              className="h-8 w-8 p-0 hover:bg-blue-50"
+              className="h-6 w-6 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:scale-110 transition-all duration-300 shadow-md"
               title="تعديل"
             >
-              <Edit2 className="h-4 w-4 text-blue-600" />
-            </Button>
-          )}
-
-          {/* Delete */}
-          {canDelete && hasPermission('delete_orders') && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDelete}
-              className="h-8 w-8 p-0 hover:bg-red-50"
-              title="حذف"
-            >
-              <Trash2 className="h-4 w-4 text-red-600" />
+              <Edit2 className="h-3 w-3" />
             </Button>
           )}
 
@@ -250,11 +253,24 @@ const OrderListItem = ({
             variant="ghost"
             size="sm"
             onClick={() => onViewOrder?.(order)}
-            className="h-8 w-8 p-0 hover:bg-green-50"
+            className="h-6 w-6 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600 hover:scale-110 transition-all duration-300 shadow-md"
             title="تتبع"
           >
-            <ExternalLink className="h-4 w-4 text-green-600" />
+            <ExternalLink className="h-3 w-3" />
           </Button>
+
+          {/* Delete */}
+          {canDelete && hasPermission('delete_orders') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDelete}
+              className="h-6 w-6 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
+              title="حذف"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          )}
         </div>
       </div>
     </motion.div>
