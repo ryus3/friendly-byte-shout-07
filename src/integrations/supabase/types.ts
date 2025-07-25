@@ -341,7 +341,6 @@ export type Database = {
           sent_at: string
           sent_via: string
           success: boolean
-          telegram_message_id: number | null
         }
         Insert: {
           created_at?: string
@@ -353,7 +352,6 @@ export type Database = {
           sent_at?: string
           sent_via: string
           success?: boolean
-          telegram_message_id?: number | null
         }
         Update: {
           created_at?: string
@@ -365,51 +363,12 @@ export type Database = {
           sent_at?: string
           sent_via?: string
           success?: boolean
-          telegram_message_id?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "customer_notifications_sent_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      customer_telegram_accounts: {
-        Row: {
-          created_at: string
-          customer_id: string | null
-          id: string
-          is_active: boolean
-          linked_at: string
-          telegram_chat_id: number
-          telegram_username: string | null
-        }
-        Insert: {
-          created_at?: string
-          customer_id?: string | null
-          id?: string
-          is_active?: boolean
-          linked_at?: string
-          telegram_chat_id: number
-          telegram_username?: string | null
-        }
-        Update: {
-          created_at?: string
-          customer_id?: string | null
-          id?: string
-          is_active?: boolean
-          linked_at?: string
-          telegram_chat_id?: number
-          telegram_username?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_telegram_accounts_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: true
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
