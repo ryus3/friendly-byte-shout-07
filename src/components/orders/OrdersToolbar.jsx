@@ -54,11 +54,12 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
         <div className="flex items-center border rounded-lg p-1 bg-muted/30">
           <Button 
             onClick={() => setShowQRScanner(true)}
-            variant="outline"
+            variant="default"
             size="sm"
-            className="h-8 px-3 bg-gradient-to-r from-primary/10 to-primary/20 hover:from-primary/20 hover:to-primary/30 border-primary/30"
+            className="h-8 px-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transition-all duration-200 border-0"
           >
-            <QrCode className="h-4 w-4" />
+            <QrCode className="h-4 w-4 mr-1" />
+            {!isMobile && 'مسح QR'}
           </Button>
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}

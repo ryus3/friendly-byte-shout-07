@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import SearchableSelectFixed from '@/components/ui/searchable-select-fixed';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle } from 'lucide-react';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import { motion } from 'framer-motion';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
@@ -574,7 +574,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       const result = await createOrder(customerInfoPayload, cart, trackingNumber, discount, orderStatus, qrLink, { ...deliveryPartnerData, ...deliveryData });
       if (result.success) {
-        toast({ title: "نجاح", description: `تم إنشاء الطلب بنجاح. رقم الفاتورة: ${result.trackingNumber}`, variant: 'success' });
+        // إشعار محسن مع QR ID
+        toast({ 
+          title: (
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-500" />
+              تم إنشاء الطلب بنجاح
+            </div>
+          ),
+          description: (
+            <div className="space-y-1">
+              <p><strong>QR ID:</strong> {result.qr_id || result.trackingNumber}</p>
+              <p><strong>العميل:</strong> {formData.name}</p>
+              <p><strong>المبلغ:</strong> {Math.round(finalTotal).toLocaleString()} د.ع</p>
+            </div>
+          ),
+          variant: 'success',
+          duration: 5000
+        });
         resetForm();
         if(onOrderCreated) onOrderCreated();
       } else { throw new Error(result.error || "فشل إنشاء الطلب في النظام."); }

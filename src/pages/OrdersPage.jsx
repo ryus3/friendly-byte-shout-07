@@ -8,9 +8,10 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, DollarSign, RefreshCw, Loader2, Printer, Archive, Users, ShoppingCart, Trash2, Building, Edit } from 'lucide-react';
+import { ArrowRight, DollarSign, RefreshCw, Loader2, Printer, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/customSupabaseClient';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -50,6 +51,63 @@ const OrdersPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
 
+  // Realtime updates للطلبات
+  useEffect(() => {
+    const channel = supabase
+      .channel('orders-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          const newOrder = payload.new;
+          console.log('New order created:', newOrder);
+          
+          // إشعار فوري عند إنشاء طلب جديد
+          toast({
+            title: (
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                تم إنشاء طلب جديد بنجاح
+              </div>
+            ),
+            description: (
+              <div className="space-y-1">
+                <p><strong>رقم الطلب:</strong> {newOrder.qr_id || newOrder.order_number}</p>
+                <p><strong>العميل:</strong> {newOrder.customer_name}</p>
+                <p><strong>المبلغ:</strong> {newOrder.final_amount?.toLocaleString()} د.ع</p>
+              </div>
+            ),
+            variant: "success",
+            duration: 5000
+          });
+          
+          // تحديث البيانات
+          refetchProducts();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('Order updated:', payload.new);
+          // تحديث البيانات عند تحديث طلب
+          refetchProducts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetchProducts]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
