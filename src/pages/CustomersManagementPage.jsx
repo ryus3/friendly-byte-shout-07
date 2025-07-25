@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Filter, Clock } from 'lucide-react';
+import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Filter, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +34,7 @@ const CustomersManagementPage = () => {
   const [loyaltyTiers, setLoyaltyTiers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [userPermissions, setUserPermissions] = useState({});
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // جلب بيانات العملاء مع تفاصيل الولاء
   const fetchCustomers = async () => {
@@ -452,16 +453,27 @@ const CustomersManagementPage = () => {
         />
       </div>
 
-      {/* الفلاتر */}
+      {/* الفلاتر المتقدمة */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            فلاتر البحث والتصفية
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              فلاتر البحث والتصفية
+            </CardTitle>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              فلاتر متقدمة
+              {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label>البحث</Label>
               <Input
@@ -500,41 +512,46 @@ const CustomersManagementPage = () => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label>التصنيف (رجالي/نسائي)</Label>
-              <Select value={genderSegmentation} onValueChange={setGenderSegmentation}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل التصنيفات</SelectItem>
-                  <SelectItem value="male">رجالي</SelectItem>
-                  <SelectItem value="female">نسائي</SelectItem>
-                  <SelectItem value="unisex">للجنسين</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* الفلاتر المتقدمة */}
+          {showAdvancedFilters && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>التصنيف (رجالي/نسائي)</Label>
+                  <Select value={genderSegmentation} onValueChange={setGenderSegmentation}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل التصنيفات</SelectItem>
+                      <SelectItem value="male">رجالي</SelectItem>
+                      <SelectItem value="female">نسائي</SelectItem>
+                      <SelectItem value="unisex">للجنسين</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label>الأقسام والتصنيفات</Label>
-              <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الأقسام والتصنيفات</SelectItem>
-                  {departments.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.name} ({item.type === 'department' ? 'قسم' : 'تصنيف'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div className="space-y-2">
+                  <Label>الأقسام والتصنيفات</Label>
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الأقسام والتصنيفات</SelectItem>
+                      {departments.map(item => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.name} ({item.type === 'department' ? 'قسم' : 'تصنيف'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label>مستوى الولاء</Label>
+                <div className="space-y-2">
+                  <Label>مستوى الولاء</Label>
               <Select value={loyaltyTierFilter} onValueChange={setLoyaltyTierFilter}>
                 <SelectTrigger>
                   <SelectValue />
