@@ -204,7 +204,7 @@ const CustomersManagementPage = () => {
     }
   };
 
-  // تصدير بيانات العملاء مع فلترة متقدمة
+  // تصدير بيانات العملاء مع فلترة متقدمة (CSV)
   const exportCustomersData = (filterType = 'all', dateRange = null) => {
     let filteredData = customers;
     
@@ -215,35 +215,11 @@ const CustomersManagementPage = () => {
       filteredData = customers.filter(c => !c.customer_loyalty || c.customer_loyalty.total_points === 0);
     } else if (filterType === 'active') {
       filteredData = customers.filter(c => c.customer_loyalty?.total_orders > 0);
+    } else if (filterType === 'with_phone') {
+      filteredData = customers.filter(c => c.phone && c.phone.trim());
     }
     
-    // فلترة حسب الفترة الزمنية
-    if (dateRange) {
-      const { start, end } = dateRange;
-      filteredData = filteredData.filter(customer => {
-        const customerDate = new Date(customer.created_at);
-        return customerDate >= start && customerDate <= end;
-      });
-    }
-
-    const csvData = filteredData.map(customer => ({
-      'الاسم': customer.name,
-      'الهاتف': customer.phone || '',
-      'المدينة': customer.city || '',
-      'المحافظة': customer.province || '',
-      'النقاط': customer.customer_loyalty?.total_points || 0,
-      'الطلبات_المكتملة': customer.customer_loyalty?.total_orders || 0,
-      'المشتريات': customer.customer_loyalty?.total_spent || 0,
-      'المستوى': customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
-      'خصم_المستوى': customer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0,
-      'تاريخ_الانضمام': new Date(customer.created_at).toLocaleDateString('ar'),
-      'آخر_ترقية': customer.customer_loyalty?.last_tier_upgrade 
-        ? new Date(customer.customer_loyalty.last_tier_upgrade).toLocaleDateString('ar') 
-        : 'لا يوجد',
-      'حالة_الواتساب': customer.phone ? 'متوفر' : 'غير متوفر'
-    }));
-
-    if (csvData.length === 0) {
+    if (filteredData.length === 0) {
       toast({
         title: 'لا توجد بيانات',
         description: 'لا توجد عملاء مطابقون للفلتر المحدد',
@@ -252,25 +228,69 @@ const CustomersManagementPage = () => {
       return;
     }
 
+    // إنشاء CSV مع جميع التفاصيل
+    const csvHeaders = [
+      'الاسم',
+      'الهاتف', 
+      'المدينة',
+      'المحافظة',
+      'النقاط_الحالية',
+      'الطلبات_المكتملة',
+      'إجمالي_المشتريات',
+      'المستوى',
+      'خصم_المستوى_%',
+      'تاريخ_الانضمام',
+      'آخر_ترقية_مستوى',
+      'حالة_الواتساب',
+      'العنوان'
+    ];
+
+    const csvData = filteredData.map(customer => [
+      customer.name || '',
+      customer.phone || '',
+      customer.city || '',
+      customer.province || '',
+      customer.customer_loyalty?.total_points || 0,
+      customer.customer_loyalty?.total_orders || 0,
+      customer.customer_loyalty?.total_spent || 0,
+      customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
+      customer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0,
+      customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '',
+      customer.customer_loyalty?.last_tier_upgrade 
+        ? new Date(customer.customer_loyalty.last_tier_upgrade).toLocaleDateString('ar') 
+        : 'لا يوجد',
+      customer.phone ? 'متوفر' : 'غير متوفر',
+      customer.address || ''
+    ]);
+
+    // إنشاء محتوى CSV
     const csvContent = [
-      Object.keys(csvData[0]).join(','),
-      ...csvData.map(row => Object.values(row).join(','))
+      csvHeaders.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
     ].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // إضافة BOM للدعم العربي
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     
-    const filterSuffix = filterType === 'with_points' ? '_with_points' : 
-                        filterType === 'no_points' ? '_no_points' : 
-                        filterType === 'active' ? '_active_customers' : '';
+    const filterSuffix = filterType === 'with_points' ? '_مع_نقاط' : 
+                        filterType === 'no_points' ? '_بدون_نقاط' : 
+                        filterType === 'active' ? '_نشط' :
+                        filterType === 'with_phone' ? '_مع_هاتف' : '';
     
-    link.download = `customers_data${filterSuffix}_${new Date().toISOString().split('T')[0]}.csv`;
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.download = `عملاء${filterSuffix}_${timestamp}.csv`;
+    
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     toast({
-      title: 'تم التصدير',
-      description: `تم تصدير ${csvData.length} عميل بنجاح`
+      title: 'تم التصدير بنجاح',
+      description: `تم تصدير ${csvData.length} عميل إلى ملف CSV`
     });
   };
 
@@ -311,11 +331,30 @@ const CustomersManagementPage = () => {
       });
 
     } catch (error) {
+      console.error('Error fetching customer details:', error);
       toast({
         title: 'خطأ',
         description: 'حدث خطأ في تحميل تفاصيل العميل',
         variant: 'destructive'
       });
+    }
+  };
+
+  // إرسال إشعار مخصص للعميل
+  const sendCustomNotification = async (customerId, message) => {
+    if (!message.trim()) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى كتابة رسالة',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await sendCustomerNotification(customerId, 'custom', message);
+    } catch (error) {
+      console.error('Error sending notification:', error);
     }
   };
 
@@ -355,7 +394,7 @@ const CustomersManagementPage = () => {
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
                 <Download className="h-4 w-4 mr-1" />
-                تصدير البيانات
+                تصدير العملاء (CSV)
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -363,36 +402,59 @@ const CustomersManagementPage = () => {
                 <DialogTitle>تصدير بيانات العملاء</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  اختر نوع العملاء المراد تصديرهم إلى ملف CSV:
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <Button 
                     onClick={() => exportCustomersData('all')}
                     variant="outline"
+                    className="h-12"
                   >
                     جميع العملاء
+                    <div className="text-xs text-muted-foreground">
+                      ({customers.length} عميل)
+                    </div>
                   </Button>
                   <Button 
                     onClick={() => exportCustomersData('with_points')}
                     variant="outline"
+                    className="h-12"
                   >
                     العملاء مع نقاط
+                    <div className="text-xs text-muted-foreground">
+                      ({customers.filter(c => c.customer_loyalty?.total_points > 0).length} عميل)
+                    </div>
                   </Button>
                   <Button 
                     onClick={() => exportCustomersData('no_points')}
                     variant="outline"
+                    className="h-12"
                   >
                     العملاء بدون نقاط
+                    <div className="text-xs text-muted-foreground">
+                      ({customers.filter(c => !c.customer_loyalty || c.customer_loyalty.total_points === 0).length} عميل)
+                    </div>
                   </Button>
                   <Button 
-                    onClick={() => exportCustomersData('active')}
+                    onClick={() => exportCustomersData('with_phone')}
                     variant="outline"
+                    className="h-12"
                   >
-                    العملاء النشطين
+                    العملاء مع أرقام هواتف
+                    <div className="text-xs text-muted-foreground">
+                      ({customers.filter(c => c.phone).length} عميل)
+                    </div>
                   </Button>
                 </div>
                 
-                <div className="text-sm text-muted-foreground">
-                  <p>• العملاء مع نقاط: الذين لديهم طلبات مكتملة/مُسلّمة</p>
-                  <p>• العملاء النشطين: الذين لديهم طلبات مُسجّلة</p>
+                <div className="p-3 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">ملاحظات:</h4>
+                  <ul className="text-sm text-muted-foreground space-y-1">
+                    <li>• سيتم التصدير بصيغة CSV مع دعم العربية</li>
+                    <li>• العملاء مع نقاط: الذين لديهم طلبات مكتملة/مُسلّمة</li>
+                    <li>• يشمل الملف: الاسم، الهاتف، النقاط، المستوى، التواريخ</li>
+                  </ul>
                 </div>
               </div>
             </DialogContent>
