@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, MapPin, Package, CreditCard, Truck, Home, Calendar, Clock } from 'lucide-react';
+import { ShoppingCart, MapPin, Package, CreditCard, Truck, Home, Calendar, Clock, CheckCircle, XCircle, RotateCcw, PackageCheck } from 'lucide-react';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -26,55 +26,55 @@ const RecentOrdersCard = ({ recentOrders }) => {
     const statusMap = {
       'pending': { 
         label: 'قيد التجهيز', 
-        icon: Clock,
-        className: 'bg-status-pending-bg text-status-pending border-2 border-status-pending/30 shadow-lg shadow-status-pending-shadow/25 font-bold rounded-xl'
+        icon: Package,
+        className: 'bg-gradient-to-r from-status-pending-start to-status-pending-end text-white border border-status-pending-border shadow-lg shadow-status-pending-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'shipped': { 
         label: 'تم الشحن', 
         icon: Truck,
-        className: 'bg-status-shipped-bg text-status-shipped border-2 border-status-shipped/30 shadow-lg shadow-status-shipped-shadow/25 font-bold rounded-xl'
+        className: 'bg-gradient-to-r from-status-shipped-start to-status-shipped-end text-white border border-status-shipped-border shadow-lg shadow-status-shipped-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'delivery': { 
         label: 'قيد التوصيل', 
         icon: Truck,
-        className: 'bg-status-delivery-bg text-status-delivery border-2 border-status-delivery/30 shadow-lg shadow-status-delivery-shadow/25 font-bold rounded-xl'
+        className: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'delivered': { 
         label: 'تم التسليم', 
-        icon: Package,
-        className: 'bg-status-delivered-bg text-status-delivered border-2 border-status-delivered/30 shadow-lg shadow-status-delivered-shadow/25 font-bold rounded-xl'
+        icon: CheckCircle,
+        className: 'bg-gradient-to-r from-status-delivered-start to-status-delivered-end text-white border border-status-delivered-border shadow-lg shadow-status-delivered-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'completed': { 
         label: 'مكتمل', 
-        icon: Package,
-        className: 'bg-status-completed-bg text-status-completed border-2 border-status-completed/30 shadow-lg shadow-status-completed-shadow/25 font-bold rounded-xl'
+        icon: CheckCircle,
+        className: 'bg-gradient-to-r from-status-completed-start to-status-completed-end text-white border border-status-completed-border shadow-lg shadow-status-completed-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'returned': { 
         label: 'راجعة', 
-        icon: Package,
-        className: 'bg-status-returned-bg text-status-returned border-2 border-status-returned/30 shadow-lg shadow-status-returned-shadow/25 font-bold rounded-xl'
+        icon: RotateCcw,
+        className: 'bg-gradient-to-r from-status-returned-start to-status-returned-end text-white border border-status-returned-border shadow-lg shadow-status-returned-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'returned_in_stock': { 
         label: 'راجع للمخزن', 
-        icon: Package,
-        className: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 font-bold rounded-xl'
+        icon: PackageCheck,
+        className: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       'cancelled': { 
         label: 'ملغي', 
-        icon: Package,
-        className: 'bg-status-cancelled-bg text-status-cancelled border-2 border-status-cancelled/30 shadow-lg shadow-status-cancelled-shadow/25 font-bold rounded-xl'
+        icon: XCircle,
+        className: 'bg-gradient-to-r from-status-cancelled-start to-status-cancelled-end text-white border border-status-cancelled-border shadow-lg shadow-status-cancelled-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       },
       // معالجة الحالات القديمة
       'return_received': { 
         label: 'راجع للمخزن', 
-        icon: Package,
-        className: 'bg-status-returned-stock-bg text-status-returned-stock border-2 border-status-returned-stock/30 shadow-lg shadow-status-returned-stock-shadow/25 font-bold rounded-xl'
+        icon: PackageCheck,
+        className: 'bg-gradient-to-r from-status-returned-stock-start to-status-returned-stock-end text-white border border-status-returned-stock-border shadow-lg shadow-status-returned-stock-shadow/40 font-bold rounded-lg px-2 py-1 text-xs'
       }
     };
     const statusInfo = statusMap[status] || { 
       label: status, 
       icon: Package,
-      className: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-xl'
+      className: 'bg-muted text-muted-foreground border-2 border-border shadow-sm font-medium rounded-lg px-2 py-1 text-xs'
     };
     const StatusIcon = statusInfo.icon;
     return (
@@ -131,7 +131,12 @@ const RecentOrdersCard = ({ recentOrders }) => {
     const diffInDays = Math.floor(diffInHours / 24);
     if (diffInDays === 1) return 'منذ يوم واحد';
     if (diffInDays < 7) return `منذ ${diffInDays} أيام`;
-    return date.toLocaleDateString('ar-SA');
+    // تاريخ ميلادي بدلاً من هجري
+    return date.toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
   };
 
   return (
