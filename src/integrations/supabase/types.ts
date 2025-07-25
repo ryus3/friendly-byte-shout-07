@@ -2641,6 +2641,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_monthly_city_discount_trigger: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       auth_with_username: {
         Args: { username_input: string; password_input: string }
         Returns: {
@@ -2659,10 +2663,6 @@ export type Database = {
           p_variant_id: string
           p_quantity_sold: number
         }
-        Returns: number
-      }
-      calculate_loyalty_points: {
-        Args: { order_amount: number }
         Returns: number
       }
       calculate_loyalty_points_per_order: {
