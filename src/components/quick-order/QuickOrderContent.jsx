@@ -344,19 +344,19 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     const safeCart = Array.isArray(cart) ? cart : [];
     const quantityCount = safeCart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    const subtotal = safeCart.reduce((sum, item) => sum + (item.total || (item.price * item.quantity) || 0), 0);
+    const cartSubtotal = safeCart.reduce((sum, item) => sum + (item.total || (item.price * item.quantity) || 0), 0);
     
     // حساب رسوم التوصيل بناءً على نوع الشريك
-    let deliveryFee = 0;
+    let currentDeliveryFee = 0;
     if (activePartner === 'local') {
       // للتوصيل المحلي، أضف رسوم التوصيل
-      deliveryFee = settings?.deliveryFee || 0;
+      currentDeliveryFee = settings?.deliveryFee || 0;
     }
     // للوسيط أو الشركات الأخرى، لا توجد رسوم إضافية
     
-    // حساب السعر النهائي مع الخصم ورسوم التوصيل
-    const totalAfterDiscount = subtotal - (discount || 0);
-    const finalPriceWithDelivery = totalAfterDiscount + deliveryFee;
+    // حساب السعر النهائي: (مجموع المنتجات - الخصم) + رسوم التوصيل
+    const totalAfterDiscount = cartSubtotal - (discount || 0);
+    const finalPriceWithDelivery = totalAfterDiscount + currentDeliveryFee;
     
     const detailsString = safeCart
       .map(item => 
