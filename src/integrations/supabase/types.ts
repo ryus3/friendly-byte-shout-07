@@ -198,6 +198,33 @@ export type Database = {
         }
         Relationships: []
       }
+      city_random_discounts: {
+        Row: {
+          city_name: string
+          created_at: string
+          discount_month: number
+          discount_percentage: number
+          discount_year: number
+          id: string
+        }
+        Insert: {
+          city_name: string
+          created_at?: string
+          discount_month: number
+          discount_percentage?: number
+          discount_year: number
+          id?: string
+        }
+        Update: {
+          city_name?: string
+          created_at?: string
+          discount_month?: number
+          discount_percentage?: number
+          discount_year?: number
+          id?: string
+        }
+        Relationships: []
+      }
       colors: {
         Row: {
           created_at: string
@@ -827,6 +854,47 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      monthly_discount_usage: {
+        Row: {
+          created_at: string
+          customer_id: string
+          discount_amount: number
+          discount_month: number
+          discount_type: string
+          discount_year: number
+          id: string
+          order_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          discount_amount?: number
+          discount_month: number
+          discount_type: string
+          discount_year: number
+          id?: string
+          order_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          discount_amount?: number
+          discount_month?: number
+          discount_type?: string
+          discount_year?: number
+          id?: string
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_discount_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -2361,6 +2429,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      check_city_random_discount: {
+        Args: { p_city_name: string }
+        Returns: Json
+      }
+      check_monthly_loyalty_discount_eligibility: {
+        Args: { p_customer_id: string }
+        Returns: Json
+      }
       check_user_permission: {
         Args: { p_user_id: string; p_permission_name: string }
         Returns: boolean
@@ -2494,6 +2570,15 @@ export type Database = {
           p_employee_code?: string
         }
         Returns: string
+      }
+      record_discount_usage: {
+        Args: {
+          p_customer_id: string
+          p_discount_type: string
+          p_discount_amount: number
+          p_order_id: string
+        }
+        Returns: undefined
       }
       refresh_main_cash_balance: {
         Args: Record<PropertyKey, never>
