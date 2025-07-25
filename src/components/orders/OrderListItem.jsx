@@ -13,11 +13,15 @@ import {
   PackageCheck,
   Calendar,
   Building,
-  ExternalLink
+  ExternalLink,
+  Phone,
+  User
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { MobileTableRow, MobileTableCell, MobileTableGrid } from '@/components/ui/mobile-table';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 const OrderListItem = ({ 
   order, 
@@ -116,6 +120,167 @@ const OrderListItem = ({
     });
   };
 
+  const isMobile = useMediaQuery('(max-width: 768px)');
+
+  if (isMobile) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.2 }}
+      >
+        <MobileTableRow 
+          className={isSelected ? 'border-primary shadow-md shadow-primary/20 bg-primary/5' : ''}
+          onClick={() => onViewOrder?.(order)}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onSelect?.(order.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0"
+              />
+              <div className="font-bold text-base text-foreground">
+                {order.qr_id || order.order_number}
+              </div>
+            </div>
+            
+            {/* Status Badge */}
+            {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextStatus = {
+                    'pending': 'shipped',
+                    'shipped': 'delivery', 
+                    'delivery': 'delivered',
+                    'delivered': 'completed',
+                    'returned': 'returned_in_stock'
+                  }[order.status];
+                  if (nextStatus) handleStatusChange(nextStatus);
+                }}
+                className={`${statusConfig.color} hover:shadow-md transition-all duration-300 h-auto p-2`}
+                title="انقر لتحديث الحالة"
+              >
+                <StatusIcon className="h-3 w-3" />
+                <span className="ml-1 text-xs">{statusConfig.label}</span>
+              </Button>
+            ) : (
+              <div className={`flex items-center gap-1 ${statusConfig.color}`}>
+                <StatusIcon className="h-3 w-3" />
+                <span className="text-xs">{statusConfig.label}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Customer Info */}
+          <MobileTableCell primary>
+            <div className="flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" />
+              <span>{order.customer_name}</span>
+            </div>
+          </MobileTableCell>
+
+          <MobileTableCell secondary>
+            <div className="flex items-center gap-2">
+              <Phone className="h-3 w-3" />
+              <span>{order.customer_phone}</span>
+            </div>
+          </MobileTableCell>
+
+          {/* Products Summary */}
+          <MobileTableCell label="المنتجات">
+            {(() => {
+              const items = order.items || order.order_items || [];
+              if (items.length === 0) return 'لا توجد منتجات';
+              
+              const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+              
+              if (items.length === 1) {
+                const item = items[0];
+                const productName = item.productname || item.product_name || item.producttype || item.product_type || 'منتج';
+                return `${productName} (${item.quantity || 1})`;
+              } else {
+                const firstProductType = items[0]?.producttype || items[0]?.product_type || 'منتج';
+                return `${totalItems} قطعة - ${firstProductType}`;
+              }
+            })()}
+          </MobileTableCell>
+
+          <MobileTableGrid>
+            <MobileTableCell label="التاريخ">
+              <div className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                <span className="text-xs">{formatDate(order.created_at)}</span>
+              </div>
+            </MobileTableCell>
+
+            <MobileTableCell label="المبلغ">
+              <span className="font-bold text-primary">
+                {order.final_amount?.toLocaleString()} د.ع
+              </span>
+            </MobileTableCell>
+          </MobileTableGrid>
+
+          <MobileTableCell label="التوصيل">
+            <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full shadow-sm`}>
+              <Building className="h-3 w-3 ml-1" />
+              {order.delivery_partner}
+            </Badge>
+          </MobileTableCell>
+
+          {/* Actions */}
+          <MobileTableCell actions>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewOrder?.(order);
+              }}
+              className="h-8 w-8 p-0 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+
+            {canEdit && hasPermission('edit_orders') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditOrder?.(order);
+                }}
+                className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600"
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+            )}
+
+            {canDelete && hasPermission('delete_orders') && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </MobileTableCell>
+        </MobileTableRow>
+      </motion.div>
+    );
+  }
+
+  // Desktop view - العرض الأصلي
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -124,7 +289,7 @@ const OrderListItem = ({
       transition={{ duration: 0.2 }}
       className={`bg-card border rounded-lg p-3 hover:shadow-md transition-all duration-300 ${isSelected ? 'border-primary shadow-md shadow-primary/20 bg-primary/5' : 'border-border/50 hover:border-primary/30'}`}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 overflow-x-auto min-w-fit">
         
         {/* Checkbox */}
         <Checkbox
@@ -134,14 +299,14 @@ const OrderListItem = ({
         />
 
         {/* QR ID */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[80px] flex-shrink-0">
           <div className="font-bold text-sm text-foreground">
             {order.qr_id || order.order_number}
           </div>
         </div>
 
         {/* Customer Info & Products */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[200px] flex-shrink-0">
           <div className="font-medium text-sm text-foreground truncate">
             {order.customer_name}
           </div>
@@ -169,7 +334,7 @@ const OrderListItem = ({
         </div>
 
         {/* Date & Delivery */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[150px] flex-shrink-0">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3 w-3" />
             {formatDate(order.created_at)}
@@ -181,7 +346,7 @@ const OrderListItem = ({
         </div>
 
         {/* Amount */}
-        <div className="min-w-0 flex-1 text-left">
+        <div className="min-w-[120px] flex-shrink-0 text-left">
           <div className="font-bold text-sm text-primary">
             {order.final_amount?.toLocaleString()} د.ع
           </div>
@@ -191,7 +356,7 @@ const OrderListItem = ({
         </div>
 
         {/* Status - قابل للنقر للطلبات المحلية */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[120px] flex-shrink-0">
           {isLocalOrder && order.status !== 'completed' && order.status !== 'cancelled' && order.status !== 'returned_in_stock' ? (
             <Button
               variant="ghost"
