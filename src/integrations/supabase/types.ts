@@ -256,6 +256,103 @@ export type Database = {
         }
         Relationships: []
       }
+      city_benefit_usage: {
+        Row: {
+          applied_at: string
+          benefit_applied: number
+          city_benefit_id: string
+          customer_id: string
+          customer_phone: string
+          id: string
+          notification_sent: boolean
+          order_id: string
+        }
+        Insert: {
+          applied_at?: string
+          benefit_applied?: number
+          city_benefit_id: string
+          customer_id: string
+          customer_phone: string
+          id?: string
+          notification_sent?: boolean
+          order_id: string
+        }
+        Update: {
+          applied_at?: string
+          benefit_applied?: number
+          city_benefit_id?: string
+          customer_id?: string
+          customer_phone?: string
+          id?: string
+          notification_sent?: boolean
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "city_benefit_usage_city_benefit_id_fkey"
+            columns: ["city_benefit_id"]
+            isOneToOne: false
+            referencedRelation: "city_monthly_benefits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_benefit_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "city_benefit_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      city_monthly_benefits: {
+        Row: {
+          benefit_type: string
+          benefit_value: number
+          city_name: string
+          created_at: string
+          current_usage: number
+          id: string
+          is_active: boolean
+          max_usage: number
+          month: number
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          benefit_type: string
+          benefit_value?: number
+          city_name: string
+          created_at?: string
+          current_usage?: number
+          id?: string
+          is_active?: boolean
+          max_usage?: number
+          month: number
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          benefit_type?: string
+          benefit_value?: number
+          city_name?: string
+          created_at?: string
+          current_usage?: number
+          id?: string
+          is_active?: boolean
+          max_usage?: number
+          month?: number
+          updated_at?: string
+          year?: number
+        }
+        Relationships: []
+      }
       city_order_stats: {
         Row: {
           city_name: string
