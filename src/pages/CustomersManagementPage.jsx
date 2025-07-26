@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Download } from 'lucide-react';
+import { Download, Star, Gift, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,12 +44,17 @@ const CustomersManagementPage = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // جلب العملاء مع إحصائيات مدمجة من الطلبات المكتملة
+      const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select(`
           *,
           customer_loyalty (
-            *,
+            total_points,
+            total_orders,
+            total_spent,
+            current_tier_id,
             loyalty_tiers (
               name,
               color,
@@ -58,7 +64,7 @@ const CustomersManagementPage = () => {
             )
           ),
           customer_product_segments (
-            *,
+            gender_segment,
             departments (name),
             categories (name),
             product_types (name)
@@ -66,11 +72,34 @@ const CustomersManagementPage = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (customersError) throw customersError;
+
+      // حساب عدد أعضاء كل مستوى ولاء
+      const tierCounts = {};
+      const processedCustomers = (customersData || []).map(customer => {
+        const loyaltyData = customer.customer_loyalty?.[0];
+        
+        // عد الأعضاء لكل مستوى
+        if (loyaltyData?.current_tier_id) {
+          const tierId = loyaltyData.current_tier_id;
+          tierCounts[tierId] = (tierCounts[tierId] || 0) + 1;
+        }
+        
+        return customer;
+      });
+
+      // إضافة عدد الأعضاء لمستويات الولاء
+      const updatedTiers = loyaltyTiers.map(tier => ({
+        ...tier,
+        memberCount: tierCounts[tier.id] || 0
+      }));
       
-      console.log('بيانات العملاء المحملة:', data);
-      setCustomers(data || []);
-      setFilteredCustomers(data || []);
+      setLoyaltyTiers(updatedTiers);
+      setCustomers(processedCustomers);
+      setFilteredCustomers(processedCustomers);
+      
+      console.log('بيانات العملاء المحملة:', processedCustomers);
+      
     } catch (error) {
       console.error('خطأ في جلب العملاء:', error);
       toast({
@@ -383,44 +412,70 @@ const CustomersManagementPage = () => {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">جاري تحميل بيانات العملاء...</p>
           </div>
-        </div>
       </div>
-    );
+    </div>
+  );
   }
 
   return (
-    <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-7xl">
-      {/* الهيدر - محسن للهاتف */}
-      <div className="flex flex-col gap-3 md:gap-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl md:text-3xl font-bold leading-tight">إدارة العملاء</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              إدارة شاملة لبيانات العملاء ونظام الولاء
-            </p>
-            <p className="text-xs text-muted-foreground">
-              النقاط: 200 نقطة لكل طلب مكتمل
-            </p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      <div className="container mx-auto p-3 md:p-6 space-y-6 max-w-7xl">
+        {/* هيدر حديث وجذاب */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 border border-primary/20">
+          <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+          <div className="relative z-10">
+            <div className="flex flex-col lg:flex-row justify-between items-start gap-4">
+              <div className="space-y-2">
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  🏪 إدارة العملاء
+                </h1>
+                <p className="text-lg text-muted-foreground max-w-2xl">
+                  منصة متطورة لإدارة قاعدة عملائك ونظام الولاء الذكي
+                </p>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full">
+                    <Star className="h-4 w-4 text-primary" />
+                    <span>200 نقطة لكل طلب مكتمل</span>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1 bg-green-100 rounded-full">
+                    <Gift className="h-4 w-4 text-green-600" />
+                    <span>خصومات تلقائية للولاء</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3 shrink-0">
+                <Button 
+                  onClick={() => setShowExportDialog(true)} 
+                  className="gap-2 bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-700 shadow-lg"
+                  size="lg"
+                >
+                  <Download className="h-5 w-5" />
+                  تصدير البيانات
+                </Button>
+              </div>
+            </div>
           </div>
-          <Button 
-            onClick={() => setShowExportDialog(true)} 
-            className="gap-2 shrink-0 w-full sm:w-auto"
-            size="sm"
-          >
-            <Download className="h-4 w-4" />
-            تصدير العملاء
-          </Button>
         </div>
 
-        {/* خصم المدينة الشهري */}
+        {/* إعلان خصم المدينة الشهري */}
         {monthlyDiscount && (
-          <div className="p-3 bg-green-100 border border-green-300 rounded-lg">
-            <p className="text-green-800 font-medium text-sm">
-              🎉 مدينة {monthlyDiscount.city_name} مختارة لخصم {monthlyDiscount.discount_percentage}% هذا الشهر!
-            </p>
+          <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-4 shadow-sm">
+            <div className="absolute inset-0 bg-pattern opacity-5"></div>
+            <div className="relative flex items-center gap-3">
+              <div className="p-2 bg-green-100 rounded-full">
+                <Gift className="h-6 w-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-green-800">🎉 خصم المدينة المختارة</h3>
+                <p className="text-green-700">
+                  مدينة <span className="font-bold">{monthlyDiscount.city_name}</span> مختارة للحصول على خصم خاص 
+                  <span className="font-bold text-lg"> {monthlyDiscount.discount_percentage}%</span> هذا الشهر!
+                </p>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
       {/* الإحصائيات */}
       <CustomerStats
@@ -447,42 +502,58 @@ const CustomersManagementPage = () => {
         totalCustomers={filteredCustomers.length}
       />
 
-      {/* قائمة العملاء - محسنة للهاتف */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg md:text-xl">
-            قائمة العملاء ({filteredCustomers.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 md:p-6">
-          <div className="space-y-3 md:space-y-4">
-            {filteredCustomers.map((customer) => (
-              <CustomerCard
-                key={customer.id}
-                customer={customer}
-                onViewDetails={(customer) => {
-                  setSelectedCustomer(customer);
-                  setShowCustomerDetails(true);
-                }}
-                onSendNotification={(customer) => {
-                  setSelectedCustomer(customer);
-                  setShowNotificationDialog(true);
-                }}
-              />
-            ))}
-
+        {/* قائمة العملاء المحسنة */}
+        <Card className="border-0 shadow-xl bg-gradient-to-br from-card to-card/50">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5 rounded-t-lg pb-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl md:text-2xl font-bold flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                قائمة العملاء
+                <Badge variant="secondary" className="text-lg px-3 py-1">
+                  {filteredCustomers.length}
+                </Badge>
+              </CardTitle>
+            </div>
             {filteredCustomers.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-4xl mb-4">👥</div>
-                <h3 className="text-lg font-semibold mb-2">لا توجد عملاء</h3>
-                <p className="text-muted-foreground text-sm">
-                  لا توجد عملاء يطابقون معايير البحث المحددة
-                </p>
-              </div>
+              <p className="text-muted-foreground">لا توجد نتائج تطابق معايير البحث</p>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="p-4 md:p-6">
+            <div className="grid gap-4 md:gap-6">
+              {filteredCustomers.map((customer, index) => (
+                <div 
+                  key={customer.id}
+                  className="animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <CustomerCard
+                    customer={customer}
+                    onViewDetails={(customer) => {
+                      setSelectedCustomer(customer);
+                      setShowCustomerDetails(true);
+                    }}
+                    onSendNotification={(customer) => {
+                      setSelectedCustomer(customer);
+                      setShowNotificationDialog(true);
+                    }}
+                  />
+                </div>
+              ))}
+              
+              {filteredCustomers.length === 0 && customers.length > 0 && (
+                <div className="text-center py-12">
+                  <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <Users className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">لا توجد نتائج</h3>
+                  <p className="text-muted-foreground">جرب تعديل معايير البحث للعثور على العملاء</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
       {/* نافذة تفاصيل العميل - محسنة للهاتف */}
       <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>

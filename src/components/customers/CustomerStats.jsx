@@ -114,10 +114,14 @@ const CustomerStats = ({
                           style={{ color: tier.color }} 
                         />
                       </div>
-                      <div className="min-w-0 flex-1">
+                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-sm truncate">{tier.name}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {tier.points_required.toLocaleString()} نقطة
+                        <div className="text-xs text-muted-foreground space-x-2 space-x-reverse">
+                          <span>{tier.points_required.toLocaleString()} نقطة</span>
+                          <span>•</span>
+                          <span className="font-medium text-primary">
+                            {tier.memberCount || 0} عضو
+                          </span>
                         </div>
                       </div>
                     </div>

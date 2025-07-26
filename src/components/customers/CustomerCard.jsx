@@ -27,9 +27,15 @@ const CustomerCard = ({ customer, onViewDetails, onSendNotification }) => {
   const hasPointsMismatch = totalPoints !== expectedPoints && totalOrders > 0;
 
   return (
-    <Card className="w-full hover:shadow-lg transition-all duration-200 border-l-4" 
-          style={{ borderLeftColor: loyaltyData?.loyalty_tiers?.color || '#3B82F6' }}>
-      <CardContent className="p-4 md:p-6">
+    <Card className="group w-full hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 border-0 bg-gradient-to-br from-card to-card/80 shadow-lg overflow-hidden relative" 
+          style={{ 
+            boxShadow: `0 8px 32px ${loyaltyData?.loyalty_tiers?.color || '#3B82F6'}15`,
+            borderLeft: `6px solid ${loyaltyData?.loyalty_tiers?.color || '#3B82F6'}`
+          }}>
+      {/* خلفية متحركة */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+      
+      <CardContent className="p-5 md:p-7 relative z-10">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
           <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -109,35 +115,59 @@ const CustomerCard = ({ customer, onViewDetails, onSendNotification }) => {
           </div>
         </div>
 
-        {/* Loyalty Stats - Enhanced Mobile View */}
-        <div className="bg-muted/30 rounded-lg p-3 space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-yellow-500 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-bold text-lg">{totalPoints.toLocaleString()}</div>
-                <div className="text-xs text-muted-foreground">نقطة</div>
+        {/* إحصائيات الولاء المحسنة */}
+        <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 rounded-xl p-4 space-y-4 border border-primary/10">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg opacity-10 group-hover:opacity-20 transition-opacity"></div>
+              <div className="relative flex items-center gap-3 p-3">
+                <div className="p-2 bg-yellow-100 rounded-full">
+                  <Star className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xl text-yellow-700">{totalPoints.toLocaleString()}</div>
+                  <div className="text-sm text-yellow-600 font-medium">نقطة ولاء</div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Gift className="h-5 w-5 text-green-500 shrink-0" />
-              <div className="min-w-0">
-                <div className="font-bold text-lg">{totalOrders}</div>
-                <div className="text-xs text-muted-foreground">طلب مكتمل</div>
+            
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-600 rounded-lg opacity-10 group-hover:opacity-20 transition-opacity"></div>
+              <div className="relative flex items-center gap-3 p-3">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <Gift className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold text-xl text-green-700">{totalOrders}</div>
+                  <div className="text-sm text-green-600 font-medium">طلب مكتمل</div>
+                </div>
               </div>
             </div>
           </div>
           
-          {/* Points Calculation Info */}
-          <div className="text-xs text-muted-foreground">
-            النقاط المحسوبة: {totalOrders} طلب × 200 نقطة = {expectedPoints} نقطة
+          {/* معلومات حساب النقاط */}
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-100">
+            <div className="text-sm text-blue-700 font-medium mb-1">معادلة النقاط:</div>
+            <div className="text-sm text-blue-600">
+              {totalOrders} طلب × 200 نقطة = <span className="font-bold">{expectedPoints.toLocaleString()}</span> نقطة
+            </div>
           </div>
           
-          {/* Mismatch Warning */}
+          {/* تحذير عدم التطابق */}
           {hasPointsMismatch && (
-            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-2 rounded">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="text-xs">خطأ في النقاط - المتوقع: {expectedPoints.toLocaleString()} نقطة</span>
+            <div className="relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg"></div>
+              <div className="relative flex items-center gap-3 p-3 border border-red-200 rounded-lg">
+                <div className="p-1 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-red-800 text-sm">خطأ في حساب النقاط</div>
+                  <div className="text-red-600 text-xs">
+                    المتوقع: <span className="font-bold">{expectedPoints.toLocaleString()}</span> نقطة
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
