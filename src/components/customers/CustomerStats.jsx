@@ -10,10 +10,10 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'إجمالي العملاء',
       value: customers.length,
       icon: Users,
-      gradient: 'from-slate-600 via-slate-700 to-slate-800',
-      shadow: 'shadow-slate-500/20',
-      glow: 'hover:shadow-slate-500/30',
-      iconBg: 'bg-white/10',
+      gradient: 'from-indigo-600 via-purple-600 to-pink-600',
+      shadow: 'shadow-purple-500/25',
+      glow: 'hover:shadow-purple-500/40',
+      iconBg: 'bg-white/15',
       textColor: 'text-white'
     },
     {
@@ -32,10 +32,10 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'عملاء مع نقاط',
       value: customers.filter(c => c.customer_loyalty?.total_points > 0).length,
       icon: Star,
-      gradient: 'from-orange-500 via-amber-500 to-yellow-500',
-      shadow: 'shadow-orange-500/20',
-      glow: 'hover:shadow-orange-500/30',
-      iconBg: 'bg-white/10',
+      gradient: 'from-orange-600 via-red-500 to-pink-500',
+      shadow: 'shadow-orange-500/25',
+      glow: 'hover:shadow-orange-500/35',
+      iconBg: 'bg-white/15',
       textColor: 'text-white'
     },
     {

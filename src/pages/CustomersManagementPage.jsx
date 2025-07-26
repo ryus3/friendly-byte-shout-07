@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -552,26 +553,6 @@ const CustomersManagementPage = () => {
         }}
       />
 
-      {/* مؤشر الفلتر النشط */}
-      {filterType !== 'all' && (
-        <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
-          <Badge variant="secondary" className="text-sm font-medium">
-            🔍 الفلتر النشط: {getFilterDescription(filterType)}
-          </Badge>
-          <button
-            onClick={() => {
-              setFilterType('all');
-              toast({
-                title: 'تم إزالة الفلتر',
-                description: 'عرض جميع العملاء'
-              });
-            }}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
-          >
-            إزالة الفلتر
-          </button>
-        </div>
-      )}
 
       {/* Enhanced Search and Filter Toolbar */}
       <SimpleCustomersToolbar
@@ -603,35 +584,61 @@ const CustomersManagementPage = () => {
         <TabsContent value="customers" className="space-y-4">
 
           {/* Loyalty Tiers Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle>مستويات الولاء</CardTitle>
+          <Card className="
+            bg-gradient-to-br from-white/90 to-slate-50/90 dark:from-slate-900/90 dark:to-slate-800/90
+            backdrop-blur-sm border border-border/60 shadow-xl
+          ">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                مستويات الولاء
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {loyaltyTiers.map((tier) => {
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {loyaltyTiers.map((tier, index) => {
                   const TierIcon = getTierIcon(tier.icon);
                   const customersInTier = customers.filter(c => 
                     c.customer_loyalty?.current_tier_id === tier.id
                   ).length;
                   
                   return (
-                    <div key={tier.id} className="text-center p-4 rounded-lg border">
-                      <TierIcon 
-                        className="h-8 w-8 mx-auto mb-2" 
-                        style={{ color: tier.color }}
-                      />
-                      <h3 className="font-semibold">{tier.name}</h3>
-                      <p className="text-sm text-muted-foreground">
+                    <motion.div 
+                      key={tier.id} 
+                      className="
+                        text-center p-6 rounded-xl
+                        bg-gradient-to-br from-white/80 to-slate-50/80 dark:from-slate-800/80 dark:to-slate-700/80
+                        border border-border/50 shadow-lg hover:shadow-xl
+                        backdrop-blur-sm transition-all duration-300
+                        hover:scale-[1.02] hover:-translate-y-1
+                      "
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      whileHover={{ y: -2 }}
+                    >
+                      <motion.div
+                        whileHover={{ rotate: [0, -10, 10, 0] }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        <TierIcon 
+                          className="h-10 w-10 mx-auto mb-3" 
+                          style={{ color: tier.color }}
+                        />
+                      </motion.div>
+                      <h3 className="font-bold text-lg mb-1">{tier.name}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
                         {tier.points_required} نقطة
                       </p>
-                      <p className="text-lg font-bold">{customersInTier} عميل</p>
+                      <p className="text-2xl font-bold text-primary mb-3">{customersInTier}</p>
+                      <p className="text-xs text-muted-foreground mb-3">عميل</p>
                       {tier.discount_percentage > 0 && (
-                        <Badge variant="secondary">
+                        <Badge 
+                          className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md"
+                        >
                           خصم {tier.discount_percentage}% شهرياً
                         </Badge>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>

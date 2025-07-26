@@ -101,6 +101,18 @@ const CustomerCard = ({
   
   const isPointsExpiringSoon = pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+  // ألوان متنوعة وأنيقة للكروت
+  const cardGradients = [
+    'from-slate-50 to-blue-50 dark:from-slate-900/30 dark:to-blue-900/20',
+    'from-violet-50 to-purple-50 dark:from-violet-900/30 dark:to-purple-900/20',
+    'from-emerald-50 to-teal-50 dark:from-emerald-900/30 dark:to-teal-900/20',
+    'from-rose-50 to-pink-50 dark:from-rose-900/30 dark:to-pink-900/20',
+    'from-amber-50 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20',
+    'from-cyan-50 to-sky-50 dark:from-cyan-900/30 dark:to-sky-900/20'
+  ];
+  
+  const cardGradient = cardGradients[index % cardGradients.length];
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -112,16 +124,18 @@ const CustomerCard = ({
       }}
       className={hasPoints ? 'order-first' : ''}
     >
-      <Card className="
+      <Card className={`
         relative overflow-hidden group cursor-pointer
-        bg-card/80 dark:bg-card/60 backdrop-blur-sm
-        border border-border/50 dark:border-border/30
-        shadow-lg hover:shadow-xl
+        bg-gradient-to-br ${cardGradient}
+        backdrop-blur-sm border border-border/60 dark:border-border/40
+        shadow-xl hover:shadow-2xl
         transition-all duration-300
-        hover:scale-[1.02] hover:-translate-y-1
-      ">
-        {/* تأثير الضوء الخفيف */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        hover:scale-[1.02] hover:-translate-y-2
+      `}>
+        {/* تأثيرات الضوء والانعكاس */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute -top-2 -right-2 w-8 h-8 bg-white/10 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute -bottom-1 -left-1 w-6 h-6 bg-white/5 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         
         {/* حد ملون للمستوى */}
         {customerTier && (
@@ -129,7 +143,7 @@ const CustomerCard = ({
         )}
         
         <CardHeader className="pb-3">
-          <div className={`flex items-start justify-between ${hasPoints ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className={`flex items-start justify-between ${hasPoints ? 'flex-row' : 'flex-row'}`}>
             <div className="flex-1">
               <motion.h3 
                 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors duration-300"
@@ -161,31 +175,30 @@ const CustomerCard = ({
               )}
             </div>
             
-            {/* أيقونة المستوى الملونة */}
+            {/* أيقونة المستوى الملونة والواضحة */}
             {customerTier && (
               <motion.div 
-                className={`
-                  p-3 rounded-xl ${tierColors.bgColor} ${tierColors.borderColor} border-2
-                  shadow-lg group-hover:shadow-xl
-                  relative overflow-hidden
-                `}
-                whileHover={{ 
-                  rotate: [0, -10, 10, 0],
-                  scale: 1.1,
-                  transition: { duration: 0.6, ease: "easeInOut" }
-                }}
+                className="flex items-center gap-2"
+                whileHover={{ scale: 1.05 }}
               >
-                <div className={`bg-gradient-to-br ${tierColors.color} bg-clip-text text-transparent`}>
-                  <TierIcon className="h-6 w-6" style={{ color: 'inherit' }} />
-                </div>
-                <motion.div
-                  className={`absolute inset-0 bg-gradient-to-r ${tierColors.color} opacity-10 rounded-xl`}
-                  initial={{ scale: 0 }}
+                <motion.div 
+                  className={`
+                    p-2 rounded-lg ${tierColors.bgColor} ${tierColors.borderColor} border
+                    shadow-md group-hover:shadow-lg
+                    relative overflow-hidden
+                  `}
                   whileHover={{ 
-                    scale: 1,
-                    transition: { duration: 0.4, ease: "easeOut" }
+                    rotate: [0, -5, 5, 0],
+                    transition: { duration: 0.4, ease: "easeInOut" }
                   }}
-                />
+                >
+                  <TierIcon className={`h-5 w-5 ${tierColors.textColor}`} />
+                </motion.div>
+                <Badge 
+                  className={`${tierColors.bgColor} ${tierColors.textColor} ${tierColors.borderColor} border font-medium text-xs`}
+                >
+                  {customerTier.name}
+                </Badge>
               </motion.div>
             )}
           </div>
