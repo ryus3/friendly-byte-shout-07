@@ -82,6 +82,64 @@ export type Database = {
           },
         ]
       }
+      applied_customer_discounts: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          customer_id: string | null
+          discount_amount: number
+          discount_percentage: number
+          discount_type: string
+          id: string
+          notes: string | null
+          order_id: string | null
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          customer_id?: string | null
+          discount_amount?: number
+          discount_percentage?: number
+          discount_type: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          customer_id?: string | null
+          discount_amount?: number
+          discount_percentage?: number
+          discount_type?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applied_customer_discounts_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "applied_customer_discounts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "applied_customer_discounts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -286,6 +344,7 @@ export type Database = {
           customer_id: string | null
           id: string
           last_tier_upgrade: string | null
+          points_expiry_date: string | null
           total_orders: number | null
           total_points: number | null
           total_spent: number | null
@@ -297,6 +356,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           last_tier_upgrade?: string | null
+          points_expiry_date?: string | null
           total_orders?: number | null
           total_points?: number | null
           total_spent?: number | null
@@ -308,6 +368,7 @@ export type Database = {
           customer_id?: string | null
           id?: string
           last_tier_upgrade?: string | null
+          points_expiry_date?: string | null
           total_orders?: number | null
           total_points?: number | null
           total_spent?: number | null
@@ -370,6 +431,77 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_product_segments: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          department_id: string | null
+          gender_segment: string | null
+          id: string
+          last_purchase_date: string | null
+          product_type_id: string | null
+          purchase_count: number | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          department_id?: string | null
+          gender_segment?: string | null
+          id?: string
+          last_purchase_date?: string | null
+          product_type_id?: string | null
+          purchase_count?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          department_id?: string | null
+          gender_segment?: string | null
+          id?: string
+          last_purchase_date?: string | null
+          product_type_id?: string | null
+          purchase_count?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_product_segments_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_product_segments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_product_segments_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_product_segments_product_type_id_fkey"
+            columns: ["product_type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
@@ -539,6 +671,39 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      employee_loyalty_permissions: {
+        Row: {
+          can_apply_discounts: boolean | null
+          can_manage_points: boolean | null
+          can_view_loyalty: boolean | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          can_apply_discounts?: boolean | null
+          can_manage_points?: boolean | null
+          can_view_loyalty?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          can_apply_discounts?: boolean | null
+          can_manage_points?: boolean | null
+          can_view_loyalty?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       employee_profit_rules: {
         Row: {
@@ -897,6 +1062,7 @@ export type Database = {
           id: string
           name: string
           name_en: string
+          points_expiry_months: number | null
           points_required: number
           special_benefits: Json | null
           updated_at: string | null
@@ -910,6 +1076,7 @@ export type Database = {
           id?: string
           name: string
           name_en: string
+          points_expiry_months?: number | null
           points_required: number
           special_benefits?: Json | null
           updated_at?: string | null
@@ -923,6 +1090,7 @@ export type Database = {
           id?: string
           name?: string
           name_en?: string
+          points_expiry_months?: number | null
           points_required?: number
           special_benefits?: Json | null
           updated_at?: string | null
@@ -2479,6 +2647,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      apply_monthly_city_discount_trigger: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       auth_with_username: {
         Args: { username_input: string; password_input: string }
         Returns: {
@@ -2486,6 +2658,10 @@ export type Database = {
           user_email: string
           error_message: string
         }[]
+      }
+      auto_select_monthly_city_discount: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       calculate_fifo_cost: {
         Args: {
@@ -2495,8 +2671,8 @@ export type Database = {
         }
         Returns: number
       }
-      calculate_loyalty_points: {
-        Args: { order_amount: number }
+      calculate_loyalty_points_per_order: {
+        Args: Record<PropertyKey, never>
         Returns: number
       }
       calculate_main_cash_balance: {
@@ -2538,6 +2714,10 @@ export type Database = {
       delete_purchase_completely: {
         Args: { p_purchase_id: string }
         Returns: Json
+      }
+      expire_old_points: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       filter_products_by_permissions: {
         Args: { p_user_id: string }
@@ -2595,6 +2775,14 @@ export type Database = {
       get_available_stock: {
         Args: { p_product_id: string; p_variant_id?: string }
         Returns: number
+      }
+      get_customer_auto_discount: {
+        Args: {
+          p_customer_phone: string
+          p_customer_city: string
+          p_order_subtotal: number
+        }
+        Returns: Json
       }
       get_default_cash_source: {
         Args: Record<PropertyKey, never>
