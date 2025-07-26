@@ -2892,6 +2892,15 @@ export type Database = {
         Args: { customer_id_param: string }
         Returns: string
       }
+      apply_city_benefit: {
+        Args: {
+          p_benefit_id: string
+          p_order_id: string
+          p_customer_id: string
+          p_customer_phone: string
+        }
+        Returns: Json
+      }
       apply_monthly_city_discount_trigger: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2923,6 +2932,10 @@ export type Database = {
       calculate_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      check_city_benefits: {
+        Args: { p_city_name: string; p_order_amount: number }
+        Returns: Json
       }
       check_city_random_discount: {
         Args: { p_city_name: string }
@@ -3104,6 +3117,10 @@ export type Database = {
         Returns: undefined
       }
       select_random_city_for_monthly_discount: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      setup_monthly_city_benefits: {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
