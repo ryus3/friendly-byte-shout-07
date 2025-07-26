@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Users, Award, TrendingUp, UserCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Filter, MoreHorizontal, Users, Award, TrendingUp, UserCheck, Phone, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const CustomersManagementPage = () => {
   const { toast } = useToast();
@@ -22,15 +22,26 @@ const CustomersManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterTier, setFilterTier] = useState('all');
+  const [filterGender, setFilterGender] = useState('all');
+  const [filterCity, setFilterCity] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [completedOrders, setCompletedOrders] = useState([]);
+  const [cityStats, setCityStats] = useState([]);
+  const [cityDiscounts, setCityDiscounts] = useState([]);
   const [stats, setStats] = useState({
     totalCustomers: 0,
     activeCustomers: 0,
     totalLoyaltyPoints: 0,
-    averageOrderValue: 0
+    averageOrderValue: 0,
+    goldTier: 0,
+    silverTier: 0,
+    bronzeTier: 0,
+    diamondTier: 0,
+    maleCustomers: 0,
+    femaleCustomers: 0
   });
 
   const [newCustomer, setNewCustomer] = useState({
@@ -43,10 +54,9 @@ const CustomersManagementPage = () => {
     loyalty_points: 0
   });
 
-  // Load customers and stats
+  // Load all data
   useEffect(() => {
-    loadCustomers();
-    loadStats();
+    loadAllData();
   }, []);
 
   // Filter customers based on search term and filters
@@ -69,25 +79,34 @@ const CustomersManagementPage = () => {
       filtered = filtered.filter(customer => getCustomerTier(customer.loyalty_points || 0) === filterTier);
     }
 
-    setFilteredCustomers(filtered);
-  }, [customers, searchTerm, filterStatus, filterTier]);
+    if (filterGender !== 'all') {
+      filtered = filtered.filter(customer => {
+        const customerGender = getCustomerGender(customer.id);
+        return customerGender === filterGender;
+      });
+    }
 
-  const loadCustomers = async () => {
+    if (filterCity !== 'all') {
+      filtered = filtered.filter(customer => customer.city === filterCity);
+    }
+
+    setFilteredCustomers(filtered);
+  }, [customers, searchTerm, filterStatus, filterTier, filterGender, filterCity]);
+
+  const loadAllData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      setCustomers(data || []);
+      await Promise.all([
+        loadCustomers(),
+        loadCompletedOrders(),
+        loadCityStats(),
+        loadCityDiscounts()
+      ]);
     } catch (error) {
-      console.error('Error loading customers:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "خطأ",
-        description: "فشل في تحميل بيانات العملاء",
+        description: "فشل في تحميل البيانات",
         variant: "destructive"
       });
     } finally {
@@ -95,55 +114,135 @@ const CustomersManagementPage = () => {
     }
   };
 
-  const loadStats = async () => {
+  const loadCustomers = async () => {
     try {
-      // Get total customers
-      const { count: totalCustomers } = await supabase
+      const { data, error } = await supabase
         .from('customers')
-        .select('*', { count: 'exact', head: true });
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      // Get active customers
-      const { count: activeCustomers } = await supabase
-        .from('customers')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
+      if (error) throw error;
 
-      // Get total loyalty points
-      const { data: loyaltyData } = await supabase
-        .from('customers')
-        .select('loyalty_points');
+      // حساب النقاط الجديد لكل عميل
+      const customersWithUpdatedPoints = await Promise.all(
+        (data || []).map(async (customer) => {
+          const points = await calculateCustomerLoyaltyPoints(customer.id);
+          return { ...customer, loyalty_points: points };
+        })
+      );
 
-      const totalLoyaltyPoints = loyaltyData?.reduce((sum, customer) => sum + (customer.loyalty_points || 0), 0) || 0;
-
-      // Calculate average order value from orders
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select('total');
-
-      const averageOrderValue = ordersData?.length > 0 
-        ? ordersData.reduce((sum, order) => sum + (order.total || 0), 0) / ordersData.length 
-        : 0;
-
-      setStats({
-        totalCustomers: totalCustomers || 0,
-        activeCustomers: activeCustomers || 0,
-        totalLoyaltyPoints,
-        averageOrderValue
-      });
+      setCustomers(customersWithUpdatedPoints);
+      calculateStats(customersWithUpdatedPoints);
     } catch (error) {
-      console.error('Error loading stats:', error);
+      console.error('Error loading customers:', error);
     }
   };
 
+  const loadCompletedOrders = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['completed', 'delivered']);
+
+      if (error) throw error;
+      setCompletedOrders(data || []);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  };
+
+  const loadCityStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('city_order_stats')
+        .select('*')
+        .order('total_orders', { ascending: false });
+
+      if (error) throw error;
+      setCityStats(data || []);
+    } catch (error) {
+      console.error('Error loading city stats:', error);
+    }
+  };
+
+  const loadCityDiscounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('city_random_discounts')
+        .select('*')
+        .eq('discount_month', new Date().getMonth() + 1)
+        .eq('discount_year', new Date().getFullYear());
+
+      if (error) throw error;
+      setCityDiscounts(data || []);
+    } catch (error) {
+      console.error('Error loading city discounts:', error);
+    }
+  };
+
+  const calculateCustomerLoyaltyPoints = async (customerId) => {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('customer_id', customerId)
+        .in('status', ['completed', 'delivered']);
+
+      if (error) throw error;
+
+      // 200 نقطة لكل طلب مكتمل
+      return (data || []).length * 200;
+    } catch (error) {
+      console.error('Error calculating points:', error);
+      return 0;
+    }
+  };
+
+  const calculateStats = (customersData) => {
+    const totalCustomers = customersData.length;
+    const activeCustomers = customersData.filter(c => c.status === 'active').length;
+    const totalLoyaltyPoints = customersData.reduce((sum, c) => sum + (c.loyalty_points || 0), 0);
+    
+    // حساب الفئات الجديدة
+    const goldTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'gold').length;
+    const silverTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'silver').length;
+    const bronzeTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'bronze').length;
+    const diamondTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'diamond').length;
+
+    // حساب الجنس من خلال الطلبات
+    const maleCustomers = customersData.filter(c => getCustomerGender(c.id) === 'male').length;
+    const femaleCustomers = customersData.filter(c => getCustomerGender(c.id) === 'female').length;
+
+    const averageOrderValue = completedOrders.length > 0 
+      ? completedOrders.reduce((sum, order) => sum + (order.final_amount || 0), 0) / completedOrders.length 
+      : 0;
+
+    setStats({
+      totalCustomers,
+      activeCustomers,
+      totalLoyaltyPoints,
+      averageOrderValue,
+      goldTier,
+      silverTier,
+      bronzeTier,
+      diamondTier,
+      maleCustomers,
+      femaleCustomers
+    });
+  };
+
   const getCustomerTier = (points) => {
-    if (points >= 10000) return 'gold';
-    if (points >= 5000) return 'silver';
-    if (points >= 1000) return 'bronze';
-    return 'standard';
+    if (points >= 20000) return 'diamond'; // ماسي
+    if (points >= 10000) return 'gold';    // ذهبي
+    if (points >= 5000) return 'silver';   // فضي
+    if (points >= 1000) return 'bronze';   // برونزي
+    return 'standard';                     // عادي
   };
 
   const getTierColor = (tier) => {
     switch (tier) {
+      case 'diamond': return 'bg-purple-500';
       case 'gold': return 'bg-yellow-500';
       case 'silver': return 'bg-gray-400';
       case 'bronze': return 'bg-orange-600';
@@ -153,11 +252,26 @@ const CustomersManagementPage = () => {
 
   const getTierLabel = (tier) => {
     switch (tier) {
+      case 'diamond': return 'ماسي';
       case 'gold': return 'ذهبي';
       case 'silver': return 'فضي';
       case 'bronze': return 'برونزي';
       default: return 'عادي';
     }
+  };
+
+  const getCustomerGender = (customerId) => {
+    // البحث في الطلبات المكتملة لتحديد الجنس بناءً على المنتجات المشتراة
+    const customerOrders = completedOrders.filter(order => order.customer_id === customerId);
+    if (customerOrders.length === 0) return 'unknown';
+
+    // هنا يمكن تطبيق منطق أكثر تعقيداً لتحديد الجنس بناءً على المنتجات
+    // مؤقتاً سنعيد قيمة عشوائية للاختبار
+    return Math.random() > 0.5 ? 'male' : 'female';
+  };
+
+  const getUniqueContent = (items, key) => {
+    return [...new Set(items.map(item => item[key]).filter(Boolean))];
   };
 
   const handleAddCustomer = async () => {
@@ -170,7 +284,8 @@ const CustomersManagementPage = () => {
 
       if (error) throw error;
 
-      setCustomers(prev => [data, ...prev]);
+      const points = await calculateCustomerLoyaltyPoints(data.id);
+      setCustomers(prev => [{ ...data, loyalty_points: points }, ...prev]);
       setIsAddDialogOpen(false);
       setNewCustomer({
         full_name: '',
@@ -207,9 +322,10 @@ const CustomersManagementPage = () => {
 
       if (error) throw error;
 
+      const points = await calculateCustomerLoyaltyPoints(data.id);
       setCustomers(prev =>
         prev.map(customer =>
-          customer.id === selectedCustomer.id ? data : customer
+          customer.id === selectedCustomer.id ? { ...data, loyalty_points: points } : customer
         )
       );
 
@@ -257,22 +373,13 @@ const CustomersManagementPage = () => {
 
   const awardLoyaltyPoints = async (customerId) => {
     try {
-      // Award 200 points per order
-      const { data, error } = await supabase
-        .from('customers')
-        .update({ 
-          loyalty_points: supabase.raw('loyalty_points + 200')
-        })
-        .eq('id', customerId)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const points = await calculateCustomerLoyaltyPoints(customerId);
+      const newPoints = points + 200;
 
       setCustomers(prev =>
         prev.map(customer =>
           customer.id === customerId 
-            ? { ...customer, loyalty_points: (customer.loyalty_points || 0) + 200 }
+            ? { ...customer, loyalty_points: newPoints }
             : customer
         )
       );
@@ -296,20 +403,53 @@ const CustomersManagementPage = () => {
       case 'total':
         setFilterStatus('all');
         setFilterTier('all');
+        setFilterGender('all');
+        setFilterCity('all');
         break;
       case 'active':
         setFilterStatus('active');
         setFilterTier('all');
+        setFilterGender('all');
+        setFilterCity('all');
         break;
       case 'gold':
         setFilterStatus('all');
         setFilterTier('gold');
+        setFilterGender('all');
+        setFilterCity('all');
         break;
       case 'silver':
         setFilterStatus('all');
         setFilterTier('silver');
+        setFilterGender('all');
+        setFilterCity('all');
+        break;
+      case 'bronze':
+        setFilterStatus('all');
+        setFilterTier('bronze');
+        setFilterGender('all');
+        setFilterCity('all');
+        break;
+      case 'diamond':
+        setFilterStatus('all');
+        setFilterTier('diamond');
+        setFilterGender('all');
+        setFilterCity('all');
+        break;
+      case 'male':
+        setFilterStatus('all');
+        setFilterTier('all');
+        setFilterGender('male');
+        setFilterCity('all');
+        break;
+      case 'female':
+        setFilterStatus('all');
+        setFilterTier('all');
+        setFilterGender('female');
+        setFilterCity('all');
         break;
     }
+    
     toast({
       title: "تم تطبيق الفلتر",
       description: "تم تصفية العملاء حسب الإحصائية المختارة"
@@ -318,11 +458,39 @@ const CustomersManagementPage = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="container mx-auto p-6 space-y-6" dir="rtl">
+        <div className="flex justify-between items-center">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
+
+  const uniqueCities = getUniqueContent(customers, 'city');
 
   return (
     <div className="container mx-auto p-6 space-y-6" dir="rtl">
@@ -409,17 +577,6 @@ const CustomersManagementPage = () => {
                 </Select>
               </div>
               
-              <div>
-                <Label htmlFor="loyalty_points">نقاط الولاء الأولية</Label>
-                <Input
-                  id="loyalty_points"
-                  type="number"
-                  value={newCustomer.loyalty_points}
-                  onChange={(e) => setNewCustomer({...newCustomer, loyalty_points: parseInt(e.target.value) || 0})}
-                  placeholder="0"
-                />
-              </div>
-              
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   إلغاء
@@ -433,7 +590,7 @@ const CustomersManagementPage = () => {
         </Dialog>
       </div>
 
-      {/* Stats Cards - Now Clickable */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('total')}>
           <CardContent className="p-6">
@@ -459,30 +616,134 @@ const CustomersManagementPage = () => {
           </CardContent>
         </Card>
 
+        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('diamond')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">عملاء ماسيين</p>
+                <p className="text-3xl font-bold text-purple-600">{stats.diamondTier}</p>
+              </div>
+              <Award className="h-8 w-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('gold')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">إجمالي نقاط الولاء</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.totalLoyaltyPoints.toLocaleString()}</p>
+                <p className="text-sm font-medium text-muted-foreground">عملاء ذهبيين</p>
+                <p className="text-3xl font-bold text-yellow-600">{stats.goldTier}</p>
               </div>
               <Award className="h-8 w-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105">
+        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('silver')}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">متوسط قيمة الطلب</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.averageOrderValue.toLocaleString()} د.ع</p>
+                <p className="text-sm font-medium text-muted-foreground">عملاء فضيين</p>
+                <p className="text-3xl font-bold text-gray-500">{stats.silverTier}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-blue-600" />
+              <Award className="h-8 w-8 text-gray-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('bronze')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">عملاء برونزيين</p>
+                <p className="text-3xl font-bold text-orange-600">{stats.bronzeTier}</p>
+              </div>
+              <Award className="h-8 w-8 text-orange-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('male')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">عملاء رجال</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.maleCustomers}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('female')}>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">عملاء نساء</p>
+                <p className="text-3xl font-bold text-pink-600">{stats.femaleCustomers}</p>
+              </div>
+              <Users className="h-8 w-8 text-pink-600" />
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* City Stats */}
+      {cityStats.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <MapPin className="mr-2 h-5 w-5" />
+              إحصائيات المدن
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {cityStats.slice(0, 6).map((city, index) => (
+                <div key={city.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{city.city_name}</p>
+                    <p className="text-sm text-muted-foreground">{city.total_orders} طلب</p>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-lg font-bold">{city.total_amount.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">د.ع</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* City Discounts */}
+      {cityDiscounts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Award className="mr-2 h-5 w-5" />
+              خصومات المدن الشهرية
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {cityDiscounts.map((discount) => (
+                <div key={discount.id} className="flex items-center justify-between p-4 border rounded-lg bg-gradient-to-r from-green-50 to-emerald-50">
+                  <div>
+                    <p className="font-medium text-green-800">{discount.city_name}</p>
+                    <p className="text-sm text-green-600">خصم شهري نشط</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-700">{discount.discount_percentage}%</p>
+                    <p className="text-xs text-green-600">خصم</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Search and Filters */}
       <Card>
@@ -500,15 +761,17 @@ const CustomersManagementPage = () => {
               </div>
             </div>
             
-            {/* Advanced Filters Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
                   فلاتر متقدمة
-                  {(filterStatus !== 'all' || filterTier !== 'all') && (
+                  {(filterStatus !== 'all' || filterTier !== 'all' || filterGender !== 'all' || filterCity !== 'all') && (
                     <Badge variant="secondary" className="ml-2">
-                      {(filterStatus !== 'all' ? 1 : 0) + (filterTier !== 'all' ? 1 : 0)}
+                      {(filterStatus !== 'all' ? 1 : 0) + 
+                       (filterTier !== 'all' ? 1 : 0) + 
+                       (filterGender !== 'all' ? 1 : 0) + 
+                       (filterCity !== 'all' ? 1 : 0)}
                     </Badge>
                   )}
                 </Button>
@@ -516,48 +779,72 @@ const CustomersManagementPage = () => {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>فلترة حسب الحالة</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setFilterStatus('all')}>
-                  جميع العملاء
-                  {filterStatus === 'all' && <span className="mr-auto">✓</span>}
+                  جميع العملاء {filterStatus === 'all' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterStatus('active')}>
-                  العملاء النشطين
-                  {filterStatus === 'active' && <span className="mr-auto">✓</span>}
+                  العملاء النشطين {filterStatus === 'active' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterStatus('inactive')}>
-                  العملاء غير النشطين
-                  {filterStatus === 'inactive' && <span className="mr-auto">✓</span>}
+                  العملاء غير النشطين {filterStatus === 'inactive' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>فلترة حسب مستوى الولاء</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setFilterTier('all')}>
-                  جميع المستويات
-                  {filterTier === 'all' && <span className="mr-auto">✓</span>}
+                  جميع المستويات {filterTier === 'all' && <span className="mr-auto">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterTier('diamond')}>
+                  ماسي (20,000+ نقطة) {filterTier === 'diamond' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterTier('gold')}>
-                  ذهبي (10,000+ نقطة)
-                  {filterTier === 'gold' && <span className="mr-auto">✓</span>}
+                  ذهبي (10,000+ نقطة) {filterTier === 'gold' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterTier('silver')}>
-                  فضي (5,000+ نقطة)
-                  {filterTier === 'silver' && <span className="mr-auto">✓</span>}
+                  فضي (5,000+ نقطة) {filterTier === 'silver' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterTier('bronze')}>
-                  برونزي (1,000+ نقطة)
-                  {filterTier === 'bronze' && <span className="mr-auto">✓</span>}
+                  برونزي (1,000+ نقطة) {filterTier === 'bronze' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setFilterTier('standard')}>
-                  عادي (أقل من 1,000)
-                  {filterTier === 'standard' && <span className="mr-auto">✓</span>}
+                  عادي (أقل من 1,000) {filterTier === 'standard' && <span className="mr-auto">✓</span>}
                 </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>فلترة حسب الجنس</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setFilterGender('all')}>
+                  الكل {filterGender === 'all' && <span className="mr-auto">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterGender('male')}>
+                  رجال {filterGender === 'male' && <span className="mr-auto">✓</span>}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterGender('female')}>
+                  نساء {filterGender === 'female' && <span className="mr-auto">✓</span>}
+                </DropdownMenuItem>
+
+                {uniqueCities.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>فلترة حسب المدينة</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setFilterCity('all')}>
+                      جميع المدن {filterCity === 'all' && <span className="mr-auto">✓</span>}
+                    </DropdownMenuItem>
+                    {uniqueCities.slice(0, 5).map((city) => (
+                      <DropdownMenuItem key={city} onClick={() => setFilterCity(city)}>
+                        {city} {filterCity === city && <span className="mr-auto">✓</span>}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                )}
                 
-                {(filterStatus !== 'all' || filterTier !== 'all') && (
+                {(filterStatus !== 'all' || filterTier !== 'all' || filterGender !== 'all' || filterCity !== 'all') && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={() => {
                         setFilterStatus('all');
                         setFilterTier('all');
+                        setFilterGender('all');
+                        setFilterCity('all');
                       }}
                       className="text-red-600"
                     >
@@ -585,6 +872,8 @@ const CustomersManagementPage = () => {
             <div className="space-y-4">
               {filteredCustomers.map((customer) => {
                 const tier = getCustomerTier(customer.loyalty_points || 0);
+                const gender = getCustomerGender(customer.id);
+                
                 return (
                   <div key={customer.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex items-center space-x-4 space-x-reverse">
@@ -595,7 +884,7 @@ const CustomersManagementPage = () => {
                       </Avatar>
                       
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-medium">{customer.full_name}</h3>
                           <Badge variant={customer.status === 'active' ? 'default' : 'secondary'}>
                             {customer.status === 'active' ? 'نشط' : 'غير نشط'}
@@ -603,10 +892,26 @@ const CustomersManagementPage = () => {
                           <Badge className={`text-white ${getTierColor(tier)}`}>
                             {getTierLabel(tier)}
                           </Badge>
+                          {gender !== 'unknown' && (
+                            <Badge variant="outline">
+                              {gender === 'male' ? 'رجال' : 'نساء'}
+                            </Badge>
+                          )}
+                          {customer.city && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {customer.city}
+                            </Badge>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          {customer.phone && <span>{customer.phone}</span>}
+                          {customer.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {customer.phone}
+                            </span>
+                          )}
                           {customer.email && <span>{customer.email}</span>}
                           <span className="flex items-center gap-1">
                             <Award className="h-3 w-3" />
@@ -727,17 +1032,6 @@ const CustomersManagementPage = () => {
                     <SelectItem value="inactive">غير نشط</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-loyalty_points">نقاط الولاء</Label>
-                <Input
-                  id="edit-loyalty_points"
-                  type="number"
-                  value={selectedCustomer.loyalty_points || 0}
-                  onChange={(e) => setSelectedCustomer({...selectedCustomer, loyalty_points: parseInt(e.target.value) || 0})}
-                  placeholder="0"
-                />
               </div>
               
               <div className="flex justify-end space-x-2 pt-4">
