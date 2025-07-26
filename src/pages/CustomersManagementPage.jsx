@@ -319,13 +319,8 @@ const CustomersManagementPage = () => {
 
       {/* كروت الإحصائيات */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="إجمالي العملاء"
-          value={filteredCustomers.length}
-          icon={Users}
-          trend="positive"
-          trendValue="12%"
-          trendPeriod="الشهر الماضي"
+        <div 
+          className={`cursor-pointer transition-all duration-200 hover:scale-105 ${activeFilter === 'all' ? 'ring-2 ring-primary' : ''}`}
           onClick={() => {
             setActiveFilter('all');
             setSearchTerm('');
@@ -336,48 +331,69 @@ const CustomersManagementPage = () => {
             setTimeFilter('all');
             setDateRange(null);
           }}
-          active={activeFilter === 'all'}
-        />
-        <StatCard
-          title="عملاء لديهم نقاط"
-          value={customersWithPoints.length}
-          icon={Star}
-          trend="positive"
-          trendValue="8%"
-          trendPeriod="الشهر الماضي"
+        >
+          <StatCard
+            title="إجمالي العملاء"
+            value={filteredCustomers.length}
+            icon={Users}
+            trend="positive"
+            trendValue="12%"
+            trendPeriod="الشهر الماضي"
+            active={activeFilter === 'all'}
+          />
+        </div>
+        <div 
+          className={`cursor-pointer transition-all duration-200 hover:scale-105 ${activeFilter === 'with_points' ? 'ring-2 ring-primary' : ''}`}
           onClick={() => {
             setActiveFilter('with_points');
             setPointsFilter('with_points');
           }}
-          active={activeFilter === 'with_points'}
-        />
-        <StatCard
-          title="عملاء مع أرقام"
-          value={customersWithPhones.length}
-          icon={Phone}
-          trend="neutral"
-          trendValue="3%"
-          trendPeriod="الشهر الماضي"
+        >
+          <StatCard
+            title="عملاء لديهم نقاط"
+            value={customersWithPoints.length}
+            icon={Star}
+            trend="positive"
+            trendValue="8%"
+            trendPeriod="الشهر الماضي"
+            active={activeFilter === 'with_points'}
+          />
+        </div>
+        <div 
+          className={`cursor-pointer transition-all duration-200 hover:scale-105 ${activeFilter === 'with_phones' ? 'ring-2 ring-primary' : ''}`}
           onClick={() => {
             setActiveFilter('with_phones');
             setSearchTerm('');
             setPointsFilter('all');
           }}
-          active={activeFilter === 'with_phones'}
-        />
-        <StatCard
-          title="متوسط النقاط"
-          value={Math.round((filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.[0]?.total_points || 0), 0) / (filteredCustomers.length || 1)))}
-          icon={Gift}
-          trend="positive"
-          trendValue="15%"
-          trendPeriod="الشهر الماضي"
+        >
+          <StatCard
+            title="عملاء مع أرقام"
+            value={customersWithPhones.length}
+            icon={Phone}
+            trend="neutral"
+            trendValue="3%"
+            trendPeriod="الشهر الماضي"
+            active={activeFilter === 'with_phones'}
+          />
+        </div>
+        <div 
+          className={`cursor-pointer transition-all duration-200 hover:scale-105 ${activeFilter === 'high_points' ? 'ring-2 ring-primary' : ''}`}
           onClick={() => {
             setActiveFilter('high_points');
             setPointsFilter('high_points');
           }}
-          active={activeFilter === 'high_points'}
-        />
+        >
+          <StatCard
+            title="متوسط النقاط"
+            value={Math.round((filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.[0]?.total_points || 0), 0) / (filteredCustomers.length || 1)))}
+            icon={Gift}
+            trend="positive"
+            trendValue="15%"
+            trendPeriod="الشهر الماضي"
+            active={activeFilter === 'high_points'}
+          />
+        </div>
       </div>
 
       {/* الفلاتر والبحث */}
@@ -388,16 +404,18 @@ const CustomersManagementPage = () => {
               <Filter className="h-5 w-5" />
               البحث والفلترة
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              فلاتر متقدمة
-              {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showAdvancedFilters ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                className="flex items-center gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                فلاتر متقدمة
+                {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -521,7 +539,7 @@ const CustomersManagementPage = () => {
                   >
                     مسح الفلاتر
                   </Button>
-                </div>
+                 </div>
               </div>
             )}
           </div>
