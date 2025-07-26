@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -69,7 +68,7 @@ const CustomersManagementPage = () => {
 
       if (error) throw error;
       
-      console.log('بيانات العملاء:', data);
+      console.log('بيانات العملاء المحملة:', data);
       setCustomers(data || []);
       setFilteredCustomers(data || []);
     } catch (error) {
@@ -152,14 +151,12 @@ const CustomersManagementPage = () => {
 
       if (tiersRes.data) setLoyaltyTiers(tiersRes.data);
       
-      // دمج الأقسام والتصنيفات في قائمة واحدة للفلترة
       const allFilters = [
         ...(departmentsRes.data || []).map(d => ({...d, type: 'department'})),
         ...(categoriesRes.data || []).map(c => ({...c, type: 'category'}))
       ];
       setDepartments(allFilters);
       
-      // تطبيق خصم المدينة العشوائي إذا لم يكن مطبق هذا الشهر
       await checkAndApplyCityDiscount();
     } catch (error) {
       console.error('خطأ في جلب البيانات المساعدة:', error);
@@ -183,10 +180,11 @@ const CustomersManagementPage = () => {
 
       if (!matchesSearch) return false;
 
-      // فلتر النقاط - التأكد من أن النقاط محسوبة على أساس الطلبات (200 نقطة لكل طلب)
-      if (filters.pointsFilter === 'with_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points === 0)) return false;
-      if (filters.pointsFilter === 'no_points' && customer.customer_loyalty?.[0]?.total_points > 0) return false;
-      if (filters.pointsFilter === 'high_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points < 1000)) return false;
+      // فلتر النقاط
+      const customerPoints = customer.customer_loyalty?.[0]?.total_points || 0;
+      if (filters.pointsFilter === 'with_points' && customerPoints === 0) return false;
+      if (filters.pointsFilter === 'no_points' && customerPoints > 0) return false;
+      if (filters.pointsFilter === 'high_points' && customerPoints < 1000) return false;
 
       // فلتر مستوى الولاء
       if (filters.loyaltyTierFilter !== 'all') {
@@ -194,7 +192,7 @@ const CustomersManagementPage = () => {
         if (customerTier !== filters.loyaltyTierFilter) return false;
       }
 
-      // فلتر الجنس/التقسيم حسب القسم والتصنيف معاً
+      // فلتر الجنس
       if (filters.genderSegmentation !== 'all') {
         const hasGenderSegment = customer.customer_product_segments?.some(seg => 
           seg.gender_segment === filters.genderSegmentation
@@ -202,7 +200,7 @@ const CustomersManagementPage = () => {
         if (!hasGenderSegment) return false;
       }
 
-      // فلتر حسب القسم (departments) والتصنيف (categories) معاً
+      // فلتر حسب القسم/التصنيف
       if (filters.departmentFilter !== 'all') {
         const hasSegment = customer.customer_product_segments?.some(seg => 
           seg.department_id === filters.departmentFilter || seg.category_id === filters.departmentFilter
@@ -227,31 +225,25 @@ const CustomersManagementPage = () => {
         }
       }
 
-      // فلتر نطاق التاريخ
-      if (filters.dateRange?.from && filters.dateRange?.to) {
-        const customerDate = new Date(customer.created_at);
-        if (customerDate < filters.dateRange.from || customerDate > filters.dateRange.to) return false;
-      }
-
       return true;
     });
 
     // تطبيق الفلتر النشط من الكروت
     if (activeFilter === 'with_points') {
-      filtered = filtered.filter(c => c.customer_loyalty?.[0]?.total_points > 0);
+      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0);
     } else if (activeFilter === 'with_phones') {
       filtered = filtered.filter(c => c.phone);
     } else if (activeFilter === 'high_points') {
-      filtered = filtered.filter(c => c.customer_loyalty?.[0]?.total_points >= 1000);
+      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000);
     }
 
     setFilteredCustomers(filtered);
   }, [customers, filters, activeFilter]);
 
   // إحصائيات العملاء
-  const customersWithPoints = customers.filter(c => c.customer_loyalty?.[0]?.total_points > 0).length;
+  const customersWithPoints = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0).length;
   const customersWithPhones = customers.filter(c => c.phone).length;
-  const highPointsCustomers = customers.filter(c => c.customer_loyalty?.[0]?.total_points >= 1000).length;
+  const highPointsCustomers = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000).length;
 
   const handleExport = (exportType, includeFields) => {
     let dataToExport = [];
@@ -385,8 +377,8 @@ const CustomersManagementPage = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center min-h-[400px]">
+      <div className="container mx-auto p-3 md:p-6">
+        <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">جاري تحميل بيانات العملاء...</p>
@@ -397,26 +389,37 @@ const CustomersManagementPage = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* الهيدر */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">إدارة العملاء</h1>
-          <p className="text-muted-foreground">
-            إدارة شاملة لبيانات العملاء ونظام الولاء - النقاط تُحسب على أساس الطلب (200 نقطة لكل طلب)
-          </p>
-          {monthlyDiscount && (
-            <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
-              <p className="text-green-800 font-medium">
-                🎉 مدينة {monthlyDiscount.city_name} مختارة لخصم {monthlyDiscount.discount_percentage}% هذا الشهر!
-              </p>
-            </div>
-          )}
+    <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-7xl">
+      {/* الهيدر - محسن للهاتف */}
+      <div className="flex flex-col gap-3 md:gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl md:text-3xl font-bold leading-tight">إدارة العملاء</h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              إدارة شاملة لبيانات العملاء ونظام الولاء
+            </p>
+            <p className="text-xs text-muted-foreground">
+              النقاط: 200 نقطة لكل طلب مكتمل
+            </p>
+          </div>
+          <Button 
+            onClick={() => setShowExportDialog(true)} 
+            className="gap-2 shrink-0 w-full sm:w-auto"
+            size="sm"
+          >
+            <Download className="h-4 w-4" />
+            تصدير العملاء
+          </Button>
         </div>
-        <Button onClick={() => setShowExportDialog(true)} className="gap-2">
-          <Download className="h-4 w-4" />
-          تصدير العملاء
-        </Button>
+
+        {/* خصم المدينة الشهري */}
+        {monthlyDiscount && (
+          <div className="p-3 bg-green-100 border border-green-300 rounded-lg">
+            <p className="text-green-800 font-medium text-sm">
+              🎉 مدينة {monthlyDiscount.city_name} مختارة لخصم {monthlyDiscount.discount_percentage}% هذا الشهر!
+            </p>
+          </div>
+        )}
       </div>
 
       {/* الإحصائيات */}
@@ -426,6 +429,7 @@ const CustomersManagementPage = () => {
         customersWithPhones={customersWithPhones}
         highPointsCustomers={highPointsCustomers}
         cityStats={cityStats}
+        loyaltyTiers={loyaltyTiers}
         activeFilter={activeFilter}
         onFilterChange={setActiveFilter}
       />
@@ -443,13 +447,15 @@ const CustomersManagementPage = () => {
         totalCustomers={filteredCustomers.length}
       />
 
-      {/* قائمة العملاء */}
+      {/* قائمة العملاء - محسنة للهاتف */}
       <Card>
-        <CardHeader>
-          <CardTitle>قائمة العملاء ({filteredCustomers.length})</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg md:text-xl">
+            قائمة العملاء ({filteredCustomers.length})
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 md:p-6">
+          <div className="space-y-3 md:space-y-4">
             {filteredCustomers.map((customer) => (
               <CustomerCard
                 key={customer.id}
@@ -466,32 +472,34 @@ const CustomersManagementPage = () => {
             ))}
 
             {filteredCustomers.length === 0 && (
-              <div className="text-center py-8">
-                <div className="h-12 w-12 mx-auto text-muted-foreground mb-4">👥</div>
+              <div className="text-center py-12">
+                <div className="text-4xl mb-4">👥</div>
                 <h3 className="text-lg font-semibold mb-2">لا توجد عملاء</h3>
-                <p className="text-muted-foreground">لا توجد عملاء يطابقون معايير البحث المحددة</p>
+                <p className="text-muted-foreground text-sm">
+                  لا توجد عملاء يطابقون معايير البحث المحددة
+                </p>
               </div>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* نافذة تفاصيل العميل */}
+      {/* نافذة تفاصيل العميل - محسنة للهاتف */}
       <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>تفاصيل العميل</DialogTitle>
           </DialogHeader>
           
           {selectedCustomer && (
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="font-semibold">المعلومات الأساسية</Label>
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-2 mt-2 text-sm">
                     <p><span className="font-medium">الاسم:</span> {selectedCustomer.name}</p>
                     <p><span className="font-medium">الهاتف:</span> {selectedCustomer.phone || 'غير متوفر'}</p>
-                    <p><span className="font-medium">البريد الإلكتروني:</span> {selectedCustomer.email || 'غير متوفر'}</p>
+                    <p><span className="font-medium">البريد:</span> {selectedCustomer.email || 'غير متوفر'}</p>
                     <p><span className="font-medium">العنوان:</span> {selectedCustomer.address || 'غير محدد'}</p>
                     <p><span className="font-medium">المدينة:</span> {selectedCustomer.city || 'غير محددة'}</p>
                     <p><span className="font-medium">المحافظة:</span> {selectedCustomer.province || 'غير محددة'}</p>
@@ -500,15 +508,15 @@ const CustomersManagementPage = () => {
 
                 <div>
                   <Label className="font-semibold">معلومات الولاء</Label>
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-2 mt-2 text-sm">
                     {selectedCustomer.customer_loyalty?.[0] ? (
                       <>
-                        <p><span className="font-medium">إجمالي النقاط:</span> {selectedCustomer.customer_loyalty[0].total_points}</p>
+                        <p><span className="font-medium">إجمالي النقاط:</span> {selectedCustomer.customer_loyalty[0].total_points.toLocaleString()}</p>
                         <p><span className="font-medium">إجمالي الطلبات:</span> {selectedCustomer.customer_loyalty[0].total_orders}</p>
                         <p><span className="font-medium">إجمالي المشتريات:</span> {new Intl.NumberFormat('ar-IQ').format(selectedCustomer.customer_loyalty[0].total_spent)} د.ع</p>
-                        <p className="text-sm text-muted-foreground">النقاط تُحسب: 200 نقطة لكل طلب مكتمل</p>
+                        
                         {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mt-2">
                             <span className="font-medium">مستوى الولاء:</span>
                             <div className="flex items-center gap-2 px-2 py-1 rounded-lg" 
                                  style={{ backgroundColor: selectedCustomer.customer_loyalty[0].loyalty_tiers.color + '20' }}>
@@ -527,10 +535,10 @@ const CustomersManagementPage = () => {
                           
                           if (currentPoints !== expectedPoints && currentOrders > 0) {
                             return (
-                              <div className="p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                              <div className="p-3 bg-yellow-100 border border-yellow-300 rounded-lg mt-2">
                                 <p className="text-sm font-medium text-yellow-800">⚠️ تحذير: عدم تطابق في النقاط</p>
                                 <p className="text-xs text-yellow-700">
-                                  النقاط الحالية: {currentPoints} | المتوقعة: {expectedPoints}
+                                  النقاط الحالية: {currentPoints.toLocaleString()} | المتوقعة: {expectedPoints.toLocaleString()}
                                 </p>
                               </div>
                             );
@@ -556,7 +564,7 @@ const CustomersManagementPage = () => {
                           <span className="text-sm font-medium">{tier.name}</span>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {tier.points_required} نقطة
+                          {tier.points_required.toLocaleString()} نقطة
                           {tier.discount_percentage > 0 && (
                             <span className="text-green-600 mr-1">
                               (خصم {tier.discount_percentage}%)
@@ -573,9 +581,9 @@ const CustomersManagementPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* نافذة إرسال الإشعارات */}
+      {/* نافذة إرسال الإشعارات - محسنة للهاتف */}
       <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle>إرسال إشعار للعميل</DialogTitle>
           </DialogHeader>
@@ -588,8 +596,8 @@ const CustomersManagementPage = () => {
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>{selectedCustomer.name.slice(0, 2)}</AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium">{selectedCustomer.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium truncate">{selectedCustomer.name}</p>
                     <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
                   </div>
                 </div>
