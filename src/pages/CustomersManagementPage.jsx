@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { StatCard } from '@/components/dashboard/StatCard';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CustomersManagementPage = () => {
@@ -497,9 +497,9 @@ const CustomersManagementPage = () => {
 
             <div className="space-y-2">
               <Label>نطاق التاريخ</Label>
-              <DatePickerWithRange
+              <DateRangePicker
                 date={dateRange}
-                setDate={setDateRange}
+                onDateChange={setDateRange}
               />
             </div>
 
