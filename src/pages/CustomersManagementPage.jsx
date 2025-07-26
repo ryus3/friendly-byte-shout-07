@@ -122,6 +122,12 @@ const CustomersManagementPage = () => {
         matchesFilter = customer.customer_loyalty?.total_points > 0;
       } else if (filterType === 'no_points') {
         matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
+      } else if (filterType === 'male_customers') {
+        // سيتم تطوير هذا لاحقاً بناءً على منتجات العميل
+        matchesFilter = true; // مؤقت
+      } else if (filterType === 'female_customers') {
+        // سيتم تطوير هذا لاحقاً بناءً على منتجات العميل
+        matchesFilter = true; // مؤقت
       }
       
       // فلترة حسب المستوى
@@ -569,8 +575,16 @@ const CustomersManagementPage = () => {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filterType={filterType}
+        loyaltyTiers={loyaltyTiers} // إضافة مستويات الولاء
         onFilterChange={(type) => {
           setFilterType(type);
+          // تعامل مع فلتر المستويات
+          if (type.startsWith('tier_')) {
+            const tierId = type.replace('tier_', '');
+            setSelectedTier(tierId);
+          } else {
+            setSelectedTier(null);
+          }
           if (type !== 'all') {
             toast({
               title: 'تم تطبيق الفلتر',

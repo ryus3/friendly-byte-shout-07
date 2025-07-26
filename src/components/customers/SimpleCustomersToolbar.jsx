@@ -29,7 +29,8 @@ const SimpleCustomersToolbar = ({
   filterType, 
   onFilterChange,
   totalCount,
-  filteredCount
+  filteredCount,
+  loyaltyTiers = [] // إضافة مستويات الولاء
 }) => {
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
 
@@ -37,11 +38,22 @@ const SimpleCustomersToolbar = ({
     { id: 'all', label: 'جميع العملاء', icon: Users, count: totalCount },
     { id: 'with_points', label: 'عملاء مع نقاط', icon: Star },
     { id: 'with_phone', label: 'عملاء مع هواتف', icon: Phone },
+    { id: 'male_customers', label: 'عملاء رجال', icon: Users },
+    { id: 'female_customers', label: 'عميلات نساء', icon: Users },
     { id: 'points_used', label: 'استخدموا النقاط', icon: History },
     { id: 'points_expired', label: 'نقاط منتهية الصلاحية', icon: Clock }
   ];
 
-  const activeFilter = filterOptions.find(f => f.id === filterType);
+  // إضافة مستويات الولاء إلى خيارات الفلتر
+  const tierFilters = loyaltyTiers.map(tier => ({
+    id: `tier_${tier.id}`,
+    label: `مستوى ${tier.name}`,
+    icon: Star,
+    tierData: tier
+  }));
+
+  const allFilterOptions = [...filterOptions, ...tierFilters];
+  const activeFilter = allFilterOptions.find(f => f.id === filterType);
 
   return (
     <Card className="mb-6 border-border/50 bg-card/80 backdrop-blur-sm shadow-xl shadow-black/5 dark:shadow-black/20">
@@ -95,7 +107,8 @@ const SimpleCustomersToolbar = ({
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-card/95 backdrop-blur-sm border-border/50">
+              <DropdownMenuContent align="end" className="w-64 bg-card/95 backdrop-blur-sm border-border/50 max-h-80 overflow-y-auto">
+                {/* الفلاتر الأساسية */}
                 {filterOptions.map((filter, index) => {
                   const Icon = filter.icon;
                   const isActive = filterType === filter.id;
@@ -127,6 +140,46 @@ const SimpleCustomersToolbar = ({
                     </div>
                   );
                 })}
+
+                {/* مستويات الولاء */}
+                {tierFilters.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator className="mx-2" />
+                    <div className="px-3 py-2 text-xs font-semibold text-muted-foreground">
+                      مستويات الولاء
+                    </div>
+                    {tierFilters.map((filter) => {
+                      const Icon = filter.icon;
+                      const isActive = filterType === filter.id;
+                      
+                      return (
+                        <DropdownMenuItem
+                          key={filter.id}
+                          onClick={() => onFilterChange(filter.id)}
+                          className={`
+                            cursor-pointer transition-all duration-200 rounded-lg mx-1
+                            ${isActive 
+                              ? 'bg-primary/10 text-primary font-medium' 
+                              : 'hover:bg-accent/50'
+                            }
+                          `}
+                        >
+                          <Icon className={`h-4 w-4 mr-2 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <span className="flex-1">{filter.label}</span>
+                          {filter.tierData && (
+                            <div 
+                              className="w-3 h-3 rounded-full ml-2" 
+                              style={{ backgroundColor: filter.tierData.color }}
+                            />
+                          )}
+                          {isActive && (
+                            <div className="w-2 h-2 rounded-full bg-primary ml-2"></div>
+                          )}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 

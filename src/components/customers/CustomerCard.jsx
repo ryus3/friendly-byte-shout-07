@@ -100,9 +100,17 @@ const CustomerCard = ({
     : customer.customer_loyalty?.last_tier_upgrade && customer.customer_loyalty?.loyalty_tiers?.points_expiry_months
     ? new Date(new Date(customer.customer_loyalty.last_tier_upgrade).getTime() + 
         (customer.customer_loyalty.loyalty_tiers.points_expiry_months * 30 * 24 * 60 * 60 * 1000))
+    : customer.customer_loyalty?.created_at && customer.customer_loyalty?.loyalty_tiers?.points_expiry_months
+    ? new Date(new Date(customer.customer_loyalty.created_at).getTime() + 
+        (customer.customer_loyalty.loyalty_tiers.points_expiry_months * 30 * 24 * 60 * 60 * 1000))
     : null;
   
   const isPointsExpiringSoon = pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  // إنشاء برومو كود للعميل
+  const customerPromoCode = customer.phone 
+    ? `VIP${customer.phone.slice(-4)}${customer.customer_loyalty?.current_tier_id?.slice(0, 4).toUpperCase() || 'NORM'}`
+    : `GUEST${customer.id.slice(0, 8).toUpperCase()}`;
 
   // ألوان متنوعة وأنيقة للكروت
   const cardGradients = [
@@ -296,11 +304,29 @@ const CustomerCard = ({
                   >
                     <Gift className="h-3 w-3 mr-1" />
                     {customerTier.discount_percentage}%
-                  </Badge>
-                </motion.div>
-              )}
-            </div>
-          )}
+                   </Badge>
+                 </motion.div>
+               )}
+
+               {/* برومو كود العميل */}
+               <motion.div 
+                 className="flex items-center justify-between"
+                 whileHover={{ scale: 1.02 }}
+               >
+                 <span className="text-sm font-medium text-muted-foreground">برومو كود:</span>
+                 <Badge 
+                   className="bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 dark:from-purple-900/20 dark:to-blue-900/20 dark:text-purple-300 border-purple-200 dark:border-purple-800/50 border font-mono text-xs shadow-sm cursor-pointer hover:shadow-md transition-all duration-200"
+                   onClick={() => {
+                     navigator.clipboard.writeText(customerPromoCode);
+                     // يمكن إضافة toast هنا
+                   }}
+                 >
+                   <Sparkles className="h-3 w-3 mr-1" />
+                   {customerPromoCode}
+                 </Badge>
+               </motion.div>
+             </div>
+           )}
           
           {/* أزرار الإجراءات */}
           <div className="flex gap-2 pt-2">
