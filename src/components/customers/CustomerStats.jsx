@@ -77,17 +77,18 @@ const CustomerStats = ({ customers, onStatClick }) => {
               hover:shadow-2xl hover:shadow-primary/20
               transition-all duration-300
               hover:scale-105
+              min-h-[140px] flex
             `}
             onClick={() => onStatClick && onStatClick(stat.id)}
           >
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-white/90">
+            <CardContent className="p-6 flex flex-col justify-between h-full w-full">
+              <div className="flex items-center justify-between h-full">
+                <div className="space-y-2 flex-1">
+                  <p className="text-sm font-medium text-white/90 leading-tight">
                     {stat.title}
                   </p>
                   <motion.p 
-                    className="text-2xl font-bold text-white"
+                    className="text-xl font-bold text-white leading-tight"
                     initial={{ scale: 1 }}
                     whileHover={{ scale: 1.05 }}
                     transition={{ duration: 0.2 }}

@@ -46,32 +46,38 @@ const CustomerCard = ({
     const colorMap = {
       'برونزي': {
         gradient: 'from-orange-500 to-red-600',
+        darkGradient: 'dark:from-orange-600 dark:to-red-700',
         icon: 'text-white',
         badge: 'bg-gradient-to-br from-orange-500 to-red-600'
       },
       'فضي': {
+        gradient: 'from-slate-400 to-slate-600', 
+        darkGradient: 'dark:from-slate-500 dark:to-slate-700',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-slate-400 to-slate-600'
+      },
+      'ذهبي': {
+        gradient: 'from-yellow-400 to-yellow-600',
+        darkGradient: 'dark:from-yellow-500 dark:to-yellow-700',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-yellow-400 to-yellow-600'
+      },
+      'بلاتيني': {
         gradient: 'from-blue-500 to-blue-700',
+        darkGradient: 'dark:from-blue-600 dark:to-blue-800',
         icon: 'text-white',
         badge: 'bg-gradient-to-br from-blue-500 to-blue-700'
       },
-      'ذهبي': {
-        gradient: 'from-emerald-500 to-teal-600',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-emerald-500 to-teal-600'
-      },
-      'بلاتيني': {
+      'ماسي': {
         gradient: 'from-purple-500 to-pink-600',
+        darkGradient: 'dark:from-purple-600 dark:to-pink-700',
         icon: 'text-white',
         badge: 'bg-gradient-to-br from-purple-500 to-pink-600'
-      },
-      'ماسي': {
-        gradient: 'from-indigo-500 to-purple-600',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-indigo-500 to-purple-600'
       }
     };
     return colorMap[tierName] || {
       gradient: 'from-gray-400 to-gray-600',
+      darkGradient: 'dark:from-gray-500 dark:to-gray-700',
       icon: 'text-white',
       badge: 'bg-gradient-to-br from-gray-400 to-gray-600'
     };
@@ -93,7 +99,7 @@ const CustomerCard = ({
     >
       <Card className={`
         relative overflow-hidden group cursor-pointer
-        bg-gradient-to-br ${tierColors.gradient} text-white
+        bg-gradient-to-br ${tierColors.gradient} ${tierColors.darkGradient} text-white
         border-0 shadow-lg
         hover:shadow-2xl hover:shadow-primary/20
         transition-all duration-300
