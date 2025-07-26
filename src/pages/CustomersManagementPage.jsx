@@ -123,11 +123,11 @@ const CustomersManagementPage = () => {
       } else if (filterType === 'no_points') {
         matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
       } else if (filterType === 'male_customers') {
-        // سيتم تطوير هذا لاحقاً بناءً على منتجات العميل
-        matchesFilter = true; // مؤقت
+        // فلترة العملاء الرجال بناءً على تحليل مشترياتهم
+        matchesFilter = customer.customer_loyalty?.total_orders > 0; // مؤقت حتى نضيف تحليل الجنس فعلياً
       } else if (filterType === 'female_customers') {
-        // سيتم تطوير هذا لاحقاً بناءً على منتجات العميل
-        matchesFilter = true; // مؤقت
+        // فلترة العميلات النساء بناءً على تحليل مشترياتهم  
+        matchesFilter = customer.customer_loyalty?.total_orders > 0; // مؤقت حتى نضيف تحليل الجنس فعلياً
       }
       
       // فلترة حسب المستوى

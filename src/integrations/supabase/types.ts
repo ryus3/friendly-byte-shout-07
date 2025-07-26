@@ -2791,6 +2791,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      analyze_customer_gender: {
+        Args: { customer_id_param: string }
+        Returns: string
+      }
       apply_monthly_city_discount_trigger: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2876,6 +2880,10 @@ export type Database = {
       fix_existing_purchase_shipping: {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
+      }
+      generate_customer_promo_code: {
+        Args: { customer_id_param: string }
+        Returns: string
       }
       generate_employee_telegram_code: {
         Args: { p_user_id: string }
@@ -3043,6 +3051,10 @@ export type Database = {
       username_exists: {
         Args: { p_username: string }
         Returns: boolean
+      }
+      validate_promo_code: {
+        Args: { promo_code_param: string }
+        Returns: Json
       }
     }
     Enums: {

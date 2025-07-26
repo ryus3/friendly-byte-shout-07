@@ -107,10 +107,10 @@ const CustomerCard = ({
   
   const isPointsExpiringSoon = pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  // إنشاء برومو كود للعميل
+  // إنشاء برومو كود محسّن للعميل (صغير مع RY)
   const customerPromoCode = customer.phone 
-    ? `VIP${customer.phone.slice(-4)}${customer.customer_loyalty?.current_tier_id?.slice(0, 4).toUpperCase() || 'NORM'}`
-    : `GUEST${customer.id.slice(0, 8).toUpperCase()}`;
+    ? `RY${customer.phone.slice(-4)}${customer.customer_loyalty?.loyalty_tiers?.name_en?.slice(0, 2)?.toUpperCase() || 'BR'}`
+    : `RY${customer.id.slice(0, 6).toUpperCase()}`;
 
   // ألوان متنوعة وأنيقة للكروت
   const cardGradients = [
