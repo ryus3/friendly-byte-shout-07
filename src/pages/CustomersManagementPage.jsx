@@ -52,7 +52,7 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء مع بيانات الولاء
+      // جلب العملاء مع بيانات الولاء والجنس
       const { data: customersData } = await supabase
         .from('customers')
         .select(`
@@ -63,12 +63,17 @@ const CustomersManagementPage = () => {
             total_orders,
             current_tier_id,
             last_tier_upgrade,
+            points_expiry_date,
             loyalty_tiers (
               name,
               color,
               icon,
               discount_percentage
             )
+          ),
+          customer_gender_segments (
+            gender_type,
+            confidence_score
           )
         `)
         .order('created_at', { ascending: false });
