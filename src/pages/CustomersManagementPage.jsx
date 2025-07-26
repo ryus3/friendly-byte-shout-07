@@ -519,22 +519,6 @@ const CustomersManagementPage = () => {
           {/* أدوات تطوير سريعة لاختبار فلترة الجنس */}
           <div className="flex gap-1">
             <Button 
-              variant={filterType === 'male_customers' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterType('male_customers')}
-              className="text-xs"
-            >
-              رجال ({customers.filter(c => c.customer_gender_segments?.gender_type === 'male').length})
-            </Button>
-            <Button 
-              variant={filterType === 'female_customers' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterType('female_customers')}
-              className="text-xs"
-            >
-              نساء ({customers.filter(c => c.customer_gender_segments?.gender_type === 'female').length})
-            </Button>
-            <Button 
               variant={filterType === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setFilterType('all')}
