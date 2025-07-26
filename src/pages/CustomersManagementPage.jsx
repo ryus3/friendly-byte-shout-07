@@ -501,17 +501,14 @@ const CustomersManagementPage = () => {
             </p>
           </div>
         <div className="flex flex-wrap gap-2">
-          {/* زر تصدير العملاء المحسن */}
+          {/* زر تصدير العملاء بتصميم مطابق لزر إضافة المنتج */}
           <Button 
-            variant="outline" 
             size="sm"
             onClick={() => setShowExportDialog(true)}
-            className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800/50 hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 transition-all duration-300"
+            className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
           >
-            <Download className="h-4 w-4 mr-1 text-blue-600 dark:text-blue-400" />
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-medium">
-              تصدير العملاء (CSV)
-            </span>
+            <Download className="h-4 w-4 mr-1" />
+            تصدير العملاء (CSV)
           </Button>
           
           <Button onClick={selectRandomCityDiscount} variant="outline" size="sm">
