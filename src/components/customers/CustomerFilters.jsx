@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Filter, ChevronDown, ChevronUp, X, Users, Star, Phone, Gift } from 'lucide-react';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const CustomerFilters = ({
@@ -249,9 +249,9 @@ const CustomerFilters = ({
               {/* Date Range */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">نطاق التاريخ</Label>
-                <DatePickerWithRange
+                <DateRangePicker
                   date={filters.dateRange}
-                  setDate={(date) => handleFilterChange('dateRange', date)}
+                  onDateChange={(date) => handleFilterChange('dateRange', date)}
                 />
               </div>
 

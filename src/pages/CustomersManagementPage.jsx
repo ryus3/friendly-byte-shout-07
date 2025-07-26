@@ -61,6 +61,8 @@ const CustomersManagementPage = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      
+      console.log('بيانات العملاء:', data);
       setCustomers(data || []);
       setFilteredCustomers(data || []);
     } catch (error) {
@@ -116,7 +118,7 @@ const CustomersManagementPage = () => {
 
       if (!matchesSearch) return false;
 
-      // فلتر النقاط
+      // فلتر النقاط - التأكد من أن النقاط محسوبة على أساس الطلبات (200 نقطة لكل طلب)
       if (filters.pointsFilter === 'with_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points === 0)) return false;
       if (filters.pointsFilter === 'no_points' && customer.customer_loyalty?.[0]?.total_points > 0) return false;
       if (filters.pointsFilter === 'high_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points < 1000)) return false;
@@ -185,7 +187,6 @@ const CustomersManagementPage = () => {
   const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0).length;
   const customersWithPhones = filteredCustomers.filter(c => c.phone).length;
 
-  // تصدير البيانات
   const exportCustomers = (filterType = 'all') => {
     const dataToExport = filterType === 'all' ? filteredCustomers : 
                         filterType === 'with_points' ? filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0) :
@@ -240,7 +241,6 @@ const CustomersManagementPage = () => {
     });
   };
 
-  // تحقق من تطبيق خصم المدينة العشوائي
   const checkAndApplyCityDiscount = async () => {
     try {
       const currentMonth = new Date().getMonth() + 1;
@@ -337,6 +337,11 @@ const CustomersManagementPage = () => {
               const genderIcon = genderSegment === 'male' ? '🧑' : genderSegment === 'female' ? '👩' : '👥';
               const genderText = genderSegment === 'male' ? 'رجالي' : genderSegment === 'female' ? 'نسائي' : 'للجنسين';
 
+              // حساب النقاط - التأكد من أنها محسوبة على أساس الطلبات
+              const totalPoints = loyaltyData?.total_points || 0;
+              const totalOrders = loyaltyData?.total_orders || 0;
+              const expectedPoints = totalOrders * 200; // 200 نقطة لكل طلب
+
               return (
                 <div
                   key={customer.id}
@@ -381,7 +386,13 @@ const CustomersManagementPage = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Star className="h-3 w-3" />
-                            {loyaltyData?.total_points || 0} نقطة ({loyaltyData?.total_orders || 0} طلب)
+                            {totalPoints} نقطة ({totalOrders} طلب)
+                            {/* تحذير إذا كان هناك عدم تطابق في النقاط */}
+                            {totalPoints !== expectedPoints && totalOrders > 0 && (
+                              <Badge variant="destructive" className="text-xs mr-2">
+                                خطأ في النقاط
+                              </Badge>
+                            )}
                           </div>
                         </div>
 
@@ -467,6 +478,24 @@ const CustomersManagementPage = () => {
                         {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
                           <p><span className="font-medium">مستوى الولاء:</span> {selectedCustomer.customer_loyalty[0].loyalty_tiers.name}</p>
                         )}
+                        
+                        {/* تحذير من عدم تطابق النقاط */}
+                        {(() => {
+                          const currentPoints = selectedCustomer.customer_loyalty[0].total_points;
+                          const currentOrders = selectedCustomer.customer_loyalty[0].total_orders;
+                          const expectedPoints = currentOrders * 200;
+                          
+                          if (currentPoints !== expectedPoints && currentOrders > 0) {
+                            return (
+                              <div className="p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                                <p className="text-sm font-medium text-yellow-800">⚠️ تحذير: عدم تطابق في النقاط</p>
+                                <p className="text-xs text-yellow-700">
+                                  النقاط الحالية: {currentPoints} | المتوقعة: {expectedPoints}
+                                </p>
+                              </div>
+                            );
+                          }
+                        })()}
                       </>
                     ) : (
                       <p className="text-muted-foreground">لا توجد بيانات ولاء</p>
