@@ -12,14 +12,14 @@ const CustomerStats = ({
   
   // حساب الإحصائيات
   const totalCustomers = customers.length;
-  const customersWithPoints = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0).length;
+  const customersWithPoints = customers.filter(c => (c.customer_loyalty?.total_points || 0) > 0).length;
   const customersWithPhones = customers.filter(c => c.phone).length;
-  const highPointsCustomers = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000).length;
+  const highPointsCustomers = customers.filter(c => (c.customer_loyalty?.total_points || 0) >= 1000).length;
 
   // حساب عدد العملاء في كل مستوى ولاء
   const tierCounts = {};
   customers.forEach(customer => {
-    const loyaltyData = customer.customer_loyalty?.[0];
+    const loyaltyData = customer.customer_loyalty; // تغيير من [0] إلى object مباشرة
     if (loyaltyData?.current_tier_id) {
       const tierId = loyaltyData.current_tier_id;
       tierCounts[tierId] = (tierCounts[tierId] || 0) + 1;

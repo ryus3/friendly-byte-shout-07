@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Phone, MapPin, Star, Award, Medal, Crown, Gem, Eye, Send, Gift, Users, AlertTriangle } from 'lucide-react';
 
 const CustomerCard = ({ customer, onViewDetails, onSendNotification }) => {
-  const loyaltyData = customer.customer_loyalty?.[0];
+  const loyaltyData = customer.customer_loyalty; // تغيير من [0] إلى object مباشرة
   const getTierIcon = (iconName) => {
     const icons = { Star, Award, Medal, Crown, Gem };
     return icons[iconName] || Star;

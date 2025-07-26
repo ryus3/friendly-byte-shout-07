@@ -63,7 +63,7 @@ const CustomersManagementPage = () => {
       // حساب عدد أعضاء كل مستوى ولاء
       const tierCounts = {};
       (customersData || []).forEach(customer => {
-        const loyaltyData = customer.customer_loyalty?.[0];
+        const loyaltyData = customer.customer_loyalty; // إزالة [0] لأنه object وليس array
         if (loyaltyData?.current_tier_id) {
           const tierId = loyaltyData.current_tier_id;
           tierCounts[tierId] = (tierCounts[tierId] || 0) + 1;
@@ -132,17 +132,17 @@ const CustomersManagementPage = () => {
 
     // فلتر النقاط
     if (filters.pointsFilter === 'with_points') {
-      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0);
+      filtered = filtered.filter(c => (c.customer_loyalty?.total_points || 0) > 0);
     } else if (filters.pointsFilter === 'no_points') {
-      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) === 0);
+      filtered = filtered.filter(c => (c.customer_loyalty?.total_points || 0) === 0);
     } else if (filters.pointsFilter === 'high_points') {
-      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000);
+      filtered = filtered.filter(c => (c.customer_loyalty?.total_points || 0) >= 1000);
     }
 
     // فلتر مستوى الولاء
     if (filters.loyaltyTierFilter !== 'all') {
       filtered = filtered.filter(customer => {
-        const customerTier = customer.customer_loyalty?.[0]?.current_tier_id;
+        const customerTier = customer.customer_loyalty?.current_tier_id;
         return customerTier === filters.loyaltyTierFilter;
       });
     }
@@ -158,11 +158,11 @@ const CustomersManagementPage = () => {
 
     // تطبيق الفلتر النشط من الكروت
     if (activeFilter === 'with_points') {
-      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0);
+      filtered = filtered.filter(c => (c.customer_loyalty?.total_points || 0) > 0);
     } else if (activeFilter === 'with_phones') {
       filtered = filtered.filter(c => c.phone);
     } else if (activeFilter === 'high_points') {
-      filtered = filtered.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000);
+      filtered = filtered.filter(c => (c.customer_loyalty?.total_points || 0) >= 1000);
     }
 
     setFilteredCustomers(filtered);
@@ -174,13 +174,13 @@ const CustomersManagementPage = () => {
     
     switch (exportType) {
       case 'with_points':
-        dataToExport = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0);
+        dataToExport = customers.filter(c => (c.customer_loyalty?.total_points || 0) > 0);
         break;
       case 'with_phones':
         dataToExport = customers.filter(c => c.phone);
         break;
       case 'high_points':
-        dataToExport = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000);
+        dataToExport = customers.filter(c => (c.customer_loyalty?.total_points || 0) >= 1000);
         break;
       case 'male_segment':
         dataToExport = customers.filter(c => c.customer_product_segments?.some(s => s.gender_segment === 'male'));
@@ -200,8 +200,8 @@ const CustomersManagementPage = () => {
       customer.email || '',
       customer.city || '',
       customer.address || '',
-      customer.customer_loyalty?.[0]?.total_points || 0,
-      customer.customer_loyalty?.[0]?.total_orders || 0,
+      customer.customer_loyalty?.total_points || 0,
+      customer.customer_loyalty?.total_orders || 0,
       new Date(customer.created_at).toLocaleDateString('ar')
     ]);
 
@@ -245,9 +245,9 @@ const CustomersManagementPage = () => {
   }
 
   // إحصائيات العملاء
-  const customersWithPoints = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0).length;
+  const customersWithPoints = customers.filter(c => (c.customer_loyalty?.total_points || 0) > 0).length;
   const customersWithPhones = customers.filter(c => c.phone).length;
-  const highPointsCustomers = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000).length;
+  const highPointsCustomers = customers.filter(c => (c.customer_loyalty?.total_points || 0) >= 1000).length;
 
   return (
     <div className="container mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
