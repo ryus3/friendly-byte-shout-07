@@ -76,21 +76,39 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                   )}
                 </div>
                 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">تاريخ الانضمام:</span>
-                    <span>{format(new Date(customer.created_at), 'd MMM yyyy', { locale: ar })}</span>
-                  </div>
-                  
-                  {tier && (
-                    <div className="flex items-center gap-2">
-                      <Award className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">المستوى:</span>
-                      <Badge variant="secondary">{tier.name}</Badge>
-                    </div>
-                  )}
-                </div>
+                 <div className="space-y-3">
+                   <div className="flex items-center gap-2">
+                     <Calendar className="h-4 w-4 text-muted-foreground" />
+                     <span className="font-medium">تاريخ الانضمام:</span>
+                     <span>{format(new Date(customer.created_at), 'd MMM yyyy', { locale: ar })}</span>
+                   </div>
+                   
+                   {tier && (
+                     <div className="flex items-center gap-2">
+                       <Award className="h-4 w-4 text-muted-foreground" />
+                       <span className="font-medium">المستوى:</span>
+                       <Badge variant="secondary">{tier.name}</Badge>
+                     </div>
+                   )}
+                   
+                   {/* صلاحية النقاط */}
+                   {loyalty?.points_expiry_date && loyalty?.total_points > 0 && (
+                     <div className="flex items-center gap-2">
+                       <Calendar className="h-4 w-4 text-muted-foreground" />
+                       <span className="font-medium">صلاحية النقاط:</span>
+                       <Badge 
+                         className={`
+                           ${new Date(loyalty.points_expiry_date) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                             ? 'bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-red-400' 
+                             : 'bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400'
+                           } border
+                         `}
+                       >
+                         {format(new Date(loyalty.points_expiry_date), 'd MMM yyyy', { locale: ar })}
+                       </Badge>
+                     </div>
+                   )}
+                 </div>
               </CardContent>
             </Card>
 

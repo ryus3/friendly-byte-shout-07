@@ -205,11 +205,6 @@ const CustomerCard = ({
                 >
                   <TierIcon className={`h-5 w-5 ${tierColors.textColor}`} />
                 </motion.div>
-                <Badge 
-                  className={`${tierColors.bgColor} ${tierColors.textColor} ${tierColors.borderColor} border font-medium text-xs`}
-                >
-                  {customerTier.name}
-                </Badge>
               </motion.div>
             )}
           </div>
