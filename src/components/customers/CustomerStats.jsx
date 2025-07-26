@@ -4,15 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Star, Phone, Gift, MapPin, Award, Crown, Medal, Gem } from 'lucide-react';
 
 const CustomerStats = ({ 
-  totalCustomers, 
-  customersWithPoints, 
-  customersWithPhones, 
-  highPointsCustomers,
-  cityStats,
-  loyaltyTiers,
-  activeFilter,
-  onFilterChange 
+  customers = [], 
+  loyaltyTiers = [], 
+  activeFilter, 
+  setActiveFilter 
 }) => {
+  
+  // حساب الإحصائيات
+  const totalCustomers = customers.length;
+  const customersWithPoints = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) > 0).length;
+  const customersWithPhones = customers.filter(c => c.phone).length;
+  const highPointsCustomers = customers.filter(c => (c.customer_loyalty?.[0]?.total_points || 0) >= 1000).length;
+
+  // حساب عدد العملاء في كل مستوى ولاء
+  const tierCounts = {};
+  customers.forEach(customer => {
+    const loyaltyData = customer.customer_loyalty?.[0];
+    if (loyaltyData?.current_tier_id) {
+      const tierId = loyaltyData.current_tier_id;
+      tierCounts[tierId] = (tierCounts[tierId] || 0) + 1;
+    }
+  });
   
   const StatCard = ({ icon: Icon, title, value, description, isActive, onClick, color = "blue" }) => (
     <Card 
@@ -50,7 +62,7 @@ const CustomerStats = ({
           title="جميع العملاء"
           value={totalCustomers}
           isActive={activeFilter === 'all'}
-          onClick={() => onFilterChange('all')}
+          onClick={() => setActiveFilter('all')}
           color="blue"
         />
 
@@ -60,7 +72,7 @@ const CustomerStats = ({
           value={customersWithPoints}
           description={`${Math.round((customersWithPoints / totalCustomers) * 100)}%`}
           isActive={activeFilter === 'with_points'}
-          onClick={() => onFilterChange('with_points')}
+          onClick={() => setActiveFilter('with_points')}
           color="yellow"
         />
 
@@ -70,7 +82,7 @@ const CustomerStats = ({
           value={customersWithPhones}
           description={`${Math.round((customersWithPhones / totalCustomers) * 100)}%`}
           isActive={activeFilter === 'with_phones'}
-          onClick={() => onFilterChange('with_phones')}
+          onClick={() => setActiveFilter('with_phones')}
           color="green"
         />
 
@@ -80,7 +92,7 @@ const CustomerStats = ({
           value={highPointsCustomers}
           description="أكثر من 1000"
           isActive={activeFilter === 'high_points'}
-          onClick={() => onFilterChange('high_points')}
+          onClick={() => setActiveFilter('high_points')}
           color="purple"
         />
       </div>
@@ -120,7 +132,7 @@ const CustomerStats = ({
                           <span>{tier.points_required.toLocaleString()} نقطة</span>
                           <span>•</span>
                           <span className="font-medium text-primary">
-                            {tier.memberCount || 0} عضو
+                            {tierCounts[tier.id] || 0} عضو
                           </span>
                         </div>
                       </div>
@@ -137,33 +149,29 @@ const CustomerStats = ({
           </Card>
         )}
 
-        {/* إحصائيات المدن */}
-        {cityStats && cityStats.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                <MapPin className="h-5 w-5" />
-                أكثر المدن طلباً
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {cityStats.slice(0, 6).map((city, index) => (
-                <div key={city.city_name} className="flex items-center justify-between p-2 md:p-3 bg-muted/30 rounded-lg">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm truncate">{city.city_name}</div>
-                    <div className="text-xs text-muted-foreground">{city.customer_count} عميل</div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="text-sm font-medium">{city.total_orders} طلب</div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Intl.NumberFormat('ar-IQ').format(city.total_amount)} د.ع
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+        {/* إحصائيات الجمهور */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Users className="h-5 w-5" />
+              الجمهور المستهدف
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4">
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-700">
+                {customers.filter(c => c.customer_product_segments?.some(s => s.gender_segment === 'male')).length}
+              </div>
+              <div className="text-sm text-blue-600">🧑 جمهور رجالي</div>
+            </div>
+            <div className="text-center p-4 bg-pink-50 rounded-lg">
+              <div className="text-2xl font-bold text-pink-700">
+                {customers.filter(c => c.customer_product_segments?.some(s => s.gender_segment === 'female')).length}
+              </div>
+              <div className="text-sm text-pink-600">👩 جمهور نسائي</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

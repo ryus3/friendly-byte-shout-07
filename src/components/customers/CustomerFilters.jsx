@@ -12,23 +12,18 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 
 const CustomerFilters = ({
   filters,
-  onFiltersChange,
-  loyaltyTiers,
-  departments,
-  activeFilter,
-  onActiveFilterChange,
-  customersWithPoints,
-  customersWithPhones,
-  totalCustomers
+  setFilters,
+  loyaltyTiers = [],
+  departments = []
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const handleFilterChange = (key, value) => {
-    onFiltersChange({ ...filters, [key]: value });
+    setFilters({ ...filters, [key]: value });
   };
 
   const resetFilters = () => {
-    onFiltersChange({
+    setFilters({
       searchTerm: '',
       timeFilter: 'all',
       pointsFilter: 'all',
@@ -37,7 +32,6 @@ const CustomerFilters = ({
       departmentFilter: 'all',
       dateRange: null
     });
-    onActiveFilterChange('all');
   };
 
   const hasActiveFilters = 
@@ -51,82 +45,12 @@ const CustomerFilters = ({
 
   return (
     <div className="space-y-4">
-      {/* Quick Filter Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-            activeFilter === 'all' ? 'ring-2 ring-primary bg-primary/5' : ''
-          }`}
-          onClick={() => onActiveFilterChange('all')}
-        >
-          <CardContent className="p-4 flex items-center space-x-4 space-x-reverse">
-            <div className="p-2 bg-blue-100 rounded-full">
-              <Users className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{totalCustomers}</p>
-              <p className="text-sm text-muted-foreground">جميع العملاء</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-            activeFilter === 'with_points' ? 'ring-2 ring-primary bg-primary/5' : ''
-          }`}
-          onClick={() => onActiveFilterChange('with_points')}
-        >
-          <CardContent className="p-4 flex items-center space-x-4 space-x-reverse">
-            <div className="p-2 bg-yellow-100 rounded-full">
-              <Star className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{customersWithPoints}</p>
-              <p className="text-sm text-muted-foreground">لديهم نقاط</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-            activeFilter === 'with_phones' ? 'ring-2 ring-primary bg-primary/5' : ''
-          }`}
-          onClick={() => onActiveFilterChange('with_phones')}
-        >
-          <CardContent className="p-4 flex items-center space-x-4 space-x-reverse">
-            <div className="p-2 bg-green-100 rounded-full">
-              <Phone className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{customersWithPhones}</p>
-              <p className="text-sm text-muted-foreground">مع أرقام</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-            activeFilter === 'high_points' ? 'ring-2 ring-primary bg-primary/5' : ''
-          }`}
-          onClick={() => onActiveFilterChange('high_points')}
-        >
-          <CardContent className="p-4 flex items-center space-x-4 space-x-reverse">
-            <div className="p-2 bg-purple-100 rounded-full">
-              <Gift className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{Math.round((totalCustomers * 0.15))}</p>
-              <p className="text-sm text-muted-foreground">نقاط عالية</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Search Bar */}
       <div className="relative">
         <Input
           placeholder="ابحث بالاسم أو الهاتف أو البريد الإلكتروني..."
-          value={filters.searchTerm}
+          value={filters.searchTerm || ''}
           onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
           className="pr-12"
         />
