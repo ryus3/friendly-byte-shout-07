@@ -574,7 +574,7 @@ const CustomersManagementPage = () => {
       )}
 
       {/* Enhanced Search and Filter Toolbar */}
-      <CustomersToolbar
+      <EnhancedCustomersToolbar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filterType={filterType}
