@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Download, Users, Star, Phone, Gender, AlertCircle } from 'lucide-react';
+import { Download, Users, Star, Phone, User, AlertCircle } from 'lucide-react';
 
 const EnhancedExportDialog = ({ 
   open, 
@@ -55,9 +55,9 @@ const EnhancedExportDialog = ({
       title: 'العملاء الرجال',
       description: 'العملاء المصنفون كرجال حسب تحليل المشتريات',
       count: customers.filter(c => 
-        c.customer_gender_segments?.some(s => s.gender_type === 'male' && s.confidence_score >= 0.5)
+        c.customer_gender_segments?.gender_type === 'male'
       ).length,
-      icon: Gender,
+      icon: User,
       gradient: 'from-sky-500 to-blue-500',
       bgGradient: 'from-sky-50 to-blue-50 dark:from-sky-900/20 dark:to-blue-900/20'
     },
@@ -66,9 +66,9 @@ const EnhancedExportDialog = ({
       title: 'العميلات النساء',
       description: 'العميلات المصنفات كنساء حسب تحليل المشتريات',
       count: customers.filter(c => 
-        c.customer_gender_segments?.some(s => s.gender_type === 'female' && s.confidence_score >= 0.5)
+        c.customer_gender_segments?.gender_type === 'female'
       ).length,
-      icon: Gender,
+      icon: User,
       gradient: 'from-pink-500 to-rose-500',
       bgGradient: 'from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20'
     }

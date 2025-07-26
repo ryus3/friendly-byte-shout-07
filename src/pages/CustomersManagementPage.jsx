@@ -131,14 +131,10 @@ const CustomersManagementPage = () => {
         matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
       } else if (filterType === 'male_customers') {
         // فلترة العملاء الرجال بناءً على تحليل جنس حقيقي وفولاذي
-        matchesFilter = customer.customer_gender_segments?.some(segment => 
-          segment.gender_type === 'male' && segment.confidence_score >= 0.5
-        ) || false;
+        matchesFilter = customer.customer_gender_segments?.gender_type === 'male' || false;
       } else if (filterType === 'female_customers') {
         // فلترة العميلات النساء بناءً على تحليل جنس حقيقي وفولاذي
-        matchesFilter = customer.customer_gender_segments?.some(segment => 
-          segment.gender_type === 'female' && segment.confidence_score >= 0.5
-        ) || false;
+        matchesFilter = customer.customer_gender_segments?.gender_type === 'female' || false;
       }
       
       // فلترة حسب المستوى
@@ -292,16 +288,12 @@ const CustomersManagementPage = () => {
     } else if (filterType === 'male') {
       // فلترة قوية للرجال - نظام فولاذي
       filteredData = customers.filter(c => 
-        c.customer_gender_segments?.some(segment => 
-          segment.gender_type === 'male' && segment.confidence_score >= 0.5
-        )
+        c.customer_gender_segments?.gender_type === 'male'
       );
     } else if (filterType === 'female') {
       // فلترة قوية للنساء - نظام فولاذي
       filteredData = customers.filter(c => 
-        c.customer_gender_segments?.some(segment => 
-          segment.gender_type === 'female' && segment.confidence_score >= 0.5
-        )
+        c.customer_gender_segments?.gender_type === 'female'
       );
     }
     
@@ -339,8 +331,8 @@ const CustomersManagementPage = () => {
       customer.city || '',
       customer.province || '',
       // تحليل الجنس الدقيق والقوي
-      customer.customer_gender_segments?.find(s => s.confidence_score >= 0.5)?.gender_type === 'male' ? 'ذكر' : 
-      customer.customer_gender_segments?.find(s => s.confidence_score >= 0.5)?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
+      customer.customer_gender_segments?.gender_type === 'male' ? 'ذكر' : 
+      customer.customer_gender_segments?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
       customer.customer_loyalty?.total_points || 0,
       customer.customer_loyalty?.total_orders || 0,
       customer.customer_loyalty?.total_spent || 0,
@@ -535,7 +527,7 @@ const CustomersManagementPage = () => {
               onClick={() => setFilterType('male_customers')}
               className="text-xs"
             >
-              رجال ({customers.filter(c => c.customer_gender_segments?.some(s => s.gender_type === 'male' && s.confidence_score >= 0.5)).length})
+              رجال ({customers.filter(c => c.customer_gender_segments?.gender_type === 'male').length})
             </Button>
             <Button 
               variant={filterType === 'female_customers' ? 'default' : 'outline'}
@@ -543,7 +535,7 @@ const CustomersManagementPage = () => {
               onClick={() => setFilterType('female_customers')}
               className="text-xs"
             >
-              نساء ({customers.filter(c => c.customer_gender_segments?.some(s => s.gender_type === 'female' && s.confidence_score >= 0.5)).length})
+              نساء ({customers.filter(c => c.customer_gender_segments?.gender_type === 'female').length})
             </Button>
             <Button 
               variant={filterType === 'all' ? 'default' : 'outline'}
