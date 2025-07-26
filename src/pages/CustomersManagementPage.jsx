@@ -1,41 +1,38 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Filter, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, Eye, Send, Download } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { StatCard } from '@/components/dashboard/StatCard';
-import { DatePickerWithRange } from '@/components/ui/date-range-picker';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Label } from '@/components/ui/label';
+import CustomerFilters from '@/components/customers/CustomerFilters';
 
 const CustomersManagementPage = () => {
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [genderSegmentation, setGenderSegmentation] = useState('all');
-  const [timeFilter, setTimeFilter] = useState('all');
-  const [loyaltyTierFilter, setLoyaltyTierFilter] = useState('all');
-  const [pointsFilter, setPointsFilter] = useState('all');
-  const [dateRange, setDateRange] = useState(null);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [loyaltyTiers, setLoyaltyTiers] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const [userPermissions, setUserPermissions] = useState({});
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Filter states
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    timeFilter: 'all',
+    pointsFilter: 'all',
+    loyaltyTierFilter: 'all',
+    genderSegmentation: 'all',
+    departmentFilter: 'all',
+    dateRange: null
+  });
 
   // جلب بيانات العملاء مع تفاصيل الولاء
   const fetchCustomers = async () => {
@@ -81,21 +78,20 @@ const CustomersManagementPage = () => {
   // جلب مستويات الولاء والأقسام والتصنيفات للفلترة  
   const fetchSupportingData = async () => {
     try {
-      const [tiersRes, categoriesRes, departmentsRes, permsRes] = await Promise.all([
+      const [tiersRes, categoriesRes, departmentsRes] = await Promise.all([
         supabase.from('loyalty_tiers').select('*').order('points_required'),
         supabase.from('categories').select('*').order('name'),
-        supabase.from('departments').select('*').order('name'),
-        supabase.from('employee_loyalty_permissions').select('*').eq('user_id', (await supabase.auth.getUser()).data.user?.id).single()
+        supabase.from('departments').select('*').order('name')
       ]);
 
       if (tiersRes.data) setLoyaltyTiers(tiersRes.data);
+      
       // دمج الأقسام والتصنيفات في قائمة واحدة للفلترة
       const allFilters = [
         ...(departmentsRes.data || []).map(d => ({...d, type: 'department'})),
         ...(categoriesRes.data || []).map(c => ({...c, type: 'category'}))
       ];
       setDepartments(allFilters);
-      if (permsRes.data) setUserPermissions(permsRes.data);
       
       // تطبيق خصم المدينة العشوائي إذا لم يكن مطبق هذا الشهر
       await checkAndApplyCityDiscount();
@@ -113,61 +109,61 @@ const CustomersManagementPage = () => {
   useEffect(() => {
     let filtered = customers.filter(customer => {
       // فلتر البحث
-      const matchesSearch = !searchTerm || 
-        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone?.includes(searchTerm) ||
-        customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !filters.searchTerm || 
+        customer.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        customer.phone?.includes(filters.searchTerm) ||
+        customer.email?.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
       if (!matchesSearch) return false;
 
       // فلتر النقاط
-      if (pointsFilter === 'with_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points === 0)) return false;
-      if (pointsFilter === 'no_points' && customer.customer_loyalty?.[0]?.total_points > 0) return false;
-      if (pointsFilter === 'high_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points < 1000)) return false;
+      if (filters.pointsFilter === 'with_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points === 0)) return false;
+      if (filters.pointsFilter === 'no_points' && customer.customer_loyalty?.[0]?.total_points > 0) return false;
+      if (filters.pointsFilter === 'high_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points < 1000)) return false;
 
       // فلتر مستوى الولاء
-      if (loyaltyTierFilter !== 'all') {
+      if (filters.loyaltyTierFilter !== 'all') {
         const customerTier = customer.customer_loyalty?.[0]?.current_tier_id;
-        if (customerTier !== loyaltyTierFilter) return false;
+        if (customerTier !== filters.loyaltyTierFilter) return false;
       }
 
       // فلتر الجنس/التقسيم حسب القسم والتصنيف معاً
-      if (genderSegmentation !== 'all') {
+      if (filters.genderSegmentation !== 'all') {
         const hasGenderSegment = customer.customer_product_segments?.some(seg => 
-          seg.gender_segment === genderSegmentation
+          seg.gender_segment === filters.genderSegmentation
         );
         if (!hasGenderSegment) return false;
       }
 
       // فلتر حسب القسم (departments) والتصنيف (categories) معاً
-      if (departmentFilter !== 'all') {
+      if (filters.departmentFilter !== 'all') {
         const hasSegment = customer.customer_product_segments?.some(seg => 
-          seg.department_id === departmentFilter || seg.category_id === departmentFilter
+          seg.department_id === filters.departmentFilter || seg.category_id === filters.departmentFilter
         );
         if (!hasSegment) return false;
       }
 
       // فلتر الوقت
-      if (timeFilter !== 'all') {
+      if (filters.timeFilter !== 'all') {
         const customerDate = new Date(customer.created_at);
         const now = new Date();
         
-        if (timeFilter === 'today') {
+        if (filters.timeFilter === 'today') {
           const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           if (customerDate < today) return false;
-        } else if (timeFilter === 'week') {
+        } else if (filters.timeFilter === 'week') {
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           if (customerDate < weekAgo) return false;
-        } else if (timeFilter === 'month') {
+        } else if (filters.timeFilter === 'month') {
           const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
           if (customerDate < monthAgo) return false;
         }
       }
 
       // فلتر نطاق التاريخ
-      if (dateRange?.from && dateRange?.to) {
+      if (filters.dateRange?.from && filters.dateRange?.to) {
         const customerDate = new Date(customer.created_at);
-        if (customerDate < dateRange.from || customerDate > dateRange.to) return false;
+        if (customerDate < filters.dateRange.from || customerDate > filters.dateRange.to) return false;
       }
 
       return true;
@@ -183,21 +179,22 @@ const CustomersManagementPage = () => {
     }
 
     setFilteredCustomers(filtered);
-  }, [customers, searchTerm, activeFilter, pointsFilter, loyaltyTierFilter, genderSegmentation, departmentFilter, timeFilter, dateRange]);
+  }, [customers, filters, activeFilter]);
 
-  const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0);
-  const customersWithPhones = filteredCustomers.filter(c => c.phone);
+  // إحصائيات العملاء
+  const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0).length;
+  const customersWithPhones = filteredCustomers.filter(c => c.phone).length;
 
   // تصدير البيانات
   const exportCustomers = (filterType = 'all') => {
     const dataToExport = filterType === 'all' ? filteredCustomers : 
-                        filterType === 'with_points' ? customersWithPoints :
-                        filterType === 'with_phones' ? customersWithPhones : filteredCustomers;
+                        filterType === 'with_points' ? filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0) :
+                        filterType === 'with_phones' ? filteredCustomers.filter(c => c.phone) : filteredCustomers;
 
     const csvHeaders = [
       'الاسم', 'الهاتف', 'البريد الإلكتروني', 'المحافظة', 'المدينة', 'العنوان',
-      'إجمالي النقاط', 'إجمالي الطلبات', 'إجمالي المبالغ', 'مستوى الولاء', 'خصم الولاء',
-      'تاريخ التسجيل', 'آخر ترقية', 'حالة الهاتف', 'تقسيم الجنس'
+      'إجمالي النقاط', 'إجمالي الطلبات', 'مستوى الولاء', 'الجمهور المستهدف',
+      'تاريخ التسجيل'
     ];
 
     const csvData = dataToExport.map(customer => [
@@ -209,15 +206,11 @@ const CustomersManagementPage = () => {
       customer.address || '',
       customer.customer_loyalty?.[0]?.total_points || 0,
       customer.customer_loyalty?.[0]?.total_orders || 0,
-      customer.customer_loyalty?.[0]?.total_spent || 0,
       customer.customer_loyalty?.[0]?.loyalty_tiers?.name || 'لا يوجد',
-      customer.customer_loyalty?.[0]?.loyalty_tiers?.discount_percentage || 0,
-      customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '',
-      customer.customer_loyalty?.[0]?.last_tier_upgrade 
-        ? new Date(customer.customer_loyalty[0].last_tier_upgrade).toLocaleDateString('ar') 
-        : 'لا يوجد',
-      customer.phone ? 'متوفر' : 'غير متوفر',
-      customer.customer_product_segments?.[0]?.gender_segment || 'غير محدد'
+      customer.customer_product_segments?.[0]?.gender_segment === 'male' ? 'رجالي' :
+      customer.customer_product_segments?.[0]?.gender_segment === 'female' ? 'نسائي' :
+      customer.customer_product_segments?.[0]?.gender_segment === 'unisex' ? 'للجنسين' : 'غير محدد',
+      customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : ''
     ]);
 
     const csvContent = [
@@ -232,8 +225,7 @@ const CustomersManagementPage = () => {
     link.href = URL.createObjectURL(blob);
     
     const filterSuffix = filterType === 'with_points' ? '_مع_نقاط' : 
-                        filterType === 'with_phones' ? '_مع_هواتف' : 
-                        filterType === 'high_points' ? '_نقاط_عالية' : '';
+                        filterType === 'with_phones' ? '_مع_هواتف' : '';
     
     const timestamp = new Date().toISOString().split('T')[0];
     link.download = `عملاء${filterSuffix}_${timestamp}.csv`;
@@ -262,7 +254,6 @@ const CustomersManagementPage = () => {
         .single();
         
       if (!existingDiscount) {
-        // تطبيق اختيار المدينة العشوائية
         const { data: result } = await supabase.rpc('select_random_city_for_monthly_discount');
         console.log('نتيجة اختيار المدينة:', result);
       }
@@ -272,9 +263,7 @@ const CustomersManagementPage = () => {
   };
 
   const getTierIcon = (iconName) => {
-    const tierIcons = {
-      Star, Award, Medal, Crown, Gem
-    };
+    const tierIcons = { Star, Award, Medal, Crown, Gem };
     const IconComponent = tierIcons[iconName] || Star;
     return IconComponent;
   };
@@ -303,7 +292,7 @@ const CustomersManagementPage = () => {
         <div>
           <h1 className="text-3xl font-bold">إدارة العملاء</h1>
           <p className="text-muted-foreground">
-            إدارة شاملة لبيانات العملاء ونظام الولاء
+            إدارة شاملة لبيانات العملاء ونظام الولاء - النقاط تُحسب على أساس الطلب (200 نقطة لكل طلب)
           </p>
         </div>
         <div className="flex gap-2">
@@ -318,216 +307,18 @@ const CustomersManagementPage = () => {
         </div>
       </div>
 
-      {/* كروت الإحصائيات */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="إجمالي العملاء"
-          value={filteredCustomers.length}
-          icon={Users}
-          trend="positive"
-          trendValue="12%"
-          trendPeriod="الشهر الماضي"
-          onClick={() => {
-            setActiveFilter('all');
-            setSearchTerm('');
-            setPointsFilter('all');
-            setLoyaltyTierFilter('all');
-            setGenderSegmentation('all');
-            setDepartmentFilter('all');
-            setTimeFilter('all');
-            setDateRange(null);
-          }}
-          active={activeFilter === 'all'}
-        />
-        <StatCard
-          title="عملاء لديهم نقاط"
-          value={customersWithPoints.length}
-          icon={Star}
-          trend="positive"
-          trendValue="8%"
-          trendPeriod="الشهر الماضي"
-          onClick={() => {
-            setActiveFilter('with_points');
-            setPointsFilter('with_points');
-          }}
-          active={activeFilter === 'with_points'}
-        />
-        <StatCard
-          title="عملاء مع أرقام"
-          value={customersWithPhones.length}
-          icon={Phone}
-          trend="neutral"
-          trendValue="3%"
-          trendPeriod="الشهر الماضي"
-          onClick={() => {
-            setActiveFilter('with_phones');
-            setSearchTerm('');
-            setPointsFilter('all');
-          }}
-          active={activeFilter === 'with_phones'}
-        />
-        <StatCard
-          title="متوسط النقاط"
-          value={Math.round((filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.[0]?.total_points || 0), 0) / (filteredCustomers.length || 1)))}
-          icon={Gift}
-          trend="positive"
-          trendValue="15%"
-          trendPeriod="الشهر الماضي"
-          onClick={() => {
-            setActiveFilter('high_points');
-            setPointsFilter('high_points');
-          }}
-          active={activeFilter === 'high_points'}
-        />
-      </div>
-
-      {/* الفلاتر والبحث */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              البحث والفلترة
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-              className="flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              فلاتر متقدمة
-              {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* الفلاتر الأساسية */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>البحث</Label>
-              <Input
-                placeholder="ابحث بالاسم أو الهاتف..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>فلتر الوقت</Label>
-              <Select value={timeFilter} onValueChange={setTimeFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الفترات</SelectItem>
-                  <SelectItem value="today">اليوم</SelectItem>
-                  <SelectItem value="week">هذا الأسبوع</SelectItem>
-                  <SelectItem value="month">هذا الشهر</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>فلتر النقاط</Label>
-              <Select value={pointsFilter} onValueChange={setPointsFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل العملاء</SelectItem>
-                  <SelectItem value="with_points">لديهم نقاط</SelectItem>
-                  <SelectItem value="no_points">بدون نقاط</SelectItem>
-                  <SelectItem value="high_points">نقاط عالية (+1000)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* الفلاتر المتقدمة */}
-          {showAdvancedFilters && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="space-y-2">
-                  <Label>التصنيف (رجالي/نسائي)</Label>
-                  <Select value={genderSegmentation} onValueChange={setGenderSegmentation}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل التصنيفات</SelectItem>
-                      <SelectItem value="male">رجالي</SelectItem>
-                      <SelectItem value="female">نسائي</SelectItem>
-                      <SelectItem value="unisex">للجنسين</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>الأقسام والتصنيفات</Label>
-                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل الأقسام والتصنيفات</SelectItem>
-                      {departments.map((dept) => (
-                        <SelectItem key={`${dept.type}-${dept.id}`} value={dept.id}>
-                          {dept.name} ({dept.type === 'department' ? 'قسم' : 'تصنيف'})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>مستوى الولاء</Label>
-                  <Select value={loyaltyTierFilter} onValueChange={setLoyaltyTierFilter}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل المستويات</SelectItem>
-                      {loyaltyTiers.map((tier) => (
-                        <SelectItem key={tier.id} value={tier.id}>
-                          {tier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>نطاق التاريخ</Label>
-                  <DatePickerWithRange
-                    date={dateRange}
-                    setDate={setDateRange}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-end mt-4">
-                <Button 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setTimeFilter('all');
-                    setPointsFilter('all');
-                    setLoyaltyTierFilter('all');
-                    setGenderSegmentation('all');
-                    setDepartmentFilter('all');
-                    setDateRange(null);
-                    setActiveFilter('all');
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  مسح الفلاتر
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* الفلاتر الجديدة */}
+      <CustomerFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+        loyaltyTiers={loyaltyTiers}
+        departments={departments}
+        activeFilter={activeFilter}
+        onActiveFilterChange={setActiveFilter}
+        customersWithPoints={customersWithPoints}
+        customersWithPhones={customersWithPhones}
+        totalCustomers={filteredCustomers.length}
+      />
 
       {/* قائمة العملاء */}
       <Card>
@@ -540,6 +331,11 @@ const CustomersManagementPage = () => {
               const loyaltyData = customer.customer_loyalty?.[0];
               const tierIcon = loyaltyData?.loyalty_tiers?.icon ? getTierIcon(loyaltyData.loyalty_tiers.icon) : Users;
               const TierIcon = tierIcon;
+
+              // تحديد الجمهور المستهدف
+              const genderSegment = customer.customer_product_segments?.[0]?.gender_segment;
+              const genderIcon = genderSegment === 'male' ? '🧑' : genderSegment === 'female' ? '👩' : '👥';
+              const genderText = genderSegment === 'male' ? 'رجالي' : genderSegment === 'female' ? 'نسائي' : 'للجنسين';
 
               return (
                 <div
@@ -554,8 +350,8 @@ const CustomersManagementPage = () => {
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center gap-2">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold">{customer.name}</h3>
                           {loyaltyData?.loyalty_tiers && (
                             <Badge 
@@ -565,6 +361,11 @@ const CustomersManagementPage = () => {
                             >
                               <TierIcon className="h-3 w-3" />
                               {loyaltyData.loyalty_tiers.name}
+                            </Badge>
+                          )}
+                          {genderSegment && (
+                            <Badge variant="outline" className="text-xs">
+                              {genderIcon} {genderText}
                             </Badge>
                           )}
                         </div>
@@ -580,7 +381,7 @@ const CustomersManagementPage = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <Star className="h-3 w-3" />
-                            {loyaltyData?.total_points || 0} نقطة
+                            {loyaltyData?.total_points || 0} نقطة ({loyaltyData?.total_orders || 0} طلب)
                           </div>
                         </div>
 
@@ -588,10 +389,6 @@ const CustomersManagementPage = () => {
                           {customer.customer_product_segments?.map((segment, index) => (
                             <Badge key={index} variant="outline" className="text-xs">
                               {segment.departments?.name || segment.categories?.name || 'غير محدد'}
-                              {segment.gender_segment && ` - ${
-                                segment.gender_segment === 'male' ? 'رجالي' :
-                                segment.gender_segment === 'female' ? 'نسائي' : 'للجنسين'
-                              }`}
                             </Badge>
                           ))}
                         </div>
@@ -645,6 +442,7 @@ const CustomersManagementPage = () => {
           
           {selectedCustomer && (
             <div className="space-y-6">
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="font-semibold">المعلومات الأساسية</Label>
@@ -665,7 +463,7 @@ const CustomersManagementPage = () => {
                       <>
                         <p><span className="font-medium">إجمالي النقاط:</span> {selectedCustomer.customer_loyalty[0].total_points}</p>
                         <p><span className="font-medium">إجمالي الطلبات:</span> {selectedCustomer.customer_loyalty[0].total_orders}</p>
-                        <p><span className="font-medium">إجمالي المبلغ:</span> {formatCurrency(selectedCustomer.customer_loyalty[0].total_spent)}</p>
+                        <p className="text-sm text-muted-foreground">النقاط تُحسب: 200 نقطة لكل طلب مكتمل</p>
                         {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
                           <p><span className="font-medium">مستوى الولاء:</span> {selectedCustomer.customer_loyalty[0].loyalty_tiers.name}</p>
                         )}
@@ -674,31 +472,6 @@ const CustomersManagementPage = () => {
                       <p className="text-muted-foreground">لا توجد بيانات ولاء</p>
                     )}
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <Label className="font-semibold">التصنيفات والأقسام المفضلة</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {selectedCustomer.customer_product_segments?.map((segment, index) => (
-                    <Badge key={index} variant="outline">
-                      {segment.departments?.name || segment.categories?.name || 'غير محدد'}
-                      {segment.gender_segment && ` - ${
-                        segment.gender_segment === 'male' ? 'رجالي' :
-                        segment.gender_segment === 'female' ? 'نسائي' : 'للجنسين'
-                      }`}
-                    </Badge>
-                  )) || <p className="text-muted-foreground">لا توجد تصنيفات محددة</p>}
-                </div>
-              </div>
-
-              <div>
-                <Label className="font-semibold">تواريخ مهمة</Label>
-                <div className="space-y-2 mt-2">
-                  <p><span className="font-medium">تاريخ التسجيل:</span> {new Date(selectedCustomer.created_at).toLocaleDateString('ar')}</p>
-                  {selectedCustomer.customer_loyalty?.[0]?.last_tier_upgrade && (
-                    <p><span className="font-medium">آخر ترقية مستوى:</span> {new Date(selectedCustomer.customer_loyalty[0].last_tier_upgrade).toLocaleDateString('ar')}</p>
-                  )}
                 </div>
               </div>
             </div>
@@ -750,7 +523,6 @@ const CustomersManagementPage = () => {
                 </Button>
                 <Button
                   onClick={() => {
-                    // هنا يتم إرسال الإشعار
                     toast({
                       title: 'تم إرسال الإشعار',
                       description: `تم إرسال الرسالة إلى ${selectedCustomer.name}`
