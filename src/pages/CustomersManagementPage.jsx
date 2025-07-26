@@ -10,7 +10,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
 import CustomerStats from '@/components/customers/CustomerStats';
 import CustomerCard from '@/components/customers/CustomerCard';
-import CustomersToolbar from '@/components/customers/CustomersToolbar';
+import EnhancedCustomersToolbar from '@/components/customers/EnhancedCustomersToolbar';
 import CustomerDetailsDialog from '@/components/customers/CustomerDetailsDialog';
 
 const CustomersManagementPage = () => {
@@ -23,6 +23,8 @@ const CustomersManagementPage = () => {
   const [cityDiscounts, setCityDiscounts] = useState([]);
   const [activeTab, setActiveTab] = useState('customers');
   const [filterType, setFilterType] = useState('all'); // حالة الفلترة
+  const [dateRange, setDateRange] = useState('all'); // فلترة المدة الزمنية
+  const [pointsUsageFilter, setPointsUsageFilter] = useState('all'); // فلترة استخدام النقاط
 
   const tierIcons = {
     'Award': Award,
@@ -447,15 +449,17 @@ const CustomersManagementPage = () => {
     <div className="container mx-auto p-4 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6" />
-            إدارة العملاء ونظام الولاء المتقدم
-          </h1>
-          <p className="text-muted-foreground">
-            إدارة شاملة للعملاء والولاء والإشعارات والخصومات
-          </p>
-        </div>
+          <div>
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <Users className="h-8 w-8 text-blue-600" />
+              <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+                إدارة العملاء ونظام الولاء
+              </span>
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              إدارة شاملة للعملاء والولاء والإشعارات والخصومات
+            </p>
+          </div>
         <div className="flex flex-wrap gap-2">
           {/* قائمة منسدلة للتصدير */}
           <Dialog>

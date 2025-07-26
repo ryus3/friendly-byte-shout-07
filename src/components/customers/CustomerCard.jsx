@@ -45,41 +45,41 @@ const CustomerCard = ({
   const getTierColors = (tierName) => {
     const colorMap = {
       'برونزي': {
-        gradient: 'from-orange-500 to-red-600',
-        darkGradient: 'dark:from-orange-600 dark:to-red-700',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-orange-500 to-red-600'
+        gradient: 'from-orange-600 via-orange-500 to-amber-600',
+        darkGradient: 'dark:from-orange-700 dark:via-orange-600 dark:to-amber-700',
+        textColor: 'text-white',
+        badge: 'bg-gradient-to-br from-orange-600 to-amber-600'
       },
       'فضي': {
-        gradient: 'from-slate-400 to-slate-600', 
-        darkGradient: 'dark:from-slate-500 dark:to-slate-700',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-slate-400 to-slate-600'
+        gradient: 'from-slate-500 via-gray-400 to-slate-600', 
+        darkGradient: 'dark:from-slate-600 dark:via-gray-500 dark:to-slate-700',
+        textColor: 'text-white',
+        badge: 'bg-gradient-to-br from-slate-500 to-slate-600'
       },
       'ذهبي': {
-        gradient: 'from-yellow-400 to-yellow-600',
-        darkGradient: 'dark:from-yellow-500 dark:to-yellow-700',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-yellow-400 to-yellow-600'
+        gradient: 'from-yellow-500 via-amber-400 to-yellow-600',
+        darkGradient: 'dark:from-yellow-600 dark:via-amber-500 dark:to-yellow-700',
+        textColor: 'text-gray-900',
+        badge: 'bg-gradient-to-br from-amber-500 to-yellow-600'
       },
       'بلاتيني': {
-        gradient: 'from-blue-500 to-blue-700',
-        darkGradient: 'dark:from-blue-600 dark:to-blue-800',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-blue-500 to-blue-700'
+        gradient: 'from-blue-600 via-indigo-500 to-blue-700',
+        darkGradient: 'dark:from-blue-700 dark:via-indigo-600 dark:to-blue-800',
+        textColor: 'text-white',
+        badge: 'bg-gradient-to-br from-blue-600 to-indigo-700'
       },
       'ماسي': {
-        gradient: 'from-purple-500 to-pink-600',
-        darkGradient: 'dark:from-purple-600 dark:to-pink-700',
-        icon: 'text-white',
-        badge: 'bg-gradient-to-br from-purple-500 to-pink-600'
+        gradient: 'from-purple-600 via-pink-500 to-purple-700',
+        darkGradient: 'dark:from-purple-700 dark:via-pink-600 dark:to-purple-800',
+        textColor: 'text-white',
+        badge: 'bg-gradient-to-br from-purple-600 to-pink-700'
       }
     };
     return colorMap[tierName] || {
-      gradient: 'from-gray-400 to-gray-600',
-      darkGradient: 'dark:from-gray-500 dark:to-gray-700',
-      icon: 'text-white',
-      badge: 'bg-gradient-to-br from-gray-400 to-gray-600'
+      gradient: 'from-gray-500 to-gray-600',
+      darkGradient: 'dark:from-gray-600 dark:to-gray-700',
+      textColor: 'text-white',
+      badge: 'bg-gradient-to-br from-gray-500 to-gray-600'
     };
   };
 
@@ -99,7 +99,7 @@ const CustomerCard = ({
     >
       <Card className={`
         relative overflow-hidden group cursor-pointer
-        bg-gradient-to-br ${tierColors.gradient} ${tierColors.darkGradient} text-white
+        bg-gradient-to-br ${tierColors.gradient} ${tierColors.darkGradient}
         border-0 shadow-lg
         hover:shadow-2xl hover:shadow-primary/20
         transition-all duration-300
@@ -113,7 +113,7 @@ const CustomerCard = ({
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <motion.h3 
-                className="font-bold text-lg text-white group-hover:text-white/90 transition-colors duration-300"
+                className={`font-bold text-lg ${tierColors.textColor} group-hover:opacity-90 transition-colors duration-300`}
                 whileHover={{ scale: 1.02 }}
               >
                 {customer.name}
@@ -121,7 +121,7 @@ const CustomerCard = ({
               
               {customer.phone && (
                 <motion.div 
-                  className="flex items-center gap-1 text-sm text-white/80 mt-1"
+                  className={`flex items-center gap-1 text-sm ${tierColors.textColor} opacity-80 mt-1`}
                   whileHover={{ x: 2 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -132,7 +132,7 @@ const CustomerCard = ({
               
               {(customer.city || customer.province) && (
                 <motion.div 
-                  className="flex items-center gap-1 text-sm text-white/80 mt-1"
+                  className={`flex items-center gap-1 text-sm ${tierColors.textColor} opacity-80 mt-1`}
                   whileHover={{ x: 2 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -148,7 +148,8 @@ const CustomerCard = ({
                 className={`
                   p-2 rounded-xl ${tierColors.badge} text-white
                   shadow-lg group-hover:shadow-xl
-                  relative overflow-hidden bg-white/10 backdrop-blur-sm
+                  relative overflow-hidden bg-white/20 backdrop-blur-sm
+                  border border-white/30
                 `}
                 whileHover={{ 
                   rotate: [0, -5, 5, 0],
@@ -187,6 +188,7 @@ const CustomerCard = ({
                       px-3 py-1 font-medium
                       shadow-md hover:shadow-lg
                       transition-all duration-300
+                      border border-white/30
                     `}
                   >
                     <Sparkles className="h-3 w-3 mr-1" />
@@ -201,7 +203,7 @@ const CustomerCard = ({
                 whileHover={{ scale: 1.02 }}
               >
                 <span className="text-sm font-medium">النقاط:</span>
-                <div className="flex items-center gap-1 font-bold text-primary">
+                <div className="flex items-center gap-1 font-bold text-yellow-400">
                   <Star className="h-4 w-4 fill-current" />
                   {customer.customer_loyalty.total_points?.toLocaleString('ar') || 0}
                 </div>
@@ -213,7 +215,7 @@ const CustomerCard = ({
                 whileHover={{ scale: 1.02 }}
               >
                 <span className="text-sm font-medium">الطلبات:</span>
-                <div className="flex items-center gap-1 font-medium text-blue-600">
+                <div className="flex items-center gap-1 font-medium text-blue-300">
                   <Users className="h-4 w-4" />
                   {customer.customer_loyalty.total_orders || 0}
                 </div>
@@ -226,7 +228,7 @@ const CustomerCard = ({
                   whileHover={{ scale: 1.02 }}
                 >
                   <span className="text-sm font-medium">المشتريات:</span>
-                  <div className="font-medium text-green-600">
+                  <div className="font-medium text-emerald-300">
                     {customer.customer_loyalty.total_spent?.toLocaleString('ar')} د.ع
                   </div>
                 </motion.div>
