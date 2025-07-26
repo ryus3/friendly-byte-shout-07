@@ -1,1045 +1,766 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, MoreHorizontal, Users, Award, TrendingUp, UserCheck, Phone, MapPin } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
+import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Filter, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { Skeleton } from '@/components/ui/skeleton';
+import { StatCard } from '@/components/dashboard/StatCard';
+import { DatePickerWithRange } from '@/components/ui/date-range-picker';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const CustomersManagementPage = () => {
-  const { toast } = useToast();
   const [customers, setCustomers] = useState([]);
   const [filteredCustomers, setFilteredCustomers] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterTier, setFilterTier] = useState('all');
-  const [filterGender, setFilterGender] = useState('all');
-  const [filterCity, setFilterCity] = useState('all');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [completedOrders, setCompletedOrders] = useState([]);
-  const [cityStats, setCityStats] = useState([]);
-  const [cityDiscounts, setCityDiscounts] = useState([]);
-  const [stats, setStats] = useState({
-    totalCustomers: 0,
-    activeCustomers: 0,
-    totalLoyaltyPoints: 0,
-    averageOrderValue: 0,
-    goldTier: 0,
-    silverTier: 0,
-    bronzeTier: 0,
-    diamondTier: 0,
-    maleCustomers: 0,
-    femaleCustomers: 0
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [showCustomerDetails, setShowCustomerDetails] = useState(false);
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [genderSegmentation, setGenderSegmentation] = useState('all');
+  const [timeFilter, setTimeFilter] = useState('all');
+  const [loyaltyTierFilter, setLoyaltyTierFilter] = useState('all');
+  const [pointsFilter, setPointsFilter] = useState('all');
+  const [dateRange, setDateRange] = useState(null);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [loyaltyTiers, setLoyaltyTiers] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [userPermissions, setUserPermissions] = useState({});
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
-  const [newCustomer, setNewCustomer] = useState({
-    full_name: '',
-    phone: '',
-    email: '',
-    address: '',
-    notes: '',
-    status: 'active',
-    loyalty_points: 0
-  });
-
-  // Load all data
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
-  // Filter customers based on search term and filters
-  useEffect(() => {
-    let filtered = customers;
-
-    if (searchTerm) {
-      filtered = filtered.filter(customer =>
-        customer.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone?.includes(searchTerm) ||
-        customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(customer => customer.status === filterStatus);
-    }
-
-    if (filterTier !== 'all') {
-      filtered = filtered.filter(customer => getCustomerTier(customer.loyalty_points || 0) === filterTier);
-    }
-
-    if (filterGender !== 'all') {
-      filtered = filtered.filter(customer => {
-        const customerGender = getCustomerGender(customer.id);
-        return customerGender === filterGender;
-      });
-    }
-
-    if (filterCity !== 'all') {
-      filtered = filtered.filter(customer => customer.city === filterCity);
-    }
-
-    setFilteredCustomers(filtered);
-  }, [customers, searchTerm, filterStatus, filterTier, filterGender, filterCity]);
-
-  const loadAllData = async () => {
+  // جلب بيانات العملاء مع تفاصيل الولاء
+  const fetchCustomers = async () => {
     try {
       setLoading(true);
-      await Promise.all([
-        loadCustomers(),
-        loadCompletedOrders(),
-        loadCityStats(),
-        loadCityDiscounts()
-      ]);
+      const { data, error } = await supabase
+        .from('customers')
+        .select(`
+          *,
+          customer_loyalty (
+            *,
+            loyalty_tiers (
+              name,
+              color,
+              icon,
+              discount_percentage
+            )
+          ),
+          customer_product_segments (
+            *,
+            departments (name),
+            categories (name),
+            product_types (name)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCustomers(data || []);
+      setFilteredCustomers(data || []);
     } catch (error) {
-      console.error('Error loading data:', error);
+      console.error('خطأ في جلب العملاء:', error);
       toast({
-        title: "خطأ",
-        description: "فشل في تحميل البيانات",
-        variant: "destructive"
+        title: 'خطأ في جلب البيانات',
+        description: error.message,
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
     }
   };
 
-  const loadCustomers = async () => {
+  // جلب مستويات الولاء والأقسام والتصنيفات للفلترة  
+  const fetchSupportingData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [tiersRes, categoriesRes, departmentsRes, permsRes] = await Promise.all([
+        supabase.from('loyalty_tiers').select('*').order('points_required'),
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('departments').select('*').order('name'),
+        supabase.from('employee_loyalty_permissions').select('*').eq('user_id', (await supabase.auth.getUser()).data.user?.id).single()
+      ]);
 
-      if (error) throw error;
-
-      // حساب النقاط الجديد لكل عميل
-      const customersWithUpdatedPoints = await Promise.all(
-        (data || []).map(async (customer) => {
-          const points = await calculateCustomerLoyaltyPoints(customer.id);
-          return { ...customer, loyalty_points: points };
-        })
-      );
-
-      setCustomers(customersWithUpdatedPoints);
-      calculateStats(customersWithUpdatedPoints);
+      if (tiersRes.data) setLoyaltyTiers(tiersRes.data);
+      // دمج الأقسام والتصنيفات في قائمة واحدة للفلترة
+      const allFilters = [
+        ...(departmentsRes.data || []).map(d => ({...d, type: 'department'})),
+        ...(categoriesRes.data || []).map(c => ({...c, type: 'category'}))
+      ];
+      setDepartments(allFilters);
+      if (permsRes.data) setUserPermissions(permsRes.data);
+      
+      // تطبيق خصم المدينة العشوائي إذا لم يكن مطبق هذا الشهر
+      await checkAndApplyCityDiscount();
     } catch (error) {
-      console.error('Error loading customers:', error);
+      console.error('خطأ في جلب البيانات المساعدة:', error);
     }
   };
 
-  const loadCompletedOrders = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .in('status', ['completed', 'delivered']);
+  useEffect(() => {
+    fetchCustomers();
+    fetchSupportingData();
+  }, []);
 
-      if (error) throw error;
-      setCompletedOrders(data || []);
-    } catch (error) {
-      console.error('Error loading orders:', error);
+  // تطبيق الفلاتر
+  useEffect(() => {
+    let filtered = customers.filter(customer => {
+      // فلتر البحث
+      const matchesSearch = !searchTerm || 
+        customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone?.includes(searchTerm) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) return false;
+
+      // فلتر النقاط
+      if (pointsFilter === 'with_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points === 0)) return false;
+      if (pointsFilter === 'no_points' && customer.customer_loyalty?.[0]?.total_points > 0) return false;
+      if (pointsFilter === 'high_points' && (!customer.customer_loyalty?.[0]?.total_points || customer.customer_loyalty[0].total_points < 1000)) return false;
+
+      // فلتر مستوى الولاء
+      if (loyaltyTierFilter !== 'all') {
+        const customerTier = customer.customer_loyalty?.[0]?.current_tier_id;
+        if (customerTier !== loyaltyTierFilter) return false;
+      }
+
+      // فلتر الجنس/التقسيم حسب القسم والتصنيف معاً
+      if (genderSegmentation !== 'all') {
+        const hasGenderSegment = customer.customer_product_segments?.some(seg => 
+          seg.gender_segment === genderSegmentation
+        );
+        if (!hasGenderSegment) return false;
+      }
+
+      // فلتر حسب القسم (departments) والتصنيف (categories) معاً
+      if (departmentFilter !== 'all') {
+        const hasSegment = customer.customer_product_segments?.some(seg => 
+          seg.department_id === departmentFilter || seg.category_id === departmentFilter
+        );
+        if (!hasSegment) return false;
+      }
+
+      // فلتر الوقت
+      if (timeFilter !== 'all') {
+        const customerDate = new Date(customer.created_at);
+        const now = new Date();
+        
+        if (timeFilter === 'today') {
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          if (customerDate < today) return false;
+        } else if (timeFilter === 'week') {
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          if (customerDate < weekAgo) return false;
+        } else if (timeFilter === 'month') {
+          const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+          if (customerDate < monthAgo) return false;
+        }
+      }
+
+      // فلتر نطاق التاريخ
+      if (dateRange?.from && dateRange?.to) {
+        const customerDate = new Date(customer.created_at);
+        if (customerDate < dateRange.from || customerDate > dateRange.to) return false;
+      }
+
+      return true;
+    });
+
+    // تطبيق الفلتر النشط من الكروت
+    if (activeFilter === 'with_points') {
+      filtered = filtered.filter(c => c.customer_loyalty?.[0]?.total_points > 0);
+    } else if (activeFilter === 'with_phones') {
+      filtered = filtered.filter(c => c.phone);
+    } else if (activeFilter === 'high_points') {
+      filtered = filtered.filter(c => c.customer_loyalty?.[0]?.total_points >= 1000);
     }
+
+    setFilteredCustomers(filtered);
+  }, [customers, searchTerm, activeFilter, pointsFilter, loyaltyTierFilter, genderSegmentation, departmentFilter, timeFilter, dateRange]);
+
+  const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0);
+  const customersWithPhones = filteredCustomers.filter(c => c.phone);
+
+  // تصدير البيانات
+  const exportCustomers = (filterType = 'all') => {
+    const dataToExport = filterType === 'all' ? filteredCustomers : 
+                        filterType === 'with_points' ? customersWithPoints :
+                        filterType === 'with_phones' ? customersWithPhones : filteredCustomers;
+
+    const csvHeaders = [
+      'الاسم', 'الهاتف', 'البريد الإلكتروني', 'المحافظة', 'المدينة', 'العنوان',
+      'إجمالي النقاط', 'إجمالي الطلبات', 'إجمالي المبالغ', 'مستوى الولاء', 'خصم الولاء',
+      'تاريخ التسجيل', 'آخر ترقية', 'حالة الهاتف', 'تقسيم الجنس'
+    ];
+
+    const csvData = dataToExport.map(customer => [
+      customer.name,
+      customer.phone || '',
+      customer.email || '',
+      customer.province || '',
+      customer.city || '',
+      customer.address || '',
+      customer.customer_loyalty?.[0]?.total_points || 0,
+      customer.customer_loyalty?.[0]?.total_orders || 0,
+      customer.customer_loyalty?.[0]?.total_spent || 0,
+      customer.customer_loyalty?.[0]?.loyalty_tiers?.name || 'لا يوجد',
+      customer.customer_loyalty?.[0]?.loyalty_tiers?.discount_percentage || 0,
+      customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '',
+      customer.customer_loyalty?.[0]?.last_tier_upgrade 
+        ? new Date(customer.customer_loyalty[0].last_tier_upgrade).toLocaleDateString('ar') 
+        : 'لا يوجد',
+      customer.phone ? 'متوفر' : 'غير متوفر',
+      customer.customer_product_segments?.[0]?.gender_segment || 'غير محدد'
+    ]);
+
+    const csvContent = [
+      csvHeaders.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    
+    const filterSuffix = filterType === 'with_points' ? '_مع_نقاط' : 
+                        filterType === 'with_phones' ? '_مع_هواتف' : 
+                        filterType === 'high_points' ? '_نقاط_عالية' : '';
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    link.download = `عملاء${filterSuffix}_${timestamp}.csv`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: 'تم التصدير بنجاح',
+      description: `تم تصدير ${csvData.length} عميل إلى ملف CSV`
+    });
   };
 
-  const loadCityStats = async () => {
+  // تحقق من تطبيق خصم المدينة العشوائي
+  const checkAndApplyCityDiscount = async () => {
     try {
-      const { data, error } = await supabase
-        .from('city_order_stats')
-        .select('*')
-        .order('total_orders', { ascending: false });
-
-      if (error) throw error;
-      setCityStats(data || []);
-    } catch (error) {
-      console.error('Error loading city stats:', error);
-    }
-  };
-
-  const loadCityDiscounts = async () => {
-    try {
-      const { data, error } = await supabase
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      const { data: existingDiscount } = await supabase
         .from('city_random_discounts')
         .select('*')
-        .eq('discount_month', new Date().getMonth() + 1)
-        .eq('discount_year', new Date().getFullYear());
-
-      if (error) throw error;
-      setCityDiscounts(data || []);
-    } catch (error) {
-      console.error('Error loading city discounts:', error);
-    }
-  };
-
-  const calculateCustomerLoyaltyPoints = async (customerId) => {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('customer_id', customerId)
-        .in('status', ['completed', 'delivered']);
-
-      if (error) throw error;
-
-      // 200 نقطة لكل طلب مكتمل
-      return (data || []).length * 200;
-    } catch (error) {
-      console.error('Error calculating points:', error);
-      return 0;
-    }
-  };
-
-  const calculateStats = (customersData) => {
-    const totalCustomers = customersData.length;
-    const activeCustomers = customersData.filter(c => c.status === 'active').length;
-    const totalLoyaltyPoints = customersData.reduce((sum, c) => sum + (c.loyalty_points || 0), 0);
-    
-    // حساب الفئات الجديدة
-    const goldTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'gold').length;
-    const silverTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'silver').length;
-    const bronzeTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'bronze').length;
-    const diamondTier = customersData.filter(c => getCustomerTier(c.loyalty_points || 0) === 'diamond').length;
-
-    // حساب الجنس من خلال الطلبات
-    const maleCustomers = customersData.filter(c => getCustomerGender(c.id) === 'male').length;
-    const femaleCustomers = customersData.filter(c => getCustomerGender(c.id) === 'female').length;
-
-    const averageOrderValue = completedOrders.length > 0 
-      ? completedOrders.reduce((sum, order) => sum + (order.final_amount || 0), 0) / completedOrders.length 
-      : 0;
-
-    setStats({
-      totalCustomers,
-      activeCustomers,
-      totalLoyaltyPoints,
-      averageOrderValue,
-      goldTier,
-      silverTier,
-      bronzeTier,
-      diamondTier,
-      maleCustomers,
-      femaleCustomers
-    });
-  };
-
-  const getCustomerTier = (points) => {
-    if (points >= 20000) return 'diamond'; // ماسي
-    if (points >= 10000) return 'gold';    // ذهبي
-    if (points >= 5000) return 'silver';   // فضي
-    if (points >= 1000) return 'bronze';   // برونزي
-    return 'standard';                     // عادي
-  };
-
-  const getTierColor = (tier) => {
-    switch (tier) {
-      case 'diamond': return 'bg-purple-500';
-      case 'gold': return 'bg-yellow-500';
-      case 'silver': return 'bg-gray-400';
-      case 'bronze': return 'bg-orange-600';
-      default: return 'bg-blue-500';
-    }
-  };
-
-  const getTierLabel = (tier) => {
-    switch (tier) {
-      case 'diamond': return 'ماسي';
-      case 'gold': return 'ذهبي';
-      case 'silver': return 'فضي';
-      case 'bronze': return 'برونزي';
-      default: return 'عادي';
-    }
-  };
-
-  const getCustomerGender = (customerId) => {
-    // البحث في الطلبات المكتملة لتحديد الجنس بناءً على المنتجات المشتراة
-    const customerOrders = completedOrders.filter(order => order.customer_id === customerId);
-    if (customerOrders.length === 0) return 'unknown';
-
-    // هنا يمكن تطبيق منطق أكثر تعقيداً لتحديد الجنس بناءً على المنتجات
-    // مؤقتاً سنعيد قيمة عشوائية للاختبار
-    return Math.random() > 0.5 ? 'male' : 'female';
-  };
-
-  const getUniqueContent = (items, key) => {
-    return [...new Set(items.map(item => item[key]).filter(Boolean))];
-  };
-
-  const handleAddCustomer = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .insert([newCustomer])
-        .select()
+        .eq('discount_month', currentMonth)
+        .eq('discount_year', currentYear)
         .single();
-
-      if (error) throw error;
-
-      const points = await calculateCustomerLoyaltyPoints(data.id);
-      setCustomers(prev => [{ ...data, loyalty_points: points }, ...prev]);
-      setIsAddDialogOpen(false);
-      setNewCustomer({
-        full_name: '',
-        phone: '',
-        email: '',
-        address: '',
-        notes: '',
-        status: 'active',
-        loyalty_points: 0
-      });
-
-      toast({
-        title: "نجح",
-        description: "تم إضافة العميل بنجاح"
-      });
+        
+      if (!existingDiscount) {
+        // تطبيق اختيار المدينة العشوائية
+        const { data: result } = await supabase.rpc('select_random_city_for_monthly_discount');
+        console.log('نتيجة اختيار المدينة:', result);
+      }
     } catch (error) {
-      console.error('Error adding customer:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في إضافة العميل",
-        variant: "destructive"
-      });
+      console.error('خطأ في تطبيق خصم المدينة:', error);
     }
   };
 
-  const handleEditCustomer = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('customers')
-        .update(selectedCustomer)
-        .eq('id', selectedCustomer.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const points = await calculateCustomerLoyaltyPoints(data.id);
-      setCustomers(prev =>
-        prev.map(customer =>
-          customer.id === selectedCustomer.id ? { ...data, loyalty_points: points } : customer
-        )
-      );
-
-      setIsEditDialogOpen(false);
-      setSelectedCustomer(null);
-
-      toast({
-        title: "نجح",
-        description: "تم تحديث بيانات العميل بنجاح"
-      });
-    } catch (error) {
-      console.error('Error updating customer:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في تحديث بيانات العميل",
-        variant: "destructive"
-      });
-    }
+  const getTierIcon = (iconName) => {
+    const tierIcons = {
+      Star, Award, Medal, Crown, Gem
+    };
+    const IconComponent = tierIcons[iconName] || Star;
+    return IconComponent;
   };
 
-  const handleDeleteCustomer = async (customerId) => {
-    try {
-      const { error } = await supabase
-        .from('customers')
-        .delete()
-        .eq('id', customerId);
-
-      if (error) throw error;
-
-      setCustomers(prev => prev.filter(customer => customer.id !== customerId));
-
-      toast({
-        title: "نجح",
-        description: "تم حذف العميل بنجاح"
-      });
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في حذف العميل",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const awardLoyaltyPoints = async (customerId) => {
-    try {
-      const points = await calculateCustomerLoyaltyPoints(customerId);
-      const newPoints = points + 200;
-
-      setCustomers(prev =>
-        prev.map(customer =>
-          customer.id === customerId 
-            ? { ...customer, loyalty_points: newPoints }
-            : customer
-        )
-      );
-
-      toast({
-        title: "نجح",
-        description: "تم منح 200 نقطة ولاء للعميل"
-      });
-    } catch (error) {
-      console.error('Error awarding loyalty points:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في منح نقاط الولاء",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleStatCardClick = (statType) => {
-    switch (statType) {
-      case 'total':
-        setFilterStatus('all');
-        setFilterTier('all');
-        setFilterGender('all');
-        setFilterCity('all');
-        break;
-      case 'active':
-        setFilterStatus('active');
-        setFilterTier('all');
-        setFilterGender('all');
-        setFilterCity('all');
-        break;
-      case 'gold':
-        setFilterStatus('all');
-        setFilterTier('gold');
-        setFilterGender('all');
-        setFilterCity('all');
-        break;
-      case 'silver':
-        setFilterStatus('all');
-        setFilterTier('silver');
-        setFilterGender('all');
-        setFilterCity('all');
-        break;
-      case 'bronze':
-        setFilterStatus('all');
-        setFilterTier('bronze');
-        setFilterGender('all');
-        setFilterCity('all');
-        break;
-      case 'diamond':
-        setFilterStatus('all');
-        setFilterTier('diamond');
-        setFilterGender('all');
-        setFilterCity('all');
-        break;
-      case 'male':
-        setFilterStatus('all');
-        setFilterTier('all');
-        setFilterGender('male');
-        setFilterCity('all');
-        break;
-      case 'female':
-        setFilterStatus('all');
-        setFilterTier('all');
-        setFilterGender('female');
-        setFilterCity('all');
-        break;
-    }
-    
-    toast({
-      title: "تم تطبيق الفلتر",
-      description: "تم تصفية العملاء حسب الإحصائية المختارة"
-    });
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('ar-IQ').format(amount) + ' د.ع';
   };
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 space-y-6" dir="rtl">
-        <div className="flex justify-between items-center">
-          <div>
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">جاري تحميل بيانات العملاء...</p>
           </div>
-          <Skeleton className="h-10 w-32" />
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <Skeleton className="h-20 w-full" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
     );
   }
 
-  const uniqueCities = getUniqueContent(customers, 'city');
-
   return (
-    <div className="container mx-auto p-6 space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-6 space-y-6">
+      {/* الهيدر */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold">إدارة العملاء</h1>
-          <p className="text-muted-foreground">إدارة قاعدة بيانات العملاء ونقاط الولاء</p>
+          <p className="text-muted-foreground">
+            إدارة شاملة لبيانات العملاء ونظام الولاء
+          </p>
         </div>
-        
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              إضافة عميل جديد
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>إضافة عميل جديد</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">الاسم الكامل *</Label>
-                <Input
-                  id="name"
-                  value={newCustomer.full_name}
-                  onChange={(e) => setNewCustomer({...newCustomer, full_name: e.target.value})}
-                  placeholder="أدخل الاسم الكامل"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">رقم الهاتف *</Label>
-                <Input
-                  id="phone"
-                  value={newCustomer.phone}
-                  onChange={(e) => setNewCustomer({...newCustomer, phone: e.target.value})}
-                  placeholder="أدخل رقم الهاتف"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="email">البريد الإلكتروني</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={newCustomer.email}
-                  onChange={(e) => setNewCustomer({...newCustomer, email: e.target.value})}
-                  placeholder="أدخل البريد الإلكتروني"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="address">العنوان</Label>
-                <Textarea
-                  id="address"
-                  value={newCustomer.address}
-                  onChange={(e) => setNewCustomer({...newCustomer, address: e.target.value})}
-                  placeholder="أدخل العنوان"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="notes">ملاحظات</Label>
-                <Textarea
-                  id="notes"
-                  value={newCustomer.notes}
-                  onChange={(e) => setNewCustomer({...newCustomer, notes: e.target.value})}
-                  placeholder="أدخل أي ملاحظات إضافية"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="status">الحالة</Label>
-                <Select value={newCustomer.status} onValueChange={(value) => setNewCustomer({...newCustomer, status: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">نشط</SelectItem>
-                    <SelectItem value="inactive">غير نشط</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  إلغاء
-                </Button>
-                <Button onClick={handleAddCustomer}>
-                  إضافة العميل
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex gap-2">
+          <Button onClick={() => exportCustomers('all')} variant="outline">
+            <Download className="h-4 w-4 mr-2" />
+            تصدير الكل
+          </Button>
+          <Button onClick={() => exportCustomers('with_points')} variant="outline">
+            <Star className="h-4 w-4 mr-2" />
+            تصدير العملاء مع النقاط
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* كروت الإحصائيات */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('total')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">إجمالي العملاء</p>
-                <p className="text-3xl font-bold">{stats.totalCustomers}</p>
-              </div>
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('active')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">العملاء النشطين</p>
-                <p className="text-3xl font-bold text-green-600">{stats.activeCustomers}</p>
-              </div>
-              <UserCheck className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('diamond')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">عملاء ماسيين</p>
-                <p className="text-3xl font-bold text-purple-600">{stats.diamondTier}</p>
-              </div>
-              <Award className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('gold')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">عملاء ذهبيين</p>
-                <p className="text-3xl font-bold text-yellow-600">{stats.goldTier}</p>
-              </div>
-              <Award className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('silver')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">عملاء فضيين</p>
-                <p className="text-3xl font-bold text-gray-500">{stats.silverTier}</p>
-              </div>
-              <Award className="h-8 w-8 text-gray-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('bronze')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">عملاء برونزيين</p>
-                <p className="text-3xl font-bold text-orange-600">{stats.bronzeTier}</p>
-              </div>
-              <Award className="h-8 w-8 text-orange-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('male')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">عملاء رجال</p>
-                <p className="text-3xl font-bold text-blue-600">{stats.maleCustomers}</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-105" onClick={() => handleStatCardClick('female')}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">عملاء نساء</p>
-                <p className="text-3xl font-bold text-pink-600">{stats.femaleCustomers}</p>
-              </div>
-              <Users className="h-8 w-8 text-pink-600" />
-            </div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="إجمالي العملاء"
+          value={filteredCustomers.length}
+          icon={Users}
+          trend="positive"
+          trendValue="12%"
+          trendPeriod="الشهر الماضي"
+          onClick={() => {
+            setActiveFilter('all');
+            setSearchTerm('');
+            setPointsFilter('all');
+            setLoyaltyTierFilter('all');
+            setGenderSegmentation('all');
+            setDepartmentFilter('all');
+            setTimeFilter('all');
+            setDateRange(null);
+          }}
+          active={activeFilter === 'all'}
+        />
+        <StatCard
+          title="عملاء لديهم نقاط"
+          value={customersWithPoints.length}
+          icon={Star}
+          trend="positive"
+          trendValue="8%"
+          trendPeriod="الشهر الماضي"
+          onClick={() => {
+            setActiveFilter('with_points');
+            setPointsFilter('with_points');
+          }}
+          active={activeFilter === 'with_points'}
+        />
+        <StatCard
+          title="عملاء مع أرقام"
+          value={customersWithPhones.length}
+          icon={Phone}
+          trend="neutral"
+          trendValue="3%"
+          trendPeriod="الشهر الماضي"
+          onClick={() => {
+            setActiveFilter('with_phones');
+            setSearchTerm('');
+            setPointsFilter('all');
+          }}
+          active={activeFilter === 'with_phones'}
+        />
+        <StatCard
+          title="متوسط النقاط"
+          value={Math.round((filteredCustomers.reduce((sum, c) => sum + (c.customer_loyalty?.[0]?.total_points || 0), 0) / (filteredCustomers.length || 1)))}
+          icon={Gift}
+          trend="positive"
+          trendValue="15%"
+          trendPeriod="الشهر الماضي"
+          onClick={() => {
+            setActiveFilter('high_points');
+            setPointsFilter('high_points');
+          }}
+          active={activeFilter === 'high_points'}
+        />
       </div>
 
-      {/* City Stats */}
-      {cityStats.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <MapPin className="mr-2 h-5 w-5" />
-              إحصائيات المدن
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {cityStats.slice(0, 6).map((city, index) => (
-                <div key={city.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{city.city_name}</p>
-                    <p className="text-sm text-muted-foreground">{city.total_orders} طلب</p>
-                  </div>
-                  <div className="text-left">
-                    <p className="text-lg font-bold">{city.total_amount.toLocaleString()}</p>
-                    <p className="text-xs text-muted-foreground">د.ع</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* City Discounts */}
-      {cityDiscounts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Award className="mr-2 h-5 w-5" />
-              خصومات المدن الشهرية
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cityDiscounts.map((discount) => (
-                <div key={discount.id} className="flex items-center justify-between p-4 border rounded-lg bg-gradient-to-r from-green-50 to-emerald-50">
-                  <div>
-                    <p className="font-medium text-green-800">{discount.city_name}</p>
-                    <p className="text-sm text-green-600">خصم شهري نشط</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold text-green-700">{discount.discount_percentage}%</p>
-                    <p className="text-xs text-green-600">خصم</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Search and Filters */}
+      {/* الفلاتر والبحث */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="البحث في العملاء..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pr-10"
-                />
-              </div>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              البحث والفلترة
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              فلاتر متقدمة
+              {showAdvancedFilters ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {/* الفلاتر الأساسية */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>البحث</Label>
+              <Input
+                placeholder="ابحث بالاسم أو الهاتف..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  فلاتر متقدمة
-                  {(filterStatus !== 'all' || filterTier !== 'all' || filterGender !== 'all' || filterCity !== 'all') && (
-                    <Badge variant="secondary" className="ml-2">
-                      {(filterStatus !== 'all' ? 1 : 0) + 
-                       (filterTier !== 'all' ? 1 : 0) + 
-                       (filterGender !== 'all' ? 1 : 0) + 
-                       (filterCity !== 'all' ? 1 : 0)}
-                    </Badge>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>فلترة حسب الحالة</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setFilterStatus('all')}>
-                  جميع العملاء {filterStatus === 'all' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus('active')}>
-                  العملاء النشطين {filterStatus === 'active' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus('inactive')}>
-                  العملاء غير النشطين {filterStatus === 'inactive' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>فلترة حسب مستوى الولاء</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setFilterTier('all')}>
-                  جميع المستويات {filterTier === 'all' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterTier('diamond')}>
-                  ماسي (20,000+ نقطة) {filterTier === 'diamond' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterTier('gold')}>
-                  ذهبي (10,000+ نقطة) {filterTier === 'gold' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterTier('silver')}>
-                  فضي (5,000+ نقطة) {filterTier === 'silver' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterTier('bronze')}>
-                  برونزي (1,000+ نقطة) {filterTier === 'bronze' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterTier('standard')}>
-                  عادي (أقل من 1,000) {filterTier === 'standard' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel>فلترة حسب الجنس</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => setFilterGender('all')}>
-                  الكل {filterGender === 'all' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterGender('male')}>
-                  رجال {filterGender === 'male' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterGender('female')}>
-                  نساء {filterGender === 'female' && <span className="mr-auto">✓</span>}
-                </DropdownMenuItem>
+            <div className="space-y-2">
+              <Label>فلتر الوقت</Label>
+              <Select value={timeFilter} onValueChange={setTimeFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الفترات</SelectItem>
+                  <SelectItem value="today">اليوم</SelectItem>
+                  <SelectItem value="week">هذا الأسبوع</SelectItem>
+                  <SelectItem value="month">هذا الشهر</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-                {uniqueCities.length > 0 && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>فلترة حسب المدينة</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setFilterCity('all')}>
-                      جميع المدن {filterCity === 'all' && <span className="mr-auto">✓</span>}
-                    </DropdownMenuItem>
-                    {uniqueCities.slice(0, 5).map((city) => (
-                      <DropdownMenuItem key={city} onClick={() => setFilterCity(city)}>
-                        {city} {filterCity === city && <span className="mr-auto">✓</span>}
-                      </DropdownMenuItem>
-                    ))}
-                  </>
-                )}
-                
-                {(filterStatus !== 'all' || filterTier !== 'all' || filterGender !== 'all' || filterCity !== 'all') && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setFilterStatus('all');
-                        setFilterTier('all');
-                        setFilterGender('all');
-                        setFilterCity('all');
-                      }}
-                      className="text-red-600"
-                    >
-                      إزالة جميع الفلاتر
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="space-y-2">
+              <Label>فلتر النقاط</Label>
+              <Select value={pointsFilter} onValueChange={setPointsFilter}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل العملاء</SelectItem>
+                  <SelectItem value="with_points">لديهم نقاط</SelectItem>
+                  <SelectItem value="no_points">بدون نقاط</SelectItem>
+                  <SelectItem value="high_points">نقاط عالية (+1000)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* الفلاتر المتقدمة */}
+          {showAdvancedFilters && (
+            <div className="mt-6 pt-6 border-t">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>التصنيف (رجالي/نسائي)</Label>
+                  <Select value={genderSegmentation} onValueChange={setGenderSegmentation}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل التصنيفات</SelectItem>
+                      <SelectItem value="male">رجالي</SelectItem>
+                      <SelectItem value="female">نسائي</SelectItem>
+                      <SelectItem value="unisex">للجنسين</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>الأقسام والتصنيفات</Label>
+                  <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الأقسام والتصنيفات</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={`${dept.type}-${dept.id}`} value={dept.id}>
+                          {dept.name} ({dept.type === 'department' ? 'قسم' : 'تصنيف'})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>مستوى الولاء</Label>
+                  <Select value={loyaltyTierFilter} onValueChange={setLoyaltyTierFilter}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل المستويات</SelectItem>
+                      {loyaltyTiers.map((tier) => (
+                        <SelectItem key={tier.id} value={tier.id}>
+                          {tier.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>نطاق التاريخ</Label>
+                  <DatePickerWithRange
+                    date={dateRange}
+                    setDate={setDateRange}
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <Button 
+                    onClick={() => {
+                      setSearchTerm('');
+                      setTimeFilter('all');
+                      setPointsFilter('all');
+                      setLoyaltyTierFilter('all');
+                      setGenderSegmentation('all');
+                      setDepartmentFilter('all');
+                      setDateRange(null);
+                      setActiveFilter('all');
+                    }}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    مسح الفلاتر
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Customers List */}
+      {/* قائمة العملاء */}
       <Card>
         <CardHeader>
           <CardTitle>قائمة العملاء ({filteredCustomers.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredCustomers.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">لا توجد عملاء مطابقين للبحث</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredCustomers.map((customer) => {
-                const tier = getCustomerTier(customer.loyalty_points || 0);
-                const gender = getCustomerGender(customer.id);
-                
-                return (
-                  <div key={customer.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center space-x-4 space-x-reverse">
-                      <Avatar>
-                        <AvatarFallback>
-                          {customer.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'ع'}
+          <div className="space-y-4">
+            {filteredCustomers.map((customer) => {
+              const loyaltyData = customer.customer_loyalty?.[0];
+              const tierIcon = loyaltyData?.loyalty_tiers?.icon ? getTierIcon(loyaltyData.loyalty_tiers.icon) : Users;
+              const TierIcon = tierIcon;
+
+              return (
+                <div
+                  key={customer.id}
+                  className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4 space-x-reverse">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-primary/10">
+                          {customer.name.slice(0, 2)}
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-medium">{customer.full_name}</h3>
-                          <Badge variant={customer.status === 'active' ? 'default' : 'secondary'}>
-                            {customer.status === 'active' ? 'نشط' : 'غير نشط'}
-                          </Badge>
-                          <Badge className={`text-white ${getTierColor(tier)}`}>
-                            {getTierLabel(tier)}
-                          </Badge>
-                          {gender !== 'unknown' && (
-                            <Badge variant="outline">
-                              {gender === 'male' ? 'رجال' : 'نساء'}
-                            </Badge>
-                          )}
-                          {customer.city && (
-                            <Badge variant="outline" className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {customer.city}
+                      <div className="space-y-1 flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{customer.name}</h3>
+                          {loyaltyData?.loyalty_tiers && (
+                            <Badge 
+                              variant="secondary" 
+                              className="flex items-center gap-1"
+                              style={{ backgroundColor: loyaltyData.loyalty_tiers.color + '20', color: loyaltyData.loyalty_tiers.color }}
+                            >
+                              <TierIcon className="h-3 w-3" />
+                              {loyaltyData.loyalty_tiers.name}
                             </Badge>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          {customer.phone && (
-                            <span className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {customer.phone}
-                            </span>
-                          )}
-                          {customer.email && <span>{customer.email}</span>}
-                          <span className="flex items-center gap-1">
-                            <Award className="h-3 w-3" />
-                            {customer.loyalty_points || 0} نقطة
-                          </span>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {customer.phone || 'غير متوفر'}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {customer.city ? `${customer.city}, ${customer.province}` : 'غير محدد'}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Star className="h-3 w-3" />
+                            {loyaltyData?.total_points || 0} نقطة
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {customer.customer_product_segments?.map((segment, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {segment.departments?.name || segment.categories?.name || 'غير محدد'}
+                              {segment.gender_segment && ` - ${
+                                segment.gender_segment === 'male' ? 'رجالي' :
+                                segment.gender_segment === 'female' ? 'نسائي' : 'للجنسين'
+                              }`}
+                            </Badge>
+                          ))}
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => awardLoyaltyPoints(customer.id)}
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setShowCustomerDetails(true);
+                        }}
                       >
-                        منح 200 نقطة
+                        <Eye className="h-4 w-4" />
                       </Button>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setSelectedCustomer(customer);
-                              setIsEditDialogOpen(true);
-                            }}
-                          >
-                            تعديل
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteCustomer(customer.id)}
-                            className="text-red-600"
-                          >
-                            حذف
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCustomer(customer);
+                          setShowNotificationDialog(true);
+                        }}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+
+            {filteredCustomers.length === 0 && (
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">لا توجد عملاء</h3>
+                <p className="text-muted-foreground">لا توجد عملاء يطابقون معايير البحث المحددة</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-lg">
+      {/* نافذة تفاصيل العميل */}
+      <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>تعديل بيانات العميل</DialogTitle>
+            <DialogTitle>تفاصيل العميل</DialogTitle>
           </DialogHeader>
+          
+          {selectedCustomer && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-semibold">المعلومات الأساسية</Label>
+                  <div className="space-y-2 mt-2">
+                    <p><span className="font-medium">الاسم:</span> {selectedCustomer.name}</p>
+                    <p><span className="font-medium">الهاتف:</span> {selectedCustomer.phone || 'غير متوفر'}</p>
+                    <p><span className="font-medium">البريد الإلكتروني:</span> {selectedCustomer.email || 'غير متوفر'}</p>
+                    <p><span className="font-medium">العنوان:</span> {selectedCustomer.address || 'غير محدد'}</p>
+                    <p><span className="font-medium">المدينة:</span> {selectedCustomer.city || 'غير محددة'}</p>
+                    <p><span className="font-medium">المحافظة:</span> {selectedCustomer.province || 'غير محددة'}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="font-semibold">معلومات الولاء</Label>
+                  <div className="space-y-2 mt-2">
+                    {selectedCustomer.customer_loyalty?.[0] ? (
+                      <>
+                        <p><span className="font-medium">إجمالي النقاط:</span> {selectedCustomer.customer_loyalty[0].total_points}</p>
+                        <p><span className="font-medium">إجمالي الطلبات:</span> {selectedCustomer.customer_loyalty[0].total_orders}</p>
+                        <p><span className="font-medium">إجمالي المبلغ:</span> {formatCurrency(selectedCustomer.customer_loyalty[0].total_spent)}</p>
+                        {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
+                          <p><span className="font-medium">مستوى الولاء:</span> {selectedCustomer.customer_loyalty[0].loyalty_tiers.name}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-muted-foreground">لا توجد بيانات ولاء</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="font-semibold">التصنيفات والأقسام المفضلة</Label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedCustomer.customer_product_segments?.map((segment, index) => (
+                    <Badge key={index} variant="outline">
+                      {segment.departments?.name || segment.categories?.name || 'غير محدد'}
+                      {segment.gender_segment && ` - ${
+                        segment.gender_segment === 'male' ? 'رجالي' :
+                        segment.gender_segment === 'female' ? 'نسائي' : 'للجنسين'
+                      }`}
+                    </Badge>
+                  )) || <p className="text-muted-foreground">لا توجد تصنيفات محددة</p>}
+                </div>
+              </div>
+
+              <div>
+                <Label className="font-semibold">تواريخ مهمة</Label>
+                <div className="space-y-2 mt-2">
+                  <p><span className="font-medium">تاريخ التسجيل:</span> {new Date(selectedCustomer.created_at).toLocaleDateString('ar')}</p>
+                  {selectedCustomer.customer_loyalty?.[0]?.last_tier_upgrade && (
+                    <p><span className="font-medium">آخر ترقية مستوى:</span> {new Date(selectedCustomer.customer_loyalty[0].last_tier_upgrade).toLocaleDateString('ar')}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* نافذة إرسال الإشعارات */}
+      <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>إرسال إشعار للعميل</DialogTitle>
+          </DialogHeader>
+          
           {selectedCustomer && (
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-name">الاسم الكامل *</Label>
-                <Input
-                  id="edit-name"
-                  value={selectedCustomer.full_name || ''}
-                  onChange={(e) => setSelectedCustomer({...selectedCustomer, full_name: e.target.value})}
-                  placeholder="أدخل الاسم الكامل"
-                />
+                <Label>العميل المحدد</Label>
+                <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                  <Avatar className="h-8 w-8">
+                    <AvatarFallback>{selectedCustomer.name.slice(0, 2)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{selectedCustomer.name}</p>
+                    <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
+                  </div>
+                </div>
               </div>
-              
+
               <div>
-                <Label htmlFor="edit-phone">رقم الهاتف *</Label>
-                <Input
-                  id="edit-phone"
-                  value={selectedCustomer.phone || ''}
-                  onChange={(e) => setSelectedCustomer({...selectedCustomer, phone: e.target.value})}
-                  placeholder="أدخل رقم الهاتف"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-email">البريد الإلكتروني</Label>
-                <Input
-                  id="edit-email"
-                  type="email"
-                  value={selectedCustomer.email || ''}
-                  onChange={(e) => setSelectedCustomer({...selectedCustomer, email: e.target.value})}
-                  placeholder="أدخل البريد الإلكتروني"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-address">العنوان</Label>
+                <Label>نص الرسالة</Label>
                 <Textarea
-                  id="edit-address"
-                  value={selectedCustomer.address || ''}
-                  onChange={(e) => setSelectedCustomer({...selectedCustomer, address: e.target.value})}
-                  placeholder="أدخل العنوان"
+                  placeholder="اكتب رسالتك هنا..."
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                  className="mt-2"
                 />
               </div>
-              
-              <div>
-                <Label htmlFor="edit-notes">ملاحظات</Label>
-                <Textarea
-                  id="edit-notes"
-                  value={selectedCustomer.notes || ''}
-                  onChange={(e) => setSelectedCustomer({...selectedCustomer, notes: e.target.value})}
-                  placeholder="أدخل أي ملاحظات إضافية"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-status">الحالة</Label>
-                <Select value={selectedCustomer.status} onValueChange={(value) => setSelectedCustomer({...selectedCustomer, status: value})}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">نشط</SelectItem>
-                    <SelectItem value="inactive">غير نشط</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNotificationDialog(false);
+                    setNotificationMessage('');
+                  }}
+                >
                   إلغاء
                 </Button>
-                <Button onClick={handleEditCustomer}>
-                  حفظ التغييرات
+                <Button
+                  onClick={() => {
+                    // هنا يتم إرسال الإشعار
+                    toast({
+                      title: 'تم إرسال الإشعار',
+                      description: `تم إرسال الرسالة إلى ${selectedCustomer.name}`
+                    });
+                    setShowNotificationDialog(false);
+                    setNotificationMessage('');
+                  }}
+                  disabled={!notificationMessage.trim()}
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  إرسال
                 </Button>
               </div>
             </div>
