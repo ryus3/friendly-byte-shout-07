@@ -518,14 +518,6 @@ const CustomersManagementPage = () => {
 
           {/* أدوات تطوير سريعة لاختبار فلترة الجنس */}
           <div className="flex gap-1">
-            <Button 
-              variant={filterType === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilterType('all')}
-              className="text-xs"
-            >
-              الكل
-            </Button>
           </div>
         </div>
       </div>
