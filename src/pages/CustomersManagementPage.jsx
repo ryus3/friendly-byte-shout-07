@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
-import { Download, Star, Gift, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { toast } from '@/hooks/use-toast';
+import { Download, Star, Gift, Users, Eye, Send, Phone, MapPin, AlertTriangle, Sparkles, Trophy, Medal, Crown, Gem, Award } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import CustomerFilters from '@/components/customers/CustomerFilters';
 import CustomerStats from '@/components/customers/CustomerStats';
-import CustomerCard from '@/components/customers/CustomerCard';
 import ExportDialog from '@/components/customers/ExportDialog';
 
 const CustomersManagementPage = () => {
@@ -193,10 +192,15 @@ const CustomersManagementPage = () => {
   };
 
   useEffect(() => {
-    fetchCustomers();
     fetchSupportingData();
     fetchCityStatsAndDiscounts();
   }, []);
+
+  useEffect(() => {
+    if (loyaltyTiers.length > 0) {
+      fetchCustomers();
+    }
+  }, [loyaltyTiers]);
 
   // تطبيق الفلاتر
   useEffect(() => {
@@ -404,17 +408,256 @@ const CustomersManagementPage = () => {
     }
   };
 
+  // مكون كارت العميل المحسن
+  const CustomerCard = ({ customer, onViewDetails, onSendNotification }) => {
+    const loyaltyData = customer.customer_loyalty?.[0];
+    const getTierIcon = (iconName) => {
+      const icons = { Star, Award, Medal, Crown, Gem, Trophy };
+      return icons[iconName] || Star;
+    };
+    
+    const TierIcon = loyaltyData?.loyalty_tiers?.icon ? getTierIcon(loyaltyData.loyalty_tiers.icon) : Star;
+
+    // تحديد الجمهور المستهدف
+    const genderSegment = customer.customer_product_segments?.[0]?.gender_segment;
+    const genderIcon = genderSegment === 'male' ? '🧑' : genderSegment === 'female' ? '👩' : '👥';
+    const genderText = genderSegment === 'male' ? 'رجالي' : genderSegment === 'female' ? 'نسائي' : 'للجنسين';
+
+    // حساب النقاط - 200 نقطة لكل طلب مكتمل
+    const totalPoints = loyaltyData?.total_points || 0;
+    const totalOrders = loyaltyData?.total_orders || 0;
+    const expectedPoints = totalOrders * 200;
+    const hasPointsMismatch = totalPoints !== expectedPoints && totalOrders > 0;
+
+    return (
+      <Card className="group w-full hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 border-0 bg-gradient-to-br from-card to-card/80 shadow-lg overflow-hidden relative" 
+            style={{ 
+              boxShadow: `0 8px 32px ${loyaltyData?.loyalty_tiers?.color || '#3B82F6'}15`,
+              borderLeft: `6px solid ${loyaltyData?.loyalty_tiers?.color || '#3B82F6'}`
+            }}>
+        {/* خلفية متحركة */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+        
+        <CardContent className="p-5 md:p-7 relative z-10">
+          {/* Header Section */}
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+            <div className="flex items-start gap-3 flex-1 min-w-0">
+              <Avatar className="h-12 w-12 md:h-16 md:w-16 shrink-0 ring-4 ring-primary/10">
+                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-sm md:text-lg font-bold text-primary">
+                  {customer.name.slice(0, 2)}
+                </AvatarFallback>
+              </Avatar>
+              
+              <div className="space-y-2 md:space-y-3 flex-1 min-w-0">
+                <div className="flex flex-col md:flex-row md:items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-lg md:text-xl leading-tight truncate bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    {customer.name}
+                  </h3>
+                  
+                  <div className="flex flex-wrap items-center gap-2">
+                    {loyaltyData?.loyalty_tiers && (
+                      <Badge 
+                        variant="secondary" 
+                        className="flex items-center gap-1 px-3 py-1 text-xs font-semibold border-2"
+                        style={{ 
+                          backgroundColor: loyaltyData.loyalty_tiers.color + '20', 
+                          color: loyaltyData.loyalty_tiers.color,
+                          borderColor: loyaltyData.loyalty_tiers.color + '40'
+                        }}
+                      >
+                        <TierIcon className="h-3 w-3" />
+                        <span className="hidden sm:inline">{loyaltyData.loyalty_tiers.name}</span>
+                        <span className="sm:hidden">{loyaltyData.loyalty_tiers.name.slice(0, 3)}</span>
+                      </Badge>
+                    )}
+                    {genderSegment && (
+                      <Badge variant="outline" className="text-xs border-2 font-medium">
+                        <span className="md:hidden">{genderIcon}</span>
+                        <span className="hidden md:inline">{genderIcon} {genderText}</span>
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Contact Info */}
+                <div className="grid grid-cols-1 gap-2 text-sm">
+                  <div className="flex items-center gap-2 min-w-0 p-2 bg-muted/30 rounded-lg">
+                    <Phone className="h-4 w-4 text-green-600 shrink-0" />
+                    <span className="font-medium truncate">{customer.phone || 'غير متوفر'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 min-w-0 p-2 bg-muted/30 rounded-lg">
+                    <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
+                    <span className="truncate">
+                      {customer.city ? `${customer.city}, ${customer.province}` : 'غير محدد'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons - Mobile Optimized */}
+            <div className="flex md:flex-col gap-2 justify-end shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onViewDetails(customer)}
+                className="flex-1 md:flex-none gap-2 text-xs px-3 py-2 border-2 hover:bg-primary hover:text-primary-foreground transition-all"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="hidden sm:inline">تفاصيل</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onSendNotification(customer)}
+                className="flex-1 md:flex-none gap-2 text-xs px-3 py-2 border-2 hover:bg-accent hover:text-accent-foreground transition-all"
+              >
+                <Send className="h-4 w-4" />
+                <span className="hidden sm:inline">إشعار</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* إحصائيات الولاء المحسنة */}
+          <div className="bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 rounded-xl p-4 space-y-4 border border-primary/10">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                <div className="relative flex items-center gap-3 p-3">
+                  <div className="p-2 bg-yellow-100 rounded-full">
+                    <Star className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-xl text-yellow-700">{totalPoints.toLocaleString()}</div>
+                    <div className="text-sm text-yellow-600 font-medium">نقطة ولاء</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-400 to-green-600 rounded-lg opacity-10 group-hover:opacity-20 transition-opacity"></div>
+                <div className="relative flex items-center gap-3 p-3">
+                  <div className="p-2 bg-green-100 rounded-full">
+                    <Gift className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-bold text-xl text-green-700">{totalOrders}</div>
+                    <div className="text-sm text-green-600 font-medium">طلب مكتمل</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* معلومات حساب النقاط */}
+            <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-100">
+              <div className="text-sm text-blue-700 font-medium mb-1">معادلة النقاط:</div>
+              <div className="text-sm text-blue-600">
+                {totalOrders} طلب × 200 نقطة = <span className="font-bold">{expectedPoints.toLocaleString()}</span> نقطة
+              </div>
+            </div>
+            
+            {/* تحذير عدم التطابق */}
+            {hasPointsMismatch && (
+              <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg"></div>
+                <div className="relative flex items-center gap-3 p-3 border border-red-200 rounded-lg">
+                  <div className="p-1 bg-red-100 rounded-full">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-red-800 text-sm">خطأ في حساب النقاط</div>
+                    <div className="text-red-600 text-xs">
+                      المتوقع: <span className="font-bold">{expectedPoints.toLocaleString()}</span> نقطة
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Total Spending */}
+            {loyaltyData?.total_spent > 0 && (
+              <div className="text-sm text-muted-foreground pt-2 border-t border-border/50">
+                💰 إجمالي المشتريات: <span className="font-bold text-primary">{new Intl.NumberFormat('ar-IQ').format(loyaltyData.total_spent)} د.ع</span>
+              </div>
+            )}
+          </div>
+
+          {/* Product Segments */}
+          {customer.customer_product_segments?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-4">
+              {customer.customer_product_segments.slice(0, 3).map((segment, index) => (
+                <Badge key={index} variant="outline" className="text-xs border-2">
+                  {segment.departments?.name || segment.categories?.name || 'غير محدد'}
+                </Badge>
+              ))}
+              {customer.customer_product_segments.length > 3 && (
+                <Badge variant="outline" className="text-xs border-2">
+                  +{customer.customer_product_segments.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const handleSendNotification = async () => {
+    if (!selectedCustomer || !notificationMessage.trim()) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى إدخال نص الإشعار',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('customer_notifications_sent')
+        .insert({
+          customer_id: selectedCustomer.id,
+          notification_type: 'manual',
+          message: notificationMessage,
+          sent_via: 'pending',
+          success: false
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'تم إرسال الإشعار',
+        description: `تم إضافة الإشعار لـ ${selectedCustomer.name} في قائمة الانتظار`
+      });
+
+      setShowNotificationDialog(false);
+      setNotificationMessage('');
+      setSelectedCustomer(null);
+    } catch (error) {
+      console.error('خطأ في إرسال الإشعار:', error);
+      toast({
+        title: 'خطأ في الإرسال',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (loading) {
     return (
-      <div className="container mx-auto p-3 md:p-6">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">جاري تحميل بيانات العملاء...</p>
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/30 border-t-primary mx-auto"></div>
+            <Sparkles className="h-8 w-8 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
           </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-primary">جاري التحميل...</h3>
+            <p className="text-muted-foreground">تحضير بيانات العملاء المتطورة</p>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
   }
 
   return (
@@ -477,30 +720,30 @@ const CustomersManagementPage = () => {
           </div>
         )}
 
-      {/* الإحصائيات */}
-      <CustomerStats
-        totalCustomers={customers.length}
-        customersWithPoints={customersWithPoints}
-        customersWithPhones={customersWithPhones}
-        highPointsCustomers={highPointsCustomers}
-        cityStats={cityStats}
-        loyaltyTiers={loyaltyTiers}
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-      />
+        {/* الإحصائيات */}
+        <CustomerStats
+          totalCustomers={customers.length}
+          customersWithPoints={customersWithPoints}
+          customersWithPhones={customersWithPhones}
+          highPointsCustomers={highPointsCustomers}
+          cityStats={cityStats}
+          loyaltyTiers={loyaltyTiers}
+          activeFilter={activeFilter}
+          onFilterChange={setActiveFilter}
+        />
 
-      {/* الفلاتر */}
-      <CustomerFilters
-        filters={filters}
-        onFiltersChange={setFilters}
-        loyaltyTiers={loyaltyTiers}
-        departments={departments}
-        activeFilter={activeFilter}
-        onActiveFilterChange={setActiveFilter}
-        customersWithPoints={customersWithPoints}
-        customersWithPhones={customersWithPhones}
-        totalCustomers={filteredCustomers.length}
-      />
+        {/* الفلاتر */}
+        <CustomerFilters
+          filters={filters}
+          onFiltersChange={setFilters}
+          loyaltyTiers={loyaltyTiers}
+          departments={departments}
+          activeFilter={activeFilter}
+          onActiveFilterChange={setActiveFilter}
+          customersWithPoints={customersWithPoints}
+          customersWithPhones={customersWithPhones}
+          totalCustomers={filteredCustomers.length}
+        />
 
         {/* قائمة العملاء المحسنة */}
         <Card className="border-0 shadow-xl bg-gradient-to-br from-card to-card/50">
@@ -555,174 +798,138 @@ const CustomersManagementPage = () => {
           </CardContent>
         </Card>
 
-      {/* نافذة تفاصيل العميل - محسنة للهاتف */}
-      <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>تفاصيل العميل</DialogTitle>
-          </DialogHeader>
-          
-          {selectedCustomer && (
-            <div className="space-y-4 md:space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label className="font-semibold">المعلومات الأساسية</Label>
-                  <div className="space-y-2 mt-2 text-sm">
-                    <p><span className="font-medium">الاسم:</span> {selectedCustomer.name}</p>
-                    <p><span className="font-medium">الهاتف:</span> {selectedCustomer.phone || 'غير متوفر'}</p>
-                    <p><span className="font-medium">البريد:</span> {selectedCustomer.email || 'غير متوفر'}</p>
-                    <p><span className="font-medium">العنوان:</span> {selectedCustomer.address || 'غير محدد'}</p>
-                    <p><span className="font-medium">المدينة:</span> {selectedCustomer.city || 'غير محددة'}</p>
-                    <p><span className="font-medium">المحافظة:</span> {selectedCustomer.province || 'غير محددة'}</p>
+        {/* Dialog تفاصيل العميل */}
+        <Dialog open={showCustomerDetails} onOpenChange={setShowCustomerDetails}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                تفاصيل العميل
+              </DialogTitle>
+            </DialogHeader>
+            {selectedCustomer && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">الاسم</Label>
+                    <p className="text-lg font-semibold">{selectedCustomer.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">الهاتف</Label>
+                    <p className="text-lg">{selectedCustomer.phone || 'غير متوفر'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">البريد الإلكتروني</Label>
+                    <p className="text-lg">{selectedCustomer.email || 'غير متوفر'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">المحافظة</Label>
+                    <p className="text-lg">{selectedCustomer.province || 'غير محدد'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">المدينة</Label>
+                    <p className="text-lg">{selectedCustomer.city || 'غير محدد'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">تاريخ التسجيل</Label>
+                    <p className="text-lg">
+                      {selectedCustomer.created_at ? new Date(selectedCustomer.created_at).toLocaleDateString('ar') : 'غير محدد'}
+                    </p>
                   </div>
                 </div>
-
-                <div>
-                  <Label className="font-semibold">معلومات الولاء</Label>
-                  <div className="space-y-2 mt-2 text-sm">
-                    {selectedCustomer.customer_loyalty?.[0] ? (
-                      <>
-                        <p><span className="font-medium">إجمالي النقاط:</span> {selectedCustomer.customer_loyalty[0].total_points.toLocaleString()}</p>
-                        <p><span className="font-medium">إجمالي الطلبات:</span> {selectedCustomer.customer_loyalty[0].total_orders}</p>
-                        <p><span className="font-medium">إجمالي المشتريات:</span> {new Intl.NumberFormat('ar-IQ').format(selectedCustomer.customer_loyalty[0].total_spent)} د.ع</p>
-                        
-                        {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="font-medium">مستوى الولاء:</span>
-                            <div className="flex items-center gap-2 px-2 py-1 rounded-lg" 
-                                 style={{ backgroundColor: selectedCustomer.customer_loyalty[0].loyalty_tiers.color + '20' }}>
-                              <span style={{ color: selectedCustomer.customer_loyalty[0].loyalty_tiers.color }}>
-                                {selectedCustomer.customer_loyalty[0].loyalty_tiers.name}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* تحذير من عدم تطابق النقاط */}
-                        {(() => {
-                          const currentPoints = selectedCustomer.customer_loyalty[0].total_points;
-                          const currentOrders = selectedCustomer.customer_loyalty[0].total_orders;
-                          const expectedPoints = currentOrders * 200;
-                          
-                          if (currentPoints !== expectedPoints && currentOrders > 0) {
-                            return (
-                              <div className="p-3 bg-yellow-100 border border-yellow-300 rounded-lg mt-2">
-                                <p className="text-sm font-medium text-yellow-800">⚠️ تحذير: عدم تطابق في النقاط</p>
-                                <p className="text-xs text-yellow-700">
-                                  النقاط الحالية: {currentPoints.toLocaleString()} | المتوقعة: {expectedPoints.toLocaleString()}
-                                </p>
-                              </div>
-                            );
-                          }
-                        })()}
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground">لا توجد بيانات ولاء</p>
-                    )}
+                
+                {selectedCustomer.address && (
+                  <div>
+                    <Label className="text-sm font-medium">العنوان</Label>
+                    <p className="text-lg">{selectedCustomer.address}</p>
                   </div>
-                </div>
-              </div>
+                )}
 
-              {/* مستويات الولاء المتاحة */}
-              {loyaltyTiers.length > 0 && (
-                <div>
-                  <Label className="font-semibold">مستويات الولاء المتاحة</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                    {loyaltyTiers.map((tier) => (
-                      <div key={tier.id} className="flex items-center justify-between p-2 rounded-lg border">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tier.color }}></div>
-                          <span className="text-sm font-medium">{tier.name}</span>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {tier.points_required.toLocaleString()} نقطة
-                          {tier.discount_percentage > 0 && (
-                            <span className="text-green-600 mr-1">
-                              (خصم {tier.discount_percentage}%)
-                            </span>
-                          )}
-                        </div>
+                {/* معلومات الولاء */}
+                {selectedCustomer.customer_loyalty?.[0] && (
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3">معلومات الولاء</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">النقاط:</span>
+                        <span className="ml-2">{selectedCustomer.customer_loyalty[0].total_points || 0}</span>
                       </div>
-                    ))}
+                      <div>
+                        <span className="font-medium">الطلبات:</span>
+                        <span className="ml-2">{selectedCustomer.customer_loyalty[0].total_orders || 0}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">إجمالي المشتريات:</span>
+                        <span className="ml-2">{new Intl.NumberFormat('ar-IQ').format(selectedCustomer.customer_loyalty[0].total_spent || 0)} د.ع</span>
+                      </div>
+                      {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
+                        <div>
+                          <span className="font-medium">مستوى الولاء:</span>
+                          <span className="ml-2">{selectedCustomer.customer_loyalty[0].loyalty_tiers.name}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+                )}
 
-      {/* نافذة إرسال الإشعارات - محسنة للهاتف */}
-      <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
-        <DialogContent className="w-[95vw] max-w-md">
-          <DialogHeader>
-            <DialogTitle>إرسال إشعار للعميل</DialogTitle>
-          </DialogHeader>
-          
-          {selectedCustomer && (
+                {/* تقسيمات المنتجات */}
+                {selectedCustomer.customer_product_segments?.length > 0 && (
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3">تقسيمات المنتجات</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCustomer.customer_product_segments.map((segment, index) => (
+                        <Badge key={index} variant="outline">
+                          {segment.departments?.name || segment.categories?.name || 'غير محدد'}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog إرسال إشعار */}
+        <Dialog open={showNotificationDialog} onOpenChange={setShowNotificationDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                إرسال إشعار
+              </DialogTitle>
+            </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label>العميل المحدد</Label>
-                <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>{selectedCustomer.name.slice(0, 2)}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{selectedCustomer.name}</p>
-                    <p className="text-sm text-muted-foreground">{selectedCustomer.phone}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <Label>نص الرسالة</Label>
+                <Label htmlFor="message">نص الإشعار</Label>
                 <Textarea
-                  placeholder="اكتب رسالتك هنا..."
+                  id="message"
+                  placeholder="اكتب نص الإشعار هنا..."
                   value={notificationMessage}
                   onChange={(e) => setNotificationMessage(e.target.value)}
-                  className="mt-2"
+                  rows={4}
                 />
               </div>
-
               <div className="flex gap-2 justify-end">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowNotificationDialog(false);
-                    setNotificationMessage('');
-                  }}
-                >
+                <Button variant="outline" onClick={() => setShowNotificationDialog(false)}>
                   إلغاء
                 </Button>
-                <Button
-                  onClick={() => {
-                    toast({
-                      title: 'تم إرسال الإشعار',
-                      description: `تم إرسال الرسالة إلى ${selectedCustomer.name}`
-                    });
-                    setShowNotificationDialog(false);
-                    setNotificationMessage('');
-                  }}
-                  disabled={!notificationMessage.trim()}
-                >
-                  إرسال
+                <Button onClick={handleSendNotification}>
+                  إرسال الإشعار
                 </Button>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
 
-      {/* نافذة التصدير */}
-      <ExportDialog
-        isOpen={showExportDialog}
-        onClose={() => setShowExportDialog(false)}
-        customers={filteredCustomers}
-        customersWithPoints={customersWithPoints}
-        customersWithPhones={customersWithPhones}
-        highPointsCustomers={highPointsCustomers}
-        onExport={handleExport}
-      />
+        {/* Dialog التصدير */}
+        <ExportDialog
+          open={showExportDialog}
+          onOpenChange={setShowExportDialog}
+          onExport={handleExport}
+          customers={customers}
+        />
+      </div>
     </div>
   );
 };
