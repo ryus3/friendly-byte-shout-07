@@ -18,15 +18,19 @@ import {
   Eye,
   Gift,
   Sparkles,
-  Users
+  Users,
+  Clock
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 const CustomerCard = ({ 
   customer, 
   onViewDetails, 
   onSendNotification, 
   onApplyDiscount,
-  tierIcons = {}
+  tierIcons = {},
+  index = 0
 }) => {
   const [customMessage, setCustomMessage] = useState('');
 
@@ -42,78 +46,121 @@ const CustomerCard = ({
     return iconMap[iconName] || Star;
   };
 
-  const getTierColors = (tierName) => {
-    const colorMap = {
-      'برونزي': {
-        gradient: 'from-orange-600 via-orange-500 to-amber-600',
-        darkGradient: 'dark:from-orange-700 dark:via-orange-600 dark:to-amber-700',
+  // تدرجات لونية راقية جداً مع تنويع حسب الفهرس
+  const getCardGradient = (index, hasPoints) => {
+    const gradientSets = [
+      // مجموعة 1: الغروب الساحر
+      {
+        gradient: 'from-rose-500 via-orange-400 to-amber-400',
+        darkGradient: 'dark:from-rose-600 dark:via-orange-500 dark:to-amber-500',
         textColor: 'text-white',
-        badge: 'bg-gradient-to-br from-orange-600 to-amber-600'
+        shadow: 'shadow-rose-500/25',
+        hoverShadow: 'hover:shadow-rose-500/40',
+        glow: 'hover:shadow-2xl hover:shadow-rose-500/30'
       },
-      'فضي': {
-        gradient: 'from-slate-500 via-gray-400 to-slate-600', 
-        darkGradient: 'dark:from-slate-600 dark:via-gray-500 dark:to-slate-700',
+      // مجموعة 2: المحيط العميق
+      {
+        gradient: 'from-blue-600 via-cyan-500 to-teal-400',
+        darkGradient: 'dark:from-blue-700 dark:via-cyan-600 dark:to-teal-500',
         textColor: 'text-white',
-        badge: 'bg-gradient-to-br from-slate-500 to-slate-600'
+        shadow: 'shadow-blue-500/25',
+        hoverShadow: 'hover:shadow-blue-500/40',
+        glow: 'hover:shadow-2xl hover:shadow-blue-500/30'
       },
-      'ذهبي': {
-        gradient: 'from-yellow-500 via-amber-400 to-yellow-600',
-        darkGradient: 'dark:from-yellow-600 dark:via-amber-500 dark:to-yellow-700',
-        textColor: 'text-gray-900',
-        badge: 'bg-gradient-to-br from-amber-500 to-yellow-600'
-      },
-      'بلاتيني': {
-        gradient: 'from-blue-600 via-indigo-500 to-blue-700',
-        darkGradient: 'dark:from-blue-700 dark:via-indigo-600 dark:to-blue-800',
+      // مجموعة 3: الطبيعة الخضراء
+      {
+        gradient: 'from-emerald-600 via-green-500 to-lime-400',
+        darkGradient: 'dark:from-emerald-700 dark:via-green-600 dark:to-lime-500',
         textColor: 'text-white',
-        badge: 'bg-gradient-to-br from-blue-600 to-indigo-700'
+        shadow: 'shadow-emerald-500/25',
+        hoverShadow: 'hover:shadow-emerald-500/40',
+        glow: 'hover:shadow-2xl hover:shadow-emerald-500/30'
       },
-      'ماسي': {
-        gradient: 'from-purple-600 via-pink-500 to-purple-700',
-        darkGradient: 'dark:from-purple-700 dark:via-pink-600 dark:to-purple-800',
+      // مجموعة 4: البنفسجي الملكي
+      {
+        gradient: 'from-purple-600 via-violet-500 to-indigo-500',
+        darkGradient: 'dark:from-purple-700 dark:via-violet-600 dark:to-indigo-600',
         textColor: 'text-white',
-        badge: 'bg-gradient-to-br from-purple-600 to-pink-700'
+        shadow: 'shadow-purple-500/25',
+        hoverShadow: 'hover:shadow-purple-500/40',
+        glow: 'hover:shadow-2xl hover:shadow-purple-500/30'
+      },
+      // مجموعة 5: الوردي الساحر
+      {
+        gradient: 'from-pink-600 via-rose-500 to-fuchsia-500',
+        darkGradient: 'dark:from-pink-700 dark:via-rose-600 dark:to-fuchsia-600',
+        textColor: 'text-white',
+        shadow: 'shadow-pink-500/25',
+        hoverShadow: 'hover:shadow-pink-500/40',
+        glow: 'hover:shadow-2xl hover:shadow-pink-500/30'
+      },
+      // مجموعة 6: الذهبي الفاخر
+      {
+        gradient: 'from-amber-600 via-yellow-500 to-orange-500',
+        darkGradient: 'dark:from-amber-700 dark:via-yellow-600 dark:to-orange-600',
+        textColor: 'text-white',
+        shadow: 'shadow-amber-500/25',
+        hoverShadow: 'hover:shadow-amber-500/40',
+        glow: 'hover:shadow-2xl hover:shadow-amber-500/30'
       }
-    };
-    return colorMap[tierName] || {
-      gradient: 'from-gray-500 to-gray-600',
-      darkGradient: 'dark:from-gray-600 dark:to-gray-700',
-      textColor: 'text-white',
-      badge: 'bg-gradient-to-br from-gray-500 to-gray-600'
+    ];
+
+    const selectedGradient = gradientSets[index % gradientSets.length];
+    
+    return {
+      ...selectedGradient,
+      // العملاء ذوو النقاط يكون لهم اتجاه مختلف
+      direction: hasPoints ? 'flex-row-reverse' : 'flex-row',
+      specialRing: hasPoints ? 'ring-2 ring-white/30 ring-offset-2 ring-offset-transparent' : ''
     };
   };
 
   const customerTier = customer.customer_loyalty?.loyalty_tiers;
-  const tierColors = getTierColors(customerTier?.name);
   const TierIcon = getTierIcon(customerTier?.icon);
+  const hasPoints = customer.customer_loyalty?.total_points > 0;
+  const cardStyle = getCardGradient(index, hasPoints);
+
+  // حساب تاريخ انتهاء صلاحية النقاط (3 أشهر من آخر تحديث)
+  const pointsExpiryDate = customer.customer_loyalty?.points_expiry_date 
+    ? new Date(customer.customer_loyalty.points_expiry_date)
+    : null;
+  
+  const isPointsExpiringSoon = pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // خلال 30 يوم
 
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
       whileHover={{ 
-        y: -5,
-        transition: { duration: 0.2 }
+        y: -8,
+        transition: { duration: 0.3, ease: "easeOut" }
       }}
     >
       <Card className={`
         relative overflow-hidden group cursor-pointer
-        bg-gradient-to-br ${tierColors.gradient} ${tierColors.darkGradient}
-        border-0 shadow-lg
-        hover:shadow-2xl hover:shadow-primary/20
-        transition-all duration-300
-        hover:scale-105
+        bg-gradient-to-br ${cardStyle.gradient} ${cardStyle.darkGradient}
+        border-0 shadow-xl ${cardStyle.shadow} ${cardStyle.specialRing}
+        ${cardStyle.glow}
+        transition-all duration-500
+        hover:scale-[1.03] hover:-translate-y-2
+        backdrop-blur-sm
       `}>
-        {/* تأثيرات الخلفية */}
-        <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
-        <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
+        {/* تأثيرات الخلفية الجديدة */}
+        <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+        <div className="absolute -top-6 -left-6 w-24 h-24 bg-white/5 rounded-full blur-xl"></div>
+        <div className="absolute top-1/2 left-1/2 w-40 h-40 bg-white/3 rounded-full blur-3xl transform -translate-x-1/2 -translate-y-1/2"></div>
+        
+        {/* حدود متوهجة للعملاء ذوي النقاط */}
+        {hasPoints && (
+          <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-60 pointer-events-none"></div>
+        )}
         
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
+          <div className={`flex items-start justify-between ${cardStyle.direction}`}>
             <div className="flex-1">
               <motion.h3 
-                className={`font-bold text-lg ${tierColors.textColor} group-hover:opacity-90 transition-colors duration-300`}
+                className={`font-bold text-lg ${cardStyle.textColor} drop-shadow-sm group-hover:opacity-90 transition-colors duration-300`}
                 whileHover={{ scale: 1.02 }}
               >
                 {customer.name}
@@ -121,8 +168,8 @@ const CustomerCard = ({
               
               {customer.phone && (
                 <motion.div 
-                  className={`flex items-center gap-1 text-sm ${tierColors.textColor} opacity-80 mt-1`}
-                  whileHover={{ x: 2 }}
+                  className={`flex items-center gap-1 text-sm ${cardStyle.textColor} opacity-90 mt-1 drop-shadow-sm`}
+                  whileHover={{ x: hasPoints ? -2 : 2 }}
                   transition={{ duration: 0.2 }}
                 >
                   <Phone className="h-3 w-3" />
@@ -132,8 +179,8 @@ const CustomerCard = ({
               
               {(customer.city || customer.province) && (
                 <motion.div 
-                  className={`flex items-center gap-1 text-sm ${tierColors.textColor} opacity-80 mt-1`}
-                  whileHover={{ x: 2 }}
+                  className={`flex items-center gap-1 text-sm ${cardStyle.textColor} opacity-90 mt-1 drop-shadow-sm`}
+                  whileHover={{ x: hasPoints ? -2 : 2 }}
                   transition={{ duration: 0.2 }}
                 >
                   <MapPin className="h-3 w-3" />
@@ -145,25 +192,20 @@ const CustomerCard = ({
             {/* أيقونة المستوى */}
             {customerTier && (
               <motion.div 
-                className={`
-                  p-2 rounded-xl ${tierColors.badge} text-white
-                  shadow-lg group-hover:shadow-xl
-                  relative overflow-hidden bg-white/20 backdrop-blur-sm
-                  border border-white/30
-                `}
+                className="p-3 rounded-xl bg-white/20 text-white shadow-xl border border-white/30 backdrop-blur-sm"
                 whileHover={{ 
-                  rotate: [0, -5, 5, 0],
-                  scale: 1.1,
-                  transition: { duration: 0.4 }
+                  rotate: [0, -10, 10, 0],
+                  scale: 1.15,
+                  transition: { duration: 0.6, ease: "easeInOut" }
                 }}
               >
-                <TierIcon className="h-5 w-5" />
+                <TierIcon className="h-6 w-6 drop-shadow-lg" />
                 <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/30 to-white/0"
+                  className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/40 to-white/0 rounded-xl"
                   initial={{ x: '-100%' }}
                   whileHover={{ 
                     x: '100%',
-                    transition: { duration: 0.8, ease: "easeInOut" }
+                    transition: { duration: 1, ease: "easeInOut" }
                   }}
                 />
               </motion.div>
@@ -181,15 +223,9 @@ const CustomerCard = ({
                   className="flex items-center justify-between"
                   whileHover={{ scale: 1.02 }}
                 >
-                  <span className="text-sm font-medium">المستوى:</span>
+                  <span className="text-sm font-medium drop-shadow-sm">المستوى:</span>
                   <Badge 
-                    className={`
-                      ${tierColors.badge} text-white
-                      px-3 py-1 font-medium
-                      shadow-md hover:shadow-lg
-                      transition-all duration-300
-                      border border-white/30
-                    `}
+                    className="bg-white/20 text-white px-3 py-1 font-medium shadow-lg border border-white/30 backdrop-blur-sm"
                   >
                     <Sparkles className="h-3 w-3 mr-1" />
                     {customerTier.name}
@@ -202,20 +238,41 @@ const CustomerCard = ({
                 className="flex items-center justify-between"
                 whileHover={{ scale: 1.02 }}
               >
-                <span className="text-sm font-medium">النقاط:</span>
-                <div className="flex items-center gap-1 font-bold text-yellow-400">
+                <span className="text-sm font-medium drop-shadow-sm">النقاط:</span>
+                <div className="flex items-center gap-1 font-bold text-yellow-300 drop-shadow-lg">
                   <Star className="h-4 w-4 fill-current" />
                   {customer.customer_loyalty.total_points?.toLocaleString('ar') || 0}
                 </div>
               </motion.div>
+
+              {/* عرض تاريخ انتهاء صلاحية النقاط */}
+              {pointsExpiryDate && hasPoints && (
+                <motion.div 
+                  className="flex items-center justify-between"
+                  whileHover={{ scale: 1.02 }}
+                >
+                  <span className="text-sm font-medium drop-shadow-sm">صلاحية النقاط:</span>
+                  <Badge 
+                    className={`
+                      ${isPointsExpiringSoon 
+                        ? 'bg-red-500/30 text-red-100 border-red-300/50' 
+                        : 'bg-white/20 text-white border-white/30'
+                      } shadow-lg backdrop-blur-sm px-2 py-1
+                    `}
+                  >
+                    <Clock className="h-3 w-3 mr-1" />
+                    {format(pointsExpiryDate, 'dd/MM/yyyy', { locale: ar })}
+                  </Badge>
+                </motion.div>
+              )}
               
               {/* عدد الطلبات */}
               <motion.div 
                 className="flex items-center justify-between"
                 whileHover={{ scale: 1.02 }}
               >
-                <span className="text-sm font-medium">الطلبات:</span>
-                <div className="flex items-center gap-1 font-medium text-blue-300">
+                <span className="text-sm font-medium drop-shadow-sm">الطلبات:</span>
+                <div className="flex items-center gap-1 font-medium text-blue-200 drop-shadow-sm">
                   <Users className="h-4 w-4" />
                   {customer.customer_loyalty.total_orders || 0}
                 </div>
@@ -227,8 +284,8 @@ const CustomerCard = ({
                   className="flex items-center justify-between"
                   whileHover={{ scale: 1.02 }}
                 >
-                  <span className="text-sm font-medium">المشتريات:</span>
-                  <div className="font-medium text-emerald-300">
+                  <span className="text-sm font-medium drop-shadow-sm">المشتريات:</span>
+                  <div className="font-medium text-emerald-200 drop-shadow-sm">
                     {customer.customer_loyalty.total_spent?.toLocaleString('ar')} د.ع
                   </div>
                 </motion.div>
@@ -240,8 +297,8 @@ const CustomerCard = ({
                   className="flex items-center justify-between"
                   whileHover={{ scale: 1.02 }}
                 >
-                  <span className="text-sm font-medium">خصم المستوى:</span>
-                  <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
+                  <span className="text-sm font-medium drop-shadow-sm">خصم المستوى:</span>
+                  <Badge className="bg-green-400/30 text-green-100 border-green-300/50 shadow-lg backdrop-blur-sm">
                     <Gift className="h-3 w-3 mr-1" />
                     {customerTier.discount_percentage}%
                   </Badge>
@@ -256,7 +313,7 @@ const CustomerCard = ({
               variant="outline"
               size="sm"
               onClick={() => onViewDetails(customer.id)}
-              className="flex-1 group/btn hover:bg-primary hover:text-primary-foreground transition-all duration-300"
+              className="flex-1 group/btn bg-white/10 border-white/30 text-white hover:bg-white/20 hover:border-white/50 transition-all duration-300 backdrop-blur-sm"
             >
               <Eye className="h-4 w-4 mr-1 group-hover/btn:scale-110 transition-transform duration-200" />
               التفاصيل
@@ -267,7 +324,7 @@ const CustomerCard = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="group/btn hover:bg-blue-500 hover:text-white transition-all duration-300"
+                  className="group/btn bg-white/10 border-white/30 text-white hover:bg-blue-500/20 hover:border-blue-300/50 transition-all duration-300 backdrop-blur-sm"
                 >
                   <MessageCircle className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
                 </Button>
@@ -303,19 +360,19 @@ const CustomerCard = ({
               variant="outline"
               size="sm"
               onClick={() => onApplyDiscount(customer.id)}
-              className="group/btn hover:bg-green-500 hover:text-white transition-all duration-300"
+              className="group/btn bg-white/10 border-white/30 text-white hover:bg-green-500/20 hover:border-green-300/50 transition-all duration-300 backdrop-blur-sm"
             >
               <Gift className="h-4 w-4 group-hover/btn:scale-110 transition-transform duration-200" />
             </Button>
           </div>
         </CardContent>
         
+        {/* تأثير الضوء المحسن */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/15 via-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-all duration-500 rounded-xl" />
+        
         {/* شريط تدرج في الأسفل */}
         <motion.div 
-          className={`
-            absolute bottom-0 left-0 h-1 bg-gradient-to-r ${tierColors.badge}
-            w-0 group-hover:w-full transition-all duration-500
-          `}
+          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-white/60 to-white/80 w-0 group-hover:w-full transition-all duration-700"
           whileHover={{ width: "100%" }}
         />
       </Card>

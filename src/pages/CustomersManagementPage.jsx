@@ -10,7 +10,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
 import CustomerStats from '@/components/customers/CustomerStats';
 import CustomerCard from '@/components/customers/CustomerCard';
-import EnhancedCustomersToolbar from '@/components/customers/EnhancedCustomersToolbar';
+import SimpleCustomersToolbar from '@/components/customers/SimpleCustomersToolbar';
 import CustomerDetailsDialog from '@/components/customers/CustomerDetailsDialog';
 
 const CustomersManagementPage = () => {
@@ -574,7 +574,7 @@ const CustomersManagementPage = () => {
       )}
 
       {/* Enhanced Search and Filter Toolbar */}
-      <EnhancedCustomersToolbar
+      <SimpleCustomersToolbar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         filterType={filterType}
@@ -640,10 +640,11 @@ const CustomersManagementPage = () => {
 
           {/* Enhanced Customers List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCustomers.map((customer) => (
+            {filteredCustomers.map((customer, index) => (
               <CustomerCard
                 key={customer.id}
                 customer={customer}
+                index={index}
                 onViewDetails={viewCustomerDetails}
                 onSendNotification={sendCustomNotification}
                 onApplyDiscount={applyLoyaltyDiscount}

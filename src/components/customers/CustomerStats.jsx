@@ -10,7 +10,9 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'إجمالي العملاء',
       value: customers.length,
       icon: Users,
-      gradient: 'from-blue-500 to-blue-700',
+      gradient: 'from-slate-600 via-slate-700 to-slate-800',
+      shadow: 'shadow-slate-500/20',
+      glow: 'hover:shadow-slate-500/30',
       iconBg: 'bg-white/10',
       textColor: 'text-white'
     },
@@ -19,7 +21,9 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'عملاء مع أرقام هواتف',
       value: customers.filter(c => c.phone).length,
       icon: Phone,
-      gradient: 'from-emerald-500 to-teal-600',
+      gradient: 'from-blue-500 via-cyan-500 to-teal-500',
+      shadow: 'shadow-blue-500/20',
+      glow: 'hover:shadow-blue-500/30',
       iconBg: 'bg-white/10',
       textColor: 'text-white'
     },
@@ -28,7 +32,9 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'عملاء مع نقاط',
       value: customers.filter(c => c.customer_loyalty?.total_points > 0).length,
       icon: Star,
-      gradient: 'from-orange-500 to-red-600',
+      gradient: 'from-orange-500 via-amber-500 to-yellow-500',
+      shadow: 'shadow-orange-500/20',
+      glow: 'hover:shadow-orange-500/30',
       iconBg: 'bg-white/10',
       textColor: 'text-white'
     },
@@ -37,7 +43,9 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'إجمالي النقاط',
       value: customers.reduce((sum, c) => sum + (c.customer_loyalty?.total_points || 0), 0).toLocaleString('ar'),
       icon: TrendingUp,
-      gradient: 'from-purple-500 to-pink-600',
+      gradient: 'from-purple-500 via-violet-500 to-pink-500',
+      shadow: 'shadow-purple-500/20',
+      glow: 'hover:shadow-purple-500/30',
       iconBg: 'bg-white/10',
       textColor: 'text-white'
     },
@@ -46,7 +54,9 @@ const CustomerStats = ({ customers, onStatClick }) => {
       title: 'إجمالي المبيعات',
       value: customers.reduce((sum, c) => sum + (c.customer_loyalty?.total_spent || 0), 0).toLocaleString('ar') + ' د.ع',
       icon: ShoppingBag,
-      gradient: 'from-indigo-500 to-purple-600',
+      gradient: 'from-rose-500 via-pink-500 to-purple-500',
+      shadow: 'shadow-rose-500/20',
+      glow: 'hover:shadow-rose-500/30',
       iconBg: 'bg-white/10',
       textColor: 'text-white'
     }
@@ -73,11 +83,12 @@ const CustomerStats = ({ customers, onStatClick }) => {
             className={`
               relative overflow-hidden cursor-pointer group
               bg-gradient-to-br ${stat.gradient} text-white
-              border-0 shadow-lg
-              hover:shadow-2xl hover:shadow-primary/20
-              transition-all duration-300
-              hover:scale-105
+              border-0 shadow-xl ${stat.shadow}
+              hover:shadow-2xl ${stat.glow}
+              transition-all duration-500
+              hover:scale-[1.02] hover:-translate-y-1
               min-h-[140px] flex
+              backdrop-blur-sm
             `}
             onClick={() => onStatClick && onStatClick(stat.id)}
           >
