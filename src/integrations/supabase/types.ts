@@ -337,6 +337,44 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_gender_segments: {
+        Row: {
+          confidence_score: number
+          created_at: string
+          customer_id: string | null
+          gender_type: string
+          id: string
+          last_analysis_date: string
+          updated_at: string
+        }
+        Insert: {
+          confidence_score?: number
+          created_at?: string
+          customer_id?: string | null
+          gender_type: string
+          id?: string
+          last_analysis_date?: string
+          updated_at?: string
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string
+          customer_id?: string | null
+          gender_type?: string
+          id?: string
+          last_analysis_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_gender_segments_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_loyalty: {
         Row: {
           created_at: string | null
@@ -502,6 +540,60 @@ export type Database = {
             columns: ["product_type_id"]
             isOneToOne: false
             referencedRelation: "product_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_promo_codes: {
+        Row: {
+          created_at: string
+          customer_id: string | null
+          discount_percentage: number
+          id: string
+          is_active: boolean
+          max_uses: number
+          promo_code: string
+          tier_id: string | null
+          updated_at: string
+          used_count: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id?: string | null
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          promo_code: string
+          tier_id?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string | null
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          promo_code?: string
+          tier_id?: string | null
+          updated_at?: string
+          used_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_promo_codes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_promo_codes_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_tiers"
             referencedColumns: ["id"]
           },
         ]
@@ -1531,6 +1623,58 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_gender_categories: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          department_id: string | null
+          gender_type: string
+          id: string
+          priority: number
+          product_type_id: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          gender_type: string
+          id?: string
+          priority?: number
+          product_type_id?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          department_id?: string | null
+          gender_type?: string
+          id?: string
+          priority?: number
+          product_type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_gender_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_gender_categories_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_gender_categories_product_type_id_fkey"
+            columns: ["product_type_id"]
+            isOneToOne: false
+            referencedRelation: "product_types"
             referencedColumns: ["id"]
           },
         ]
