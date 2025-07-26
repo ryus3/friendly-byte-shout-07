@@ -303,6 +303,30 @@ const CustomerCard = ({
                  </motion.div>
                )}
 
+               {/* التوصيل المجاني */}
+               {customerTier?.free_delivery_threshold >= 0 && (
+                 <motion.div 
+                   className="flex items-center justify-between"
+                   whileHover={{ scale: 1.02 }}
+                 >
+                   <span className="text-sm font-medium text-muted-foreground">التوصيل المجاني:</span>
+                   <Badge 
+                     className={`
+                       ${customerTier.free_delivery_threshold === 0 
+                         ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0' 
+                         : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0'
+                       } font-medium shadow-sm
+                     `}
+                   >
+                     <Sparkles className="h-3 w-3 mr-1" />
+                     {customerTier.free_delivery_threshold === 0 
+                       ? 'مجاناً دائماً' 
+                       : `فوق ${customerTier.free_delivery_threshold.toLocaleString('ar')} د.ع`
+                     }
+                   </Badge>
+                 </motion.div>
+               )}
+
                {/* برومو كود العميل */}
                <motion.div 
                  className="flex items-center justify-between"

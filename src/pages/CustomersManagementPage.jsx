@@ -13,6 +13,7 @@ import CustomerStats from '@/components/customers/CustomerStats';
 import CustomerCard from '@/components/customers/CustomerCard';
 import SimpleCustomersToolbar from '@/components/customers/SimpleCustomersToolbar';
 import CustomerDetailsDialog from '@/components/customers/CustomerDetailsDialog';
+import EnhancedExportDialog from '@/components/customers/EnhancedExportDialog';
 
 const CustomersManagementPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -27,6 +28,7 @@ const CustomersManagementPage = () => {
   const [dateRange, setDateRange] = useState('all'); // فلترة المدة الزمنية
   const [pointsUsageFilter, setPointsUsageFilter] = useState('all'); // فلترة استخدام النقاط
   const [selectedTier, setSelectedTier] = useState(null); // فلترة حسب المستوى
+  const [showExportDialog, setShowExportDialog] = useState(false); // حالة نافذة التصدير
 
   const tierIcons = {
     'Award': Award,
@@ -128,11 +130,15 @@ const CustomersManagementPage = () => {
       } else if (filterType === 'no_points') {
         matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
       } else if (filterType === 'male_customers') {
-        // فلترة العملاء الرجال بناءً على تحليل مشترياتهم
-        matchesFilter = customer.customer_loyalty?.total_orders > 0; // مؤقت حتى نضيف تحليل الجنس فعلياً
+        // فلترة العملاء الرجال بناءً على تحليل جنس حقيقي وفولاذي
+        matchesFilter = customer.customer_gender_segments?.some(segment => 
+          segment.gender_type === 'male' && segment.confidence_score >= 0.5
+        ) || false;
       } else if (filterType === 'female_customers') {
-        // فلترة العميلات النساء بناءً على تحليل مشترياتهم  
-        matchesFilter = customer.customer_loyalty?.total_orders > 0; // مؤقت حتى نضيف تحليل الجنس فعلياً
+        // فلترة العميلات النساء بناءً على تحليل جنس حقيقي وفولاذي
+        matchesFilter = customer.customer_gender_segments?.some(segment => 
+          segment.gender_type === 'female' && segment.confidence_score >= 0.5
+        ) || false;
       }
       
       // فلترة حسب المستوى
@@ -284,9 +290,19 @@ const CustomersManagementPage = () => {
     } else if (filterType === 'with_phone') {
       filteredData = customers.filter(c => c.phone && c.phone.trim());
     } else if (filterType === 'male') {
-      filteredData = customers.filter(c => c.customer_gender_segments?.gender_type === 'male');
+      // فلترة قوية للرجال - نظام فولاذي
+      filteredData = customers.filter(c => 
+        c.customer_gender_segments?.some(segment => 
+          segment.gender_type === 'male' && segment.confidence_score >= 0.5
+        )
+      );
     } else if (filterType === 'female') {
-      filteredData = customers.filter(c => c.customer_gender_segments?.gender_type === 'female');
+      // فلترة قوية للنساء - نظام فولاذي
+      filteredData = customers.filter(c => 
+        c.customer_gender_segments?.some(segment => 
+          segment.gender_type === 'female' && segment.confidence_score >= 0.5
+        )
+      );
     }
     
     if (filteredData.length === 0) {
@@ -322,8 +338,9 @@ const CustomersManagementPage = () => {
       customer.phone || '',
       customer.city || '',
       customer.province || '',
-      customer.customer_gender_segments?.gender_type === 'male' ? 'ذكر' : 
-      customer.customer_gender_segments?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
+      // تحليل الجنس الدقيق والقوي
+      customer.customer_gender_segments?.find(s => s.confidence_score >= 0.5)?.gender_type === 'male' ? 'ذكر' : 
+      customer.customer_gender_segments?.find(s => s.confidence_score >= 0.5)?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
       customer.customer_loyalty?.total_points || 0,
       customer.customer_loyalty?.total_orders || 0,
       customer.customer_loyalty?.total_spent || 0,
@@ -492,101 +509,51 @@ const CustomersManagementPage = () => {
             </p>
           </div>
         <div className="flex flex-wrap gap-2">
-          {/* قائمة منسدلة للتصدير */}
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-1" />
-                تصدير العملاء (CSV)
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>تصدير بيانات العملاء</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  اختر نوع العملاء المراد تصديرهم إلى ملف CSV:
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    onClick={() => exportCustomersData('all')}
-                    variant="outline"
-                    className="h-12"
-                  >
-                    جميع العملاء
-                    <div className="text-xs text-muted-foreground">
-                      ({customers.length} عميل)
-                    </div>
-                  </Button>
-                  <Button 
-                    onClick={() => exportCustomersData('with_points')}
-                    variant="outline"
-                    className="h-12"
-                  >
-                    العملاء مع نقاط
-                    <div className="text-xs text-muted-foreground">
-                      ({customers.filter(c => c.customer_loyalty?.total_points > 0).length} عميل)
-                    </div>
-                  </Button>
-                  <Button 
-                    onClick={() => exportCustomersData('no_points')}
-                    variant="outline"
-                    className="h-12"
-                  >
-                    العملاء بدون نقاط
-                    <div className="text-xs text-muted-foreground">
-                      ({customers.filter(c => !c.customer_loyalty || c.customer_loyalty.total_points === 0).length} عميل)
-                    </div>
-                  </Button>
-                   <Button 
-                     onClick={() => exportCustomersData('with_phone')}
-                     variant="outline"
-                     className="h-12"
-                   >
-                     العملاء مع أرقام هواتف
-                     <div className="text-xs text-muted-foreground">
-                       ({customers.filter(c => c.phone).length} عميل)
-                     </div>
-                   </Button>
-                   <Button 
-                     onClick={() => exportCustomersData('male')}
-                     variant="outline"
-                     className="h-12"
-                   >
-                     العملاء الرجال
-                     <div className="text-xs text-muted-foreground">
-                       ({customers.filter(c => c.customer_gender_segments?.gender_type === 'male').length} عميل)
-                     </div>
-                   </Button>
-                   <Button 
-                     onClick={() => exportCustomersData('female')}
-                     variant="outline"
-                     className="h-12"
-                   >
-                     العميلات النساء
-                     <div className="text-xs text-muted-foreground">
-                       ({customers.filter(c => c.customer_gender_segments?.gender_type === 'female').length} عميل)
-                     </div>
-                   </Button>
-                </div>
-                
-                <div className="p-3 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">ملاحظات:</h4>
-                  <ul className="text-sm text-muted-foreground space-y-1">
-                    <li>• سيتم التصدير بصيغة CSV مع دعم العربية</li>
-                    <li>• العملاء مع نقاط: الذين لديهم طلبات مكتملة/مُسلّمة</li>
-                    <li>• يشمل الملف: الاسم، الهاتف، النقاط، المستوى، التواريخ</li>
-                  </ul>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          {/* زر تصدير العملاء المحسن */}
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => setShowExportDialog(true)}
+            className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-blue-200 dark:border-blue-800/50 hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 transition-all duration-300"
+          >
+            <Download className="h-4 w-4 mr-1 text-blue-600 dark:text-blue-400" />
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-medium">
+              تصدير العملاء (CSV)
+            </span>
+          </Button>
           
           <Button onClick={selectRandomCityDiscount} variant="outline" size="sm">
             <Gift className="h-4 w-4 mr-1" />
             اختيار مدينة للخصم
           </Button>
+
+          {/* أدوات تطوير سريعة لاختبار فلترة الجنس */}
+          <div className="flex gap-1">
+            <Button 
+              variant={filterType === 'male_customers' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('male_customers')}
+              className="text-xs"
+            >
+              رجال ({customers.filter(c => c.customer_gender_segments?.some(s => s.gender_type === 'male' && s.confidence_score >= 0.5)).length})
+            </Button>
+            <Button 
+              variant={filterType === 'female_customers' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('female_customers')}
+              className="text-xs"
+            >
+              نساء ({customers.filter(c => c.customer_gender_segments?.some(s => s.gender_type === 'female' && s.confidence_score >= 0.5)).length})
+            </Button>
+            <Button 
+              variant={filterType === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterType('all')}
+              className="text-xs"
+            >
+              الكل
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -849,6 +816,15 @@ const CustomersManagementPage = () => {
         customer={selectedCustomer}
         open={!!selectedCustomer}
         onOpenChange={(open) => !open && setSelectedCustomer(null)}
+      />
+
+      {/* Enhanced Export Dialog */}
+      <EnhancedExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        customers={customers}
+        onExport={exportCustomersData}
+        loyaltyTiers={loyaltyTiers}
       />
     </div>
   );
