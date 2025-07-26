@@ -45,41 +45,35 @@ const CustomerCard = ({
   const getTierColors = (tierName) => {
     const colorMap = {
       'برونزي': {
-        bg: 'from-amber-100 to-yellow-200',
-        border: 'border-amber-300',
-        icon: 'text-amber-600',
-        badge: 'bg-amber-500'
+        gradient: 'from-orange-500 to-red-600',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-orange-500 to-red-600'
       },
       'فضي': {
-        bg: 'from-gray-100 to-slate-200',
-        border: 'border-gray-300',
-        icon: 'text-gray-600',
-        badge: 'bg-gray-500'
+        gradient: 'from-blue-500 to-blue-700',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-blue-500 to-blue-700'
       },
       'ذهبي': {
-        bg: 'from-yellow-100 to-amber-200',
-        border: 'border-yellow-400',
-        icon: 'text-yellow-600',
-        badge: 'bg-yellow-500'
+        gradient: 'from-emerald-500 to-teal-600',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-emerald-500 to-teal-600'
       },
       'بلاتيني': {
-        bg: 'from-blue-100 to-indigo-200',
-        border: 'border-blue-300',
-        icon: 'text-blue-600',
-        badge: 'bg-blue-500'
+        gradient: 'from-purple-500 to-pink-600',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-purple-500 to-pink-600'
       },
       'ماسي': {
-        bg: 'from-purple-100 to-pink-200',
-        border: 'border-purple-300',
-        icon: 'text-purple-600',
-        badge: 'bg-purple-500'
+        gradient: 'from-indigo-500 to-purple-600',
+        icon: 'text-white',
+        badge: 'bg-gradient-to-br from-indigo-500 to-purple-600'
       }
     };
     return colorMap[tierName] || {
-      bg: 'from-gray-50 to-gray-100',
-      border: 'border-gray-200',
-      icon: 'text-gray-500',
-      badge: 'bg-gray-400'
+      gradient: 'from-gray-400 to-gray-600',
+      icon: 'text-white',
+      badge: 'bg-gradient-to-br from-gray-400 to-gray-600'
     };
   };
 
@@ -99,20 +93,21 @@ const CustomerCard = ({
     >
       <Card className={`
         relative overflow-hidden group cursor-pointer
-        bg-gradient-to-br ${tierColors.bg}
-        ${tierColors.border}
+        bg-gradient-to-br ${tierColors.gradient} text-white
+        border-0 shadow-lg
         hover:shadow-2xl hover:shadow-primary/20
         transition-all duration-300
-        hover:border-primary/40
+        hover:scale-105
       `}>
-        {/* تأثير الضوء العلوي */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        {/* تأثيرات الخلفية */}
+        <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/10 rounded-full"></div>
+        <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/10 rounded-full"></div>
         
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <motion.h3 
-                className="font-bold text-lg text-foreground group-hover:text-primary transition-colors duration-300"
+                className="font-bold text-lg text-white group-hover:text-white/90 transition-colors duration-300"
                 whileHover={{ scale: 1.02 }}
               >
                 {customer.name}
@@ -120,7 +115,7 @@ const CustomerCard = ({
               
               {customer.phone && (
                 <motion.div 
-                  className="flex items-center gap-1 text-sm text-muted-foreground mt-1"
+                  className="flex items-center gap-1 text-sm text-white/80 mt-1"
                   whileHover={{ x: 2 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -131,7 +126,7 @@ const CustomerCard = ({
               
               {(customer.city || customer.province) && (
                 <motion.div 
-                  className="flex items-center gap-1 text-sm text-muted-foreground mt-1"
+                  className="flex items-center gap-1 text-sm text-white/80 mt-1"
                   whileHover={{ x: 2 }}
                   transition={{ duration: 0.2 }}
                 >
@@ -145,9 +140,9 @@ const CustomerCard = ({
             {customerTier && (
               <motion.div 
                 className={`
-                  p-2 rounded-xl bg-gradient-to-br ${tierColors.badge} text-white
+                  p-2 rounded-xl ${tierColors.badge} text-white
                   shadow-lg group-hover:shadow-xl
-                  relative overflow-hidden
+                  relative overflow-hidden bg-white/10 backdrop-blur-sm
                 `}
                 whileHover={{ 
                   rotate: [0, -5, 5, 0],

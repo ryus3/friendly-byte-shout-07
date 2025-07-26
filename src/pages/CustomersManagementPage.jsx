@@ -20,6 +20,7 @@ const CustomersManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [cityDiscounts, setCityDiscounts] = useState([]);
   const [activeTab, setActiveTab] = useState('customers');
+  const [filterType, setFilterType] = useState('all'); // حالة الفلترة
 
   const tierIcons = {
     'Award': Award,
@@ -99,11 +100,25 @@ const CustomersManagementPage = () => {
     }
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // فلترة العملاء حسب البحث ونوع الفلتر
+  const filteredCustomers = customers.filter(customer => {
+    // فلترة البحث النصي
+    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.phone?.includes(searchTerm) ||
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // فلترة حسب النوع
+    let matchesFilter = true;
+    if (filterType === 'with_phone') {
+      matchesFilter = customer.phone && customer.phone.trim();
+    } else if (filterType === 'with_points') {
+      matchesFilter = customer.customer_loyalty?.total_points > 0;
+    } else if (filterType === 'no_points') {
+      matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
+    }
+    
+    return matchesSearch && matchesFilter;
+  });
 
   const getTierIcon = (iconName) => {
     const IconComponent = tierIcons[iconName] || Star;
@@ -112,6 +127,19 @@ const CustomersManagementPage = () => {
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-IQ').format(amount) + ' د.ع';
+  };
+
+  // وصف نوع الفلتر
+  const getFilterDescription = (type) => {
+    switch(type) {
+      case 'total': return 'جميع العملاء';
+      case 'with_phone': return 'العملاء مع أرقام هواتف';
+      case 'with_points': return 'العملاء مع نقاط';
+      case 'no_points': return 'العملاء بدون نقاط';
+      case 'total_points': return 'إجمالي النقاط';
+      case 'total_sales': return 'إجمالي المبيعات';
+      default: return 'جميع العملاء';
+    }
   };
 
   // إرسال إشعار للعميل
@@ -473,14 +501,35 @@ const CustomersManagementPage = () => {
       <CustomerStats 
         customers={customers}
         onStatClick={(statType) => {
-          // يمكن إضافة فلترة حسب نوع الإحصائية
-          if (statType === 'with_phone') {
-            setSearchTerm(''); // مثال: إعادة تعيين البحث
-          } else if (statType === 'with_points') {
-            // فلترة العملاء الذين لديهم نقاط
-          }
+          // تطبيق الفلترة الفعلية
+          setFilterType(statType);
+          toast({
+            title: 'تم تطبيق الفلتر',
+            description: getFilterDescription(statType)
+          });
         }}
       />
+
+      {/* مؤشر الفلتر النشط */}
+      {filterType !== 'all' && (
+        <div className="flex items-center justify-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
+          <Badge variant="secondary" className="text-sm font-medium">
+            🔍 الفلتر النشط: {getFilterDescription(filterType)}
+          </Badge>
+          <button
+            onClick={() => {
+              setFilterType('all');
+              toast({
+                title: 'تم إزالة الفلتر',
+                description: 'عرض جميع العملاء'
+              });
+            }}
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+          >
+            إزالة الفلتر
+          </button>
+        </div>
+      )}
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
