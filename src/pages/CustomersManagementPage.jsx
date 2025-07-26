@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -503,28 +504,28 @@ const CustomersManagementPage = () => {
                     setDate={setDateRange}
                   />
                 </div>
-
-                <div className="flex items-end">
-                  <Button 
-                    onClick={() => {
-                      setSearchTerm('');
-                      setTimeFilter('all');
-                      setPointsFilter('all');
-                      setLoyaltyTierFilter('all');
-                      setGenderSegmentation('all');
-                      setDepartmentFilter('all');
-                      setDateRange(null);
-                      setActiveFilter('all');
-                    }}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    مسح الفلاتر
-                  </Button>
-                </div>
               </div>
-            )}
-          </div>
+
+              <div className="flex items-end mt-4">
+                <Button 
+                  onClick={() => {
+                    setSearchTerm('');
+                    setTimeFilter('all');
+                    setPointsFilter('all');
+                    setLoyaltyTierFilter('all');
+                    setGenderSegmentation('all');
+                    setDepartmentFilter('all');
+                    setDateRange(null);
+                    setActiveFilter('all');
+                  }}
+                  variant="outline"
+                  className="w-full"
+                >
+                  مسح الفلاتر
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
