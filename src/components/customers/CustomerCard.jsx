@@ -304,7 +304,7 @@ const CustomerCard = ({
                )}
 
                {/* التوصيل المجاني */}
-               {customerTier?.free_delivery_threshold >= 0 && (
+               {customerTier?.free_delivery_threshold !== undefined && customerTier?.free_delivery_threshold !== null && (
                  <motion.div 
                    className="flex items-center justify-between"
                    whileHover={{ scale: 1.02 }}
