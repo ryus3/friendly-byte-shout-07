@@ -278,6 +278,10 @@ const CustomersManagementPage = () => {
       filteredData = customers.filter(c => c.customer_loyalty?.total_orders > 0);
     } else if (filterType === 'with_phone') {
       filteredData = customers.filter(c => c.phone && c.phone.trim());
+    } else if (filterType === 'male') {
+      filteredData = customers.filter(c => c.customer_gender_segments?.gender_type === 'male');
+    } else if (filterType === 'female') {
+      filteredData = customers.filter(c => c.customer_gender_segments?.gender_type === 'female');
     }
     
     if (filteredData.length === 0) {
@@ -295,11 +299,13 @@ const CustomersManagementPage = () => {
       'الهاتف', 
       'المدينة',
       'المحافظة',
+      'الجنس_المتوقع',
       'النقاط_الحالية',
       'الطلبات_المكتملة',
       'إجمالي_المشتريات',
       'المستوى',
       'خصم_المستوى_%',
+      'صلاحية_النقاط',
       'تاريخ_الانضمام',
       'آخر_ترقية_مستوى',
       'حالة_الواتساب',
@@ -311,11 +317,15 @@ const CustomersManagementPage = () => {
       customer.phone || '',
       customer.city || '',
       customer.province || '',
+      customer.customer_gender_segments?.gender_type === 'male' ? 'ذكر' : 
+      customer.customer_gender_segments?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
       customer.customer_loyalty?.total_points || 0,
       customer.customer_loyalty?.total_orders || 0,
       customer.customer_loyalty?.total_spent || 0,
       customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
       customer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0,
+      customer.customer_loyalty?.points_expiry_date ? 
+        new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar') : 'لا توجد',
       customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '',
       customer.customer_loyalty?.last_tier_upgrade 
         ? new Date(customer.customer_loyalty.last_tier_upgrade).toLocaleDateString('ar') 
@@ -340,7 +350,9 @@ const CustomersManagementPage = () => {
     const filterSuffix = filterType === 'with_points' ? '_مع_نقاط' : 
                         filterType === 'no_points' ? '_بدون_نقاط' : 
                         filterType === 'active' ? '_نشط' :
-                        filterType === 'with_phone' ? '_مع_هاتف' : '';
+                        filterType === 'with_phone' ? '_مع_هاتف' : 
+                        filterType === 'male' ? '_رجال' :
+                        filterType === 'female' ? '_نساء' : '';
     
     const timestamp = new Date().toISOString().split('T')[0];
     link.download = `عملاء${filterSuffix}_${timestamp}.csv`;
@@ -522,16 +534,36 @@ const CustomersManagementPage = () => {
                       ({customers.filter(c => !c.customer_loyalty || c.customer_loyalty.total_points === 0).length} عميل)
                     </div>
                   </Button>
-                  <Button 
-                    onClick={() => exportCustomersData('with_phone')}
-                    variant="outline"
-                    className="h-12"
-                  >
-                    العملاء مع أرقام هواتف
-                    <div className="text-xs text-muted-foreground">
-                      ({customers.filter(c => c.phone).length} عميل)
-                    </div>
-                  </Button>
+                   <Button 
+                     onClick={() => exportCustomersData('with_phone')}
+                     variant="outline"
+                     className="h-12"
+                   >
+                     العملاء مع أرقام هواتف
+                     <div className="text-xs text-muted-foreground">
+                       ({customers.filter(c => c.phone).length} عميل)
+                     </div>
+                   </Button>
+                   <Button 
+                     onClick={() => exportCustomersData('male')}
+                     variant="outline"
+                     className="h-12"
+                   >
+                     العملاء الرجال
+                     <div className="text-xs text-muted-foreground">
+                       ({customers.filter(c => c.customer_gender_segments?.gender_type === 'male').length} عميل)
+                     </div>
+                   </Button>
+                   <Button 
+                     onClick={() => exportCustomersData('female')}
+                     variant="outline"
+                     className="h-12"
+                   >
+                     العميلات النساء
+                     <div className="text-xs text-muted-foreground">
+                       ({customers.filter(c => c.customer_gender_segments?.gender_type === 'female').length} عميل)
+                     </div>
+                   </Button>
                 </div>
                 
                 <div className="p-3 bg-muted rounded-lg">
