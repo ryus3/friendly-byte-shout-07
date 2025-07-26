@@ -1,15 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
-import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, Eye, Send, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import CustomerFilters from '@/components/customers/CustomerFilters';
+import CustomerStats from '@/components/customers/CustomerStats';
+import CustomerCard from '@/components/customers/CustomerCard';
+import ExportDialog from '@/components/customers/ExportDialog';
 
 const CustomersManagementPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -18,9 +21,12 @@ const CustomersManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showCustomerDetails, setShowCustomerDetails] = useState(false);
   const [showNotificationDialog, setShowNotificationDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [loyaltyTiers, setLoyaltyTiers] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [cityStats, setCityStats] = useState([]);
+  const [monthlyDiscount, setMonthlyDiscount] = useState(null);
   
   // Filter states
   const [activeFilter, setActiveFilter] = useState('all');
@@ -48,7 +54,8 @@ const CustomersManagementPage = () => {
               name,
               color,
               icon,
-              discount_percentage
+              discount_percentage,
+              points_required
             )
           ),
           customer_product_segments (
@@ -74,6 +81,63 @@ const CustomersManagementPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // جلب إحصائيات المدن وخصم المدينة المختارة
+  const fetchCityStatsAndDiscounts = async () => {
+    try {
+      // إحصائيات المدن
+      const { data: cityData, error: cityError } = await supabase
+        .from('customers')
+        .select(`
+          city,
+          customer_loyalty!inner(total_orders, total_spent)
+        `)
+        .not('city', 'is', null);
+
+      if (cityError) throw cityError;
+
+      // تجميع البيانات حسب المدينة
+      const cityMap = {};
+      cityData?.forEach(customer => {
+        const city = customer.city;
+        if (!cityMap[city]) {
+          cityMap[city] = {
+            city_name: city,
+            customer_count: 0,
+            total_orders: 0,
+            total_amount: 0
+          };
+        }
+        cityMap[city].customer_count++;
+        cityMap[city].total_orders += customer.customer_loyalty?.total_orders || 0;
+        cityMap[city].total_amount += customer.customer_loyalty?.total_spent || 0;
+      });
+
+      const cityStatsArray = Object.values(cityMap)
+        .sort((a, b) => b.total_orders - a.total_orders)
+        .slice(0, 10);
+
+      setCityStats(cityStatsArray);
+
+      // خصم المدينة الشهري
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      const { data: discountData } = await supabase
+        .from('city_random_discounts')
+        .select('*')
+        .eq('discount_month', currentMonth)
+        .eq('discount_year', currentYear)
+        .single();
+
+      if (discountData) {
+        setMonthlyDiscount(discountData);
+      }
+
+    } catch (error) {
+      console.error('خطأ في جلب إحصائيات المدن:', error);
     }
   };
 
@@ -105,6 +169,7 @@ const CustomersManagementPage = () => {
   useEffect(() => {
     fetchCustomers();
     fetchSupportingData();
+    fetchCityStatsAndDiscounts();
   }, []);
 
   // تطبيق الفلاتر
@@ -184,35 +249,87 @@ const CustomersManagementPage = () => {
   }, [customers, filters, activeFilter]);
 
   // إحصائيات العملاء
-  const customersWithPoints = filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0).length;
-  const customersWithPhones = filteredCustomers.filter(c => c.phone).length;
+  const customersWithPoints = customers.filter(c => c.customer_loyalty?.[0]?.total_points > 0).length;
+  const customersWithPhones = customers.filter(c => c.phone).length;
+  const highPointsCustomers = customers.filter(c => c.customer_loyalty?.[0]?.total_points >= 1000).length;
 
-  const exportCustomers = (filterType = 'all') => {
-    const dataToExport = filterType === 'all' ? filteredCustomers : 
-                        filterType === 'with_points' ? filteredCustomers.filter(c => c.customer_loyalty?.[0]?.total_points > 0) :
-                        filterType === 'with_phones' ? filteredCustomers.filter(c => c.phone) : filteredCustomers;
+  const handleExport = (exportType, includeFields) => {
+    let dataToExport = [];
+    
+    switch (exportType) {
+      case 'with_points':
+        dataToExport = customers.filter(c => c.customer_loyalty?.[0]?.total_points > 0);
+        break;
+      case 'with_phones':
+        dataToExport = customers.filter(c => c.phone);
+        break;
+      case 'high_points':
+        dataToExport = customers.filter(c => c.customer_loyalty?.[0]?.total_points >= 1000);
+        break;
+      case 'male_segment':
+        dataToExport = customers.filter(c => c.customer_product_segments?.some(s => s.gender_segment === 'male'));
+        break;
+      case 'female_segment':
+        dataToExport = customers.filter(c => c.customer_product_segments?.some(s => s.gender_segment === 'female'));
+        break;
+      default:
+        dataToExport = customers;
+    }
 
-    const csvHeaders = [
-      'الاسم', 'الهاتف', 'البريد الإلكتروني', 'المحافظة', 'المدينة', 'العنوان',
-      'إجمالي النقاط', 'إجمالي الطلبات', 'مستوى الولاء', 'الجمهور المستهدف',
-      'تاريخ التسجيل'
-    ];
+    const csvHeaders = [];
+    
+    if (includeFields.basic) {
+      csvHeaders.push('الاسم', 'الهاتف', 'البريد الإلكتروني');
+    }
+    if (includeFields.location) {
+      csvHeaders.push('المحافظة', 'المدينة', 'العنوان');
+    }
+    if (includeFields.loyalty) {
+      csvHeaders.push('إجمالي النقاط', 'إجمالي الطلبات', 'مستوى الولاء', 'إجمالي المشتريات');
+    }
+    if (includeFields.segments) {
+      csvHeaders.push('الجمهور المستهدف', 'التقسيمات');
+    }
+    csvHeaders.push('تاريخ التسجيل');
 
-    const csvData = dataToExport.map(customer => [
-      customer.name,
-      customer.phone || '',
-      customer.email || '',
-      customer.province || '',
-      customer.city || '',
-      customer.address || '',
-      customer.customer_loyalty?.[0]?.total_points || 0,
-      customer.customer_loyalty?.[0]?.total_orders || 0,
-      customer.customer_loyalty?.[0]?.loyalty_tiers?.name || 'لا يوجد',
-      customer.customer_product_segments?.[0]?.gender_segment === 'male' ? 'رجالي' :
-      customer.customer_product_segments?.[0]?.gender_segment === 'female' ? 'نسائي' :
-      customer.customer_product_segments?.[0]?.gender_segment === 'unisex' ? 'للجنسين' : 'غير محدد',
-      customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : ''
-    ]);
+    const csvData = dataToExport.map(customer => {
+      const row = [];
+      
+      if (includeFields.basic) {
+        row.push(
+          customer.name,
+          customer.phone || '',
+          customer.email || ''
+        );
+      }
+      if (includeFields.location) {
+        row.push(
+          customer.province || '',
+          customer.city || '',
+          customer.address || ''
+        );
+      }
+      if (includeFields.loyalty) {
+        row.push(
+          customer.customer_loyalty?.[0]?.total_points || 0,
+          customer.customer_loyalty?.[0]?.total_orders || 0,
+          customer.customer_loyalty?.[0]?.loyalty_tiers?.name || 'لا يوجد',
+          customer.customer_loyalty?.[0]?.total_spent || 0
+        );
+      }
+      if (includeFields.segments) {
+        const genderSegment = customer.customer_product_segments?.[0]?.gender_segment;
+        const genderText = genderSegment === 'male' ? 'رجالي' : genderSegment === 'female' ? 'نسائي' : 'للجنسين';
+        const segments = customer.customer_product_segments?.map(s => 
+          s.departments?.name || s.categories?.name || 'غير محدد'
+        ).join(', ') || 'غير محدد';
+        
+        row.push(genderText, segments);
+      }
+      row.push(customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '');
+      
+      return row;
+    });
 
     const csvContent = [
       csvHeaders.join(','),
@@ -225,8 +342,12 @@ const CustomersManagementPage = () => {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     
-    const filterSuffix = filterType === 'with_points' ? '_مع_نقاط' : 
-                        filterType === 'with_phones' ? '_مع_هواتف' : '';
+    const filterSuffix = exportType === 'all' ? '' : 
+                        exportType === 'with_points' ? '_مع_نقاط' :
+                        exportType === 'with_phones' ? '_مع_هواتف' :
+                        exportType === 'high_points' ? '_نقاط_عالية' :
+                        exportType === 'male_segment' ? '_جمهور_رجالي' :
+                        exportType === 'female_segment' ? '_جمهور_نسائي' : '';
     
     const timestamp = new Date().toISOString().split('T')[0];
     link.download = `عملاء${filterSuffix}_${timestamp}.csv`;
@@ -262,16 +383,6 @@ const CustomersManagementPage = () => {
     }
   };
 
-  const getTierIcon = (iconName) => {
-    const tierIcons = { Star, Award, Medal, Crown, Gem };
-    const IconComponent = tierIcons[iconName] || Star;
-    return IconComponent;
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('ar-IQ').format(amount) + ' د.ع';
-  };
-
   if (loading) {
     return (
       <div className="container mx-auto p-6">
@@ -294,20 +405,32 @@ const CustomersManagementPage = () => {
           <p className="text-muted-foreground">
             إدارة شاملة لبيانات العملاء ونظام الولاء - النقاط تُحسب على أساس الطلب (200 نقطة لكل طلب)
           </p>
+          {monthlyDiscount && (
+            <div className="mt-2 p-3 bg-green-100 border border-green-300 rounded-lg">
+              <p className="text-green-800 font-medium">
+                🎉 مدينة {monthlyDiscount.city_name} مختارة لخصم {monthlyDiscount.discount_percentage}% هذا الشهر!
+              </p>
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => exportCustomers('all')} variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            تصدير الكل
-          </Button>
-          <Button onClick={() => exportCustomers('with_points')} variant="outline">
-            <Star className="h-4 w-4 mr-2" />
-            تصدير العملاء مع النقاط
-          </Button>
-        </div>
+        <Button onClick={() => setShowExportDialog(true)} className="gap-2">
+          <Download className="h-4 w-4" />
+          تصدير العملاء
+        </Button>
       </div>
 
-      {/* الفلاتر الجديدة */}
+      {/* الإحصائيات */}
+      <CustomerStats
+        totalCustomers={customers.length}
+        customersWithPoints={customersWithPoints}
+        customersWithPhones={customersWithPhones}
+        highPointsCustomers={highPointsCustomers}
+        cityStats={cityStats}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
+
+      {/* الفلاتر */}
       <CustomerFilters
         filters={filters}
         onFiltersChange={setFilters}
@@ -327,115 +450,24 @@ const CustomersManagementPage = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredCustomers.map((customer) => {
-              const loyaltyData = customer.customer_loyalty?.[0];
-              const tierIcon = loyaltyData?.loyalty_tiers?.icon ? getTierIcon(loyaltyData.loyalty_tiers.icon) : Users;
-              const TierIcon = tierIcon;
-
-              // تحديد الجمهور المستهدف
-              const genderSegment = customer.customer_product_segments?.[0]?.gender_segment;
-              const genderIcon = genderSegment === 'male' ? '🧑' : genderSegment === 'female' ? '👩' : '👥';
-              const genderText = genderSegment === 'male' ? 'رجالي' : genderSegment === 'female' ? 'نسائي' : 'للجنسين';
-
-              // حساب النقاط - التأكد من أنها محسوبة على أساس الطلبات
-              const totalPoints = loyaltyData?.total_points || 0;
-              const totalOrders = loyaltyData?.total_orders || 0;
-              const expectedPoints = totalOrders * 200; // 200 نقطة لكل طلب
-
-              return (
-                <div
-                  key={customer.id}
-                  className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4 space-x-reverse">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-primary/10">
-                          {customer.name.slice(0, 2)}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="space-y-2 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-semibold">{customer.name}</h3>
-                          {loyaltyData?.loyalty_tiers && (
-                            <Badge 
-                              variant="secondary" 
-                              className="flex items-center gap-1"
-                              style={{ backgroundColor: loyaltyData.loyalty_tiers.color + '20', color: loyaltyData.loyalty_tiers.color }}
-                            >
-                              <TierIcon className="h-3 w-3" />
-                              {loyaltyData.loyalty_tiers.name}
-                            </Badge>
-                          )}
-                          {genderSegment && (
-                            <Badge variant="outline" className="text-xs">
-                              {genderIcon} {genderText}
-                            </Badge>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {customer.phone || 'غير متوفر'}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {customer.city ? `${customer.city}, ${customer.province}` : 'غير محدد'}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Star className="h-3 w-3" />
-                            {totalPoints} نقطة ({totalOrders} طلب)
-                            {/* تحذير إذا كان هناك عدم تطابق في النقاط */}
-                            {totalPoints !== expectedPoints && totalOrders > 0 && (
-                              <Badge variant="destructive" className="text-xs mr-2">
-                                خطأ في النقاط
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {customer.customer_product_segments?.map((segment, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {segment.departments?.name || segment.categories?.name || 'غير محدد'}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setShowCustomerDetails(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCustomer(customer);
-                          setShowNotificationDialog(true);
-                        }}
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {filteredCustomers.map((customer) => (
+              <CustomerCard
+                key={customer.id}
+                customer={customer}
+                onViewDetails={(customer) => {
+                  setSelectedCustomer(customer);
+                  setShowCustomerDetails(true);
+                }}
+                onSendNotification={(customer) => {
+                  setSelectedCustomer(customer);
+                  setShowNotificationDialog(true);
+                }}
+              />
+            ))}
 
             {filteredCustomers.length === 0 && (
               <div className="text-center py-8">
-                <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <div className="h-12 w-12 mx-auto text-muted-foreground mb-4">👥</div>
                 <h3 className="text-lg font-semibold mb-2">لا توجد عملاء</h3>
                 <p className="text-muted-foreground">لا توجد عملاء يطابقون معايير البحث المحددة</p>
               </div>
@@ -453,7 +485,6 @@ const CustomersManagementPage = () => {
           
           {selectedCustomer && (
             <div className="space-y-6">
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="font-semibold">المعلومات الأساسية</Label>
@@ -474,9 +505,18 @@ const CustomersManagementPage = () => {
                       <>
                         <p><span className="font-medium">إجمالي النقاط:</span> {selectedCustomer.customer_loyalty[0].total_points}</p>
                         <p><span className="font-medium">إجمالي الطلبات:</span> {selectedCustomer.customer_loyalty[0].total_orders}</p>
+                        <p><span className="font-medium">إجمالي المشتريات:</span> {new Intl.NumberFormat('ar-IQ').format(selectedCustomer.customer_loyalty[0].total_spent)} د.ع</p>
                         <p className="text-sm text-muted-foreground">النقاط تُحسب: 200 نقطة لكل طلب مكتمل</p>
                         {selectedCustomer.customer_loyalty[0].loyalty_tiers && (
-                          <p><span className="font-medium">مستوى الولاء:</span> {selectedCustomer.customer_loyalty[0].loyalty_tiers.name}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">مستوى الولاء:</span>
+                            <div className="flex items-center gap-2 px-2 py-1 rounded-lg" 
+                                 style={{ backgroundColor: selectedCustomer.customer_loyalty[0].loyalty_tiers.color + '20' }}>
+                              <span style={{ color: selectedCustomer.customer_loyalty[0].loyalty_tiers.color }}>
+                                {selectedCustomer.customer_loyalty[0].loyalty_tiers.name}
+                              </span>
+                            </div>
+                          </div>
                         )}
                         
                         {/* تحذير من عدم تطابق النقاط */}
@@ -503,6 +543,31 @@ const CustomersManagementPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* مستويات الولاء المتاحة */}
+              {loyaltyTiers.length > 0 && (
+                <div>
+                  <Label className="font-semibold">مستويات الولاء المتاحة</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                    {loyaltyTiers.map((tier) => (
+                      <div key={tier.id} className="flex items-center justify-between p-2 rounded-lg border">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tier.color }}></div>
+                          <span className="text-sm font-medium">{tier.name}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {tier.points_required} نقطة
+                          {tier.discount_percentage > 0 && (
+                            <span className="text-green-600 mr-1">
+                              (خصم {tier.discount_percentage}%)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -561,7 +626,6 @@ const CustomersManagementPage = () => {
                   }}
                   disabled={!notificationMessage.trim()}
                 >
-                  <Send className="h-4 w-4 mr-2" />
                   إرسال
                 </Button>
               </div>
@@ -569,6 +633,17 @@ const CustomersManagementPage = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* نافذة التصدير */}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        customers={filteredCustomers}
+        customersWithPoints={customersWithPoints}
+        customersWithPhones={customersWithPhones}
+        highPointsCustomers={highPointsCustomers}
+        onExport={handleExport}
+      />
     </div>
   );
 };
