@@ -26,6 +26,7 @@ const CustomersManagementPage = () => {
   const [filterType, setFilterType] = useState('all'); // حالة الفلترة
   const [dateRange, setDateRange] = useState('all'); // فلترة المدة الزمنية
   const [pointsUsageFilter, setPointsUsageFilter] = useState('all'); // فلترة استخدام النقاط
+  const [selectedTier, setSelectedTier] = useState(null); // فلترة حسب المستوى
 
   const tierIcons = {
     'Award': Award,
@@ -123,7 +124,13 @@ const CustomersManagementPage = () => {
         matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
       }
       
-      return matchesSearch && matchesFilter;
+      // فلترة حسب المستوى
+      let matchesTier = true;
+      if (selectedTier) {
+        matchesTier = customer.customer_loyalty?.current_tier_id === selectedTier;
+      }
+      
+      return matchesSearch && matchesFilter && matchesTier;
     })
     .sort((a, b) => {
       // ترتيب حسب النقاط أولاً (من الأعلى للأقل)
@@ -605,7 +612,7 @@ const CustomersManagementPage = () => {
                     <motion.div 
                       key={tier.id} 
                       className="
-                        text-center p-6 rounded-xl
+                        text-center p-6 rounded-xl cursor-pointer
                         bg-gradient-to-br from-white/80 to-slate-50/80 dark:from-slate-800/80 dark:to-slate-700/80
                         border border-border/50 shadow-lg hover:shadow-xl
                         backdrop-blur-sm transition-all duration-300
@@ -615,6 +622,21 @@ const CustomersManagementPage = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                       whileHover={{ y: -2 }}
+                      onClick={() => {
+                        if (selectedTier === tier.id) {
+                          setSelectedTier(null);
+                          toast({
+                            title: 'تم إزالة فلتر المستوى',
+                            description: 'عرض جميع العملاء'
+                          });
+                        } else {
+                          setSelectedTier(tier.id);
+                          toast({
+                            title: 'تم فلترة المستوى',
+                            description: `عرض عملاء مستوى ${tier.name} فقط`
+                          });
+                        }
+                      }}
                     >
                       <motion.div
                         whileHover={{ rotate: [0, -10, 10, 0] }}
@@ -629,7 +651,12 @@ const CustomersManagementPage = () => {
                       <p className="text-sm text-muted-foreground mb-2">
                         {tier.points_required} نقطة
                       </p>
-                      <p className="text-2xl font-bold text-primary mb-3">{customersInTier}</p>
+                      <p className="text-2xl font-bold text-primary mb-3">
+                        {selectedTier === tier.id 
+                          ? filteredCustomers.length 
+                          : customersInTier
+                        }
+                      </p>
                       <p className="text-xs text-muted-foreground mb-3">عميل</p>
                       {tier.discount_percentage > 0 && (
                         <Badge 
@@ -637,6 +664,9 @@ const CustomersManagementPage = () => {
                         >
                           خصم {tier.discount_percentage}% شهرياً
                         </Badge>
+                      )}
+                      {selectedTier === tier.id && (
+                        <div className="absolute top-2 right-2 w-3 h-3 bg-primary rounded-full animate-pulse"></div>
                       )}
                     </motion.div>
                   );

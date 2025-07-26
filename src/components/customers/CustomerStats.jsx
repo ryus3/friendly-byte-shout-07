@@ -90,6 +90,7 @@ const CustomerStats = ({ customers, onStatClick }) => {
               min-h-[140px] flex
               backdrop-blur-sm
             `}
+            onClick={() => onStatClick && onStatClick(stat.id)}
           >
             <CardContent className="p-6 flex flex-col justify-between h-full w-full">
               <div className="flex items-center justify-between h-full">

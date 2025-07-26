@@ -288,7 +288,9 @@ const CustomerCard = ({
                   whileHover={{ scale: 1.02 }}
                 >
                   <span className="text-sm font-medium text-muted-foreground">خصم المستوى:</span>
-                  <Badge className="bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800/50 border font-medium shadow-sm">
+                  <Badge 
+                    className={`${tierColors.bgColor} ${tierColors.textColor} ${tierColors.borderColor} border font-medium shadow-sm`}
+                  >
                     <Gift className="h-3 w-3 mr-1" />
                     {customerTier.discount_percentage}%
                   </Badge>

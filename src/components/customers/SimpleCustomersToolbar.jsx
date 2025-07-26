@@ -145,32 +145,6 @@ const SimpleCustomersToolbar = ({
           </div>
         </div>
 
-        {/* مؤشر الفلتر النشط */}
-        {filterType !== 'all' && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-4 flex items-center justify-between p-3 bg-gradient-to-r from-primary/5 to-blue/5 rounded-lg border border-primary/20"
-          >
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                <Filter className="h-3 w-3 mr-1" />
-                الفلتر النشط: {activeFilter?.label}
-              </Badge>
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onFilterChange('all')}
-              className="h-8 px-3 text-primary hover:bg-primary/10 hover:text-primary rounded-lg"
-            >
-              <X className="h-3 w-3 mr-1" />
-              إزالة
-            </Button>
-          </motion.div>
-        )}
 
         {/* رسالة عدم وجود نتائج */}
         {filteredCount === 0 && searchTerm && (
