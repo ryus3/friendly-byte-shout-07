@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import CustomerStats from '@/components/customers/CustomerStats';
+import CustomerCard from '@/components/customers/CustomerCard';
 
 const CustomersManagementPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -468,75 +470,17 @@ const CustomersManagementPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي العملاء</p>
-                <p className="text-2xl font-bold">{customers.length}</p>
-              </div>
-              <Users className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">عملاء مع أرقام هواتف</p>
-                <p className="text-2xl font-bold">
-                  {customers.filter(c => c.phone).length}
-                </p>
-              </div>
-              <Phone className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">عملاء مع نقاط</p>
-                <p className="text-2xl font-bold">
-                  {customers.filter(c => c.customer_loyalty?.total_points > 0).length}
-                </p>
-              </div>
-              <Star className="h-8 w-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي النقاط</p>
-                <p className="text-xl font-bold">
-                  {customers.reduce((sum, c) => sum + (c.customer_loyalty?.total_points || 0), 0).toLocaleString()}
-                </p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">إجمالي المبيعات</p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(customers.reduce((sum, c) => sum + (c.customer_loyalty?.total_spent || 0), 0))}
-                </p>
-              </div>
-              <ShoppingBag className="h-8 w-8 text-purple-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <CustomerStats 
+        customers={customers}
+        onStatClick={(statType) => {
+          // يمكن إضافة فلترة حسب نوع الإحصائية
+          if (statType === 'with_phone') {
+            setSearchTerm(''); // مثال: إعادة تعيين البحث
+          } else if (statType === 'with_points') {
+            // فلترة العملاء الذين لديهم نقاط
+          }
+        }}
+      />
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -596,135 +540,16 @@ const CustomersManagementPage = () => {
 
           {/* Enhanced Customers List */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCustomers.map((customer) => {
-              const loyalty = customer.customer_loyalty;
-              const tier = loyalty?.loyalty_tiers;
-              const TierIcon = tier ? getTierIcon(tier.icon) : Star;
-
-              return (
-                <Card key={customer.id} className="hover:shadow-lg transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Customer Header */}
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{customer.name}</h3>
-                            {customer.phone && (
-                              <Badge variant="outline" className="text-xs">
-                                <Phone className="h-3 w-3 mr-1" />
-                                واتساب
-                              </Badge>
-                            )}
-                          </div>
-                          {customer.phone && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              {customer.phone}
-                            </div>
-                          )}
-                          {customer.city && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              {customer.city}, {customer.province}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Tier Badge */}
-                        {tier && (
-                          <Badge 
-                            variant="outline" 
-                            className="flex items-center gap-1"
-                            style={{ borderColor: tier.color, color: tier.color }}
-                          >
-                            <TierIcon className="h-3 w-3" />
-                            {tier.name}
-                          </Badge>
-                        )}
-                      </div>
-
-                      {/* Enhanced Loyalty Stats */}
-                      {loyalty && (
-                        <div className="grid grid-cols-2 gap-4 pt-3 border-t">
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-primary">
-                              {loyalty.total_points.toLocaleString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">نقطة</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-lg font-bold text-green-600">
-                              {loyalty.total_orders}
-                            </p>
-                            <p className="text-xs text-muted-foreground">طلب</p>
-                          </div>
-                          <div className="text-center col-span-2">
-                            <p className="text-sm font-medium">
-                              {formatCurrency(loyalty.total_spent)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">إجمالي المشتريات</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Enhanced Action Buttons */}
-                      <div className="grid grid-cols-3 gap-1 pt-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => applyLoyaltyDiscount(customer.id)}
-                          disabled={!loyalty || (loyalty.total_points === 0)}
-                          title={!loyalty || loyalty.total_points === 0 ? 'العميل لا يملك نقاط كافية' : 'تطبيق خصم الولاء'}
-                        >
-                          <Gift className="h-3 w-3 mr-1" />
-                          خصم
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => sendCustomerNotification(
-                            customer.id, 
-                            'manual',
-                            `مرحباً ${customer.name}، شكراً لك على ثقتك بنا! 🙏${loyalty ? ` لديك ${loyalty.total_points} نقطة ولاء` : ''}`
-                          )}
-                          disabled={!customer.phone}
-                          title={!customer.phone ? 'لا يوجد رقم هاتف' : 'إرسال رسالة واتساب'}
-                        >
-                          <Send className="h-3 w-3 mr-1" />
-                          رسالة
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => viewCustomerDetails(customer.id)}
-                        >
-                          <Eye className="h-3 w-3 mr-1" />
-                          تفاصيل
-                        </Button>
-                      </div>
-                      
-                      {/* Points Status Indicator */}
-                      {loyalty && loyalty.total_points > 0 && (
-                        <div className="mt-2 text-center">
-                          <Badge variant="secondary" className="text-xs">
-                            ✅ مؤهل لخصم الولاء ({tier?.discount_percentage || 0}%)
-                          </Badge>
-                        </div>
-                      )}
-                      
-                      {(!loyalty || loyalty.total_points === 0) && (
-                        <div className="mt-2 text-center">
-                          <Badge variant="outline" className="text-xs text-muted-foreground">
-                            بحاجة لطلبات مكتملة للحصول على نقاط
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {filteredCustomers.map((customer) => (
+              <CustomerCard
+                key={customer.id}
+                customer={customer}
+                onViewDetails={viewCustomerDetails}
+                onSendNotification={sendCustomNotification}
+                onApplyDiscount={applyLoyaltyDiscount}
+                tierIcons={tierIcons}
+              />
+            ))}
           </div>
 
           {/* Empty State */}
