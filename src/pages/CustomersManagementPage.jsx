@@ -551,8 +551,11 @@ const CustomersManagementPage = () => {
       <CustomerStats 
         customers={customers}
         onStatClick={(statType) => {
-          // تطبيق الفلترة الفعلية
+          // إزالة فلتر المستوى عند النقر على كروت الإحصائيات
+          setSelectedTier(null);
+          // تطبيق الفلترة الجديدة
           setFilterType(statType);
+          console.log('Stats filter applied:', statType);
           toast({
             title: 'تم تطبيق الفلتر',
             description: getFilterDescription(statType)

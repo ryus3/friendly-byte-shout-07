@@ -94,9 +94,12 @@ const CustomerCard = ({
   const hasPoints = customer.customer_loyalty?.total_points > 0;
   const tierColors = getTierColors(customerTier?.name);
 
-  // حساب تاريخ انتهاء صلاحية النقاط
+  // حساب تاريخ انتهاء صلاحية النقاط - حل جذري
   const pointsExpiryDate = customer.customer_loyalty?.points_expiry_date 
     ? new Date(customer.customer_loyalty.points_expiry_date)
+    : customer.customer_loyalty?.last_tier_upgrade && customer.customer_loyalty?.loyalty_tiers?.points_expiry_months
+    ? new Date(new Date(customer.customer_loyalty.last_tier_upgrade).getTime() + 
+        (customer.customer_loyalty.loyalty_tiers.points_expiry_months * 30 * 24 * 60 * 60 * 1000))
     : null;
   
   const isPointsExpiringSoon = pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
