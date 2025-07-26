@@ -11,7 +11,7 @@ import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, Tren
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { StatCard } from '@/components/dashboard/StatCard';
+import StatCard from '@/components/dashboard/StatCard';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
