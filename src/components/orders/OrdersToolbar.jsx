@@ -120,8 +120,8 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
 
       {/* الصف الثاني: الفلاتر */}
       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-        {/* Status Filter */}
-        {(hasPermission('view_all_orders') || filters.status === 'archived') && (
+        {/* Status Filter - عرضها لجميع المستخدمين */}
+        {(hasPermission('view_all_orders') || filters.status === 'archived' || true) && (
           <Select value={filters.status} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-full sm:w-[160px] h-9 text-sm">
               <SelectValue placeholder="جميع الحالات" />

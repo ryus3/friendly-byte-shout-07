@@ -25,6 +25,7 @@ import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard'
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
+import EmployeeStatsCards from '@/components/dashboard/EmployeeStatsCards';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
@@ -580,6 +581,21 @@ const Dashboard = () => {
                         onSettle={() => navigate('/profits-summary')} 
                     />
                 )}
+                
+                {/* عرض إحصائيات الموظف إذا لم يكن مديراً */}
+                {!canViewAllData && (
+                    <EmployeeStatsCards 
+                        stats={{
+                            pendingProfits: employeeProfitsData.personalPendingProfit || 0,
+                            totalOrders: visibleOrders.length,
+                            deliveredOrders: visibleOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length,
+                            pendingOrders: visibleOrders.filter(o => o.status === 'pending').length
+                        }}
+                        userRole="employee"
+                        canRequestSettlement={true}
+                    />
+                )}
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {allStatCards.slice(0, 8).map((stat, index) => (
                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>

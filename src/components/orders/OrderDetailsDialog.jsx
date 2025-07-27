@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X } from 'lucide-react';
+import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, Receipt } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,7 +34,7 @@ const getStatusInfo = (status) => {
     { value: 'returned_in_stock', label: 'راجع للمخزن' }
   ];
 
-const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {
+const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName, onReceiveReceipt }) => {
   const [newStatus, setNewStatus] = useState(order?.status);
 
   React.useEffect(() => {
@@ -193,6 +193,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
             <Button onClick={handleUpdateStatus} disabled={newStatus === order.status}>
               <Edit className="w-4 h-4 ml-2" />
               تحديث الحالة
+            </Button>
+          )}
+          {/* زر استلام الفاتورة للطلبات المسلمة */}
+          {order.status === 'delivered' && !order.receipt_received && onReceiveReceipt && (
+            <Button onClick={handleReceiveReceipt} variant="outline">
+              <Receipt className="w-4 h-4 ml-2" />
+              استلام الفاتورة
             </Button>
           )}
         </DialogFooter>
