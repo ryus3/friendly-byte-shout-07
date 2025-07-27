@@ -684,16 +684,6 @@ const InventoryPage = () => {
               <Download className="w-4 h-4 ml-2" />
               تصدير تقرير PDF
             </Button>
-            
-            <Button 
-              onClick={() => setIsReservedStockDialogOpen(true)}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <PackageOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">عرض المحجوز</span>
-            </Button>
           </div>
         </div>
 

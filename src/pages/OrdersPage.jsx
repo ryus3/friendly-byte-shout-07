@@ -268,12 +268,16 @@ const OrdersPage = () => {
     if(!hasPermission('delete_local_orders')) {
         return; // Simply return without showing toast
     }
-    const localOrdersToDelete = ordersToDelete.filter(orderId => {
+    
+    // التأكد من أن ordersToDelete هو array
+    const ordersArray = Array.isArray(ordersToDelete) ? ordersToDelete : [ordersToDelete];
+    
+    const localOrdersToDelete = ordersArray.filter(orderId => {
         const order = orders.find(o => o.id === orderId);
         return order && order.delivery_partner === 'محلي';
     });
 
-    if (localOrdersToDelete.length < ordersToDelete.length) {
+    if (localOrdersToDelete.length < ordersArray.length) {
         toast({
             title: 'تنبيه',
             description: 'يمكن حذف الطلبات المحلية فقط. تم تجاهل الطلبات من شركات التوصيل.',

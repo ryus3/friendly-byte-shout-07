@@ -110,7 +110,7 @@ const OrderListItem = ({
   const handleDelete = () => {
     if (onDeleteOrder && canDelete) {
       setShowDeleteDialog(false);
-      onDeleteOrder([order.id]);
+      onDeleteOrder([order.id]); // تمرير array كما هو متوقع
     }
   };
 
