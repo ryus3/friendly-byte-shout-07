@@ -231,7 +231,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             .eq('phone', formData.phone)
             .maybeSingle();
 
-          if (error) {
+          if (error || !customer) {
             console.log('❌ لم يتم العثور على العميل');
             setCustomerData(null);
             setLoyaltyDiscount(0);
@@ -241,31 +241,33 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           console.log('✅ تم العثور على العميل:', customer);
           setCustomerData(customer);
           
-          // ملء البيانات تلقائياً
-          setFormData(prev => ({
-            ...prev,
-            name: customer.name || prev.name,
-            city: customer.city || prev.city,
-            address: customer.address || prev.address
-          }));
+          // ملء البيانات تلقائياً مع حماية من null
+          if (customer) {
+            setFormData(prev => ({
+              ...prev,
+              name: customer.name || prev.name,
+              city: customer.city || prev.city,
+              address: customer.address || prev.address
+            }));
 
-          // حساب خصم الولاء
-          const loyaltyData = customer.customer_loyalty;
-          if (loyaltyData && loyaltyData.loyalty_tiers) {
-            const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
-            const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0;
-            const loyaltyDiscountAmount = (currentSubtotal * discountPercentage) / 100;
-            
-            setLoyaltyDiscount(loyaltyDiscountAmount);
-            setDiscount(prev => prev + loyaltyDiscountAmount);
-            
-            console.log(`🎁 خصم الولاء: ${discountPercentage}% = ${loyaltyDiscountAmount} د.ع`);
-            
-            toast({
-              title: "🎉 تم العثور على العميل!",
-              description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${discountPercentage}%`,
-              duration: 3000,
-            });
+            // حساب خصم الولاء
+            const loyaltyData = customer.customer_loyalty;
+            if (loyaltyData && loyaltyData.loyalty_tiers) {
+              const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
+              const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0;
+              const loyaltyDiscountAmount = (currentSubtotal * discountPercentage) / 100;
+              
+              setLoyaltyDiscount(loyaltyDiscountAmount);
+              setDiscount(prev => prev + loyaltyDiscountAmount);
+              
+              console.log(`🎁 خصم الولاء: ${discountPercentage}% = ${loyaltyDiscountAmount} د.ع`);
+              
+              toast({
+                title: "🎉 تم العثور على العميل!",
+                description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${discountPercentage}%`,
+                duration: 3000,
+              });
+            }
           }
 
         } catch (error) {
