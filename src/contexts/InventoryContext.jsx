@@ -365,6 +365,32 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [setProducts]);
 
+  // إضافة realtime subscription للمخزون
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('inventory-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'inventory'
+        },
+        (payload) => {
+          console.log('🔄 تحديث مخزون فوري:', payload);
+          // تحديث المخزون فوراً بدون إعادة تحميل كامل
+          refreshInventoryData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, refreshInventoryData]);
+
   const fetchInitialData = useCallback(async () => {
     if (!user) {
       setLoading(false);
