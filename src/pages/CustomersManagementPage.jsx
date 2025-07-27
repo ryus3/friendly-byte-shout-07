@@ -589,11 +589,12 @@ const CustomersManagementPage = () => {
                     <motion.div 
                       key={tier.id} 
                       className="
-                        text-center p-6 rounded-xl cursor-pointer
-                        bg-gradient-to-br from-white/80 to-slate-50/80 dark:from-slate-800/80 dark:to-slate-700/80
-                        border border-border/50 shadow-lg hover:shadow-xl
+                        text-center p-6 rounded-xl cursor-pointer relative overflow-hidden
+                        bg-gradient-to-br from-white/90 to-slate-50/90 dark:from-slate-800/90 dark:to-slate-700/90
+                        border-2 border-border/50 shadow-xl hover:shadow-2xl
                         backdrop-blur-sm transition-all duration-300
-                        hover:scale-[1.02] hover:-translate-y-1
+                        hover:scale-[1.02] hover:-translate-y-2
+                        hover:border-primary/50
                       "
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -624,24 +625,52 @@ const CustomersManagementPage = () => {
                           style={{ color: tier.color }}
                         />
                       </motion.div>
-                      <h3 className="font-bold text-lg mb-1">{tier.name}</h3>
-                      <p className="text-sm text-muted-foreground mb-2">
+                      <h3 className="font-bold text-xl mb-2 bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-200 dark:to-slate-400 bg-clip-text text-transparent">
+                        {tier.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-3 px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full">
                         {tier.points_required} نقطة
                       </p>
-                      <p className="text-2xl font-bold text-primary mb-3">
-                        {selectedTier === tier.id 
-                          ? filteredCustomers.length 
-                          : customersInTier
-                        }
-                      </p>
-                      <p className="text-xs text-muted-foreground mb-3">عميل</p>
-                      {tier.discount_percentage > 0 && (
-                        <Badge 
-                          className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md"
-                        >
-                          خصم {tier.discount_percentage}% شهرياً
-                        </Badge>
-                      )}
+                      <div className="bg-gradient-to-r from-primary/10 to-primary/20 rounded-lg p-3 mb-4">
+                        <p className="text-3xl font-bold text-primary">
+                          {selectedTier === tier.id 
+                            ? filteredCustomers.length 
+                            : customersInTier
+                          }
+                        </p>
+                        <p className="text-xs text-muted-foreground">عميل</p>
+                      </div>
+                      
+                      {/* عرض المزايا */}
+                      <div className="space-y-2">
+                        {tier.discount_percentage > 0 && (
+                          <Badge 
+                            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md block"
+                          >
+                            خصم {tier.discount_percentage}% شهرياً
+                          </Badge>
+                        )}
+                        
+                        {tier.free_delivery_threshold !== null && tier.free_delivery_threshold >= 0 && (
+                          <Badge 
+                            className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 shadow-md block"
+                          >
+                            {tier.free_delivery_threshold === 0 
+                              ? "توصيل مجاني دائماً" 
+                              : `توصيل مجاني فوق ${tier.free_delivery_threshold.toLocaleString('ar-IQ')} د.ع`
+                            }
+                          </Badge>
+                        )}
+                        
+                        {tier.special_benefits && tier.special_benefits.length > 0 && (
+                          <Badge 
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-md block"
+                          >
+                            مزايا خاصة متاحة
+                          </Badge>
+                        )}
+                      </div>
+                      
                       {selectedTier === tier.id && (
                         <div className="absolute top-2 right-2 w-3 h-3 bg-primary rounded-full animate-pulse"></div>
                       )}
