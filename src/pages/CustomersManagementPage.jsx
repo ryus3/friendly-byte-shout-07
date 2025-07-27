@@ -567,10 +567,9 @@ const CustomersManagementPage = () => {
 
       {/* Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="customers">العملاء ({filteredCustomers.length})</TabsTrigger>
-          <TabsTrigger value="cities">إحصائيات المدن</TabsTrigger>
-          <TabsTrigger value="discounts">خصومات المدن</TabsTrigger>
+          <TabsTrigger value="city-stats">إحصائيات المدن</TabsTrigger>
         </TabsList>
 
         {/* Customers Tab */}
@@ -690,44 +689,325 @@ const CustomersManagementPage = () => {
           )}
         </TabsContent>
 
-        {/* Cities Stats Tab */}
-        <TabsContent value="cities" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>إحصائيات المدن هذا الشهر</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {cityStats.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {cityStats.map((city, index) => (
-                    <div key={city.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{city.city_name}</h3>
-                        <Badge variant={index < 3 ? "default" : "secondary"}>
-                          #{index + 1}
-                        </Badge>
+        {/* إحصائيات المدن */}
+        <TabsContent value="city-stats" className="space-y-6">
+          <div className="grid gap-6">
+            {/* كارت إحصائيات المدن المحسن والاحترافي */}
+            <Card className="relative bg-gradient-to-br from-violet-500/10 via-purple-500/10 to-fuchsia-500/10 border-violet-200/50 dark:border-violet-800/30 overflow-hidden shadow-xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-violet-600/5 to-fuchsia-600/5 dark:from-violet-400/5 dark:to-fuchsia-400/5"></div>
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-full -translate-y-16 translate-x-16"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-fuchsia-500/20 to-pink-500/20 rounded-full translate-y-12 -translate-x-12"></div>
+              
+              <CardHeader className="relative pb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-2xl blur-lg opacity-30"></div>
+                      <div className="relative p-4 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-2xl shadow-lg">
+                        <BarChart3 className="h-8 w-8 text-white" />
                       </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">الطلبات:</span>
-                          <span className="font-medium">{city.total_orders}</span>
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent">
+                        إحصائيات المدن العالمية
+                      </CardTitle>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        أداء المدن المتميز • تحليل شامل • نظرة عامة احترافية
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge 
+                      variant="secondary" 
+                      className="px-4 py-2 bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-900/30 dark:to-purple-900/30 border border-violet-200/50 dark:border-violet-700/50"
+                    >
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {new Date().toLocaleDateString('ar', { month: 'long', year: 'numeric' })}
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="relative pb-8">
+                {cityStats.length > 0 ? (
+                  <>
+                    {/* ملخص سريع */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                      <div className="p-4 bg-gradient-to-br from-white/60 to-gray-50/60 dark:from-gray-800/60 dark:to-gray-900/60 rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg">
+                            <MapPin className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">إجمالي المدن</p>
+                            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{cityStats.length}</p>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">المبيعات:</span>
-                          <span className="font-medium">{formatCurrency(city.total_amount)}</span>
+                      </div>
+                      
+                      <div className="p-4 bg-gradient-to-br from-white/60 to-gray-50/60 dark:from-gray-800/60 dark:to-gray-900/60 rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg">
+                            <ShoppingBag className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                              {cityStats.reduce((sum, city) => sum + city.total_orders, 0)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 bg-gradient-to-br from-white/60 to-gray-50/60 dark:from-gray-800/60 dark:to-gray-900/60 rounded-xl border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg">
+                            <TrendingUp className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">إجمالي المبيعات</p>
+                            <p className="text-xl font-bold text-purple-600 dark:text-purple-400">
+                              {formatCurrency(cityStats.reduce((sum, city) => sum + city.total_amount, 0))}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  ))}
+
+                    {/* قائمة المدن الاحترافية */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {cityStats.slice(0, 9).map((city, index) => (
+                        <motion.div
+                          key={city.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="relative group"
+                        >
+                          <div className="p-6 rounded-2xl bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-800/80 dark:to-gray-900/80 border border-gray-200/50 dark:border-gray-700/50 hover:shadow-2xl hover:shadow-violet-500/10 transition-all duration-500 group-hover:border-violet-300/60 dark:group-hover:border-violet-600/40 backdrop-blur-sm group-hover:-translate-y-1">
+                            {/* رقم الترتيب */}
+                            <div className="absolute -top-3 -right-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg ${
+                                index === 0 ? "bg-gradient-to-br from-yellow-400 to-orange-500" :
+                                index === 1 ? "bg-gradient-to-br from-gray-400 to-gray-600" :
+                                index === 2 ? "bg-gradient-to-br from-orange-400 to-red-500" :
+                                "bg-gradient-to-br from-violet-400 to-purple-500"
+                              }`}>
+                                {index + 1}
+                              </div>
+                            </div>
+
+                            {/* اسم المدينة */}
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-lg font-bold text-gray-800 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                                {city.city_name}
+                              </h4>
+                              {index < 3 && (
+                                <div className="flex items-center gap-1">
+                                  {index === 0 && <Crown className="h-4 w-4 text-yellow-500" />}
+                                  {index === 1 && <Medal className="h-4 w-4 text-gray-500" />}
+                                  {index === 2 && <Award className="h-4 w-4 text-orange-500" />}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* الإحصائيات */}
+                            <div className="space-y-3">
+                              <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <ShoppingBag className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                  <span className="text-sm text-blue-700 dark:text-blue-300">الطلبات</span>
+                                </div>
+                                <span className="font-bold text-blue-600 dark:text-blue-400">
+                                  {city.total_orders}
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                  <span className="text-sm text-green-700 dark:text-green-300">المبيعات</span>
+                                </div>
+                                <span className="font-bold text-green-600 dark:text-green-400 text-sm">
+                                  {formatCurrency(city.total_amount)}
+                                </span>
+                              </div>
+
+                              {/* متوسط قيمة الطلب */}
+                              <div className="flex justify-between items-center p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <BarChart3 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                  <span className="text-sm text-purple-700 dark:text-purple-300">متوسط الطلب</span>
+                                </div>
+                                <span className="font-bold text-purple-600 dark:text-purple-400 text-sm">
+                                  {formatCurrency(Math.round(city.total_amount / city.total_orders))}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* مؤشر المدينة المختارة */}
+                            {cityDiscounts.some(discount => discount.city_name === city.city_name) && (
+                              <div className="mt-4 p-3 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-lg border border-green-200/50 dark:border-green-700/50">
+                                <div className="flex items-center gap-2">
+                                  <div className="relative">
+                                    <Gift className="h-5 w-5 text-green-600 dark:text-green-400" />
+                                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                  </div>
+                                  <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                                    مدينة مميزة • خصائص خاصة
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-12">
+                    <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4 opacity-50" />
+                    <p className="text-gray-500 dark:text-gray-400 text-lg">لا توجد إحصائيات للمدن هذا الشهر</p>
+                    <p className="text-gray-400 dark:text-gray-500 text-sm mt-2">ستظهر البيانات عند وجود طلبات من المدن</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* نظام خصومات المدن المحسن */}
+            <Card className="relative bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border-emerald-200/50 dark:border-emerald-800/30 overflow-hidden shadow-xl">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/5 to-cyan-600/5 dark:from-emerald-400/5 dark:to-cyan-400/5"></div>
+              <div className="absolute top-0 left-0 w-28 h-28 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-full -translate-y-14 -translate-x-14"></div>
+              
+              <CardHeader className="relative pb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl blur-lg opacity-30"></div>
+                      <div className="relative p-4 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-lg">
+                        <PartyPopper className="h-8 w-8 text-white" />
+                      </div>
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 bg-clip-text text-transparent">
+                        نظام المدن المميزة الذكي
+                      </CardTitle>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        كل شهر • طلبين عشوائيين • خصم 10% أو توصيل مجاني • مفاجآت للعملاء
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={selectRandomCityDiscount}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    size="sm"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    اختيار مدينة جديدة
+                  </Button>
                 </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>لا توجد إحصائيات للمدن هذا الشهر</p>
+              </CardHeader>
+
+              <CardContent className="relative pb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* شرح النظام */}
+                  <div className="space-y-6">
+                    <div className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl border border-blue-200/50 dark:border-blue-700/50">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        <h4 className="text-lg font-bold text-blue-800 dark:text-blue-300">آلية عمل النظام</h4>
+                      </div>
+                      <div className="space-y-3">
+                        {[
+                          "نختار أفضل المدن من الشهر السابق تلقائياً",
+                          "كل مدينة مختارة تحصل على مزايا خاصة",
+                          "طلبين عشوائيين شهرياً لكل مدينة",
+                          "خصم 10% أو توصيل مجاني عشوائي"
+                        ].map((item, index) => (
+                          <div key={index} className="flex items-center gap-3 text-blue-700 dark:text-blue-300">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm">{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-200/50 dark:border-green-700/50">
+                      <div className="flex items-center gap-3 mb-4">
+                        <Gift className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        <h4 className="text-lg font-bold text-green-800 dark:text-green-300">المزايا والعروض</h4>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { icon: "💰", text: "خصم 10%" },
+                          { icon: "🚚", text: "توصيل مجاني" },
+                          { icon: "🔔", text: "إشعارات خاصة" },
+                          { icon: "⭐", text: "أولوية في الخدمة" }
+                        ].map((item, index) => (
+                          <div key={index} className="flex items-center gap-2 p-2 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                            <span className="text-lg">{item.icon}</span>
+                            <span className="text-sm text-green-700 dark:text-green-300 font-medium">{item.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* المدن المختارة حالياً */}
+                  <div className="space-y-6">
+                    <h4 className="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-3">
+                      <Truck className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+                      المدن المميزة هذا الشهر
+                    </h4>
+                    
+                    {cityDiscounts.length > 0 ? (
+                      <div className="space-y-4">
+                        {cityDiscounts.map((discount, index) => (
+                          <motion.div
+                            key={discount.id}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.2 }}
+                            className="p-6 bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 dark:from-yellow-900/20 dark:via-orange-900/20 dark:to-red-900/20 rounded-2xl border border-yellow-200/50 dark:border-yellow-700/50 shadow-lg hover:shadow-xl transition-all duration-300"
+                          >
+                            <div className="flex items-center justify-between mb-4">
+                              <h5 className="text-xl font-bold text-yellow-800 dark:text-yellow-300 flex items-center gap-3">
+                                <Crown className="h-6 w-6" />
+                                {discount.city_name}
+                              </h5>
+                              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0 px-3 py-1">
+                                🎯 نشط
+                              </Badge>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg">
+                                <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-1">نسبة الخصم</p>
+                                <p className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                                  {discount.discount_percentage}%
+                                </p>
+                              </div>
+                              <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg">
+                                <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-1">العروض الشهرية</p>
+                                <p className="text-lg font-bold text-yellow-800 dark:text-yellow-200">
+                                  طلبين مميزين
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                        <PartyPopper className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                        <p className="text-lg mb-2">لا توجد مدن مختارة حالياً</p>
+                        <p className="text-sm">اضغط على "اختيار مدينة جديدة" لبدء النظام</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* City Discounts Tab */}
