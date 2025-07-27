@@ -57,8 +57,8 @@ const ProfitsSummaryPage = () => {
   const [selectedOrders, setSelectedOrders] = useState([]);
 
   // تحديد الصلاحيات بناءً على الدور - المدراء يرون كل شيء، الموظفون يرون أرباحهم فقط
-  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
-  const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement');
+  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin';
+  const canRequestSettlement = user?.role === 'employee' || user?.role === 'deputy';
   
   // تطبيق فلتر المعلقة مباشرة للموظفين
   useEffect(() => {
@@ -66,6 +66,8 @@ const ProfitsSummaryPage = () => {
       setFilters(prev => ({ ...prev, profitStatus: 'pending' }));
     }
   }, [canViewAll]);
+  
+  console.log('🔧 صلاحيات المستخدم:', { canViewAll, canRequestSettlement, userRole: user?.role });
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -292,9 +294,11 @@ const ProfitsSummaryPage = () => {
 
   console.log('📋 بيانات مفلترة:', {
     canViewAll,
+    canRequestSettlement,
     filteredCount: filteredDetailedProfits.length,
-    totalProfitData: profitData,
-    filters
+    filters,
+    showCheckbox: canRequestSettlement && filters.profitStatus === 'pending',
+    totalProfitData: profitData
   });
 
   const handleFilterChange = useCallback((key, value) => {
