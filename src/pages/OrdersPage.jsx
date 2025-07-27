@@ -373,7 +373,7 @@ const OrdersPage = () => {
     setDialogs(d => ({ ...d, returnReceipt: true }));
   }, []);
 
-  const profitsPagePath = '/profits-summary';
+  const profitsPagePath = '/profits-management';
 
   return (
     <>
