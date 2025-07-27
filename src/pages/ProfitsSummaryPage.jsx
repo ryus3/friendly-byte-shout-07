@@ -56,9 +56,9 @@ const ProfitsSummaryPage = () => {
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
 
-  // تحديد الصلاحيات بناءً على الدور - المدراء يرون كل شيء، الموظفون يرون أرباحهم فقط
-  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
-  const canRequestSettlement = (user?.role === 'employee' || user?.role === 'deputy' || user?.role === 'sales_employee') && hasPermission('request_profit_settlement');
+  // تحديد الصلاحيات بناءً على الدور والصلاحيات
+  const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');
+  const canRequestSettlement = hasPermission('request_profit_settlement');
   
   // تطبيق فلتر المعلقة مباشرة للموظفين
   useEffect(() => {
@@ -67,7 +67,15 @@ const ProfitsSummaryPage = () => {
     }
   }, [canViewAll]);
   
-  console.log('🔧 صلاحيات المستخدم:', { canViewAll, canRequestSettlement, userRole: user?.role });
+  console.log('🔧 صلاحيات المستخدم:', { 
+    canViewAll, 
+    canRequestSettlement, 
+    userRole: user?.role,
+    userId: user?.id,
+    hasRequestPermission: hasPermission('request_profit_settlement'),
+    hasManagePermission: hasPermission('manage_profit_settlement'),
+    hasViewAllPermission: hasPermission('view_all_profits')
+  });
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -297,8 +305,9 @@ const ProfitsSummaryPage = () => {
     canRequestSettlement,
     filteredCount: filteredDetailedProfits.length,
     filters,
-    showCheckbox: canRequestSettlement && filters.profitStatus === 'pending',
-    totalProfitData: profitData
+    showCheckbox: canRequestSettlement,
+    totalProfitData: profitData,
+    userPermissions: Object.keys(user || {}).filter(k => user[k] === true)
   });
 
   const handleFilterChange = useCallback((key, value) => {
@@ -427,7 +436,7 @@ const ProfitsSummaryPage = () => {
             />
             
             <SettlementRequest
-                canRequestSettlement={canRequestSettlement && filters.profitStatus === 'pending'}
+                canRequestSettlement={canRequestSettlement}
                 isRequesting={isRequesting}
                 selectedOrdersCount={selectedOrders.length}
                 onRequest={handleRequestSettlement}
@@ -479,7 +488,7 @@ const ProfitsSummaryPage = () => {
               <ProfitDetailsMobile
                 orders={filteredDetailedProfits}
                 canViewAll={canViewAll}
-                canRequestSettlement={canRequestSettlement && filters.profitStatus === 'pending'}
+                canRequestSettlement={canRequestSettlement}
                 selectedOrders={selectedOrders}
                 onSelectOrder={handleSelectOrder}
                 onViewOrder={handleViewOrder}
@@ -489,7 +498,7 @@ const ProfitsSummaryPage = () => {
              <ProfitDetailsTable
                 orders={filteredDetailedProfits}
                 canViewAll={canViewAll}
-                canRequestSettlement={canRequestSettlement && filters.profitStatus === 'pending'}
+                canRequestSettlement={canRequestSettlement}
                 selectedOrders={selectedOrders}
                 onSelectOrder={handleSelectOrder}
                 onSelectAll={handleSelectAll}
