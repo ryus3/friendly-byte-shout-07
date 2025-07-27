@@ -355,7 +355,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       
       for (const item of orderItems || []) {
         // إلغاء الحجز فقط باستخدام RPC المحسن
-        const { error } = await supabase.rpc('release_stock_item', {
+        const { data: releaseResult, error } = await supabase.rpc('release_stock_item', {
           p_product_id: item.product_id,
           p_variant_id: item.variant_id,
           p_quantity: item.quantity
@@ -364,7 +364,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         if (error) {
           console.error('Error releasing stock item:', error);
         } else {
-          console.log(`Released ${item.quantity} items for product ${item.product_id}`);
+          console.log(`✅ Released ${item.quantity} items for product ${item.product_id}:`, releaseResult);
+          console.log(`📊 Stock released: ${releaseResult?.old_reserved_quantity} → ${releaseResult?.new_reserved_quantity}`);
         }
       }
       
