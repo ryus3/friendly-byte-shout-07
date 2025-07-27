@@ -325,7 +325,7 @@ export const InventoryProvider = ({ children }) => {
         };
       });
 
-      setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
+      setOrders(processedOrders || []);
     } catch (error) {
       console.error('❌ خطأ في تحديث الطلبات:', error);
     }
