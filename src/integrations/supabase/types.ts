@@ -2973,6 +2973,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_reserved_stock: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       delete_purchase_completely: {
         Args: { p_purchase_id: string }
         Returns: Json
