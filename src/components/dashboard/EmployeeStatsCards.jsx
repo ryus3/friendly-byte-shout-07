@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import EmployeeSettlementDialog from '@/components/dashboard/EmployeeSettlementDialog';
 
-const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement }) => {
+const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, onPendingProfitsClick }) => {
   const [showSettlementDialog, setShowSettlementDialog] = useState(false);
 
   if (!stats) return null;
@@ -78,7 +78,8 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement }) => {
       icon: Clock,
       color: "text-orange-600",
       bgColor: "bg-orange-50",
-      description: "أرباح في انتظار التحاسب"
+      description: "أرباح في انتظار التحاسب",
+      onClick: onPendingProfitsClick
     },
     {
       title: "أرباحي المستلمة",
@@ -167,7 +168,8 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement }) => {
                 value={card.value}
                 icon={card.icon}
                 description={card.description}
-                className="hover:shadow-lg transition-shadow duration-300"
+                onClick={card.onClick}
+                className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
               />
             </motion.div>
           ))}

@@ -18,10 +18,18 @@ export const useUnifiedProfits = (userId = null) => {
     personalSettledProfit: 0,
     personalTotalProfit: 0,
     
+    // إحصائيات إضافية للموظف
+    totalOrders: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+    totalRevenue: 0,
+    pendingProfits: 0,
+    settledProfits: 0,
+    totalProfits: 0,
+    
     // بيانات إضافية
     totalExpenses: 0,
     settledDues: 0,
-    pendingOrders: 0,
     settledOrders: 0
   });
   
@@ -54,20 +62,26 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (expensesError) throw expensesError;
 
-      // 3. جلب الطلبات المكتملة (سواء تم استلام الفاتورة أم لا)
-      const { data: completedOrders, error: ordersError } = await supabase
-        .from('orders')
-        .select('id, status, receipt_received')
-        .eq('status', 'completed');
-
+      // 3. جلب جميع الطلبات لحساب الإحصائيات
+      const ordersQuery = userId ? 
+        supabase.from('orders').select('*').eq('created_by', userId) :
+        supabase.from('orders').select('*');
+        
+      const { data: allOrders, error: ordersError } = await ordersQuery;
       if (ordersError) throw ordersError;
 
-      const completedOrderIds = completedOrders?.map(o => o.id) || [];
-      const receiptReceivedOrderIds = completedOrders?.filter(o => o.receipt_received).map(o => o.id) || [];
+      // فلترة الطلبات حسب المستخدم
+      const userOrders = allOrders || [];
+      const completedOrders = userOrders.filter(o => o.status === 'completed' || o.status === 'delivered');
+      const pendingOrders = userOrders.filter(o => o.status === 'pending' || o.status === 'shipped');
       
-      // 4. حساب البيانات العامة - الأرباح من الطلبات المكتملة
+      // حساب الإيرادات الإجمالية
+      const totalRevenue = completedOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
+      
+      // حساب البيانات العامة للنظام
+      const completedOrderIds = completedOrders.map(o => o.id);
       const completedProfits = systemProfits?.filter(p => completedOrderIds.includes(p.order_id)) || [];
-      const pendingProfits = systemProfits?.filter(p => !completedOrderIds.includes(p.order_id)) || [];
+      const allPendingProfits = systemProfits?.filter(p => !completedOrderIds.includes(p.order_id)) || [];
       
       const totalSystemProfit = completedProfits?.reduce((sum, p) => sum + (p.profit_amount || 0), 0) || 0;
       const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
@@ -76,26 +90,39 @@ export const useUnifiedProfits = (userId = null) => {
       // صافي الأرباح = أرباح الطلبات المكتملة - المصاريف
       const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       const netSystemProfit = totalManagerProfits - totalExpenses;
-      
-      // الأرباح المعلقة = أرباح الطلبات غير المكتملة
-      const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
 
-      // 4. حساب البيانات الشخصية (إذا تم تمرير معرف المستخدم)
+      // حساب البيانات الشخصية للموظف
       let personalData = {
         personalPendingProfit: 0,
         personalSettledProfit: 0,
-        personalTotalProfit: 0
+        personalTotalProfit: 0,
+        totalOrders: userOrders.length,
+        pendingOrders: pendingOrders.length,
+        completedOrders: completedOrders.length,
+        totalRevenue: totalRevenue,
+        pendingProfits: 0,
+        settledProfits: 0,
+        totalProfits: 0
       };
 
       if (userId) {
-        const personalProfits = systemProfits?.filter(p => p.employee_id === userId && completedOrderIds.includes(p.order_id)) || [];
+        // جلب أرباح المستخدم من قاعدة البيانات
+        const personalProfits = systemProfits?.filter(p => p.employee_id === userId) || [];
         const pendingPersonalProfits = personalProfits.filter(p => p.status === 'pending');
         const settledPersonalProfits = personalProfits.filter(p => p.status === 'settled');
         
+        const pendingProfitAmount = pendingPersonalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        const settledProfitAmount = settledPersonalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        const totalProfitAmount = personalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        
         personalData = {
-          personalPendingProfit: pendingPersonalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
-          personalSettledProfit: settledPersonalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
-          personalTotalProfit: personalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
+          ...personalData,
+          personalPendingProfit: pendingProfitAmount,
+          personalSettledProfit: settledProfitAmount,
+          personalTotalProfit: totalProfitAmount,
+          pendingProfits: pendingProfitAmount,
+          settledProfits: settledProfitAmount,
+          totalProfits: totalProfitAmount
         };
       }
 
