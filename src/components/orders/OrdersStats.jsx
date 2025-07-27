@@ -1,23 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 
-const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => {
+const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globalPeriod }) => {
   const { canViewAllData, isSalesEmployee } = usePermissions();
-  const [periods, setPeriods] = useState({
-    total: 'today',
-    pending: 'today',
-    shipped: 'today',
-    delivered: 'today',
-    returned: 'today',
-    archived: 'all',
-  });
 
   const handlePeriodChange = (stat, period) => {
-    setPeriods(prev => ({...prev, [stat]: period}));
     const statusMap = {
       total: 'all',
       pending: 'pending',
@@ -30,33 +21,35 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => 
   };
   
   const getStats = (status) => {
-    const periodKey = Object.keys(periods).find(key => key === status || (status === 'all' && key === 'total')) || 'total';
     const safeOrders = Array.isArray(orders) ? orders : [];
-    const filtered = filterOrdersByPeriod(safeOrders, periods[periodKey]);
+    const filtered = globalPeriod !== 'all' ? filterOrdersByPeriod(safeOrders, globalPeriod) : safeOrders;
 
-    if (status === 'all') return filtered.filter(o => !o.isArchived).length;
-    if (status === 'archived') return safeOrders.filter(o => o.isArchived).length;
-    return filtered.filter(o => o.status === status && !o.isArchived).length;
+    if (status === 'all') {
+      return filtered.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
+    }
+    if (status === 'archived') {
+      return filtered.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock').length;
+    }
+    return filtered.filter(o => o.status === status && !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
   };
 
   const createClickHandler = (status) => () => {
-    const periodKey = Object.keys(periods).find(key => key === status || (status === 'all' && key === 'total')) || 'total';
-    onStatCardClick(status, periods[periodKey]);
+    onStatCardClick(status, globalPeriod);
   };
   
   const statsData = useMemo(() => [
     { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrders.length, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
-    { key: 'total', title: 'إجمالي الطلبات', icon: ShoppingCart, colors: ['blue-500', 'cyan-500'], value: getStats('all'), onPeriodChange: (p) => handlePeriodChange('total', p), onClick: createClickHandler('all'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'pending', title: 'قيد التجهيز', icon: Clock, colors: ['yellow-500', 'orange-500'], value: getStats('pending'), onPeriodChange: (p) => handlePeriodChange('pending', p), onClick: createClickHandler('pending'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onPeriodChange: (p) => handlePeriodChange('shipped', p), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onPeriodChange: (p) => handlePeriodChange('delivery', p), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onPeriodChange: (p) => handlePeriodChange('delivered', p), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'returned', title: 'راجع للمخزن', icon: CornerDownLeft, colors: ['status-returned', 'red-600'], value: getStats('returned_in_stock'), onPeriodChange: (p) => handlePeriodChange('returned', p), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'total', title: 'إجمالي الطلبات', icon: ShoppingCart, colors: ['blue-500', 'cyan-500'], value: getStats('all'), onClick: createClickHandler('all'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'pending', title: 'قيد التجهيز', icon: Clock, colors: ['yellow-500', 'orange-500'], value: getStats('pending'), onClick: createClickHandler('pending'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'returned', title: 'راجع للمخزن', icon: CornerDownLeft, colors: ['status-returned', 'red-600'], value: getStats('returned_in_stock'), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'archived', title: 'الأرشيف', icon: Archive, colors: ['status-cancelled', 'red-800'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
-  ], [orders, aiOrders, periods]);
+  ], [orders, aiOrders, globalPeriod]);
 
   return (
-    <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 sm:gap-4">
       {statsData.map((stat, index) => (
          <motion.div
             key={stat.key}
@@ -69,8 +62,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick }) => 
               value={stat.value}
               title={stat.title}
               colors={stat.colors}
-              currentPeriod={periods[stat.key]}
-              onPeriodChange={stat.onPeriodChange}
+              currentPeriod={globalPeriod}
               onClick={stat.onClick}
               periods={stat.periods}
             />

@@ -327,17 +327,18 @@ const OrdersPage = () => {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-           <div className="col-span-1 sm:col-span-2 lg:col-span-3">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+           <div className="col-span-1 lg:col-span-3">
              <OrdersStats 
                 orders={userOrders} 
                 aiOrders={userAiOrders} 
                 onAiOrdersClick={() => setDialogs(d => ({ ...d, aiManager: true }))}
                 onStatCardClick={handleStatCardClick}
+                globalPeriod={filters.period}
              />
            </div>
             {hasPermission('view_profits') && (
-              <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+              <div className="col-span-1 lg:col-span-1">
                 <StatCard 
                   title="ملخص الأرباح" 
                   value={myProfits}
@@ -365,20 +366,20 @@ const OrdersPage = () => {
         />
         
         {selectedOrders.length > 0 && hasPermission('manage_orders') && (
-          <Card className="p-4 bg-card rounded-lg border">
-            <CardContent className="p-0 flex items-center justify-between w-full gap-2">
+          <Card className="p-3 sm:p-4 bg-card rounded-lg border">
+            <CardContent className="p-0 flex flex-col sm:flex-row items-start sm:items-center justify-between w-full gap-2">
               <p className="font-medium text-sm">
                 {selectedOrders.length} طلبات محددة
               </p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full sm:w-auto">
                 {filters.status !== 'archived' && (
-                  <Button variant="outline" onClick={() => setDialogs(d => ({ ...d, archiveAlert: true }))}>
+                  <Button variant="outline" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, archiveAlert: true }))}>
                     <Archive className="w-4 h-4 ml-2" />
                     أرشفة
                   </Button>
                 )}
                 {hasPermission('delete_local_orders') && (
-                    <Button variant="destructive" onClick={() => setDialogs(d => ({ ...d, deleteAlert: true }))}>
+                    <Button variant="destructive" size="sm" className="flex-1 sm:flex-none" onClick={() => setDialogs(d => ({ ...d, deleteAlert: true }))}>
                       <Trash2 className="w-4 h-4 ml-2" />
                       حذف
                     </Button>
