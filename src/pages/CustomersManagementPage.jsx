@@ -83,92 +83,73 @@ const CustomersManagementPage = () => {
 
       setCustomers(customersData || []);
       
-      // *** حل جذري ونهائي لمشكلة المبيعات ***
-      console.log('🚀 بدء الحل الجذري لحساب إحصائيات المدن...');
+      // 🔥 حل جذري ونهائي بدون أي تعقيدات
+      console.log('=== بدء الحل الجذري النهائي ===');
       
-      try {
-        // 1. استعلام مباشر ودقيق من قاعدة البيانات
-        const { data: rawOrders, error: queryError } = await supabase
-          .from('orders')
-          .select('customer_city, final_amount, order_number, status, created_at')
-          .in('status', ['completed', 'delivered'])
-          .not('customer_city', 'is', null)
-          .neq('customer_city', '');
+      // استعلام مبسط ومباشر
+      const { data: allOrders, error } = await supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['completed', 'delivered']);
 
-        if (queryError) {
-          console.error('❌ خطأ في الاستعلام:', queryError);
-          setCityStats([]);
-          return;
-        }
-
-        console.log(`📥 تم جلب ${rawOrders?.length || 0} طلب من قاعدة البيانات`);
-        
-        // 2. فلترة الطلبات للشهر الحالي بدقة
-        const currentDate = new Date();
-        const currentMonth = currentDate.getMonth() + 1;
-        const currentYear = currentDate.getFullYear();
-        
-        const currentMonthOrders = rawOrders?.filter(order => {
-          const orderDate = new Date(order.created_at);
-          const orderMonth = orderDate.getMonth() + 1;
-          const orderYear = orderDate.getFullYear();
-          return orderMonth === currentMonth && orderYear === currentYear;
-        }) || [];
-
-        console.log(`📅 طلبات الشهر الحالي (${currentMonth}/${currentYear}): ${currentMonthOrders.length}`);
-        
-        // 3. حساب إحصائيات كل مدينة بدقة كاملة
-        const cityCalculations = {};
-        let debugTotal = 0;
-        
-        currentMonthOrders.forEach((order, index) => {
-          const city = order.customer_city;
-          const amount = parseFloat(order.final_amount) || 0;
-          
-          console.log(`🔢 طلب ${index + 1}: ${order.order_number} - ${city} - ${amount} د.ع`);
-          
-          if (!cityCalculations[city]) {
-            cityCalculations[city] = {
-              id: `city_${city}`,
-              city_name: city,
-              total_orders: 0,
-              total_amount: 0,
-              orders_debug: []
-            };
-          }
-          
-          cityCalculations[city].total_orders += 1;
-          cityCalculations[city].total_amount += amount;
-          cityCalculations[city].orders_debug.push(`${order.order_number}:${amount}`);
-          
-          debugTotal += amount;
-        });
-
-        // 4. تحويل إلى مصفوفة مرتبة
-        const finalCityStats = Object.values(cityCalculations)
-          .sort((a, b) => b.total_orders - a.total_orders);
-
-        // 5. تسجيل النتائج النهائية للمراجعة
-        console.log('✅ النتائج النهائية المحسوبة:');
-        console.log(`   📊 إجمالي المبيعات المحسوبة: ${debugTotal.toLocaleString('ar')} د.ع`);
-        console.log(`   🏙️ عدد المدن: ${finalCityStats.length}`);
-        
-        finalCityStats.forEach((city, index) => {
-          console.log(`   ${index + 1}. ${city.city_name}:`);
-          console.log(`      - الطلبات: ${city.total_orders}`);
-          console.log(`      - المبيعات: ${city.total_amount.toLocaleString('ar')} د.ع`);
-          console.log(`      - التفاصيل: ${city.orders_debug.join(', ')}`);
-        });
-
-        // 6. تحديث الحالة
-        setCityStats(finalCityStats);
-        
-        console.log('🎉 تم تحديث إحصائيات المدن بنجاح!');
-        
-      } catch (error) {
-        console.error('💥 خطأ في الحل الجذري:', error);
+      if (error) {
+        console.error('خطأ:', error);
         setCityStats([]);
+        return;
       }
+
+      console.log(`جميع الطلبات المكتملة: ${allOrders?.length || 0}`);
+      
+      // إجمالي خام لفحص البيانات
+      const totalAll = allOrders?.reduce((sum, order) => sum + (parseFloat(order.final_amount) || 0), 0) || 0;
+      console.log(`إجمالي جميع الطلبات: ${totalAll.toLocaleString('ar')} د.ع`);
+
+      // فلترة للشهر الحالي
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+      
+      const thisMonthOrders = allOrders?.filter(order => {
+        if (!order.customer_city) return false;
+        const orderDate = new Date(order.created_at);
+        return orderDate.getMonth() + 1 === currentMonth && orderDate.getFullYear() === currentYear;
+      }) || [];
+
+      console.log(`طلبات ${currentMonth}/${currentYear}: ${thisMonthOrders.length}`);
+
+      // حساب بسيط للمدن
+      const citiesData = {};
+      let monthTotal = 0;
+
+      thisMonthOrders.forEach(order => {
+        const city = order.customer_city;
+        const amount = parseFloat(order.final_amount) || 0;
+        
+        if (!citiesData[city]) {
+          citiesData[city] = { 
+            id: city, 
+            city_name: city, 
+            total_orders: 0, 
+            total_amount: 0 
+          };
+        }
+        
+        citiesData[city].total_orders++;
+        citiesData[city].total_amount += amount;
+        monthTotal += amount;
+        
+        console.log(`✓ ${order.order_number}: ${city} = ${amount} د.ع`);
+      });
+
+      const finalStats = Object.values(citiesData).sort((a, b) => b.total_orders - a.total_orders);
+      
+      console.log('=== النتيجة النهائية ===');
+      console.log(`إجمالي الشهر: ${monthTotal.toLocaleString('ar')} د.ع`);
+      finalStats.forEach(city => {
+        console.log(`${city.city_name}: ${city.total_orders} طلب = ${city.total_amount.toLocaleString('ar')} د.ع`);
+      });
+
+      setCityStats(finalStats);
         
       setCityStats(cityStatsData || []);
       
