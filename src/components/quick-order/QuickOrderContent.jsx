@@ -210,7 +210,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // جلب بيانات العميل عند إدخال رقم الهاتف
   useEffect(() => {
     const fetchCustomerData = async () => {
-      if (formData.phone && formData.phone.length >= 11) {
+      if (formData.phone && formData.phone.length >= 10) {
         try {
           console.log('🔍 البحث عن العميل:', formData.phone);
           
@@ -229,7 +229,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               )
             `)
             .eq('phone', formData.phone)
-            .single();
+            .maybeSingle();
 
           if (error) {
             console.log('❌ لم يتم العثور على العميل');
