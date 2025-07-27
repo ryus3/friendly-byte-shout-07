@@ -167,47 +167,60 @@ const OrdersPage = () => {
   }, [aiOrders, user]);
 
   const filteredOrders = useMemo(() => {
-    let result = userOrders;
-
-    // البحث
-    if (filters.searchTerm && filters.searchTerm.trim()) {
-      const searchQuery = filters.searchTerm.toLowerCase().trim();
-      result = result.filter(order => 
-        order.customer_name?.toLowerCase().includes(searchQuery) ||
-        order.customer_phone?.toLowerCase().includes(searchQuery) ||
-        order.qr_code?.toLowerCase().includes(searchQuery) ||
-        order.notes?.toLowerCase().includes(searchQuery) ||
-        (order.products && order.products.some(product => 
-          product.product_name?.toLowerCase().includes(searchQuery) ||
-          product.color?.toLowerCase().includes(searchQuery)
-        ))
-      );
-    }
-
-    // فلتر الحالة
-    if (filters.status !== 'all') {
-      if (filters.status === 'archived') {
-        // عرض الطلبات المؤرشفة
-        result = result.filter(order => order.isArchived);
-        // إضافة فلتر حالة فرعية للأرشيف فقط
-        if (filters.archiveSubStatus !== 'all') {
-          result = result.filter(order => order.status === filters.archiveSubStatus);
-        }
-      } else {
-        // عرض الطلبات غير المؤرشفة مع الحالة المحددة
-        result = result.filter(order => !order.isArchived && order.status === filters.status);
-      }
+    let tempOrders;
+    if (filters.status === 'archived') {
+      // في الأرشيف، إظهار جميع الطلبات المؤرشفة والمكتملة والراجعة للمخزن
+      tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
     } else {
-      // عرض الطلبات غير المؤرشفة فقط
-      result = result.filter(order => !order.isArchived);
+      // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
+      tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
     }
 
-    // فلتر الفترة الزمنية
+    // تطبيق فلتر الوقت أولاً
     if (filters.period !== 'all') {
-      result = filterOrdersByPeriod(result, filters.period);
+      tempOrders = filterOrdersByPeriod(tempOrders, filters.period);
     }
+    
+    return tempOrders.filter(order => {
+      const { searchTerm, status, archiveSubStatus } = filters;
+      const lowerCaseSearchTerm = searchTerm.toLowerCase();
+      const customerInfo = order.customerinfo || {
+        name: order.customer_name,
+        phone: order.customer_phone
+      };
+      const matchesSearch = (
+        (customerInfo.name || order.customer_name || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.trackingnumber || order.tracking_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.qr_id || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (order.order_number || '').toLowerCase().includes(lowerCaseSearchTerm) ||
+        (customerInfo.phone || order.customer_phone || '').includes(searchTerm)
+      );
+      
+      let matchesStatus = true;
+      
+      if (status === 'archived') {
+        // في الأرشيف، تطبيق فلتر فرعي للحالة
+        if (archiveSubStatus === 'all') {
+          matchesStatus = true; // إظهار جميع الطلبات المؤرشفة
+        } else {
+          matchesStatus = order.status === archiveSubStatus;
+        }
+      } else if (status === 'all') {
+        // إظهار جميع الطلبات في الحالة المحددة (أرشيف أم لا)
+        matchesStatus = true;
+      } else {
+        // فلترة حسب الحالة المحددة
+        if (filters.status === 'archived') {
+          // في صفحة الأرشيف، يمكن فلترة حسب الحالة الفرعية
+          matchesStatus = order.status === status;
+        } else {
+          // في الصفحة العادية، فلترة حسب الحالة مع استبعاد المؤرشفة
+          matchesStatus = order.status === status && !order.isArchived && order.status !== 'completed' && order.status !== 'returned_in_stock';
+        }
+      }
 
-    return result;
+      return matchesSearch && matchesStatus;
+    });
   }, [userOrders, filters]);
 
   const myProfits = useMemo(() => {

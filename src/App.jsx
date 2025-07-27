@@ -1,5 +1,5 @@
-import React, { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/components/ui/use-toast.js';
@@ -35,17 +35,6 @@ const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx')
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
 const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAnalysisPage.jsx'));
 const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPage.jsx'));
-
-// مكون لانتقال إلى أعلى الصفحة عند تغيير المسار
-function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -96,7 +85,6 @@ function AppContent() {
 
   return (
     <div className="h-dvh bg-background text-foreground">
-       <ScrollToTop />
        <Helmet>
         <title>RYUS</title>
         <link rel="manifest" href="/manifest.json" />
