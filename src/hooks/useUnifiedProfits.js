@@ -131,6 +131,9 @@ export const useUnifiedProfits = (userId = null) => {
       const pendingOrdersCount = allPendingProfits.length || 0;
       const settledDues = systemProfits?.filter(p => p.status === 'settled').reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
 
+      // حساب الأرباح المعلقة
+      const pendingSystemProfits = allPendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0), 0);
+
       // 7. تجميع جميع البيانات
       setProfitData({
         // البيانات العامة
