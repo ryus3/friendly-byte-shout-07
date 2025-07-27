@@ -196,6 +196,7 @@ const OrdersPage = () => {
       
       let matchesStatus = status === 'all' || order.status === status;
       if (status === 'archived') {
+        // في الأرشيف، إظهار كل الطلبات المؤرشفة أو المكتملة أو الراجعة للمخزن
         matchesStatus = !!order.isArchived || order.status === 'completed' || order.status === 'returned_in_stock';
       } else if (status === 'completed' || status === 'returned_in_stock') {
         // إذا تم اختيار البحث عن المكتملة أو الراجعة للمخزن، ابحث فيها حتى لو كانت مؤرشفة
