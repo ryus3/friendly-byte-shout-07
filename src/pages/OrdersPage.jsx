@@ -399,7 +399,7 @@ const OrdersPage = () => {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
+         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
            <div className="col-span-1 lg:col-span-3">
              <OrdersStats 
                 orders={userOrders} 
@@ -409,20 +409,18 @@ const OrdersPage = () => {
                 globalPeriod={filters.period}
              />
            </div>
-            {hasPermission('view_profits') && (
-              <div className="col-span-1 lg:col-span-1">
-                <StatCard 
-                  title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المكتملة"}
-                  value={myProfits}
-                  format="currency"
-                  icon={DollarSign} 
-                  colors={['green-500', 'emerald-500']}
-                  onClick={() => navigate(profitsPagePath)}
-                  periods={{ all: hasPermission('view_all_data') ? 'الطلبات المكتملة' : 'أرباحي' }}
-                  currentPeriod="all"
-                />
-              </div>
-            )}
+            <div className="col-span-1 lg:col-span-1">
+              <StatCard 
+                title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المكتملة"}
+                value={myProfits}
+                format="currency"
+                icon={DollarSign} 
+                colors={['green-500', 'emerald-500']}
+                onClick={() => navigate(profitsPagePath)}
+                periods={{ all: hasPermission('view_all_data') ? 'الطلبات المكتملة' : 'أرباحي' }}
+                currentPeriod="all"
+              />
+            </div>
         </div>
 
         <OrdersToolbar 
