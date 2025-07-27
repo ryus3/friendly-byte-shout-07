@@ -159,10 +159,10 @@ const UnifiedProfitDisplay = ({
 
   return (
     <div className={`${getLayoutClasses()} ${className}`}>
-      {cards.map(card => (
+      {cards.map(({ key, ...cardProps }) => (
         <StatCard 
-          key={card.key} 
-          {...card}
+          key={key} 
+          {...cardProps}
           // إضافة ستايل خاص للمركز المالي
           className={displayMode === 'financial-center' ? 'financial-card' : ''}
         />

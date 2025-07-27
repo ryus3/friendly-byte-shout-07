@@ -105,37 +105,18 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
             className="pr-10" 
           />
         </div>
-        {/* Status Filter - إظهار فلتر الحالات دائماً في الأرشيف */}
-        {(isMobile && (hasPermission('view_all_orders') || filters.status === 'archived')) ? (
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full"><Filter className="w-4 h-4 ml-2" /> فلترة حسب الحالة</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                    <DropdownMenuLabel>حالة الطلب</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {statusOptions.map(option => (
-                        <DropdownMenuCheckboxItem
-                            key={option.value}
-                            checked={filters.status === option.value}
-                            onCheckedChange={() => handleStatusChange(option.value)}
-                        >
-                            {option.label}
-                        </DropdownMenuCheckboxItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        ) : (
-            (hasPermission('view_all_orders') || filters.status === 'archived') && (
-              <Select value={filters.status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="حالة الطلب" /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map(option => (
-                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )
+        {/* Status Filter - إظهار فلتر الحالات دائماً عند الدخول للأرشيف */}
+        {(hasPermission('view_all_orders') || filters.status === 'archived') && (
+          <Select value={filters.status} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="حالة الطلب" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         
         {/* Period Filter */}

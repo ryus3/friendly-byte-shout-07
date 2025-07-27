@@ -169,12 +169,14 @@ const OrdersPage = () => {
   const filteredOrders = useMemo(() => {
     let tempOrders;
     if (filters.status === 'archived') {
+      // في الأرشيف، إظهار جميع الطلبات المؤرشفة والمكتملة والراجعة للمخزن
       tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
     } else {
       // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
       tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
     }
 
+    // تطبيق فلتر الوقت أولاً
     if (filters.period !== 'all') {
       tempOrders = filterOrdersByPeriod(tempOrders, filters.period);
     }
@@ -194,15 +196,23 @@ const OrdersPage = () => {
         (customerInfo.phone || order.customer_phone || '').includes(searchTerm)
       );
       
-      let matchesStatus = status === 'all' || order.status === status;
+      let matchesStatus = true;
+      
       if (status === 'archived') {
-        // في الأرشيف، إظهار كل الطلبات المؤرشفة أو المكتملة أو الراجعة للمخزن
-        matchesStatus = !!order.isArchived || order.status === 'completed' || order.status === 'returned_in_stock';
-      } else if (status === 'completed' || status === 'returned_in_stock') {
-        // إذا تم اختيار البحث عن المكتملة أو الراجعة للمخزن، ابحث فيها حتى لو كانت مؤرشفة
-        matchesStatus = order.status === status;
-      } else if (status !== 'all') {
-        matchesStatus = order.status === status && !order.isArchived && order.status !== 'completed' && order.status !== 'returned_in_stock';
+        // في الأرشيف، إظهار جميع الطلبات المؤرشفة/المكتملة/الراجعة للمخزن
+        matchesStatus = true;
+      } else if (status === 'all') {
+        // إظهار جميع الطلبات في الحالة المحددة (أرشيف أم لا)
+        matchesStatus = true;
+      } else {
+        // فلترة حسب الحالة المحددة
+        if (filters.status === 'archived') {
+          // في صفحة الأرشيف، يمكن فلترة حسب الحالة الفرعية
+          matchesStatus = order.status === status;
+        } else {
+          // في الصفحة العادية، فلترة حسب الحالة مع استبعاد المؤرشفة
+          matchesStatus = order.status === status && !order.isArchived && order.status !== 'completed' && order.status !== 'returned_in_stock';
+        }
       }
 
       return matchesSearch && matchesStatus;

@@ -80,21 +80,31 @@ const ProfitsSummaryPage = () => {
 
     const profitData = useMemo(() => {
         const { from, to } = dateRange;
-        if (!orders || !allUsers || !from || !to || !profits) return {
-            managerProfitFromEmployees: 0,
-            detailedProfits: [],
-            totalExpenses: 0,
-            totalPersonalProfit: 0,
-            personalPendingProfit: 0,
-            personalSettledProfit: 0,
-            totalSettledDues: 0,
-            netProfit: 0,
-            totalRevenue: 0,
-            deliveryFees: 0,
-            cogs: 0,
-            generalExpenses: 0,
-            employeeSettledDues: 0
-        };
+        console.log('🔍 حساب بيانات الأرباح:', { from, to, ordersCount: orders?.length, usersCount: allUsers?.length, profitsCount: profits?.length });
+        
+        if (!orders || !allUsers || !from || !to || !profits) {
+            console.log('❌ بيانات ناقصة للحساب:', { 
+                hasOrders: !!orders, 
+                hasUsers: !!allUsers, 
+                hasDateRange: !!from && !!to, 
+                hasProfits: !!profits 
+            });
+            return {
+                managerProfitFromEmployees: 0,
+                detailedProfits: [],
+                totalExpenses: 0,
+                totalPersonalProfit: 0,
+                personalPendingProfit: 0,
+                personalSettledProfit: 0,
+                totalSettledDues: 0,
+                netProfit: 0,
+                totalRevenue: 0,
+                deliveryFees: 0,
+                cogs: 0,
+                generalExpenses: 0,
+                employeeSettledDues: 0
+            };
+        }
 
         // فلترة الطلبات الموصلة التي تم استلام فواتيرها في النطاق الزمني المحدد
         const deliveredOrders = orders?.filter(o => {
@@ -212,6 +222,17 @@ const ProfitsSummaryPage = () => {
             const invDate = parseISO(inv.settlement_date);
             return isValid(invDate) && invDate >= from && invDate <= to;
         }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
+        
+        console.log('📊 نتائج الحساب:', {
+            deliveredOrdersCount: deliveredOrders.length,
+            pendingOrdersCount: pendingDeliveredOrders.length,
+            managerProfitFromEmployees,
+            totalRevenue,
+            netProfit,
+            totalPersonalProfit,
+            personalPendingProfit,
+            personalSettledProfit
+        });
         
         return { 
             managerProfitFromEmployees, 
