@@ -67,17 +67,18 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
     setFoundOrder(null);
 
     // إنشاء ماسح QR
-    html5QrCodeRef.current = new Html5QrcodeScanner(
-      "qr-reader",
-      {
-        fps: 10,
-        qrbox: { width: 300, height: 300 },
-        aspectRatio: 1.0,
-        showTorchButtonIfSupported: true,
-        supportedScanTypes: []
-      },
-      false
-    );
+    setTimeout(() => {
+      html5QrCodeRef.current = new Html5QrcodeScanner(
+        "qr-reader",
+        {
+          fps: 10,
+          qrbox: { width: 300, height: 300 },
+          aspectRatio: 1.0,
+          showTorchButtonIfSupported: true,
+          supportedScanTypes: []
+        },
+        false
+      );
 
     // عند نجاح المسح
     const onScanSuccess = async (decodedText) => {
@@ -93,7 +94,8 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
       // لا نعرض أخطاء المسح المستمرة
     };
 
-    html5QrCodeRef.current.render(onScanSuccess, onScanFailure);
+      html5QrCodeRef.current.render(onScanSuccess, onScanFailure);
+    }, 100);
   };
 
   // إيقاف المسح

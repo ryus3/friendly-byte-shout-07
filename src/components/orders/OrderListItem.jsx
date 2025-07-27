@@ -99,7 +99,7 @@ const OrderListItem = ({
 
   // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قيد التجهيز لجميع الموظفين
   const canEdit = order.status === 'pending';
-  const canDelete = order.status === 'pending';
+  const canDelete = order.status === 'pending' && (hasPermission('cancel_orders') || hasPermission('delete_orders'));
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
@@ -288,7 +288,7 @@ const OrderListItem = ({
               <ExternalLink className="h-4 w-4" />
             </Button>
 
-            {canDelete && (hasPermission('cancel_orders') || hasPermission('delete_orders')) && (
+            {canDelete && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -461,7 +461,7 @@ const OrderListItem = ({
           </Button>
 
           {/* Delete */}
-          {canDelete && (hasPermission('cancel_orders') || hasPermission('delete_orders')) && (
+          {canDelete && (
             <Button
               variant="ghost"
               size="sm"

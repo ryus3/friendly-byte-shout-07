@@ -100,7 +100,7 @@ const OrderCard = ({
 
   // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قيد التجهيز لجميع الموظفين
   const canEdit = order.status === 'pending';
-  const canDelete = order.status === 'pending';
+  const canDelete = order.status === 'pending' && (hasPermission('cancel_orders') || hasPermission('delete_orders'));
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
@@ -300,7 +300,7 @@ const OrderCard = ({
                   </Button>
 
                   {/* Delete - للطلبات قيد التجهيز فقط */}
-                  {canDelete && (hasPermission('cancel_orders') || hasPermission('delete_orders')) && (
+                  {canDelete && (
                     <Button
                       variant="ghost"
                       size="sm"

@@ -13,6 +13,7 @@ import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCar
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -52,6 +53,11 @@ const OrdersPage = () => {
   });
   const [syncing, setSyncing] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
+
+  // Scroll to top when page loads
+  useEffect(() => {
+    scrollToTopInstant();
+  }, []);
 
   // Realtime updates للطلبات
   useEffect(() => {

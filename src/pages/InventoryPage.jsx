@@ -8,6 +8,7 @@ import { useVariants } from '@/contexts/VariantsContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Button } from '@/components/ui/button';
 import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -162,6 +163,11 @@ const InventoryPage = () => {
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [isReservedStockDialogOpen, setIsReservedStockDialogOpen] = useState(false);
   const [selectedItemsForExport, setSelectedItemsForExport] = useState([]);
+
+  // Scroll to top when page loads
+  useEffect(() => {
+    scrollToTopInstant();
+  }, []);
 
   useEffect(() => {
     const searchParam = searchParams.get('search');
