@@ -620,16 +620,19 @@ const Dashboard = () => {
             <TopCustomersDialog 
               open={topCustomersOpen} 
               onOpenChange={setTopCustomersOpen} 
+              employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
             />
             
             <TopProvincesDialog 
               open={topProvincesOpen} 
               onOpenChange={setTopProvincesOpen} 
+              employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
             />
             
             <TopProductsDialog 
               open={topProductsOpen} 
               onOpenChange={setTopProductsOpen} 
+              employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
             />
         </>
     );

@@ -51,7 +51,8 @@ const getDefaultPermissions = (role) => {
     'view_customers',
     'create_customers',
     'edit_customers',
-    'view_profits'
+    'view_profits',
+    'manage_all_customers' // إضافة صلاحية إدارة جميع العملاء
   ];
 };
 
