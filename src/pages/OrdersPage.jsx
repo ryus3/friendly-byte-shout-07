@@ -6,6 +6,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, DollarSign, RefreshCw, Loader2, Printer, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle } from 'lucide-react';
@@ -33,6 +34,7 @@ const OrdersPage = () => {
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
+  const { profitData } = useUnifiedProfits(hasPermission('view_all_data') ? null : user?.id);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -218,14 +220,14 @@ const OrdersPage = () => {
   }, [userOrders, filters]);
 
   const myProfits = useMemo(() => {
-    if (!userOrders) return 0;
-    return userOrders
-      .filter(order => order.status === 'delivered' && order.profitStatus !== 'settled')
-      .reduce((total, order) => {
-        const orderProfit = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
-        return total + orderProfit;
-      }, 0);
-  }, [userOrders, calculateProfit]);
+    if (hasPermission('view_all_data')) {
+      // للمديرين: إظهار صافي الربح للنظام
+      return profitData?.netProfit || 0;
+    } else {
+      // للموظفين: إظهار الأرباح الشخصية المعلقة
+      return profitData?.personalPendingProfit || 0;
+    }
+  }, [profitData, hasPermission]);
   
   const handleSync = async () => {
     setSyncing(true);
@@ -349,13 +351,13 @@ const OrdersPage = () => {
             {hasPermission('view_profits') && (
               <div className="col-span-1 lg:col-span-1">
                 <StatCard 
-                  title="ملخص الأرباح" 
+                  title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المعلقة"}
                   value={myProfits}
                   format="currency"
                   icon={DollarSign} 
                   colors={['green-500', 'emerald-500']}
                   onClick={() => navigate(profitsPagePath)}
-                  periods={{ all: 'كل الأرباح' }}
+                  periods={{ all: hasPermission('view_all_data') ? 'إجمالي الأرباح' : 'أرباحي' }}
                   currentPeriod="all"
                 />
               </div>
