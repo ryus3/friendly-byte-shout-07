@@ -709,34 +709,13 @@ const InventoryPage = () => {
             </Button>
             
             <Button 
-              onClick={async () => {
-                try {
-                  const { data, error } = await supabase.rpc('cleanup_reserved_stock');
-                  if (error) throw error;
-                  
-                  toast({ 
-                    title: "تم التنظيف", 
-                    description: `تم تنظيف ${data || 0} عنصر من المخزون المحجوز`,
-                    variant: "success" 
-                  });
-                  
-                  // إعادة تحميل البيانات
-                  window.location.reload();
-                } catch (error) {
-                  console.error('Error cleaning reserved stock:', error);
-                  toast({ 
-                    title: "خطأ", 
-                    description: "فشل في تنظيف المخزون المحجوز",
-                    variant: "destructive" 
-                  });
-                }
-              }}
+              onClick={() => setIsReservedStockDialogOpen(true)}
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
             >
               <PackageOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">تنظيف المحجوز</span>
+              <span className="hidden sm:inline">عرض المحجوز</span>
             </Button>
           </div>
         </div>
