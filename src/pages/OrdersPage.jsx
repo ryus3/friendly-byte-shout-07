@@ -154,11 +154,21 @@ const OrdersPage = () => {
   }, [allUsers]);
 
   const userOrders = useMemo(() => {
-    if (!Array.isArray(orders)) return [];
+    if (!Array.isArray(orders)) {
+      console.log('❌ الطلبات ليست مصفوفة:', orders);
+      return [];
+    }
+    console.log('📊 إجمالي الطلبات المحملة:', orders.length);
+    console.log('🔐 صلاحية عرض جميع الطلبات:', hasPermission('view_all_orders'));
+    console.log('👤 معرف المستخدم:', user?.id || user?.user_id);
+    
     if (hasPermission('view_all_orders')) {
+        console.log('✅ المستخدم يستطيع رؤية جميع الطلبات');
         return orders;
     }
-    return orders.filter(order => order.created_by === (user?.id || user?.user_id));
+    const filtered = orders.filter(order => order.created_by === (user?.id || user?.user_id));
+    console.log('🔍 طلبات المستخدم بعد الفلترة:', filtered.length);
+    return filtered;
   }, [orders, user, hasPermission]);
   
   const userAiOrders = useMemo(() => {
@@ -177,6 +187,12 @@ const OrdersPage = () => {
     if (filters.period !== 'all') {
       tempOrders = filterOrdersByPeriod(tempOrders, filters.period);
     }
+    console.log('🔍 فلترة الطلبات:', {
+      userOrdersCount: userOrders.length,
+      filtersStatus: filters.status,
+      filtersSearchTerm: filters.searchTerm,
+      filtersPeriod: filters.period
+    });
     
     return tempOrders.filter(order => {
       const { searchTerm, status } = filters;
