@@ -25,11 +25,11 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
   };
 
   const handleStatusChange = (value) => {
-    onFiltersChange({ status: value, period: 'all' });
+    onFiltersChange({ status: value });
   };
 
   const clearFilters = () => {
-    onFiltersChange({ searchTerm: '', status: 'all', period: 'today' });
+    onFiltersChange({ searchTerm: '', status: 'all', period: 'all' });
   };
   
   const statusOptions = [
