@@ -481,7 +481,7 @@ const OrdersPage = () => {
           onOpenChange={(open) => setDialogs(d => ({ ...d, details: open }))}
           onUpdate={updateOrder}
           onEditOrder={handleEditOrder}
-          canEditStatus={hasPermission('manage_orders')}
+          canEditStatus={hasPermission('manage_orders') || (selectedOrder?.created_by === user?.id)}
           sellerName={selectedOrder ? usersMap.get(selectedOrder.created_by) : null}
         />
 

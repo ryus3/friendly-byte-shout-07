@@ -2937,6 +2937,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      calculate_missing_profits: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       check_city_benefits: {
         Args: { p_city_name: string; p_order_amount: number }
         Returns: Json

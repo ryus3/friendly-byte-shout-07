@@ -44,15 +44,15 @@
     --status-pending-border: 45 93 47;
     --status-pending-shadow: 45 93 47;
     
-    --status-shipped-start: 24 95 53;        /* Orange like warehouse employee */
-    --status-shipped-end: 24 95 53;
-    --status-shipped-border: 24 95 53;
-    --status-shipped-shadow: 24 95 53;
+    --status-shipped-start: 260 84 47;        /* بنفسجي خفيف */
+    --status-shipped-end: 280 87 47;          /* بنفسجي متوسط */
+    --status-shipped-border: 270 85 47;
+    --status-shipped-shadow: 270 85 47;
     
-    --status-delivery-start: 280 100 70;     /* Purple like super admin */
-    --status-delivery-end: 280 100 70;
-    --status-delivery-border: 280 100 70;
-    --status-delivery-shadow: 280 100 70;
+    --status-delivery-start: 199 89 48;       /* سماوي فاتح */
+    --status-delivery-end: 217 91 60;         /* سماوي ناعم */
+    --status-delivery-border: 208 90 54;
+    --status-delivery-shadow: 208 90 54;
     
     --status-delivered-start: 142 69 58;     /* Green like sales employee */
     --status-delivered-end: 142 69 58;

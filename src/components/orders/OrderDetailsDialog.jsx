@@ -34,7 +34,7 @@ const getStatusInfo = (status) => {
     { value: 'returned_in_stock', label: 'راجع للمخزن' }
   ];
 
-const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus, sellerName }) => {
+const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {
   const [newStatus, setNewStatus] = useState(order?.status);
 
   React.useEffect(() => {
@@ -164,31 +164,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                </div>
             </div>
             
-            {/* إضافة قسم تحديث حالة الطلب للطلبات المحلية */}
-            {order.delivery_partner === 'محلي' && canEditStatus && (
-              <div className="p-4 bg-secondary rounded-lg border border-border">
-                <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
-                <Select value={newStatus} onValueChange={setNewStatus}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الحالة الجديدة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions
-                      .filter(option => {
-                        // منع العودة للخلف في الحالات
-                        const currentIndex = statusOptions.findIndex(s => s.value === order.status);
-                        const optionIndex = statusOptions.findIndex(s => s.value === option.value);
-                        return optionIndex >= currentIndex;
-                      })
-                      .map(option => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {canEditStatus && order.delivery_partner !== 'محلي' && (
+            {/* قسم تحديث الحالة - للموظفين والمديرين */}
+            {canEditStatus && (
               <div className="p-4 bg-secondary rounded-lg border border-border">
                 <h4 className="font-semibold text-foreground mb-3">تحديث حالة الطلب</h4>
                 <Select value={newStatus} onValueChange={setNewStatus}>
