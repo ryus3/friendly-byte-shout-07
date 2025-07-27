@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -23,18 +24,42 @@ const EmployeeFollowUpPage = () => {
   const { hasPermission } = usePermissions();
   const { orders, loading, calculateManagerProfit, calculateProfit, updateOrder, refetchProducts, settlementInvoices, deleteOrders } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
+  const [searchParams] = useSearchParams();
+  
+  // استخراج parameters من URL
+  const employeeFromUrl = searchParams.get('employee');
+  const ordersFromUrl = searchParams.get('orders');
+  const highlightFromUrl = searchParams.get('highlight');
+  const filterFromUrl = searchParams.get('filter');
   
   const [filters, setFilters] = useState({
     status: 'all',
-    employeeId: 'all',
+    employeeId: employeeFromUrl || 'all',
     archived: false, // افتراضياً لا نعرض المؤرشف
-    profitStatus: 'all',
+    profitStatus: filterFromUrl === 'pending_settlement' ? 'pending' : 'all',
   });
   const [syncing, setSyncing] = useState(false);
-  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [selectedOrders, setSelectedOrders] = useState(ordersFromUrl ? ordersFromUrl.split(',') : []);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
+  
+  // تسليط الضوء على طلب تحاسب عند القدوم من إشعار
+  useEffect(() => {
+    if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
+      // عرض تنبيه أو تسليط ضوء على طلب التحاسب
+      const orderList = ordersFromUrl.split(',');
+      setSelectedOrders(orderList);
+      
+      setTimeout(() => {
+        // تمرير سلس للبحث عن الموظف
+        const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500);
+    }
+  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
@@ -271,6 +296,35 @@ const EmployeeFollowUpPage = () => {
                   <Archive className="w-4 h-4 ml-2" />
                   استلام الراجع في المخزن
                 </Button>
+              </Card>
+            )}
+
+            {highlightFromUrl === 'settlement' && selectedOrders.length > 0 && (
+              <Card className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-orange-200 dark:border-orange-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-orange-800 dark:text-orange-200">
+                      طلب تحاسب جديد - {selectedOrders.length} طلبات محددة
+                    </p>
+                    <p className="text-sm text-orange-600 dark:text-orange-300">
+                      الموظف يطلب تحاسب أرباحه من الطلبات المحددة
+                    </p>
+                  </div>
+                  <Button 
+                    variant="default" 
+                    className="bg-orange-600 hover:bg-orange-700 text-white"
+                    onClick={() => {
+                      // الانتقال لصفحة التسوية
+                      const employeeId = filters.employeeId;
+                      if (employeeId && employeeId !== 'all') {
+                        window.location.href = `/profit-settlement/${employeeId}?orders=${selectedOrders.join(',')}`;
+                      }
+                    }}
+                  >
+                    <DollarSign className="w-4 h-4 ml-2" />
+                    بدء التسوية
+                  </Button>
+                </div>
               </Card>
             )}
 

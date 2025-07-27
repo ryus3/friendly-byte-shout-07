@@ -27,24 +27,32 @@ import React, { useState, useMemo, useEffect } from 'react';
         const [selectedOrderIds, setSelectedOrderIds] = useState([]);
         const [isSettling, setIsSettling] = useState(false);
     
-        const employee = useMemo(() => allUsers.find(u => u.id === employeeId), [allUsers, employeeId]);
+    const employee = useMemo(() => allUsers.find(u => u.user_id === employeeId || u.id === employeeId), [allUsers, employeeId]);
+    
+    const requestedOrderIds = useMemo(() => {
+        const orderIdsParam = query.get('orders');
+        return orderIdsParam ? orderIdsParam.split(',') : null;
+    }, [query]);
+    
+    const unsettledOrders = useMemo(() => {
+        if (!orders || !employeeId) return [];
+        let filteredOrders = orders
+            .filter(o => 
+                (o.created_by === employeeId) && 
+                (o.status === 'delivered' || o.status === 'completed') && 
+                o.receipt_received === true &&
+                (o.profitStatus || 'pending') === 'pending'
+            );
         
-        const requestedOrderIds = useMemo(() => {
-            const orderIdsParam = query.get('orders');
-            return orderIdsParam ? orderIdsParam.split(',').map(id => parseInt(id, 10)) : null;
-        }, [query]);
-    
-        const unsettledOrders = useMemo(() => {
-            if (!orders || !employeeId) return [];
-            let filteredOrders = orders
-                .filter(o => o.created_by === employeeId && o.status === 'delivered' && (o.profitStatus || 'pending') === 'pending');
-            
-            if (requestedOrderIds) {
-                filteredOrders = filteredOrders.filter(o => requestedOrderIds.includes(o.id));
-            }
-    
-            return filteredOrders.map(o => ({...o, employee_profit: (o.items || []).reduce((sum, item) => sum + calculateProfit(item, o.created_by), 0) }));
-        }, [orders, employeeId, calculateProfit, requestedOrderIds]);
+        if (requestedOrderIds) {
+            filteredOrders = filteredOrders.filter(o => requestedOrderIds.includes(o.id));
+        }
+
+        return filteredOrders.map(o => ({
+            ...o, 
+            employee_profit: (o.items || []).reduce((sum, item) => sum + calculateProfit(item, o.created_by), 0)
+        }));
+    }, [orders, employeeId, calculateProfit, requestedOrderIds]);
     
         const totalUnsettledProfit = useMemo(() => {
             return unsettledOrders
@@ -180,9 +188,11 @@ import React, { useState, useMemo, useEffect } from 'react';
                                                     onCheckedChange={() => handleSelectOrder(order.id)}
                                                 />
                                             </TableCell>
-                                            <TableCell className="font-medium">{order.trackingnumber}</TableCell>
-                                            <TableCell>{order.customerinfo.name}</TableCell>
-                                            <TableCell>{format(parseISO(order.updated_at), 'd MMMM yyyy', { locale: ar })}</TableCell>
+                                            <TableCell className="font-medium">{order.order_number || 'لا يوجد رقم'}</TableCell>
+                                            <TableCell>{order.customer_name || 'غير معروف'}</TableCell>
+                                            <TableCell>
+                                                {order.created_at ? format(parseISO(order.created_at), 'd MMMM yyyy', { locale: ar }) : 'غير محدد'}
+                                            </TableCell>
                                             <TableCell className="text-right font-semibold text-primary">{order.employee_profit.toLocaleString()} د.ع</TableCell>
                                         </TableRow>
                                     ))}

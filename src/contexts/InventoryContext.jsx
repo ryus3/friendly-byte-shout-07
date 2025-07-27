@@ -1176,58 +1176,79 @@ export const InventoryProvider = ({ children }) => {
   }
 
   const settleEmployeeProfits = async (employeeId, amount, employeeName, orderIds) => {
-    // تسجيل عملية التسوية في الإشعارات بدلاً من جدول منفصل
-    const notificationData = {
-      type: 'settlement',
-      title: 'تسوية أرباح',
-      message: `تمت تسوية مستحقات ${employeeName} بقيمة ${amount} دينار`,
-      data: {
-        employee_id: employeeId,
-        settlement_amount: amount,
-        order_ids: orderIds,
-        invoice_number: `INV-${Date.now()}`
-      }
-    };
-
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert(notificationData);
-
-    if (notificationError) {
-      console.error('Error creating settlement notification:', notificationError);
-    }
-
-    // إضافة المصروف
-    await addExpense({
-      date: new Date().toISOString(),
-      category: 'مستحقات الموظفين',
-      description: `دفع مستحقات الموظف ${employeeName}`,
-      amount: amount,
-    });
-    
-    // تحديث حالة الطلبات
-    if (orderIds && orderIds.length > 0) {
-        const { error } = await supabase
-            .from('profits')
-            .update({ status: 'settled', settled_at: new Date().toISOString() })
-            .eq('employee_id', employeeId)
-            .in('order_id', orderIds);
-            
-        if(error) {
-            console.error("Error updating profit status:", error);
+    try {
+      // 1. إنشاء سجلات أرباح للطلبات التي لا تملك سجل
+      for (const orderId of orderIds) {
+        const order = orders.find(o => o.id === orderId);
+        if (!order) continue;
+        
+        const employeeProfit = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+        
+        // محاولة إنشاء سجل ربح جديد أو تحديث الموجود
+        const { error: profitError } = await supabase
+          .from('profits')
+          .upsert({
+            order_id: orderId,
+            employee_profit: employeeProfit,
+            profit_amount: employeeProfit + calculateManagerProfit(order),
+            settled_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          }, {
+            onConflict: 'order_id'
+          });
+        
+        if (profitError) {
+          console.error('Error creating/updating profit record:', profitError);
         }
-    }
+      }
 
-    // إرسال إشعار للموظف
-    addNotification({
-        type: 'profit_settlement_paid',
-        title: 'تمت تسوية مستحقاتك',
-        message: `قام المدير بتسوية مستحقاتك بمبلغ ${amount.toLocaleString()} د.ع.`,
-        user_id: employeeId,
-        color: 'green',
-        icon: 'CheckCircle'
-    });
-    toast({title: "نجاح", description: `تمت تسوية مستحقات ${employeeName} بنجاح.`});
+      // 2. إضافة المصروف
+      await addExpense({
+        date: new Date().toISOString(),
+        category: 'مستحقات الموظفين',
+        description: `دفع مستحقات الموظف ${employeeName}`,
+        amount: amount,
+        expense_type: 'system',
+        status: 'approved'
+      });
+
+      // 3. تسجيل التسوية في الإشعارات
+      const invoiceNumber = `INV-${Date.now()}`;
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          type: 'profit_settlement_completed',
+          title: 'تمت تسوية الأرباح',
+          message: `تمت تسوية مستحقات ${employeeName} بقيمة ${amount.toLocaleString()} د.ع`,
+          data: {
+            employee_id: employeeId,
+            employee_name: employeeName,
+            settlement_amount: amount,
+            order_ids: orderIds,
+            invoice_number: invoiceNumber,
+            orders_count: orderIds.length
+          },
+          user_id: null // للجميع
+        });
+
+      if (notificationError) {
+        console.error('Error creating settlement notification:', notificationError);
+      }
+
+      toast({ 
+        title: "تمت التسوية بنجاح", 
+        description: `تم تسوية مستحقات ${employeeName} بقيمة ${amount.toLocaleString()} د.ع`,
+        variant: "success"
+      });
+
+    } catch (error) {
+      console.error('Error in settleEmployeeProfits:', error);
+      toast({ 
+        title: "خطأ في التسوية", 
+        description: "حدث خطأ أثناء معالجة التسوية",
+        variant: "destructive"
+      });
+    }
   };
 
   const updateCapital = async (newCapital) => {

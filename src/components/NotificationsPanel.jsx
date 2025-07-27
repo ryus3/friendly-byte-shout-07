@@ -78,6 +78,7 @@ const iconMap = {
   new_order: OrderIcon,
   new_registration: UserRegistrationIcon,
   profit_settlement: ProfitIcon,
+  profit_settlement_request: ProfitIcon,
   system: SystemIcon,
   // ألوان حسب النوع
   AlertTriangle: StockWarningIcon,
@@ -156,6 +157,13 @@ const typeColorMap = {
     icon: 'text-yellow-600 dark:text-yellow-400',
     dot: 'bg-yellow-500'
   },
+  profit_settlement_request: { 
+    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    text: 'text-foreground', 
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500'
+  },
   system: { 
     bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
     border: 'border-r-4 border-slate-500 dark:border-slate-400',
@@ -228,6 +236,17 @@ const NotificationsPanel = () => {
         navigate(`/orders?search=${encodeURIComponent(orderNumber)}&status=completed`);
       } else {
         navigate('/orders?status=completed');
+      }
+    } else if (notification.type === 'profit_settlement_request') {
+      // طلب تحاسب من موظف - التنقل لصفحة متابعة الموظفين مع عرض الطلب
+      const data = notification.data || {};
+      const employeeId = data.employeeId;
+      const orderIds = data.orderIds || [];
+      
+      if (employeeId && orderIds.length > 0) {
+        navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`);
+      } else {
+        navigate('/employee-follow-up?filter=pending_settlement');
       }
     } else if (notification.type === 'profit_settlement') {
       navigate('/profits-summary');
