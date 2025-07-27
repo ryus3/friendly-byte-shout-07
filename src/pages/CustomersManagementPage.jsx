@@ -692,39 +692,150 @@ const CustomersManagementPage = () => {
 
         {/* Cities Stats Tab */}
         <TabsContent value="cities" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>إحصائيات المدن هذا الشهر</CardTitle>
+          <Card className="overflow-hidden bg-gradient-to-br from-white/95 to-blue-50/80 dark:from-slate-900/95 dark:to-blue-900/30 border-0 shadow-2xl">
+            <CardHeader className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white pb-8">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgPC9wYXR0ZXJuPgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiAvPgo8L3N2Zz4=')] opacity-20" />
+              <div className="relative z-10">
+                <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <BarChart3 className="h-6 w-6" />
+                  </div>
+                  إحصائيات المدن هذا الشهر
+                </CardTitle>
+                <p className="text-blue-100 mt-2">أداء المدن والمناطق في الطلبات والمبيعات</p>
+              </div>
+              
+              {/* عناصر تزيينية */}
+              <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 rounded-full animate-pulse" />
+              <div className="absolute bottom-2 left-8 w-8 h-8 bg-purple-400/20 rounded-full animate-pulse delay-1000" />
+              <div className="absolute top-1/2 right-1/3 w-6 h-6 bg-indigo-300/20 rounded-full animate-pulse delay-500" />
             </CardHeader>
-            <CardContent>
+            
+            <CardContent className="p-6">
               {cityStats.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {cityStats.map((city, index) => (
-                    <div key={city.id} className="p-4 border rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{city.city_name}</h3>
-                        <Badge variant={index < 3 ? "default" : "secondary"}>
-                          #{index + 1}
-                        </Badge>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">الطلبات:</span>
-                          <span className="font-medium">{city.total_orders}</span>
+                    <motion.div 
+                      key={city.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="relative overflow-hidden group"
+                    >
+                      {/* شريط الترتيب العلوي */}
+                      <div className={`absolute top-0 left-0 w-full h-1 ${
+                        index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                        index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                        index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-800' :
+                        'bg-gradient-to-r from-blue-400 to-purple-600'
+                      }`} />
+                      
+                      <div className="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <motion.div 
+                              className={`p-3 rounded-full shadow-md ${
+                                index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
+                                index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-600' :
+                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
+                                'bg-gradient-to-br from-blue-500 to-purple-600'
+                              }`}
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <MapPin className="h-5 w-5 text-white" />
+                            </motion.div>
+                            <div>
+                              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
+                                {city.city_name}
+                              </h3>
+                              <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
+                                <TrendingUp className="h-3 w-3" />
+                                <span>المرتبة {index + 1}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <Badge 
+                            className={`${
+                              index === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white' :
+                              index === 1 ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white' :
+                              index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white' :
+                              'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                            } border-0 px-3 py-1 text-sm font-bold shadow-md`}
+                          >
+                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'} #{index + 1}
+                          </Badge>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">المبيعات:</span>
-                          <span className="font-medium">{formatCurrency(city.total_amount)}</span>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/30 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                              {city.total_orders}
+                            </div>
+                            <div className="text-xs text-blue-700 dark:text-blue-300 font-medium">طلب</div>
+                          </div>
+                          
+                          <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-900/30 rounded-lg border border-emerald-200/30 dark:border-emerald-800/30">
+                            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1 truncate" title={formatCurrency(city.total_amount)}>
+                              {formatCurrency(city.total_amount)}
+                            </div>
+                            <div className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">مبيعات</div>
+                          </div>
                         </div>
+                        
+                        {/* مؤشر الأداء */}
+                        <div className="mt-4 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                          <motion.div 
+                            className={`h-full ${
+                              index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                              index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                              index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-800' :
+                              'bg-gradient-to-r from-blue-400 to-purple-600'
+                            }`}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min((city.total_orders / (cityStats[0]?.total_orders || 1)) * 100, 100)}%` }}
+                            transition={{ duration: 1, delay: index * 0.1 }}
+                          />
+                        </div>
+                        
+                        {/* تأثيرات بصرية */}
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400/30 rounded-full animate-pulse" />
+                        <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-purple-400/30 rounded-full animate-ping" />
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>لا توجد إحصائيات للمدن هذا الشهر</p>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-center py-12"
+                >
+                  <div className="relative">
+                    <motion.div 
+                      className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center shadow-lg"
+                      animate={{ 
+                        y: [0, -10, 0],
+                        scale: [1, 1.05, 1]
+                      }}
+                      transition={{ 
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <BarChart3 className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      لا توجد إحصائيات للمدن هذا الشهر
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                      ستظهر إحصائيات المدن تلقائياً عند وجود طلبات ومبيعات
+                    </p>
+                  </div>
+                </motion.div>
               )}
             </CardContent>
           </Card>
@@ -752,6 +863,25 @@ const CustomersManagementPage = () => {
             </CardHeader>
             
             <CardContent className="p-6">
+              {/* شرح الميزة */}
+              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-800/30">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-md flex-shrink-0">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-amber-800 dark:text-amber-200 mb-2">🎯 كيف يعمل نظام خصومات المدن؟</h4>
+                    <div className="space-y-2 text-sm text-amber-700 dark:text-amber-300">
+                      <p>• <strong>النظام التلقائي:</strong> يتم اختيار المدن الأكثر نشاطاً في الطلبات والمبيعات تلقائياً</p>
+                      <p>• <strong>المزايا الشهرية:</strong> كل شهر، مدينة واحدة تحصل على خصم 10% + توصيل مجاني</p>
+                      <p>• <strong>طلبين عشوائيين فقط:</strong> طلب واحد يحصل على خصم 10%، وطلب آخر يحصل على توصيل مجاني</p>
+                      <p>• <strong>الإشعارات:</strong> يتم إشعار العملاء عند تطبيق المزايا على طلباتهم</p>
+                      <p>• <strong>العدالة:</strong> كل مدينة لها فرصة للفوز بناءً على أداء سكانها في الطلبات</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               {cityDiscounts.length > 0 ? (
                 <div className="space-y-6">
                   {cityDiscounts.map((discount, index) => (
