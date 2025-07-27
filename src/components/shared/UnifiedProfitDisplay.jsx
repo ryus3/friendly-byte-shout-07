@@ -1,6 +1,5 @@
 import React from 'react';
 import StatCard from '@/components/dashboard/StatCard';
-import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { 
   User, 
   Hourglass, 
@@ -9,8 +8,7 @@ import {
   TrendingDown, 
   PackageCheck,
   Wallet,
-  TrendingUp,
-  DollarSign
+  TrendingUp
 } from 'lucide-react';
 
 /**
@@ -18,18 +16,14 @@ import {
  * يمكن استخدامه في لوحة التحكم والمركز المالي بتصاميم مختلفة
  */
 const UnifiedProfitDisplay = ({
-  profitData: propProfitData,
+  profitData,
   displayMode = 'dashboard', // 'dashboard' | 'financial-center'
   canViewAll = true,
   onFilterChange = () => {},
   onExpensesClick = () => {},
   onSettledDuesClick = () => {},
-  className = '',
-  useRealTimeData = false // إضافة خيار لاستخدام البيانات الحية
+  className = ''
 }) => {
-  // استخدام البيانات الحية إذا طُلب ذلك
-  const { profitData: realTimeProfitData } = useUnifiedProfits();
-  const profitData = useRealTimeData ? realTimeProfitData : propProfitData;
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -80,19 +74,6 @@ const UnifiedProfitDisplay = ({
             onClick: () => onFilterChange('employeeId', 'employees')
           }
         );
-      } else if (displayMode === 'order-tracking') {
-        // في متابعة الطلبات: عرض مبسط
-        cards.push(
-          {
-            key: 'total-profits',
-            title: 'ملخص الأرباح',
-            value: canViewAll ? profitData.netProfit || 0 : profitData.totalPersonalProfit || 0,
-            icon: DollarSign,
-            colors: ['green-500', 'emerald-500'],
-            format: 'currency',
-            onClick: () => window.location.href = '/profits-summary'
-          }
-        );
       } else {
         // في لوحة التحكم: عرض شامل
         cards.push(
@@ -135,51 +116,47 @@ const UnifiedProfitDisplay = ({
       }
     } else {
       // للموظف: البيانات الشخصية فقط
-      if (displayMode !== 'order-tracking') {
-        cards.push(
-          {
-            key: 'my-total-profit',
-            title: 'إجمالي أرباحي',
-            value: profitData.totalPersonalProfit || 0,
-            icon: User,
-            colors: ['green-500', 'emerald-500'],
-            format: 'currency'
-          }
-        );
-      }
-    }
-
-    // إضافة بطاقات الأرباح المعلقة والمستلمة (للجميع ما عدا order-tracking)
-    if (displayMode !== 'order-tracking') {
       cards.push(
         {
-          key: 'pending-profit',
-          title: 'الأرباح المعلقة',
-          value: canViewAll 
-            ? (profitData.detailedProfits || [])
-                .filter(p => (p.profitStatus || 'pending') === 'pending')
-                .reduce((sum, p) => sum + p.profit, 0)
-            : profitData.personalPendingProfit || 0,
-          icon: Hourglass,
-          colors: ['yellow-500', 'amber-500'],
-          format: 'currency',
-          onClick: () => onFilterChange('profitStatus', 'pending')
-        },
-        {
-          key: 'settled-profit',
-          title: 'الأرباح المستلمة',
-          value: canViewAll 
-            ? (profitData.detailedProfits || [])
-                .filter(p => p.profitStatus === 'settled')
-                .reduce((sum, p) => sum + p.profit, 0)
-            : profitData.personalSettledProfit || 0,
-          icon: CheckCircle,
-          colors: ['blue-500', 'sky-500'],
-          format: 'currency',
-          onClick: () => onFilterChange('profitStatus', 'settled')
+          key: 'my-total-profit',
+          title: 'إجمالي أرباحي',
+          value: profitData.totalPersonalProfit || 0,
+          icon: User,
+          colors: ['green-500', 'emerald-500'],
+          format: 'currency'
         }
       );
     }
+
+    // إضافة بطاقات الأرباح المعلقة والمستلمة (للجميع)
+    cards.push(
+      {
+        key: 'pending-profit',
+        title: 'الأرباح المعلقة',
+        value: canViewAll 
+          ? (profitData.detailedProfits || [])
+              .filter(p => (p.profitStatus || 'pending') === 'pending')
+              .reduce((sum, p) => sum + p.profit, 0)
+          : profitData.personalPendingProfit || 0,
+        icon: Hourglass,
+        colors: ['yellow-500', 'amber-500'],
+        format: 'currency',
+        onClick: () => onFilterChange('profitStatus', 'pending')
+      },
+      {
+        key: 'settled-profit',
+        title: 'الأرباح المستلمة',
+        value: canViewAll 
+          ? (profitData.detailedProfits || [])
+              .filter(p => p.profitStatus === 'settled')
+              .reduce((sum, p) => sum + p.profit, 0)
+          : profitData.personalSettledProfit || 0,
+        icon: CheckCircle,
+        colors: ['blue-500', 'sky-500'],
+        format: 'currency',
+        onClick: () => onFilterChange('profitStatus', 'settled')
+      }
+    );
 
     console.log('✅ تم بناء الكروت:', cards.map(c => ({ key: c.key, value: c.value })));
     return cards;

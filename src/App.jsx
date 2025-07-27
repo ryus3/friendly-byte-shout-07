@@ -1,9 +1,8 @@
-import React, { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/components/ui/use-toast.js';
-import { scrollToTop } from '@/utils/scrollToTop';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { usePermissions } from '@/hooks/usePermissions.js';
@@ -73,12 +72,6 @@ function ProtectedRoute({ children, permission }) {
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
-  const location = useLocation();
-
-  // الانتقال إلى أعلى الصفحة عند تغيير المسار
-  useEffect(() => {
-    scrollToTop();
-  }, [location.pathname]);
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;

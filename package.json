@@ -70,7 +70,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3",
     "uuid": "^9.0.1",
-    "vite": "^7.0.6"
+    "vite": "^5.4.19"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
