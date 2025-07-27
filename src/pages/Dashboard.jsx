@@ -400,9 +400,10 @@ const Dashboard = () => {
             pendingProfitOrders: filteredDeliveredOrders,
             deliveredSalesOrders,
             pendingSalesOrders,
-            topCustomers: getTopCustomers(visibleOrders),
-            topProvinces: getTopProvinces(visibleOrders),
-            topProducts: getTopProducts(visibleOrders),
+            // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
+            topCustomers: canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
+            topProvinces: canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
+            topProducts: canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
         };
     }, [
         visibleOrders, 

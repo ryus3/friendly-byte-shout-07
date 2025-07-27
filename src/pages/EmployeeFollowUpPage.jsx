@@ -27,7 +27,7 @@ const EmployeeFollowUpPage = () => {
   const [filters, setFilters] = useState({
     status: 'all',
     employeeId: 'all',
-    archived: false,
+    archived: false, // افتراضياً لا نعرض المؤرشف
     profitStatus: 'all',
   });
   const [syncing, setSyncing] = useState(false);
@@ -62,7 +62,7 @@ const EmployeeFollowUpPage = () => {
       const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;
       const statusMatch = filters.status === 'all' || order.status === filters.status;
       const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
-      const archiveMatch = filters.archived ? order.isArchived === true : !order.isArchived;
+      const archiveMatch = filters.archived ? true : !order.isArchived; // إذا كان مفعل عرض الأرشيف، اعرض الكل، وإلا اعرض غير المؤرشف فقط
       return employeeMatch && statusMatch && archiveMatch && profitStatusMatch;
     }).map(order => ({
       ...order,

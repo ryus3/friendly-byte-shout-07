@@ -161,12 +161,12 @@ const OrdersPage = () => {
     if (hasPermission('view_all_orders')) {
         return orders;
     }
-    return orders.filter(order => order.created_by === (user?.id || user?.user_id));
+    return orders.filter(order => order.created_by === user?.user_id);
   }, [orders, user, hasPermission]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
-    return aiOrders.filter(order => order.created_by === (user?.id || user?.user_id));
+    return aiOrders.filter(order => order.created_by === user?.user_id);
   }, [aiOrders, user]);
 
   const filteredOrders = useMemo(() => {
