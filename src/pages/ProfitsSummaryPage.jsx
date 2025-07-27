@@ -48,13 +48,6 @@ const ProfitsSummaryPage = () => {
     profitStatus: 'all',
   });
   
-  // تطبيق فلتر المعلقة مباشرة للموظفين
-  useEffect(() => {
-    if (!canViewAll) {
-      setFilters(prev => ({ ...prev, profitStatus: 'pending' }));
-    }
-  }, [canViewAll]);
-  
   const [dateRange, setDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -66,6 +59,13 @@ const ProfitsSummaryPage = () => {
   // تحديد الصلاحيات بناءً على الدور - المدراء يرون كل شيء، الموظفون يرون أرباحهم فقط
   const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
   const canRequestSettlement = !canViewAll && hasPermission('request_profit_settlement');
+  
+  // تطبيق فلتر المعلقة مباشرة للموظفين
+  useEffect(() => {
+    if (!canViewAll) {
+      setFilters(prev => ({ ...prev, profitStatus: 'pending' }));
+    }
+  }, [canViewAll]);
   
   useEffect(() => {
     const params = new URLSearchParams(location.search);
