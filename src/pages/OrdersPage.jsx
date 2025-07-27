@@ -221,11 +221,11 @@ const OrdersPage = () => {
 
   const myProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {
-      // للمديرين: إظهار صافي الربح للنظام
+      // للمديرين: إظهار صافي الربح للنظام من الطلبات المكتملة
       return profitData?.netProfit || 0;
     } else {
-      // للموظفين: إظهار الأرباح الشخصية المعلقة
-      return profitData?.personalPendingProfit || 0;
+      // للموظفين: إظهار إجمالي الأرباح الشخصية من الطلبات المكتملة
+      return profitData?.personalTotalProfit || 0;
     }
   }, [profitData, hasPermission]);
   
@@ -351,13 +351,13 @@ const OrdersPage = () => {
             {hasPermission('view_profits') && (
               <div className="col-span-1 lg:col-span-1">
                 <StatCard 
-                  title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المعلقة"}
+                  title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المكتملة"}
                   value={myProfits}
                   format="currency"
                   icon={DollarSign} 
                   colors={['green-500', 'emerald-500']}
                   onClick={() => navigate(profitsPagePath)}
-                  periods={{ all: hasPermission('view_all_data') ? 'إجمالي الأرباح' : 'أرباحي' }}
+                  periods={{ all: hasPermission('view_all_data') ? 'الطلبات المكتملة' : 'أرباحي' }}
                   currentPeriod="all"
                 />
               </div>
