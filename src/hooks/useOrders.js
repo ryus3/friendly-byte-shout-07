@@ -403,11 +403,17 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         const { error } = await supabase.from('orders').delete().in('id', deleteIds);
         if (error) throw error;
         
+        // تحديث قائمة الطلبات فوراً
         setOrders(prev => prev.filter(o => !deleteIds.includes(o.id)));
+        
+        // تحديث المخزون فوراً في الواجهة لضمان عرض البيانات المحدثة
+        if (onStockUpdate) {
+          onStockUpdate();
+        }
         
         toast({ 
           title: "تم الحذف", 
-          description: `تم حذف ${deleteIds.length} طلب بنجاح`,
+          description: `تم حذف ${deleteIds.length} طلب بنجاح وإلغاء حجز المخزون`,
           variant: "success" 
         });
       }
