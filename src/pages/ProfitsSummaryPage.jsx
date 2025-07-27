@@ -139,7 +139,8 @@ const ProfitsSummaryPage = () => {
             let employeeProfitShare, profitStatus;
             if (profitRecord) {
                 employeeProfitShare = profitRecord.employee_profit || 0;
-                profitStatus = profitRecord.status;
+                // إذا كان settled_at موجود = مستلم، وإلا = معلق
+                profitStatus = profitRecord.settled_at ? 'settled' : 'pending';
             } else {
                 employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
                 profitStatus = 'settled'; // مستلمة لأن الفاتورة مستلمة
