@@ -593,8 +593,14 @@ export const InventoryProvider = ({ children }) => {
       });
 
       setProducts(processedProducts);
-      setOrders(processedOrders.filter(o => o.delivery_status !== 'ai_pending') || []);
+      setOrders(processedOrders || []);
       setAiOrders(aiOrdersRes.data || []);
+
+      console.log('✅ تم تحميل البيانات بنجاح:', {
+        products: processedProducts.length,
+        orders: processedOrders.length,
+        aiOrders: aiOrdersRes.data?.length || 0
+      });
 
       // تحميل قواعد الأرباح
       if (profitRulesRes.data && profitRulesRes.data.length > 0) {
