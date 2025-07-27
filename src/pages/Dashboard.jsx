@@ -275,6 +275,15 @@ const Dashboard = () => {
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
+        // فلترة الطلبات والعملاء حسب صلاحيات المستخدم
+        const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
+            order.created_by === user?.id || order.created_by === user?.user_id
+        )) : [];
+
+        const visibleCustomers = customers ? (canViewAllData ? customers : customers.filter(customer => 
+            customer.created_by === user?.id || customer.created_by === user?.user_id
+        )) : [];
+
         if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
         
         const filterByDate = (itemDateStr) => {
@@ -283,7 +292,7 @@ const Dashboard = () => {
             return isValid(itemDate) && itemDate >= from && itemDate <= to;
         };
         
-        const deliveredOrders = (orders || []).filter(o => 
+        const deliveredOrders = (visibleOrders || []).filter(o => 
             (o.status === 'delivered' || o.status === 'completed') && 
             o.receipt_received === true && 
             filterByDate(o.updated_at || o.created_at)
@@ -339,7 +348,7 @@ const Dashboard = () => {
         }));
 
         return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
-    }, [periods.netProfit, orders, accounting, products]);
+    }, [periods.netProfit, visibleOrders, accounting, products]);
 
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !user) return {

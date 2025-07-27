@@ -216,8 +216,11 @@ const OrdersPage = () => {
       }
 
       return matchesSearch && matchesStatus;
-    });
-  }, [userOrders, filters]);
+    }).map(order => ({
+      ...order,
+      created_by_name: usersMap.get(order.created_by) || 'غير معروف'
+    }));
+  }, [userOrders, filters, usersMap]);
 
   const myProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {
