@@ -1,5 +1,5 @@
-import React, { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/components/ui/use-toast.js';
@@ -13,6 +13,7 @@ import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import ProfitSettlementPage from '@/pages/ProfitSettlementPage.jsx';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
@@ -69,6 +70,17 @@ function ProtectedRoute({ children, permission }) {
   return children;
 }
 
+// مكون للتمرير لأعلى الصفحة عند تغيير المسار
+function ScrollToTop() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    scrollToTopInstant();
+  }, [location.pathname]);
+  
+  return null;
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
@@ -90,6 +102,7 @@ function AppContent() {
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#ffffff" />
       </Helmet>
+      <ScrollToTop />
       <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

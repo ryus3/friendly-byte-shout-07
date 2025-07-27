@@ -199,7 +199,7 @@ const OrdersPage = () => {
       let matchesStatus = true;
       
       if (status === 'archived') {
-        // في الأرشيف، تطبيق فلتر فرعي للحالة
+        // في الأرشيف، تطبيق فلتر فرعي للحالة داخل الطلبات المؤرشفة فقط
         if (archiveSubStatus === 'all') {
           matchesStatus = true; // إظهار جميع الطلبات المؤرشفة
         } else {
@@ -209,14 +209,8 @@ const OrdersPage = () => {
         // إظهار جميع الطلبات في الحالة المحددة (أرشيف أم لا)
         matchesStatus = true;
       } else {
-        // فلترة حسب الحالة المحددة
-        if (filters.status === 'archived') {
-          // في صفحة الأرشيف، يمكن فلترة حسب الحالة الفرعية
-          matchesStatus = order.status === status;
-        } else {
-          // في الصفحة العادية، فلترة حسب الحالة مع استبعاد المؤرشفة
-          matchesStatus = order.status === status && !order.isArchived && order.status !== 'completed' && order.status !== 'returned_in_stock';
-        }
+        // فلترة حسب الحالة المحددة - فقط للطلبات غير المؤرشفة
+        matchesStatus = order.status === status;
       }
 
       return matchesSearch && matchesStatus;
