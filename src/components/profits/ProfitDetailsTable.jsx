@@ -61,8 +61,8 @@ const ProfitDetailsTable = ({
                     )}
                   </TableCell>
                 )}
-                <TableCell>{order.trackingnumber || 'لا يوجد رقم'}</TableCell>
-                <TableCell>{order.customerinfo?.name || 'غير معروف'}</TableCell>
+                <TableCell>{order.order_number || 'لا يوجد رقم'}</TableCell>
+                <TableCell>{order.customer_name || 'غير معروف'}</TableCell>
                 {canViewAll && <TableCell>{order.employeeName}</TableCell>}
                 <TableCell>
                   {deliveryDate && isValid(deliveryDate) ? format(deliveryDate, 'd MMM yyyy', { locale: ar }) : 'غير محدد'}
