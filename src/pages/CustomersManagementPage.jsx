@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3 } from 'lucide-react';
+import { Users, Phone, MapPin, Star, Award, Medal, Crown, Gem, ShoppingBag, TrendingUp, Send, MessageCircle, Download, Eye, Gift, Calendar, BarChart3, Sparkles, Truck, PartyPopper, Zap } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
 import CustomerStats from '@/components/customers/CustomerStats';
@@ -732,44 +732,147 @@ const CustomersManagementPage = () => {
 
         {/* City Discounts Tab */}
         <TabsContent value="discounts" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>خصومات المدن الحالية</CardTitle>
+          <Card className="overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-900/30 border-0 shadow-xl">
+            <CardHeader className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white pb-8">
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgPC9wYXR0ZXJuPgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiAvPgo8L3N2Zz4=')] opacity-20" />
+              <div className="relative z-10">
+                <CardTitle className="text-2xl font-bold flex items-center gap-3">
+                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <Gift className="h-6 w-6" />
+                  </div>
+                  خصومات المدن الحالية
+                </CardTitle>
+                <p className="text-blue-100 mt-2">نظام المكافآت الشهرية للمدن النشطة</p>
+              </div>
+              
+              {/* Decorative elements */}
+              <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 rounded-full animate-pulse" />
+              <div className="absolute bottom-2 left-8 w-8 h-8 bg-purple-400/20 rounded-full animate-pulse delay-1000" />
+              <div className="absolute top-1/2 right-1/3 w-6 h-6 bg-blue-300/20 rounded-full animate-pulse delay-500" />
             </CardHeader>
-            <CardContent>
+            
+            <CardContent className="p-6">
               {cityDiscounts.length > 0 ? (
-                <div className="space-y-4">
-                  {cityDiscounts.map((discount) => (
-                    <div key={discount.id} className="p-4 border rounded-lg bg-green-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold text-lg">{discount.city_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            شهر {discount.discount_month} - {discount.discount_year}
-                          </p>
+                <div className="space-y-6">
+                  {cityDiscounts.map((discount, index) => (
+                    <motion.div 
+                      key={discount.id}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      className="relative overflow-hidden"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-xl" />
+                      <div className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
+                        {/* الشريط العلوي المتدرج */}
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500" />
+                        
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-4">
+                            <motion.div 
+                              className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full shadow-lg"
+                              whileHover={{ scale: 1.1, rotate: 5 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <MapPin className="h-6 w-6 text-white" />
+                            </motion.div>
+                            <div>
+                              <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100">
+                                {discount.city_name}
+                              </h3>
+                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                <Calendar className="h-4 w-4" />
+                                <span>شهر {discount.discount_month} - {discount.discount_year}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 px-4 py-2 text-sm font-bold shadow-md">
+                              <Sparkles className="h-4 w-4 mr-1" />
+                              خصم {discount.discount_percentage}%
+                            </Badge>
+                            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 px-4 py-2 text-sm font-bold shadow-md">
+                              <Truck className="h-4 w-4 mr-1" />
+                              توصيل مجاني
+                            </Badge>
+                          </div>
                         </div>
-                        <Badge className="bg-green-600">
-                          خصم {discount.discount_percentage}%
-                        </Badge>
+                        
+                        {/* محتوى التهنئة */}
+                        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-emerald-200/50 dark:border-emerald-800/30">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg shadow-md">
+                              <PartyPopper className="h-5 w-5 text-white" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-emerald-800 dark:text-emerald-200 font-medium leading-relaxed">
+                                🎉 <strong>تهانينا لسكان {discount.city_name}!</strong>
+                              </p>
+                              <p className="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
+                                تم اختياركم كمدينة الشهر للحصول على مزايا خاصة: خصم {discount.discount_percentage}% وتوصيل مجاني!
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* معلومات إضافية */}
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div className="text-center p-3 bg-white/60 dark:bg-slate-700/60 rounded-lg border border-slate-200/50 dark:border-slate-600/50">
+                            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">1</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">خصم متاح</div>
+                          </div>
+                          <div className="text-center p-3 bg-white/60 dark:bg-slate-700/60 rounded-lg border border-slate-200/50 dark:border-slate-600/50">
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">1</div>
+                            <div className="text-xs text-slate-600 dark:text-slate-400">توصيل مجاني</div>
+                          </div>
+                        </div>
+                        
+                        {/* تأثيرات بصرية */}
+                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-400/30 rounded-full animate-ping" />
+                        <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-400/30 rounded-full animate-pulse" />
                       </div>
-                      <p className="text-sm mt-2 text-green-700">
-                        🎉 تهانينا لسكان {discount.city_name}! اختاركم شهر للحصول على خصم خاص {discount.discount_percentage}%
-                      </p>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Gift className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>لا توجد خصومات مدن نشطة حالياً</p>
-                  <Button 
-                    onClick={selectRandomCityDiscount} 
-                    className="mt-4"
-                    variant="outline"
-                  >
-                    اختيار مدينة للخصم الشهري
-                  </Button>
-                </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-center py-12"
+                >
+                  <div className="relative">
+                    <motion.div 
+                      className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center shadow-lg"
+                      animate={{ 
+                        y: [0, -10, 0],
+                        scale: [1, 1.05, 1]
+                      }}
+                      transition={{ 
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                    >
+                      <Gift className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+                    </motion.div>
+                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      لا توجد خصومات مدن نشطة حالياً
+                    </h3>
+                    <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
+                      سيتم اختيار المدن تلقائياً بناءً على أداء المبيعات والطلبات
+                    </p>
+                    <Button 
+                      onClick={selectRandomCityDiscount}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-8 py-3"
+                      size="lg"
+                    >
+                      <Zap className="h-5 w-5 mr-2" />
+                      اختيار مدينة للخصم الشهري
+                    </Button>
+                  </div>
+                </motion.div>
               )}
             </CardContent>
           </Card>
