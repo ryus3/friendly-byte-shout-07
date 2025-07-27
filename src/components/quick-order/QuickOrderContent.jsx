@@ -210,144 +210,150 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // جلب بيانات العميل عند إدخال رقم الهاتف
   useEffect(() => {
     const fetchCustomerData = async () => {
-      if (formData.phone && formData.phone.length >= 10) {
-        try {
-          console.log('🔍 البحث عن العميل:', formData.phone);
-          
-          // تطبيع رقم الهاتف وإنشاء جميع الصيغ الممكنة
-          const cleanPhone = formData.phone.replace(/\D/g, ''); // إزالة كل شيء عدا الأرقام
-          
-          const searchPatterns = [];
-          
-          // إذا كان الرقم يبدأ بـ 964 (رمز العراق)
-          if (cleanPhone.startsWith('964')) {
-            const localNumber = cleanPhone.substring(3); // إزالة 964
-            searchPatterns.push(
-              cleanPhone,           // 9647728020024
-              localNumber,          // 7728020024
-              `0${localNumber}`,    // 07728020024
-              `+${cleanPhone}`,     // +9647728020024
-              `00${cleanPhone}`     // 009647728020024
-            );
-          }
-          // إذا كان الرقم يبدأ بـ 0
-          else if (cleanPhone.startsWith('0')) {
-            const withoutZero = cleanPhone.substring(1); // إزالة الصفر
-            searchPatterns.push(
-              cleanPhone,                    // 07728020024
-              withoutZero,                   // 7728020024
-              `964${withoutZero}`,          // 9647728020024
-              `+964${withoutZero}`,         // +9647728020024
-              `00964${withoutZero}`         // 009647728020024
-            );
-          }
-          // إذا كان الرقم عادي بدون رمز أو صفر
-          else {
-            searchPatterns.push(
-              cleanPhone,                    // 7728020024
-              `0${cleanPhone}`,             // 07728020024
-              `964${cleanPhone}`,           // 9647728020024
-              `+964${cleanPhone}`,          // +9647728020024
-              `00964${cleanPhone}`          // 009647728020024
-            );
-          }
-          
-          console.log('🔍 جميع أنماط البحث:', searchPatterns);
-          
-          let customer = null;
-          
-          // البحث بجميع الأنماط
-          for (const pattern of searchPatterns) {
-            console.log(`🔎 البحث برقم: ${pattern}`);
-            
-            const { data, error } = await supabase
-              .from('customers')
-              .select(`
-                *,
-                customer_loyalty (
-                  total_points,
-                  total_spent,
-                  current_tier_id,
-                  loyalty_tiers (
-                    name,
-                    discount_percentage
-                  )
-                )
-              `)
-              .eq('phone', pattern)
-              .maybeSingle();
-              
-            if (data && !error) {
-              customer = data;
-              console.log(`✅ تم العثور على العميل برقم: ${pattern}`);
-              break;
-            }
-          }
-
-          if (!customer) {
-            console.log('❌ لم يتم العثور على العميل');
-            setCustomerData(null);
-            setLoyaltyDiscount(0);
-            return;
-          }
-
-          console.log('✅ تم العثور على العميل:', customer);
-          setCustomerData(customer);
-          
-          // ملء البيانات تلقائياً مع حماية من null
-          setFormData(prev => ({
-            ...prev,
-            name: customer.name || prev.name,
-            city: customer.city || prev.city,
-            address: customer.address || prev.address
-          }));
-
-          // حساب وتطبيق خصم الولاء فوراً
-          const loyaltyData = customer.customer_loyalty;
-          if (loyaltyData && loyaltyData.loyalty_tiers) {
-            const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
-            
-            // إعادة حساب الخصم مع السلة الحالية
-            const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
-            const loyaltyDiscountAmount = Math.round((currentSubtotal * discountPercentage) / 100);
-            
-            console.log(`🛒 مجموع السلة: ${currentSubtotal} د.ع`);
-            console.log(`🎁 خصم الولاء: ${discountPercentage}% = ${loyaltyDiscountAmount} د.ع`);
-            
-            setLoyaltyDiscount(loyaltyDiscountAmount);
-            setDiscount(loyaltyDiscountAmount); // تطبيق الخصم مباشرة
-            
-            toast({
-              title: "🎉 تم العثور على العميل!",
-              description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${discountPercentage}%`,
-              duration: 3000,
-            });
-          }
-
-        } catch (error) {
-          console.error('خطأ في جلب بيانات العميل:', error);
-        }
-      } else {
+      if (!formData.phone || formData.phone.length < 4) {
         setCustomerData(null);
         setLoyaltyDiscount(0);
-        setDiscount(0); // إعادة تعيين الخصم عند مسح الرقم
+        setDiscount(0);
+        return;
       }
+      
+      console.log('🔍 البحث عن العميل برقم:', formData.phone);
+      
+      // تنظيف وتطبيع رقم الهاتف
+      let cleanPhone = formData.phone.replace(/\D/g, ''); // إزالة جميع غير الأرقام
+      
+      console.log('📱 الرقم بعد التنظيف:', cleanPhone);
+      
+      // إنشاء جميع الأنماط المحتملة للبحث
+      const searchPatterns = new Set([
+        formData.phone.trim(),        // الرقم كما هو
+        cleanPhone               // الرقم منظف
+      ]);
+      
+      // إضافة الأنماط العراقية المختلفة
+      if (cleanPhone.startsWith('964')) {
+        // إذا بدأ بـ 964، أزل الرمز واجعله بدون صفر
+        const withoutCountryCode = cleanPhone.substring(3);
+        searchPatterns.add(withoutCountryCode);
+        searchPatterns.add(`0${withoutCountryCode}`);
+      } else if (cleanPhone.startsWith('0')) {
+        // إذا بدأ بصفر، أضف بدون صفر ومع رمز البلد
+        const withoutZero = cleanPhone.substring(1);
+        searchPatterns.add(withoutZero);
+        searchPatterns.add(`964${withoutZero}`);
+        searchPatterns.add(`+964${withoutZero}`);
+        searchPatterns.add(`00964${withoutZero}`);
+      } else {
+        // إذا لم يبدأ بصفر أو 964، أضف جميع الصيغ
+        searchPatterns.add(
+          `0${cleanPhone}`,             // 07728020024
+          `964${cleanPhone}`,           // 9647728020024
+          `+964${cleanPhone}`,          // +9647728020024
+          `00964${cleanPhone}`          // 009647728020024
+        );
+      }
+      
+      console.log('🔍 جميع أنماط البحث:', Array.from(searchPatterns));
+      
+      let customer = null;
+      
+      // البحث بجميع الأنماط
+      for (const pattern of searchPatterns) {
+        console.log(`🔎 البحث برقم: ${pattern}`);
+        
+        try {
+          const { data, error } = await supabase
+            .from('customers')
+            .select(`
+              *,
+              customer_loyalty (
+                total_points,
+                total_spent,
+                current_tier_id,
+                loyalty_tiers (
+                  name,
+                  discount_percentage
+                )
+              )
+            `)
+            .eq('phone', pattern)
+            .maybeSingle();
+            
+          if (data && !error) {
+            customer = data;
+            console.log(`✅ تم العثور على العميل برقم: ${pattern}`);
+            break;
+          }
+        } catch (err) {
+          console.error(`خطأ في البحث برقم ${pattern}:`, err);
+        }
+      }
+
+      if (!customer) {
+        console.log('❌ لم يتم العثور على العميل');
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+        setDiscount(0);
+        return;
+      }
+
+      console.log('✅ تم العثور على العميل:', customer);
+      setCustomerData(customer);
+      
+      // ملء البيانات تلقائياً مع حماية من null
+      setFormData(prev => ({
+        ...prev,
+        name: customer.name || prev.name,
+        city: customer.city || prev.city,
+        address: customer.address || prev.address
+      }));
+
+      // حساب وتطبيق خصم الولاء فوراً مع التقريب المطلوب
+      const loyaltyData = customer.customer_loyalty;
+      if (loyaltyData && loyaltyData.loyalty_tiers) {
+        const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
+        
+        // إعادة حساب الخصم مع السلة الحالية
+        const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
+        const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
+        
+        // تقريب الخصم إلى أقرب 500 دينار
+        const roundedDiscountAmount = Math.round(baseDiscountAmount / 500) * 500;
+        
+        console.log(`🛒 مجموع السلة: ${currentSubtotal} د.ع`);
+        console.log(`🎁 خصم الولاء الأساسي: ${discountPercentage}% = ${baseDiscountAmount} د.ع`);
+        console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
+        
+        setLoyaltyDiscount(roundedDiscountAmount);
+        setDiscount(roundedDiscountAmount); // تطبيق الخصم مباشرة
+        
+        toast({
+          title: "🎉 تم العثور على العميل!",
+          description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${roundedDiscountAmount.toLocaleString()} د.ع`,
+          duration: 3000,
+        });
+      }
+
     };
 
     fetchCustomerData();
-  }, [formData.phone]); // إزالة cart من التبعيات لتجنب التحديث المستمر
+  }, [formData.phone]);
+
   
-  // تحديث الخصم عند تغيير السلة
+  // تحديث الخصم عند تغيير السلة مع التقريب المطلوب
   useEffect(() => {
     if (customerData?.customer_loyalty?.loyalty_tiers?.discount_percentage && cart.length > 0) {
       const discountPercentage = customerData.customer_loyalty.loyalty_tiers.discount_percentage;
       const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
-      const loyaltyDiscountAmount = Math.round((currentSubtotal * discountPercentage) / 100);
+      const baseDiscountAmount = (currentSubtotal * discountPercentage) / 100;
       
-      setLoyaltyDiscount(loyaltyDiscountAmount);
-      setDiscount(loyaltyDiscountAmount);
+      // تقريب الخصم إلى أقرب 500 دينار
+      const roundedDiscountAmount = Math.round(baseDiscountAmount / 500) * 500;
       
-      console.log(`🔄 تحديث الخصم: ${loyaltyDiscountAmount} د.ع`);
+      setLoyaltyDiscount(roundedDiscountAmount);
+      setDiscount(roundedDiscountAmount);
+      
+      console.log(`🔄 تحديث الخصم: ${baseDiscountAmount} → ${roundedDiscountAmount} د.ع`);
     }
   }, [cart, customerData]);
   
