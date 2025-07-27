@@ -342,16 +342,19 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
     }
   };
 
-  // إلغاء حجز المخزون (عند الإلغاء)
+  // إلغاء حجز المخزون (عند الإلغاء) - محسن للعمل التلقائي
   const releaseStock = async (orderId) => {
     try {
+      console.log('Starting to release stock for order:', orderId);
       const { data: orderItems } = await supabase
         .from('order_items')
         .select('product_id, variant_id, quantity')
         .eq('order_id', orderId);
 
+      console.log('Order items to release:', orderItems);
+      
       for (const item of orderItems || []) {
-        // إلغاء الحجز فقط باستخدام RPC
+        // إلغاء الحجز فقط باستخدام RPC المحسن
         const { error } = await supabase.rpc('release_stock_item', {
           p_product_id: item.product_id,
           p_variant_id: item.variant_id,
@@ -359,11 +362,16 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         });
           
         if (error) {
-          console.error('Error releasing stock:', error);
+          console.error('Error releasing stock item:', error);
+        } else {
+          console.log(`Released ${item.quantity} items for product ${item.product_id}`);
         }
       }
+      
+      console.log('Stock release completed for order:', orderId);
     } catch (error) {
-      console.error('Error releasing stock:', error);
+      console.error('Error in releaseStock:', error);
+      throw error; // إعادة إلقاء الخطأ للمعالجة في المستوى الأعلى
     }
   };
 
