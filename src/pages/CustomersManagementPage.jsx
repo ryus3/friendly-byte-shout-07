@@ -641,9 +641,19 @@ const CustomersManagementPage = () => {
                         <p className="text-xs text-muted-foreground">عميل</p>
                       </div>
                       
-                      {/* عرض المزايا */}
+                      {/* عرض المزايا بناءً على المستوى */}
                       <div className="space-y-2">
-                        {tier.discount_percentage > 0 && (
+                        {/* برونزي: لا مزايا - فقط لمعرفة النقاط */}
+                        {tier.name === 'برونزي' && (
+                          <Badge 
+                            className="bg-gradient-to-r from-slate-400 to-slate-500 text-white border-0 shadow-md block"
+                          >
+                            🏁 بداية رحلة الولاء
+                          </Badge>
+                        )}
+                        
+                        {/* فضي: خصم فقط بدون توصيل مجاني */}
+                        {tier.name === 'فضي' && tier.discount_percentage > 0 && (
                           <Badge 
                             className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md block"
                           >
@@ -651,15 +661,25 @@ const CustomersManagementPage = () => {
                           </Badge>
                         )}
                         
-                        {tier.free_delivery_threshold !== null && tier.free_delivery_threshold >= 0 && (
-                          <Badge 
-                            className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 shadow-md block"
-                          >
-                            {tier.free_delivery_threshold === 0 
-                              ? "توصيل مجاني دائماً" 
-                              : `توصيل مجاني فوق ${tier.free_delivery_threshold.toLocaleString('ar-IQ')} د.ع`
-                            }
-                          </Badge>
+                        {/* ذهبي وماسي: خصم + توصيل مجاني */}
+                        {(tier.name === 'ذهبي' || tier.name === 'ماسي') && (
+                          <>
+                            {tier.discount_percentage > 0 && (
+                              <Badge 
+                                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-md block"
+                              >
+                                خصم {tier.discount_percentage}% شهرياً
+                              </Badge>
+                            )}
+                            
+                            {tier.free_delivery_threshold !== null && tier.free_delivery_threshold === 0 && (
+                              <Badge 
+                                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 shadow-md block"
+                              >
+                                🚚 توصيل مجاني دائماً
+                              </Badge>
+                            )}
+                          </>
                         )}
                         
                         {tier.special_benefits && tier.special_benefits.length > 0 && (
