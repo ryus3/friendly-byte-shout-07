@@ -327,11 +327,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         setLoyaltyDiscount(roundedDiscountAmount);
         setDiscount(roundedDiscountAmount); // تطبيق الخصم مباشرة
         
-        toast({
-          title: "🎉 تم العثور على العميل!",
-          description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${roundedDiscountAmount.toLocaleString()} د.ع`,
-          duration: 3000,
-        });
+        // عدم إظهار رسالة الولاء للموظفين لتجنب الخلط
+        // لأن كل موظف يرى عملاءه فقط
+        console.log(`✅ تم العثور على العميل: ${customer.name} - نقاط: ${loyaltyData.total_points}`);
+        if (roundedDiscountAmount > 0) {
+          console.log(`🎁 خصم الولاء المقرب: ${roundedDiscountAmount} د.ع`);
+        }
       }
 
     };

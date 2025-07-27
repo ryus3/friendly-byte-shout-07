@@ -9,7 +9,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, DollarSign, RefreshCw, Loader2, Printer, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle } from 'lucide-react';
+import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -236,12 +236,6 @@ const OrdersPage = () => {
     setSyncing(false);
   }
 
-  const handlePrintInvoices = () => {
-    toast({
-      title: "🚧 هذه الميزة غير مطبقة بعد",
-      description: "لكن لا تقلق! يمكنك طلبها في الرسالة التالية! 🚀"
-    });
-  };
 
   const handleViewOrder = useCallback((order) => {
     setSelectedOrder(order);
@@ -327,10 +321,6 @@ const OrdersPage = () => {
                 <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             </div>
             <div className="flex items-center gap-2 self-end sm:self-center">
-              <Button variant="outline" onClick={handlePrintInvoices}>
-                  <Printer className="h-4 h-4 ml-2" />
-                  طباعة
-              </Button>
               <Button variant="outline" onClick={handleSync} disabled={syncing}>
                   {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
                   مزامنة
