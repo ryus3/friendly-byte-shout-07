@@ -742,7 +742,14 @@ const InventoryPage = () => {
         </div>
 
         {/* إحصائيات سريعة */}
-        <InventoryStats inventoryItems={inventoryItems} />
+        <InventoryStats 
+          inventoryItems={inventoryItems} 
+          lowStockCount={inventoryStats.lowStockCount}
+          reservedStockCount={inventoryStats.reservedStockCount}
+          onFilterChange={(filterType) => {
+            setFilters(prev => ({ ...prev, stockFilter: filterType }));
+          }}
+        />
 
         {/* كروت الأقسام - تحميل فوري */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">

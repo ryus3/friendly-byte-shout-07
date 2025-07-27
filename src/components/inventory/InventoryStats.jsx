@@ -26,7 +26,7 @@ const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
     <div className="flex items-start justify-between">
       <div className="flex-1">
         <p className="text-muted-foreground text-sm font-medium">{title}</p>
-        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{value.toLocaleString()}</h3>
+        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{(value || 0).toLocaleString()}</h3>
       </div>
       <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110", colorClass)}>
         <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
