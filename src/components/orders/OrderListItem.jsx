@@ -185,6 +185,18 @@ const OrderListItem = ({
             </div>
           </MobileTableCell>
 
+          {/* Employee name */}
+          {order.created_by_name && (
+            <MobileTableCell secondary>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-2 py-1 rounded-full border border-primary/20">
+                  <User className="h-3 w-3 inline-block ml-1" />
+                  {order.created_by_name}
+                </span>
+              </div>
+            </MobileTableCell>
+          )}
+
           <MobileTableCell secondary>
             <div className="flex items-center gap-2">
               <Phone className="h-3 w-3" />
@@ -313,6 +325,15 @@ const OrderListItem = ({
           <div className="text-xs text-muted-foreground mt-1">
             {order.customer_phone}
           </div>
+          {/* Employee name */}
+          {order.created_by_name && (
+            <div className="mt-1">
+              <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-2 py-1 rounded-full border border-primary/20">
+                <User className="h-3 w-3 inline-block ml-1" />
+                {order.created_by_name}
+              </span>
+            </div>
+          )}
           {/* Product Summary */}
           <div className="text-xs text-primary font-medium mt-1">
             {(() => {

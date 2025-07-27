@@ -5,7 +5,7 @@ import { Package, Calendar, Eye, TrendingUp, DollarSign, ShoppingCart } from 'lu
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 
-const TopProductsDialog = ({ open, onOpenChange }) => {
+const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
   const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [productStats, setProductStats] = useState([]);
@@ -25,7 +25,7 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
     try {
       console.log('🔄 جاري جلب الطلبات مع المنتجات...');
       
-      const { data: orders, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(`
           *,
@@ -43,6 +43,13 @@ const TopProductsDialog = ({ open, onOpenChange }) => {
         `)
         .in('status', ['completed', 'delivered'])
         .order('created_at', { ascending: false });
+
+      // إذا كان هناك معرف موظف، فلتر حسب الموظف فقط
+      if (employeeId) {
+        query = query.eq('created_by', employeeId);
+      }
+
+      const { data: orders, error } = await query;
 
       if (error) {
         console.error('❌ خطأ في جلب الطلبات:', error);

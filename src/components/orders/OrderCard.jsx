@@ -323,15 +323,15 @@ const OrderCard = ({
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                     <Clock className="h-3 w-3 text-muted-foreground" />
                   </div>
-                  {/* اسم الموظف صاحب الطلب */}
-                  {order.created_by_name && (
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md">
-                        {order.created_by_name}
-                      </span>
-                      <User className="h-3 w-3 text-muted-foreground" />
-                    </div>
-                  )}
+                   {/* اسم الموظف صاحب الطلب */}
+                   {order.created_by_name && (
+                     <div className="flex items-center gap-2 justify-end">
+                       <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
+                         <User className="h-3 w-3 inline-block ml-1" />
+                         {order.created_by_name}
+                       </span>
+                     </div>
+                   )}
                   <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold w-fit ml-auto shadow-sm`}>
                     <Building className="h-3 w-3 ml-1" />
                     {order.delivery_partner}
