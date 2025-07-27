@@ -109,8 +109,11 @@ const OrderCard = ({
   };
 
   const handleDelete = () => {
-    if (onDeleteOrder) {
-      onDeleteOrder(order); // تمرير الطلب كاملاً بدلاً من الـ ID فقط
+    // إضافة رسالة تأكيد قبل الحذف
+    if (confirm(`هل أنت متأكد من حذف الطلب ${order.qr_id || order.order_number}؟\n\nسيتم تحرير المخزون المحجوز تلقائياً.`)) {
+      if (onDeleteOrder) {
+        onDeleteOrder(order); // تمرير الطلب كاملاً بدلاً من الـ ID فقط
+      }
     }
   };
 

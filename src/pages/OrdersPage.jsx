@@ -92,6 +92,30 @@ const OrdersPage = () => {
             variant: "success",
             duration: 5000
           });
+
+          // إضافة إشعار في نافذة الإشعارات للمديرين فقط
+          if (hasPermission('view_all_data') || hasPermission('manage_orders')) {
+            const createNotification = async () => {
+              try {
+                await supabase.from('notifications').insert({
+                  title: 'طلب جديد',
+                  message: `تم إنشاء طلب جديد برقم ${newOrder.qr_id || newOrder.order_number} من العميل ${newOrder.customer_name}`,
+                  type: 'order_created',
+                  priority: 'high',
+                  data: {
+                    order_id: newOrder.id,
+                    order_qr: newOrder.qr_id,
+                    customer_name: newOrder.customer_name,
+                    amount: newOrder.final_amount
+                  },
+                  user_id: null // إشعار عام للمديرين
+                });
+              } catch (error) {
+                console.error('Error creating notification:', error);
+              }
+            };
+            createNotification();
+          }
           
           // تحديث البيانات
           refetchProducts();
@@ -302,17 +326,34 @@ const OrdersPage = () => {
     }
 
     if (ordersToDeleteFiltered.length === 0) {
+        toast({
+            title: 'خطأ',
+            description: 'لا توجد طلبات قابلة للحذف.',
+            variant: 'destructive'
+        });
         return;
     }
 
-    for (const orderId of ordersToDeleteFiltered) {
-        await deleteOrdersContext([orderId]);
+    try {
+        // حذف الطلبات وتحرير المخزون المحجوز تلقائياً
+        await deleteOrdersContext(ordersToDeleteFiltered);
+        
+        toast({
+            title: 'تم الحذف بنجاح',
+            description: `تم حذف ${ordersToDeleteFiltered.length} طلبات وتحرير المخزون المحجوز.`,
+            variant: 'success'
+        });
+        
+        setSelectedOrders([]);
+        setDialogs(d => ({ ...d, deleteAlert: false }));
+    } catch (error) {
+        console.error('Error deleting orders:', error);
+        toast({
+            title: 'خطأ في الحذف',
+            description: 'حدث خطأ أثناء حذف الطلبات.',
+            variant: 'destructive'
+        });
     }
-    
-    toast({ title: 'تم الحذف', description: `تم حذف ${ordersToDeleteFiltered.length} طلبات.`, variant: 'success' });
-    
-    setSelectedOrders([]);
-    setDialogs(d => ({ ...d, deleteAlert: false }));
   }, [hasPermission, orders, deleteOrdersContext]);
 
   const handleStatCardClick = useCallback((status, period) => {
