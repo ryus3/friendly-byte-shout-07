@@ -791,7 +791,7 @@ const CustomersManagementPage = () => {
                               </h3>
                               <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
                                 <TrendingUp className="h-3 w-3" />
-                                <span>المرتبة {index + 1}</span>
+                                <span>المرتبة {index + 1} | طلبات مكتملة فقط</span>
                               </div>
                             </div>
                           </div>
