@@ -619,7 +619,28 @@ const InventoryPage = () => {
             <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
           </div>
           
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            {/* شريط البحث والمسح الضوئي في نفس السطر */}
+            <div className="flex gap-2 items-center">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setIsBarcodeScannerOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <QrCode className="w-4 h-4" />
+                <span className="hidden sm:inline">مسح QR</span>
+              </Button>
+              
+              <input
+                type="text"
+                placeholder="البحث اليدوي..."
+                value={filters.searchTerm}
+                onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                className="px-3 py-1.5 text-sm border rounded-md bg-background w-32 sm:w-40"
+              />
+            </div>
+            
             <Button 
               onClick={async () => {
                  try {
@@ -648,57 +669,63 @@ const InventoryPage = () => {
                        price: variant.selling_price || variant.sale_price || variant.price || 0
                      }));
                    });
-
-                  if (!exportData.length) {
-                    toast({
-                      title: "تنبيه",
-                      description: "لا توجد متغيرات للتصدير",
-                      variant: "destructive"
-                    });
-                    return;
-                  }
-
-                  console.log('تصدير PDF:', exportData.length, 'متغير');
-                  
-                  // استدعاء مولد PDF
-                  const { generateInventoryReportPDF } = await import('@/utils/pdfGenerator');
-                  await generateInventoryReportPDF(exportData);
-                  
-                  toast({
-                    title: "تم تصدير التقرير",
-                    description: `تم تصدير ${exportData.length} متغير بنجاح`,
-                  });
-                } catch (error) {
-                  console.error('خطأ في تصدير PDF:', error);
-                  toast({
-                    title: "خطأ",
-                    description: "حدث خطأ في تصدير التقرير",
-                    variant: "destructive"
-                  });
-                }
-              }} 
+                   
+                   if (exportData.length === 0) {
+                     toast({ 
+                       title: "تحذير", 
+                       description: "لا توجد منتجات للتصدير",
+                       variant: "destructive" 
+                     });
+                     return;
+                   }
+                   
+                   const fileName = selectedItemsForExport.length > 0 
+                     ? `الجرد_المحدد_${new Date().toISOString().split('T')[0]}`
+                     : `الجرد_الكامل_${new Date().toISOString().split('T')[0]}`;
+                   
+                   await generateInventoryReportPDF(exportData, fileName);
+                   
+                   toast({ 
+                     title: "تم بنجاح", 
+                     description: `تم تصدير ${exportData.length} عنصر إلى PDF`,
+                     variant: "success" 
+                   });
+                 } catch (error) {
+                   console.error('Error exporting inventory:', error);
+                   toast({ 
+                     title: "خطأ في التصدير", 
+                     description: "فشل في تصدير البيانات للـ PDF",
+                     variant: "destructive" 
+                   });
+                 }
+              }}
               variant="outline"
-              className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
+              size="sm"
+              className="flex items-center gap-2"
             >
-              <Download className="w-4 h-4 mr-2" />
-              تصدير PDF
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">تصدير PDF</span>
+            </Button>
+            
+            <Button 
+              onClick={() => setIsReservedStockDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <PackageOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">المحجوز</span>
             </Button>
           </div>
         </div>
-        
-        <InventoryStats
-          inventoryItems={inventoryItems}
-          lowStockCount={inventoryStats.lowStockCount}
-          reservedStockCount={inventoryStats.reservedStockCount}
-          onFilterChange={handleFilterChange}
-          onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
-          onRestoreProduct={() => console.log('restore product')}
-        />
 
-        {/* صف موحد للأرشيف وكروت الأقسام */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* كروت الأقسام أولاً */}
-          {departments.map((dept, index) => {
+        {/* إحصائيات سريعة */}
+        <InventoryStats inventoryItems={inventoryItems} />
+
+        {/* كروت الأقسام - تحميل فوري */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {/* كروت الأقسام أولاً - محملة مسبقاً */}
+          {departments.length > 0 ? departments.map((dept, index) => {
             const IconComponent = getIconForDepartment(dept.name, index);
             const gradientClass = getGradientForIndex(index);
             
@@ -709,80 +736,84 @@ const InventoryPage = () => {
                 onClick={() => {
                   setFilters(prev => ({ 
                     ...prev, 
-                    department: dept.id, // استخدام معرف القسم بدلاً من الاسم
-                    searchTerm: '', // مسح البحث عند تغيير القسم
-                    stockFilter: 'all' // إعادة تعيين فلتر المخزون
+                    department: dept.id,
+                    searchTerm: '',
+                    stockFilter: 'all'
                   }));
-                  // إزالة categoryFilter لتجنب التعارض
                 }}
               >
-                <CardContent className="p-6">
-                  <div className={`text-center space-y-4 bg-gradient-to-br ${gradientClass} text-white rounded-lg p-6 relative overflow-hidden`}>
-                    {/* رقم القسم */}
+                <CardContent className="p-4">
+                  <div className={`text-center space-y-3 bg-gradient-to-br ${gradientClass} text-white rounded-lg p-4 relative overflow-hidden`}>
                     <div className="absolute top-2 right-2">
                       <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
                         {dept.order}
                       </Badge>
                     </div>
                     
-                    {/* الأيقونة */}
                     <div className="flex justify-center">
-                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-                        <IconComponent className="w-8 h-8" />
+                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                        <IconComponent className="w-6 h-6" />
                       </div>
                     </div>
                     
-                    {/* اسم القسم */}
                     <div>
-                      <h4 className="font-bold text-lg">{dept.name}</h4>
+                      <h4 className="font-bold text-sm">{dept.name}</h4>
                       {dept.description && (
                         <p className="text-xs opacity-90 mt-1">{dept.description}</p>
                       )}
                     </div>
                     
-                    {/* عدد المنتجات */}
                     <div className="flex items-center justify-between pt-2 border-t border-white/20">
                       <div className="text-right">
-                        <p className="text-xl font-bold">{dept.productCount}</p>
+                        <p className="text-lg font-bold">{dept.productCount}</p>
                         <p className="text-white/80 text-xs">منتج</p>
                       </div>
                       <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-4 h-4" />
+                        <Package className="w-3 h-3" />
                         <span className="text-xs">متاح</span>
                       </div>
                     </div>
                     
-                    {/* تأثير الخلفية */}
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
             );
-          })}
+          }) : (
+            // مؤشر تحميل للأقسام
+            Array.from({ length: 4 }).map((_, index) => (
+              <Card key={index} className="animate-pulse">
+                <CardContent className="p-4">
+                  <div className="bg-muted rounded-lg p-4 space-y-3">
+                    <div className="h-8 bg-muted-foreground/20 rounded-full w-8 mx-auto"></div>
+                    <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mx-auto"></div>
+                    <div className="h-6 bg-muted-foreground/20 rounded w-1/2 mx-auto"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
           
           {/* كارت الأرشيف على اليسار */}
           <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
                 onClick={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}>
-            <CardContent className="p-6">
-              <div className="text-center space-y-4 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-lg p-6 relative overflow-hidden">
-                {/* أيقونة الأرشيف */}
+            <CardContent className="p-4">
+              <div className="text-center space-y-3 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-lg p-4 relative overflow-hidden">
                 <div className="flex justify-center">
-                  <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-                    <Archive className="w-8 h-8" />
+                  <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                    <Archive className="w-6 h-6" />
                   </div>
                 </div>
                 
-                {/* عنوان الأرشيف */}
                 <div>
-                  <h4 className="font-bold text-lg">أرشيف المنتجات</h4>
+                  <h4 className="font-bold text-sm">أرشيف المنتجات</h4>
                   <p className="text-xs opacity-90 mt-1">المنتجات النافذة والمؤرشفة</p>
                 </div>
                 
-                {/* عدد المنتجات المؤرشفة */}
                 <div className="flex items-center justify-between pt-2 border-t border-white/20">
                   <div className="text-right">
-                    <p className="text-xl font-bold">{inventoryItems.filter(item => 
+                    <p className="text-lg font-bold">{inventoryItems.filter(item => 
                       item.variants && item.variants.length > 0 && 
                       item.variants.every(v => (v.quantity || 0) === 0)
                     ).length}</p>
@@ -793,9 +824,8 @@ const InventoryPage = () => {
                   </div>
                 </div>
                 
-                {/* تأثير الخلفية */}
-                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-white/5 rounded-full"></div>
+                <div className="absolute -top-2 -left-2 w-8 h-8 bg-white/5 rounded-full"></div>
               </div>
             </CardContent>
           </Card>
