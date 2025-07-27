@@ -100,7 +100,7 @@ const OrderCard = ({
 
   // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قيد التجهيز لجميع الموظفين
   const canEdit = order.status === 'pending';
-  const canDelete = order.status === 'pending' && (hasPermission('cancel_orders') || hasPermission('delete_orders'));
+  const canDelete = order.status === 'pending'; // بساطة - أي طلب قيد التجهيز قابل للحذف
 
   const handleStatusChange = (newStatus) => {
     if (onUpdateStatus) {
