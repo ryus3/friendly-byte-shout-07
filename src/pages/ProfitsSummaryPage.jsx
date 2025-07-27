@@ -48,6 +48,13 @@ const ProfitsSummaryPage = () => {
     profitStatus: 'all',
   });
   
+  // تطبيق فلتر المعلقة مباشرة للموظفين
+  useEffect(() => {
+    if (!canViewAll) {
+      setFilters(prev => ({ ...prev, profitStatus: 'pending' }));
+    }
+  }, [canViewAll]);
+  
   const [dateRange, setDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -115,7 +122,7 @@ const ProfitsSummaryPage = () => {
         // الطلبات الموصلة بدون فواتير مستلمة (معلقة)
         const pendingDeliveredOrders = orders?.filter(o => {
             const orderDate = o.created_at ? parseISO(o.created_at) : null;
-            return o.status === 'delivered' && !o.receipt_received && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+            return (o.status === 'delivered' || o.status === 'completed') && !o.receipt_received && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
         }) || [];
 
         // ربط الطلبات بسجلات الأرباح من قاعدة البيانات
@@ -163,7 +170,7 @@ const ProfitsSummaryPage = () => {
                 profit: employeeProfitShare,
                 managerProfitShare,
                 employeeName: orderCreator.full_name,
-                profitStatus: 'pending',
+                profitStatus: 'pending', // معلقة لأن الفاتورة غير مستلمة
                 profitRecord: null,
             });
         });
@@ -467,7 +474,7 @@ const ProfitsSummaryPage = () => {
               <ProfitDetailsMobile
                 orders={filteredDetailedProfits}
                 canViewAll={canViewAll}
-                canRequestSettlement={canRequestSettlement}
+                canRequestSettlement={canRequestSettlement && filters.profitStatus === 'pending'}
                 selectedOrders={selectedOrders}
                 onSelectOrder={handleSelectOrder}
                 onViewOrder={handleViewOrder}
