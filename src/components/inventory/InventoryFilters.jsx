@@ -149,17 +149,17 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
   return (
     <div className="bg-card rounded-xl p-4 border space-y-4 flex-grow">
       <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="relative flex-grow w-full md:flex-grow-0 md:w-auto">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="البحث..."
-              value={filters.searchTerm}
-              onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-              className="pr-10 md:w-48"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-grow">
+            <div className="relative flex-grow">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="البحث..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                className="pr-10"
+              />
+            </div>
+            
             <Button
               variant="outline"
               size="icon"

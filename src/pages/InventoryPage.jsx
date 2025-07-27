@@ -620,28 +620,7 @@ const InventoryPage = () => {
             <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
           </div>
           
-          <div className="flex flex-wrap gap-3">
-            {/* شريط البحث والمسح الضوئي في نفس السطر */}
-            <div className="flex gap-2 items-center">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setIsBarcodeScannerOpen(true)}
-                className="flex items-center gap-2"
-              >
-                <QrCode className="w-4 h-4" />
-                <span className="hidden sm:inline">مسح QR</span>
-              </Button>
-              
-              <input
-                type="text"
-                placeholder="البحث اليدوي..."
-                value={filters.searchTerm}
-                onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-                className="px-3 py-1.5 text-sm border rounded-md bg-background w-32 sm:w-40"
-              />
-            </div>
-            
+          <div className="flex gap-3">
             <Button 
               onClick={async () => {
                  try {
@@ -699,13 +678,11 @@ const InventoryPage = () => {
                      variant: "destructive" 
                    });
                  }
-              }}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
+               }}
+               className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">تصدير PDF</span>
+              <Download className="w-4 h-4 ml-2" />
+              تصدير تقرير PDF
             </Button>
             
             <Button 
