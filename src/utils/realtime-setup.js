@@ -11,7 +11,9 @@ export const setupRealtime = () => {
       table: 'orders'
     }, (payload) => {
       // إرسال حدث مخصص فقط بدون إعادة تحميل
-      window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
+      if (payload.eventType === 'INSERT') {
+        window.dispatchEvent(new CustomEvent('orderCreated', { detail: payload.new }));
+      }
     })
     .subscribe();
 

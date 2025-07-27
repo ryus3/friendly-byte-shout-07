@@ -58,8 +58,11 @@ const EmployeeFollowUpPage = () => {
       const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
       const archiveMatch = filters.archived ? order.isArchived === true : !order.isArchived;
       return employeeMatch && statusMatch && archiveMatch && profitStatusMatch;
-    });
-  }, [orders, filters]);
+    }).map(order => ({
+      ...order,
+      created_by_name: usersMap.get(order.created_by) || 'غير معروف'
+    }));
+  }, [orders, filters, usersMap]);
 
   const stats = useMemo(() => {
     if (!filteredOrders || !Array.isArray(filteredOrders)) {

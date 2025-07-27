@@ -45,10 +45,57 @@ const NotificationsHandler = () => {
       )
       .subscribe();
 
+    // New order notifications for admin
+    const ordersChannel = supabase
+      .channel('orders-notifications-handler-admin')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        (payload) => {
+          // جلب اسم المستخدم صاحب الطلب
+          const getUserName = async () => {
+            try {
+              const { data: userData } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('user_id', payload.new.created_by)
+                .single();
+              
+              const userName = userData?.full_name || 'مستخدم غير معروف';
+              
+              addNotification({
+                type: 'new_order',
+                title: 'طلب جديد',
+                message: `طلب رقم ${payload.new.order_number} من ${userName}`,
+                icon: 'ShoppingCart',
+                color: 'blue',
+                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
+                user_id: null, // Admin only
+              });
+            } catch (error) {
+              console.error('Error fetching user name:', error);
+              addNotification({
+                type: 'new_order',
+                title: 'طلب جديد',
+                message: `طلب رقم ${payload.new.order_number}`,
+                icon: 'ShoppingCart',
+                color: 'blue',
+                data: { orderId: payload.new.id, orderNumber: payload.new.order_number },
+                user_id: null, // Admin only
+              });
+            }
+          };
+          
+          getUserName();
+        }
+      )
+      .subscribe();
+
     // إشعارات المخزون تتم الآن من خلال StockMonitoringSystem
 
     return () => {
       supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(ordersChannel);
     };
     
   }, [user, fetchAdminData, addNotification]);
