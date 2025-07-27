@@ -275,13 +275,9 @@ const Dashboard = () => {
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
-        // فلترة الطلبات والعملاء حسب صلاحيات المستخدم
+        // فلترة الطلبات حسب صلاحيات المستخدم
         const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
             order.created_by === user?.id || order.created_by === user?.user_id
-        )) : [];
-
-        const visibleCustomers = customers ? (canViewAllData ? customers : customers.filter(customer => 
-            customer.created_by === user?.id || customer.created_by === user?.user_id
         )) : [];
 
         if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
