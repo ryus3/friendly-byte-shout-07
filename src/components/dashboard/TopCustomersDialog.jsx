@@ -31,7 +31,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
         .in('status', ['completed', 'delivered'])
         .order('created_at', { ascending: false });
 
-      // إذا كان هناك معرف موظف، فلتر حسب الموظف فقط
+      // إذا كان هناك معرف موظف، فلتر حسب الموظف فقط  
       if (employeeId) {
         query = query.eq('created_by', employeeId);
       }

@@ -144,6 +144,7 @@ export const permissionsMap = [
       { id: 'add_customers', label: 'إضافة عملاء جدد' },
       { id: 'edit_customers', label: 'تعديل بيانات العملاء' },
       { id: 'delete_customers', label: 'حذف العملاء' },
+      { id: 'manage_all_customers', label: 'إدارة جميع العملاء (لكل الموظفين)' },
       { id: 'view_customer_history', label: 'عرض تاريخ العميل' },
       { id: 'export_customers', label: 'تصدير قائمة العملاء' }
     ]

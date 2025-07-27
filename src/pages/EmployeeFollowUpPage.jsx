@@ -62,7 +62,7 @@ const EmployeeFollowUpPage = () => {
       const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;
       const statusMatch = filters.status === 'all' || order.status === filters.status;
       const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
-      const archiveMatch = filters.archived ? true : !order.isArchived; // إذا كان مفعل عرض الأرشيف، اعرض الكل، وإلا اعرض غير المؤرشف فقط
+      const archiveMatch = filters.archived ? true : !order.isarchived; // إذا كان مفعل عرض الأرشيف، اعرض الكل، وإلا اعرض غير المؤرشف فقط
       return employeeMatch && statusMatch && archiveMatch && profitStatusMatch;
     }).map(order => ({
       ...order,

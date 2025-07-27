@@ -288,6 +288,19 @@ const OrderCard = ({
                     </Button>
                   )}
 
+                  {/* Delete - للطلبات قيد التجهيز فقط */}
+                  {order.status === 'pending' && (hasPermission('cancel_orders') || canEdit) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteOrder?.(order)}
+                      className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="حذف الطلب"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
                   {/* Track */}
                   <Button
                     variant="ghost"
