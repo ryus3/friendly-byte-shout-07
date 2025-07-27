@@ -405,12 +405,6 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         
         setOrders(prev => prev.filter(o => !deleteIds.includes(o.id)));
         
-        // تحديث المخزون فوراً
-        if (window.location.pathname.includes('inventory') || window.location.pathname.includes('products')) {
-          // إعادة جلب بيانات المخزون
-          window.dispatchEvent(new CustomEvent('refreshInventory'));
-        }
-        
         toast({ 
           title: "تم الحذف", 
           description: `تم حذف ${deleteIds.length} طلب بنجاح`,
