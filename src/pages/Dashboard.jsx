@@ -25,7 +25,7 @@ import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard'
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
-import EmployeeStatsCards from '@/components/dashboard/EmployeeStatsCards';
+
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
@@ -574,24 +574,12 @@ const Dashboard = () => {
                 <StockMonitoringSystem />
                 
                 <WelcomeHeader user={user} currentTime={currentTime} />
-                {/* عرض كارت طلب المحاسبة للموظفين فقط، ليس للمديرين */}
+                
+                {/* كارت طلب المحاسبة للموظفين فقط */}
                 {!canViewAllData && (
                     <SettlementRequestCard 
                         pendingProfit={employeeProfitsData.personalPendingProfit} 
                         onSettle={() => navigate('/profits-summary')} 
-                    />
-                )}
-                
-                {/* عرض إحصائيات الموظف إذا لم يكن مديراً */}
-                {!canViewAllData && (
-                    <EmployeeStatsCards 
-                        stats={{
-                            totalOrders: visibleOrders?.length || 0,
-                            pendingOrders: visibleOrders?.filter(o => o.status === 'pending' || o.status === 'shipped')?.length || 0,
-                            completedOrders: visibleOrders?.filter(o => o.status === 'completed' || o.status === 'delivered')?.length || 0,
-                            totalRevenue: visibleOrders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0
-                        }}
-                        userRole={user?.role || 'employee'}
                     />
                 )}
                 
