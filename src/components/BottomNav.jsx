@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCart, Bot, Home, Search, Menu, User, Settings, Package } from 'lucide-react';
+import { ShoppingCart, Bot, Home, Search, Menu, User, Settings, Package, DollarSign } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import CartDialog from '@/components/orders/CartDialog';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -69,6 +69,7 @@ const MenuContent = ({ onClose }) => {
     { path: '/', icon: Home, label: 'لوحة التحكم', permission: 'view_dashboard', color: 'text-blue-500' },
     { path: '/products', icon: Package, label: 'المنتجات', permission: 'view_products', color: 'text-orange-500' },
     { path: '/my-orders', icon: ShoppingCart, label: 'طلباتي', permission: 'view_orders', color: 'text-green-500' },
+    { path: '/profits-management', icon: DollarSign, label: 'أرباحي', permission: 'view_profits', color: 'text-emerald-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', permission: 'view_settings', color: 'text-gray-500' }
   ];
 
