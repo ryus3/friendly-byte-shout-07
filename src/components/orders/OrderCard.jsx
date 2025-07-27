@@ -98,7 +98,7 @@ const OrderCard = ({
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';
 
-  // التحقق من الصلاحيات
+  // التحقق من الصلاحيات - يمكن تعديل وحذف الطلبات قيد التجهيز لجميع الموظفين
   const canEdit = order.status === 'pending';
   const canDelete = order.status === 'pending';
 
@@ -300,7 +300,7 @@ const OrderCard = ({
                   </Button>
 
                   {/* Delete - للطلبات قيد التجهيز فقط */}
-                  {canDelete && hasPermission('delete_orders') && (
+                  {canDelete && (hasPermission('cancel_orders') || hasPermission('delete_orders')) && (
                     <Button
                       variant="ghost"
                       size="sm"

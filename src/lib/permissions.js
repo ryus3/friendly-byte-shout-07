@@ -194,6 +194,8 @@ export const defaultPermissions = {
     'view_orders',
     'view_own_orders',
     'create_orders',
+    'edit_orders',        // إضافة صلاحية التعديل للموظفين
+    'cancel_orders',      // إضافة صلاحية الحذف/الإلغاء للموظفين
     'checkout_orders',
     'view_order_details',
     'print_invoices',
