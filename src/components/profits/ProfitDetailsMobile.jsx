@@ -66,7 +66,7 @@ const ProfitDetailsMobile = ({
                       className="text-xs"
                     >
                       <DollarSign className="w-3 h-3 ml-1" />
-                      استلام
+                      تسوية
                     </Button>
                   )}
                 </div>

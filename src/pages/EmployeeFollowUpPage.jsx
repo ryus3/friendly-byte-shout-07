@@ -38,8 +38,9 @@ const EmployeeFollowUpPage = () => {
 
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
-    // تضمين جميع المستخدمين النشطين بغض النظر عن الدور
-    return allUsers.filter(u => u && u.status === 'active');
+    // تضمين المستخدمين النشطين ما عدا المدراء
+    return allUsers.filter(u => u && u.status === 'active' && 
+      !['admin', 'super_admin'].includes(u.role));
   }, [allUsers]);
 
   const usersMap = useMemo(() => {
@@ -269,7 +270,7 @@ const EmployeeFollowUpPage = () => {
                 </p>
                 <Button onClick={handleReceiveReturned} disabled={selectedOrders.length === 0}>
                   <Archive className="w-4 h-4 ml-2" />
-                  استلام الراجع في المخزن
+                  تسوية الراجع في المخزن
                 </Button>
               </Card>
             )}
