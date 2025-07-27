@@ -2913,6 +2913,10 @@ export type Database = {
           error_message: string
         }[]
       }
+      auto_apply_city_benefits: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       auto_select_monthly_city_discount: {
         Args: Record<PropertyKey, never>
         Returns: undefined
