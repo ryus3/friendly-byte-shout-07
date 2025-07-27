@@ -510,15 +510,6 @@ const CustomersManagementPage = () => {
             <Download className="h-4 w-4 mr-1" />
             تصدير العملاء (CSV)
           </Button>
-          
-          <Button onClick={selectRandomCityDiscount} variant="outline" size="sm">
-            <Gift className="h-4 w-4 mr-1" />
-            اختيار مدينة للخصم
-          </Button>
-
-          {/* أدوات تطوير سريعة لاختبار فلترة الجنس */}
-          <div className="flex gap-1">
-          </div>
         </div>
       </div>
 
@@ -843,164 +834,384 @@ const CustomersManagementPage = () => {
 
         {/* City Discounts Tab */}
         <TabsContent value="discounts" className="space-y-4">
-          <Card className="overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/50 dark:to-blue-900/30 border-0 shadow-xl">
-            <CardHeader className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white pb-8">
+          <Card className="overflow-hidden bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-violet-900/30 dark:via-purple-900/30 dark:to-fuchsia-900/30 border-0 shadow-2xl">
+            <CardHeader className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white pb-8">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgPC9wYXR0ZXJuPgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiAvPgo8L3N2Zz4=')] opacity-20" />
               <div className="relative z-10">
-                <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                    <Gift className="h-6 w-6" />
-                  </div>
-                  خصومات المدن الحالية
+                <CardTitle className="text-3xl font-bold flex items-center gap-4">
+                  <motion.div 
+                    className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg"
+                    animate={{ 
+                      rotate: [0, 5, -5, 0],
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{ 
+                      duration: 4,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Gift className="h-8 w-8" />
+                  </motion.div>
+                  <span className="bg-gradient-to-r from-white via-purple-100 to-white bg-clip-text text-transparent">
+                    🎁 نظام خصومات المدن الخرافي
+                  </span>
                 </CardTitle>
-                <p className="text-blue-100 mt-2">نظام المكافآت الشهرية للمدن النشطة</p>
+                <p className="text-purple-100 mt-3 text-lg font-medium">المكافآت الشهرية المدهشة للمدن الأكثر نشاطاً ✨</p>
               </div>
               
-              {/* Decorative elements */}
-              <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 rounded-full animate-pulse" />
-              <div className="absolute bottom-2 left-8 w-8 h-8 bg-purple-400/20 rounded-full animate-pulse delay-1000" />
-              <div className="absolute top-1/2 right-1/3 w-6 h-6 bg-blue-300/20 rounded-full animate-pulse delay-500" />
+              {/* تأثيرات بصرية خرافية */}
+              <div className="absolute top-4 right-4 w-16 h-16 bg-white/10 rounded-full animate-pulse" />
+              <div className="absolute bottom-3 left-10 w-10 h-10 bg-fuchsia-400/20 rounded-full animate-pulse delay-1000" />
+              <div className="absolute top-1/2 right-1/4 w-8 h-8 bg-purple-300/20 rounded-full animate-pulse delay-500" />
+              <div className="absolute top-6 left-1/3 w-6 h-6 bg-violet-300/30 rounded-full animate-ping delay-700" />
             </CardHeader>
             
-            <CardContent className="p-6">
-              {/* شرح الميزة */}
-              <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-800/30">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg shadow-md flex-shrink-0">
-                    <Sparkles className="h-5 w-5 text-white" />
-                  </div>
+            <CardContent className="p-8">
+              {/* شرح الميزة الخرافي */}
+              <motion.div 
+                className="mb-8 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-900/30 dark:via-orange-900/30 dark:to-yellow-900/30 rounded-2xl p-6 border-2 border-amber-200/50 dark:border-amber-800/30 shadow-xl"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <div className="flex items-start gap-4">
+                  <motion.div 
+                    className="p-3 bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-500 rounded-xl shadow-lg flex-shrink-0"
+                    animate={{ 
+                      boxShadow: [
+                        "0 4px 20px rgba(245, 158, 11, 0.3)",
+                        "0 8px 30px rgba(245, 158, 11, 0.5)",
+                        "0 4px 20px rgba(245, 158, 11, 0.3)"
+                      ]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Sparkles className="h-6 w-6 text-white" />
+                  </motion.div>
                   <div className="flex-1">
-                    <h4 className="font-bold text-amber-800 dark:text-amber-200 mb-2">🎯 كيف يعمل نظام خصومات المدن؟</h4>
-                    <div className="space-y-2 text-sm text-amber-700 dark:text-amber-300">
-                      <p>• <strong>النظام التلقائي:</strong> يتم اختيار المدن الأكثر نشاطاً في الطلبات والمبيعات تلقائياً</p>
-                      <p>• <strong>المزايا الشهرية:</strong> كل شهر، مدينة واحدة تحصل على خصم 10% + توصيل مجاني</p>
-                      <p>• <strong>طلبين عشوائيين فقط:</strong> طلب واحد يحصل على خصم 10%، وطلب آخر يحصل على توصيل مجاني</p>
-                      <p>• <strong>الإشعارات:</strong> يتم إشعار العملاء عند تطبيق المزايا على طلباتهم</p>
-                      <p>• <strong>العدالة:</strong> كل مدينة لها فرصة للفوز بناءً على أداء سكانها في الطلبات</p>
+                    <h4 className="font-bold text-2xl text-amber-800 dark:text-amber-200 mb-4 flex items-center gap-2">
+                      🎯 نظام المكافآت الذكي للمدن الرائدة
+                      <motion.span
+                        animate={{ rotate: [0, 10, -10, 0] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
+                        ⚡
+                      </motion.span>
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <motion.div 
+                        className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30"
+                        whileHover={{ scale: 1.02 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-emerald-800 dark:text-emerald-200 font-semibold mb-2">🤖 النظام التلقائي الذكي</p>
+                        <p className="text-emerald-700 dark:text-emerald-300">يختار المدن الأكثر نشاطاً في المبيعات والطلبات بذكاء خالص</p>
+                      </motion.div>
+                      
+                      <motion.div 
+                        className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/30"
+                        whileHover={{ scale: 1.02 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-blue-800 dark:text-blue-200 font-semibold mb-2">🎁 مزايا خرافية شهرية</p>
+                        <p className="text-blue-700 dark:text-blue-300">كل شهر مدينة واحدة تفوز بخصم 10% + توصيل مجاني</p>
+                      </motion.div>
+                      
+                      <motion.div 
+                        className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 rounded-xl border border-purple-200/50 dark:border-purple-800/30"
+                        whileHover={{ scale: 1.02 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-purple-800 dark:text-purple-200 font-semibold mb-2">🎲 عشوائية عادلة مدهشة</p>
+                        <p className="text-purple-700 dark:text-purple-300">طلبين عشوائيين: واحد خصم 10% وآخر توصيل مجاني</p>
+                      </motion.div>
+                      
+                      <motion.div 
+                        className="p-4 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 rounded-xl border border-pink-200/50 dark:border-pink-800/30"
+                        whileHover={{ scale: 1.02 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <p className="text-pink-800 dark:text-pink-200 font-semibold mb-2">🔔 إشعارات فورية رائعة</p>
+                        <p className="text-pink-700 dark:text-pink-300">العملاء يُشعرون فوراً عند تطبيق المزايا على طلباتهم</p>
+                      </motion.div>
                     </div>
+                    
+                    <motion.div 
+                      className="mt-6 p-4 bg-gradient-to-r from-yellow-100 via-amber-100 to-orange-100 dark:from-yellow-900/30 dark:via-amber-900/30 dark:to-orange-900/30 rounded-xl border-2 border-yellow-300/50 dark:border-yellow-700/50"
+                      animate={{ 
+                        borderColor: [
+                          "rgba(252, 211, 77, 0.5)",
+                          "rgba(245, 158, 11, 0.7)",
+                          "rgba(252, 211, 77, 0.5)"
+                        ]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <p className="text-yellow-800 dark:text-yellow-200 font-bold text-center flex items-center justify-center gap-2">
+                        ⚖️ <span>نظام عادل 100% - كل مدينة لها فرصة الفوز حسب أداء سكانها!</span> 🏆
+                      </p>
+                    </motion.div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
               {cityDiscounts.length > 0 ? (
                 <div className="space-y-6">
-                  {cityDiscounts.map((discount, index) => (
                     <motion.div 
                       key={discount.id}
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
+                      transition={{ duration: 0.5, delay: index * 0.15 }}
                       className="relative overflow-hidden"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 rounded-xl" />
-                      <div className="relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-emerald-200/50 dark:border-emerald-800/30 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
-                        {/* الشريط العلوي المتدرج */}
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/30 via-blue-500/30 to-purple-500/30 rounded-2xl blur-sm" />
+                      <div className="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border-2 border-emerald-200/70 dark:border-emerald-800/50 rounded-2xl p-8 shadow-2xl hover:shadow-3xl transition-all duration-500 group hover:scale-[1.02]">
                         
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
+                        {/* الشريط العلوي الخرافي */}
+                        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-blue-500 via-purple-500 to-pink-500 rounded-t-2xl" />
+                        
+                        {/* أيقونات متحركة في الخلفية */}
+                        <div className="absolute top-4 right-4 opacity-10">
+                          <motion.div
+                            animate={{ 
+                              rotate: [0, 360],
+                              scale: [1, 1.2, 1]
+                            }}
+                            transition={{ 
+                              duration: 8,
+                              repeat: Infinity,
+                              ease: "linear"
+                            }}
+                          >
+                            <Gift className="h-16 w-16 text-emerald-500" />
+                          </motion.div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center gap-6">
                             <motion.div 
-                              className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full shadow-lg"
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                              transition={{ duration: 0.2 }}
+                              className="p-4 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 rounded-2xl shadow-xl"
+                              whileHover={{ 
+                                scale: 1.15, 
+                                rotate: 10,
+                                boxShadow: "0 20px 40px rgba(16, 185, 129, 0.4)"
+                              }}
+                              transition={{ duration: 0.3 }}
                             >
-                              <MapPin className="h-6 w-6 text-white" />
+                              <MapPin className="h-8 w-8 text-white" />
                             </motion.div>
                             <div>
-                              <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100">
-                                {discount.city_name}
+                              <h3 className="font-bold text-3xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                                🏙️ {discount.city_name}
                               </h3>
-                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                              <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-400 mt-1">
                                 <Calendar className="h-4 w-4" />
-                                <span>شهر {discount.discount_month} - {discount.discount_year}</span>
+                                <span className="font-medium">شهر {discount.discount_month} - {discount.discount_year}</span>
+                                <motion.span 
+                                  className="px-3 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold rounded-full"
+                                  animate={{ 
+                                    boxShadow: [
+                                      "0 0 0 0 rgba(251, 191, 36, 0.7)",
+                                      "0 0 0 10px rgba(251, 191, 36, 0)",
+                                      "0 0 0 0 rgba(251, 191, 36, 0.7)"
+                                    ]
+                                  }}
+                                  transition={{ duration: 2, repeat: Infinity }}
+                                >
+                                  🎉 مدينة الشهر
+                                </motion.span>
                               </div>
                             </div>
                           </div>
                           
-                          <div className="flex flex-col items-end gap-2">
-                            <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 px-4 py-2 text-sm font-bold shadow-md">
-                              <Sparkles className="h-4 w-4 mr-1" />
+                          <div className="flex flex-col items-end gap-3">
+                            <motion.div
+                              className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 px-6 py-3 text-lg font-bold rounded-2xl shadow-xl"
+                              whileHover={{ 
+                                scale: 1.05,
+                                boxShadow: "0 10px 30px rgba(16, 185, 129, 0.4)"
+                              }}
+                            >
+                              <Sparkles className="h-5 w-5 mr-2 inline" />
                               خصم {discount.discount_percentage}%
-                            </Badge>
-                            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 px-4 py-2 text-sm font-bold shadow-md">
-                              <Truck className="h-4 w-4 mr-1" />
+                            </motion.div>
+                            <motion.div
+                              className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white border-0 px-6 py-3 text-lg font-bold rounded-2xl shadow-xl"
+                              whileHover={{ 
+                                scale: 1.05,
+                                boxShadow: "0 10px 30px rgba(59, 130, 246, 0.4)"
+                              }}
+                            >
+                              <Truck className="h-5 w-5 mr-2 inline" />
                               توصيل مجاني
-                            </Badge>
+                            </motion.div>
                           </div>
                         </div>
                         
-                        {/* محتوى التهنئة */}
-                        <div className="bg-gradient-to-r from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 rounded-lg p-4 border border-emerald-200/50 dark:border-emerald-800/30">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg shadow-md">
-                              <PartyPopper className="h-5 w-5 text-white" />
-                            </div>
+                        {/* رسالة التهنئة الخرافية */}
+                        <motion.div 
+                          className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-900/30 dark:via-teal-900/30 dark:to-cyan-900/30 rounded-2xl p-6 border-2 border-emerald-200/70 dark:border-emerald-800/40 mb-6"
+                          whileHover={{ scale: 1.02 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <div className="flex items-start gap-4">
+                            <motion.div 
+                              className="p-3 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-2xl shadow-lg"
+                              animate={{ 
+                                rotate: [0, -5, 5, 0],
+                                scale: [1, 1.1, 1]
+                              }}
+                              transition={{ 
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                              }}
+                            >
+                              <PartyPopper className="h-6 w-6 text-white" />
+                            </motion.div>
                             <div className="flex-1">
-                              <p className="text-emerald-800 dark:text-emerald-200 font-medium leading-relaxed">
-                                🎉 <strong>تهانينا لسكان {discount.city_name}!</strong>
-                              </p>
-                              <p className="text-emerald-700 dark:text-emerald-300 text-sm mt-1">
-                                تم اختياركم كمدينة الشهر للحصول على مزايا خاصة: خصم {discount.discount_percentage}% وتوصيل مجاني!
+                              <motion.p 
+                                className="text-emerald-800 dark:text-emerald-200 font-bold text-xl leading-relaxed mb-2"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.5 }}
+                              >
+                                🎊 <strong>ألف مبروك لأهالي {discount.city_name} الكرام!</strong> 🎊
+                              </motion.p>
+                              <p className="text-emerald-700 dark:text-emerald-300 text-lg">
+                                تم اختياركم كمدينة البطولة لهذا الشهر! استمتعوا بخصم {discount.discount_percentage}% وتوصيل مجاني على طلباتكم المميزة! 🚀✨
                               </p>
                             </div>
                           </div>
+                        </motion.div>
+                        
+                        {/* إحصائيات رائعة */}
+                        <div className="grid grid-cols-2 gap-6">
+                          <motion.div 
+                            className="text-center p-4 bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 rounded-2xl border-2 border-emerald-300/50 dark:border-emerald-700/50"
+                            whileHover={{ 
+                              scale: 1.05,
+                              boxShadow: "0 10px 25px rgba(16, 185, 129, 0.2)"
+                            }}
+                          >
+                            <div className="text-4xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">1</div>
+                            <div className="text-sm text-emerald-700 dark:text-emerald-300 font-semibold">خصم متاح</div>
+                          </motion.div>
+                          <motion.div 
+                            className="text-center p-4 bg-gradient-to-br from-blue-100 to-cyan-100 dark:from-blue-900/40 dark:to-cyan-900/40 rounded-2xl border-2 border-blue-300/50 dark:border-blue-700/50"
+                            whileHover={{ 
+                              scale: 1.05,
+                              boxShadow: "0 10px 25px rgba(59, 130, 246, 0.2)"
+                            }}
+                          >
+                            <div className="text-4xl font-bold text-blue-600 dark:text-blue-400 mb-2">1</div>
+                            <div className="text-sm text-blue-700 dark:text-blue-300 font-semibold">توصيل مجاني</div>
+                          </motion.div>
                         </div>
                         
-                        {/* معلومات إضافية */}
-                        <div className="grid grid-cols-2 gap-4 mt-4">
-                          <div className="text-center p-3 bg-white/60 dark:bg-slate-700/60 rounded-lg border border-slate-200/50 dark:border-slate-600/50">
-                            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">1</div>
-                            <div className="text-xs text-slate-600 dark:text-slate-400">خصم متاح</div>
-                          </div>
-                          <div className="text-center p-3 bg-white/60 dark:bg-slate-700/60 rounded-lg border border-slate-200/50 dark:border-slate-600/50">
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">1</div>
-                            <div className="text-xs text-slate-600 dark:text-slate-400">توصيل مجاني</div>
-                          </div>
-                        </div>
-                        
-                        {/* تأثيرات بصرية */}
-                        <div className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-400/30 rounded-full animate-ping" />
-                        <div className="absolute -bottom-1 -left-1 w-3 h-3 bg-blue-400/30 rounded-full animate-pulse" />
+                        {/* تأثيرات بصرية خرافية */}
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-400/40 rounded-full animate-ping" />
+                        <div className="absolute -bottom-2 -left-2 w-4 h-4 bg-blue-400/40 rounded-full animate-pulse" />
+                        <div className="absolute top-1/2 -left-1 w-3 h-3 bg-purple-400/40 rounded-full animate-bounce" />
                       </div>
                     </motion.div>
                   ))}
                 </div>
               ) : (
                 <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center py-12"
+                  transition={{ duration: 0.8 }}
+                  className="text-center py-16"
                 >
                   <div className="relative">
                     <motion.div 
-                      className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center shadow-lg"
+                      className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-violet-100 via-purple-100 to-fuchsia-100 dark:from-violet-900/40 dark:via-purple-900/40 dark:to-fuchsia-900/40 rounded-full flex items-center justify-center shadow-2xl border-4 border-violet-200/50 dark:border-violet-700/50"
                       animate={{ 
-                        y: [0, -10, 0],
-                        scale: [1, 1.05, 1]
+                        y: [0, -15, 0],
+                        scale: [1, 1.08, 1],
+                        rotate: [0, 3, -3, 0]
                       }}
                       transition={{ 
-                        duration: 3,
+                        duration: 4,
                         repeat: Infinity,
                         ease: "easeInOut"
                       }}
                     >
-                      <Gift className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+                      <Gift className="h-16 w-16 text-violet-500 dark:text-violet-400" />
                     </motion.div>
-                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">
-                      لا توجد خصومات مدن نشطة حالياً
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
-                      سيتم اختيار المدن تلقائياً بناءً على أداء المبيعات والطلبات
-                    </p>
-                    <Button 
-                      onClick={selectRandomCityDiscount}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 px-8 py-3"
-                      size="lg"
+                    
+                    {/* تأثيرات خرافية حول الأيقونة */}
+                    <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+                      {[...Array(6)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="absolute w-2 h-2 bg-violet-400/60 rounded-full"
+                          animate={{
+                            x: [0, Math.cos(i * 60 * Math.PI / 180) * 40],
+                            y: [0, Math.sin(i * 60 * Math.PI / 180) * 40],
+                            opacity: [0, 1, 0],
+                            scale: [0, 1, 0]
+                          }}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            delay: i * 0.5,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      ))}
+                    </div>
+                    
+                    <motion.h3 
+                      className="text-3xl font-bold bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 bg-clip-text text-transparent mb-4"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
                     >
-                      <Zap className="h-5 w-5 mr-2" />
-                      اختيار مدينة للخصم الشهري
-                    </Button>
+                      🌟 لا توجد مدن محظوظة حالياً 🌟
+                    </motion.h3>
+                    
+                    <motion.p 
+                      className="text-slate-500 dark:text-slate-400 mb-8 max-w-md mx-auto text-lg leading-relaxed"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.7 }}
+                    >
+                      النظام الذكي يختار المدن الرائدة تلقائياً بناءً على الأداء المتميز في المبيعات والطلبات ✨
+                    </motion.p>
+                    
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 1, type: "spring", stiffness: 200 }}
+                    >
+                      <Button 
+                        onClick={selectRandomCityDiscount}
+                        className="bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 px-10 py-4 text-lg font-bold rounded-2xl border-0"
+                        size="lg"
+                      >
+                        <motion.div
+                          animate={{ 
+                            rotate: [0, 10, -10, 0],
+                            scale: [1, 1.1, 1]
+                          }}
+                          transition={{ 
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                        >
+                          <Zap className="h-6 w-6 mr-3" />
+                        </motion.div>
+                        🎯 اختيار مدينة البطولة الشهرية
+                      </Button>
+                    </motion.div>
                   </div>
                 </motion.div>
               )}
