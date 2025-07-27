@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
@@ -22,6 +22,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { MobileTableRow, MobileTableCell, MobileTableGrid } from '@/components/ui/mobile-table';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 
 const OrderListItem = ({ 
   order, 
@@ -33,6 +34,7 @@ const OrderListItem = ({
   onEditOrder
 }) => {
   const { hasPermission } = useAuth();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // تحديد لون وأيقونة الحالة - نفس الشبكة
   const getStatusConfig = (status) => {
@@ -107,6 +109,7 @@ const OrderListItem = ({
 
   const handleDelete = () => {
     if (onDeleteOrder && canDelete) {
+      setShowDeleteDialog(false);
       onDeleteOrder([order.id]);
     }
   };
@@ -279,7 +282,7 @@ const OrderListItem = ({
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDelete();
+                  setShowDeleteDialog(true);
                 }}
                 className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600"
               >
@@ -450,7 +453,7 @@ const OrderListItem = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
               className="h-6 w-6 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
               title="حذف"
             >
@@ -459,6 +462,15 @@ const OrderListItem = ({
           )}
         </div>
       </div>
+
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDelete}
+        title="تأكيد حذف الطلب"
+        description={`هل أنت متأكد من حذف الطلب رقم ${order.qr_id || order.order_number}؟ سيتم إرجاع المنتجات المحجوزة إلى المخزون تلقائياً. لا يمكن التراجع عن هذا الإجراء.`}
+        type="danger"
+      />
     </motion.div>
   );
 };
