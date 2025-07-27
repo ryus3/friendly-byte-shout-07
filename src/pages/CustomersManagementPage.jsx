@@ -83,40 +83,79 @@ const CustomersManagementPage = () => {
 
       setCustomers(customersData || []);
       
-      // جلب إحصائيات المدن مباشرة من جدول الطلبات لضمان الدقة
-      const { data: ordersForCityStats } = await supabase
+      // جلب إحصائيات المدن مباشرة من جدول الطلبات بدقة كاملة
+      console.log('🔍 بدء حساب إحصائيات المدن...');
+      
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      const { data: ordersForCityStats, error: ordersError } = await supabase
         .from('orders')
         .select(`
           customer_city,
           final_amount,
           status,
-          created_at
+          created_at,
+          order_number
         `)
         .in('status', ['completed', 'delivered'])
         .not('customer_city', 'is', null)
         .neq('customer_city', '')
-        .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
-        .lte('created_at', new Date().toISOString());
+        .gte('created_at', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
+        .lt('created_at', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
-      // معالجة البيانات وتجميعها حسب المدينة
-      const cityMap = {};
-      ordersForCityStats?.forEach(order => {
-        const city = order.customer_city;
-        if (!cityMap[city]) {
-          cityMap[city] = {
-            id: city,
-            city_name: city,
-            total_orders: 0,
-            total_amount: 0
-          };
-        }
-        cityMap[city].total_orders += 1;
-        cityMap[city].total_amount += parseFloat(order.final_amount || 0);
-      });
+      if (ordersError) {
+        console.error('❌ خطأ في جلب بيانات الطلبات:', ordersError);
+        setCityStats([]);
+      } else {
+        console.log(`📊 تم جلب ${ordersForCityStats?.length || 0} طلب مكتمل للشهر الحالي`);
+        
+        // معالجة وتجميع البيانات بدقة
+        const cityMap = {};
+        let totalOrdersCount = 0;
+        let totalRevenue = 0;
 
-      // تحويل إلى مصفوفة وترتيب حسب عدد الطلبات
-      const cityStatsData = Object.values(cityMap)
-        .sort((a, b) => b.total_orders - a.total_orders)
+        ordersForCityStats?.forEach(order => {
+          const city = order.customer_city;
+          const amount = parseFloat(order.final_amount || 0);
+          
+          if (!cityMap[city]) {
+            cityMap[city] = {
+              id: city,
+              city_name: city,
+              total_orders: 0,
+              total_amount: 0,
+              orders_list: []
+            };
+          }
+          
+          cityMap[city].total_orders += 1;
+          cityMap[city].total_amount += amount;
+          cityMap[city].orders_list.push({
+            order_number: order.order_number,
+            amount: amount,
+            date: order.created_at
+          });
+          
+          totalOrdersCount += 1;
+          totalRevenue += amount;
+        });
+
+        // تحويل إلى مصفوفة وترتيب حسب عدد الطلبات
+        const cityStatsData = Object.values(cityMap)
+          .sort((a, b) => b.total_orders - a.total_orders);
+
+        console.log('📈 نتائج الحساب النهائية:');
+        console.log(`   - إجمالي الطلبات: ${totalOrdersCount}`);
+        console.log(`   - إجمالي المبيعات: ${totalRevenue.toLocaleString('ar')} د.ع`);
+        console.log(`   - عدد المدن: ${cityStatsData.length}`);
+        
+        cityStatsData.forEach((city, index) => {
+          console.log(`   ${index + 1}. ${city.city_name}: ${city.total_orders} طلب - ${city.total_amount.toLocaleString('ar')} د.ع`);
+        });
+
+        setCityStats(cityStatsData);
+      }
         
       setCityStats(cityStatsData || []);
       
