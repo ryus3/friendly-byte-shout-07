@@ -28,6 +28,10 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
     onFiltersChange({ status: value });
   };
 
+  const handlePeriodChange = (value) => {
+    onFiltersChange({ period: value });
+  };
+
   const clearFilters = () => {
     onFiltersChange({ searchTerm: '', status: 'all', period: 'all' });
   };
@@ -43,6 +47,15 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
       { value: 'returned', label: 'راجعة' },
       { value: 'returned_in_stock', label: 'راجع للمخزن' },
       { value: 'archived', label: 'المؤرشفة' },
+  ];
+
+  const periodOptions = [
+    { value: 'all', label: 'جميع الأوقات' },
+    { value: 'today', label: 'اليوم' },
+    { value: 'yesterday', label: 'أمس' },
+    { value: 'week', label: 'هذا الأسبوع' },
+    { value: 'month', label: 'هذا الشهر' },
+    { value: 'year', label: 'هذا العام' },
   ];
 
   if (!hasPermission('view_orders')) return null;
@@ -122,6 +135,19 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
               </SelectContent>
             </Select>
         )}
+        
+        {/* Period Filter */}
+        <Select value={filters.period} onValueChange={handlePeriodChange}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="الفترة الزمنية" />
+          </SelectTrigger>
+          <SelectContent>
+            {periodOptions.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
         <Button variant="outline" className="w-full sm:w-auto" onClick={clearFilters}>
           <Filter className="w-4 h-4 ml-2" /> مسح الفلاتر
         </Button>

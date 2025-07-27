@@ -36,7 +36,7 @@ const OrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [filters, setFilters] = useState({ searchTerm: '', status: 'all', period: 'all' });
+  const [filters, setFilters] = useLocalStorage('ordersFilters', { searchTerm: '', status: 'all', period: 'all' });
   const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid'); // حفظ وضع العرض
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
@@ -169,9 +169,10 @@ const OrdersPage = () => {
   const filteredOrders = useMemo(() => {
     let tempOrders;
     if (filters.status === 'archived') {
-      tempOrders = userOrders.filter(o => o.isArchived);
+      tempOrders = userOrders.filter(o => o.isArchived || o.status === 'completed' || o.status === 'returned_in_stock');
     } else {
-      tempOrders = userOrders.filter(o => !o.isArchived);
+      // إخفاء الطلبات المؤرشفة والمكتملة والراجعة للمخزن من القائمة العادية
+      tempOrders = userOrders.filter(o => !o.isArchived && o.status !== 'completed' && o.status !== 'returned_in_stock');
     }
 
     if (filters.period !== 'all') {
@@ -195,9 +196,12 @@ const OrdersPage = () => {
       
       let matchesStatus = status === 'all' || order.status === status;
       if (status === 'archived') {
-        matchesStatus = !!order.isArchived;
+        matchesStatus = !!order.isArchived || order.status === 'completed' || order.status === 'returned_in_stock';
+      } else if (status === 'completed' || status === 'returned_in_stock') {
+        // إذا تم اختيار البحث عن المكتملة أو الراجعة للمخزن، ابحث فيها حتى لو كانت مؤرشفة
+        matchesStatus = order.status === status;
       } else if (status !== 'all') {
-        matchesStatus = order.status === status && !order.isArchived;
+        matchesStatus = order.status === status && !order.isArchived && order.status !== 'completed' && order.status !== 'returned_in_stock';
       }
 
       return matchesSearch && matchesStatus;
