@@ -83,80 +83,95 @@ const CustomersManagementPage = () => {
 
       setCustomers(customersData || []);
       
-      // 🔥 حل نهائي لمشكلة مبيعات بغداد
-      console.log('=== إصلاح مشكلة مبيعات بغداد ===');
+      // 🔥 الحل النهائي القاطع لمشكلة مبيعات المدن
+      console.log('=== الحل النهائي القاطع لمبيعات المدن ===');
       
-      const { data: completedOrders, error } = await supabase
-        .from('orders')
-        .select('id, order_number, customer_city, final_amount, total_amount, created_at, status, receipt_received')
-        .eq('status', 'completed')
-        .eq('receipt_received', true)
-        .not('customer_city', 'is', null);
+      try {
+        // استعلام مباشر ودقيق
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('id, order_number, customer_city, final_amount, total_amount, created_at')
+          .eq('status', 'completed')
+          .eq('receipt_received', true);
 
-      if (error) {
-        console.error('خطأ في جلب الطلبات:', error);
-        setCityStats([]);
-        return;
-      }
-
-      console.log(`📋 إجمالي الطلبات المكتملة والمستلمة: ${completedOrders?.length || 0}`);
-      
-      // فلترة للشهر الحالي بدقة
-      const now = new Date();
-      const currentMonth = now.getMonth();
-      const currentYear = now.getFullYear();
-      
-      const currentMonthOrders = completedOrders?.filter(order => {
-        const orderDate = new Date(order.created_at);
-        const isCurrentMonth = orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-        
-        if (isCurrentMonth) {
-          console.log(`✅ طلب ${order.order_number}: ${order.customer_city} - ${order.final_amount || order.total_amount} د.ع - ${order.created_at}`);
+        if (ordersError) {
+          console.error('❌ خطأ في جلب الطلبات:', ordersError);
+          setCityStats([]);
+          return;
         }
+
+        console.log(`📊 إجمالي الطلبات المكتملة والمستلمة: ${ordersData?.length || 0}`);
         
-        return isCurrentMonth;
-      }) || [];
-
-      console.log(`📅 طلبات الشهر الحالي (${currentMonth + 1}/${currentYear}): ${currentMonthOrders.length}`);
-
-      // حساب إحصائيات المدن بدقة عالية
-      const citiesMap = new Map();
-      let totalMonthRevenue = 0;
-
-      currentMonthOrders.forEach(order => {
-        const city = order.customer_city?.trim();
-        const amount = parseFloat(order.final_amount || order.total_amount || 0);
+        // تحديد الشهر والسنة الحاليين
+        const today = new Date();
+        const currentMonth = today.getMonth(); // 0-11
+        const currentYear = today.getFullYear();
         
-        if (city && amount > 0) {
-          if (!citiesMap.has(city)) {
-            citiesMap.set(city, { 
-              id: city, 
-              city_name: city, 
-              total_orders: 0, 
-              total_amount: 0 
+        console.log(`📅 الشهر الحالي: ${currentMonth + 1}/${currentYear}`);
+        
+        // فلترة دقيقة للشهر الحالي
+        const currentMonthOrders = ordersData?.filter(order => {
+          if (!order.customer_city) return false;
+          
+          const orderDate = new Date(order.created_at);
+          const orderMonth = orderDate.getMonth();
+          const orderYear = orderDate.getFullYear();
+          
+          const isCurrentMonth = orderMonth === currentMonth && orderYear === currentYear;
+          
+          if (isCurrentMonth) {
+            const amount = order.final_amount || order.total_amount || 0;
+            console.log(`✅ طلب مقبول: ${order.order_number} | ${order.customer_city} | ${amount} د.ع | ${order.created_at}`);
+          }
+          
+          return isCurrentMonth;
+        }) || [];
+
+        console.log(`📈 طلبات الشهر الحالي: ${currentMonthOrders.length}`);
+
+        // حساب إحصائيات دقيقة لكل مدينة
+        const cityMap = new Map();
+        let totalRevenue = 0;
+
+        currentMonthOrders.forEach(order => {
+          const city = order.customer_city.trim();
+          const amount = parseFloat(order.final_amount || order.total_amount || 0);
+          
+          if (!cityMap.has(city)) {
+            cityMap.set(city, {
+              id: city,
+              city_name: city,
+              total_orders: 0,
+              total_amount: 0
             });
           }
           
-          const cityData = citiesMap.get(city);
-          cityData.total_orders++;
+          const cityData = cityMap.get(city);
+          cityData.total_orders += 1;
           cityData.total_amount += amount;
-          totalMonthRevenue += amount;
+          totalRevenue += amount;
           
-          console.log(`📊 ${order.order_number}: ${city} = ${amount.toLocaleString('ar')} د.ع (المجموع: ${cityData.total_amount.toLocaleString('ar')})`);
-        }
-      });
+          console.log(`📊 ${order.order_number}: ${city} +${amount} = ${cityData.total_amount} د.ع (${cityData.total_orders} طلب)`);
+        });
 
-      const finalCityStats = Array.from(citiesMap.values())
-        .sort((a, b) => b.total_orders - a.total_orders);
-      
-      console.log('=== النتيجة النهائية الصحيحة ===');
-      console.log(`💰 إجمالي إيرادات الشهر: ${totalMonthRevenue.toLocaleString('ar')} د.ع`);
-      finalCityStats.forEach(city => {
-        console.log(`🏙️ ${city.city_name}: ${city.total_orders} طلب = ${city.total_amount.toLocaleString('ar')} د.ع`);
-      });
+        // ترتيب حسب عدد الطلبات
+        const sortedCities = Array.from(cityMap.values())
+          .sort((a, b) => b.total_orders - a.total_orders);
+        
+        console.log('=== النتائج النهائية الصحيحة ===');
+        console.log(`💰 إجمالي إيرادات الشهر: ${totalRevenue.toLocaleString('ar')} د.ع`);
+        sortedCities.forEach((city, index) => {
+          console.log(`${index + 1}. ${city.city_name}: ${city.total_orders} طلب = ${city.total_amount.toLocaleString('ar')} د.ع`);
+        });
 
-      setCityStats(finalCityStats);
-      console.log('🎯 تم تحديث إحصائيات المدن بنجاح');
+        setCityStats(sortedCities);
+        console.log('✅ تم تحديث إحصائيات المدن بنجاح');
+        
+      } catch (error) {
+        console.error('❌ خطأ عام:', error);
+        setCityStats([]);
+      }
+
       
       // جلب خصومات المدن الحالية
       const { data: cityDiscountsData } = await supabase

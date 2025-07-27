@@ -214,22 +214,52 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         try {
           console.log('🔍 البحث عن العميل:', formData.phone);
           
-          // تطبيع رقم الهاتف للبحث (إزالة المسافات والرموز)
-          const normalizedPhone = formData.phone.replace(/\D/g, '');
+          // تطبيع رقم الهاتف وإنشاء جميع الصيغ الممكنة
+          const cleanPhone = formData.phone.replace(/\D/g, ''); // إزالة كل شيء عدا الأرقام
           
-          // البحث بعدة أشكال: مع وبدون رمز البلد
-          const searchPatterns = [
-            normalizedPhone, // الرقم كما هو
-            normalizedPhone.startsWith('964') ? normalizedPhone.substring(3) : `964${normalizedPhone}`, // مع/بدون رمز البلد
-            normalizedPhone.startsWith('0') ? normalizedPhone : `0${normalizedPhone}` // مع/بدون الصفر
-          ];
+          const searchPatterns = [];
           
-          console.log('🔍 أنماط البحث:', searchPatterns);
+          // إذا كان الرقم يبدأ بـ 964 (رمز العراق)
+          if (cleanPhone.startsWith('964')) {
+            const localNumber = cleanPhone.substring(3); // إزالة 964
+            searchPatterns.push(
+              cleanPhone,           // 9647728020024
+              localNumber,          // 7728020024
+              `0${localNumber}`,    // 07728020024
+              `+${cleanPhone}`,     // +9647728020024
+              `00${cleanPhone}`     // 009647728020024
+            );
+          }
+          // إذا كان الرقم يبدأ بـ 0
+          else if (cleanPhone.startsWith('0')) {
+            const withoutZero = cleanPhone.substring(1); // إزالة الصفر
+            searchPatterns.push(
+              cleanPhone,                    // 07728020024
+              withoutZero,                   // 7728020024
+              `964${withoutZero}`,          // 9647728020024
+              `+964${withoutZero}`,         // +9647728020024
+              `00964${withoutZero}`         // 009647728020024
+            );
+          }
+          // إذا كان الرقم عادي بدون رمز أو صفر
+          else {
+            searchPatterns.push(
+              cleanPhone,                    // 7728020024
+              `0${cleanPhone}`,             // 07728020024
+              `964${cleanPhone}`,           // 9647728020024
+              `+964${cleanPhone}`,          // +9647728020024
+              `00964${cleanPhone}`          // 009647728020024
+            );
+          }
+          
+          console.log('🔍 جميع أنماط البحث:', searchPatterns);
           
           let customer = null;
           
           // البحث بجميع الأنماط
           for (const pattern of searchPatterns) {
+            console.log(`🔎 البحث برقم: ${pattern}`);
+            
             const { data, error } = await supabase
               .from('customers')
               .select(`
