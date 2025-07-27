@@ -1350,7 +1350,7 @@ export const InventoryProvider = ({ children }) => {
     clearCart, 
     getLowStockProducts: (limit) => getLowStockProducts(limit, allProducts),
     approveAiOrder,
-    updateVariantStock, calculateProfit, requestProfitSettlement,
+    updateVariantStock, calculateProfit, calculateManagerProfit, requestProfitSettlement,
     getEmployeeProfitRules, setEmployeeProfitRule, settleEmployeeProfits,
     updateCapital, addExpense, deleteExpense,
     
