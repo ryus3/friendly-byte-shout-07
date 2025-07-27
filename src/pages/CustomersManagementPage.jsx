@@ -83,12 +83,12 @@ const CustomersManagementPage = () => {
 
       setCustomers(customersData || []);
       
-      // 🔥 حل جذري نهائي لمشكلة المبيعات في المدن
-      console.log('=== بدء الحل الجذري النهائي ===');
+      // 🔥 حل نهائي لمشكلة مبيعات بغداد
+      console.log('=== إصلاح مشكلة مبيعات بغداد ===');
       
-      const { data: allOrders, error } = await supabase
+      const { data: completedOrders, error } = await supabase
         .from('orders')
-        .select('*')
+        .select('id, order_number, customer_city, final_amount, total_amount, created_at, status, receipt_received')
         .eq('status', 'completed')
         .eq('receipt_received', true)
         .not('customer_city', 'is', null);
@@ -99,55 +99,64 @@ const CustomersManagementPage = () => {
         return;
       }
 
-      console.log(`🔍 جميع الطلبات المكتملة المستلمة: ${allOrders?.length || 0}`);
+      console.log(`📋 إجمالي الطلبات المكتملة والمستلمة: ${completedOrders?.length || 0}`);
       
-      // فلترة للشهر الحالي فقط
+      // فلترة للشهر الحالي بدقة
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
       
-      const thisMonthOrders = allOrders?.filter(order => {
+      const currentMonthOrders = completedOrders?.filter(order => {
         const orderDate = new Date(order.created_at);
-        return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-      }) || [];
-
-      console.log(`📅 طلبات ${currentMonth + 1}/${currentYear}: ${thisMonthOrders.length}`);
-
-      // حساب دقيق للمدن
-      const citiesData = {};
-      let monthTotal = 0;
-
-      thisMonthOrders.forEach(order => {
-        const city = order.customer_city;
-        const amount = parseFloat(order.final_amount || order.total_amount || 0);
+        const isCurrentMonth = orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
         
-        if (!citiesData[city]) {
-          citiesData[city] = { 
-            id: city, 
-            city_name: city, 
-            total_orders: 0, 
-            total_amount: 0 
-          };
+        if (isCurrentMonth) {
+          console.log(`✅ طلب ${order.order_number}: ${order.customer_city} - ${order.final_amount || order.total_amount} د.ع - ${order.created_at}`);
         }
         
-        citiesData[city].total_orders++;
-        citiesData[city].total_amount += amount;
-        monthTotal += amount;
+        return isCurrentMonth;
+      }) || [];
+
+      console.log(`📅 طلبات الشهر الحالي (${currentMonth + 1}/${currentYear}): ${currentMonthOrders.length}`);
+
+      // حساب إحصائيات المدن بدقة عالية
+      const citiesMap = new Map();
+      let totalMonthRevenue = 0;
+
+      currentMonthOrders.forEach(order => {
+        const city = order.customer_city?.trim();
+        const amount = parseFloat(order.final_amount || order.total_amount || 0);
         
-        console.log(`📊 ${order.order_number}: ${city} = ${amount.toLocaleString('ar')} د.ع`);
+        if (city && amount > 0) {
+          if (!citiesMap.has(city)) {
+            citiesMap.set(city, { 
+              id: city, 
+              city_name: city, 
+              total_orders: 0, 
+              total_amount: 0 
+            });
+          }
+          
+          const cityData = citiesMap.get(city);
+          cityData.total_orders++;
+          cityData.total_amount += amount;
+          totalMonthRevenue += amount;
+          
+          console.log(`📊 ${order.order_number}: ${city} = ${amount.toLocaleString('ar')} د.ع (المجموع: ${cityData.total_amount.toLocaleString('ar')})`);
+        }
       });
 
-      const finalStats = Object.values(citiesData).sort((a, b) => b.total_orders - a.total_orders);
+      const finalCityStats = Array.from(citiesMap.values())
+        .sort((a, b) => b.total_orders - a.total_orders);
       
       console.log('=== النتيجة النهائية الصحيحة ===');
-      console.log(`💰 إجمالي الشهر: ${monthTotal.toLocaleString('ar')} د.ع`);
-      finalStats.forEach(city => {
+      console.log(`💰 إجمالي إيرادات الشهر: ${totalMonthRevenue.toLocaleString('ar')} د.ع`);
+      finalCityStats.forEach(city => {
         console.log(`🏙️ ${city.city_name}: ${city.total_orders} طلب = ${city.total_amount.toLocaleString('ar')} د.ع`);
       });
 
-      setCityStats(finalStats);
-        
-      setCityStats(cityStatsData || []);
+      setCityStats(finalCityStats);
+      console.log('🎯 تم تحديث إحصائيات المدن بنجاح');
       
       // جلب خصومات المدن الحالية
       const { data: cityDiscountsData } = await supabase
@@ -759,7 +768,7 @@ const CustomersManagementPage = () => {
           </Card>
 
           {/* Enhanced Customers List */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" dir="rtl">
             {filteredCustomers.map((customer, index) => (
               <CustomerCard
                 key={customer.id}

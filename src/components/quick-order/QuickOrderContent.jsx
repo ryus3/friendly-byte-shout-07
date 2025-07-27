@@ -214,24 +214,47 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         try {
           console.log('🔍 البحث عن العميل:', formData.phone);
           
-          const { data: customer, error } = await supabase
-            .from('customers')
-            .select(`
-              *,
-              customer_loyalty (
-                total_points,
-                total_spent,
-                current_tier_id,
-                loyalty_tiers (
-                  name,
-                  discount_percentage
+          // تطبيع رقم الهاتف للبحث (إزالة المسافات والرموز)
+          const normalizedPhone = formData.phone.replace(/\D/g, '');
+          
+          // البحث بعدة أشكال: مع وبدون رمز البلد
+          const searchPatterns = [
+            normalizedPhone, // الرقم كما هو
+            normalizedPhone.startsWith('964') ? normalizedPhone.substring(3) : `964${normalizedPhone}`, // مع/بدون رمز البلد
+            normalizedPhone.startsWith('0') ? normalizedPhone : `0${normalizedPhone}` // مع/بدون الصفر
+          ];
+          
+          console.log('🔍 أنماط البحث:', searchPatterns);
+          
+          let customer = null;
+          
+          // البحث بجميع الأنماط
+          for (const pattern of searchPatterns) {
+            const { data, error } = await supabase
+              .from('customers')
+              .select(`
+                *,
+                customer_loyalty (
+                  total_points,
+                  total_spent,
+                  current_tier_id,
+                  loyalty_tiers (
+                    name,
+                    discount_percentage
+                  )
                 )
-              )
-            `)
-            .eq('phone', formData.phone)
-            .maybeSingle();
+              `)
+              .eq('phone', pattern)
+              .maybeSingle();
+              
+            if (data && !error) {
+              customer = data;
+              console.log(`✅ تم العثور على العميل برقم: ${pattern}`);
+              break;
+            }
+          }
 
-          if (error || !customer) {
+          if (!customer) {
             console.log('❌ لم يتم العثور على العميل');
             setCustomerData(null);
             setLoyaltyDiscount(0);
@@ -242,32 +265,33 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setCustomerData(customer);
           
           // ملء البيانات تلقائياً مع حماية من null
-          if (customer) {
-            setFormData(prev => ({
-              ...prev,
-              name: customer.name || prev.name,
-              city: customer.city || prev.city,
-              address: customer.address || prev.address
-            }));
+          setFormData(prev => ({
+            ...prev,
+            name: customer.name || prev.name,
+            city: customer.city || prev.city,
+            address: customer.address || prev.address
+          }));
 
-            // حساب خصم الولاء
-            const loyaltyData = customer.customer_loyalty;
-            if (loyaltyData && loyaltyData.loyalty_tiers) {
-              const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
-              const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0;
-              const loyaltyDiscountAmount = (currentSubtotal * discountPercentage) / 100;
-              
-              setLoyaltyDiscount(loyaltyDiscountAmount);
-              setDiscount(prev => prev + loyaltyDiscountAmount);
-              
-              console.log(`🎁 خصم الولاء: ${discountPercentage}% = ${loyaltyDiscountAmount} د.ع`);
-              
-              toast({
-                title: "🎉 تم العثور على العميل!",
-                description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${discountPercentage}%`,
-                duration: 3000,
-              });
-            }
+          // حساب وتطبيق خصم الولاء فوراً
+          const loyaltyData = customer.customer_loyalty;
+          if (loyaltyData && loyaltyData.loyalty_tiers) {
+            const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
+            
+            // إعادة حساب الخصم مع السلة الحالية
+            const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
+            const loyaltyDiscountAmount = Math.round((currentSubtotal * discountPercentage) / 100);
+            
+            console.log(`🛒 مجموع السلة: ${currentSubtotal} د.ع`);
+            console.log(`🎁 خصم الولاء: ${discountPercentage}% = ${loyaltyDiscountAmount} د.ع`);
+            
+            setLoyaltyDiscount(loyaltyDiscountAmount);
+            setDiscount(loyaltyDiscountAmount); // تطبيق الخصم مباشرة
+            
+            toast({
+              title: "🎉 تم العثور على العميل!",
+              description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${discountPercentage}%`,
+              duration: 3000,
+            });
           }
 
         } catch (error) {
@@ -276,11 +300,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       } else {
         setCustomerData(null);
         setLoyaltyDiscount(0);
+        setDiscount(0); // إعادة تعيين الخصم عند مسح الرقم
       }
     };
 
     fetchCustomerData();
-  }, [formData.phone, cart]);
+  }, [formData.phone]); // إزالة cart من التبعيات لتجنب التحديث المستمر
+  
+  // تحديث الخصم عند تغيير السلة
+  useEffect(() => {
+    if (customerData?.customer_loyalty?.loyalty_tiers?.discount_percentage && cart.length > 0) {
+      const discountPercentage = customerData.customer_loyalty.loyalty_tiers.discount_percentage;
+      const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + (item.total || 0), 0) : 0;
+      const loyaltyDiscountAmount = Math.round((currentSubtotal * discountPercentage) / 100);
+      
+      setLoyaltyDiscount(loyaltyDiscountAmount);
+      setDiscount(loyaltyDiscountAmount);
+      
+      console.log(`🔄 تحديث الخصم: ${loyaltyDiscountAmount} د.ع`);
+    }
+  }, [cart, customerData]);
   
   
   const [cities, setCities] = useState([]);
