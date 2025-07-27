@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { iraqiProvinces } from '@/lib/iraq-provinces';
 
-const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected }) => {
+const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, partnerSpecificFields, isSubmittingState, isDeliveryPartnerSelected, customerData, loyaltyDiscount }) => {
   
   // اختيار بغداد تلقائياً إذا لم تكن المدينة محددة
   useEffect(() => {
@@ -41,6 +41,39 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
           <Label htmlFor="phone">رقم الهاتف الاساسي</Label>
           <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required className={errors.phone ? 'border-red-500' : ''} disabled={isSubmittingState} />
           {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
+          
+          {/* عرض معلومات العميل والنقاط */}
+          {customerData && (
+            <div className="mt-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-green-600 dark:text-green-400 font-medium">✅ عميل مسجل</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">({customerData.customer_loyalty?.loyalty_tiers?.name || 'عادي'})</span>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">النقاط:</span>
+                  <span className="font-bold text-blue-600 dark:text-blue-400 ml-1">
+                    {customerData.customer_loyalty?.total_points?.toLocaleString('ar') || 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600 dark:text-gray-400">إجمالي الشراء:</span>
+                  <span className="font-bold text-green-600 dark:text-green-400 ml-1">
+                    {customerData.customer_loyalty?.total_spent?.toLocaleString('ar') || 0} د.ع
+                  </span>
+                </div>
+              </div>
+              
+              {loyaltyDiscount > 0 && (
+                <div className="mt-2 p-2 bg-orange-100 dark:bg-orange-900/30 rounded border border-orange-200 dark:border-orange-800">
+                  <span className="text-orange-700 dark:text-orange-300 text-sm font-medium">
+                    🎁 خصم الولاء: {loyaltyDiscount.toLocaleString('ar')} د.ع
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="second_phone">رقم الهاتف الثانوي</Label>

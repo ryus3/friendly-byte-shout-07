@@ -201,8 +201,85 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }
     }
   }, [aiOrderData, clearCart, addToCart]);
+  
   const [errors, setErrors] = useState({});
   const [discount, setDiscount] = useState(0);
+  const [customerData, setCustomerData] = useState(null);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+  
+  // جلب بيانات العميل عند إدخال رقم الهاتف
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      if (formData.phone && formData.phone.length >= 11) {
+        try {
+          console.log('🔍 البحث عن العميل:', formData.phone);
+          
+          const { data: customer, error } = await supabase
+            .from('customers')
+            .select(`
+              *,
+              customer_loyalty (
+                total_points,
+                total_spent,
+                current_tier_id,
+                loyalty_tiers (
+                  name,
+                  discount_percentage
+                )
+              )
+            `)
+            .eq('phone', formData.phone)
+            .single();
+
+          if (error) {
+            console.log('❌ لم يتم العثور على العميل');
+            setCustomerData(null);
+            setLoyaltyDiscount(0);
+            return;
+          }
+
+          console.log('✅ تم العثور على العميل:', customer);
+          setCustomerData(customer);
+          
+          // ملء البيانات تلقائياً
+          setFormData(prev => ({
+            ...prev,
+            name: customer.name || prev.name,
+            city: customer.city || prev.city,
+            address: customer.address || prev.address
+          }));
+
+          // حساب خصم الولاء
+          const loyaltyData = customer.customer_loyalty;
+          if (loyaltyData && loyaltyData.loyalty_tiers) {
+            const discountPercentage = loyaltyData.loyalty_tiers.discount_percentage || 0;
+            const currentSubtotal = Array.isArray(cart) ? cart.reduce((sum, item) => sum + item.total, 0) : 0;
+            const loyaltyDiscountAmount = (currentSubtotal * discountPercentage) / 100;
+            
+            setLoyaltyDiscount(loyaltyDiscountAmount);
+            setDiscount(prev => prev + loyaltyDiscountAmount);
+            
+            console.log(`🎁 خصم الولاء: ${discountPercentage}% = ${loyaltyDiscountAmount} د.ع`);
+            
+            toast({
+              title: "🎉 تم العثور على العميل!",
+              description: `${customer.name} - ${loyaltyData.total_points} نقطة - خصم ${discountPercentage}%`,
+              duration: 3000,
+            });
+          }
+
+        } catch (error) {
+          console.error('خطأ في جلب بيانات العميل:', error);
+        }
+      } else {
+        setCustomerData(null);
+        setLoyaltyDiscount(0);
+      }
+    };
+
+    fetchCustomerData();
+  }, [formData.phone, cart]);
+  
   
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -708,6 +785,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             partnerSpecificFields={partnerSpecificFields}
             isSubmittingState={isSubmittingState}
             isDeliveryPartnerSelected={isDeliveryPartnerSelected}
+            customerData={customerData}
+            loyaltyDiscount={loyaltyDiscount}
           />
           <OrderDetailsForm
             formData={formData}
