@@ -57,8 +57,8 @@ const ProfitsSummaryPage = () => {
   const [selectedOrders, setSelectedOrders] = useState([]);
 
   // تحديد الصلاحيات بناءً على الدور - المدراء يرون كل شيء، الموظفون يرون أرباحهم فقط
-  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin';
-  const canRequestSettlement = user?.role === 'employee' || user?.role === 'deputy';
+  const canViewAll = user?.role === 'admin' || user?.role === 'super_admin' || hasPermission('manage_profit_settlement');
+  const canRequestSettlement = (user?.role === 'employee' || user?.role === 'deputy' || user?.role === 'sales_employee') && hasPermission('request_profit_settlement');
   
   // تطبيق فلتر المعلقة مباشرة للموظفين
   useEffect(() => {

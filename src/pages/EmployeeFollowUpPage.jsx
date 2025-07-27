@@ -112,14 +112,15 @@ const EmployeeFollowUpPage = () => {
             .reduce((sum, inv) => sum + (inv?.total_amount || 0), 0)
         : 0;
 
-    // حساب المستحقات المعلقة - الطلبات التي تم استلام فواتيرها ولم تُسوى بعد
+    // حساب المستحقات المعلقة - أرباح الموظفين التي يجب دفعها لهم
     const pendingDues = relevantOrders
         .filter(order => order.receipt_received === true) // فواتير مستلمة
         .reduce((sum, order) => {
-            const managerProfit = calculateManagerProfit && typeof calculateManagerProfit === 'function' 
-                ? calculateManagerProfit(order) 
-                : 0;
-            return sum + managerProfit;
+            // حساب ربح الموظف من هذا الطلب (وليس ربح المدير)
+            const employeeProfit = (order.items || []).reduce((itemSum, item) => {
+                return itemSum + (item.profit || 0); // ربح الموظف من كل منتج
+            }, 0);
+            return sum + employeeProfit;
         }, 0);
 
     return {
