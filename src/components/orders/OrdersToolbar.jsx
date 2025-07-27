@@ -72,23 +72,22 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
   if (!hasPermission('view_orders')) return null;
 
   return (
-    <div className="bg-card rounded-xl p-4 border">
-      <div className="flex flex-col sm:flex-row items-center gap-4">
+    <div className="bg-card rounded-xl p-3 sm:p-4 border">
+      {/* الصف الأول: QR Scanner + View Mode + Search */}
+      <div className="flex items-center gap-3 mb-3">
         {/* QR Scanner Button */}
-        <div className="flex items-center">
-          <Button 
-            onClick={() => setShowQRScanner(true)}
-            variant="ghost"
-            size="sm"
-            className="h-9 w-9 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl"
-            title="مسح QR Code"
-          >
-            <QrCode className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button 
+          onClick={() => setShowQRScanner(true)}
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 p-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 border-0 rounded-xl flex-shrink-0"
+          title="مسح QR Code"
+        >
+          <QrCode className="h-4 w-4" />
+        </Button>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center border rounded-lg p-1 bg-muted/30">
+        <div className="flex items-center border rounded-lg p-1 bg-muted/30 flex-shrink-0">
           <Button
             variant={viewMode === 'grid' ? 'default' : 'ghost'}
             size="sm"
@@ -107,20 +106,25 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
           </Button>
         </div>
 
-        <div className="relative w-full sm:flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        {/* Search Input */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input 
             placeholder="البحث في الطلبات..." 
             value={filters.searchTerm} 
             onChange={handleSearchChange} 
-            className="pr-10" 
+            className="pr-9 h-9 text-sm" 
           />
         </div>
-        {/* Status Filter - إظهار فلتر الحالات دائماً عند الدخول للأرشيف */}
+      </div>
+
+      {/* الصف الثاني: الفلاتر */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        {/* Status Filter */}
         {(hasPermission('view_all_orders') || filters.status === 'archived') && (
           <Select value={filters.status} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="حالة الطلب" />
+            <SelectTrigger className="w-full sm:w-[160px] h-9 text-sm">
+              <SelectValue placeholder="جميع الحالات" />
             </SelectTrigger>
             <SelectContent>
               {statusOptions.map(option => (
@@ -130,35 +134,40 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
           </Select>
         )}
           
-          {/* Period Filter */}
-          <Select value={filters.period} onValueChange={handlePeriodChange}>
-            <SelectTrigger className="w-full sm:w-[150px]">
-              <SelectValue placeholder="الفترة الزمنية" />
+        {/* Period Filter */}
+        <Select value={filters.period} onValueChange={handlePeriodChange}>
+          <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+            <SelectValue placeholder="جميع الأوقات" />
+          </SelectTrigger>
+          <SelectContent>
+            {periodOptions.map(option => (
+              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Archive Sub-Status Filter */}
+        {filters.status === 'archived' && (
+          <Select value={filters.archiveSubStatus || 'all'} onValueChange={handleArchiveSubStatusChange}>
+            <SelectTrigger className="w-full sm:w-[140px] h-9 text-sm">
+              <SelectValue placeholder="حالة الأرشيف" />
             </SelectTrigger>
             <SelectContent>
-              {periodOptions.map(option => (
+              {archiveSubStatusOptions.map(option => (
                 <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-
-          {/* Archive Sub-Status Filter - only show when in archive */}
-          {filters.status === 'archived' && (
-            <Select value={filters.archiveSubStatus || 'all'} onValueChange={handleArchiveSubStatusChange}>
-              <SelectTrigger className="w-full sm:w-[150px]">
-                <SelectValue placeholder="حالة الأرشيف" />
-              </SelectTrigger>
-              <SelectContent>
-                {archiveSubStatusOptions.map(option => (
-                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+        )}
           
-          <Button variant="outline" className="w-full sm:w-auto" onClick={clearFilters}>
-            <Filter className="w-4 h-4 ml-2" /> مسح الفلاتر
-          </Button>
+        <Button 
+          variant="outline" 
+          className="w-full sm:w-auto h-9 text-sm px-3" 
+          onClick={clearFilters}
+        >
+          <Filter className="w-4 h-4 ml-1" /> 
+          مسح الفلاتر
+        </Button>
       </div>
 
       {/* QR Scanner Dialog */}
