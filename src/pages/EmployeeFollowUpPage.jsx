@@ -62,7 +62,13 @@ const EmployeeFollowUpPage = () => {
       const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;
       const statusMatch = filters.status === 'all' || order.status === filters.status;
       const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
-      const archiveMatch = filters.archived ? true : !order.isarchived; // إذا كان مفعل عرض الأرشيف، اعرض الكل، وإلا اعرض غير المؤرشف فقط
+      
+      // الطلبات المكتملة والمسلمة تعتبر أرشيف تلقائياً
+      const isAutoArchived = order.status === 'completed' || order.status === 'delivered';
+      const archiveMatch = filters.archived 
+        ? true  // عرض الكل إذا كان الأرشيف مفعل
+        : !order.isarchived && !isAutoArchived; // عرض غير المؤرشف والغير مكتمل فقط
+      
       return employeeMatch && statusMatch && archiveMatch && profitStatusMatch;
     }).map(order => ({
       ...order,
@@ -150,6 +156,23 @@ const EmployeeFollowUpPage = () => {
 
   const handleUpdateStatus = async (orderId, newStatus) => {
     await updateOrder(orderId, { status: newStatus });
+  };
+
+  const handleDeleteOrder = async (order) => {
+    try {
+      await deleteOrders([order.id]);
+      toast({ 
+        title: "تم الحذف", 
+        description: `تم حذف الطلب ${order.order_number} وإرجاع المخزون المحجوز.` 
+      });
+      await refetchProducts();
+    } catch (error) {
+      toast({ 
+        title: "خطأ في الحذف", 
+        description: "حدث خطأ أثناء حذف الطلب.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   if (loading) {
@@ -245,7 +268,7 @@ const EmployeeFollowUpPage = () => {
                 onUpdateStatus={handleUpdateStatus}
                 selectedOrders={selectedOrders}
                 setSelectedOrders={setSelectedOrders}
-                onDeleteOrder={(orderIds) => deleteOrders(orderIds)}
+                onDeleteOrder={handleDeleteOrder}
             />
         </div>
 
