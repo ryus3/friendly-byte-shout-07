@@ -63,11 +63,13 @@ const EmployeeFollowUpPage = () => {
       const statusMatch = filters.status === 'all' || order.status === filters.status;
       const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
       
-      // الطلبات المكتملة والمسلمة تعتبر أرشيف تلقائياً
-      const isAutoArchived = order.status === 'completed' || order.status === 'delivered';
-      const archiveMatch = filters.archived 
-        ? true  // عرض الكل إذا كان الأرشيف مفعل
-        : !order.isarchived && !isAutoArchived; // عرض غير المؤرشف والغير مكتمل فقط
+      // الطلبات التي تُعتبر أرشيف (مؤرشفة يدوياً أو تلقائياً)
+      const isAutoArchived = order.status === 'completed' || order.status === 'returned_in_stock';
+      const isManuallyArchived = order.isarchived === true;
+      const isArchived = isAutoArchived || isManuallyArchived;
+      
+      // منطق الفلترة: إذا كان الأرشيف مفعل اعرض المؤرشف فقط، وإلا اعرض غير المؤرشف فقط
+      const archiveMatch = filters.archived ? isArchived : !isArchived;
       
       return employeeMatch && statusMatch && archiveMatch && profitStatusMatch;
     }).map(order => ({
