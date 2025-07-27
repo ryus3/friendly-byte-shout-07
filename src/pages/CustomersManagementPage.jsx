@@ -962,6 +962,7 @@ const CustomersManagementPage = () => {
 
               {cityDiscounts.length > 0 ? (
                 <div className="space-y-6">
+                  {cityDiscounts.map((discount, index) => (
                     <motion.div 
                       key={discount.id}
                       initial={{ opacity: 0, scale: 0.95 }}
