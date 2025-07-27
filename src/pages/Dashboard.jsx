@@ -25,7 +25,6 @@ import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard'
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
-
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
@@ -574,15 +573,13 @@ const Dashboard = () => {
                 <StockMonitoringSystem />
                 
                 <WelcomeHeader user={user} currentTime={currentTime} />
-                
-                {/* كارت طلب المحاسبة للموظفين فقط */}
+                {/* عرض كارت طلب المحاسبة للموظفين فقط، ليس للمديرين */}
                 {!canViewAllData && (
                     <SettlementRequestCard 
                         pendingProfit={employeeProfitsData.personalPendingProfit} 
                         onSettle={() => navigate('/profits-summary')} 
                     />
                 )}
-                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     {allStatCards.slice(0, 8).map((stat, index) => (
                          <motion.div key={stat.key} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>

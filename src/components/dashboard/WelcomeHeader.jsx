@@ -15,7 +15,7 @@ const WelcomeHeader = ({ user, currentTime }) => {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold gradient-text mb-2">مرحباً، {user?.full_name || user?.email}</h1>
-          <p className="text-muted-foreground">إليك نظرة سريعة على أداء {user?.role === 'admin' || user?.role === 'super_admin' ? 'النظام' : 'عملك'}</p>
+          <p className="text-muted-foreground">إليك نظرة سريعة على أداء متجرك</p>
         </div>
         <div className="text-center sm:text-right bg-secondary/50 dark:bg-secondary/20 p-4 rounded-lg">
           <p className="text-lg font-semibold gradient-text">{formattedDate}</p>

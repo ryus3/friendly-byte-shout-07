@@ -373,36 +373,6 @@ const OrdersPage = () => {
     setDialogs(d => ({ ...d, returnReceipt: true }));
   }, []);
 
-  const handleReceiveReceipt = useCallback(async (orderId) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          receipt_received: true,
-          receipt_received_at: new Date().toISOString(),
-          receipt_received_by: user?.id
-        })
-        .eq('id', orderId);
-
-      if (error) throw error;
-
-      toast({
-        title: "تم استلام الفاتورة",
-        description: "تم تحديث الطلب إلى مكتمل بنجاح",
-        variant: "success"
-      });
-
-      await refetchProducts();
-    } catch (error) {
-      console.error('Error receiving receipt:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء استلام الفاتورة",
-        variant: "destructive"
-      });
-    }
-  }, [user?.id, refetchProducts]);
-
   const profitsPagePath = '/profits-summary';
 
   return (
@@ -513,7 +483,6 @@ const OrdersPage = () => {
           onEditOrder={handleEditOrder}
           canEditStatus={hasPermission('manage_orders') || (selectedOrder?.created_by === user?.id)}
           sellerName={selectedOrder ? usersMap.get(selectedOrder.created_by) : null}
-          onReceiveReceipt={handleReceiveReceipt}
         />
 
         <EditOrderDialog

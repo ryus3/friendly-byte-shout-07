@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import StatCard from '@/components/dashboard/StatCard';
 import { 
   User, 
@@ -8,10 +8,8 @@ import {
   TrendingDown, 
   PackageCheck,
   Wallet,
-  TrendingUp,
-  DollarSign
+  TrendingUp
 } from 'lucide-react';
-import { supabase } from '@/lib/customSupabaseClient';
 
 /**
  * عنصر موحد لعرض بيانات الأرباح
@@ -26,32 +24,6 @@ const UnifiedProfitDisplay = ({
   onSettledDuesClick = () => {},
   className = ''
 }) => {
-  const [actualCashBalance, setActualCashBalance] = useState(0);
-
-  // جلب الرصيد النقدي الفعلي
-  useEffect(() => {
-    const fetchActualCashBalance = async () => {
-      try {
-        // جلب رصيد القاصة الرئيسية مباشرة
-        const { data: mainCash, error } = await supabase
-          .from('cash_sources')
-          .select('current_balance')
-          .eq('name', 'القاصة الرئيسية')
-          .single();
-        
-        if (error) {
-          console.error('خطأ في جلب رصيد القاصة الرئيسية:', error);
-          return;
-        }
-
-        setActualCashBalance(mainCash?.current_balance || 0);
-      } catch (error) {
-        console.error('خطأ في جلب الرصيد النقدي الفعلي:', error);
-      }
-    };
-
-    fetchActualCashBalance();
-  }, []);
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -105,15 +77,6 @@ const UnifiedProfitDisplay = ({
       } else {
         // في لوحة التحكم: عرض شامل
         cards.push(
-          {
-            key: 'actual-cash-balance',
-            title: 'الرصيد النقدي الفعلي',
-            value: actualCashBalance,
-            icon: DollarSign,
-            colors: ['cyan-500', 'blue-500'],
-            format: 'currency',
-            description: 'رصيد القاصة الرئيسية'
-          },
           {
             key: 'net-profit',
             title: 'صافي الربح',
