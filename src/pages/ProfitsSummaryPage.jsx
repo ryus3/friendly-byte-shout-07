@@ -282,6 +282,13 @@ const ProfitsSummaryPage = () => {
     return filtered;
   }, [profitData?.detailedProfits, filters, canViewAll, user?.id, allUsers]);
 
+  console.log('📋 بيانات مفلترة:', {
+    canViewAll,
+    filteredCount: filteredDetailedProfits.length,
+    totalProfitData: profitData,
+    filters
+  });
+
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     if (key === 'profitStatus' && value !== 'pending') {

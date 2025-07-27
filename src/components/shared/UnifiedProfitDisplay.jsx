@@ -39,6 +39,8 @@ const UnifiedProfitDisplay = ({
   const buildCards = () => {
     const cards = [];
 
+    console.log('🔧 بناء كروت العرض:', { profitData, canViewAll, displayMode });
+
     if (canViewAll) {
       // للمدير: عرض بيانات النظام الكاملة
       if (displayMode === 'financial-center') {
@@ -47,7 +49,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'net-system-profit',
             title: 'صافي ربح النظام',
-            value: profitData.netSystemProfit || 0,
+            value: profitData.netProfit || 0,
             icon: Wallet,
             colors: ['emerald-600', 'teal-600'],
             format: 'currency',
@@ -56,7 +58,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-manager-profits',
             title: 'أرباح المؤسسة',
-            value: profitData.totalManagerProfits || 0,
+            value: profitData.managerProfitFromEmployees || 0,
             icon: TrendingUp,
             colors: ['blue-600', 'indigo-600'],
             format: 'currency',
@@ -65,7 +67,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-employee-profits',
             title: 'أرباح الموظفين',
-            value: profitData.totalEmployeeProfits || 0,
+            value: (profitData.detailedProfits || []).reduce((sum, p) => sum + p.profit, 0),
             icon: Users,
             colors: ['purple-600', 'violet-600'],
             format: 'currency',
@@ -78,7 +80,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'net-profit',
             title: 'صافي الربح',
-            value: profitData.netSystemProfit || 0,
+            value: profitData.netProfit || 0,
             icon: User,
             colors: ['green-500', 'emerald-500'],
             format: 'currency'
@@ -86,7 +88,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'manager-profit-from-employees',
             title: 'أرباح من الموظفين',
-            value: profitData.totalManagerProfits || 0,
+            value: profitData.managerProfitFromEmployees || 0,
             icon: Users,
             colors: ['indigo-500', 'violet-500'],
             format: 'currency',
@@ -104,7 +106,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-settled-dues',
             title: 'المستحقات المدفوعة',
-            value: profitData.settledDues || 0,
+            value: profitData.totalSettledDues || 0,
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',
@@ -118,7 +120,7 @@ const UnifiedProfitDisplay = ({
         {
           key: 'my-total-profit',
           title: 'إجمالي أرباحي',
-          value: profitData.personalTotalProfit || 0,
+          value: profitData.totalPersonalProfit || 0,
           icon: User,
           colors: ['green-500', 'emerald-500'],
           format: 'currency'
@@ -132,7 +134,9 @@ const UnifiedProfitDisplay = ({
         key: 'pending-profit',
         title: 'الأرباح المعلقة',
         value: canViewAll 
-          ? profitData.totalSystemProfit - profitData.settledDues 
+          ? (profitData.detailedProfits || [])
+              .filter(p => (p.profitStatus || 'pending') === 'pending')
+              .reduce((sum, p) => sum + p.profit, 0)
           : profitData.personalPendingProfit || 0,
         icon: Hourglass,
         colors: ['yellow-500', 'amber-500'],
@@ -143,7 +147,9 @@ const UnifiedProfitDisplay = ({
         key: 'settled-profit',
         title: 'الأرباح المستلمة',
         value: canViewAll 
-          ? profitData.settledDues 
+          ? (profitData.detailedProfits || [])
+              .filter(p => p.profitStatus === 'settled')
+              .reduce((sum, p) => sum + p.profit, 0)
           : profitData.personalSettledProfit || 0,
         icon: CheckCircle,
         colors: ['blue-500', 'sky-500'],
@@ -152,6 +158,7 @@ const UnifiedProfitDisplay = ({
       }
     );
 
+    console.log('✅ تم بناء الكروت:', cards.map(c => ({ key: c.key, value: c.value })));
     return cards;
   };
 

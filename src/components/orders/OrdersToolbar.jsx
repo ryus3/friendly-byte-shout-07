@@ -32,8 +32,12 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
     onFiltersChange({ period: value });
   };
 
+  const handleArchiveSubStatusChange = (value) => {
+    onFiltersChange({ archiveSubStatus: value });
+  };
+
   const clearFilters = () => {
-    onFiltersChange({ searchTerm: '', status: 'all', period: 'all' });
+    onFiltersChange({ searchTerm: '', status: 'all', period: 'all', archiveSubStatus: 'all' });
   };
   
   const statusOptions = [
@@ -56,6 +60,13 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
     { value: 'week', label: 'هذا الأسبوع' },
     { value: 'month', label: 'هذا الشهر' },
     { value: 'year', label: 'هذا العام' },
+  ];
+
+  const archiveSubStatusOptions = [
+    { value: 'all', label: 'جميع الحالات' },
+    { value: 'completed', label: 'مكتمل' },
+    { value: 'returned_in_stock', label: 'راجع للمخزن' },
+    { value: 'cancelled', label: 'ملغي' },
   ];
 
   if (!hasPermission('view_orders')) return null;
@@ -118,22 +129,36 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
             </SelectContent>
           </Select>
         )}
-        
-        {/* Period Filter */}
-        <Select value={filters.period} onValueChange={handlePeriodChange}>
-          <SelectTrigger className="w-full sm:w-[150px]">
-            <SelectValue placeholder="الفترة الزمنية" />
-          </SelectTrigger>
-          <SelectContent>
-            {periodOptions.map(option => (
-              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <Button variant="outline" className="w-full sm:w-auto" onClick={clearFilters}>
-          <Filter className="w-4 h-4 ml-2" /> مسح الفلاتر
-        </Button>
+          
+          {/* Period Filter */}
+          <Select value={filters.period} onValueChange={handlePeriodChange}>
+            <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectValue placeholder="الفترة الزمنية" />
+            </SelectTrigger>
+            <SelectContent>
+              {periodOptions.map(option => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Archive Sub-Status Filter - only show when in archive */}
+          {filters.status === 'archived' && (
+            <Select value={filters.archiveSubStatus || 'all'} onValueChange={handleArchiveSubStatusChange}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="حالة الأرشيف" />
+              </SelectTrigger>
+              <SelectContent>
+                {archiveSubStatusOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
+          <Button variant="outline" className="w-full sm:w-auto" onClick={clearFilters}>
+            <Filter className="w-4 h-4 ml-2" /> مسح الفلاتر
+          </Button>
       </div>
 
       {/* QR Scanner Dialog */}

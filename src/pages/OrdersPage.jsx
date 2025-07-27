@@ -36,7 +36,7 @@ const OrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const [filters, setFilters] = useLocalStorage('ordersFilters', { searchTerm: '', status: 'all', period: 'all' });
+  const [filters, setFilters] = useLocalStorage('ordersFilters', { searchTerm: '', status: 'all', period: 'all', archiveSubStatus: 'all' });
   const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid'); // حفظ وضع العرض
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
@@ -116,10 +116,10 @@ const OrdersPage = () => {
     const highlightOrder = params.get('highlight');
     
     if (statusFilter) {
-      setFilters(prev => ({ ...prev, status: statusFilter, period: 'all' }));
+      setFilters(prev => ({ ...prev, status: statusFilter, period: 'all', archiveSubStatus: 'all' }));
     }
     if (trackingNumber) {
-      setFilters(prev => ({ ...prev, searchTerm: trackingNumber, period: 'all', status: 'all' }));
+      setFilters(prev => ({ ...prev, searchTerm: trackingNumber, period: 'all', status: 'all', archiveSubStatus: 'all' }));
     }
     
     if (highlightOrder && orders) {
@@ -182,7 +182,7 @@ const OrdersPage = () => {
     }
     
     return tempOrders.filter(order => {
-      const { searchTerm, status } = filters;
+      const { searchTerm, status, archiveSubStatus } = filters;
       const lowerCaseSearchTerm = searchTerm.toLowerCase();
       const customerInfo = order.customerinfo || {
         name: order.customer_name,
@@ -199,8 +199,12 @@ const OrdersPage = () => {
       let matchesStatus = true;
       
       if (status === 'archived') {
-        // في الأرشيف، إظهار جميع الطلبات المؤرشفة/المكتملة/الراجعة للمخزن
-        matchesStatus = true;
+        // في الأرشيف، تطبيق فلتر فرعي للحالة
+        if (archiveSubStatus === 'all') {
+          matchesStatus = true; // إظهار جميع الطلبات المؤرشفة
+        } else {
+          matchesStatus = order.status === archiveSubStatus;
+        }
       } else if (status === 'all') {
         // إظهار جميع الطلبات في الحالة المحددة (أرشيف أم لا)
         matchesStatus = true;
