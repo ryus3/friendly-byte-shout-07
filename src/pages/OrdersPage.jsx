@@ -12,6 +12,7 @@ import { ArrowRight, DollarSign, RefreshCw, Loader2, Printer, Archive, Users, Sh
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
+import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -199,24 +200,13 @@ const OrdersPage = () => {
       let matchesStatus = true;
       
       if (status === 'archived') {
-        // في الأرشيف، تطبيق فلتر فرعي للحالة
-        if (archiveSubStatus === 'all') {
-          matchesStatus = true; // إظهار جميع الطلبات المؤرشفة
-        } else {
+        // في الأرشيف، تطبيق فلتر فرعي للحالة داخل الأرشيف فقط
+        if (archiveSubStatus !== 'all') {
           matchesStatus = order.status === archiveSubStatus;
         }
-      } else if (status === 'all') {
-        // إظهار جميع الطلبات في الحالة المحددة (أرشيف أم لا)
-        matchesStatus = true;
-      } else {
-        // فلترة حسب الحالة المحددة
-        if (filters.status === 'archived') {
-          // في صفحة الأرشيف، يمكن فلترة حسب الحالة الفرعية
-          matchesStatus = order.status === status;
-        } else {
-          // في الصفحة العادية، فلترة حسب الحالة مع استبعاد المؤرشفة
-          matchesStatus = order.status === status && !order.isArchived && order.status !== 'completed' && order.status !== 'returned_in_stock';
-        }
+      } else if (status !== 'all') {
+        // فلترة حسب الحالة المحددة فقط خارج الأرشيف
+        matchesStatus = order.status === status;
       }
 
       return matchesSearch && matchesStatus;
@@ -354,15 +344,11 @@ const OrdersPage = () => {
            </div>
             {hasPermission('view_profits') && (
               <div className="col-span-1 lg:col-span-1">
-                <StatCard 
-                  title="ملخص الأرباح" 
-                  value={myProfits}
-                  format="currency"
-                  icon={DollarSign} 
-                  colors={['green-500', 'emerald-500']}
-                  onClick={() => navigate(profitsPagePath)}
-                  periods={{ all: 'كل الأرباح' }}
-                  currentPeriod="all"
+                <UnifiedProfitDisplay
+                  displayMode="order-tracking"
+                  canViewAll={hasPermission('view_all_profits')}
+                  useRealTimeData={true}
+                  className="col-span-1"
                 />
               </div>
             )}
