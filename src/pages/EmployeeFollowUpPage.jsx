@@ -167,6 +167,7 @@ const EmployeeFollowUpPage = () => {
         title: "تم الحذف", 
         description: `تم حذف الطلب ${order.order_number} وإرجاع المخزون المحجوز.` 
       });
+      // إعادة جلب البيانات فوراً لتحديث المخزون
       await refetchProducts();
     } catch (error) {
       toast({ 
