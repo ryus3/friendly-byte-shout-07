@@ -3122,7 +3122,7 @@ export type Database = {
       }
       release_stock_item: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
-        Returns: undefined
+        Returns: Json
       }
       select_random_city_for_monthly_discount: {
         Args: Record<PropertyKey, never>
