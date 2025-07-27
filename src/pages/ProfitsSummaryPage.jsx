@@ -153,7 +153,7 @@ const ProfitsSummaryPage = () => {
                 profitStatus = profitRecord.settled_at ? 'settled' : 'pending';
             } else {
                 employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
-                profitStatus = 'settled'; // مستلمة لأن الفاتورة مستلمة
+                profitStatus = 'pending'; // معلق إذا لم يكن هناك سجل في الأرباح
             }
             
             const managerProfitShare = calculateManagerProfit(order);
@@ -244,12 +244,14 @@ const ProfitsSummaryPage = () => {
         console.log('📊 نتائج الحساب:', {
             deliveredOrdersCount: deliveredOrders.length,
             pendingOrdersCount: pendingDeliveredOrders.length,
+            detailedProfitsCount: detailedProfits.length,
             managerProfitFromEmployees,
             totalRevenue,
             netProfit,
             totalPersonalProfit,
             personalPendingProfit,
-            personalSettledProfit
+            personalSettledProfit,
+            detailedProfitsSample: detailedProfits.slice(0, 2)
         });
         
         return { 
@@ -307,7 +309,9 @@ const ProfitsSummaryPage = () => {
     filters,
     showCheckbox: canRequestSettlement,
     totalProfitData: profitData,
-    userPermissions: Object.keys(user || {}).filter(k => user[k] === true)
+    userPermissions: Object.keys(user || {}).filter(k => user[k] === true),
+    filteredSample: filteredDetailedProfits.slice(0, 2),
+    allDetailedProfits: profitData?.detailedProfits?.length
   });
 
   const handleFilterChange = useCallback((key, value) => {
