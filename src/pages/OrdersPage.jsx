@@ -148,8 +148,9 @@ const OrdersPage = () => {
   const usersMap = useMemo(() => {
     const map = new Map();
     (allUsers || []).forEach(u => {
-      if (u && u.id) {
-        map.set(u.id, u.full_name || u.name || 'مستخدم غير معروف');
+      if (u && u.user_id) {
+        // استخدام user_id للربط مع created_by
+        map.set(u.user_id, u.full_name || u.name || 'غير معروف');
       }
     });
     return map;

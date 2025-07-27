@@ -38,13 +38,19 @@ const EmployeeFollowUpPage = () => {
 
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u && (u.role === 'employee' || u.role === 'deputy' || u.role === 'admin'));
+    // تضمين جميع المستخدمين النشطين بغض النظر عن الدور
+    return allUsers.filter(u => u && u.status === 'active');
   }, [allUsers]);
 
   const usersMap = useMemo(() => {
     const map = new Map();
     if (allUsers && Array.isArray(allUsers)) {
-      allUsers.forEach(u => map.set(u.id, u.full_name));
+      allUsers.forEach(u => {
+        if (u && u.user_id) {
+          // استخدام user_id للربط بدلاً من id
+          map.set(u.user_id, u.full_name || u.name || 'غير معروف');
+        }
+      });
     }
     return map;
   }, [allUsers]);
@@ -196,7 +202,7 @@ const EmployeeFollowUpPage = () => {
               <SelectContent>
                 <SelectItem value="all">كل الموظفين</SelectItem>
                 {employees.map(emp => (
-                  <SelectItem key={emp.id} value={emp.id}>{emp.full_name}</SelectItem>
+                  <SelectItem key={emp.user_id} value={emp.user_id}>{emp.full_name || emp.name || 'غير معروف'}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
