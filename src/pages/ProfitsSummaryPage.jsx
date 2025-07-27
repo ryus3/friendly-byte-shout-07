@@ -123,7 +123,7 @@ const ProfitsSummaryPage = () => {
 
         // معالجة الطلبات المستلمة
         deliveredOrders.forEach(order => {
-            const orderCreator = allUsers.find(u => u.id === order.created_by);
+            const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
             if (!orderCreator) return;
 
             // البحث عن سجل الأرباح في قاعدة البيانات
@@ -152,7 +152,7 @@ const ProfitsSummaryPage = () => {
 
         // معالجة الطلبات المعلقة (موصلة بدون فواتير)
         pendingDeliveredOrders.forEach(order => {
-            const orderCreator = allUsers.find(u => u.id === order.created_by);
+            const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
             if (!orderCreator) return;
 
             const employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
@@ -207,7 +207,7 @@ const ProfitsSummaryPage = () => {
         const netProfit = grossProfit - totalExpenses;
 
         // حساب أرباح المدير الشخصية
-        const personalProfits = detailedProfits.filter(p => p.created_by === user.id);
+        const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
         const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
       
         const personalPendingProfit = personalProfits
@@ -251,7 +251,7 @@ const ProfitsSummaryPage = () => {
             generalExpenses,
             employeeSettledDues
         };
-    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
+    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
@@ -263,7 +263,7 @@ const ProfitsSummaryPage = () => {
     
     // إذا لم يكن المستخدم مدير، يرى أرباحه فقط
     if (!canViewAll) {
-        filtered = filtered.filter(p => p.created_by === user?.id);
+        filtered = filtered.filter(p => p.created_by === user?.user_id || p.created_by === user?.id);
     } else if (filters.employeeId !== 'all') {
       if (filters.employeeId === 'employees') {
         filtered = filtered.filter(p => {
@@ -280,7 +280,7 @@ const ProfitsSummaryPage = () => {
     }
 
     return filtered;
-  }, [profitData?.detailedProfits, filters, canViewAll, user?.id, allUsers]);
+  }, [profitData?.detailedProfits, filters, canViewAll, user?.user_id, user?.id, allUsers]);
 
   console.log('📋 بيانات مفلترة:', {
     canViewAll,
