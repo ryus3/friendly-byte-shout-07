@@ -10,6 +10,7 @@ import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
 import NotificationsRealtimeProvider from '@/contexts/NotificationsRealtimeContext.jsx';
+import { OrdersRealtimeProvider } from '@/contexts/OrdersRealtimeContext.jsx';
 
 export const AppProviders = ({ children }) => {
   return (
@@ -17,19 +18,21 @@ export const AppProviders = ({ children }) => {
       <SupabaseProvider>
         <UnifiedAuthProvider>
           <NotificationsRealtimeProvider>
-            <NotificationsProvider>
-              <NotificationsSystemProvider>
-                <VariantsProvider>
-                  <InventoryProvider>
-                    <ProfitsProvider>
-                      <AlWaseetProvider>
-                          <AiChatProvider>
-                            {children}
-                          </AiChatProvider>
-                      </AlWaseetProvider>
-                    </ProfitsProvider>
-                  </InventoryProvider>
-                </VariantsProvider>
+             <NotificationsProvider>
+               <NotificationsSystemProvider>
+                 <OrdersRealtimeProvider>
+                   <VariantsProvider>
+                     <InventoryProvider>
+                       <ProfitsProvider>
+                         <AlWaseetProvider>
+                             <AiChatProvider>
+                             {children}
+                           </AiChatProvider>
+                       </AlWaseetProvider>
+                     </ProfitsProvider>
+                   </InventoryProvider>
+                 </VariantsProvider>
+               </OrdersRealtimeProvider>
               </NotificationsSystemProvider>
             </NotificationsProvider>
           </NotificationsRealtimeProvider>

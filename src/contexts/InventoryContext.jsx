@@ -365,11 +365,12 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [setProducts]);
 
-  // إضافة realtime subscription للمخزون
+  // إضافة realtime subscriptions للمخزون والطلبات
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
+    // Realtime للمخزون
+    const inventoryChannel = supabase
       .channel('inventory-changes')
       .on(
         'postgres_changes',
@@ -380,16 +381,51 @@ export const InventoryProvider = ({ children }) => {
         },
         (payload) => {
           console.log('🔄 تحديث مخزون فوري:', payload);
-          // تحديث المخزون فوراً بدون إعادة تحميل كامل
           refreshInventoryData();
         }
       )
       .subscribe();
 
+    // Realtime للطلبات
+    const ordersChannel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('🔄 تحديث طلبات فوري:', payload);
+          refreshOrders();
+        }
+      )
+      .subscribe();
+
+    // Realtime لعناصر الطلبات
+    const orderItemsChannel = supabase
+      .channel('order-items-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_items'
+        },
+        (payload) => {
+          console.log('🔄 تحديث عناصر طلبات فوري:', payload);
+          refreshOrders();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(inventoryChannel);
+      supabase.removeChannel(ordersChannel);  
+      supabase.removeChannel(orderItemsChannel);
     };
-  }, [user, refreshInventoryData]);
+  }, [user, refreshInventoryData, refreshOrders]);
 
   const fetchInitialData = useCallback(async () => {
     if (!user) {
