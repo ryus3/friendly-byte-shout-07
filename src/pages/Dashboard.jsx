@@ -586,13 +586,17 @@ const Dashboard = () => {
                 {!canViewAllData && (
                     <EmployeeStatsCards 
                         stats={{
-                            pendingProfits: employeeProfitsData.personalPendingProfit || 0,
-                            totalOrders: visibleOrders.length,
-                            deliveredOrders: visibleOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length,
-                            pendingOrders: visibleOrders.filter(o => o.status === 'pending').length
+                            totalOrders: visibleOrders?.length || 0,
+                            pendingOrders: visibleOrders?.filter(o => o.status === 'pending' || o.status === 'shipped')?.length || 0,
+                            completedOrders: visibleOrders?.filter(o => o.status === 'completed' || o.status === 'delivered')?.length || 0,
+                            totalRevenue: visibleOrders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0,
+                            pendingProfits: profitsLocalData.pending?.filter(p => p.employee_id === user?.id)?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0,
+                            settledProfits: profitsLocalData.settled?.filter(p => p.employee_id === user?.id)?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0,
+                            totalProfits: [...(profitsLocalData.pending || []), ...(profitsLocalData.settled || [])]?.filter(p => p.employee_id === user?.id)?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0
                         }}
-                        userRole="employee"
-                        canRequestSettlement={true}
+                        userRole={user?.role || 'employee'}
+                        canRequestSettlement={hasPermission('request_profit_settlement')}
+                        onPendingProfitsClick={() => setIsPendingProfitsOpen(true)}
                     />
                 )}
                 

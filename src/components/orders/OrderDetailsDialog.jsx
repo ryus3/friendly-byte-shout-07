@@ -75,6 +75,13 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
     }
   };
 
+  const handleReceiveReceipt = () => {
+    if (onReceiveReceipt) {
+      onReceiveReceipt(order.id);
+      onOpenChange(false);
+    }
+  };
+
   const canEditOrder = order.status === 'pending';
 
   return (
@@ -196,8 +203,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
             </Button>
           )}
           {/* زر استلام الفاتورة للطلبات المسلمة */}
-          {order.status === 'delivered' && !order.receipt_received && onReceiveReceipt && (
-            <Button onClick={handleReceiveReceipt} variant="outline">
+          {(order.status === 'delivered' || order.status === 'completed') && !order.receipt_received && onReceiveReceipt && (
+            <Button onClick={handleReceiveReceipt} variant="outline" className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200">
               <Receipt className="w-4 h-4 ml-2" />
               استلام الفاتورة
             </Button>

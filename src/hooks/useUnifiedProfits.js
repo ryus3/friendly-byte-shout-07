@@ -127,8 +127,8 @@ export const useUnifiedProfits = (userId = null) => {
       }
 
       // 6. إحصائيات إضافية
-      const settledOrders = systemProfits?.filter(p => p.status === 'settled').length || 0;
-      const pendingOrders = pendingProfits.length || 0;
+      const settledOrdersCount = systemProfits?.filter(p => p.status === 'settled').length || 0;
+      const pendingOrdersCount = allPendingProfits.length || 0;
       const settledDues = systemProfits?.filter(p => p.status === 'settled').reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
 
       // 7. تجميع جميع البيانات
@@ -146,8 +146,8 @@ export const useUnifiedProfits = (userId = null) => {
         // بيانات إضافية
         totalExpenses,
         settledDues,
-        pendingOrders,
-        settledOrders
+        pendingOrders: pendingOrdersCount,
+        settledOrders: settledOrdersCount
       });
 
     } catch (error) {
