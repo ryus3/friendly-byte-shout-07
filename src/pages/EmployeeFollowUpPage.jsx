@@ -21,7 +21,7 @@ import { Label } from '@/components/ui/label';
 const EmployeeFollowUpPage = () => {
   const { allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  const { orders, loading, calculateManagerProfit, updateOrder, refetchProducts, settlementInvoices, deleteOrders } = useInventory();
+  const { orders, loading, calculateManagerProfit, calculateProfit, updateOrder, refetchProducts, settlementInvoices, deleteOrders } = useInventory();
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   
   const [filters, setFilters] = useState({
@@ -112,13 +112,13 @@ const EmployeeFollowUpPage = () => {
             .reduce((sum, inv) => sum + (inv?.total_amount || 0), 0)
         : 0;
 
-    // حساب المستحقات المعلقة - أرباح الموظفين التي يجب دفعها لهم
+    // حساب المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى بعد
     const pendingDues = relevantOrders
         .filter(order => order.receipt_received === true) // فواتير مستلمة
         .reduce((sum, order) => {
-            // حساب ربح الموظف من هذا الطلب (وليس ربح المدير)
+            // حساب ربح الموظف من هذا الطلب باستخدام calculateProfit
             const employeeProfit = (order.items || []).reduce((itemSum, item) => {
-                return itemSum + (item.profit || 0); // ربح الموظف من كل منتج
+                return itemSum + calculateProfit(item, order.created_by);
             }, 0);
             return sum + employeeProfit;
         }, 0);
