@@ -1,24 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  DollarSign, 
   ShoppingCart, 
   TrendingUp, 
   Clock, 
   CheckCircle,
-  AlertTriangle,
-  Bot,
-  MapPin,
-  Star,
-  Receipt
+  AlertTriangle
 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import EmployeeSettlementDialog from '@/components/dashboard/EmployeeSettlementDialog';
 
-const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, onPendingProfitsClick }) => {
-  const [showSettlementDialog, setShowSettlementDialog] = useState(false);
+const EmployeeStatsCards = ({ stats, userRole }) => {
 
   if (!stats) return null;
 
@@ -71,33 +63,7 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, onPendingPr
     }
   ];
 
-  const profitCards = [
-    {
-      title: "أرباحي المعلقة",
-      value: `${(stats.pendingProfits || 0).toLocaleString()} د.ع`,
-      icon: Clock,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50",
-      description: "أرباح في انتظار التحاسب",
-      onClick: onPendingProfitsClick
-    },
-    {
-      title: "أرباحي المستلمة",
-      value: `${(stats.settledProfits || 0).toLocaleString()} د.ع`,
-      icon: CheckCircle,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      description: "أرباح تم تسليمها"
-    },
-    {
-      title: "إجمالي أرباحي",
-      value: `${(stats.totalProfits || 0).toLocaleString()} د.ع`,
-      icon: DollarSign,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-      description: "مجموع جميع أرباحي"
-    }
-  ];
+  // تم حذف كروت الأرباح المالية - سيتم عرضها في صفحة ملخص الأرباح
 
   return (
     <div className="space-y-6">
@@ -135,49 +101,10 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, onPendingPr
         </div>
       </div>
 
-      {/* كروت الأرباح */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-foreground flex items-center">
-            <DollarSign className="ml-2 h-5 w-5 text-green-600" />
-            أرباحي المالية
-          </h2>
-          {canRequestSettlement && stats.pendingProfits > 0 && (
-            <Button 
-              onClick={() => setShowSettlementDialog(true)}
-              size="sm"
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Receipt className="ml-2 h-4 w-4" />
-              طلب تحاسب
-            </Button>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {profitCards.map((card, index) => (
-            <motion.div
-              key={card.title}
-              custom={index + 4}
-              initial="hidden"
-              animate="visible"
-              variants={cardVariants}
-            >
-              <StatCard
-                title={card.title}
-                value={card.value}
-                icon={card.icon}
-                description={card.description}
-                onClick={card.onClick}
-                className="hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-              />
-            </motion.div>
-          ))}
-        </div>
-      </div>
+      {/* تم حذف قسم كروت الأرباح المالية من لوحة تحكم الموظف */}
 
       {/* إشعارات مهمة */}
-      {(stats.pendingOrders > 5 || stats.pendingProfits > 100000) && (
+      {stats.pendingOrders > 5 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -191,20 +118,8 @@ const EmployeeStatsCards = ({ stats, userRole, canRequestSettlement, onPendingPr
             {stats.pendingOrders > 5 && (
               <p>• لديك {stats.pendingOrders} طلب معلق يحتاج متابعة</p>
             )}
-            {stats.pendingProfits > 100000 && (
-              <p>• لديك أرباح معلقة بقيمة {stats.pendingProfits.toLocaleString()} د.ع</p>
-            )}
           </div>
         </motion.div>
-      )}
-
-      {/* مربع حوار طلب التحاسب */}
-      {canRequestSettlement && (
-        <EmployeeSettlementDialog
-          open={showSettlementDialog}
-          onOpenChange={setShowSettlementDialog}
-          pendingProfits={stats.pendingProfits}
-        />
       )}
     </div>
   );
