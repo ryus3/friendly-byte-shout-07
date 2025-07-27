@@ -269,25 +269,41 @@ const OrdersPage = () => {
         return; // Simply return without showing toast
     }
     
-    // التأكد من أن ordersToDelete هو array
-    const ordersArray = Array.isArray(ordersToDelete) ? ordersToDelete : [ordersToDelete];
+    // إذا تم تمرير طلب واحد (object)، تحويله لـ array
+    let ordersArray;
+    if (Array.isArray(ordersToDelete)) {
+      ordersArray = ordersToDelete;
+    } else if (ordersToDelete && typeof ordersToDelete === 'object' && ordersToDelete.id) {
+      // تم تمرير طلب واحد
+      ordersArray = [ordersToDelete.id];
+    } else {
+      // تم تمرير ID مباشرة
+      ordersArray = [ordersToDelete];
+    }
     
-    const localOrdersToDelete = ordersArray.filter(orderId => {
+    // فلترة الطلبات المحلية أو الطلبات قيد التجهيز (pending)
+    const ordersToDeleteFiltered = ordersArray.filter(orderId => {
         const order = orders.find(o => o.id === orderId);
-        return order && order.delivery_partner === 'محلي';
+        return order && (order.delivery_partner === 'محلي' || order.status === 'pending');
     });
 
-    if (localOrdersToDelete.length < ordersArray.length) {
+    if (ordersToDeleteFiltered.length < ordersArray.length) {
         toast({
             title: 'تنبيه',
-            description: 'يمكن حذف الطلبات المحلية فقط. تم تجاهل الطلبات من شركات التوصيل.',
+            description: 'يمكن حذف الطلبات المحلية أو قيد التجهيز فقط. تم تجاهل باقي الطلبات.',
             variant: 'default'
         });
     }
 
-    if (localOrdersToDelete.length > 0) {
-        await deleteOrdersContext(localOrdersToDelete);
+    if (ordersToDeleteFiltered.length === 0) {
+        return;
     }
+
+    for (const orderId of ordersToDeleteFiltered) {
+        await deleteOrdersContext([orderId]);
+    }
+    
+    toast({ title: 'تم الحذف', description: `تم حذف ${ordersToDeleteFiltered.length} طلبات.`, variant: 'success' });
     
     setSelectedOrders([]);
     setDialogs(d => ({ ...d, deleteAlert: false }));

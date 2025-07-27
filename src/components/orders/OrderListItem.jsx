@@ -276,6 +276,18 @@ const OrderListItem = ({
               </Button>
             )}
 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewOrder?.(order);
+              }}
+              className="h-8 w-8 p-0 rounded-lg bg-green-50 hover:bg-green-100 text-green-600"
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+
             {canDelete && hasPermission('delete_orders') && (
               <Button
                 variant="ghost"
