@@ -14,6 +14,7 @@ import CustomerCard from '@/components/customers/CustomerCard';
 import SimpleCustomersToolbar from '@/components/customers/SimpleCustomersToolbar';
 import CustomerDetailsDialog from '@/components/customers/CustomerDetailsDialog';
 import EnhancedExportDialog from '@/components/customers/EnhancedExportDialog';
+import TopProvincesDialog from '@/components/customers/TopProvincesDialog';
 
 const CustomersManagementPage = () => {
   const [customers, setCustomers] = useState([]);
@@ -82,13 +83,40 @@ const CustomersManagementPage = () => {
 
       setCustomers(customersData || []);
       
-      // جلب إحصائيات المدن
-      const { data: cityStatsData } = await supabase
-        .from('city_order_stats')
-        .select('*')
-        .eq('month', new Date().getMonth() + 1)
-        .eq('year', new Date().getFullYear())
-        .order('total_orders', { ascending: false });
+      // جلب إحصائيات المدن مباشرة من جدول الطلبات لضمان الدقة
+      const { data: ordersForCityStats } = await supabase
+        .from('orders')
+        .select(`
+          customer_city,
+          final_amount,
+          status,
+          created_at
+        `)
+        .in('status', ['completed', 'delivered'])
+        .not('customer_city', 'is', null)
+        .neq('customer_city', '')
+        .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString())
+        .lte('created_at', new Date().toISOString());
+
+      // معالجة البيانات وتجميعها حسب المدينة
+      const cityMap = {};
+      ordersForCityStats?.forEach(order => {
+        const city = order.customer_city;
+        if (!cityMap[city]) {
+          cityMap[city] = {
+            id: city,
+            city_name: city,
+            total_orders: 0,
+            total_amount: 0
+          };
+        }
+        cityMap[city].total_orders += 1;
+        cityMap[city].total_amount += parseFloat(order.final_amount || 0);
+      });
+
+      // تحويل إلى مصفوفة وترتيب حسب عدد الطلبات
+      const cityStatsData = Object.values(cityMap)
+        .sort((a, b) => b.total_orders - a.total_orders)
         
       setCityStats(cityStatsData || []);
       
@@ -730,155 +758,289 @@ const CustomersManagementPage = () => {
           )}
         </TabsContent>
 
-        {/* Cities Stats Tab */}
-        <TabsContent value="cities" className="space-y-4">
-          <Card className="overflow-hidden bg-gradient-to-br from-white/95 to-blue-50/80 dark:from-slate-900/95 dark:to-blue-900/30 border-0 shadow-2xl">
-            <CardHeader className="relative bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white pb-8">
-              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8ZGVmcz4KICAgIDxwYXR0ZXJuIGlkPSJncmlkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMSkiIHN0cm9rZS13aWR0aD0iMSIvPgogICAgPC9wYXR0ZXJuPgogIDwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIiAvPgo8L3N2Zz4=')] opacity-20" />
-              <div className="relative z-10">
-                <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                  <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                    <BarChart3 className="h-6 w-6" />
+        {/* Cities Stats Tab - كارت عالمي احترافي مذهل */}
+        <TabsContent value="cities" className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          >
+            <Card className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white shadow-2xl hover:shadow-3xl transition-all duration-700 hover:scale-[1.01] border-0">
+              <CardHeader className="relative z-10 pb-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-3xl font-bold flex items-center gap-4 mb-3">
+                      <motion.div 
+                        className="p-3 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg"
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <BarChart3 className="h-8 w-8" />
+                      </motion.div>
+                      تحليل أداء المدن العراقية
+                    </CardTitle>
+                    <p className="text-blue-100 text-lg leading-relaxed mb-2">
+                      إحصائيات شاملة ودقيقة لأداء المبيعات في جميع المدن
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-blue-200">
+                      <Sparkles className="h-4 w-4" />
+                      <span>البيانات محسوبة مباشرة من الطلبات المكتملة والمُسلّمة</span>
+                    </div>
                   </div>
-                  إحصائيات المدن هذا الشهر
-                </CardTitle>
-                <p className="text-blue-100 mt-2">أداء المدن والمناطق في الطلبات والمبيعات</p>
-              </div>
-              
-              {/* عناصر تزيينية */}
-              <div className="absolute top-4 right-4 w-12 h-12 bg-white/10 rounded-full animate-pulse" />
-              <div className="absolute bottom-2 left-8 w-8 h-8 bg-purple-400/20 rounded-full animate-pulse delay-1000" />
-              <div className="absolute top-1/2 right-1/3 w-6 h-6 bg-indigo-300/20 rounded-full animate-pulse delay-500" />
-            </CardHeader>
-            
-            <CardContent className="p-6">
-              {cityStats.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {cityStats.map((city, index) => (
-                    <motion.div 
-                      key={city.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: index * 0.1 }}
-                      className="relative overflow-hidden group"
-                    >
-                      {/* شريط الترتيب العلوي */}
-                      <div className={`absolute top-0 left-0 w-full h-1 ${
-                        index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                        index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                        index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-800' :
-                        'bg-gradient-to-r from-blue-400 to-purple-600'
-                      }`} />
-                      
-                      <div className="relative bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <motion.div 
-                              className={`p-3 rounded-full shadow-md ${
-                                index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
-                                index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-600' :
-                                index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
-                                'bg-gradient-to-br from-blue-500 to-purple-600'
-                              }`}
-                              whileHover={{ scale: 1.1, rotate: 5 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <MapPin className="h-5 w-5 text-white" />
-                            </motion.div>
-                            <div>
-                              <h3 className="font-bold text-lg text-slate-800 dark:text-slate-100">
-                                {city.city_name}
-                              </h3>
-                              <div className="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400">
-                                <TrendingUp className="h-3 w-3" />
-                                <span>المرتبة {index + 1} | طلبات مكتملة فقط</span>
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <Badge 
-                            className={`${
-                              index === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white' :
-                              index === 1 ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white' :
-                              index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white' :
-                              'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-                            } border-0 px-3 py-1 text-sm font-bold shadow-md`}
-                          >
-                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'} #{index + 1}
-                          </Badge>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/30 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
-                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
-                              {city.total_orders}
-                            </div>
-                            <div className="text-xs text-blue-700 dark:text-blue-300 font-medium">طلب</div>
-                          </div>
-                          
-                          <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-900/30 rounded-lg border border-emerald-200/30 dark:border-emerald-800/30">
-                            <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mb-1 truncate" title={formatCurrency(city.total_amount)}>
-                              {formatCurrency(city.total_amount)}
-                            </div>
-                            <div className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">مبيعات</div>
-                          </div>
-                        </div>
-                        
-                        {/* مؤشر الأداء */}
-                        <div className="mt-4 w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
-                          <motion.div 
-                            className={`h-full ${
-                              index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
-                              index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
-                              index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-800' :
-                              'bg-gradient-to-r from-blue-400 to-purple-600'
-                            }`}
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.min((city.total_orders / (cityStats[0]?.total_orders || 1)) * 100, 100)}%` }}
-                            transition={{ duration: 1, delay: index * 0.1 }}
-                          />
-                        </div>
-                        
-                        {/* تأثيرات بصرية */}
-                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-400/30 rounded-full animate-pulse" />
-                        <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-purple-400/30 rounded-full animate-ping" />
-                      </div>
-                    </motion.div>
-                  ))}
+                  
+                  <TopProvincesDialog
+                    trigger={
+                      <motion.button
+                        className="flex items-center gap-3 px-6 py-3 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-xl border border-white/30 font-bold transition-all duration-300 shadow-lg hover:shadow-xl"
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Eye className="h-5 w-5" />
+                        التقرير التفصيلي المتكامل
+                      </motion.button>
+                    }
+                  />
                 </div>
-              ) : (
+                
+                {/* عناصر تزيينية محسنة */}
                 <motion.div 
+                  className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.1, 1],
+                    opacity: [0.3, 0.6, 0.3]
+                  }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                />
+                <motion.div 
+                  className="absolute -bottom-6 -left-6 w-32 h-32 bg-purple-400/20 rounded-full"
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    opacity: [0.2, 0.5, 0.2]
+                  }}
+                  transition={{ duration: 6, repeat: Infinity, delay: 1 }}
+                />
+                <motion.div 
+                  className="absolute top-1/2 right-1/4 w-16 h-16 bg-pink-300/20 rounded-full"
+                  animate={{ 
+                    y: [0, -10, 0],
+                    opacity: [0.3, 0.7, 0.3]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, delay: 0.5 }}
+                />
+                
+                {/* شعاع ضوئي متحرك */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-purple-500/10" />
+                <motion.div 
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '200%' }}
+                  transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
+                />
+              </CardHeader>
+              
+              <CardContent className="p-8 bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 backdrop-blur-sm">
+                {/* معلومات تفسيرية مهمة */}
+                <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-center py-12"
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="mb-6 p-4 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/50"
                 >
-                  <div className="relative">
+                  <div className="flex items-center gap-3 mb-3">
+                    <motion.div
+                      className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-lg"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                    >
+                      <Sparkles className="h-5 w-5 text-white" />
+                    </motion.div>
+                    <h4 className="text-lg font-bold text-slate-800 dark:text-slate-200">شرح البيانات والحسابات</h4>
+                  </div>
+                  
+                  <div className="grid md:grid-cols-2 gap-4 text-sm text-slate-600 dark:text-slate-400">
+                    <div className="space-y-2">
+                      <p>• <strong className="text-blue-600 dark:text-blue-400">المصدر:</strong> حسابات مباشرة من قاعدة البيانات</p>
+                      <p>• <strong className="text-blue-600 dark:text-blue-400">التصفية:</strong> الطلبات المكتملة والمُسلّمة فقط</p>
+                      <p>• <strong className="text-blue-600 dark:text-blue-400">الفترة:</strong> الشهر الحالي ({new Date().toLocaleDateString('ar', {month: 'long', year: 'numeric'})})</p>
+                    </div>
+                    <div className="space-y-2">
+                      <p>• <strong className="text-emerald-600 dark:text-emerald-400">المبيعات:</strong> مجموع قيم الطلبات النهائية</p>
+                      <p>• <strong className="text-emerald-600 dark:text-emerald-400">الترتيب:</strong> حسب عدد الطلبات (الأعلى أولاً)</p>
+                      <p>• <strong className="text-emerald-600 dark:text-emerald-400">التحديث:</strong> فوري ومطابق لسجلات النظام</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {cityStats.length > 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.4 }}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                  >
+                    {cityStats.slice(0, 6).map((city, index) => (
+                      <motion.div 
+                        key={city.id}
+                        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.5, delay: index * 0.1 }}
+                        className="relative overflow-hidden group"
+                      >
+                        {/* شريط الترتيب العلوي مع تدرج محسن */}
+                        <div className={`absolute top-0 left-0 w-full h-1 ${
+                          index === 0 ? 'bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600' :
+                          index === 1 ? 'bg-gradient-to-r from-gray-300 via-gray-400 to-gray-500' :
+                          index === 2 ? 'bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700' :
+                          'bg-gradient-to-r from-blue-400 via-blue-500 to-purple-600'
+                        }`} />
+                        
+                        <div className="relative bg-white dark:bg-slate-800 rounded-xl p-6 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.03] hover:-translate-y-2 border border-slate-200/50 dark:border-slate-700/50">
+                          <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-3">
+                              <motion.div 
+                                className={`p-3 rounded-xl shadow-lg ${
+                                  index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' :
+                                  index === 1 ? 'bg-gradient-to-br from-gray-400 to-gray-600' :
+                                  index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
+                                  'bg-gradient-to-br from-blue-500 to-purple-600'
+                                }`}
+                                whileHover={{ scale: 1.15, rotate: 10 }}
+                                transition={{ duration: 0.3 }}
+                              >
+                                <MapPin className="h-5 w-5 text-white" />
+                              </motion.div>
+                              <div>
+                                <h3 className="font-bold text-xl text-slate-800 dark:text-slate-100 mb-1">
+                                  {city.city_name}
+                                </h3>
+                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                  <TrendingUp className="h-4 w-4" />
+                                  <span className="font-medium">المرتبة #{index + 1}</span>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <Badge 
+                              className={`${
+                                index === 0 ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-yellow-500/25' :
+                                index === 1 ? 'bg-gradient-to-r from-gray-500 to-gray-600 text-white shadow-gray-500/25' :
+                                index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-white shadow-amber-500/25' :
+                                'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-blue-500/25'
+                              } border-0 px-3 py-1 text-sm font-bold shadow-lg`}
+                            >
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '🏅'}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/30 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
+                              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-1">
+                                {city.total_orders}
+                              </div>
+                              <div className="text-xs text-blue-700 dark:text-blue-300 font-medium">طلب مكتمل</div>
+                            </div>
+                            
+                            <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-green-100 dark:from-emerald-900/20 dark:to-green-900/30 rounded-lg border border-emerald-200/30 dark:border-emerald-800/30">
+                              <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mb-1 truncate" title={formatCurrency(city.total_amount)}>
+                                {formatCurrency(city.total_amount)}
+                              </div>
+                              <div className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">إجمالي المبيعات</div>
+                            </div>
+                          </div>
+                          
+                          {/* مؤشر الأداء المحسن */}
+                          <div className="mt-4">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">مؤشر الأداء</span>
+                              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                                {Math.min((city.total_orders / (cityStats[0]?.total_orders || 1)) * 100, 100).toFixed(0)}%
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                              <motion.div 
+                                className={`h-full ${
+                                  index === 0 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' :
+                                  index === 1 ? 'bg-gradient-to-r from-gray-400 to-gray-600' :
+                                  index === 2 ? 'bg-gradient-to-r from-amber-600 to-amber-800' :
+                                  'bg-gradient-to-r from-blue-400 to-purple-600'
+                                }`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min((city.total_orders / (cityStats[0]?.total_orders || 1)) * 100, 100)}%` }}
+                                transition={{ duration: 1.5, delay: index * 0.1, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* تأثيرات بصرية محسنة */}
+                          <div className="absolute -top-2 -right-2 w-4 h-4 bg-blue-400/20 rounded-full animate-pulse" />
+                          <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-purple-400/20 rounded-full animate-ping" />
+                          
+                          {/* تأثير ضوئي عند التمرير */}
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl" />
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }}
+                    className="text-center py-16"
+                  >
                     <motion.div 
-                      className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center shadow-lg"
+                      className="w-32 h-32 mx-auto mb-6 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-full flex items-center justify-center shadow-xl"
                       animate={{ 
                         y: [0, -10, 0],
-                        scale: [1, 1.05, 1]
+                        scale: [1, 1.05, 1],
+                        rotate: [0, 5, -5, 0]
                       }}
                       transition={{ 
-                        duration: 3,
+                        duration: 4,
                         repeat: Infinity,
                         ease: "easeInOut"
                       }}
                     >
-                      <BarChart3 className="h-12 w-12 text-slate-400 dark:text-slate-500" />
+                      <BarChart3 className="h-16 w-16 text-slate-400 dark:text-slate-500" />
                     </motion.div>
-                    <h3 className="text-xl font-bold text-slate-700 dark:text-slate-300 mb-2">
-                      لا توجد إحصائيات للمدن هذا الشهر
-                    </h3>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                      ستظهر إحصائيات المدن تلقائياً عند وجود طلبات ومبيعات
+                    <motion.h3 
+                      className="text-2xl font-bold text-slate-700 dark:text-slate-300 mb-3"
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      لا توجد بيانات للمدن هذا الشهر
+                    </motion.h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-lg max-w-md mx-auto">
+                      ستظهر إحصائيات المدن تلقائياً عند اكتمال طلبات جديدة
                     </p>
-                  </div>
-                </motion.div>
-              )}
-            </CardContent>
-          </Card>
+                  </motion.div>
+                )}
+
+                {/* رابط التقرير التفصيلي */}
+                {cityStats.length > 6 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.8 }}
+                    className="mt-8 text-center"
+                  >
+                    <TopProvincesDialog
+                      trigger={
+                        <motion.button
+                          className="inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          <Eye className="h-5 w-5" />
+                          عرض جميع المدن ({cityStats.length}) والتحليل المتقدم
+                          <Sparkles className="h-4 w-4" />
+                        </motion.button>
+                      }
+                    />
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </TabsContent>
 
         {/* City Discounts Tab */}
