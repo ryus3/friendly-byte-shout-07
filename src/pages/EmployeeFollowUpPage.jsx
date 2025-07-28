@@ -472,9 +472,13 @@ const EmployeeFollowUpPage = () => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة (من جدول التسويات)
-    const paidDues = settlementInvoices && Array.isArray(settlementInvoices)
-      ? settlementInvoices.reduce((sum, inv) => sum + (inv?.total_amount || 0), 0)
+    // المستحقات المدفوعة (من المصاريف المحاسبية)
+    const paidDues = expenses && Array.isArray(expenses)
+      ? expenses.filter(expense => 
+          expense.category === 'مستحقات الموظفين' && 
+          expense.expense_type === 'system' && 
+          expense.status === 'approved'
+        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
       : 0;
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى

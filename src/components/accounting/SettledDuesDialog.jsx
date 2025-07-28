@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -172,95 +173,93 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-[95vw] sm:max-w-6xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
+          <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CheckCircle className="w-5 h-5 text-green-500" />
             المستحقات المدفوعة
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm sm:text-base">
             عرض وإدارة فواتير التحاسب المكتملة للموظفين
           </DialogDescription>
         </DialogHeader>
         
         {/* فلاتر */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">الموظف</label>
-            <Select value={filters.employeeId} onValueChange={(value) => setFilters(prev => ({ ...prev, employeeId: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الموظف" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الموظفين</SelectItem>
-                {employees.map(employee => (
-                  <SelectItem key={employee.user_id} value={employee.user_id}>
-                    {employee.full_name || employee.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">فترة التاريخ</label>
-            <DateRangePicker
-              date={filters.dateRange}
-              onDateChange={(range) => setFilters(prev => ({ ...prev, dateRange: range }))}
-            />
+        <div className="px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">الموظف</label>
+              <Select value={filters.employeeId} onValueChange={(value) => setFilters(prev => ({ ...prev, employeeId: value }))}>
+                <SelectTrigger className="h-9 sm:h-10">
+                  <SelectValue placeholder="اختر الموظف" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">جميع الموظفين</SelectItem>
+                  {employees.map(employee => (
+                    <SelectItem key={employee.user_id} value={employee.user_id}>
+                      {employee.full_name || employee.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">فترة التاريخ</label>
+              <DateRangePicker
+                date={filters.dateRange}
+                onDateChange={(range) => setFilters(prev => ({ ...prev, dateRange: range }))}
+                className="h-9 sm:h-10"
+              />
+            </div>
           </div>
         </div>
 
         {/* إجمالي المبلغ */}
-        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center mb-4">
-          <p className="text-sm text-muted-foreground">إجمالي المستحقات المدفوعة</p>
-          <p className="text-2xl font-bold text-green-600">{totalAmount.toLocaleString()} د.ع</p>
+        <div className="mx-4 sm:mx-6 p-3 sm:p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center mb-4">
+          <p className="text-xs sm:text-sm text-muted-foreground">إجمالي المستحقات المدفوعة</p>
+          <p className="text-xl sm:text-2xl font-bold text-green-600">{totalAmount.toLocaleString()} د.ع</p>
+          <p className="text-xs text-muted-foreground mt-1">عدد الفواتير: {filteredInvoices.length}</p>
         </div>
 
-        {/* الجدول */}
-        <ScrollArea className="h-[400px] w-full border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>رقم الفاتورة</TableHead>
-                <TableHead>اسم الموظف</TableHead>
-                <TableHead>المبلغ</TableHead>
-                <TableHead>تاريخ التسوية</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        {/* الجدول - responsive */}
+        <div className="flex-1 px-4 sm:px-6 pb-4 sm:pb-6 overflow-hidden">
+          <ScrollArea className="h-full border rounded-lg">
+            {/* عرض mobile */}
+            <div className="block sm:hidden">
               {filteredInvoices.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    لا توجد مستحقات مدفوعة لعرضها
-                  </TableCell>
-                </TableRow>
+                <div className="p-8 text-center text-muted-foreground">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                  <p className="text-lg font-medium">لا توجد مستحقات مدفوعة</p>
+                  <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                </div>
               ) : (
-                filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
-                    <TableCell className="font-medium">{invoice.employee_name}</TableCell>
-                    <TableCell className="text-green-600 font-bold">
-                      {invoice.settlement_amount?.toLocaleString()} د.ع
-                    </TableCell>
-                    <TableCell>
-                      {invoice.settlement_date ? 
-                        format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
-                        'غير محدد'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <Badge className="bg-green-100 text-green-800 border-green-200">
-                        مكتملة
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                <div className="space-y-3 p-3">
+                  {filteredInvoices.map((invoice) => (
+                    <Card key={invoice.id} className="p-4 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold text-sm">{invoice.employee_name}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-green-600">{invoice.settlement_amount?.toLocaleString()} د.ع</p>
+                          <p className="text-xs text-muted-foreground">
+                            {invoice.settlement_date ? 
+                              format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                              'غير محدد'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t">
+                        <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                          مكتملة
+                        </Badge>
                         <Button
                           variant="outline"
                           size="sm"
+                          className="text-xs h-8"
                           onClick={() => {
                             // فتح نافذة معاينة الفاتورة مع التفاصيل الكاملة
                             const details = `=== فاتورة التحاسب ===
@@ -269,24 +268,102 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
 المبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع
 تاريخ التسوية: ${invoice.settlement_date ? format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) : 'غير محدد'}
 الوصف: ${invoice.description}
-الحالة: تم التحاسب بنجاح`;
+الحالة: تم التحاسب بنجاح
+
+=== تفاصيل الفاتورة ===
+المعرف: ${invoice.id}
+البيانات الإضافية: ${JSON.stringify(invoice.metadata, null, 2)}`;
                             
                             alert(details);
                           }}
                         >
-                          معاينة الفاتورة
+                          معاينة
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                    </Card>
+                  ))}
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </ScrollArea>
+            </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            {/* عرض desktop */}
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>رقم الفاتورة</TableHead>
+                    <TableHead>اسم الموظف</TableHead>
+                    <TableHead>المبلغ</TableHead>
+                    <TableHead>تاريخ التسوية</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>الإجراءات</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredInvoices.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <CheckCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p className="text-lg font-medium">لا توجد مستحقات مدفوعة لعرضها</p>
+                        <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredInvoices.map((invoice) => (
+                      <TableRow key={invoice.id}>
+                        <TableCell className="font-mono">{invoice.invoice_number}</TableCell>
+                        <TableCell className="font-medium">{invoice.employee_name}</TableCell>
+                        <TableCell className="text-green-600 font-bold">
+                          {invoice.settlement_amount?.toLocaleString()} د.ع
+                        </TableCell>
+                        <TableCell>
+                          {invoice.settlement_date ? 
+                            format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                            'غير محدد'
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                            مكتملة
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                // فتح نافذة معاينة الفاتورة مع التفاصيل الكاملة
+                                const details = `=== فاتورة التحاسب ===
+رقم الفاتورة: ${invoice.invoice_number}
+الموظف: ${invoice.employee_name}
+المبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع
+تاريخ التسوية: ${invoice.settlement_date ? format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) : 'غير محدد'}
+الوصف: ${invoice.description}
+الحالة: تم التحاسب بنجاح
+
+=== تفاصيل الفاتورة ===
+المعرف: ${invoice.id}
+البيانات الإضافية: ${JSON.stringify(invoice.metadata, null, 2)}`;
+                                
+                                alert(details);
+                              }}
+                            >
+                              معاينة الفاتورة
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
+        </div>
+
+        <DialogFooter className="p-4 sm:p-6 pt-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto">
             إغلاق
           </Button>
         </DialogFooter>

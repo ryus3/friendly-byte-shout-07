@@ -224,6 +224,7 @@ export const InventoryProvider = ({ children }) => {
           vendor_name: expense.vendor_name || null,
           receipt_number: expense.receipt_number || null,
           status: expense.status || 'approved',
+          metadata: expense.metadata || {},
           created_by: user?.user_id
         })
         .select()
@@ -1263,18 +1264,27 @@ export const InventoryProvider = ({ children }) => {
       }
 
       // 2. إضافة المصروف
+      const invoiceNumber = `INV-${Date.now()}`;
       await addExpense({
         date: new Date().toISOString(),
         category: 'مستحقات الموظفين',
         description: `دفع مستحقات الموظف ${employeeName}`,
         amount: amount,
+        vendor_name: employeeName,
+        receipt_number: invoiceNumber,
         expense_type: 'system',
-        status: 'approved'
+        status: 'approved',
+        metadata: {
+          settlement_type: 'employee_profit',
+          employee_id: employeeId,
+          employee_name: employeeName,
+          order_ids: orderIds,
+          orders_count: orderIds.length
+        }
       });
 
       // 3. تسجيل التسوية في الإشعارات
       const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
-      const invoiceNumber = `INV-${Date.now()}`;
       
       // إشعار للمديرين
       const { error: adminNotificationError } = await supabase
