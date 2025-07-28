@@ -33,7 +33,16 @@ export const useUnifiedProfits = (userId = null) => {
       setLoading(true);
       setError(null);
 
-      // 1. جلب إجمالي الأرباح من النظام
+      // استخدام النظام المحسن للحسابات المالية
+      const { data: enhancedData, error: enhancedError } = await supabase
+        .rpc('calculate_enhanced_main_cash_balance');
+
+      if (enhancedError) throw enhancedError;
+
+      // البيانات المحسنة
+      const enhanced = enhancedData?.[0] || {};
+      
+      // 1. جلب إجمالي الأرباح من النظام للعرض التفصيلي
       const { data: systemProfits, error: systemError } = await supabase
         .from('profits')
         .select(`
@@ -46,16 +55,7 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (systemError) throw systemError;
 
-      // 2. جلب المصاريف العامة (باستثناء مستحقات الموظفين)
-      const { data: expenses, error: expensesError } = await supabase
-        .from('expenses')
-        .select('amount, category')
-        .eq('status', 'approved')
-        .neq('category', 'مستحقات الموظفين');
-
-      if (expensesError) throw expensesError;
-
-      // 3. جلب الطلبات المكتملة (سواء تم استلام الفاتورة أم لا)
+      // 2. جلب الطلبات المكتملة
       const { data: completedOrders, error: ordersError } = await supabase
         .from('orders')
         .select('id, status, receipt_received')
@@ -66,17 +66,17 @@ export const useUnifiedProfits = (userId = null) => {
       const completedOrderIds = completedOrders?.map(o => o.id) || [];
       const receiptReceivedOrderIds = completedOrders?.filter(o => o.receipt_received).map(o => o.id) || [];
       
-      // 4. حساب البيانات العامة - الأرباح من الطلبات المكتملة
+      // 3. حساب البيانات للعرض (باستخدام النتائج المحسنة)
       const completedProfits = systemProfits?.filter(p => completedOrderIds.includes(p.order_id)) || [];
       const pendingProfits = systemProfits?.filter(p => !completedOrderIds.includes(p.order_id)) || [];
       
-      const totalSystemProfit = completedProfits?.reduce((sum, p) => sum + (p.profit_amount || 0), 0) || 0;
-      const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
+      // استخدام النتائج المحسنة من الدالة الجديدة
+      const totalSystemProfit = Number(enhanced.gross_profit || 0); // الربح الخام الصحيح
+      const totalEmployeeProfits = Number(enhanced.employee_profits || 0);
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
-      // صافي الأرباح = أرباح الطلبات المكتملة - المصاريف
-      const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      const netSystemProfit = totalManagerProfits - totalExpenses;
+      // صافي الربح من النظام المحسن
+      const netSystemProfit = Number(enhanced.net_profit || 0);
       
       // الأرباح المعلقة = أرباح الطلبات غير المكتملة
       const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
@@ -107,18 +107,24 @@ export const useUnifiedProfits = (userId = null) => {
 
       // 7. تجميع جميع البيانات
       setProfitData({
-        // البيانات العامة
+        // البيانات العامة المحسنة
         totalSystemProfit,
         totalEmployeeProfits,
         managerProfitFromEmployees: totalManagerProfits,
-        netProfit: netSystemProfit, // صافي الأرباح من الطلبات المكتملة - المصاريف
+        netProfit: netSystemProfit, // صافي الأرباح من النظام المحسن
         pendingSystemProfits, // الأرباح المعلقة
+        
+        // بيانات مالية إضافية من النظام المحسن
+        totalRevenue: Number(enhanced.total_revenue || 0),
+        totalCogs: Number(enhanced.total_cogs || 0),
+        grossProfit: Number(enhanced.gross_profit || 0),
+        finalBalance: Number(enhanced.final_balance || 0),
         
         // البيانات الشخصية
         ...personalData,
         
         // بيانات إضافية
-        totalExpenses,
+        totalExpenses: Number(enhanced.total_expenses || 0),
         settledDues,
         pendingOrders,
         settledOrders

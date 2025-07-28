@@ -186,32 +186,47 @@ export const useCashSources = () => {
     return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
   };
 
-  // الحصول على رصيد القاصة الرئيسية الحقيقي من قاعدة البيانات مباشرة
+  // الحصول على رصيد القاصة الرئيسية المحسن والصحيح
   const getMainCashBalance = async () => {
     try {
-      // جلب الرصيد الفعلي من قاعدة البيانات مباشرة (نفس طريقة صفحة المحاسبة)
+      // استخدام النظام المحسن لحساب رصيد القاصة الرئيسية
       const { data, error } = await supabase
-        .from('cash_sources')
-        .select('current_balance')
-        .eq('name', 'القاصة الرئيسية')
-        .eq('is_active', true)
-        .single();
+        .rpc('calculate_enhanced_main_cash_balance');
 
       if (error) {
-        console.error('خطأ في جلب رصيد القاصة الرئيسية:', error);
-        return 0;
+        console.error('خطأ في جلب الرصيد المحسن:', error);
+        // العودة للطريقة القديمة في حالة الخطأ
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('cash_sources')
+          .select('current_balance')
+          .eq('name', 'القاصة الرئيسية')
+          .eq('is_active', true)
+          .single();
+        
+        return Number(fallbackData?.current_balance || 0);
       }
 
-      const realBalance = Number(data?.current_balance || 0);
+      const enhancedData = data?.[0] || {};
+      const realBalance = Number(enhancedData.final_balance || 0);
       
-      console.log('💰 رصيد القاصة الرئيسية من قاعدة البيانات:', {
+      console.log('💰 رصيد القاصة الرئيسية المحسن:', {
         realBalance,
-        formatted: realBalance.toLocaleString()
+        formatted: realBalance.toLocaleString(),
+        breakdown: {
+          capital: Number(enhancedData.capital_value || 0),
+          revenue: Number(enhancedData.total_revenue || 0),
+          cogs: Number(enhancedData.total_cogs || 0),
+          grossProfit: Number(enhancedData.gross_profit || 0),
+          expenses: Number(enhancedData.total_expenses || 0),
+          purchases: Number(enhancedData.total_purchases || 0),
+          employeeProfits: Number(enhancedData.employee_profits || 0),
+          netProfit: Number(enhancedData.net_profit || 0)
+        }
       });
 
       return realBalance;
     } catch (error) {
-      console.error('خطأ في حساب رصيد القاصة الرئيسية:', error);
+      console.error('خطأ في حساب رصيد القاصة الرئيسية المحسن:', error);
       return 0;
     }
   };
