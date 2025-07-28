@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -239,6 +240,51 @@ const EmployeeFollowUpPage = () => {
       }, 1000);
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
+
+  // إضافة Real-time Updates للصفحة
+  useEffect(() => {
+    // استمع لتغييرات في جدول orders
+    const ordersChannel = supabase
+      .channel('employee-follow-up-orders')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('🔄 Real-time update for orders:', payload);
+          // إعادة تحديث الطلبات
+          refetchProducts && refetchProducts();
+        }
+      )
+      .subscribe();
+
+    // استمع لتغييرات في جدول profits
+    const profitsChannel = supabase
+      .channel('employee-follow-up-profits')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'profits'
+        },
+        (payload) => {
+          console.log('🔄 Real-time update for profits:', payload);
+          // إعادة تحديث البيانات
+          refetchProducts && refetchProducts();
+        }
+      )
+      .subscribe();
+
+    // تنظيف المشتركين عند إلغاء تحميل المكون
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(profitsChannel);
+    };
+  }, [refetchProducts]);
 
   // قائمة الموظفين النشطين
   const employees = useMemo(() => {

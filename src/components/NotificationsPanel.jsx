@@ -96,6 +96,7 @@ const iconMap = {
   new_registration: UserRegistrationIcon,
   profit_settlement: ProfitIcon,
   profit_settlement_request: ProfitSettlementIcon,
+  employee_settlement_completed: ProfitSettlementIcon,
   system: SystemIcon,
   // ألوان حسب النوع
   AlertTriangle: StockWarningIcon,
@@ -180,6 +181,13 @@ const typeColorMap = {
     text: 'text-foreground', 
     icon: 'text-emerald-600 dark:text-emerald-400',
     dot: 'bg-emerald-500'
+  },
+  employee_settlement_completed: { 
+    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-green-500 dark:border-green-400',
+    text: 'text-foreground', 
+    icon: 'text-green-600 dark:text-green-400',
+    dot: 'bg-green-500'
   },
   system: { 
     bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 

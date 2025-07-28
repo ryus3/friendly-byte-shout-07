@@ -1239,6 +1239,7 @@ export const InventoryProvider = ({ children }) => {
         
         if (orderError) {
           console.error('Error archiving order:', orderError);
+          throw new Error(`خطأ في أرشفة الطلب: ${orderError.message}`);
         }
       }
 
@@ -1252,10 +1253,12 @@ export const InventoryProvider = ({ children }) => {
         status: 'approved'
       });
 
-      // 3. تسجيل التسوية في الإشعارات - للمديرين فقط
+      // 3. تسجيل التسوية في الإشعارات
       const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
       const invoiceNumber = `INV-${Date.now()}`;
-      const { error: notificationError } = await supabase
+      
+      // إشعار للمديرين
+      const { error: adminNotificationError } = await supabase
         .from('notifications')
         .insert({
           type: 'profit_settlement_completed',
@@ -1272,8 +1275,27 @@ export const InventoryProvider = ({ children }) => {
           user_id: ADMIN_ID // للمدير فقط
         });
 
-      if (notificationError) {
-        console.error('Error creating settlement notification:', notificationError);
+      if (adminNotificationError) {
+        console.error('Error creating admin settlement notification:', adminNotificationError);
+      }
+
+      // إشعار للموظف نفسه
+      const { error: employeeNotificationError } = await supabase
+        .from('notifications')
+        .insert({
+          type: 'employee_settlement_completed',
+          title: 'تمت محاسبتك',
+          message: `تمت محاسبتك وتسوية مستحقاتك بقيمة ${amount.toLocaleString()} د.ع من ${orderIds.length} طلبات`,
+          data: {
+            settlement_amount: amount,
+            orders_count: orderIds.length,
+            invoice_number: invoiceNumber
+          },
+          user_id: employeeId // للموظف نفسه
+        });
+
+      if (employeeNotificationError) {
+        console.error('Error creating employee settlement notification:', employeeNotificationError);
       }
 
       // 4. تحديث البيانات المحلية
