@@ -46,10 +46,10 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (systemError) throw systemError;
 
-      // 2. جلب المصاريف العامة
+      // 2. جلب المصاريف العامة والمستحقات المدفوعة
       const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
-        .select('amount')
+        .select('amount, category, expense_type')
         .eq('status', 'approved');
 
       if (expensesError) throw expensesError;
@@ -73,9 +73,17 @@ export const useUnifiedProfits = (userId = null) => {
       const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
-      // صافي الأرباح = أرباح الطلبات المكتملة - المصاريف
-      const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      const netSystemProfit = totalManagerProfits - totalExpenses;
+      // فصل المصاريف العامة عن المستحقات المدفوعة
+      const generalExpenses = expenses?.filter(e => e.category !== 'مستحقات مدفوعة')
+        .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      
+      const paidDues = expenses?.filter(e => e.category === 'مستحقات مدفوعة')
+        .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      
+      const totalExpenses = generalExpenses + paidDues;
+      
+      // صافي الأرباح = أرباح المدير من المبيعات - المصاريف العامة - المستحقات المدفوعة
+      const netSystemProfit = totalManagerProfits - generalExpenses - paidDues;
       
       // الأرباح المعلقة = أرباح الطلبات غير المكتملة
       const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
