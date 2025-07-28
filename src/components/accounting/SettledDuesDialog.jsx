@@ -11,6 +11,13 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { CheckCircle } from 'lucide-react';
 
 const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
+  console.log('🚀 SettledDuesDialog مُحدّث:', {
+    open,
+    invoicesReceived: invoices,
+    invoicesLength: invoices?.length || 0,
+    invoicesType: typeof invoices,
+    allUsersLength: allUsers?.length || 0
+  });
   const [filters, setFilters] = useState({
     employeeId: 'all',
     dateRange: { from: undefined, to: undefined },

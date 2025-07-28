@@ -1422,6 +1422,7 @@ export const InventoryProvider = ({ children }) => {
       categories, 
       departments,
       accounting, 
+      expenses: accounting.expenses || [], // إضافة expenses هنا!
       loading, 
       employeeProfitRules,
     
