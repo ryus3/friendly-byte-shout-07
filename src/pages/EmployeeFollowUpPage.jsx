@@ -39,20 +39,39 @@ const EmployeeFollowUpPage = () => {
   const { profits } = useProfits();
   const [searchParams] = useSearchParams();
   
-  // استخراج parameters من URL
-  const employeeFromUrl = searchParams.get('employee');
-  const ordersFromUrl = searchParams.get('orders');
-  const highlightFromUrl = searchParams.get('highlight');
+  // استخراج parameters من URL - مع دعم أفضل للـ parameters
+  const [employeeFromUrl, setEmployeeFromUrl] = useState(null);
+  const [ordersFromUrl, setOrdersFromUrl] = useState(null);  
+  const [highlightFromUrl, setHighlightFromUrl] = useState(null);
   const filterFromUrl = searchParams.get('filter');
+  
+  // استخراج المعاملات من URL فور التحميل
+  useEffect(() => {
+    const employeeParam = searchParams.get('employee');
+    const ordersParam = searchParams.get('orders');
+    const highlightParam = searchParams.get('highlight');
+    
+    console.log('🔗 استخراج URL Parameters:', {
+      employeeParam,
+      ordersParam,
+      highlightParam,
+      fullURL: window.location.href,
+      search: window.location.search
+    });
+    
+    setEmployeeFromUrl(employeeParam);
+    setOrdersFromUrl(ordersParam);
+    setHighlightFromUrl(highlightParam);
+  }, [searchParams]);
   
   const [filters, setFilters] = useState({
     status: 'all',
-    employeeId: employeeFromUrl || 'all',
+    employeeId: 'all', // سيتم تحديثه عبر useEffect
     archived: false,
-    profitStatus: filterFromUrl === 'pending_settlement' ? 'pending' : 'all',
+    profitStatus: 'all', // سيتم تحديثه عبر useEffect
   });
   
-  const [selectedOrders, setSelectedOrders] = useState(ordersFromUrl ? ordersFromUrl.split(',') : []);
+  const [selectedOrders, setSelectedOrders] = useState([]);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
