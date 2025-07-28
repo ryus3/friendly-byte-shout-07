@@ -235,17 +235,25 @@ export const InventoryProvider = ({ children }) => {
         throw error;
       }
 
+      console.log('✅ تم إنشاء المصروف:', newExpense);
+
       // خصم المبلغ من القاصة الرئيسية وتسجيل الحركة المالية
-      if (newExpense.status === 'approved' && expense.expense_type !== 'system') {
-        const { data: mainCashSource } = await supabase
+      if (newExpense.status === 'approved' && (expense.expense_type || 'operational') !== 'system') {
+        console.log('🔄 بدء تسجيل الحركة المالية للمصروف...');
+        
+        const { data: mainCashSource, error: cashError } = await supabase
           .from('cash_sources')
           .select('id')
           .eq('name', 'القاصة الرئيسية')
-          .single();
+          .maybeSingle();
 
-        if (mainCashSource) {
+        if (cashError) {
+          console.error('خطأ في جلب القاصة الرئيسية:', cashError);
+        } else if (mainCashSource) {
+          console.log('💰 تم العثور على القاصة الرئيسية:', mainCashSource.id);
+          
           // تسجيل الحركة المالية
-          const { error: movementError } = await supabase
+          const { data: movementResult, error: movementError } = await supabase
             .rpc('update_cash_source_balance', {
               p_cash_source_id: mainCashSource.id,
               p_amount: newExpense.amount,
@@ -257,9 +265,15 @@ export const InventoryProvider = ({ children }) => {
             });
 
           if (movementError) {
-            console.error('خطأ في تسجيل الحركة المالية:', movementError);
+            console.error('❌ خطأ في تسجيل الحركة المالية:', movementError);
+          } else {
+            console.log('✅ تم تسجيل الحركة المالية بنجاح:', movementResult);
           }
+        } else {
+          console.error('❌ لم يتم العثور على القاصة الرئيسية');
         }
+      } else {
+        console.log('⏭️ تخطي تسجيل الحركة المالية - نوع المصروف:', expense.expense_type || 'operational');
       }
 
       // تحديث الحالة المحلية

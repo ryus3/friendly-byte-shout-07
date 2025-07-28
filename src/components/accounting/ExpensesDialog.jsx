@@ -23,7 +23,7 @@ import React, { useState, useEffect } from 'react';
       });
       const [filters, setFilters] = useState({
         category: 'all',
-        dateRange: { from: undefined, to: undefined }
+        dateRange: { from: null, to: null } // تعيين قيم null بدلاً من undefined لتجنب ظهور التقويم
       });
     
   const [expenseCategories, setExpenseCategories] = useState([
@@ -228,13 +228,15 @@ import React, { useState, useEffect } from 'react';
                       </SelectContent>
                     </Select>
                     <div className="flex-1">
-                      <div className="relative">
-                        <DateRangePicker
-                          date={filters.dateRange}
-                          onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
-                          className="w-full"
-                        />
-                      </div>
+                      <DateRangePicker
+                        date={filters.dateRange}
+                        onDateChange={(range) => {
+                          console.log('تغيير نطاق التاريخ:', range);
+                          setFilters(f => ({...f, dateRange: range || {from: null, to: null}}));
+                        }}
+                        className="w-full"
+                        placeholder="تصفية حسب التاريخ"
+                      />
                     </div>
                   </div>
                   
