@@ -95,7 +95,7 @@ const SystemProfitSummary = ({
     // استخدام البيانات المحسنة إذا كانت متوفرة
     if (enhancedData) {
       const actualProfit = enhancedData.netProfit || 0;
-      const systemProfit = enhancedData.systemProfit || 0; // ربح النظام الصحيح (45,000)
+      const systemProfit = enhancedData.systemProfit || 0; // ربح النظام الصحيح
       const grossProfit = enhancedData.grossProfit || 0; // للإحصائيات فقط
       const totalRevenue = enhancedData.totalRevenue || 0;
       

@@ -9,8 +9,14 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   
-  // استدعاء useAuth دائماً في المستوى الأعلى
-  const auth = useAuth();
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.warn('Auth context not available:', error);
+    auth = null;
+  }
+
   const user = passedUser || auth?.user;
 
   // إذا لم يكن لدينا auth context أو user، نعيد قيم افتراضية
