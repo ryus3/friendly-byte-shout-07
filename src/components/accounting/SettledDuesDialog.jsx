@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, ShoppingCart } from 'lucide-react';
+import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt } from 'lucide-react';
 
 // مكون معاينة الفاتورة الاحترافي
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
@@ -49,24 +49,24 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
 
               {/* Left Column */}
               <div className="space-y-4">
-                 <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
-                   <Calendar className="w-5 h-5 text-purple-600" />
-                   <div>
-                     <p className="text-sm text-gray-600">تاريخ التسوية</p>
-                     <p className="font-bold text-lg">
-                       {invoice.settlement_date ? 
-                         format(parseISO(invoice.settlement_date), 'dd MMMM yyyy', { locale: ar }) :
-                         format(new Date(), 'dd MMMM yyyy', { locale: ar })
-                       }
-                     </p>
-                     <p className="text-sm text-gray-500">
-                       {invoice.settlement_date ? 
-                         format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
-                         format(new Date(), 'HH:mm', { locale: ar })
-                       }
-                     </p>
-                   </div>
-                 </div>
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">تاريخ التسوية</p>
+                    <p className="font-bold text-lg">
+                      {invoice.settlement_date ? 
+                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy', { locale: ar }) :
+                        'غير محدد'
+                      }
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {invoice.settlement_date ? 
+                        format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
+                        ''
+                      }
+                    </p>
+                  </div>
+                </div>
 
                 <div className="flex items-center gap-3 p-3 bg-green-100 rounded-lg border-2 border-green-200">
                   <DollarSign className="w-6 h-6 text-green-700" />
@@ -90,46 +90,6 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
                 <p className="text-gray-700">{invoice.description}</p>
               </div>
             </div>
-
-            {/* Orders Details */}
-            {invoice.metadata?.orders_details && invoice.metadata.orders_details.length > 0 && (
-              <div className="mb-6">
-                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
-                  تفاصيل الطلبات المدفوعة ({invoice.metadata.orders_details.length} طلب)
-                </h3>
-                <div className="grid gap-3">
-                  {invoice.metadata.orders_details.map((order, index) => (
-                    <div key={index} className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex justify-between items-center mb-2">
-                        <p className="font-semibold text-blue-800">#{order.order_number}</p>
-                        <Badge className="bg-blue-500 text-white">{order.status}</Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-gray-600">المبلغ الإجمالي: </span>
-                          <span className="font-semibold">{order.total_amount?.toLocaleString()} د.ع</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">ربح الموظف: </span>
-                          <span className="font-semibold text-green-600">{order.employee_profit?.toLocaleString()} د.ع</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-600">العميل: </span>
-                          <span className="font-semibold">{order.customer_name}</span>
-                        </div>
-                        <div className="col-span-2">
-                          <span className="text-gray-600">تاريخ الطلب: </span>
-                          <span className="font-semibold">
-                            {format(parseISO(order.created_at), 'dd/MM/yyyy HH:mm', { locale: ar })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Metadata */}
             {invoice.metadata && Object.keys(invoice.metadata).length > 0 && (

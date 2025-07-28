@@ -16,7 +16,6 @@ const EmployeeSettlementCard = ({
   onClearSelection,
   calculateProfit 
 }) => {
-  // ALL HOOKS MUST BE CALLED FIRST
   const { settleEmployeeProfits } = useInventory();
   const [isSettling, setIsSettling] = useState(false);
 
