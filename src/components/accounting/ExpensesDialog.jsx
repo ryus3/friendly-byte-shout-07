@@ -92,9 +92,14 @@ import React, { useState, useEffect } from 'react';
           await addExpense({
             ...newExpense,
             amount: parseFloat(newExpense.amount),
-            transaction_date: expenseDate.toISOString(), // تأكيد إضافة التاريخ والوقت الصحيح
-            expense_type: 'operational' // تأكيد أنه مصروف تشغيلي وليس نظامي
+            transaction_date: expenseDate.toISOString(),
+            expense_type: 'operational'
           });
+          
+          // إعادة تحديث قائمة المصاريف من الخادم
+          if (typeof window !== 'undefined') {
+            window.location.reload();
+          }
           
           // إعادة تعيين النموذج
           setNewExpense({
