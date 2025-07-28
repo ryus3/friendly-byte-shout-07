@@ -23,12 +23,21 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
 
   // جلب فواتير التحاسب من جدول expenses مع نوع system
   const settlementInvoices = useMemo(() => {
-    if (!Array.isArray(invoices)) return [];
+    console.log('🔄 معالجة بيانات المصاريف:', {
+      invoicesLength: invoices?.length || 0,
+      invoicesArray: Array.isArray(invoices),
+      sampleData: invoices?.slice(0, 2)
+    });
     
-    console.log('📊 جميع المصاريف:', invoices);
+    if (!Array.isArray(invoices) || invoices.length === 0) {
+      console.warn('❌ لا توجد مصاريف أو البيانات ليست مصفوفة');
+      return [];
+    }
     
     // البحث عن مصاريف نوع "مستحقات الموظفين" 
     const settlements = invoices.filter(expense => {
+      if (!expense) return false;
+      
       const isSettlement = expense.category === 'مستحقات الموظفين' && 
                           expense.expense_type === 'system' &&
                           expense.status === 'approved';
@@ -38,6 +47,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
         expense_type: expense.expense_type,
         status: expense.status,
         description: expense.description,
+        amount: expense.amount,
         isSettlement
       });
       
@@ -52,73 +62,105 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
         id: expense.id,
         invoice_number: `INV-${expense.id.slice(-8).toUpperCase()}`,
         employee_name: employeeName,
-        settlement_amount: expense.amount,
+        settlement_amount: Number(expense.amount) || 0,
         settlement_date: expense.created_at,
         status: 'completed',
         description: expense.description,
-        metadata: expense.metadata
+        metadata: expense.metadata || {}
       };
     });
     
-    console.log('📋 فواتير التحاسب المعالجة:', settlements);
+    console.log('📋 فواتير التحاسب المعالجة:', {
+      count: settlements.length,
+      settlements: settlements
+    });
+    
     return settlements;
   }, [invoices]);
   
-  // استخراج اسم الموظف من وصف المصروف
+  // استخراج اسم الموظف من وصف المصروف - مبسط ومحسن
   const extractEmployeeNameFromDescription = (description) => {
-    if (!description) return 'غير محدد';
+    if (!description || typeof description !== 'string') {
+      console.warn('⚠️ وصف المصروف فارغ أو غير صالح:', description);
+      return 'غير محدد';
+    }
     
     console.log('🔍 معالجة الوصف:', description);
     
-    // تنظيف النص وإزالة المسافات الزائدة
+    // تنظيف النص
     const cleanDesc = description.trim();
     
-    // أنماط مختلفة لاستخراج اسم الموظف - مبسطة ومحسنة
-    const patterns = [
-      /دفع مستحقات الموظف\s+(.+?)(?:\s*$)/i, // نهاية النص
-      /مستحقات الموظف\s+(.+?)(?:\s*$)/i,
-      /للموظف\s+(.+?)(?:\s*$)/i,
-      /الموظف\s+(.+?)(?:\s*$)/i,
-      /تحاسب\s+(.+?)(?:\s*$)/i
-    ];
-    
-    for (const pattern of patterns) {
-      const match = cleanDesc.match(pattern);
-      if (match && match[1]) {
-        const extractedName = match[1].trim();
-        console.log(`✅ تم استخراج الاسم: "${extractedName}" باستخدام النمط: ${pattern}`);
-        return extractedName;
-      }
+    // محاولة استخراج الاسم بعد "الموظف"
+    const match = cleanDesc.match(/الموظف\s+(.+?)(?:\s*$)/i);
+    if (match && match[1]) {
+      const extractedName = match[1].trim();
+      console.log(`✅ تم استخراج الاسم: "${extractedName}"`);
+      return extractedName;
     }
     
-    // محاولة أخيرة - أخذ آخر كلمة أو كلمتين
+    // محاولة أخذ آخر كلمة
     const words = cleanDesc.split(/\s+/);
     if (words.length >= 2) {
-      const potentialName = words.slice(-2).join(' ');
-      console.log(`⚠️ استخراج احتياطي: "${potentialName}"`);
-      return potentialName;
+      const lastName = words[words.length - 1];
+      console.log(`⚠️ استخراج آخر كلمة: "${lastName}"`);
+      return lastName;
     }
     
-    console.log('❌ فشل في استخراج الاسم من:', description);
+    console.log('❌ فشل في استخراج الاسم، استخدام القيمة الافتراضية');
     return 'غير محدد';
   };
   
   const filteredInvoices = useMemo(() => {
-    return settlementInvoices.filter(invoice => {
+    console.log('🔄 فلترة الفواتير:', {
+      settlementInvoicesCount: settlementInvoices.length,
+      filters: filters,
+      employeesCount: employees.length
+    });
+    
+    const filtered = settlementInvoices.filter(invoice => {
       const employeeMatch = filters.employeeId === 'all' || 
-        invoice.employee_name?.includes(employees.find(e => e.user_id === filters.employeeId)?.full_name || '') ||
-        invoice.employee_name?.includes(employees.find(e => e.user_id === filters.employeeId)?.name || '');
+        invoice.employee_name?.toLowerCase().includes(
+          employees.find(e => e.user_id === filters.employeeId)?.full_name?.toLowerCase() || ''
+        ) ||
+        invoice.employee_name?.toLowerCase().includes(
+          employees.find(e => e.user_id === filters.employeeId)?.name?.toLowerCase() || ''
+        );
       
       const dateMatch = !filters.dateRange.from || 
         (new Date(invoice.settlement_date) >= filters.dateRange.from && 
          new Date(invoice.settlement_date) <= (filters.dateRange.to || new Date()));
       
+      console.log(`🔍 فلترة الفاتورة ${invoice.id}:`, {
+        employee_name: invoice.employee_name,
+        employeeMatch,
+        dateMatch,
+        finalMatch: employeeMatch && dateMatch
+      });
+      
       return employeeMatch && dateMatch;
     });
+    
+    console.log('✅ الفواتير المفلترة:', {
+      count: filtered.length,
+      invoices: filtered
+    });
+    
+    return filtered;
   }, [settlementInvoices, filters, employees]);
 
   const totalAmount = useMemo(() => {
-    return filteredInvoices.reduce((sum, inv) => sum + inv.settlement_amount, 0);
+    const total = filteredInvoices.reduce((sum, inv) => {
+      const amount = Number(inv.settlement_amount) || 0;
+      return sum + amount;
+    }, 0);
+    
+    console.log('💰 حساب الإجمالي:', {
+      invoicesCount: filteredInvoices.length,
+      total: total,
+      invoices: filteredInvoices.map(inv => ({ id: inv.id, amount: inv.settlement_amount }))
+    });
+    
+    return total;
   }, [filteredInvoices]);
 
   return (
