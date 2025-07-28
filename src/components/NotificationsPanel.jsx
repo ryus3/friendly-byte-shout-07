@@ -256,13 +256,20 @@ const NotificationsPanel = () => {
       }
     } else if (notification.type === 'profit_settlement_request') {
       // طلب تحاسب من موظف - التنقل لصفحة متابعة الموظفين مع تحديد البيانات
+      console.log('🔔 معالجة إشعار طلب التحاسب:', notification);
+      
       const data = notification.data || {};
       const employeeId = data.employeeId || data.employee_id;
       const orderIds = data.orderIds || data.order_ids || [];
       
+      console.log('📋 بيانات الإشعار:', { employeeId, orderIds, data });
+      
       if (employeeId && orderIds && orderIds.length > 0) {
-        navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement&filter=pending_settlement`);
+        const url = `/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement&filter=pending_settlement`;
+        console.log('🚀 التوجيه إلى:', url);
+        navigate(url);
       } else {
+        console.warn('⚠️ بيانات ناقصة في الإشعار:', { employeeId, orderIds });
         navigate('/employee-follow-up');
       }
     } else if (notification.type === 'profit_settlement') {

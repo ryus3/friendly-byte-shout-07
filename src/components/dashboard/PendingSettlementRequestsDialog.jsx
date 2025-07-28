@@ -18,22 +18,24 @@ const PendingSettlementRequestsDialog = ({
   const [settlementRequests, setSettlementRequests] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // جلب آخر طلب تحاسب فقط (غير مقروء)
+  // جلب طلبات التحاسب غير المقروءة
   const fetchSettlementRequests = async () => {
     try {
       setLoading(true);
       
-      // جلب آخر إشعار تحاسب غير مقروء فقط
+      console.log('🔍 جلب طلبات التحاسب غير المقروءة...');
+      
+      // جلب جميع إشعارات التحاسب غير المقروءة
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'profit_settlement_request')
         .eq('is_read', false)
         .order('created_at', { ascending: false })
-        .limit(1);
+        .limit(10);
 
       if (error) {
-        console.error('خطأ في جلب طلبات التحاسب:', error);
+        console.error('❌ خطأ في جلب طلبات التحاسب:', error);
         toast({
           title: "خطأ",
           description: "حدث خطأ في جلب طلبات التحاسب",
@@ -42,7 +44,8 @@ const PendingSettlementRequestsDialog = ({
         return;
       }
 
-      console.log('آخر طلب تحاسب:', data);
+      console.log('✅ تم جلب طلبات التحاسب:', data?.length || 0);
+      console.log('📋 البيانات:', data);
       setSettlementRequests(data || []);
     } catch (error) {
       console.error('خطأ في fetchSettlementRequests:', error);
@@ -147,72 +150,72 @@ const PendingSettlementRequestsDialog = ({
         <DialogHeader className="flex-shrink-0 p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
             <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
-            طلب التحاسب الأحدث
+            طلبات التحاسب الجديدة ({settlementRequests.length})
           </DialogTitle>
           <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-            آخر طلب تحاسب غير مقروء من الموظفين
+            طلبات التحاسب غير المقروءة من الموظفين
           </div>
         </DialogHeader>
 
         <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-4 gap-3">
-          {/* إحصائيات سريعة - طلب واحد فقط */}
-          {settlementRequests.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
-              <Card className="bg-gradient-to-r from-emerald-50 to-teal-100 dark:from-emerald-900/20 dark:to-teal-800/20">
-                <CardContent className="p-2 sm:p-3">
-                  <div className="flex items-center gap-2">
-                    <Bell className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">طلب جديد</p>
-                      <p className="text-sm sm:text-base font-semibold">1</p>
-                    </div>
+          {/* إحصائيات سريعة */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
+            <Card className="bg-gradient-to-r from-emerald-50 to-teal-100 dark:from-emerald-900/20 dark:to-teal-800/20">
+              <CardContent className="p-2 sm:p-3">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">طلبات جديدة</p>
+                    <p className="text-sm sm:text-base font-semibold">{settlementRequests.length}</p>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
-                <CardContent className="p-2 sm:p-3">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">المبلغ المطلوب</p>
-                      <p className="text-sm sm:text-base font-semibold">
-                        {(settlementRequests[0]?.data?.amount || settlementRequests[0]?.data?.total_profit || 0).toLocaleString()} د.ع
-                      </p>
-                    </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
+              <CardContent className="p-2 sm:p-3">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">إجمالي المبلغ</p>
+                    <p className="text-sm sm:text-base font-semibold">
+                      {settlementRequests.reduce((sum, req) => {
+                        const amount = req.data?.amount || req.data?.total_profit || 0;
+                        return sum + amount;
+                      }, 0).toLocaleString()} د.ع
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
 
-              <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
-                <CardContent className="p-2 sm:p-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">الموظف</p>
-                      <p className="text-sm sm:text-base font-semibold">
-                        {settlementRequests[0]?.data?.employeeName || settlementRequests[0]?.data?.employee_name || 'غير معروف'}
-                      </p>
-                    </div>
+            <Card className="bg-gradient-to-r from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+              <CardContent className="p-2 sm:p-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">عدد الموظفين</p>
+                    <p className="text-sm sm:text-base font-semibold">
+                      {new Set(settlementRequests.map(req => req.data?.employeeId || req.data?.employee_id)).size}
+                    </p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* أزرار التحكم - فقط إذا كان هناك طلب */}
-          {settlementRequests.length > 0 && (
-            <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
-              <Button 
-                onClick={handleMarkAllAsRead}
-                variant="outline"
-                size="sm"
-                className="w-full sm:w-auto text-xs sm:text-sm"
-              >
-                تحديد كمقروء
-              </Button>
-            </div>
-          )}
+          {/* أزرار التحكم */}
+          <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+            <Button 
+              onClick={handleMarkAllAsRead}
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto text-xs sm:text-sm"
+              disabled={settlementRequests.length === 0}
+            >
+              تحديد الكل كمقروء
+            </Button>
+          </div>
 
           {/* قائمة الطلبات */}
           <div className="flex-1 min-h-0">
@@ -226,8 +229,8 @@ const PendingSettlementRequestsDialog = ({
                 ) : settlementRequests.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <PackageCheck className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm">لا يوجد طلب تحاسب جديد</p>
-                    <p className="text-xs mt-2">ستظهر آخر طلبات التحاسب غير المقروءة هنا</p>
+                    <p className="text-sm">لا توجد طلبات تحاسب جديدة</p>
+                    <p className="text-xs mt-2">ستظهر طلبات التحاسب غير المقروءة هنا</p>
                   </div>
                 ) : (
                   settlementRequests.map((request) => {
@@ -316,7 +319,7 @@ const PendingSettlementRequestsDialog = ({
               إغلاق
             </Button>
             <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-right">
-              {settlementRequests.length ? 'طلب تحاسب واحد أحدث' : 'لا يوجد طلبات'}
+              {settlementRequests.length} طلب تحاسب جديد
             </div>
           </div>
         </div>
