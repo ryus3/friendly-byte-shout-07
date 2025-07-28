@@ -254,14 +254,26 @@ const OrdersPage = () => {
   }, [userOrders, filters, usersMap]);
 
   const myProfits = useMemo(() => {
+    console.log('💰 حساب الأرباح في OrdersPage:', {
+      hasViewAllData: hasPermission('view_all_data'),
+      profitData,
+      userId: user?.id
+    });
+    
     if (hasPermission('view_all_data')) {
       // للمديرين: إظهار صافي الربح للنظام من الطلبات المكتملة
       return profitData?.netProfit || 0;
     } else {
       // للموظفين: إظهار إجمالي الأرباح الشخصية من الطلبات المكتملة
-      return profitData?.personalTotalProfit || 0;
+      const personalTotal = profitData?.personalTotalProfit || 0;
+      console.log('👤 أرباح الموظف الشخصية:', {
+        personalTotalProfit: personalTotal,
+        personalSettledProfit: profitData?.personalSettledProfit,
+        personalPendingProfit: profitData?.personalPendingProfit
+      });
+      return personalTotal;
     }
-  }, [profitData, hasPermission]);
+  }, [profitData, hasPermission, user?.id]);
   
   const handleSync = async () => {
     setSyncing(true);
