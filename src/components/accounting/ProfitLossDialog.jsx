@@ -19,17 +19,20 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
-const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => (
-    <div className={`flex justify-between items-center py-3 border-b border-border/50 ${onClick ? 'cursor-pointer hover:bg-secondary/50 -mx-4 px-4' : ''}`} onClick={onClick}>
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <div className="flex items-center gap-2">
-            <p className={`font-semibold text-base ${colorClass}`}>
-                {isNegative ? `(${value.toLocaleString()})` : value.toLocaleString()} د.ع
-            </p>
-            {onClick && <ArrowRight className="w-4 h-4 text-muted-foreground" />}
+const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
+    const safeValue = value ?? 0;
+    return (
+        <div className={`flex justify-between items-center py-3 border-b border-border/50 ${onClick ? 'cursor-pointer hover:bg-secondary/50 -mx-4 px-4' : ''}`} onClick={onClick}>
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <div className="flex items-center gap-2">
+                <p className={`font-semibold text-base ${colorClass}`}>
+                    {isNegative ? `(${safeValue.toLocaleString()})` : safeValue.toLocaleString()} د.ع
+                </p>
+                {onClick && <ArrowRight className="w-4 h-4 text-muted-foreground" />}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePeriodChange }) => {
     const navigate = useNavigate();
@@ -85,7 +88,7 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                     <ScrollArea className="flex-1 w-full">
                         <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                             <div className="h-48 sm:h-60 flex-shrink-0">
-                                <MiniChart data={summary.chartData || []} type="bar" />
+                                <MiniChart data={summary?.chartData || []} type="bar" />
                             </div>
                             <div className="space-y-1 sm:space-y-2">
                                 <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} className="w-full">
@@ -93,7 +96,7 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                                         <AccordionTrigger className="flex justify-between items-center py-2 sm:py-3 hover:no-underline -mx-2 sm:-mx-4 px-2 sm:px-4 hover:bg-secondary/50 text-sm sm:text-base">
                                             <p className="text-sm text-muted-foreground">إجمالي المبيعات (بدون توصيل)</p>
                                             <p className="font-semibold text-green-500">
-                                                {(summary.totalRevenue - (summary.deliveryFees || 0)).toLocaleString()} د.ع
+                                                {((summary?.totalRevenue || 0) - (summary?.deliveryFees || 0)).toLocaleString()} د.ع
                                             </p>
                                         </AccordionTrigger>
                                         <AccordionContent className="pb-0">
@@ -105,16 +108,16 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                                     </AccordionItem>
                                 </Accordion>
 
-                                <StatRow label="رسوم التوصيل" value={summary.deliveryFees || 0} colorClass="text-cyan-500" />
-                                <StatRow label="تكلفة البضاعة المباعة" value={summary.cogs} colorClass="text-orange-500" isNegative />
-                                <StatRow label="مجمل الربح (قبل المصاريف)" value={summary.grossProfit} colorClass="text-blue-500 font-bold" />
+                                <StatRow label="رسوم التوصيل" value={summary?.deliveryFees || 0} colorClass="text-cyan-500" />
+                                <StatRow label="تكلفة البضاعة المباعة" value={summary?.cogs || 0} colorClass="text-orange-500" isNegative />
+                                <StatRow label="مجمل الربح (قبل المصاريف)" value={summary?.grossProfit || 0} colorClass="text-blue-500 font-bold" />
                                 
-                                <StatRow label="مستحقات مدفوعة" value={summary.employeeSettledDues || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
+                                <StatRow label="مستحقات مدفوعة" value={summary?.employeeSettledDues || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
                                 
 
                                 <div className="flex justify-between items-center py-2 sm:py-3 mt-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg px-3 sm:px-4 border border-primary/20">
                                     <p className="font-bold text-base sm:text-lg">صافي الربح</p>
-                                    <p className="font-bold text-base sm:text-lg text-primary">{(summary.netProfit || 0).toLocaleString()} د.ع</p>
+                                    <p className="font-bold text-base sm:text-lg text-primary">{(summary?.netProfit || 0).toLocaleString()} د.ع</p>
                                 </div>
                             </div>
                         </div>
