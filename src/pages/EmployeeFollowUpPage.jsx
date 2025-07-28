@@ -83,87 +83,65 @@ const EmployeeFollowUpPage = () => {
       allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl),
       fullSearchParams: searchParams.toString(),
       allOrders: orders?.length || 0,
-      allUsers: allUsers?.length || 0
+      allUsers: allUsers?.length || 0,
+      loading,
+      hasPermissionCheck: hasPermission,
+      authenticationIssue: !orders && !loading // مؤشر على مشكلة المصادقة
     });
+
+    // التحقق من حالة التحميل والمصادقة
+    if (!loading && (!orders || orders.length === 0)) {
+      console.warn('⚠️ مشكلة محتملة في تحميل البيانات - قد تكون مشكلة مصادقة');
+      
+      // إعادة المحاولة بعد تأخير قصير
+      setTimeout(() => {
+        if (!orders || orders.length === 0) {
+          toast({
+            title: "مشكلة في تحميل البيانات",
+            description: "يرجى تسجيل الدخول مرة أخرى أو إعادة تحميل الصفحة",
+            variant: "destructive",
+            duration: 8000
+          });
+        }
+      }, 3000);
+    }
     
     if (highlightFromUrl === 'settlement') {
       if (employeeFromUrl && ordersFromUrl) {
         // طلب تحاسب محدد من الإشعار
         console.log('⚡ معالجة طلب التحاسب من الإشعار');
         
-        // تعيين فلاتر محددة للتحاسب
-        setFilters(prev => ({ 
-          ...prev, 
-          employeeId: employeeFromUrl,
-          profitStatus: 'pending',
-          status: 'all',
-          archived: false
-        }));
-        
-        // تحديد الطلبات المطلوب تسويتها
-        const orderList = ordersFromUrl.split(',');
-        setSelectedOrders(orderList);
-        
-        console.log('✅ تم تعيين:', {
-          employeeId: employeeFromUrl,
-          orders: orderList,
-          ordersCount: orderList.length
-        });
-        
-        // إضافة toast لتوضيح الإجراء المطلوب
-        setTimeout(() => {
-          toast({
-            title: "طلب تحاسب جاهز!",
-            description: `تم تحديد ${orderList.length} طلب للموظف. ستجد كارت التحاسب أدناه - اضغط "دفع المستحقات" لإكمال العملية.`,
-            variant: "default",
-            duration: 8000
-          });
-        }, 1500);
-        
-        // التمرير للكارت مع تأثير بصري قوي - انتظار ذكي للتحميل
-        const scrollToEmployeeCard = () => {
-          const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // تأثير بصري مميز
-            element.style.transform = "scale(1.05)";
-            element.style.border = "3px solid #10b981";
-            element.style.borderRadius = "16px";
-            element.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.5)";
-            element.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))";
-            
-            setTimeout(() => {
-              element.style.transform = "";
-              element.style.border = "";
-              element.style.borderRadius = "";
-              element.style.boxShadow = "";
-              element.style.background = "";
-            }, 5000);
-          } else {
-            console.warn('⚠️ لم يتم العثور على كارت الموظف، محاولة أخرى...');
-            return false;
-          }
-          return true;
-        };
-
-        // محاولة التمرير مع إعادة المحاولة كل ثانية لمدة 10 ثوان
-        let attempts = 0;
-        const maxAttempts = 10;
-        const scrollInterval = setInterval(() => {
-          attempts++;
-          if (scrollToEmployeeCard() || attempts >= maxAttempts) {
-            clearInterval(scrollInterval);
-            if (attempts >= maxAttempts) {
-              console.warn('⚠️ لم يتم العثور على كارت الموظف بعد 10 محاولات');
+        // التحقق من تحميل البيانات أولاً
+        if (!orders || orders.length === 0 || !allUsers || allUsers.length === 0) {
+          console.warn('⚠️ البيانات لم تحمل بعد، انتظار...');
+          
+          // إعادة المحاولة كل ثانية حتى تحمل البيانات
+          const dataWaitInterval = setInterval(() => {
+            if (orders && orders.length > 0 && allUsers && allUsers.length > 0) {
+              clearInterval(dataWaitInterval);
+              console.log('✅ البيانات تحملت، بدء المعالجة');
+              processSettlementRequest();
+            }
+          }, 1000);
+          
+          // إيقاف الانتظار بعد 30 ثانية
+          setTimeout(() => {
+            clearInterval(dataWaitInterval);
+            if (!orders || orders.length === 0) {
+              console.error('❌ فشل في تحميل البيانات خلال 30 ثانية');
               toast({
-                title: "طلب التحاسب جاهز",
-                description: "تم تحديد الطلبات المطلوبة. ابحث عن كارت التحاسب أدناه.",
-                variant: "default",
-                duration: 5000
+                title: "مشكلة في تحميل البيانات",
+                description: "لم يتم تحميل البيانات. يرجى تسجيل الدخول مرة أخرى.",
+                variant: "destructive",
+                duration: 10000
               });
             }
-          }
-        }, 1000);
+          }, 30000);
+          
+          return;
+        }
+        
+        processSettlementRequest();
       } else {
         // إشعار عام للتحاسب - عرض رسالة توضيحية فقط
         console.log('🔔 إشعار تحاسب عام');
@@ -176,6 +154,83 @@ const EmployeeFollowUpPage = () => {
           });
         }, 1000);
       }
+    }
+    
+    function processSettlementRequest() {
+      // تعيين فلاتر محددة للتحاسب
+      setFilters(prev => ({ 
+        ...prev, 
+        employeeId: employeeFromUrl,
+        profitStatus: 'pending',
+        status: 'all',
+        archived: false
+      }));
+      
+      // تحديد الطلبات المطلوب تسويتها
+      const orderList = ordersFromUrl.split(',');
+      setSelectedOrders(orderList);
+      
+      console.log('✅ تم تعيين:', {
+        employeeId: employeeFromUrl,
+        orders: orderList,
+        ordersCount: orderList.length
+      });
+      
+      // إضافة toast لتوضيح الإجراء المطلوب
+      setTimeout(() => {
+        toast({
+          title: "طلب تحاسب جاهز!",
+          description: `تم تحديد ${orderList.length} طلب للموظف. ستجد كارت التحاسب أدناه - اضغط "دفع المستحقات" لإكمال العملية.`,
+          variant: "default",
+          duration: 8000
+        });
+      }, 1500);
+      
+      // التمرير للكارت مع تأثير بصري قوي - انتظار ذكي للتحميل
+      const scrollToEmployeeCard = () => {
+        const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // تأثير بصري مميز
+          element.style.transform = "scale(1.05)";
+          element.style.border = "3px solid #10b981";
+          element.style.borderRadius = "16px";
+          element.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.5)";
+          element.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))";
+          
+          setTimeout(() => {
+            element.style.transform = "";
+            element.style.border = "";
+            element.style.borderRadius = "";
+            element.style.boxShadow = "";
+            element.style.background = "";
+          }, 5000);
+        } else {
+          console.warn('⚠️ لم يتم العثور على كارت الموظف، محاولة أخرى...');
+          return false;
+        }
+        return true;
+      };
+
+      // محاولة التمرير مع إعادة المحاولة كل ثانية لمدة 10 ثوان
+      let attempts = 0;
+      const maxAttempts = 10;
+      const scrollInterval = setInterval(() => {
+        attempts++;
+        if (scrollToEmployeeCard() || attempts >= maxAttempts) {
+          clearInterval(scrollInterval);
+          if (attempts >= maxAttempts) {
+            console.warn('⚠️ لم يتم العثور على كارت الموظف بعد 10 محاولات');
+            toast({
+              title: "طلب التحاسب جاهز",
+              description: "تم تحديد الطلبات المطلوبة. ابحث عن كارت التحاسب أدناه.",
+              variant: "default",
+              duration: 5000
+            });
+          }
+        }
+      }, 1000);
+    }
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
