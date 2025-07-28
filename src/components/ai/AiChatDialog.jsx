@@ -15,8 +15,19 @@ const AiChatDialog = ({ open, onOpenChange }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef(null);
-  const { user } = useAuth();
-  const { createOrder } = useInventory();
+  
+  // حماية من null context
+  let user, createOrder;
+  try {
+    const authContext = useAuth();
+    const inventoryContext = useInventory();
+    user = authContext?.user;
+    createOrder = inventoryContext?.createOrder;
+  } catch (error) {
+    console.warn('AiChatDialog: Context not available');
+    user = { fullName: 'المستخدم' };
+    createOrder = () => Promise.resolve({ success: false });
+  }
 
   useEffect(() => {
     if (open && messages.length === 0) {
