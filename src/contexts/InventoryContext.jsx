@@ -1263,25 +1263,40 @@ export const InventoryProvider = ({ children }) => {
         }
       }
 
-      // 2. إضافة المصروف
-      const invoiceNumber = `INV-${Date.now()}`;
-      await addExpense({
-        date: new Date().toISOString(),
-        category: 'مستحقات الموظفين',
-        description: `دفع مستحقات الموظف ${employeeName}`,
-        amount: amount,
-        vendor_name: employeeName,
-        receipt_number: invoiceNumber,
-        expense_type: 'system',
-        status: 'approved',
-        metadata: {
-          settlement_type: 'employee_profit',
-          employee_id: employeeId,
-          employee_name: employeeName,
-          order_ids: orderIds,
-          orders_count: orderIds.length
-        }
-      });
+      // 2. إضافة المصروف مع فحص التكرار
+      const invoiceNumber = `RY-${Date.now().toString().slice(-6)}`;
+      
+      // فحص إذا كان هناك مصروف بنفس رقم الفاتورة موجود مسبقاً لتجنب التكرار
+      const { data: existingExpense } = await supabase
+        .from('expenses')
+        .select('id')
+        .eq('receipt_number', invoiceNumber)
+        .eq('category', 'مستحقات الموظفين')
+        .eq('expense_type', 'system')
+        .single();
+
+      if (!existingExpense) {
+        await addExpense({
+          date: new Date().toISOString(),
+          category: 'مستحقات الموظفين',
+          description: `دفع مستحقات الموظف ${employeeName}`,
+          amount: amount,
+          vendor_name: employeeName,
+          receipt_number: invoiceNumber,
+          expense_type: 'system',
+          status: 'approved',
+          metadata: {
+            settlement_type: 'employee_profit',
+            employee_id: employeeId,
+            employee_name: employeeName,
+            order_ids: orderIds,
+            orders_count: orderIds.length
+          }
+        });
+        console.log('✅ تم إنشاء مصروف التسوية رقم:', invoiceNumber);
+      } else {
+        console.log('⚠️ مصروف التسوية موجود مسبقاً، تم تجاهل التكرار');
+      }
 
       // 3. تسجيل التسوية في الإشعارات
       const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
