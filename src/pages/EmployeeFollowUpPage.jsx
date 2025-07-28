@@ -73,19 +73,40 @@ const EmployeeFollowUpPage = () => {
   useEffect(() => {
     if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
       // تعيين فلتر الموظف تلقائياً
-      setFilters(prev => ({ ...prev, employeeId: employeeFromUrl }));
+      setFilters(prev => ({ 
+        ...prev, 
+        employeeId: employeeFromUrl,
+        profitStatus: 'pending',  // فلترة الأرباح المعلقة فقط
+        status: 'all'  // إظهار كل الحالات للطلبات المحددة
+      }));
       
       // تحديد الطلبات المطلوب تسويتها
       const orderList = ordersFromUrl.split(',');
       setSelectedOrders(orderList);
+      
+      // إضافة toast لتوضيح الإجراء المطلوب
+      setTimeout(() => {
+        toast({
+          title: "طلبات التحاسب جاهزة",
+          description: `تم تحديد ${orderList.length} طلب للتحاسب. اضغط على "دفع المستحقات" لإكمال العملية.`,
+          variant: "default"
+        });
+      }, 1000);
       
       // التمرير للكارت
       setTimeout(() => {
         const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // تأثير بصري لتوضيح الكارت المحدد
+          element.style.border = "2px solid #3b82f6";
+          element.style.borderRadius = "12px";
+          setTimeout(() => {
+            element.style.border = "";
+            element.style.borderRadius = "";
+          }, 3000);
         }
-      }, 500);
+      }, 1500);
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
