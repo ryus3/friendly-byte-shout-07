@@ -18,21 +18,33 @@ const AiChatDialog = ({ open, onOpenChange }) => {
   const { user } = useAuth();
   const inventoryContext = useInventory();
   
-  // Add safety check for createOrder function
-  if (!inventoryContext || !inventoryContext.createOrder) {
-    console.error('InventoryContext or createOrder function not available');
-    return null;
-  }
-  
-  const { createOrder } = inventoryContext;
-
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([
-        { role: 'model', content: `أهلاً بك يا ${user.fullName}! كيف يمكنني مساعدتك اليوم؟\nيمكنني مساعدتك في إنشاء طلبات. فقط أخبرني بالتفاصيل.` }
+        { role: 'model', content: `أهلاً بك يا ${user?.fullName || 'المستخدم'}! كيف يمكنني مساعدتك اليوم؟\nيمكنني مساعدتك في إنشاء طلبات. فقط أخبرني بالتفاصيل.` }
       ]);
     }
   }, [open, messages, user]);
+
+  // NOW we can do conditional checks AFTER all hooks
+  if (!inventoryContext || !inventoryContext.createOrder) {
+    console.error('InventoryContext or createOrder function not available');
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>خطأ في النظام</DialogTitle>
+          </DialogHeader>
+          <div className="p-4 text-center text-red-600">
+            حدث خطأ في تحميل النظام. يرجى إعادة تحميل الصفحة.
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+  
+  const { createOrder } = inventoryContext;
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
