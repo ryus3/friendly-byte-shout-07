@@ -143,7 +143,7 @@ const AccountingPage = () => {
     const [datePeriod, setDatePeriod] = useState('month');
     
     // جلب بيانات تحليل الأرباح لآخر 30 يوم
-    const dateRange = {
+    const profitsDateRange = {
         from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         to: new Date()
     };
@@ -156,7 +156,7 @@ const AccountingPage = () => {
         season: 'all',
         productType: 'all'
     };
-    const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(dateRange, profitsFilters);
+    const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
     const [realCashBalance, setRealCashBalance] = useState(0);
