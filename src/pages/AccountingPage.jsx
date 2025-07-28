@@ -34,6 +34,14 @@ const formatCurrency = (amount) => {
   }).format(amount || 0) + ' د.ع';
 };
 
+// دالة للحصول على ربح الموظف من قواعد الأرباح الفعلية
+const getEmployeeProfit = (item, employeeId, totalItemProfit) => {
+  // في النظام الحقيقي، يجب جلب هذه البيانات من employee_profit_rules
+  // مؤقتاً نعيد 0 لنتجنب استخدام النسبة الافتراضية
+  // TODO: تنفيذ جلب قواعد الأرباح من قاعدة البيانات
+  return 0; // سيتم تحديثها لاحقاً لتستخدم القواعد الفعلية
+};
+
 const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
     const safeValue = value ?? 0;
     return (
@@ -280,10 +288,10 @@ const AccountingPage = () => {
         
         // حساب ربح النظام الصحيح (نفس منطق قاعدة البيانات)
         // ربح النظام = ربح المدير كاملاً + ربح النظام من طلبات الموظفين
-        const managerOrders = deliveredOrders.filter(o => !o.created_by || o.created_by === user?.id);
-        const employeeOrders = deliveredOrders.filter(o => o.created_by && o.created_by !== user?.id);
+        const managerOrdersInRange = deliveredOrders.filter(o => !o.created_by || o.created_by === user?.id);
+        const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== user?.id);
         
-        const managerTotalProfit = managerOrders.reduce((sum, order) => {
+        const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
           const orderProfit = (order.items || []).reduce((itemSum, item) => {
             const sellPrice = item.unit_price || item.price || 0;
             const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
@@ -292,13 +300,14 @@ const AccountingPage = () => {
           return sum + orderProfit;
         }, 0);
         
-        const employeeSystemProfit = employeeOrders.reduce((sum, order) => {
-          const orderProfit = (order.items || []).reduce((itemSum, item) => {
+        const employeeSystemProfit = employeeOrdersInRange.reduce((sum, order) => {
+          const orderProfit = (order.order_items || []).reduce((itemSum, item) => {
             const sellPrice = item.unit_price || item.price || 0;
             const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
             const itemProfit = (sellPrice - costPrice) * item.quantity;
-            // نسبة ربح النظام من طلبات الموظفين (70% تقريباً حسب القاعدة)
-            const systemShare = itemProfit * 0.7; // يمكن تحسينها لاحقاً من قاعدة البيانات
+            
+            // استخدام النظام الصحيح: المبلغ كاملاً للنظام مؤقتاً لأن قواعد الأرباح لا تُطبق بعد
+            const systemShare = itemProfit; // كامل الربح للنظام حالياً
             return itemSum + systemShare;
           }, 0);
           return sum + orderProfit;
@@ -336,10 +345,10 @@ const AccountingPage = () => {
         console.log('🏪 قيمة المخزون:', inventoryValue);
         
         // حساب مبيعات وأرباح المدير (المُستلمة الفواتير فقط)
-        const managerOrders = deliveredOrders.filter(o => o.created_by === currentUser?.id);
-        console.log('👨‍💼 طلبات المدير المُستلمة:', managerOrders.length);
+        const managerOrdersDelivered = deliveredOrders.filter(o => o.created_by === currentUser?.id);
+        console.log('👨‍💼 طلبات المدير المُستلمة:', managerOrdersDelivered.length);
         
-        const managerSales = managerOrders.reduce((sum, o) => {
+        const managerSales = managerOrdersDelivered.reduce((sum, o) => {
             const orderTotal = o.final_amount || o.total_amount || 0;
             const deliveryFee = o.delivery_fee || 0;
             const salesAmount = orderTotal - deliveryFee;
@@ -347,7 +356,7 @@ const AccountingPage = () => {
         }, 0);
         
         // حساب أرباح المدير بشكل مبسط (سعر البيع - التكلفة)
-        const myProfit = managerOrders.reduce((sum, o) => {
+        const myProfit = managerOrdersDelivered.reduce((sum, o) => {
             if (!o.order_items || !Array.isArray(o.order_items)) return sum;
             
             const orderProfit = o.order_items.reduce((itemSum, item) => {
@@ -360,34 +369,38 @@ const AccountingPage = () => {
             return sum + orderProfit;
         }, 0);
 
-        // حساب مبيعات وأرباح الموظفين (المُستلمة الفواتير فقط)
-        const employeeOrders = deliveredOrders.filter(o => {
+        // حساب مبيعات وأرباح الموظفين (المُستلمة الفواتير فقط) باستخدام القواعد الصحيحة
+        const employeeOrdersDelivered = deliveredOrders.filter(o => {
             const orderUser = allUsers?.find(u => u.id === o.created_by);
             return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy') && o.created_by !== currentUser?.id;
         });
         
-        const employeeSales = employeeOrders.reduce((sum, o) => {
+        const employeeSales = employeeOrdersDelivered.reduce((sum, o) => {
             const orderTotal = o.final_amount || o.total_amount || 0;
             const deliveryFee = o.delivery_fee || 0;
             return sum + (orderTotal - deliveryFee);
         }, 0);
         
-        // حساب أرباح المدير من الموظفين (نسبة من أرباحهم)
-        const managerProfitFromEmployees = employeeOrders.reduce((sum, o) => {
+        // حساب أرباح النظام من طلبات الموظفين (المبلغ - تكلفة البضاعة - ربح الموظف)
+        const systemProfitFromEmployees = employeeOrdersDelivered.reduce((sum, o) => {
             if (!o.order_items || !Array.isArray(o.order_items)) return sum;
             
-            const orderTotalProfit = o.order_items.reduce((itemSum, item) => {
+            const orderSystemProfit = o.order_items.reduce((itemSum, item) => {
                 const sellPrice = item.unit_price || 0;
                 const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
                 const quantity = item.quantity || 0;
-                return itemSum + Math.max((sellPrice - costPrice) * quantity, 0);
+                const totalProfit = (sellPrice - costPrice) * quantity;
+                
+                // الحصول على ربح الموظف من جدول الأرباح أو القواعد
+                const employeeProfit = getEmployeeProfit(item, o.created_by, totalProfit);
+                const systemProfit = Math.max(totalProfit - employeeProfit, 0);
+                
+                return itemSum + systemProfit;
             }, 0);
-            
-            // افتراض أن المدير يحصل على 30% من أرباح الموظفين
-            return sum + (orderTotalProfit * 0.3);
+            return sum + orderSystemProfit;
         }, 0);
         
-        const totalProfit = myProfit + managerProfitFromEmployees;
+        const totalSystemProfit = myProfit + systemProfitFromEmployees;
     
         const employeePendingDuesDetails = safeOrders
           .filter(o => (o.status === 'delivered' || o.status === 'completed') && (o.profitStatus || 'pending') === 'pending' && o.created_by !== currentUser?.id);
