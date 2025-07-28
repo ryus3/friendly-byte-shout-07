@@ -4,6 +4,11 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
   // الحصول على الـ auth context أولاً - يجب استدعاء الهوك دائماً في المستوى الأعلى
+  const [userRoles, setUserRoles] = useState([]);
+  const [userPermissions, setUserPermissions] = useState([]);
+  const [productPermissions, setProductPermissions] = useState({});
+  const [loading, setLoading] = useState(true);
+  
   let auth;
   try {
     auth = useAuth();
@@ -11,11 +16,6 @@ export const useUnifiedPermissions = (passedUser) => {
     console.warn('Auth context not available:', error);
     auth = null;
   }
-  
-  const [userRoles, setUserRoles] = useState([]);
-  const [userPermissions, setUserPermissions] = useState([]);
-  const [productPermissions, setProductPermissions] = useState({});
-  const [loading, setLoading] = useState(true);
 
   const user = passedUser || auth?.user;
 
