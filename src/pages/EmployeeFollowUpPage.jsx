@@ -80,7 +80,6 @@ const EmployeeFollowUpPage = () => {
       highlightFromUrl, 
       employeeFromUrl, 
       ordersFromUrl,
-      filterFromUrl,
       allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl)
     });
     
@@ -149,7 +148,7 @@ const EmployeeFollowUpPage = () => {
         }, 1000);
       }
     }
-  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl, filterFromUrl]);
+  }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
   // قائمة الموظفين النشطين
   const employees = useMemo(() => {
