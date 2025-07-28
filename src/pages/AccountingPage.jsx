@@ -478,7 +478,12 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, systemProfit, netProfit, totalSystemProfit, inventoryValue, myProfit, systemProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails: [] };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, systemProfit, netProfit, totalSystemProfit, inventoryValue, myProfit, systemProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails: [], generalExpensesFiltered: expensesInRange.filter(e => {
+          if (e.expense_type === 'system') return false;
+          if (e.category === 'مستحقات الموظفين') return false;
+          if (e.related_data?.category === 'شراء بضاعة') return false;
+          return true;
+        }) };
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, allProfits]);
 
     const totalCapital = initialCapital + financialSummary.inventoryValue;
@@ -633,7 +638,7 @@ const AccountingPage = () => {
             <ExpensesDialog
                 open={dialogs.expenses}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, expenses: open }))}
-                expenses={accounting?.expenses || []}
+                expenses={financialSummary.generalExpensesFiltered || []}
                 addExpense={addExpense}
                 deleteExpense={deleteExpense}
             />

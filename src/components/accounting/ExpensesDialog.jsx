@@ -57,36 +57,14 @@ import React, { useState, useEffect } from 'react';
         }
       }, [open]);
     
-  // فلترة المصاريف لإظهار جميع المصاريف التشغيلية فقط (استبعاد المصاريف النظامية)
+  // فلترة المصاريف حسب الفلاتر المحددة فقط (البيانات المُمررة مفلترة مسبقاً)
   const filteredExpenses = expenses.filter(expense => {
-    console.log('🔍 [TRACE] فحص مصروف:', {
-      id: expense.id,
-      category: expense.category,
-      expense_type: expense.expense_type,
-      description: expense.description,
-      amount: expense.amount
-    });
-    
-    // استبعاد جميع المصاريف النظامية بما في ذلك مستحقات الموظفين
-    if (expense.expense_type === 'system') {
-      console.log('🚫 [TRACE] تم استبعاد مصروف نظامي:', expense.category);
-      return false;
-    }
-    
-    // استبعاد مستحقات الموظفين حتى لو لم تكن مصنفة كـ system
-    if (expense.category === 'مستحقات الموظفين') {
-      console.log('🚫 [TRACE] تم استبعاد مستحقات الموظفين');
-      return false;
-    }
-    
     const categoryMatch = filters.category === 'all' || expense.category === filters.category;
     const dateMatch = !filters.dateRange.from || 
       (new Date(expense.created_at || expense.transaction_date) >= filters.dateRange.from && 
        new Date(expense.created_at || expense.transaction_date) <= (filters.dateRange.to || new Date()));
     
-    const result = categoryMatch && dateMatch;
-    console.log('✅ [TRACE] نتيجة الفلترة:', result);
-    return result;
+    return categoryMatch && dateMatch;
   });
   
   console.log('📊 [TRACE] إجمالي المصاريف قبل الفلترة:', expenses.length);

@@ -279,7 +279,13 @@ const ProfitsSummaryPage = () => {
             cogs,
             grossProfit,
             generalExpenses,
-            employeeSettledDues
+            employeeSettledDues,
+            generalExpensesFiltered: expensesInPeriod.filter(e => {
+                if (e.expense_type === 'system') return false;
+                if (e.category === 'مستحقات الموظفين') return false;
+                if (e.related_data?.category === 'شراء بضاعة') return false;
+                return true;
+            })
         };
     }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
 
@@ -539,7 +545,7 @@ const ProfitsSummaryPage = () => {
           <ExpensesDialog 
             open={dialogs.expenses}
             onOpenChange={(open) => setDialogs(d => ({...d, expenses: open}))}
-            expenses={accounting.expenses}
+            expenses={profitData.generalExpensesFiltered || []}
             addExpense={addExpense}
             deleteExpense={deleteExpense}
           />
