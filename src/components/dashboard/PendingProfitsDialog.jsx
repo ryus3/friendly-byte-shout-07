@@ -272,6 +272,30 @@ const PendingProfitsDialog = ({
           </div>
 
           {/* قائمة الطلبات */}
+          {/* ملخص سريع للأرباح */}
+          {pendingProfitOrders.length > 0 && (
+            <div className="flex-shrink-0 mb-6">
+              <Card className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-bold mb-2">
+                        {isEmployeeView ? 'ملخص أرباحي المعلقة' : 'ملخص الأرباح المعلقة'}
+                      </h3>
+                      <p className="text-white/90 text-sm">
+                        {pendingProfitOrders.length} طلب • {totalPendingProfit.toLocaleString()} د.ع
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <DollarSign className="w-8 h-8 text-white/80" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* قائمة الطلبات */}
           <div className="flex-1 min-h-0">
             <ScrollArea className="h-full w-full">
               <div className="space-y-2 pr-1">
