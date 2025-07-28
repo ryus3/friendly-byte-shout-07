@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export const useMediaQuery = (query) => {
   // Use a simple fallback approach for media queries
@@ -13,7 +13,7 @@ export const useMediaQuery = (query) => {
     return false;
   };
 
-  const [matches, setMatches] = useState(() => getMatches(query));
+  const [matches, setMatches] = useState(getMatches(query));
 
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) {
