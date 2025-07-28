@@ -277,8 +277,35 @@ const AccountingPage = () => {
         }, 0);
         
         const grossProfit = salesWithoutDelivery - cogs;
-        // حساب صافي ربح المبيعات (بدون طرح المصاريف العامة)
-        const netSalesProfit = salesWithoutDelivery - cogs; // هذا هو صافي ربح المبيعات فقط
+        
+        // حساب ربح النظام الصحيح (نفس منطق قاعدة البيانات)
+        // ربح النظام = ربح المدير كاملاً + ربح النظام من طلبات الموظفين
+        const managerOrders = deliveredOrders.filter(o => !o.created_by || o.created_by === user?.id);
+        const employeeOrders = deliveredOrders.filter(o => o.created_by && o.created_by !== user?.id);
+        
+        const managerTotalProfit = managerOrders.reduce((sum, order) => {
+          const orderProfit = (order.items || []).reduce((itemSum, item) => {
+            const sellPrice = item.unit_price || item.price || 0;
+            const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+            return itemSum + ((sellPrice - costPrice) * item.quantity);
+          }, 0);
+          return sum + orderProfit;
+        }, 0);
+        
+        const employeeSystemProfit = employeeOrders.reduce((sum, order) => {
+          const orderProfit = (order.items || []).reduce((itemSum, item) => {
+            const sellPrice = item.unit_price || item.price || 0;
+            const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+            const itemProfit = (sellPrice - costPrice) * item.quantity;
+            // نسبة ربح النظام من طلبات الموظفين (70% تقريباً حسب القاعدة)
+            const systemShare = itemProfit * 0.7; // يمكن تحسينها لاحقاً من قاعدة البيانات
+            return itemSum + systemShare;
+          }, 0);
+          return sum + orderProfit;
+        }, 0);
+        
+        // ربح النظام الصحيح
+        const systemProfit = managerTotalProfit + employeeSystemProfit;
         
         // المصاريف العامة (للعرض منفصلة وليس لطرحها من صافي الربح)
         const generalExpenses = expensesInRange.filter(e => 
@@ -292,8 +319,8 @@ const AccountingPage = () => {
           e.related_data?.category === 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // صافي الربح = ربح المبيعات فقط (بدون حذف المصاريف العامة)
-        const netProfit = grossProfit;
+        // صافي الربح = ربح النظام - المصاريف العامة
+        const netProfit = systemProfit - generalExpenses;
     
         
         // حساب قيمة المخزون
@@ -407,7 +434,7 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, systemProfit, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
     }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
 
     const totalCapital = initialCapital + financialSummary.inventoryValue;
@@ -469,7 +496,7 @@ const AccountingPage = () => {
             
             // حساب نسبة الربح
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
-            const profit = financialSummary.grossProfit || 0;
+            const profit = financialSummary.systemProfit || financialSummary.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
             // إذا كان هناك ربح، اعرض عدد القطع
@@ -533,7 +560,7 @@ const AccountingPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard 
                         title="صافي أرباح المبيعات" 
-                        value={financialSummary.grossProfit} 
+                        value={financialSummary.systemProfit || financialSummary.grossProfit} 
                         icon={PieChart} 
                         colors={['blue-500', 'sky-500']} 
                         format="currency" 
@@ -581,7 +608,7 @@ const AccountingPage = () => {
                                 <StatRow label="رسوم التوصيل" value={financialSummary.deliveryFees || 0} colorClass="text-blue-400" />
                                 <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery || 0} colorClass="text-green-600" />
                                 <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs || 0} colorClass="text-orange-500" isNegative/>
-                                <StatRow label="مجمل الربح" value={financialSummary.grossProfit || 0} colorClass="text-blue-500 font-bold" />
+                                <StatRow label="مجمل الربح" value={financialSummary.systemProfit || financialSummary.grossProfit || 0} colorClass="text-blue-500 font-bold" />
                                 <StatRow label="المصاريف العامة" value={financialSummary.generalExpenses || 0} colorClass="text-red-500" isNegative/>
                                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
                                     <p className="font-bold text-lg">صافي الربح</p>

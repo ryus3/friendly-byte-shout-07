@@ -10,7 +10,8 @@ export const useEnhancedFinancialData = () => {
     capitalValue: 0,
     totalRevenue: 0,
     totalCogs: 0,
-    grossProfit: 0,
+    grossProfit: 0, // الربح الخام للإحصائيات
+    systemProfit: 0, // ربح النظام الصحيح
     totalExpenses: 0,
     totalPurchases: 0,
     employeeProfits: 0,
@@ -38,7 +39,8 @@ export const useEnhancedFinancialData = () => {
           capitalValue: Number(result.capital_value || 0),
           totalRevenue: Number(result.total_revenue || 0),
           totalCogs: Number(result.total_cogs || 0),
-          grossProfit: Number(result.gross_profit || 0),
+          grossProfit: Number(result.gross_profit || 0), // للإحصائيات فقط
+          systemProfit: Number(result.system_profit || 0), // ربح النظام الصحيح
           totalExpenses: Number(result.total_expenses || 0),
           totalPurchases: Number(result.total_purchases || 0),
           employeeProfits: Number(result.employee_profits || 0),

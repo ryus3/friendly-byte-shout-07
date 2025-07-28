@@ -109,7 +109,8 @@ const CashManagementPage = () => {
           capitalValue: Number(enhanced.capital_value || 0),
           totalRevenue: Number(enhanced.total_revenue || 0),
           totalCogs: Number(enhanced.total_cogs || 0),
-          grossProfit: Number(enhanced.gross_profit || 0),
+          grossProfit: Number(enhanced.gross_profit || 0), // للإحصائيات فقط
+          systemProfit: Number(enhanced.system_profit || 0), // ربح النظام الصحيح
           totalExpenses: Number(enhanced.total_expenses || 0),
           totalPurchases: Number(enhanced.total_purchases || 0),
           employeeProfits: Number(enhanced.employee_profits || 0),
@@ -117,10 +118,10 @@ const CashManagementPage = () => {
           finalBalance: Number(enhanced.final_balance || 0)
         });
         
-        // تحديث النظام القديم للتوافق
+        // تحديث النظام القديم للتوافق - استخدام ربح النظام الصحيح
         setSystemFinancials({
           capitalAmount: Number(enhanced.capital_value || 0),
-          realizedProfits: Number(enhanced.gross_profit || 0),
+          realizedProfits: Number(enhanced.system_profit || 0), // تصحيح لاستخدام ربح النظام
           totalPurchases: Number(enhanced.total_purchases || 0),
           totalExpenses: Number(enhanced.total_expenses || 0)
         });

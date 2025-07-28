@@ -117,7 +117,8 @@ export const useUnifiedProfits = (userId = null) => {
         // بيانات مالية إضافية من النظام المحسن
         totalRevenue: Number(enhanced.total_revenue || 0),
         totalCogs: Number(enhanced.total_cogs || 0),
-        grossProfit: Number(enhanced.gross_profit || 0),
+        grossProfit: Number(enhanced.gross_profit || 0), // للإحصائيات فقط
+        systemProfit: Number(enhanced.system_profit || 0), // ربح النظام الصحيح
         finalBalance: Number(enhanced.final_balance || 0),
         
         // البيانات الشخصية

@@ -95,11 +95,12 @@ const SystemProfitSummary = ({
     // استخدام البيانات المحسنة إذا كانت متوفرة
     if (enhancedData) {
       const actualProfit = enhancedData.netProfit || 0;
-      const grossProfit = enhancedData.grossProfit || 0;
+      const systemProfit = enhancedData.systemProfit || 0; // ربح النظام الصحيح
+      const grossProfit = enhancedData.grossProfit || 0; // للإحصائيات فقط
       const totalRevenue = enhancedData.totalRevenue || 0;
       
       // النسب المئوية والمؤشرات المحسنة
-      const profitMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100) : 0;
+      const profitMargin = totalRevenue > 0 ? ((systemProfit / totalRevenue) * 100) : 0;
       const expenseRatio = totalRevenue > 0 ? ((enhancedData.totalExpenses / totalRevenue) * 100) : 0;
       const purchaseRatio = totalRevenue > 0 ? ((enhancedData.totalPurchases / totalRevenue) * 100) : 0;
       const roi = enhancedData.capitalValue > 0 ? ((actualProfit / enhancedData.capitalValue) * 100) : 0;
@@ -107,6 +108,7 @@ const SystemProfitSummary = ({
       return {
         netWorth: enhancedData.finalBalance || 0,
         actualProfit,
+        systemProfit, // إضافة ربح النظام الصحيح
         profitMargin,
         expenseRatio,
         purchaseRatio,
@@ -114,9 +116,9 @@ const SystemProfitSummary = ({
         isProfit: actualProfit > 0,
         isHealthy: expenseRatio < 25 && purchaseRatio < 70,
         riskLevel: expenseRatio > 30 ? 'عالي' : expenseRatio > 20 ? 'متوسط' : 'منخفض',
-        liquidityRatio: (enhancedData.capitalValue + grossProfit) / (enhancedData.totalExpenses + enhancedData.totalPurchases || 1),
+        liquidityRatio: (enhancedData.capitalValue + systemProfit) / (enhancedData.totalExpenses + enhancedData.totalPurchases || 1),
         assetTurnover: totalRevenue / (inventoryValue || 1),
-        operatingMargin: totalRevenue > 0 ? ((grossProfit - enhancedData.totalExpenses) / totalRevenue) * 100 : 0
+        operatingMargin: totalRevenue > 0 ? ((systemProfit - enhancedData.totalExpenses) / totalRevenue) * 100 : 0
       };
     }
     
@@ -367,8 +369,8 @@ const SystemProfitSummary = ({
                       <TrendingUp className="w-4 h-4 md:w-6 md:h-6 transition-transform group-hover:rotate-12" />
                     </div>
                     <div>
-                      <p className="text-xs md:text-sm text-white/80 font-medium">أرباح المبيعات</p>
-                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(realizedProfits)}</p>
+                      <p className="text-xs md:text-sm text-white/80 font-medium">ربح النظام</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(calculations.systemProfit || realizedProfits)}</p>
                       <p className="text-xs text-white/60 mt-1 flex items-center gap-1">
                         <Target className="w-3 h-3" />
                         اضغط للتحليل المتقدم
