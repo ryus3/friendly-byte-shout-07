@@ -2949,6 +2949,20 @@ export type Database = {
           final_balance: number
         }[]
       }
+      calculate_enhanced_main_cash_balance_v3: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          capital_value: number
+          total_revenue: number
+          total_cogs: number
+          gross_profit: number
+          total_expenses: number
+          total_purchases: number
+          employee_profits: number
+          net_profit: number
+          final_balance: number
+        }[]
+      }
       calculate_fifo_cost: {
         Args: {
           p_product_id: string
