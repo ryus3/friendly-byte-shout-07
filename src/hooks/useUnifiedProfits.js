@@ -74,11 +74,13 @@ export const useUnifiedProfits = (userId = null) => {
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
       // فصل المصاريف العامة عن المستحقات المدفوعة
-      const generalExpenses = expenses?.filter(e => e.category !== 'مستحقات مدفوعة')
-        .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const generalExpenses = expenses?.filter(e => 
+        e.category !== 'مستحقات الموظفين' && e.category !== 'مستحقات مدفوعة'
+      ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
-      const paidDues = expenses?.filter(e => e.category === 'مستحقات مدفوعة')
-        .reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const paidDues = expenses?.filter(e => 
+        e.category === 'مستحقات الموظفين' || e.category === 'مستحقات مدفوعة'
+      ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
       const totalExpenses = generalExpenses + paidDues;
       
