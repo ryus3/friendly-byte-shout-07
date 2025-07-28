@@ -73,7 +73,11 @@ export const useUnifiedProfits = (userId = null) => {
       const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
-      // فصل المصاريف العامة عن المستحقات المدفوعة (موحد مع المركز المالي)
+      // فصل المصاريف العامة عن المستحقات المدفوعة بشكل صحيح
+      const paidDues = expenses?.filter(e => 
+        e.category === 'مستحقات الموظفين' || e.category === 'مستحقات مدفوعة'
+      ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      
       const generalExpenses = expenses?.filter(e => 
         e.expense_type !== 'system' && 
         e.category !== 'فئات_المصاريف' &&
@@ -81,21 +85,17 @@ export const useUnifiedProfits = (userId = null) => {
         e.category !== 'مستحقات مدفوعة'
       ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
-      const paidDues = expenses?.filter(e => 
-        e.category === 'مستحقات الموظفين' || e.category === 'مستحقات مدفوعة'
-      ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      
       const totalExpenses = generalExpenses + paidDues; // للإحصائيات فقط
       
-      // صافي الأرباح = أرباح المدير من المبيعات - المستحقات المدفوعة فقط (موحد مع المركز المالي)
+      // صافي الأرباح = أرباح المدير من المبيعات - المستحقات المدفوعة فقط (منطق صحيح)
       const netSystemProfit = totalManagerProfits - paidDues;
       
       console.log('🔍 فحص النظام المحاسبي - useUnifiedProfits:', {
         expenses: expenses?.length || 0,
         totalManagerProfits,
-        generalExpenses,
-        paidDues,
-        netSystemProfit,
+        paidDues, // المستحقات المدفوعة
+        generalExpenses, // المصاريف العامة (بدون المستحقات)
+        netSystemProfit, // صافي الربح بعد خصم المستحقات فقط
         expensesDetails: expenses?.map(e => ({
           category: e.category,
           amount: e.amount,

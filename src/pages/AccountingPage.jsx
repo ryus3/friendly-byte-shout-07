@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useSettledDues } from '@/hooks/useSettledDues';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
@@ -123,6 +124,7 @@ const AccountingPage = () => {
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
     const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
+    const { settledDues } = useSettledDues(); // الهوك الموحد للمستحقات
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -288,27 +290,19 @@ const AccountingPage = () => {
           e.category !== 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // مستحقات الموظفين المسددة (منفصلة)
-        const employeeSettledDues = expensesInRange.filter(e => 
-          e.related_data?.category === 'مستحقات الموظفين' ||
-          e.category === 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + (e.amount || 0), 0);
+        // مستحقات الموظفين المسددة (استخدام البيانات الموحدة)
+        const employeeSettledDues = settledDues.totalAmount || 0;
         
         // صافي الربح = ربح المبيعات - المستحقات المدفوعة فقط (وليس المصاريف العامة)
         const netProfit = grossProfit - employeeSettledDues;
         
-        console.log('🔍 فحص النظام المحاسبي - AccountingPage:', {
+        console.log('🔍 فحص النظام المحاسبي موحد - AccountingPage:', {
           grossProfit,
           generalExpenses,
-          employeeSettledDues,
-          netProfit,
-          expensesInRange: expensesInRange?.length || 0,
-          expensesDetails: expensesInRange?.map(e => ({
-            category: e.category,
-            amount: e.amount,
-            expense_type: e.expense_type,
-            related_data: e.related_data
-          })) || []
+          employeeSettledDues, // استخدام البيانات الموحدة
+          netProfit, // صافي الربح بعد خصم المستحقات فقط
+          settledDuesFromHook: settledDues.totalAmount,
+          expensesInRange: expensesInRange?.length || 0
         });
     
         

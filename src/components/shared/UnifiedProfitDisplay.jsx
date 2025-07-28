@@ -1,5 +1,6 @@
 import React from 'react';
 import StatCard from '@/components/dashboard/StatCard';
+import { useSettledDues } from '@/hooks/useSettledDues';
 import { 
   User, 
   Hourglass, 
@@ -24,6 +25,8 @@ const UnifiedProfitDisplay = ({
   onSettledDuesClick = () => {},
   className = ''
 }) => {
+  // استخدام هوك المستحقات الموحد
+  const { settledDues } = useSettledDues();
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -108,7 +111,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'paid-dues',
             title: 'المستحقات المدفوعة',
-            value: profitData.paidDues || 0,
+            value: settledDues.totalAmount || 0, // استخدام البيانات الموحدة
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',
