@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Grid, List } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -67,7 +67,6 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // إضافة نمط العرض
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -847,27 +846,6 @@ const EmployeeFollowUpPage = () => {
             <h2 className="text-xl font-semibold">
               قائمة الطلبات ({filteredOrders.length})
             </h2>
-            {/* أزرار تبديل العرض */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-                className="flex items-center gap-2"
-              >
-                <Grid className="w-4 h-4" />
-                شبكة
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-                className="flex items-center gap-2"
-              >
-                <List className="w-4 h-4" />
-                قائمة
-              </Button>
-            </div>
           </div>
 
           {/* تنبيه للطلبات الراجعة */}
@@ -896,7 +874,7 @@ const EmployeeFollowUpPage = () => {
             setSelectedOrders={setSelectedOrders}
             calculateProfit={calculateProfit}
             profits={profits}
-            viewMode={viewMode}
+            viewMode="grid"
             showEmployeeName={filters.employeeId === 'all'}
           />
         </div>

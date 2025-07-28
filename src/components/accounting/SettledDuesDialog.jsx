@@ -18,35 +18,88 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
 
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u.role === 'employee' || u.role === 'deputy');
+    return allUsers.filter(u => u.status === 'active' && u.role !== 'admin');
   }, [allUsers]);
 
   // جلب فواتير التحاسب من جدول expenses مع نوع system
   const settlementInvoices = useMemo(() => {
     if (!Array.isArray(invoices)) return [];
     
+    console.log('📊 جميع المصاريف:', invoices);
+    
     // البحث عن مصاريف نوع "مستحقات الموظفين" 
-    return invoices.filter(expense => 
-      expense.category === 'مستحقات الموظفين' && 
-      expense.expense_type === 'system' &&
-      expense.status === 'approved'
-    ).map(expense => ({
-      id: expense.id,
-      invoice_number: `SETTLEMENT-${expense.id.slice(-8)}`,
-      employee_name: expense.description?.replace('دفع مستحقات الموظف ', '') || 'غير محدد',
-      settlement_amount: expense.amount,
-      settlement_date: expense.created_at,
-      status: 'completed'
-    }));
+    const settlements = invoices.filter(expense => {
+      const isSettlement = expense.category === 'مستحقات الموظفين' && 
+                          expense.expense_type === 'system' &&
+                          expense.status === 'approved';
+      
+      console.log(`💰 فحص المصروف ${expense.id}:`, {
+        category: expense.category,
+        expense_type: expense.expense_type,
+        status: expense.status,
+        isSettlement
+      });
+      
+      return isSettlement;
+    }).map(expense => {
+      // استخراج اسم الموظف من وصف المصروف
+      const employeeName = extractEmployeeNameFromDescription(expense.description);
+      
+      return {
+        id: expense.id,
+        invoice_number: `INV-${expense.id.slice(-8).toUpperCase()}`,
+        employee_name: employeeName,
+        settlement_amount: expense.amount,
+        settlement_date: expense.created_at,
+        status: 'completed',
+        description: expense.description,
+        metadata: expense.metadata
+      };
+    });
+    
+    console.log('📋 فواتير التحاسب المعالجة:', settlements);
+    return settlements;
   }, [invoices]);
+  
+  // استخراج اسم الموظف من وصف المصروف
+  const extractEmployeeNameFromDescription = (description) => {
+    if (!description) return 'غير محدد';
+    
+    // أنماط مختلفة لاستخراج اسم الموظف
+    const patterns = [
+      /دفع مستحقات الموظف\s*:?\s*(.+?)(?:\s*-|$)/,
+      /مستحقات\s*:?\s*(.+?)(?:\s*-|$)/,
+      /تحاسب\s*:?\s*(.+?)(?:\s*-|$)/,
+      /للموظف\s*:?\s*(.+?)(?:\s*-|$)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    // إذا لم نجد نمط محدد، نحاول استخراج اسم من النص
+    const words = description.split(/\s+/);
+    const nameWords = words.filter(word => 
+      word.length > 2 && 
+      !/^(دفع|مستحقات|الموظف|تحاسب|للموظف|من|إلى|في)$/i.test(word)
+    );
+    
+    return nameWords.slice(0, 2).join(' ') || 'غير محدد';
+  };
   
   const filteredInvoices = useMemo(() => {
     return settlementInvoices.filter(invoice => {
       const employeeMatch = filters.employeeId === 'all' || 
-        invoice.employee_name?.includes(employees.find(e => e.id === filters.employeeId)?.full_name || '');
+        invoice.employee_name?.includes(employees.find(e => e.user_id === filters.employeeId)?.full_name || '') ||
+        invoice.employee_name?.includes(employees.find(e => e.user_id === filters.employeeId)?.name || '');
+      
       const dateMatch = !filters.dateRange.from || 
         (new Date(invoice.settlement_date) >= filters.dateRange.from && 
          new Date(invoice.settlement_date) <= (filters.dateRange.to || new Date()));
+      
       return employeeMatch && dateMatch;
     });
   }, [settlementInvoices, filters, employees]);
@@ -79,8 +132,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
               <SelectContent>
                 <SelectItem value="all">جميع الموظفين</SelectItem>
                 {employees.map(employee => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.full_name}
+                  <SelectItem key={employee.user_id} value={employee.user_id}>
+                    {employee.full_name || employee.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -144,8 +197,16 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            // فتح نافذة معاينة الفاتورة - سيتم تطويرها لاحقاً
-                            alert(`فاتورة التحاسب: ${invoice.invoice_number}\nالموظف: ${invoice.employee_name}\nالمبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع`);
+                            // فتح نافذة معاينة الفاتورة مع التفاصيل الكاملة
+                            const details = `=== فاتورة التحاسب ===
+رقم الفاتورة: ${invoice.invoice_number}
+الموظف: ${invoice.employee_name}
+المبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع
+تاريخ التسوية: ${format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar })}
+الوصف: ${invoice.description}
+الحالة: تم التحاسب بنجاح`;
+                            
+                            alert(details);
                           }}
                         >
                           معاينة الفاتورة

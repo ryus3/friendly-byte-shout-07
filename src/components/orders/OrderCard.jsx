@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,10 @@ const OrderCard = ({
   onUpdateStatus, 
   onDeleteOrder, 
   onEditOrder,
-  onReceiveReturn 
+  onReceiveReturn,
+  calculateProfit,
+  profits,
+  showEmployeeName = false
 }) => {
   const { hasPermission } = useAuth();
   
@@ -176,6 +179,35 @@ const OrderCard = ({
   };
 
   const productSummary = getProductSummary();
+
+  // حساب ربح الموظف من الطلب
+  const employeeProfit = useMemo(() => {
+    if (!calculateProfit || !order.items) return 0;
+    
+    // البحث في profits أولاً
+    const profitRecord = profits?.find(p => p.order_id === order.id);
+    if (profitRecord && profitRecord.employee_profit) {
+      return profitRecord.employee_profit;
+    }
+    
+    // حساب من items إذا لم يوجد في profits
+    return order.items.reduce((sum, item) => {
+      return sum + (calculateProfit(item, order.created_by) || 0);
+    }, 0);
+  }, [calculateProfit, order, profits]);
+
+  // تحديد حالة الدفع
+  const paymentStatus = useMemo(() => {
+    const profitRecord = profits?.find(p => p.order_id === order.id);
+    
+    if (order.status === 'completed' && order.isarchived) {
+      return { status: 'paid', label: 'مدفوع', color: 'bg-green-500' };
+    } else if (profitRecord && !profitRecord.settled_at && order.receipt_received) {
+      return { status: 'pending', label: 'معلق', color: 'bg-yellow-500' };
+    } else {
+      return { status: 'not_due', label: 'غير مستحق', color: 'bg-gray-400' };
+    }
+  }, [order, profits]);
 
   return (
     <motion.div 
@@ -376,16 +408,35 @@ const OrderCard = ({
                 )}
                 
                 <div className="flex items-center gap-2 text-left">
-                  <div className="flex items-center gap-1">
-                    {order.delivery_fee > 0 && (
-                      <span className="text-xs text-muted-foreground font-medium">
-                        شامل التوصيل
-                      </span>
+                  <div className="space-y-1">
+                    {/* عرض ربح الموظف */}
+                    {employeeProfit > 0 && (
+                      <div className="flex items-center gap-1 text-xs">
+                        <span className="text-muted-foreground">ربح الموظف:</span>
+                        <span className="font-bold text-emerald-600">
+                          {employeeProfit.toLocaleString()} د.ع
+                        </span>
+                      </div>
                     )}
-                    <span className="font-bold text-lg text-primary">
-                      {order.final_amount?.toLocaleString()}
-                    </span>
-                    <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                    
+                    {/* السعر الإجمالي */}
+                    <div className="flex items-center gap-1">
+                      {order.delivery_fee > 0 && (
+                        <span className="text-xs text-muted-foreground font-medium">
+                          شامل التوصيل
+                        </span>
+                      )}
+                      <span className="font-bold text-lg text-primary">
+                        {order.final_amount?.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-primary/70 font-bold">د.ع</span>
+                    </div>
+                    
+                    {/* حالة الدفع */}
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
+                      <span className="text-xs font-medium">{paymentStatus.label}</span>
+                    </div>
                   </div>
                 </div>
               </div>
