@@ -30,7 +30,8 @@ import { ar } from 'date-fns/locale';
  * يحسب: رأس المال + أرباح المبيعات - المشتريات - المصاريف = الربح العام
  */
 const SystemProfitSummary = ({ 
-  capitalAmount = 0,
+  enhancedData = null, // البيانات المحسنة الجديدة
+  capitalAmount = 0,   // للتوافق مع النسخة القديمة
   realizedProfits = 0, 
   totalPurchases = 0,
   totalExpenses = 0,
@@ -91,20 +92,42 @@ const SystemProfitSummary = ({
   };
 
   const calculations = useMemo(() => {
-    // الربح العام = رأس المال + أرباح المبيعات المحققة - المشتريات - المصاريف + قيمة المخزون
-    const netWorth = capitalAmount + realizedProfits - totalPurchases - totalExpenses + inventoryValue;
-    const actualProfit = netWorth - capitalAmount; // الربح الفعلي = الصافي - رأس المال
+    // استخدام البيانات المحسنة إذا كانت متوفرة
+    if (enhancedData) {
+      const actualProfit = enhancedData.netProfit || 0;
+      const grossProfit = enhancedData.grossProfit || 0;
+      const totalRevenue = enhancedData.totalRevenue || 0;
+      
+      // النسب المئوية والمؤشرات المحسنة
+      const profitMargin = totalRevenue > 0 ? ((grossProfit / totalRevenue) * 100) : 0;
+      const expenseRatio = totalRevenue > 0 ? ((enhancedData.totalExpenses / totalRevenue) * 100) : 0;
+      const purchaseRatio = totalRevenue > 0 ? ((enhancedData.totalPurchases / totalRevenue) * 100) : 0;
+      const roi = enhancedData.capitalValue > 0 ? ((actualProfit / enhancedData.capitalValue) * 100) : 0;
+      
+      return {
+        netWorth: enhancedData.finalBalance || 0,
+        actualProfit,
+        profitMargin,
+        expenseRatio,
+        purchaseRatio,
+        roi,
+        isProfit: actualProfit > 0,
+        isHealthy: expenseRatio < 25 && purchaseRatio < 70,
+        riskLevel: expenseRatio > 30 ? 'عالي' : expenseRatio > 20 ? 'متوسط' : 'منخفض',
+        liquidityRatio: (enhancedData.capitalValue + grossProfit) / (enhancedData.totalExpenses + enhancedData.totalPurchases || 1),
+        assetTurnover: totalRevenue / (inventoryValue || 1),
+        operatingMargin: totalRevenue > 0 ? ((grossProfit - enhancedData.totalExpenses) / totalRevenue) * 100 : 0
+      };
+    }
     
-    // النسب المئوية والمؤشرات
+    // النظام القديم للتوافق العكسي
+    const netWorth = capitalAmount + realizedProfits - totalPurchases - totalExpenses + inventoryValue;
+    const actualProfit = netWorth - capitalAmount;
+    
     const profitMargin = capitalAmount > 0 ? ((realizedProfits / capitalAmount) * 100) : 0;
     const expenseRatio = capitalAmount > 0 ? ((totalExpenses / capitalAmount) * 100) : 0;
     const purchaseRatio = capitalAmount > 0 ? ((totalPurchases / capitalAmount) * 100) : 0;
-    const roi = capitalAmount > 0 ? ((actualProfit / capitalAmount) * 100) : 0; // عائد الاستثمار
-    
-    // تحليل الحالة المالية
-    const isProfit = actualProfit > 0;
-    const isHealthy = expenseRatio < 25 && purchaseRatio < 70;
-    const riskLevel = expenseRatio > 30 ? 'عالي' : expenseRatio > 20 ? 'متوسط' : 'منخفض';
+    const roi = capitalAmount > 0 ? ((actualProfit / capitalAmount) * 100) : 0;
     
     return {
       netWorth,
@@ -113,15 +136,14 @@ const SystemProfitSummary = ({
       expenseRatio,
       purchaseRatio,
       roi,
-      isProfit,
-      isHealthy,
-      riskLevel,
-      // مؤشرات إضافية
+      isProfit: actualProfit > 0,
+      isHealthy: expenseRatio < 25 && purchaseRatio < 70,
+      riskLevel: expenseRatio > 30 ? 'عالي' : expenseRatio > 20 ? 'متوسط' : 'منخفض',
       liquidityRatio: (capitalAmount + realizedProfits) / (totalExpenses + totalPurchases || 1),
       assetTurnover: realizedProfits / (inventoryValue || 1),
       operatingMargin: ((realizedProfits - totalExpenses) / realizedProfits) * 100
     };
-  }, [capitalAmount, realizedProfits, totalPurchases, totalExpenses, inventoryValue]);
+  }, [enhancedData, capitalAmount, realizedProfits, totalPurchases, totalExpenses, inventoryValue]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-IQ', {

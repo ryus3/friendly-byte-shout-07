@@ -49,6 +49,7 @@ const CashManagementPage = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [mainCashBalance, setMainCashBalance] = useState(0);
   const [totalSourcesBalance, setTotalSourcesBalance] = useState(0);
+  const [enhancedFinancialData, setEnhancedFinancialData] = useState(null);
   const [systemFinancials, setSystemFinancials] = useState({
     realizedProfits: 0,
     totalPurchases: 0,
@@ -95,28 +96,54 @@ const CashManagementPage = () => {
     return () => clearInterval(interval);
   }, [getMainCashBalance, getTotalSourcesBalance, cashSources, cashMovements]);
 
-  // جلب البيانات المالية الشاملة للربح العام
+  // جلب البيانات المالية المحسنة الجديدة
   const fetchSystemFinancials = async () => {
     try {
-      // جلب رأس المال
+      // استخدام النظام المحسن أولاً
+      const { data: enhancedData, error: enhancedError } = await supabase
+        .rpc('calculate_enhanced_main_cash_balance');
+
+      if (!enhancedError && enhancedData && enhancedData.length > 0) {
+        const enhanced = enhancedData[0];
+        setEnhancedFinancialData({
+          capitalValue: Number(enhanced.capital_value || 0),
+          totalRevenue: Number(enhanced.total_revenue || 0),
+          totalCogs: Number(enhanced.total_cogs || 0),
+          grossProfit: Number(enhanced.gross_profit || 0),
+          totalExpenses: Number(enhanced.total_expenses || 0),
+          totalPurchases: Number(enhanced.total_purchases || 0),
+          employeeProfits: Number(enhanced.employee_profits || 0),
+          netProfit: Number(enhanced.net_profit || 0),
+          finalBalance: Number(enhanced.final_balance || 0)
+        });
+        
+        // تحديث النظام القديم للتوافق
+        setSystemFinancials({
+          capitalAmount: Number(enhanced.capital_value || 0),
+          realizedProfits: Number(enhanced.gross_profit || 0),
+          totalPurchases: Number(enhanced.total_purchases || 0),
+          totalExpenses: Number(enhanced.total_expenses || 0)
+        });
+        
+        return;
+      }
+
+      // النظام القديم للتوافق العكسي
       const { data: capitalData } = await supabase
         .from('settings')
         .select('value')
         .eq('key', 'initial_capital')
         .single();
 
-      // جلب الأرباح المحققة (من الطلبات المستلمة)
       const { data: profitsData } = await supabase
         .from('cash_movements')
         .select('amount')
         .eq('reference_type', 'realized_profit');
 
-      // جلب المشتريات
       const { data: purchasesData } = await supabase
         .from('purchases')
         .select('total_amount');
 
-      // جلب المصاريف المعتمدة
       const { data: expensesData } = await supabase
         .from('expenses')
         .select('amount')
@@ -407,16 +434,18 @@ const CashManagementPage = () => {
 
           {/* التحليلات */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* الربح العام للنظام */}
+            {/* الملخص المالي المحسن */}
             <SystemProfitSummary
+              enhancedData={enhancedFinancialData}
               capitalAmount={systemFinancials.capitalAmount}
               realizedProfits={systemFinancials.realizedProfits}
               totalPurchases={systemFinancials.totalPurchases}
               totalExpenses={systemFinancials.totalExpenses}
-              inventoryValue={0} // سيتم حسابه لاحقاً
+              inventoryValue={0}
               onFilterChange={(period, dateRange) => {
                 console.log('تم تغيير الفلتر:', period, dateRange);
-                // هنا يمكن إضافة منطق إعادة جلب البيانات حسب الفترة
+                // إعادة جلب البيانات حسب الفترة المحددة
+                fetchSystemFinancials();
               }}
             />
             

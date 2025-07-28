@@ -51,13 +51,21 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
   const getMovementTypeLabel = (referenceType) => {
     const labels = {
       'purchase': 'شراء بضاعة',
+      'purchase_refund': 'استرداد مشتريات',
       'order': 'بيع طلب',
+      'order_payment': 'تحصيل طلب',
       'expense': 'مصروف',
-      'capital_injection': 'إضافة أموال',
-      'capital_withdrawal': 'سحب أموال',
+      'capital_injection': 'إضافة رأس مال',
+      'capital_withdrawal': 'سحب رأس مال',
       'withdrawal': 'سحب أموال',
+      'deposit': 'إيداع أموال',
       'profit_settlement': 'تحاسب أرباح',
-      'salary': 'راتب موظف'
+      'employee_dues': 'مستحقات موظفين',
+      'salary': 'راتب موظف',
+      'transfer': 'تحويل بين القصص',
+      'adjustment': 'تعديل رصيد',
+      'inventory_purchase': 'شراء مخزون',
+      'revenue': 'إيراد مبيعات'
     };
     return labels[referenceType] || 'حركة مالية';
   };
