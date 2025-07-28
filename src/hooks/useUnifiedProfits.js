@@ -76,18 +76,19 @@ export const useUnifiedProfits = (userId = null) => {
       // فصل المصاريف العامة عن المستحقات المدفوعة (موحد مع المركز المالي)
       const generalExpenses = expenses?.filter(e => 
         e.expense_type !== 'system' && 
-        e.category !== 'فئات_المصاريف'
-        // المستحقات المدفوعة تُحسب ضمن المصاريف العامة (موحد مع المركز المالي)
+        e.category !== 'فئات_المصاريف' &&
+        e.category !== 'مستحقات الموظفين' &&
+        e.category !== 'مستحقات مدفوعة'
       ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
       const paidDues = expenses?.filter(e => 
         e.category === 'مستحقات الموظفين' || e.category === 'مستحقات مدفوعة'
       ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
-      const totalExpenses = generalExpenses; // المصاريف العامة تشمل المستحقات المدفوعة
+      const totalExpenses = generalExpenses + paidDues; // للإحصائيات فقط
       
-      // صافي الأرباح = أرباح المدير من المبيعات - المصاريف العامة (بما فيها المستحقات المدفوعة)
-      const netSystemProfit = totalManagerProfits - generalExpenses;
+      // صافي الأرباح = أرباح المدير من المبيعات - المستحقات المدفوعة فقط (موحد مع المركز المالي)
+      const netSystemProfit = totalManagerProfits - paidDues;
       
       console.log('🔍 فحص النظام المحاسبي - useUnifiedProfits:', {
         expenses: expenses?.length || 0,
