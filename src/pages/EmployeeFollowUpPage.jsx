@@ -69,9 +69,14 @@ const EmployeeFollowUpPage = () => {
   // إعداد تأثير URL parameters
   useEffect(() => {
     if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
+      // تعيين فلتر الموظف تلقائياً
+      setFilters(prev => ({ ...prev, employeeId: employeeFromUrl }));
+      
+      // تحديد الطلبات المطلوب تسويتها
       const orderList = ordersFromUrl.split(',');
       setSelectedOrders(orderList);
       
+      // التمرير للكارت
       setTimeout(() => {
         const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
         if (element) {
@@ -479,6 +484,22 @@ const EmployeeFollowUpPage = () => {
           />
         </div>
 
+        {/* كارت تسوية المستحقات للطلبات المحددة - فوق قائمة الطلبات */}
+        {employeesWithSelectedOrders.length > 0 && (
+          <div className="space-y-4 mb-6">
+            <h3 className="text-lg font-semibold">تسوية المستحقات</h3>
+            {employeesWithSelectedOrders.map(({ employee, orders }) => (
+              <EmployeeSettlementCard
+                key={employee.user_id}
+                employee={employee}
+                selectedOrders={orders}
+                onClearSelection={handleClearSelection}
+                calculateProfit={calculateProfit}
+              />
+            ))}
+          </div>
+        )}
+
         {/* قائمة الطلبات */}
         <div className="bg-card p-4 rounded-xl border">
           <div className="flex items-center justify-between mb-4">
@@ -502,7 +523,6 @@ const EmployeeFollowUpPage = () => {
             </Card>
           )}
 
-
           {/* قائمة الطلبات */}
           <OrderList 
             orders={filteredOrders} 
@@ -515,22 +535,6 @@ const EmployeeFollowUpPage = () => {
             showEmployeeName={filters.employeeId === 'all'}
           />
         </div>
-
-        {/* كارت تسوية المستحقات للطلبات المحددة */}
-        {employeesWithSelectedOrders.length > 0 && (
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">تسوية المستحقات</h3>
-            {employeesWithSelectedOrders.map(({ employee, orders }) => (
-              <EmployeeSettlementCard
-                key={employee.user_id}
-                employee={employee}
-                selectedOrders={orders}
-                onClearSelection={handleClearSelection}
-                calculateProfit={calculateProfit}
-              />
-            ))}
-          </div>
-        )}
 
         {/* نوافذ حوارية */}
         <OrderDetailsDialog

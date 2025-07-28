@@ -7,6 +7,9 @@ import { DollarSign, Loader2, User, CheckCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/components/ui/use-toast';
 
+// معرف المدير الرئيسي - يجب عدم عرض التسوية له
+const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+
 const EmployeeSettlementCard = ({ 
   employee, 
   selectedOrders, 
@@ -60,10 +63,14 @@ const EmployeeSettlementCard = ({
     }
   };
 
-  if (employeeOrders.length === 0) return null;
+  // عدم عرض كارت التسوية للمدير أو إذا لم توجد طلبات
+  if (employeeOrders.length === 0 || employee.user_id === ADMIN_ID) return null;
 
   return (
-    <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+    <Card 
+      className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800"
+      data-employee-id={employee.user_id}
+    >
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-green-800 dark:text-green-200">
           <User className="w-5 h-5" />
