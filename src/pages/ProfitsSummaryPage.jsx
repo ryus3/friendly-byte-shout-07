@@ -198,18 +198,41 @@ const ProfitsSummaryPage = () => {
             return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to;
         }) : [];
 
+        console.log('🔍 [DEBUG] فحص المصاريف في ملخص الأرباح:', {
+            totalExpenses: expensesInPeriod.length,
+            expensesInPeriod: expensesInPeriod.map(e => ({
+                id: e.id,
+                category: e.category,
+                expense_type: e.expense_type,
+                amount: e.amount,
+                description: e.description
+            }))
+        });
+
         const generalExpenses = expensesInPeriod.filter(e => {
             // استبعاد جميع المصاريف النظامية
-            if (e.expense_type === 'system') return false;
+            if (e.expense_type === 'system') {
+                console.log('🚫 [DEBUG] استبعاد مصروف نظامي:', e.category, e.amount);
+                return false;
+            }
             
             // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
-            if (e.category === 'مستحقات الموظفين') return false;
+            if (e.category === 'مستحقات الموظفين') {
+                console.log('🚫 [DEBUG] استبعاد مستحقات موظفين:', e.amount);
+                return false;
+            }
             
             // استبعاد مصاريف الشراء المرتبطة بالمشتريات
-            if (e.related_data?.category === 'شراء بضاعة') return false;
+            if (e.related_data?.category === 'شراء بضاعة') {
+                console.log('🚫 [DEBUG] استبعاد مصاريف شراء:', e.amount);
+                return false;
+            }
             
+            console.log('✅ [DEBUG] مصروف عام صحيح:', e.category, e.amount);
             return true;
         }).reduce((sum, e) => sum + e.amount, 0);
+
+        console.log('📊 [DEBUG] النتائج في ملخص الأرباح:', { generalExpenses });
 
         const employeeSettledDues = expensesInPeriod.filter(e => 
             e.related_data?.category === 'مستحقات الموظفين'
