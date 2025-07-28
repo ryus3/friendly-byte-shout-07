@@ -125,13 +125,34 @@ const EmployeeFollowUpPage = () => {
         profitStatusMatch = profitStatus === filters.profitStatus;
       }
       
-      // فلتر الأرشيف
-      const isAutoArchived = order.status === 'completed' || order.status === 'returned_in_stock';
+      // فلتر الأرشيف - إصلاح المنطق
+      // المؤرشفة يدوياً فقط، وليس التلقائية
       const isManuallyArchived = order.isarchived === true || order.isArchived === true;
-      const isArchived = isAutoArchived || isManuallyArchived;
-      const archiveMatch = filters.archived ? isArchived : !isArchived;
+      let archiveMatch;
       
-      return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
+      if (filters.archived) {
+        // إذا اختار عرض الأرشيف، اعرض المؤرشفة يدوياً فقط
+        archiveMatch = isManuallyArchived;
+      } else {
+        // إذا لم يختر الأرشيف، اعرض غير المؤرشفة يدوياً (تشمل completed و returned_in_stock)
+        archiveMatch = !isManuallyArchived;
+      }
+      
+      const matchResult = employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
+      
+      console.log(`🔍 طلب ${order.order_number}:`, {
+        employeeMatch,
+        statusMatch, 
+        profitStatusMatch,
+        archiveMatch,
+        isManuallyArchived,
+        status: order.status,
+        created_by: order.created_by,
+        filters: filters.employeeId,
+        finalMatch: matchResult
+      });
+      
+      return matchResult;
     }).map(order => ({
       ...order,
       created_by_name: usersMap.get(order.created_by) || 'غير معروف'
@@ -153,10 +174,19 @@ const EmployeeFollowUpPage = () => {
       };
     }
 
-    // الطلبات المسلمة فقط
+    // الطلبات المسلمة أو المكتملة للإحصائيات
     const deliveredOrders = filteredOrders.filter(o => 
       o && (o.status === 'delivered' || o.status === 'completed')
     );
+    
+    console.log('📊 الطلبات للإحصائيات:', {
+      filteredOrdersCount: filteredOrders.length,
+      deliveredOrdersCount: deliveredOrders.length,
+      statusBreakdown: filteredOrders.reduce((acc, o) => {
+        acc[o.status] = (acc[o.status] || 0) + 1;
+        return acc;
+      }, {})
+    });
     
     const totalSales = deliveredOrders.reduce((sum, order) => 
       sum + (order?.final_amount || order?.total_amount || 0), 0
