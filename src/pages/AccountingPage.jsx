@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useCashSources } from '@/hooks/useCashSources';
+import { useEnhancedFinancialData } from '@/hooks/useEnhancedFinancialData';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -137,6 +138,7 @@ const AccountingPage = () => {
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
     const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
+    const { financialData: enhancedFinancialData, loading: financialLoading } = useEnhancedFinancialData();
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -477,19 +479,17 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // حساب نسبة الربح
-            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
-            const profit = financialSummary.systemProfit || financialSummary.grossProfit || 0;
+            // استخدام البيانات المالية المحسنة الصحيحة
+            const revenue = enhancedFinancialData.totalRevenue || 0;
+            const profit = enhancedFinancialData.grossProfit || 0;
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
             return `${profitMargin}%`;
           })(),
           subValue: (() => {
-            // حساب عدد القطع المباعة
-            const totalPiecesSold = financialSummary.deliveredOrders?.reduce((sum, order) => 
-              sum + (order.order_items?.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0) || 0), 0) || 0;
-            
-            return totalPiecesSold > 0 ? `${totalPiecesSold} قطعة` : 'لا توجد مبيعات';
+            // عرض مقدار الربح بالدينار
+            const profit = enhancedFinancialData.grossProfit || 0;
+            return profit > 0 ? `${profit.toLocaleString()} د.ع` : 'لا توجد أرباح';
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 
