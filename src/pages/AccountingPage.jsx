@@ -294,9 +294,12 @@ const AccountingPage = () => {
             .filter(e => e.expense_type !== 'system' && e.category !== 'مستحقات الموظفين' && e.related_data?.category !== 'شراء بضاعة')
             .reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // حساب المستحقات المدفوعة للموظفين
+        // حساب المستحقات المدفوعة للموظفين (في الفترة المحددة)
         const employeeSettledDues = allProfits
-            .filter(p => p.status === 'settled' && p.employee_id !== currentUser?.id)
+            .filter(p => {
+                const order = deliveredOrders.find(o => o.id === p.order_id);
+                return order && p.status === 'settled' && p.employee_id !== currentUser?.id;
+            })
             .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
         // حساب قيمة المخزون
@@ -355,8 +358,7 @@ const AccountingPage = () => {
         
         const totalSystemProfit = myProfit + systemProfitFromEmployees;
         const systemProfit = totalSystemProfit;
-        const netProfit = grossProfit - generalExpenses;
-    
+        
         // حساب مستحقات الموظفين المعلقة (من جدول profits)
         const employeePendingDues = allProfits
           .filter(p => {
@@ -364,6 +366,9 @@ const AccountingPage = () => {
             return order && p.status === 'pending' && p.employee_id !== currentUser?.id;
           })
           .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+          
+        // صافي ربح المبيعات = إجمالي ربح النظام بعد خصم مستحقات الموظفين والمصاريف العامة
+        const netProfit = totalSystemProfit - employeePendingDues - generalExpenses;
     
         // حساب رصيد القاصة الحقيقي = رأس المال + صافي الأرباح
         const cashOnHand = realCashBalance || ((accounting?.capital || 0) + netProfit);
