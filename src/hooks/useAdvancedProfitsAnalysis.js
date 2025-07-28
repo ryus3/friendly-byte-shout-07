@@ -105,7 +105,25 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       if (financialError) throw financialError;
 
       const enhancedFinancialData = financialData?.[0] || {};
-      const totalSystemProfit = Number(enhancedFinancialData.gross_profit || 0); // الربح الخام
+
+      // جلب قواعد أرباح الموظفين للحسابات الدقيقة
+      const { data: employeeProfitRules, error: rulesError } = await supabase
+        .from('employee_profit_rules')
+        .select('*')
+        .eq('is_active', true);
+
+      if (rulesError) {
+        console.error('Error fetching employee profit rules:', rulesError);
+      }
+
+      // تجميع قواعد الأرباح حسب الموظف
+      const rulesByEmployee = {};
+      (employeeProfitRules || []).forEach(rule => {
+        if (!rulesByEmployee[rule.employee_id]) {
+          rulesByEmployee[rule.employee_id] = [];
+        }
+        rulesByEmployee[rule.employee_id].push(rule);
+      });
 
       // جلب طلبات الفترة المحددة مع تفاصيلها
       let ordersQuery = supabase
@@ -115,6 +133,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           created_at,
           total_amount,
           receipt_received,
+          created_by,
           order_items (
             id,
             quantity,
@@ -157,8 +176,37 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       
       if (ordersError) throw ordersError;
 
-      // معالجة البيانات وحساب الأرباح الخامة للمنتجات
-      let totalProfit = 0;
+      // دالة لحساب ربح الموظف من عنصر
+      const calculateEmployeeProfit = (item, employeeId) => {
+        const rules = rulesByEmployee[employeeId] || [];
+        const revenue = item.unit_price * item.quantity;
+        const cost = (item.product_variants?.cost_price || item.products?.cost_price || 0) * item.quantity;
+        const grossProfit = revenue - cost;
+
+        for (const rule of rules) {
+          // قاعدة حسب المنتج
+          if (rule.rule_type === 'product' && rule.target_id === item.product_id) {
+            return rule.profit_percentage ? (grossProfit * rule.profit_percentage / 100) : rule.profit_amount;
+          }
+          // قاعدة حسب المتغير
+          if (rule.rule_type === 'variant' && rule.target_id === item.variant_id) {
+            return rule.profit_percentage ? (grossProfit * rule.profit_percentage / 100) : rule.profit_amount;
+          }
+          // قاعدة حسب القسم
+          if (rule.rule_type === 'department' && item.products?.product_departments?.some(d => d.departments.id === rule.target_id)) {
+            return rule.profit_percentage ? (grossProfit * rule.profit_percentage / 100) : rule.profit_amount;
+          }
+          // قاعدة حسب التصنيف
+          if (rule.rule_type === 'category' && item.products?.product_categories?.some(c => c.categories.id === rule.target_id)) {
+            return rule.profit_percentage ? (grossProfit * rule.profit_percentage / 100) : rule.profit_amount;
+          }
+        }
+
+        return 0; // لا يوجد ربح للموظف
+      };
+
+      // معالجة البيانات وحساب أرباح النظام بعد خصم مستحقات الموظفين
+      let totalSystemProfit = 0;
       let totalRevenue = 0;
       let totalCost = 0;
       let totalOrders = orders?.length || 0;
@@ -227,16 +275,22 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
           filteredItemsCount++;
 
-          // حساب الربح الخام للمنتج (سعر البيع - التكلفة)
+          // حساب الربح الخام والربح للموظف
           const itemRevenue = item.unit_price * item.quantity;
           const itemCost = (variant?.cost_price || product?.cost_price || 0) * item.quantity;
-          const itemProfit = itemRevenue - itemCost;
+          const itemGrossProfit = itemRevenue - itemCost;
           
-          totalProfit += itemProfit;
+          // حساب ربح الموظف إذا كان الطلب من موظف
+          const employeeProfit = order.created_by ? calculateEmployeeProfit(item, order.created_by) : 0;
+          
+          // ربح النظام = الربح الخام - ربح الموظف
+          const itemSystemProfit = itemGrossProfit - employeeProfit;
+          
+          totalSystemProfit += itemSystemProfit;
           totalRevenue += itemRevenue;
           totalCost += itemCost;
 
-          // تجميع البيانات حسب الأقسام
+          // تجميع البيانات حسب الأقسام (ربح النظام)
           const departments = product?.product_departments || [];
           for (const deptRel of departments) {
             const dept = deptRel.departments;
@@ -251,13 +305,13 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 orderCount: 0
               };
             }
-            departmentBreakdown[dept.id].profit += itemProfit;
+            departmentBreakdown[dept.id].profit += itemSystemProfit;
             departmentBreakdown[dept.id].revenue += itemRevenue;
             departmentBreakdown[dept.id].cost += itemCost;
             departmentBreakdown[dept.id].orderCount += 1;
           }
 
-          // تجميع البيانات حسب التصنيفات
+          // تجميع البيانات حسب التصنيفات (ربح النظام)
           const categories = product?.product_categories || [];
           for (const catRel of categories) {
             const cat = catRel.categories;
@@ -271,13 +325,13 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 orderCount: 0
               };
             }
-            categoryBreakdown[cat.id].profit += itemProfit;
+            categoryBreakdown[cat.id].profit += itemSystemProfit;
             categoryBreakdown[cat.id].revenue += itemRevenue;
             categoryBreakdown[cat.id].cost += itemCost;
             categoryBreakdown[cat.id].orderCount += 1;
           }
 
-          // تجميع البيانات حسب المنتجات
+          // تجميع البيانات حسب المنتجات (ربح النظام)
           if (!productBreakdown[product.id]) {
             productBreakdown[product.id] = {
               id: product.id,
@@ -288,12 +342,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
               salesCount: 0
             };
           }
-          productBreakdown[product.id].profit += itemProfit;
+          productBreakdown[product.id].profit += itemSystemProfit;
           productBreakdown[product.id].revenue += itemRevenue;
           productBreakdown[product.id].cost += itemCost;
           productBreakdown[product.id].salesCount += item.quantity;
 
-          // تجميع البيانات حسب الألوان
+          // تجميع البيانات حسب الألوان (ربح النظام)
           if (variant?.colors) {
             const color = variant.colors;
             if (!colorBreakdown[color.id]) {
@@ -306,12 +360,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            colorBreakdown[color.id].profit += itemProfit;
+            colorBreakdown[color.id].profit += itemSystemProfit;
             colorBreakdown[color.id].revenue += itemRevenue;
             colorBreakdown[color.id].cost += itemCost;
           }
 
-          // تجميع البيانات حسب القياسات
+          // تجميع البيانات حسب القياسات (ربح النظام)
           if (variant?.sizes) {
             const size = variant.sizes;
             if (!sizeBreakdown[size.id]) {
@@ -323,12 +377,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            sizeBreakdown[size.id].profit += itemProfit;
+            sizeBreakdown[size.id].profit += itemSystemProfit;
             sizeBreakdown[size.id].revenue += itemRevenue;
             sizeBreakdown[size.id].cost += itemCost;
           }
 
-          // تجميع البيانات حسب المواسم
+          // تجميع البيانات حسب المواسم (ربح النظام)
           const seasons = product?.product_seasons_occasions || [];
           for (const seasonRel of seasons) {
             const season = seasonRel.seasons_occasions;
@@ -341,12 +395,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            seasonBreakdown[season.id].profit += itemProfit;
+            seasonBreakdown[season.id].profit += itemSystemProfit;
             seasonBreakdown[season.id].revenue += itemRevenue;
             seasonBreakdown[season.id].cost += itemCost;
           }
 
-          // تجميع البيانات حسب أنواع المنتجات
+          // تجميع البيانات حسب أنواع المنتجات (ربح النظام)
           const productTypes = product?.product_product_types || [];
           for (const typeRel of productTypes) {
             const type = typeRel.product_types;
@@ -359,7 +413,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            productTypeBreakdown[type.id].profit += itemProfit;
+            productTypeBreakdown[type.id].profit += itemSystemProfit;
             productTypeBreakdown[type.id].revenue += itemRevenue;
             productTypeBreakdown[type.id].cost += itemCost;
           }
@@ -393,7 +447,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                                filters.season === 'all' && 
                                filters.productType === 'all') 
                                ? enhancedFinancialData.net_profit // استخدام صافي الربح (45 ألف) بدلاً من الخام (52 ألف)
-                               : totalProfit;
+                               : totalSystemProfit;
 
       setAnalysisData({
         totalProfit: finalTotalProfit,
@@ -404,7 +458,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         averageProfit: totalOrders > 0 ? finalTotalProfit / totalOrders : 0,
         profitMargin: totalRevenue > 0 ? (finalTotalProfit / totalRevenue) * 100 : 0,
         // معلومات مرجعية من النظام المالي
-        systemTotalProfit: totalSystemProfit,
+        systemTotalProfit: enhancedFinancialData.gross_profit || 0,
         ...sortedData
       });
 
