@@ -461,7 +461,7 @@ const Dashboard = () => {
             };
         }
         
-        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
+        const allProfits = [...(profitsLocalData.pending || []), ...(profitsLocalData.settled || [])];
         
         const userProfits = canViewAllData 
             ? allProfits 
@@ -478,7 +478,7 @@ const Dashboard = () => {
             personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
             totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
-    }, [profitsData, canViewAllData, user?.id, user?.user_id]);
+    }, [profitsLocalData, canViewAllData, user?.id, user?.user_id]);
 
     
     // إظهار loader فقط عند تحميل البيانات الأساسية
