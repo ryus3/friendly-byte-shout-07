@@ -95,18 +95,18 @@ const UnifiedProfitDisplay = ({
             onClick: () => onFilterChange('employeeId', 'employees')
           },
           {
-            key: 'total-expenses',
+            key: 'general-expenses',
             title: 'المصاريف العامة',
-            value: profitData.totalExpenses || 0,
+            value: profitData.generalExpenses || 0,
             icon: TrendingDown,
             colors: ['red-500', 'orange-500'],
             format: 'currency',
             onClick: onExpensesClick
           },
           {
-            key: 'total-settled-dues',
+            key: 'paid-dues',
             title: 'المستحقات المدفوعة',
-            value: profitData.totalSettledDues || 0,
+            value: profitData.paidDues || 0,
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',
@@ -128,35 +128,20 @@ const UnifiedProfitDisplay = ({
       );
     }
 
-    // إضافة بطاقات الأرباح المعلقة والمستلمة (للجميع)
-    cards.push(
-      {
-        key: 'pending-profit',
-        title: 'الأرباح المعلقة',
-        value: canViewAll 
-          ? (profitData.detailedProfits || [])
-              .filter(p => (p.profitStatus || 'pending') === 'pending')
-              .reduce((sum, p) => sum + p.profit, 0)
-          : profitData.personalPendingProfit || 0,
-        icon: Hourglass,
-        colors: ['yellow-500', 'amber-500'],
-        format: 'currency',
-        onClick: () => onFilterChange('profitStatus', 'pending')
-      },
-      {
-        key: 'settled-profit',
-        title: 'الأرباح المستلمة',
-        value: canViewAll 
-          ? (profitData.detailedProfits || [])
-              .filter(p => p.profitStatus === 'settled')
-              .reduce((sum, p) => sum + p.profit, 0)
-          : profitData.personalSettledProfit || 0,
-        icon: CheckCircle,
-        colors: ['blue-500', 'sky-500'],
-        format: 'currency',
-        onClick: () => onFilterChange('profitStatus', 'settled')
-      }
-    );
+    // إضافة بطاقة الأرباح المعلقة فقط (حذف الأرباح المستلمة)
+    cards.push({
+      key: 'pending-profit',
+      title: 'الأرباح المعلقة',
+      value: canViewAll 
+        ? (profitData.detailedProfits || [])
+            .filter(p => (p.profitStatus || 'pending') === 'pending')
+            .reduce((sum, p) => sum + p.profit, 0)
+        : profitData.personalPendingProfit || 0,
+      icon: Hourglass,
+      colors: ['yellow-500', 'amber-500'],
+      format: 'currency',
+      onClick: () => onFilterChange('profitStatus', 'pending')
+    });
 
     console.log('✅ تم بناء الكروت:', cards.map(c => ({ key: c.key, value: c.value })));
     return cards;

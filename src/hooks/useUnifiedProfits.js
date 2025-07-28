@@ -73,9 +73,12 @@ export const useUnifiedProfits = (userId = null) => {
       const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
-      // فصل المصاريف العامة عن المستحقات المدفوعة
+      // فصل المصاريف العامة عن المستحقات المدفوعة (بنفس منطق المركز المالي)
       const generalExpenses = expenses?.filter(e => 
-        e.category !== 'مستحقات الموظفين' && e.category !== 'مستحقات مدفوعة'
+        e.category !== 'مستحقات الموظفين' && 
+        e.category !== 'مستحقات مدفوعة' &&
+        e.expense_type !== 'system' &&
+        e.category !== 'فئات_المصاريف'
       ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
       const paidDues = expenses?.filter(e => 
@@ -126,8 +129,10 @@ export const useUnifiedProfits = (userId = null) => {
         // البيانات الشخصية
         ...personalData,
         
-        // بيانات إضافية
+        // بيانات إضافية موحدة
         totalExpenses,
+        generalExpenses, // المصاريف العامة فقط (موحدة مع المركز المالي)
+        paidDues, // المستحقات المدفوعة فقط (موحدة مع متابعة الموظفين)
         settledDues,
         pendingOrders,
         settledOrders
