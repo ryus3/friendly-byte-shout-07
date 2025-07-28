@@ -16,6 +16,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import MiniChart from '@/components/dashboard/MiniChart';
 import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import { useNavigate } from 'react-router-dom';
+import ExpensesDialog from '@/components/accounting/ExpensesDialog';
 import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
