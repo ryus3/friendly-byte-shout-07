@@ -313,8 +313,8 @@ const AccountingPage = () => {
         
         // حساب ربح النظام الصحيح (نفس منطق قاعدة البيانات)
         // ربح النظام = ربح المدير كاملاً + ربح النظام من طلبات الموظفين
-        const managerOrdersInRange = deliveredOrders.filter(o => !o.created_by || o.created_by === user?.id);
-        const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== user?.id);
+        const managerOrdersInRange = deliveredOrders.filter(o => !o.created_by || o.created_by === currentUser?.id);
+        const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== currentUser?.id);
         
         const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
           const orderProfit = (order.items || []).reduce((itemSum, item) => {
