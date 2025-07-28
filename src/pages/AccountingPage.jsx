@@ -351,13 +351,17 @@ const AccountingPage = () => {
         // ربح النظام الصحيح
         const systemProfit = managerTotalProfit + employeeSystemProfit;
         
-        // المصاريف العامة (استبعاد مستحقات الموظفين والمصاريف النظامية فقط)
-        // مستحقات الموظفين تُدفع من القاصة وتُسجل كمصروف نظام - ليست مصاريف عامة
+        // المصاريف العامة - استبعاد جميع المصاريف النظامية ومستحقات الموظفين
         const generalExpenses = expensesInRange.filter(e => {
-          // استبعاد المصاريف النظامية فقط (مستحقات الموظفين)
+          // استبعاد جميع المصاريف النظامية
           if (e.expense_type === 'system') return false;
-          // استبعاد الفئات غير المهمة
-          if (e.category === 'فئات_المصاريف') return false;
+          
+          // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
+          if (e.category === 'مستحقات الموظفين') return false;
+          
+          // استبعاد مصاريف الشراء المرتبطة بالمشتريات
+          if (e.related_data?.category === 'شراء بضاعة') return false;
+          
           return true;
         }).reduce((sum, e) => sum + (e.amount || 0), 0);
         

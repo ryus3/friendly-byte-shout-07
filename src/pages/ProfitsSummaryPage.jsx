@@ -198,9 +198,18 @@ const ProfitsSummaryPage = () => {
             return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to;
         }) : [];
 
-        const generalExpenses = expensesInPeriod.filter(e => 
-            e.related_data?.category !== 'شراء بضاعة' && e.related_data?.category !== 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + e.amount, 0);
+        const generalExpenses = expensesInPeriod.filter(e => {
+            // استبعاد جميع المصاريف النظامية
+            if (e.expense_type === 'system') return false;
+            
+            // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
+            if (e.category === 'مستحقات الموظفين') return false;
+            
+            // استبعاد مصاريف الشراء المرتبطة بالمشتريات
+            if (e.related_data?.category === 'شراء بضاعة') return false;
+            
+            return true;
+        }).reduce((sum, e) => sum + e.amount, 0);
 
         const employeeSettledDues = expensesInPeriod.filter(e => 
             e.related_data?.category === 'مستحقات الموظفين'
