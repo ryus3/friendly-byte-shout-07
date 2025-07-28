@@ -34,12 +34,18 @@ const formatCurrency = (amount) => {
   }).format(amount || 0) + ' د.ع';
 };
 
-// دالة للحصول على ربح الموظف من قواعد الأرباح الفعلية
-const getEmployeeProfit = (item, employeeId, totalItemProfit) => {
-  // في النظام الحقيقي، يجب جلب هذه البيانات من employee_profit_rules
-  // مؤقتاً نعيد 0 لنتجنب استخدام النسبة الافتراضية
-  // TODO: تنفيذ جلب قواعد الأرباح من قاعدة البيانات
-  return 0; // سيتم تحديثها لاحقاً لتستخدم القواعد الفعلية
+// دالة للحصول على ربح الموظف من جدول الأرباح الفعلي
+const getEmployeeProfitFromOrder = (orderId, employeeId) => {
+  // يجب جلب هذه البيانات من جدول profits
+  const orderProfits = allProfits?.find(p => p.order_id === orderId && p.employee_id === employeeId);
+  return orderProfits?.employee_profit || 0;
+};
+
+const getSystemProfitFromOrder = (orderId, allProfits) => {
+  // الحصول على ربح النظام من جدول profits
+  const orderProfits = allProfits?.find(p => p.order_id === orderId);
+  if (!orderProfits) return 0;
+  return (orderProfits.profit_amount || 0) - (orderProfits.employee_profit || 0);
 };
 
 const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
@@ -135,6 +141,7 @@ const AccountingPage = () => {
     
     const [datePeriod, setDatePeriod] = useState('month');
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
+    const [allProfits, setAllProfits] = useState([]);
     const [realCashBalance, setRealCashBalance] = useState(0);
     const [initialCapital, setInitialCapital] = useState(0);
 
@@ -180,7 +187,25 @@ const AccountingPage = () => {
 
     // جلب رأس المال الحقيقي من قاعدة البيانات
     useEffect(() => {
-        refreshFinancialData();
+        const fetchData = async () => {
+            await refreshFinancialData();
+            
+            // جلب بيانات الأرباح
+            try {
+                const { data: profitsData } = await supabase
+                    .from('profits')
+                    .select(`
+                        *,
+                        order:orders(order_number, status, receipt_received),
+                        employee:profiles!employee_id(full_name)
+                    `);
+                setAllProfits(profitsData || []);
+            } catch (error) {
+                console.error('خطأ في جلب بيانات الأرباح:', error);
+            }
+        };
+        
+        fetchData();
     }, []);
 
     // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
@@ -300,17 +325,9 @@ const AccountingPage = () => {
           return sum + orderProfit;
         }, 0);
         
+        // حساب ربح النظام من طلبات الموظفين (باستخدام البيانات الفعلية من جدول profits)
         const employeeSystemProfit = employeeOrdersInRange.reduce((sum, order) => {
-          const orderProfit = (order.order_items || []).reduce((itemSum, item) => {
-            const sellPrice = item.unit_price || item.price || 0;
-            const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-            const itemProfit = (sellPrice - costPrice) * item.quantity;
-            
-            // استخدام النظام الصحيح: المبلغ كاملاً للنظام مؤقتاً لأن قواعد الأرباح لا تُطبق بعد
-            const systemShare = itemProfit; // كامل الربح للنظام حالياً
-            return itemSum + systemShare;
-          }, 0);
-          return sum + orderProfit;
+          return sum + getSystemProfitFromOrder(order.id, allProfits);
         }, 0);
         
         // ربح النظام الصحيح
@@ -381,31 +398,20 @@ const AccountingPage = () => {
             return sum + (orderTotal - deliveryFee);
         }, 0);
         
-        // حساب أرباح النظام من طلبات الموظفين (المبلغ - تكلفة البضاعة - ربح الموظف)
+        // حساب أرباح النظام من طلبات الموظفين (باستخدام البيانات الفعلية)
         const systemProfitFromEmployees = employeeOrdersDelivered.reduce((sum, o) => {
-            if (!o.order_items || !Array.isArray(o.order_items)) return sum;
-            
-            const orderSystemProfit = o.order_items.reduce((itemSum, item) => {
-                const sellPrice = item.unit_price || 0;
-                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                const quantity = item.quantity || 0;
-                const totalProfit = (sellPrice - costPrice) * quantity;
-                
-                // الحصول على ربح الموظف من جدول الأرباح أو القواعد
-                const employeeProfit = getEmployeeProfit(item, o.created_by, totalProfit);
-                const systemProfit = Math.max(totalProfit - employeeProfit, 0);
-                
-                return itemSum + systemProfit;
-            }, 0);
-            return sum + orderSystemProfit;
+          return sum + getSystemProfitFromOrder(o.id, allProfits);
         }, 0);
         
         const totalSystemProfit = myProfit + systemProfitFromEmployees;
     
-        const employeePendingDuesDetails = safeOrders
-          .filter(o => (o.status === 'delivered' || o.status === 'completed') && (o.profitStatus || 'pending') === 'pending' && o.created_by !== currentUser?.id);
-        
-        const employeePendingDues = employeePendingDuesDetails.reduce((sum, o) => sum + ((o.items || []).reduce((itemSum, item) => itemSum + calculateProfit(item, o.created_by), 0) || 0), 0);
+        // حساب مستحقات الموظفين المعلقة (من جدول profits)
+        const employeePendingDues = allProfits
+          .filter(p => {
+            const order = deliveredOrders.find(o => o.id === p.order_id);
+            return order && p.status === 'pending' && p.employee_id !== currentUser?.id;
+          })
+          .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
         // حساب رصيد القاصة الحقيقي = رأس المال + صافي الأرباح
         const cashOnHand = realCashBalance || ((accounting?.capital || 0) + netProfit);
@@ -447,8 +453,8 @@ const AccountingPage = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
     
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, systemProfit, netProfit, totalProfit, inventoryValue, myProfit, managerProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails };
-    }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, calculateManagerProfit, calculateProfit]);
+        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, systemProfit, netProfit, totalSystemProfit, inventoryValue, myProfit, systemProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails: [] };
+    }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, allProfits]);
 
     const totalCapital = initialCapital + financialSummary.inventoryValue;
     
@@ -530,7 +536,7 @@ const AccountingPage = () => {
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
-        { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.managerProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
+        { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.systemProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
         { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
 
