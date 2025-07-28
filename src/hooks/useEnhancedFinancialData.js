@@ -27,9 +27,9 @@ export const useEnhancedFinancialData = () => {
       setLoading(true);
       setError(null);
 
-      // استخدام الدالة المحسنة الجديدة
+      // استخدام الدالة المالية الموحدة الصحيحة
       const { data, error } = await supabase
-        .rpc('calculate_enhanced_main_cash_balance');
+        .rpc('calculate_enhanced_main_cash_balance_v2');
 
       if (error) throw error;
 
