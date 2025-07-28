@@ -453,7 +453,7 @@ const Dashboard = () => {
 
     // استخدام البيانات من Context مباشرة لتحسين الأداء
     const employeeProfitsData = useMemo(() => {
-        if (!profitsData) {
+        if (!profits) {
             return {
                 personalPendingProfit: 0,
                 personalSettledProfit: 0,

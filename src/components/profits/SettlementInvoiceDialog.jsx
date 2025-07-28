@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Print, Download, FileText, Calendar, User, DollarSign, Package } from 'lucide-react';
+import { Printer, Download, FileText, Calendar, User, DollarSign, Package } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -195,7 +195,7 @@ const SettlementInvoiceDialog = ({
                 size="sm"
                 className="flex-1 sm:flex-none"
               >
-                <Print className="h-4 w-4 ml-1" />
+                <Printer className="h-4 w-4 ml-1" />
                 {isPrinting ? 'جاري الطباعة...' : 'طباعة'}
               </Button>
               <Button 
