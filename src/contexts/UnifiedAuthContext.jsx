@@ -656,8 +656,4 @@ export const UnifiedAuthProvider = ({ children }) => {
   );
 };
 
-// Hook لاستخدام النظام الموحد للصلاحيات
-export const usePermissions = () => {
-  const { user, hasPermission, hasRole, isAdmin, userRoles, userPermissions } = useAuth();
-  return { user, hasPermission, hasRole, isAdmin, userRoles, userPermissions };
-};
+// تم نقل usePermissions إلى ملف منفصل في src/hooks/usePermissions.js
