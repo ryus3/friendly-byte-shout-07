@@ -2,7 +2,7 @@ import React from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
 import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
-import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
+// import { AiChatProvider } from '@/contexts/AiChatContext.jsx'; // Temporarily disabled
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
@@ -24,11 +24,9 @@ export const AppProviders = ({ children }) => {
                    <VariantsProvider>
                      <InventoryProvider>
                        <ProfitsProvider>
-                         <AlWaseetProvider>
-                             <AiChatProvider>
-                             {children}
-                           </AiChatProvider>
-                       </AlWaseetProvider>
+                          <AlWaseetProvider>
+                              {children}
+                        </AlWaseetProvider>
                      </ProfitsProvider>
                    </InventoryProvider>
                  </VariantsProvider>
