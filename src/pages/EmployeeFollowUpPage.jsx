@@ -472,14 +472,39 @@ const EmployeeFollowUpPage = () => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة (من المصاريف المحاسبية)
-    const paidDues = expenses && Array.isArray(expenses)
-      ? expenses.filter(expense => 
-          expense.category === 'مستحقات الموظفين' && 
-          expense.expense_type === 'system' && 
-          expense.status === 'approved'
-        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-      : 0;
+    // المستحقات المدفوعة (من المصاريف المحاسبية) - مع إزالة التكرار
+    const paidDues = useMemo(() => {
+      if (!expenses || !Array.isArray(expenses)) return 0;
+      
+      const paidDuesExpenses = expenses.filter(expense => 
+        expense.category === 'مستحقات الموظفين' && 
+        expense.expense_type === 'system' && 
+        expense.status === 'approved'
+      );
+      
+      // إزالة التكرار بنفس الطريقة المستخدمة في SettledDuesDialog
+      const uniqueExpenses = paidDuesExpenses.reduce((unique, expense) => {
+        const employeeName = expense.vendor_name || expense.description.match(/الموظف\s+(.+?)(?:\s*$)/i)?.[1]?.trim() || 'غير محدد';
+        const amount = Number(expense.amount);
+        const dateKey = new Date(expense.created_at).toDateString();
+        
+        const uniqueKey = `${employeeName}-${amount}-${dateKey}`;
+        
+        if (unique[uniqueKey]) {
+          if (expense.receipt_number && !unique[uniqueKey].receipt_number) {
+            unique[uniqueKey] = expense;
+          } else if (new Date(expense.created_at) > new Date(unique[uniqueKey].created_at)) {
+            unique[uniqueKey] = expense;
+          }
+        } else {
+          unique[uniqueKey] = expense;
+        }
+        
+        return unique;
+      }, {});
+      
+      return Object.values(uniqueExpenses).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+    }, [expenses]);
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
     const pendingDues = deliveredOrders
