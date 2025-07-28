@@ -173,6 +173,7 @@ export const useUnifiedProfits = (userId = null) => {
         cogs,
         grossProfit,
         netProfit,
+        generalExpenses, // إضافة المصاريف العامة
         employeeSettledDues,
         managerSales,
         employeeSales,
