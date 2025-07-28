@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { useProfits } from '@/contexts/ProfitsContext';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
@@ -93,7 +92,6 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
-    const { profitData } = useUnifiedProfits(); // استخدام البيانات الموحدة
     const { profits: profitsData } = useProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -319,8 +317,8 @@ const Dashboard = () => {
         
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         
-        // استخدام البيانات الموحدة لصافي الربح (أرباح المدير من الطلبات المكتملة)
-        const netProfit = canViewAllData ? (profitData.managerProfitFromEmployees || 0) : grossProfit;
+        // صافي الربح = ربح المبيعات فقط (بدون طرح المصاريف العامة)
+        const netProfit = grossProfit;
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
@@ -345,15 +343,8 @@ const Dashboard = () => {
             net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
         }));
 
-        console.log('🔍 لوحة التحكم - البيانات الموحدة:', {
-          grossProfit,
-          netProfitFromUnified: profitData.managerProfitFromEmployees,
-          netProfitUsed: netProfit,
-          canViewAllData
-        });
-
         return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, employeeSettledDues, generalExpenses, netProfit, chartData, filteredExpenses: expensesInRange, deliveredOrders };
-    }, [periods.netProfit, visibleOrders, accounting, products, profitData, canViewAllData]);
+    }, [periods.netProfit, visibleOrders, accounting, products]);
 
     const dashboardData = useMemo(() => {
         if (!visibleOrders || !user) return {

@@ -1,6 +1,5 @@
 import React from 'react';
 import StatCard from '@/components/dashboard/StatCard';
-import { useSettledDues } from '@/hooks/useSettledDues';
 import { 
   User, 
   Hourglass, 
@@ -18,22 +17,18 @@ import {
  */
 const UnifiedProfitDisplay = ({
   profitData,
-  displayMode = 'dashboard', // 'dashboard' | 'financial-center' | 'profits-summary'
+  displayMode = 'dashboard', // 'dashboard' | 'financial-center'
   canViewAll = true,
   onFilterChange = () => {},
   onExpensesClick = () => {},
   onSettledDuesClick = () => {},
   className = ''
 }) => {
-  // استخدام هوك المستحقات الموحد
-  const { settledDues } = useSettledDues();
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
     if (displayMode === 'financial-center') {
       return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4';
-    } else if (displayMode === 'profits-summary') {
-      return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6';
     }
     return canViewAll 
       ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6'
@@ -100,18 +95,18 @@ const UnifiedProfitDisplay = ({
             onClick: () => onFilterChange('employeeId', 'employees')
           },
           {
-            key: 'general-expenses',
+            key: 'total-expenses',
             title: 'المصاريف العامة',
-            value: profitData.generalExpenses || 0,
+            value: profitData.totalExpenses || 0,
             icon: TrendingDown,
             colors: ['red-500', 'orange-500'],
             format: 'currency',
             onClick: onExpensesClick
           },
           {
-            key: 'paid-dues',
+            key: 'total-settled-dues',
             title: 'المستحقات المدفوعة',
-            value: settledDues.totalAmount || 0, // استخدام البيانات الموحدة
+            value: profitData.totalSettledDues || 0,
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',
@@ -133,20 +128,35 @@ const UnifiedProfitDisplay = ({
       );
     }
 
-    // إضافة بطاقة الأرباح المعلقة فقط (حذف الأرباح المستلمة)
-    cards.push({
-      key: 'pending-profit',
-      title: 'الأرباح المعلقة',
-      value: canViewAll 
-        ? (profitData.detailedProfits || [])
-            .filter(p => (p.profitStatus || 'pending') === 'pending')
-            .reduce((sum, p) => sum + p.profit, 0)
-        : profitData.personalPendingProfit || 0,
-      icon: Hourglass,
-      colors: ['yellow-500', 'amber-500'],
-      format: 'currency',
-      onClick: () => onFilterChange('profitStatus', 'pending')
-    });
+    // إضافة بطاقات الأرباح المعلقة والمستلمة (للجميع)
+    cards.push(
+      {
+        key: 'pending-profit',
+        title: 'الأرباح المعلقة',
+        value: canViewAll 
+          ? (profitData.detailedProfits || [])
+              .filter(p => (p.profitStatus || 'pending') === 'pending')
+              .reduce((sum, p) => sum + p.profit, 0)
+          : profitData.personalPendingProfit || 0,
+        icon: Hourglass,
+        colors: ['yellow-500', 'amber-500'],
+        format: 'currency',
+        onClick: () => onFilterChange('profitStatus', 'pending')
+      },
+      {
+        key: 'settled-profit',
+        title: 'الأرباح المستلمة',
+        value: canViewAll 
+          ? (profitData.detailedProfits || [])
+              .filter(p => p.profitStatus === 'settled')
+              .reduce((sum, p) => sum + p.profit, 0)
+          : profitData.personalSettledProfit || 0,
+        icon: CheckCircle,
+        colors: ['blue-500', 'sky-500'],
+        format: 'currency',
+        onClick: () => onFilterChange('profitStatus', 'settled')
+      }
+    );
 
     console.log('✅ تم بناء الكروت:', cards.map(c => ({ key: c.key, value: c.value })));
     return cards;

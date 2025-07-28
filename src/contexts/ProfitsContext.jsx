@@ -245,33 +245,6 @@ export const ProfitsProvider = ({ children }) => {
 
       if (invoiceError) throw invoiceError;
 
-      // إنشاء مصروف للمستحقات المدفوعة
-      const { error: expenseError } = await supabase
-        .from('expenses')
-        .insert([{
-          category: 'مستحقات الموظفين',
-          expense_type: 'system',
-          description: `دفع مستحقات الموظف - فاتورة ${invoiceNumber}`,
-          amount: request.total_profit,
-          vendor_name: user?.fullName || 'الموظف',
-          receipt_number: invoiceNumber,
-          status: 'approved',
-          created_by: user?.id,
-          approved_by: user?.id,
-          approved_at: new Date().toISOString(),
-          metadata: {
-            settlement_type: 'employee_profit',
-            employee_id: request.employee_id,
-            order_ids: request.order_ids,
-            invoice_number: invoiceNumber
-          }
-        }]);
-
-      if (expenseError) {
-        console.error('Error creating expense for settlement:', expenseError);
-        // لا نريد إيقاف العملية إذا فشل إنشاء المصروف
-      }
-
       // تحديث حالة الأرباح إلى مدفوعة
       await supabase
         .from('profits')

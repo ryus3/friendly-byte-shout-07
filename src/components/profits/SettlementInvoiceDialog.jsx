@@ -15,27 +15,12 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-    if (!invoice?.data) return null;
+    if (!invoice) return null;
 
-    const invoiceData = invoice.data;
-    const employeeName = allUsers.find(u => u.id === invoiceData.employee_id)?.full_name || 'موظف';
-    const generatorName = allUsers.find(u => u.id === invoiceData.generated_by)?.full_name || 'المدير';
-    
-    // البحث عن الطلبات التي تم دفع مستحقاتها
-    const settledOrdersDetails = (invoiceData.order_ids || []).map(orderId => {
+    const settledBy = allUsers.find(u => u.id === invoice.settled_by_id);
+    const settledOrdersDetails = (invoice.settled_orders || []).map(orderId => {
         return orders.find(o => o.id === orderId);
     }).filter(Boolean);
-
-    // تنسيق التاريخ والوقت
-    const formatDateTime = (dateString) => {
-        if (!dateString) return 'غير محدد';
-        try {
-            const date = parseISO(dateString);
-            return format(date, 'dd/MM/yyyy HH:mm', { locale: ar });
-        } catch (error) {
-            return 'تاريخ غير صحيح';
-        }
-    };
 
     const handleViewOrder = (order) => {
         setSelectedOrder(order);
@@ -47,22 +32,13 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
             <AlertDialog open={open} onOpenChange={onOpenChange}>
                 <AlertDialogContent className="max-w-4xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <FileText /> فاتورة تسوية {invoiceData.invoice_number}
-                        </AlertDialogTitle>
+                        <AlertDialogTitle className="flex items-center gap-2"><FileText /> فاتورة تسوية #{invoice.invoice_number}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            <div className="space-y-2">
-                                <p>اسم الموظف: <strong>{employeeName}</strong></p>
-                                <p>تاريخ التسوية: <strong>{formatDateTime(invoiceData.generated_at)}</strong></p>
-                                <p>تم الإنشاء بواسطة: <strong>{generatorName}</strong></p>
-                                <p>طريقة الدفع: <strong>{invoiceData.payment_method === 'cash' ? 'نقداً' : invoiceData.payment_method}</strong></p>
-                            </div>
+                            تمت التسوية بتاريخ {format(parseISO(invoice.settlement_date), 'd MMMM yyyy', { locale: ar })} بواسطة {settledBy?.full_name || 'المدير'}.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <div className="my-4">
-                        <p className="text-2xl font-bold text-primary text-center">
-                            إجمالي المبلغ: {(invoiceData.total_amount || 0).toLocaleString()} د.ع
-                        </p>
+                        <p className="text-2xl font-bold text-primary text-center">المبلغ الإجمالي: {invoice.total_amount.toLocaleString()} د.ع</p>
                     </div>
                     <h4 className="font-semibold mb-2">الطلبات المسددة ({settledOrdersDetails.length}):</h4>
                     <ScrollArea className="h-[45vh] pr-4">
@@ -71,12 +47,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                 <AccordionItem value={`order-${order.id}`} key={order.id}>
                                     <AccordionTrigger>
                                         <div className="flex justify-between w-full pr-4 items-center">
-                                            <div className="flex flex-col items-start">
-                                                <span>طلب #{order.order_number || order.trackingnumber} - {order.customer_name || order.customerinfo?.name}</span>
-                                                <span className="text-sm text-muted-foreground">
-                                                    {formatDateTime(order.created_at)} - {(order.final_amount || order.total_amount || 0).toLocaleString()} د.ع
-                                                </span>
-                                            </div>
+                                            <span>طلب #{order.trackingnumber} - {order.customerinfo.name}</span>
                                             <Button variant="ghost" size="icon" className="mr-2" onClick={(e) => { e.stopPropagation(); handleViewOrder(order); }}>
                                                 <Eye className="w-4 h-4" />
                                             </Button>
@@ -84,29 +55,11 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                     </AccordionTrigger>
                                     <AccordionContent>
                                         <div className="px-4 py-2 bg-muted/50 rounded-md">
-                                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                                <div>
-                                                    <p className="font-medium">عنوان العميل:</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {order.customer_address || order.customerinfo?.address || 'غير محدد'}
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="font-medium">رقم الهاتف:</p>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {order.customer_phone || order.customerinfo?.phone || 'غير محدد'}
-                                                    </p>
-                                                </div>
-                                            </div>
                                             <p className="font-semibold mb-2">المنتجات:</p>
                                             <ul className="list-disc pl-5 space-y-1 text-sm">
-                                                {(order.items || []).map((item, index) => (
-                                                    <li key={item.sku || index}>
-                                                        {item.productName || item.product_name} 
-                                                        {item.color ? ` (${item.color}` : ''}
-                                                        {item.size ? `, ${item.size})` : item.color ? ')' : ''} 
-                                                        - الكمية: {item.quantity} 
-                                                        - السعر: {(item.total || item.total_price || 0).toLocaleString()} د.ع
+                                                {(order.items || []).map(item => (
+                                                    <li key={item.sku}>
+                                                        {item.productName} ({item.color}, {item.size}) - الكمية: {item.quantity} - السعر: {item.total.toLocaleString()} د.ع
                                                     </li>
                                                 ))}
                                             </ul>

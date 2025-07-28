@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useSettledDues } from '@/hooks/useSettledDues';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
@@ -124,7 +123,6 @@ const AccountingPage = () => {
     const { user: currentUser, allUsers } = useAuth();
     const { hasPermission } = usePermissions();
     const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
-    const { settledDues } = useSettledDues(); // الهوك الموحد للمستحقات
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
@@ -177,19 +175,22 @@ const AccountingPage = () => {
         refreshFinancialData();
     }, []);
 
-    // جلب الرصيد النقدي الفعلي (استخدام البيانات الموحدة)
+    // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
     useEffect(() => {
         const fetchRealBalance = async () => {
             try {
-                // استخدام الرصيد المحسوب من الهوك الموحد
-                const mainBalance = await getMainCashBalance();
+                // استخدام نفس الطريقة المباشرة والموحدة
+                const totalMainBalance = await getMainCashBalance();
+                const otherSourcesBalance = getTotalSourcesBalance();
+                const totalRealBalance = totalMainBalance + otherSourcesBalance;
                 
-                console.log('💰 رصيد القاصة الرئيسية من قاعدة البيانات:', {
-                    realBalance: mainBalance,
-                    formatted: mainBalance.toLocaleString()
+                console.log('💰 الرصيد النقدي الفعلي الموحد:', {
+                    mainBalance: totalMainBalance,
+                    otherSources: otherSourcesBalance,
+                    total: totalRealBalance
                 });
                 
-                setRealCashBalance(mainBalance);
+                setRealCashBalance(totalRealBalance);
             } catch (error) {
                 console.error('❌ خطأ في حساب الرصيد النقدي الفعلي:', error);
                 setRealCashBalance(0);
@@ -197,11 +198,7 @@ const AccountingPage = () => {
         };
         
         fetchRealBalance();
-        
-        // إعادة تحديث كل 30 ثانية لضمان البيانات الحديثة
-        const interval = setInterval(fetchRealBalance, 30000);
-        return () => clearInterval(interval);
-    }, [getMainCashBalance, settledDues.totalAmount]); // إضافة المستحقات كـ dependency
+    }, [getMainCashBalance, getTotalSourcesBalance, initialCapital]); // إضافة getMainCashBalance كـ dependency
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
@@ -283,28 +280,20 @@ const AccountingPage = () => {
         // حساب صافي ربح المبيعات (بدون طرح المصاريف العامة)
         const netSalesProfit = salesWithoutDelivery - cogs; // هذا هو صافي ربح المبيعات فقط
         
-        // المصاريف العامة (بدون المستحقات المدفوعة)
+        // المصاريف العامة (للعرض منفصلة وليس لطرحها من صافي الربح)
         const generalExpenses = expensesInRange.filter(e => 
           e.expense_type !== 'system' && 
           e.category !== 'فئات_المصاريف' &&
-          e.related_data?.category !== 'مستحقات الموظفين' &&
-          e.category !== 'مستحقات الموظفين'
+          e.related_data?.category !== 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // مستحقات الموظفين المسددة (استخدام البيانات الموحدة)
-        const employeeSettledDues = settledDues.totalAmount || 0;
+        // مستحقات الموظفين المسددة
+        const employeeSettledDues = expensesInRange.filter(e => 
+          e.related_data?.category === 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // صافي الربح = ربح المبيعات - المستحقات المدفوعة فقط (وليس المصاريف العامة)
-        const netProfit = grossProfit - employeeSettledDues;
-        
-        console.log('🔍 فحص النظام المحاسبي موحد - AccountingPage:', {
-          grossProfit,
-          generalExpenses,
-          employeeSettledDues, // استخدام البيانات الموحدة
-          netProfit, // صافي الربح بعد خصم المستحقات فقط
-          settledDuesFromHook: settledDues.totalAmount,
-          expensesInRange: expensesInRange?.length || 0
-        });
+        // صافي الربح = ربح المبيعات فقط (بدون حذف المصاريف العامة)
+        const netProfit = grossProfit;
     
         
         // حساب قيمة المخزون

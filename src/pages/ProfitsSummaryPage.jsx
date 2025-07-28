@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Refactored Components
-import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
+import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import SettlementRequest from '@/components/profits/SettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
@@ -418,9 +418,8 @@ const ProfitsSummaryPage = () => {
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
         </div>
 
-        <UnifiedProfitDisplay 
+        <ProfitStats 
             profitData={profitData}
-            displayMode="profits-summary"
             canViewAll={canViewAll}
             onFilterChange={handleFilterChange}
             onExpensesClick={() => setDialogs(d => ({...d, expenses: true}))}

@@ -46,10 +46,10 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (systemError) throw systemError;
 
-      // 2. جلب المصاريف العامة والمستحقات المدفوعة
+      // 2. جلب المصاريف العامة
       const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
-        .select('amount, category, expense_type')
+        .select('amount')
         .eq('status', 'approved');
 
       if (expensesError) throw expensesError;
@@ -73,35 +73,9 @@ export const useUnifiedProfits = (userId = null) => {
       const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
-      // فصل المصاريف العامة عن المستحقات المدفوعة بشكل صحيح
-      const paidDues = expenses?.filter(e => 
-        e.category === 'مستحقات الموظفين' || e.category === 'مستحقات مدفوعة'
-      ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      
-      const generalExpenses = expenses?.filter(e => 
-        e.expense_type !== 'system' && 
-        e.category !== 'فئات_المصاريف' &&
-        e.category !== 'مستحقات الموظفين' &&
-        e.category !== 'مستحقات مدفوعة'
-      ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-      
-      const totalExpenses = generalExpenses + paidDues; // للإحصائيات فقط
-      
-      // صافي الأرباح = أرباح المدير من المبيعات - المستحقات المدفوعة فقط (منطق صحيح)
-      const netSystemProfit = totalManagerProfits - paidDues;
-      
-      console.log('🔍 فحص النظام المحاسبي - useUnifiedProfits:', {
-        expenses: expenses?.length || 0,
-        totalManagerProfits,
-        paidDues, // المستحقات المدفوعة
-        generalExpenses, // المصاريف العامة (بدون المستحقات)
-        netSystemProfit, // صافي الربح بعد خصم المستحقات فقط
-        expensesDetails: expenses?.map(e => ({
-          category: e.category,
-          amount: e.amount,
-          expense_type: e.expense_type
-        })) || []
-      });
+      // صافي الأرباح = أرباح الطلبات المكتملة - المصاريف
+      const totalExpenses = expenses?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
+      const netSystemProfit = totalManagerProfits - totalExpenses;
       
       // الأرباح المعلقة = أرباح الطلبات غير المكتملة
       const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
@@ -142,10 +116,8 @@ export const useUnifiedProfits = (userId = null) => {
         // البيانات الشخصية
         ...personalData,
         
-        // بيانات إضافية موحدة
+        // بيانات إضافية
         totalExpenses,
-        generalExpenses, // المصاريف العامة فقط (موحدة مع المركز المالي)
-        paidDues, // المستحقات المدفوعة فقط (موحدة مع متابعة الموظفين)
         settledDues,
         pendingOrders,
         settledOrders
