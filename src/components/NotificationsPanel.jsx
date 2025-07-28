@@ -284,7 +284,8 @@ const NotificationsPanel = () => {
           navigate(`/employee-follow-up`);
           break;
         case 'settlement_invoice':
-          navigate(`/profits-summary?invoice=${notification.related_entity_id}`);
+          // توجيه طلبات التحاسب إلى صفحة متابعة الموظفين
+          navigate(`/employee-follow-up?highlight=settlement`);
           break;
         case 'product':
           navigate(`/inventory?product=${notification.related_entity_id}`);
