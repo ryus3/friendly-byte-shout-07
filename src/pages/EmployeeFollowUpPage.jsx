@@ -50,11 +50,13 @@ const EmployeeFollowUpPage = () => {
     const employeeParam = searchParams.get('employee');
     const ordersParam = searchParams.get('orders');
     const highlightParam = searchParams.get('highlight');
+    const filterParam = searchParams.get('filter');
     
     console.log('🔗 استخراج URL Parameters:', {
       employeeParam,
       ordersParam,
       highlightParam,
+      filterParam,
       fullURL: window.location.href,
       search: window.location.search
     });
@@ -62,6 +64,27 @@ const EmployeeFollowUpPage = () => {
     setEmployeeFromUrl(employeeParam);
     setOrdersFromUrl(ordersParam);
     setHighlightFromUrl(highlightParam);
+    
+    // تحديث الفلاتر مباشرة بناءً على URL parameters
+    if (employeeParam || filterParam) {
+      setFilters(prev => ({
+        ...prev,
+        employeeId: employeeParam || prev.employeeId,
+        profitStatus: filterParam === 'pending_settlement' ? 'pending' : prev.profitStatus
+      }));
+      
+      console.log('✅ تم تحديث الفلاتر من URL:', {
+        employeeId: employeeParam,
+        profitStatus: filterParam === 'pending_settlement' ? 'pending' : 'unchanged'
+      });
+    }
+    
+    // تحديد الطلبات إذا كانت موجودة في URL
+    if (ordersParam) {
+      const ordersList = ordersParam.split(',');
+      setSelectedOrders(ordersList);
+      console.log('📋 تم تحديد الطلبات من URL:', ordersList);
+    }
   }, [searchParams]);
   
   const [filters, setFilters] = useState({
