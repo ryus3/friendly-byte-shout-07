@@ -177,7 +177,7 @@ const AccountingPage = () => {
     }, [datePeriod]);
 
     // دالة لإعادة تحميل جميع البيانات المالية
-    const refreshFinancialData = async () => {
+    const refreshAllFinancialData = async () => {
         try {
             // جلب رأس المال المحدث
             const { data: capitalData, error: capitalError } = await supabase
