@@ -117,8 +117,8 @@ const EmployeeFollowUpPage = () => {
           });
         }, 1500);
         
-        // التمرير للكارت مع تأثير بصري قوي
-        setTimeout(() => {
+        // التمرير للكارت مع تأثير بصري قوي - انتظار ذكي للتحميل
+        const scrollToEmployeeCard = () => {
           const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -137,9 +137,30 @@ const EmployeeFollowUpPage = () => {
               element.style.background = "";
             }, 5000);
           } else {
-            console.warn('⚠️ لم يتم العثور على كارت الموظف');
+            console.warn('⚠️ لم يتم العثور على كارت الموظف، محاولة أخرى...');
+            return false;
           }
-        }, 2000);
+          return true;
+        };
+
+        // محاولة التمرير مع إعادة المحاولة كل ثانية لمدة 10 ثوان
+        let attempts = 0;
+        const maxAttempts = 10;
+        const scrollInterval = setInterval(() => {
+          attempts++;
+          if (scrollToEmployeeCard() || attempts >= maxAttempts) {
+            clearInterval(scrollInterval);
+            if (attempts >= maxAttempts) {
+              console.warn('⚠️ لم يتم العثور على كارت الموظف بعد 10 محاولات');
+              toast({
+                title: "طلب التحاسب جاهز",
+                description: "تم تحديد الطلبات المطلوبة. ابحث عن كارت التحاسب أدناه.",
+                variant: "default",
+                duration: 5000
+              });
+            }
+          }
+        }, 1000);
       } else {
         // إشعار عام للتحاسب - عرض رسالة توضيحية فقط
         console.log('🔔 إشعار تحاسب عام');
