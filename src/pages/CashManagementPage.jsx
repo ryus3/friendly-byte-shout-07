@@ -99,9 +99,9 @@ const CashManagementPage = () => {
   // جلب البيانات المالية المحسنة الجديدة
   const fetchSystemFinancials = async () => {
     try {
-      // استخدام النظام المحسن أولاً (النسخة المحدثة)
+      // استخدام النظام المحسن أولاً
       const { data: enhancedData, error: enhancedError } = await supabase
-        .rpc('calculate_enhanced_main_cash_balance_v3');
+        .rpc('calculate_enhanced_main_cash_balance');
 
       if (!enhancedError && enhancedData && enhancedData.length > 0) {
         const enhanced = enhancedData[0];

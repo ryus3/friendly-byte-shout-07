@@ -189,9 +189,9 @@ export const useCashSources = () => {
   // الحصول على رصيد القاصة الرئيسية المحسن والصحيح
   const getMainCashBalance = async () => {
     try {
-      // استخدام النظام المحسن لحساب رصيد القاصة الرئيسية (النسخة المحدثة)
+      // استخدام النظام المحسن لحساب رصيد القاصة الرئيسية
       const { data, error } = await supabase
-        .rpc('calculate_enhanced_main_cash_balance_v3');
+        .rpc('calculate_enhanced_main_cash_balance');
 
       if (error) {
         console.error('خطأ في جلب الرصيد المحسن:', error);

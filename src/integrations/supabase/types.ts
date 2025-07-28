@@ -2998,10 +2998,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
-      calculate_main_cash_balance_v3: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
       calculate_missing_profits: {
         Args: Record<PropertyKey, never>
         Returns: number
