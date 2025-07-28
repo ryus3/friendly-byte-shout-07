@@ -280,20 +280,35 @@ const AccountingPage = () => {
         // حساب صافي ربح المبيعات (بدون طرح المصاريف العامة)
         const netSalesProfit = salesWithoutDelivery - cogs; // هذا هو صافي ربح المبيعات فقط
         
-        // المصاريف العامة (للعرض منفصلة وليس لطرحها من صافي الربح)
+        // المصاريف العامة (تشمل جميع المصاريف بما فيها المستحقات المدفوعة)
         const generalExpenses = expensesInRange.filter(e => 
           e.expense_type !== 'system' && 
-          e.category !== 'فئات_المصاريف' &&
-          e.related_data?.category !== 'مستحقات الموظفين'
+          e.category !== 'فئات_المصاريف'
+          // إزالة استبعاد مستحقات الموظفين لتصبح ضمن المصاريف العامة
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // مستحقات الموظفين المسددة
+        // مستحقات الموظفين المسددة (للعرض منفصلة فقط)
         const employeeSettledDues = expensesInRange.filter(e => 
-          e.related_data?.category === 'مستحقات الموظفين'
+          e.related_data?.category === 'مستحقات الموظفين' ||
+          e.category === 'مستحقات الموظفين'
         ).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // صافي الربح = ربح المبيعات فقط (بدون حذف المصاريف العامة)
-        const netProfit = grossProfit;
+        // صافي الربح = ربح المبيعات - المصاريف العامة (بما فيها المستحقات المدفوعة)
+        const netProfit = grossProfit - generalExpenses;
+        
+        console.log('🔍 فحص النظام المحاسبي - AccountingPage:', {
+          grossProfit,
+          generalExpenses,
+          employeeSettledDues,
+          netProfit,
+          expensesInRange: expensesInRange?.length || 0,
+          expensesDetails: expensesInRange?.map(e => ({
+            category: e.category,
+            amount: e.amount,
+            expense_type: e.expense_type,
+            related_data: e.related_data
+          })) || []
+        });
     
         
         // حساب قيمة المخزون

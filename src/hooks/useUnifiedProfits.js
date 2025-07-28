@@ -73,22 +73,34 @@ export const useUnifiedProfits = (userId = null) => {
       const totalEmployeeProfits = completedProfits?.reduce((sum, p) => sum + (p.employee_profit || 0), 0) || 0;
       const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
       
-      // فصل المصاريف العامة عن المستحقات المدفوعة (بنفس منطق المركز المالي)
+      // فصل المصاريف العامة عن المستحقات المدفوعة (موحد مع المركز المالي)
       const generalExpenses = expenses?.filter(e => 
-        e.category !== 'مستحقات الموظفين' && 
-        e.category !== 'مستحقات مدفوعة' &&
-        e.expense_type !== 'system' &&
+        e.expense_type !== 'system' && 
         e.category !== 'فئات_المصاريف'
+        // المستحقات المدفوعة تُحسب ضمن المصاريف العامة (موحد مع المركز المالي)
       ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
       const paidDues = expenses?.filter(e => 
         e.category === 'مستحقات الموظفين' || e.category === 'مستحقات مدفوعة'
       ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
       
-      const totalExpenses = generalExpenses + paidDues;
+      const totalExpenses = generalExpenses; // المصاريف العامة تشمل المستحقات المدفوعة
       
-      // صافي الأرباح = أرباح المدير من المبيعات - المصاريف العامة - المستحقات المدفوعة
-      const netSystemProfit = totalManagerProfits - generalExpenses - paidDues;
+      // صافي الأرباح = أرباح المدير من المبيعات - المصاريف العامة (بما فيها المستحقات المدفوعة)
+      const netSystemProfit = totalManagerProfits - generalExpenses;
+      
+      console.log('🔍 فحص النظام المحاسبي - useUnifiedProfits:', {
+        expenses: expenses?.length || 0,
+        totalManagerProfits,
+        generalExpenses,
+        paidDues,
+        netSystemProfit,
+        expensesDetails: expenses?.map(e => ({
+          category: e.category,
+          amount: e.amount,
+          expense_type: e.expense_type
+        })) || []
+      });
       
       // الأرباح المعلقة = أرباح الطلبات غير المكتملة
       const pendingSystemProfits = pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0) - (p.employee_profit || 0), 0);
