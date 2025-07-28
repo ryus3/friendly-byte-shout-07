@@ -166,12 +166,21 @@ const EmployeeFollowUpPage = () => {
 
   // الطلبات المفلترة
   const filteredOrders = useMemo(() => {
-    console.log('🔄 تفلتر الطلبات:', { ordersLength: orders?.length, filters });
+    console.log('🔄 تفلتر الطلبات:', { 
+      ordersLength: orders?.length, 
+      filters,
+      employeeFromUrl,
+      ordersFromUrl,
+      highlightFromUrl 
+    });
     
     if (!orders || !Array.isArray(orders)) {
-      console.log('❌ لا توجد طلبات');
+      console.log('❌ لا توجد طلبات في البيانات');
       return [];
     }
+
+    console.log('📊 إجمالي الطلبات المتاحة:', orders.length);
+    console.log('🎯 الموظف المطلوب:', filters.employeeId);
 
     const filtered = orders.filter(order => {
       if (!order) return false;
@@ -210,17 +219,21 @@ const EmployeeFollowUpPage = () => {
       
       const matchResult = employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
       
-      console.log(`🔍 طلب ${order.order_number}:`, {
-        employeeMatch,
-        statusMatch, 
-        profitStatusMatch,
-        archiveMatch,
-        isManuallyArchived,
-        status: order.status,
-        created_by: order.created_by,
-        filters: filters.employeeId,
-        finalMatch: matchResult
-      });
+      // تفصيل كامل لكل طلب
+      if (order.created_by === filters.employeeId || filters.employeeId === 'all') {
+        console.log(`🔍 طلب ${order.order_number}:`, {
+          id: order.id,
+          employeeMatch,
+          statusMatch, 
+          profitStatusMatch,
+          archiveMatch,
+          isManuallyArchived,
+          status: order.status,
+          created_by: order.created_by,
+          filters: filters.employeeId,
+          finalMatch: matchResult
+        });
+      }
       
       return matchResult;
     }).map(order => ({
@@ -228,7 +241,11 @@ const EmployeeFollowUpPage = () => {
       created_by_name: usersMap.get(order.created_by) || 'غير معروف'
     }));
 
-    console.log('✅ الطلبات المفلترة:', filtered.length);
+    console.log('✅ الطلبات المفلترة النهائية:', {
+      count: filtered.length,
+      orders: filtered.map(o => ({ id: o.id, number: o.order_number, status: o.status }))
+    });
+    
     return filtered;
   }, [orders, filters, usersMap, profits]);
 
