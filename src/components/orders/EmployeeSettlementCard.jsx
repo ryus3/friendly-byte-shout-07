@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Loader2, User, CheckCircle } from 'lucide-react';
+import { DollarSign, Loader2, User, CheckCircle, Receipt } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/hooks/use-toast';
+import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
 
 // معرف المدير الرئيسي - يجب عدم عرض التسوية له
 const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
@@ -18,6 +19,7 @@ const EmployeeSettlementCard = ({
 }) => {
   const { settleEmployeeProfits } = useInventory();
   const [isSettling, setIsSettling] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
 
   // حساب إجمالي المستحقات للطلبات المحددة
   const totalSettlement = useMemo(() => {
@@ -50,6 +52,7 @@ const EmployeeSettlementCard = ({
       setIsSettling(true);
       const orderIds = employeeOrders.map(order => order.id);
       await settleEmployeeProfits(employee.user_id, totalSettlement, employee.full_name, orderIds);
+      setShowInvoice(true); // عرض الفاتورة
       onClearSelection(); // إلغاء التحديد بعد التسوية
     } catch (error) {
       console.error('Error in settlement:', error);
@@ -149,6 +152,18 @@ const EmployeeSettlementCard = ({
           </AlertDialog>
         </div>
       </CardContent>
+      
+      {/* نافذة فاتورة التحاسب */}
+      {showInvoice && (
+        <SettlementInvoiceDialog
+          open={showInvoice}
+          onClose={() => setShowInvoice(false)}
+          employee={employee}
+          orders={employeeOrders}
+          totalProfit={totalSettlement}
+          settlementDate={new Date()}
+        />
+      )}
     </Card>
   );
 };

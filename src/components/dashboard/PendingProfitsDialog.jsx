@@ -15,7 +15,8 @@ const PendingProfitsDialog = ({
   onClose, 
   pendingProfitOrders = [], 
   onReceiveInvoices,
-  user
+  user,
+  isEmployeeView = false
 }) => {
   const [selectedOrders, setSelectedOrders] = useState([]);
 
@@ -127,10 +128,10 @@ const PendingProfitsDialog = ({
         <DialogHeader className="flex-shrink-0 p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
             <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-            الأرباح المعلقة - طلبات محلية
+            {isEmployeeView ? 'أرباحي المعلقة - طلبات للتحاسب' : 'الأرباح المعلقة - طلبات محلية'}
           </DialogTitle>
           <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-            الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية
+            {isEmployeeView ? 'طلباتك المُسلّمة والمنتظرة للتحاسب عليها' : 'الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية'}
           </div>
         </DialogHeader>
 
@@ -196,6 +197,8 @@ const PendingProfitsDialog = ({
                   <PackageCheck className="h-3 w-3 sm:h-4 sm:w-4 animate-spin ml-1" />
                   جاري الاستلام...
                 </>
+              ) : isEmployeeView ? (
+                <>طلب تحاسب ({selectedOrders.length})</>
               ) : (
                 <>استلام فواتير ({selectedOrders.length})</>
               )}
@@ -206,10 +209,10 @@ const PendingProfitsDialog = ({
           <div className="flex-1 min-h-0">
             <ScrollArea className="h-full w-full">
               <div className="space-y-2 pr-1">
-                {pendingProfitOrders.length === 0 ? (
+                 {pendingProfitOrders.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <PackageCheck className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm">لا توجد طلبات معلقة لاستلام فواتير</p>
+                    <p className="text-sm">{isEmployeeView ? 'لا توجد طلبات معلقة للتحاسب' : 'لا توجد طلبات معلقة لاستلام فواتير'}</p>
                   </div>
                 ) : (
                   pendingProfitOrders.map((order) => {
@@ -232,7 +235,7 @@ const PendingProfitsDialog = ({
                                 {order.order_number}
                               </Badge>
                               <Badge variant="secondary" className="text-xs">
-                                مُوصل
+                                {isEmployeeView ? 'مُسلّم' : 'مُوصل'}
                               </Badge>
                               {order.tracking_number && (
                                 <Badge variant="outline" className="text-xs font-mono">
