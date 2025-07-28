@@ -52,13 +52,16 @@ const EmployeeFollowUpPage = () => {
     const highlightParam = searchParams.get('highlight');
     const filterParam = searchParams.get('filter');
     
-    console.log('🔗 استخراج URL Parameters:', {
+    console.log('🔗 URL ANALYSIS:', {
+      fullURL: window.location.href,
+      search: window.location.search,
       employeeParam,
       ordersParam,
       highlightParam,
       filterParam,
-      fullURL: window.location.href,
-      search: window.location.search
+      hasEmployee: !!employeeParam,
+      hasOrders: !!ordersParam,
+      shouldShowData: !!(employeeParam && ordersParam)
     });
     
     // تحديث الـ state فوراً
@@ -75,7 +78,11 @@ const EmployeeFollowUpPage = () => {
         profitStatus: filterParam === 'pending_settlement' ? 'pending' : 'all'
       };
       
-      console.log('🔄 تحديث الفلاتر فوراً:', newFilters);
+      console.log('🔄 FILTERS UPDATE:', {
+        oldFilters: filters,
+        newFilters,
+        willUpdate: true
+      });
       setFilters(newFilters);
     }
     
@@ -83,7 +90,11 @@ const EmployeeFollowUpPage = () => {
     if (ordersParam) {
       const ordersList = ordersParam.split(',');
       setSelectedOrders(ordersList);
-      console.log('📋 تم تحديد الطلبات من URL:', ordersList);
+      console.log('📋 ORDERS SELECTED FROM URL:', {
+        ordersParam,
+        ordersList,
+        count: ordersList.length
+      });
     }
   }, [searchParams]);
   
