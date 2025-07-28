@@ -394,19 +394,54 @@ const EmployeeFollowUpPage = () => {
 
   // معالج الانتقال لتحاسب من الإشعار
   const handleNavigateToSettlement = (employeeId, orderIds) => {
-    // تعيين فلتر الموظف
-    setFilters(prev => ({ ...prev, employeeId }));
+    console.log('🔄 handleNavigateToSettlement called:', { employeeId, orderIds });
     
-    // تحديد الطلبات
+    if (!employeeId || !orderIds || orderIds.length === 0) {
+      console.warn('⚠️ بيانات غير مكتملة للتحاسب');
+      toast({
+        title: "تنبيه",
+        description: "بيانات طلب التحاسب غير مكتملة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // تعيين فلتر الموظف والحالة
+    setFilters(prev => ({ 
+      ...prev, 
+      employeeId,
+      profitStatus: 'pending', // فلترة الأرباح المعلقة فقط
+      status: 'all' // إظهار كل الحالات
+    }));
+    
+    // تحديد الطلبات المطلوب تسويتها
     setSelectedOrders(orderIds);
     
-    // التمرير للكارت
+    console.log('✅ تم تعيين الفلاتر والطلبات:', { employeeId, orderIds });
+    
+    // toast لتوضيح الإجراء
+    toast({
+      title: "طلبات التحاسب جاهزة",
+      description: `تم تحديد ${orderIds.length} طلب للتحاسب. اضغط على "دفع المستحقات" أدناه.`,
+      variant: "default"
+    });
+    
+    // التمرير للكارت مع تأثير بصري
     setTimeout(() => {
       const element = document.querySelector(`[data-employee-id="${employeeId}"]`);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // تأثير بصري
+        element.style.border = "3px solid #3b82f6";
+        element.style.borderRadius = "12px";
+        element.style.boxShadow = "0 0 20px rgba(59, 130, 246, 0.5)";
+        setTimeout(() => {
+          element.style.border = "";
+          element.style.borderRadius = "";
+          element.style.boxShadow = "";
+        }, 4000);
       }
-    }, 300);
+    }, 1000);
   };
 
   if (loading) {
