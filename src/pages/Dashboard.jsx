@@ -34,6 +34,7 @@ import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 import { supabase } from '@/lib/customSupabaseClient';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { toast } from '@/components/ui/use-toast';
+import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -324,8 +325,8 @@ const Dashboard = () => {
         
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         
-        // صافي الربح = ربح المبيعات فقط (بدون طرح المصاريف العامة)
-        const netProfit = grossProfit;
+        // صافي الربح = الربح الخام - المصاريف العامة
+        const netProfit = grossProfit - generalExpenses;
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
@@ -489,9 +490,7 @@ const Dashboard = () => {
         { 
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
-        canViewAllData && {
-            key: 'netProfit', title: 'صافي أرباح المبيعات', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
-        },
+        // كارت صافي أرباح المبيعات - سيتم عرضه منفصلاً باستخدام UnifiedProfitDisplay
         {
             key: 'pendingProfit', 
             title: canViewAllData ? 'الأرباح المعلقة' : 'أرباحي المعلقة', 
@@ -598,6 +597,17 @@ const Dashboard = () => {
                             <StatCard {...stat} />
                          </motion.div>
                     ))}
+                    {canViewAllData && (
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+                            <UnifiedProfitDisplay
+                                displayMode="dashboard"
+                                datePeriod={periods.netProfit}
+                                canViewAll={canViewAllData}
+                                onExpensesClick={() => setIsProfitLossOpen(true)}
+                                className=""
+                            />
+                        </motion.div>
+                    )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <TopListCard 
