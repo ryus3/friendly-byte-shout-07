@@ -428,7 +428,9 @@ export const InventoryProvider = ({ children }) => {
   }, [user, refreshInventoryData, refreshOrders]);
 
   const fetchInitialData = useCallback(async () => {
+    console.log('🚀 بدء fetchInitialData - جلب جميع البيانات من قاعدة البيانات');
     if (!user) {
+      console.log('❌ لا يوجد مستخدم، توقف fetchInitialData');
       setLoading(false);
       return;
     }
@@ -600,10 +602,17 @@ export const InventoryProvider = ({ children }) => {
       }
 
       // تحميل المصاريف من قاعدة البيانات
-      const { data: expensesData } = await supabase
+      console.log('🔄 جلب المصاريف من قاعدة البيانات...');
+      const { data: expensesData, error: expensesError } = await supabase
         .from('expenses')
         .select('*')
         .order('created_at', { ascending: false });
+      
+      console.log('💰 نتائج جلب المصاريف:', {
+        count: expensesData?.length || 0,
+        error: expensesError,
+        sample: expensesData?.slice(0, 3)
+      });
       
       if (expensesData) {
         const formattedExpenses = expensesData.map(expense => ({
@@ -616,13 +625,23 @@ export const InventoryProvider = ({ children }) => {
           vendor_name: expense.vendor_name,
           receipt_number: expense.receipt_number,
           status: expense.status,
+          expense_type: expense.expense_type, // إضافة expense_type المهم!
+          metadata: expense.metadata, // إضافة metadata
+          created_by: expense.created_by, // إضافة created_by
           related_data: {
             category: expense.category,
             vendor: expense.vendor_name
           }
         }));
         
+        console.log('📋 المصاريف المعالجة:', {
+          count: formattedExpenses.length,
+          settlementExpenses: formattedExpenses.filter(exp => exp.category === 'مستحقات الموظفين')
+        });
+        
         setAccounting(prev => ({ ...prev, expenses: formattedExpenses }));
+      } else if (expensesError) {
+        console.error('❌ خطأ في جلب المصاريف:', expensesError);
       }
 
       // معالجة وتحويل بيانات الطلبات
