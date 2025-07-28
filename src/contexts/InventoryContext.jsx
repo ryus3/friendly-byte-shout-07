@@ -243,7 +243,7 @@ export const InventoryProvider = ({ children }) => {
         
         const { data: mainCashSource, error: cashError } = await supabase
           .from('cash_sources')
-          .select('id')
+          .select('id, current_balance')
           .eq('name', 'القاصة الرئيسية')
           .maybeSingle();
 
@@ -252,17 +252,35 @@ export const InventoryProvider = ({ children }) => {
         } else if (mainCashSource) {
           console.log('💰 تم العثور على القاصة الرئيسية:', mainCashSource.id);
           
-          // تسجيل الحركة المالية
+          const newBalance = parseFloat(mainCashSource.current_balance) - parseFloat(newExpense.amount);
+          
+          // تحديث رصيد القاصة
+          const { error: updateError } = await supabase
+            .from('cash_sources')
+            .update({ current_balance: newBalance })
+            .eq('id', mainCashSource.id);
+            
+          if (updateError) {
+            console.error('❌ خطأ في تحديث الرصيد:', updateError);
+            return;
+          }
+          
+          // إنشاء حركة مالية
           const { data: movementResult, error: movementError } = await supabase
-            .rpc('update_cash_source_balance', {
-              p_cash_source_id: mainCashSource.id,
-              p_amount: newExpense.amount,
-              p_movement_type: 'out',
-              p_reference_type: 'expense',
-              p_reference_id: newExpense.id,
-              p_description: `مصروف: ${newExpense.description}`,
-              p_created_by: user?.user_id
-            });
+            .from('cash_movements')
+            .insert({
+              cash_source_id: mainCashSource.id,
+              amount: parseFloat(newExpense.amount),
+              movement_type: 'out',
+              reference_type: 'expense',
+              reference_id: newExpense.id,
+              description: `مصروف: ${newExpense.description}`,
+              balance_before: parseFloat(mainCashSource.current_balance),
+              balance_after: newBalance,
+              created_by: user?.user_id
+            })
+            .select()
+            .single();
 
           if (movementError) {
             console.error('❌ خطأ في تسجيل الحركة المالية:', movementError);
