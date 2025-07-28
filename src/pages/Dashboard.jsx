@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -93,6 +94,7 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
+    const { profitData: unifiedProfitData } = useUnifiedProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -490,7 +492,7 @@ const Dashboard = () => {
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
         canViewAllData && {
-            key: 'netProfit', title: 'صافي أرباح المبيعات', value: financialSummary?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
+            key: 'netProfit', title: 'صافي أرباح المبيعات', value: unifiedProfitData?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         {
             key: 'pendingProfit', 
@@ -551,7 +553,7 @@ const Dashboard = () => {
                     <ProfitLossDialog
                         open={isProfitLossOpen}
                         onOpenChange={setIsProfitLossOpen}
-                        summary={financialSummary}
+                        summary={unifiedProfitData}
                         datePeriod={periods.netProfit}
                         onDatePeriodChange={(p) => handlePeriodChange('netProfit', p)}
                     />

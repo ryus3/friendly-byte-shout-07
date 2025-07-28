@@ -26,6 +26,7 @@ import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formatCurrency = (amount) => {
@@ -157,6 +158,7 @@ const AccountingPage = () => {
         productType: 'all'
     };
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
+    const { profitData: unifiedProfitData } = useUnifiedProfits();
     
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
@@ -661,7 +663,7 @@ const AccountingPage = () => {
             <ProfitLossDialog
                 open={dialogs.profitLoss}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, profitLoss: open }))}
-                summary={financialSummary}
+                summary={unifiedProfitData}
                 datePeriod={datePeriod}
                 onDatePeriodChange={setDatePeriod}
             />
