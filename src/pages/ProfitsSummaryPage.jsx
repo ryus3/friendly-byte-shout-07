@@ -386,6 +386,7 @@ const ProfitsSummaryPage = () => {
       }
       // التوجيه لصفحة متابعة الموظفين مع تحديد البيانات
       navigate(`/employee-follow-up?employee=${employeeId}&orders=${selectedOrders.join(',')}&highlight=settlement`);
+  };
 
   const handleArchiveSelected = async () => {
       for (const orderId of selectedOrders) {
