@@ -39,87 +39,21 @@ const EmployeeFollowUpPage = () => {
   const { profits } = useProfits();
   const [searchParams] = useSearchParams();
   
-  // استخراج parameters من URL - مع دعم أفضل للـ parameters
-  const [employeeFromUrl, setEmployeeFromUrl] = useState(null);
-  const [ordersFromUrl, setOrdersFromUrl] = useState(null);  
-  const [highlightFromUrl, setHighlightFromUrl] = useState(null);
-  const filterFromUrl = searchParams.get('filter');
+  // استخراج المعاملات من URL مباشرة
+  const employeeFromUrl = searchParams.get('employee');
+  const ordersFromUrl = searchParams.get('orders');
+  const highlightFromUrl = searchParams.get('highlight');
   
-  // استخراج المعاملات من URL
-  useEffect(() => {
-    const employeeParam = searchParams.get('employee');
-    const ordersParam = searchParams.get('orders');
-    const highlightParam = searchParams.get('highlight');
-    
-    setEmployeeFromUrl(employeeParam);
-    setOrdersFromUrl(ordersParam);
-    setHighlightFromUrl(highlightParam);
-  }, [searchParams]);
-
-  // تطبيق الفلترة ONLY بعد تحميل البيانات كاملة
-  useEffect(() => {
-    // تأكد من تحميل البيانات كاملة قبل التطبيق
-    if (!loading && orders && Array.isArray(orders) && orders.length > 0 && allUsers && Array.isArray(allUsers)) {
-      
-      console.log('🚀 البيانات محملة - تطبيق فلترة التحاسب:', {
-        ordersCount: orders.length,
-        usersCount: allUsers.length,
-        employeeFromUrl,
-        highlightFromUrl
-      });
-      
-      if (employeeFromUrl && highlightFromUrl === 'settlement') {
-        console.log('✅ تطبيق فلترة التحاسب الآن');
-        
-        // تطبيق الفلترة
-        setFilters({
-          status: 'all',
-          archived: false,
-          employeeId: employeeFromUrl,
-          profitStatus: 'pending'
-        });
-        
-        if (ordersFromUrl) {
-          const ordersList = ordersFromUrl.split(',');
-          setSelectedOrders(ordersList);
-        }
-        
-        // toast بعد التطبيق
-        setTimeout(() => {
-          toast({
-            title: "✅ تم تطبيق الفلترة",
-            description: "تم فلترة طلبات التحاسب بنجاح",
-            duration: 3000
-          });
-        }, 500);
-      }
-    } else {
-      console.log('⏳ انتظار تحميل البيانات...', {
-        loading,
-        ordersLoaded: !!orders,
-        ordersCount: orders?.length || 0,
-        usersLoaded: !!allUsers
-      });
-    }
-  }, [loading, orders, allUsers, employeeFromUrl, ordersFromUrl, highlightFromUrl]);
-  
-  const [filters, setFilters] = useState(() => {
-    // استخراج المعاملات من URL مباشرة عند التهيئة
-    const employeeParam = new URLSearchParams(window.location.search).get('employee');
-    const highlightParam = new URLSearchParams(window.location.search).get('highlight');
-    
-    return {
-      status: 'all',
-      archived: false,
-      employeeId: (employeeParam && highlightParam === 'settlement') ? employeeParam : 'all',
-      profitStatus: (employeeParam && highlightParam === 'settlement') ? 'pending' : 'all'
-    };
+  // الفلاتر - تطبيق URL فوراً إذا كان من التحاسب
+  const [filters, setFilters] = useState({
+    status: 'all',
+    archived: false,
+    employeeId: (employeeFromUrl && highlightFromUrl === 'settlement') ? employeeFromUrl : 'all',
+    profitStatus: (employeeFromUrl && highlightFromUrl === 'settlement') ? 'pending' : 'all'
   });
   
   const [selectedOrders, setSelectedOrders] = useState(() => {
-    // استخراج الطلبات من URL مباشرة عند التهيئة
-    const ordersParam = new URLSearchParams(window.location.search).get('orders');
-    return ordersParam ? ordersParam.split(',') : [];
+    return ordersFromUrl && highlightFromUrl === 'settlement' ? ordersFromUrl.split(',') : [];
   });
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
