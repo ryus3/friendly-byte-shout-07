@@ -238,14 +238,13 @@ const NotificationsPanel = () => {
         navigate('/orders?status=completed');
       }
     } else if (notification.type === 'profit_settlement_request') {
-      // طلب تحاسب من موظف - التنقل مباشرة لصفحة التحاسب
+      // طلب تحاسب من موظف - التنقل لصفحة متابعة الموظفين مع الطلبات المحددة
       const data = notification.data || {};
       const employeeId = data.employeeId;
       const orderIds = data.orderIds || [];
       
       if (employeeId && orderIds.length > 0) {
-        // الذهاب مباشرة لصفحة التحاسب مع الطلبات المحددة
-        navigate(`/profit-settlement/${employeeId}?orders=${orderIds.join(',')}`);
+        navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`);
       } else {
         navigate('/employee-follow-up?filter=pending_settlement');
       }

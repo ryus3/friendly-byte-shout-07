@@ -16,6 +16,7 @@ import { toast } from '@/components/ui/use-toast';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
+import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -322,6 +323,38 @@ const EmployeeFollowUpPage = () => {
     }
   };
 
+  // إيجاد الطلبات المحددة كـ objects بدلاً من ids
+  const selectedOrdersData = useMemo(() => {
+    return filteredOrders.filter(order => selectedOrders.includes(order.id));
+  }, [filteredOrders, selectedOrders]);
+
+  // تجميع الطلبات المحددة حسب الموظف للتحاسب
+  const employeesWithSelectedOrders = useMemo(() => {
+    const employeeGroups = {};
+    
+    selectedOrdersData.forEach(order => {
+      if (!employeeGroups[order.created_by]) {
+        const employee = employees.find(emp => emp.user_id === order.created_by);
+        if (employee) {
+          employeeGroups[order.created_by] = {
+            employee,
+            orders: []
+          };
+        }
+      }
+      if (employeeGroups[order.created_by]) {
+        employeeGroups[order.created_by].orders.push(order);
+      }
+    });
+    
+    return Object.values(employeeGroups);
+  }, [selectedOrdersData, employees]);
+
+  // معالج إلغاء تحديد الطلبات
+  const handleClearSelection = () => {
+    setSelectedOrders([]);
+  };
+
   if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -469,34 +502,6 @@ const EmployeeFollowUpPage = () => {
             </Card>
           )}
 
-          {/* تنبيه طلب التحاسب */}
-          {highlightFromUrl === 'settlement' && selectedOrders.length > 0 && (
-            <Card className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-orange-200 dark:border-orange-800">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-orange-800 dark:text-orange-200">
-                    طلب تحاسب جديد - {selectedOrders.length} طلبات محددة
-                  </p>
-                  <p className="text-sm text-orange-600 dark:text-orange-300">
-                    الموظف يطلب تحاسب أرباحه من الطلبات المحددة
-                  </p>
-                </div>
-                <Button 
-                  variant="default" 
-                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                  onClick={() => {
-                    const employeeId = filters.employeeId;
-                    if (employeeId && employeeId !== 'all') {
-                      navigate(`/profit-settlement/${employeeId}?orders=${selectedOrders.join(',')}`);
-                    }
-                  }}
-                >
-                  <DollarSign className="w-4 h-4 ml-2" />
-                  بدء التسوية
-                </Button>
-              </div>
-            </Card>
-          )}
 
           {/* قائمة الطلبات */}
           <OrderList 
@@ -510,6 +515,22 @@ const EmployeeFollowUpPage = () => {
             showEmployeeName={filters.employeeId === 'all'}
           />
         </div>
+
+        {/* كارت تسوية المستحقات للطلبات المحددة */}
+        {employeesWithSelectedOrders.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">تسوية المستحقات</h3>
+            {employeesWithSelectedOrders.map(({ employee, orders }) => (
+              <EmployeeSettlementCard
+                key={employee.user_id}
+                employee={employee}
+                selectedOrders={orders}
+                onClearSelection={handleClearSelection}
+                calculateProfit={calculateProfit}
+              />
+            ))}
+          </div>
+        )}
 
         {/* نوافذ حوارية */}
         <OrderDetailsDialog

@@ -242,6 +242,14 @@ const OrderCard = ({
                   <span className="font-bold">{statusConfig.label}</span>
                 </div>
               )}
+              
+              {/* مؤشر دفع المستحقات */}
+              {order.status === 'completed' && order.isArchived && (
+                <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-300/50 shadow-lg shadow-green-400/40 font-bold">
+                  <CheckCircle className="w-3 h-3 ml-1" />
+                  مدفوع المستحقات
+                </Badge>
+              )}
             </div>
 
             {/* Customer Info مع الأيقونات في المنتصف */}

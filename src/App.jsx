@@ -12,7 +12,7 @@ import { useAiChat } from './contexts/AiChatContext';
 import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
-import ProfitSettlementPage from '@/pages/ProfitSettlementPage.jsx';
+
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
@@ -127,7 +127,7 @@ function AppContent() {
           <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
           
           <Route path="/profits-summary" element={<ProtectedRoute permission="view_own_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
-          <Route path="/profit-settlement/:employeeId" element={<ProtectedRoute permission="manage_profit_settlement">{childrenWithProps(ProfitSettlementPage)}</ProtectedRoute>} />
+          
           <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
           <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
