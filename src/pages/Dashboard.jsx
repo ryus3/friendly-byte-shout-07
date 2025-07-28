@@ -488,7 +488,7 @@ const Dashboard = () => {
         {
             key: 'pendingProfit', 
             title: canViewAllData ? 'الأرباح المعلقة' : 'أرباحي المعلقة', 
-            value: canViewAllData ? dashboardData.pendingProfit : employeeProfitsData.personalPendingProfit, 
+            value: canViewAllData ? dashboardData.pendingProfit : dashboardData.pendingProfit, 
             icon: Hourglass, 
             colors: ['yellow-500', 'amber-500'], 
             format: 'currency', 

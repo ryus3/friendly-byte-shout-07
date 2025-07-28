@@ -274,7 +274,7 @@ const NotificationsPanel = () => {
           navigate(`/orders?highlight=${notification.related_entity_id}`);
           break;
         case 'settlement_request':
-          navigate(`/employee-follow-up`);
+          navigate(`/profits-summary`);
           break;
         case 'settlement_invoice':
           navigate(`/profits-summary?invoice=${notification.related_entity_id}`);
