@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
