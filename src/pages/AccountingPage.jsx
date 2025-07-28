@@ -259,6 +259,45 @@ const AccountingPage = () => {
     // استخدام البيانات المالية الموحدة لعرض البطاقات والحسابات
     const financialSummary = useMemo(() => {
         // إضافة القيم المحسوبة من البيانات الموحدة
+        
+        // تصفية الطلبات المُسلمة والمُستلمة الفواتير
+        const deliveredOrders = orders.filter(order => 
+            order.status === 'delivered' && order.receipt_received === true
+        );
+        
+        // تصفية المصاريف للفترة المحددة
+        const expensesInRange = (accounting?.expenses || []).filter(expense => {
+            if (!expense.transaction_date) return false;
+            const expenseDate = new Date(expense.transaction_date);
+            return expenseDate >= dateRange.from && expenseDate <= dateRange.to;
+        });
+        
+        // حساب إجمالي الإيرادات ورسوم التوصيل
+        const totalRevenue = deliveredOrders.reduce((sum, order) => sum + (order.final_amount || order.total_amount || 0), 0);
+        const deliveryFees = deliveredOrders.reduce((sum, order) => sum + (order.delivery_fee || 0), 0);
+        const salesWithoutDelivery = totalRevenue - deliveryFees;
+        
+        // حساب تكلفة البضاعة المباعة
+        const cogs = deliveredOrders.reduce((sum, order) => {
+            if (!order.order_items || !Array.isArray(order.order_items)) return sum;
+            return sum + order.order_items.reduce((itemSum, item) => {
+                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+                const quantity = item.quantity || 0;
+                return itemSum + (costPrice * quantity);
+            }, 0);
+        }, 0);
+        
+        const grossProfit = salesWithoutDelivery - cogs;
+        
+        // حساب المصاريف العامة (استثناء مستحقات الموظفين وشراء البضاعة)
+        const generalExpenses = expensesInRange
+            .filter(e => e.expense_type !== 'system' && e.category !== 'مستحقات الموظفين' && e.related_data?.category !== 'شراء بضاعة')
+            .reduce((sum, e) => sum + (e.amount || 0), 0);
+        
+        // حساب المستحقات المدفوعة للموظفين
+        const employeeSettledDues = allProfits
+            .filter(p => p.status === 'settled' && p.employee_id !== currentUser?.id)
+            .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
         // حساب قيمة المخزون
         const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
@@ -315,6 +354,8 @@ const AccountingPage = () => {
         }, 0);
         
         const totalSystemProfit = myProfit + systemProfitFromEmployees;
+        const systemProfit = totalSystemProfit;
+        const netProfit = grossProfit - generalExpenses;
     
         // حساب مستحقات الموظفين المعلقة (من جدول profits)
         const employeePendingDues = allProfits
