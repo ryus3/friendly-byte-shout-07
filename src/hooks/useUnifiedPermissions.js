@@ -8,14 +8,8 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
 
-  // الحصول على الـ auth context بأمان
-  let auth = null;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.warn('useUnifiedPermissions: Auth context not available, using fallback');
-  }
-  
+  // الحصول على الـ auth context - يجب استدعاء الهوك دائماً في المستوى الأعلى
+  const auth = useAuth();
   const user = passedUser || auth?.user;
 
   // إذا لم يكن لدينا auth context أو user، نعيد قيم افتراضية
