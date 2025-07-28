@@ -2931,6 +2931,7 @@ export type Database = {
           total_expenses: number
           total_purchases: number
           employee_profits: number
+          system_profit: number
           net_profit: number
           final_balance: number
         }[]
