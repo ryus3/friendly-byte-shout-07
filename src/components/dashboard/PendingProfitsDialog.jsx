@@ -46,25 +46,28 @@ const PendingProfitsDialog = ({
   const calculateOrderProfit = (order) => {
     if (!order.items || !Array.isArray(order.items)) return 0;
     
+    console.log('💰 حساب الربح للطلب:', order.order_number, {
+      items: order.items.length,
+      isEmployeeView,
+      orderCreatedBy: order.created_by,
+      currentUser: user?.user_id || user?.id
+    });
+    
     return order.items.reduce((sum, item) => {
       // التأكد من التحويل الصحيح للأرقام
       const unitPrice = parseFloat(item.unit_price || item.price) || 0;
       const costPrice = parseFloat(item.cost_price || item.costPrice) || 0;
       const quantity = parseInt(item.quantity) || 0;
       
-      // للموظف: حساب ربحه فقط (لا يشمل ربح المدير)
-      // للمدير: حساب الربح الكامل للطلب
       const profit = (unitPrice - costPrice) * quantity;
       
-      console.log('💰 حساب الربح للطلب:', order.order_number, {
+      console.log('🔍 تفصيل المنتج:', {
         product: item.product_name || item.name,
         unitPrice,
         costPrice,
         quantity,
         profit,
-        isEmployeeView,
-        orderCreatedBy: order.created_by,
-        currentUser: user?.user_id || user?.id
+        orderNumber: order.order_number
       });
       
       return sum + Math.max(0, profit);
