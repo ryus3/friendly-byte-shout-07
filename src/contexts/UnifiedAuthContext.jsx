@@ -7,38 +7,7 @@ const UnifiedAuthContext = createContext(null);
 export const useAuth = () => {
   const context = useContext(UnifiedAuthContext);
   if (!context) {
-    // إرجاع قيم افتراضية آمنة بدلاً من رمي خطأ
-    return {
-      user: null,
-      session: null,
-      loading: false,
-      allUsers: [],
-      pendingRegistrations: [],
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {},
-      hasPermission: () => false,
-      hasRole: () => false,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: (data) => data || [],
-      filterProductsByPermissions: (products) => products || [],
-      getEmployeeStats: () => ({ total: 0, personal: 0 }),
-      login: async () => false,
-      register: async () => false,
-      logout: async () => {},
-      resetPassword: async () => false,
-      updatePassword: async () => false,
-      refreshUserData: async () => {},
-      updateUserStatus: async () => false,
-      updateUserRole: async () => false
-    };
+    throw new Error('useAuth must be used within an UnifiedAuthProvider');
   }
   return context;
 };
