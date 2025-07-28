@@ -28,6 +28,38 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
     return allUsers.filter(u => u.status === 'active' && u.role !== 'admin');
   }, [allUsers]);
 
+  // استخراج اسم الموظف من وصف المصروف - مبسط ومحسن
+  const extractEmployeeNameFromDescription = (description) => {
+    if (!description || typeof description !== 'string') {
+      console.warn('⚠️ وصف المصروف فارغ أو غير صالح:', description);
+      return 'غير محدد';
+    }
+    
+    console.log('🔍 معالجة الوصف:', description);
+    
+    // تنظيف النص
+    const cleanDesc = description.trim();
+    
+    // محاولة استخراج الاسم بعد "الموظف"
+    const match = cleanDesc.match(/الموظف\s+(.+?)(?:\s*$)/i);
+    if (match && match[1]) {
+      const extractedName = match[1].trim();
+      console.log(`✅ تم استخراج الاسم: "${extractedName}"`);
+      return extractedName;
+    }
+    
+    // محاولة أخذ آخر كلمة
+    const words = cleanDesc.split(/\s+/);
+    if (words.length >= 2) {
+      const lastName = words[words.length - 1];
+      console.log(`⚠️ استخراج آخر كلمة: "${lastName}"`);
+      return lastName;
+    }
+    
+    console.log('❌ فشل في استخراج الاسم، استخدام القيمة الافتراضية');
+    return 'غير محدد';
+  };
+
   // جلب فواتير التحاسب من جدول expenses مع نوع system
   const settlementInvoices = useMemo(() => {
     console.log('🔄 معالجة بيانات المصاريف:', {
@@ -84,38 +116,6 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
     
     return settlements;
   }, [invoices]);
-  
-  // استخراج اسم الموظف من وصف المصروف - مبسط ومحسن
-  const extractEmployeeNameFromDescription = (description) => {
-    if (!description || typeof description !== 'string') {
-      console.warn('⚠️ وصف المصروف فارغ أو غير صالح:', description);
-      return 'غير محدد';
-    }
-    
-    console.log('🔍 معالجة الوصف:', description);
-    
-    // تنظيف النص
-    const cleanDesc = description.trim();
-    
-    // محاولة استخراج الاسم بعد "الموظف"
-    const match = cleanDesc.match(/الموظف\s+(.+?)(?:\s*$)/i);
-    if (match && match[1]) {
-      const extractedName = match[1].trim();
-      console.log(`✅ تم استخراج الاسم: "${extractedName}"`);
-      return extractedName;
-    }
-    
-    // محاولة أخذ آخر كلمة
-    const words = cleanDesc.split(/\s+/);
-    if (words.length >= 2) {
-      const lastName = words[words.length - 1];
-      console.log(`⚠️ استخراج آخر كلمة: "${lastName}"`);
-      return lastName;
-    }
-    
-    console.log('❌ فشل في استخراج الاسم، استخدام القيمة الافتراضية');
-    return 'غير محدد';
-  };
   
   const filteredInvoices = useMemo(() => {
     console.log('🔄 فلترة الفواتير:', {
