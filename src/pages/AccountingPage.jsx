@@ -573,11 +573,12 @@ const AccountingPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard 
                         title="صافي أرباح المبيعات" 
-                        value={financialSummary.systemProfit || financialSummary.grossProfit} 
+                        value={financialSummary.netProfit} 
                         icon={PieChart} 
                         colors={['blue-500', 'sky-500']} 
                         format="currency" 
                         onClick={() => setDialogs(d => ({...d, profitLoss: true}))}
+                        description="بعد خصم المصاريف العامة"
                     />
                      <Card className="h-full">
                         <CardHeader>
