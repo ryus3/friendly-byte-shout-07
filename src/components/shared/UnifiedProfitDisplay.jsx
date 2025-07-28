@@ -1,5 +1,7 @@
 import React from 'react';
 import StatCard from '@/components/dashboard/StatCard';
+import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
+import { startOfMonth, endOfMonth } from 'date-fns';
 import { 
   User, 
   Hourglass, 
@@ -24,6 +26,24 @@ const UnifiedProfitDisplay = ({
   onSettledDuesClick = () => {},
   className = ''
 }) => {
+  // جلب بيانات تحليل الأرباح للمنتجات
+  const currentMonth = {
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  };
+
+  const { analysisData, loading: analysisLoading } = useAdvancedProfitsAnalysis(
+    currentMonth, 
+    {
+      product: 'all',
+      color: 'all', 
+      size: 'all',
+      department: 'all',
+      category: 'all',
+      productType: 'all',
+      season: 'all'
+    }
+  );
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -93,6 +113,16 @@ const UnifiedProfitDisplay = ({
             colors: ['indigo-500', 'violet-500'],
             format: 'currency',
             onClick: () => onFilterChange('employeeId', 'employees')
+          },
+          {
+            key: 'product-profit-analysis',
+            title: 'تحليل أرباح المنتجات',
+            value: analysisData?.systemProfit || 0,
+            icon: TrendingUp,
+            colors: ['green-500', 'emerald-500'],
+            format: 'currency',
+            onClick: () => window.open('/advanced-profits-analysis', '_blank'),
+            loading: analysisLoading
           },
           {
             key: 'total-expenses',

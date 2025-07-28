@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 
 /**
- * هوك تحليل الأرباح المتقدم - يستخدم البيانات الموجودة مباشرة
- * بدلاً من hook منفصل لتجنب التداخل والدوال المعطلة
+ * هوك تحليل الأرباح المتقدم - يستخدم قواعد الأرباح المحددة لكل موظف ومنتج
  */
 export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const [loading, setLoading] = useState(true);
@@ -18,6 +17,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
   const [products, setProducts] = useState([]);
+  
+  // قواعد الأرباح للموظفين
+  const [employeeProfitRules, setEmployeeProfitRules] = useState([]);
 
   // جلب بيانات الخيارات
   const fetchFilterOptions = async () => {
@@ -52,53 +54,82 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     }
   };
 
-  // حساب الربح الفعلي بناءً على تكلفة الشراء
-  const calculateRealProfit = async (orderItem, purchaseHistory) => {
-    // البحث عن تكلفة الشراء الأصلية للمنتج
-    const relevantPurchases = purchaseHistory.filter(p => 
-      p.product_id === orderItem.product_id && 
-      p.variant_id === orderItem.variant_id &&
-      new Date(p.created_at) <= new Date(orderItem.order_date)
-    ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  // جلب قواعد الأرباح
+  const fetchEmployeeProfitRules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('employee_profit_rules')
+        .select('*')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      setEmployeeProfitRules(data || []);
+    } catch (err) {
+      console.error('Error fetching profit rules:', err);
+    }
+  };
 
-    let actualCost = orderItem.variant_cost_price || orderItem.product_cost_price || 0;
-    
-    if (relevantPurchases.length > 0) {
-      // استخدام FIFO - أول داخل أول خارج
-      let remainingQuantity = orderItem.quantity;
-      let totalCost = 0;
+  // حساب ربح الموظف والنظام بناءً على القواعد المحددة
+  const calculateProfitSplit = (orderItem, employeeId) => {
+    const itemRevenue = orderItem.unit_price * orderItem.quantity;
+    const variant = orderItem.product_variants;
+    const product = orderItem.products;
+    const itemCost = (variant?.cost_price || product?.cost_price || 0) * orderItem.quantity;
+    const grossProfit = itemRevenue - itemCost;
 
-      for (const purchase of relevantPurchases.reverse()) {
-        if (remainingQuantity <= 0) break;
-        
-        const availableFromThisPurchase = Math.min(remainingQuantity, purchase.quantity);
-        totalCost += availableFromThisPurchase * purchase.unit_cost;
-        remainingQuantity -= availableFromThisPurchase;
+    // البحث عن قاعدة ربح خاصة بهذا المنتج للموظف
+    const productRule = employeeProfitRules.find(rule => 
+      rule.employee_id === employeeId && 
+      rule.rule_type === 'product' && 
+      rule.target_id === orderItem.product_id
+    );
+
+    // البحث عن قاعدة ربح عامة للموظف
+    const generalRule = employeeProfitRules.find(rule => 
+      rule.employee_id === employeeId && 
+      rule.rule_type === 'general'
+    );
+
+    let employeeProfit = 0;
+    let systemProfit = grossProfit;
+
+    if (productRule) {
+      // استخدام قاعدة المنتج المحددة
+      if (productRule.profit_percentage) {
+        employeeProfit = grossProfit * (productRule.profit_percentage / 100);
+      } else if (productRule.profit_amount) {
+        employeeProfit = productRule.profit_amount * orderItem.quantity;
       }
-
-      if (remainingQuantity <= 0) {
-        actualCost = totalCost / orderItem.quantity;
+    } else if (generalRule) {
+      // استخدام القاعدة العامة
+      if (generalRule.profit_percentage) {
+        employeeProfit = grossProfit * (generalRule.profit_percentage / 100);
+      } else if (generalRule.profit_amount) {
+        employeeProfit = generalRule.profit_amount * orderItem.quantity;
       }
+    } else {
+      // إذا لم توجد قاعدة، فالربح كله للنظام (طلب من المدير)
+      employeeProfit = 0;
     }
 
-    const revenue = orderItem.unit_price * orderItem.quantity;
-    const profit = revenue - (actualCost * orderItem.quantity);
-    
+    systemProfit = grossProfit - employeeProfit;
+
     return {
-      ...orderItem,
-      actualCost,
-      revenue,
-      profit
+      grossProfit,
+      employeeProfit,
+      systemProfit,
+      revenue: itemRevenue,
+      cost: itemCost
     };
   };
 
-  // تحليل الأرباح - حساب مباشر بدون اعتماد على hook معطل
+  // تحليل الأرباح - حساب مباشر بناءً على القواعد المحددة
   const fetchAdvancedAnalysis = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('📊 بدء تحليل الأرباح المتقدم للمنتجات...');
+      console.log('📊 بدء تحليل الأرباح المتقدم باستخدام قواعد الأرباح...');
 
       // جلب الطلبات المُسلمة والمُستلمة الفواتير في النطاق الزمني
       let ordersQuery = supabase
@@ -158,6 +189,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       let totalRevenue = 0;
       let totalCost = 0;
       let totalSystemProfit = 0;
+      let totalEmployeeProfit = 0;
       let totalOrders = orders?.length || 0;
       let filteredItemsCount = 0;
 
@@ -217,19 +249,18 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
           filteredItemsCount++;
 
-          // حساب الإيرادات والتكاليف
-          const itemRevenue = item.unit_price * item.quantity;
-          const itemCost = (variant?.cost_price || product?.cost_price || 0) * item.quantity;
-          const grossItemProfit = itemRevenue - itemCost;
-          
-          // حساب ربح النظام (افتراض أن 30% ربح النظام و 70% ربح الموظف للطلبات من الموظفين)
-          const isEmployeeOrder = order.created_by && order.created_by !== 'manager';
-          const systemProfitRatio = isEmployeeOrder ? 0.3 : 1.0; // 30% للنظام إذا كان من موظف، 100% إذا كان من المدير
-          const itemSystemProfit = grossItemProfit * systemProfitRatio;
+          // حساب الأرباح بناءً على القواعد المحددة
+          const profitSplit = calculateProfitSplit(item, order.created_by);
+          const itemRevenue = profitSplit.revenue;
+          const itemCost = profitSplit.cost;
+          const grossItemProfit = profitSplit.grossProfit;
+          const itemSystemProfit = profitSplit.systemProfit;
+          const itemEmployeeProfit = profitSplit.employeeProfit;
           
           totalRevenue += itemRevenue;
           totalCost += itemCost;
           totalSystemProfit += itemSystemProfit;
+          totalEmployeeProfit += itemEmployeeProfit;
 
           // تجميع البيانات للتفصيلات
           const departments = product?.product_departments || [];
@@ -373,8 +404,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           .sort((a, b) => b.profit - a.profit)
       };
 
-      console.log('📊 نتائج تحليل الأرباح:', {
+      console.log('📊 نتائج تحليل الأرباح باستخدام القواعد:', {
         totalSystemProfit,
+        totalEmployeeProfit,
         totalRevenue,
         totalCost,
         totalOrders,
@@ -382,7 +414,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       });
 
       setAnalysisData({
-        systemProfit: totalSystemProfit, // ربح النظام الفعلي
+        systemProfit: totalSystemProfit, // ربح النظام بناءً على القواعد المحددة
         totalProfit: totalSystemProfit, // للتوافق مع الكود القديم
         totalOrders,
         totalRevenue,
@@ -404,14 +436,15 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
   // تحديث البيانات عند تغيير الفلاتر
   useEffect(() => {
-    if (dateRange?.from && dateRange?.to) {
+    if (dateRange?.from && dateRange?.to && employeeProfitRules.length >= 0) {
       fetchAdvancedAnalysis();
     }
-  }, [dateRange, filters]);
+  }, [dateRange, filters, employeeProfitRules]);
 
-  // جلب خيارات الفلاتر عند التحميل
+  // جلب خيارات الفلاتر وقواعد الأرباح عند التحميل
   useEffect(() => {
     fetchFilterOptions();
+    fetchEmployeeProfitRules();
   }, []);
 
   const refreshData = () => {
