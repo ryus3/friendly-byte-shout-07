@@ -3165,9 +3165,9 @@ export type Database = {
           p_amount: number
           p_movement_type: string
           p_reference_type: string
-          p_reference_id: string
-          p_description: string
-          p_created_by: string
+          p_reference_id?: string
+          p_description?: string
+          p_created_by?: string
         }
         Returns: Json
       }
