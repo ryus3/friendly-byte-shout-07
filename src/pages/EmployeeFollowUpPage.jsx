@@ -244,10 +244,23 @@ const EmployeeFollowUpPage = () => {
     console.log('🎯 الموظف المطلوب:', effectiveEmployeeId);
 
     const filtered = orders.filter(order => {
-      if (!order) return false;
+      if (!order) {
+        console.log('❌ طلب فارغ تم تجاهله');
+        return false;
+      }
+      
+      console.log(`🔍 فحص الطلب ${order.order_number || order.id}:`, {
+        order_id: order.id,
+        created_by: order.created_by,
+        effectiveEmployeeId,
+        status: order.status,
+        isArchived: order.isarchived || order.isArchived,
+        hasMatchingEmployee: order.created_by === effectiveEmployeeId
+      });
       
       // استبعاد طلبات المدير الرئيسي من الظهور في متابعة الموظفين
       if (order.created_by === ADMIN_ID) {
+        console.log(`⚠️ استبعاد طلب المدير: ${order.order_number}`);
         return false;
       }
       
