@@ -45,56 +45,51 @@ const EmployeeFollowUpPage = () => {
   const [highlightFromUrl, setHighlightFromUrl] = useState(null);
   const filterFromUrl = searchParams.get('filter');
   
-  // استخراج المعاملات من URL فور التحميل
+  // استخراج المعاملات من URL فور التحميل وتطبيقها مباشرة
   useEffect(() => {
     const employeeParam = searchParams.get('employee');
     const ordersParam = searchParams.get('orders');
     const highlightParam = searchParams.get('highlight');
     const filterParam = searchParams.get('filter');
     
-    console.log('🔗 URL ANALYSIS:', {
-      fullURL: window.location.href,
-      search: window.location.search,
+    console.log('🔗 معالجة إشعار التحاسب:', {
       employeeParam,
       ordersParam,
       highlightParam,
-      filterParam,
-      hasEmployee: !!employeeParam,
-      hasOrders: !!ordersParam,
-      shouldShowData: !!(employeeParam && ordersParam)
+      filterParam
     });
     
-    // تحديث الـ state فوراً
+    // تحديث الـ state
     setEmployeeFromUrl(employeeParam);
     setOrdersFromUrl(ordersParam);
     setHighlightFromUrl(highlightParam);
     
-    // تحديث الفلاتر فوراً بناءً على URL parameters
-    if (employeeParam || filterParam) {
-      const newFilters = {
-        status: 'all',
-        archived: false,
-        employeeId: employeeParam || 'all',
-        profitStatus: filterParam === 'pending_settlement' ? 'pending' : 'all'
-      };
+    // إذا جاء من إشعار تحاسب، طبق الفلاتر فوراً
+    if (employeeParam && highlightParam === 'settlement') {
+      console.log('✅ تطبيق فلاتر إشعار التحاسب');
       
-      console.log('🔄 FILTERS UPDATE:', {
-        oldFilters: filters,
-        newFilters,
-        willUpdate: true
+      setFilters({
+        status: 'all',
+        archived: false, 
+        employeeId: employeeParam,
+        profitStatus: 'pending'
       });
-      setFilters(newFilters);
-    }
-    
-    // تحديد الطلبات إذا كانت موجودة في URL
-    if (ordersParam) {
-      const ordersList = ordersParam.split(',');
-      setSelectedOrders(ordersList);
-      console.log('📋 ORDERS SELECTED FROM URL:', {
-        ordersParam,
-        ordersList,
-        count: ordersList.length
-      });
+      
+      // تحديد الطلبات المطلوبة
+      if (ordersParam) {
+        const ordersList = ordersParam.split(',');
+        setSelectedOrders(ordersList);
+        console.log('📋 طلبات محددة:', ordersList);
+        
+        // toast للتوضيح
+        setTimeout(() => {
+          toast({
+            title: "طلب تحاسب",
+            description: `تم تحديد ${ordersList.length} طلب للتحاسب. اضغط "دفع المستحقات" أدناه.`,
+            duration: 5000
+          });
+        }, 1000);
+      }
     }
   }, [searchParams]);
   
