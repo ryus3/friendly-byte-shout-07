@@ -231,7 +231,6 @@ const EmployeeFollowUpPage = () => {
         }
       }, 1000);
     }
-    }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
   // قائمة الموظفين النشطين
