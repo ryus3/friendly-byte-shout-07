@@ -390,6 +390,7 @@ const EmployeeFollowUpPage = () => {
       
       // فلتر الأرشيف - طلبات مؤرشفة من التسوية أو يدوياً
       const isArchived = order.isarchived === true || order.isArchived === true;
+      const isManuallyArchived = isArchived && order.status !== 'completed'; // مؤرشفة يدوياً
       const isSettled = order.status === 'completed' && isArchived; // مؤرشفة من التسوية
       let archiveMatch;
       
