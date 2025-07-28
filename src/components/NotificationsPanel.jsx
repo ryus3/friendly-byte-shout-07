@@ -255,11 +255,20 @@ const NotificationsPanel = () => {
         navigate('/orders?status=completed');
       }
     } else if (notification.type === 'profit_settlement_request') {
-      // طلب تحاسب من موظف - التوجه المباشر لصفحة متابعة الموظفين
+      // طلب تحاسب من موظف - التوجه لصفحة متابعة الموظفين مع الفلترة
       console.log('🔔 إشعار طلب التحاسب:', notification);
       
-      // التوجه المباشر لصفحة متابعة الموظفين
-      navigate('/employee-follow-up');
+      const data = notification.data || {};
+      const employeeId = data.employeeId || data.employee_id;
+      const orderIds = data.orderIds || data.order_ids || [];
+      
+      if (employeeId && orderIds && orderIds.length > 0) {
+        // توجيه مع معاملات الفلترة
+        navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`);
+      } else {
+        // توجيه عادي إذا لم تكن البيانات متوفرة
+        navigate('/employee-follow-up');
+      }
       
     } else if (notification.type === 'profit_settlement') {
       navigate('/employee-follow-up');

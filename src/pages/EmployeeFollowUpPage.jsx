@@ -45,48 +45,43 @@ const EmployeeFollowUpPage = () => {
   const [highlightFromUrl, setHighlightFromUrl] = useState(null);
   const filterFromUrl = searchParams.get('filter');
   
-  // استخراج المعاملات من URL فور التحميل وتطبيقها مباشرة
+  // استخراج المعاملات من URL وتطبيق الفلترة
   useEffect(() => {
     const employeeParam = searchParams.get('employee');
     const ordersParam = searchParams.get('orders');
     const highlightParam = searchParams.get('highlight');
-    const filterParam = searchParams.get('filter');
     
-    console.log('🔗 معالجة إشعار التحاسب:', {
+    console.log('🔔 معالجة URL parameters:', {
       employeeParam,
       ordersParam,
-      highlightParam,
-      filterParam
+      highlightParam
     });
     
-    // تحديث الـ state
     setEmployeeFromUrl(employeeParam);
     setOrdersFromUrl(ordersParam);
     setHighlightFromUrl(highlightParam);
     
-    // إذا جاء من إشعار تحاسب، طبق الفلاتر فوراً
+    // إذا جاء من إشعار تحاسب، طبق الفلترة
     if (employeeParam && highlightParam === 'settlement') {
-      console.log('✅ تطبيق فلاتر إشعار التحاسب');
+      console.log('✅ تطبيق فلترة التحاسب');
       
       setFilters({
         status: 'all',
-        archived: false, 
+        archived: false,
         employeeId: employeeParam,
         profitStatus: 'pending'
       });
       
-      // تحديد الطلبات المطلوبة
       if (ordersParam) {
         const ordersList = ordersParam.split(',');
         setSelectedOrders(ordersList);
-        console.log('📋 طلبات محددة:', ordersList);
         
         // toast للتوضيح
         setTimeout(() => {
           toast({
             title: "طلب تحاسب",
-            description: `تم تحديد ${ordersList.length} طلب للتحاسب. اضغط "دفع المستحقات" أدناه.`,
-            duration: 5000
+            description: `تم فلترة الطلبات للموظف. يمكنك الآن دفع المستحقات.`,
+            duration: 4000
           });
         }, 1000);
       }
