@@ -61,22 +61,22 @@ const EmployeeFollowUpPage = () => {
       search: window.location.search
     });
     
+    // تحديث الـ state فوراً
     setEmployeeFromUrl(employeeParam);
     setOrdersFromUrl(ordersParam);
     setHighlightFromUrl(highlightParam);
     
-    // تحديث الفلاتر مباشرة بناءً على URL parameters
+    // تحديث الفلاتر فوراً بناءً على URL parameters
     if (employeeParam || filterParam) {
-      setFilters(prev => ({
-        ...prev,
-        employeeId: employeeParam || prev.employeeId,
-        profitStatus: filterParam === 'pending_settlement' ? 'pending' : prev.profitStatus
-      }));
+      const newFilters = {
+        status: 'all',
+        archived: false,
+        employeeId: employeeParam || 'all',
+        profitStatus: filterParam === 'pending_settlement' ? 'pending' : 'all'
+      };
       
-      console.log('✅ تم تحديث الفلاتر من URL:', {
-        employeeId: employeeParam,
-        profitStatus: filterParam === 'pending_settlement' ? 'pending' : 'unchanged'
-      });
+      console.log('🔄 تحديث الفلاتر فوراً:', newFilters);
+      setFilters(newFilters);
     }
     
     // تحديد الطلبات إذا كانت موجودة في URL
