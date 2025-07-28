@@ -37,6 +37,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
         category: expense.category,
         expense_type: expense.expense_type,
         status: expense.status,
+        description: expense.description,
         isSettlement
       });
       
@@ -44,6 +45,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
     }).map(expense => {
       // استخراج اسم الموظف من وصف المصروف
       const employeeName = extractEmployeeNameFromDescription(expense.description);
+      
+      console.log(`🔍 استخراج اسم الموظف من "${expense.description}": "${employeeName}"`);
       
       return {
         id: expense.id,
@@ -65,29 +68,39 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
   const extractEmployeeNameFromDescription = (description) => {
     if (!description) return 'غير محدد';
     
-    // أنماط مختلفة لاستخراج اسم الموظف
+    console.log('🔍 معالجة الوصف:', description);
+    
+    // تنظيف النص وإزالة المسافات الزائدة
+    const cleanDesc = description.trim();
+    
+    // أنماط مختلفة لاستخراج اسم الموظف - مبسطة ومحسنة
     const patterns = [
-      /دفع مستحقات الموظف\s*:?\s*(.+?)(?:\s*-|$)/,
-      /مستحقات\s*:?\s*(.+?)(?:\s*-|$)/,
-      /تحاسب\s*:?\s*(.+?)(?:\s*-|$)/,
-      /للموظف\s*:?\s*(.+?)(?:\s*-|$)/
+      /دفع مستحقات الموظف\s+(.+?)(?:\s*$)/i, // نهاية النص
+      /مستحقات الموظف\s+(.+?)(?:\s*$)/i,
+      /للموظف\s+(.+?)(?:\s*$)/i,
+      /الموظف\s+(.+?)(?:\s*$)/i,
+      /تحاسب\s+(.+?)(?:\s*$)/i
     ];
     
     for (const pattern of patterns) {
-      const match = description.match(pattern);
+      const match = cleanDesc.match(pattern);
       if (match && match[1]) {
-        return match[1].trim();
+        const extractedName = match[1].trim();
+        console.log(`✅ تم استخراج الاسم: "${extractedName}" باستخدام النمط: ${pattern}`);
+        return extractedName;
       }
     }
     
-    // إذا لم نجد نمط محدد، نحاول استخراج اسم من النص
-    const words = description.split(/\s+/);
-    const nameWords = words.filter(word => 
-      word.length > 2 && 
-      !/^(دفع|مستحقات|الموظف|تحاسب|للموظف|من|إلى|في)$/i.test(word)
-    );
+    // محاولة أخيرة - أخذ آخر كلمة أو كلمتين
+    const words = cleanDesc.split(/\s+/);
+    if (words.length >= 2) {
+      const potentialName = words.slice(-2).join(' ');
+      console.log(`⚠️ استخراج احتياطي: "${potentialName}"`);
+      return potentialName;
+    }
     
-    return nameWords.slice(0, 2).join(' ') || 'غير محدد';
+    console.log('❌ فشل في استخراج الاسم من:', description);
+    return 'غير محدد';
   };
   
   const filteredInvoices = useMemo(() => {

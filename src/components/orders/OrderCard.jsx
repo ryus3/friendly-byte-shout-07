@@ -201,11 +201,11 @@ const OrderCard = ({
     const profitRecord = profits?.find(p => p.order_id === order.id);
     
     if (order.status === 'completed' && order.isarchived) {
-      return { status: 'paid', label: 'مدفوع', color: 'bg-green-500' };
+      return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
     } else if (profitRecord && !profitRecord.settled_at && order.receipt_received) {
-      return { status: 'pending', label: 'معلق', color: 'bg-yellow-500' };
+      return { status: 'pending', label: 'معلق', color: 'bg-orange-500' };
     } else {
-      return { status: 'not_due', label: 'غير مستحق', color: 'bg-gray-400' };
+      return { status: 'not_due', label: 'مدفوع', color: 'bg-emerald-500' };
     }
   }, [order, profits]);
 
