@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useProfits } from '@/contexts/ProfitsContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -14,16 +14,26 @@ import Loader from '@/components/ui/loader';
 import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import StatCard from '@/components/dashboard/StatCard.jsx';
+import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
 const EmployeeFollowUpPage = () => {
+  const navigate = useNavigate();
   const { allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  const { orders, loading, calculateManagerProfit, calculateProfit, updateOrder, refetchProducts, settlementInvoices, deleteOrders } = useInventory();
-  const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
+  const { 
+    orders, 
+    loading, 
+    calculateManagerProfit, 
+    calculateProfit, 
+    updateOrder, 
+    refetchProducts, 
+    settlementInvoices, 
+    deleteOrders 
+  } = useInventory();
+  const { profits } = useProfits();
   const [searchParams] = useSearchParams();
   
   // استخراج parameters من URL
@@ -35,24 +45,33 @@ const EmployeeFollowUpPage = () => {
   const [filters, setFilters] = useState({
     status: 'all',
     employeeId: employeeFromUrl || 'all',
-    archived: false, // افتراضياً لا نعرض المؤرشف
+    archived: false,
     profitStatus: filterFromUrl === 'pending_settlement' ? 'pending' : 'all',
   });
-  const [syncing, setSyncing] = useState(false);
+  
   const [selectedOrders, setSelectedOrders] = useState(ordersFromUrl ? ordersFromUrl.split(',') : []);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   
-  // تسليط الضوء على طلب تحاسب عند القدوم من إشعار
+  console.log('🔍 EmployeeFollowUpPage Data:', {
+    ordersCount: orders?.length || 0,
+    usersCount: allUsers?.length || 0,
+    profitsCount: profits?.length || 0,
+    loading,
+    filters,
+    employeeFromUrl,
+    ordersFromUrl,
+    highlightFromUrl
+  });
+  
+  // إعداد تأثير URL parameters
   useEffect(() => {
     if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
-      // عرض تنبيه أو تسليط ضوء على طلب التحاسب
       const orderList = ordersFromUrl.split(',');
       setSelectedOrders(orderList);
       
       setTimeout(() => {
-        // تمرير سلس للبحث عن الموظف
         const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -61,18 +80,18 @@ const EmployeeFollowUpPage = () => {
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
 
+  // قائمة الموظفين النشطين
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
-    // تضمين جميع المستخدمين النشطين بغض النظر عن الدور
     return allUsers.filter(u => u && u.status === 'active');
   }, [allUsers]);
 
+  // خريطة الموظفين للأسماء
   const usersMap = useMemo(() => {
     const map = new Map();
     if (allUsers && Array.isArray(allUsers)) {
       allUsers.forEach(u => {
         if (u && u.user_id) {
-          // استخدام user_id للربط بدلاً من id
           map.set(u.user_id, u.full_name || u.name || 'غير معروف');
         }
       });
@@ -80,29 +99,49 @@ const EmployeeFollowUpPage = () => {
     return map;
   }, [allUsers]);
 
+  // الطلبات المفلترة
   const filteredOrders = useMemo(() => {
-    if (!orders || !Array.isArray(orders)) return [];
-    return orders.filter(order => {
+    console.log('🔄 تفلتر الطلبات:', { ordersLength: orders?.length, filters });
+    
+    if (!orders || !Array.isArray(orders)) {
+      console.log('❌ لا توجد طلبات');
+      return [];
+    }
+
+    const filtered = orders.filter(order => {
       if (!order) return false;
+      
+      // فلتر الموظف
       const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;
+      
+      // فلتر الحالة
       const statusMatch = filters.status === 'all' || order.status === filters.status;
-      const profitStatusMatch = filters.profitStatus === 'all' || (order.profitStatus || 'pending') === filters.profitStatus;
       
-      // الطلبات التي تُعتبر أرشيف (مؤرشفة يدوياً أو تلقائياً)
+      // فلتر حالة الربح
+      let profitStatusMatch = true;
+      if (filters.profitStatus !== 'all') {
+        const profitRecord = profits?.find(p => p.order_id === order.id);
+        const profitStatus = profitRecord ? (profitRecord.settled_at ? 'settled' : 'pending') : 'pending';
+        profitStatusMatch = profitStatus === filters.profitStatus;
+      }
+      
+      // فلتر الأرشيف
       const isAutoArchived = order.status === 'completed' || order.status === 'returned_in_stock';
-      const isManuallyArchived = order.isarchived === true;
+      const isManuallyArchived = order.isarchived === true || order.isArchived === true;
       const isArchived = isAutoArchived || isManuallyArchived;
-      
-      // منطق الفلترة: إذا كان الأرشيف مفعل اعرض المؤرشف فقط، وإلا اعرض غير المؤرشف فقط
       const archiveMatch = filters.archived ? isArchived : !isArchived;
       
-      return employeeMatch && statusMatch && archiveMatch && profitStatusMatch;
+      return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
     }).map(order => ({
       ...order,
       created_by_name: usersMap.get(order.created_by) || 'غير معروف'
     }));
-  }, [orders, filters, usersMap]);
 
+    console.log('✅ الطلبات المفلترة:', filtered.length);
+    return filtered;
+  }, [orders, filters, usersMap, profits]);
+
+  // الإحصائيات
   const stats = useMemo(() => {
     if (!filteredOrders || !Array.isArray(filteredOrders)) {
       return {
@@ -114,39 +153,57 @@ const EmployeeFollowUpPage = () => {
       };
     }
 
-    const relevantOrders = filteredOrders.filter(o => o && o.status === 'delivered');
-    const totalSales = relevantOrders.reduce((sum, order) => sum + (order?.total || 0), 0);
+    // الطلبات المسلمة فقط
+    const deliveredOrders = filteredOrders.filter(o => 
+      o && (o.status === 'delivered' || o.status === 'completed')
+    );
     
-    const profitsData = relevantOrders.map(order => ({
-        ...order,
-        managerProfit: calculateManagerProfit && typeof calculateManagerProfit === 'function' 
-          ? (calculateManagerProfit(order) || 0) 
-          : 0,
-    }));
+    const totalSales = deliveredOrders.reduce((sum, order) => 
+      sum + (order?.final_amount || order?.total_amount || 0), 0
+    );
+    
+    // أرباح المدير من الموظفين
+    const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
+      if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
+        return sum + (calculateManagerProfit(order) || 0);
+      }
+      return sum;
+    }, 0);
 
-    const totalManagerProfits = profitsData.reduce((sum, order) => sum + (order?.managerProfit || 0), 0);
-    
+    // المستحقات المدفوعة (من جدول التسويات)
     const paidDues = settlementInvoices && Array.isArray(settlementInvoices)
-        ? settlementInvoices
-            .filter(inv => {
-                const employee = allUsers && Array.isArray(allUsers) 
-                  ? allUsers.find(u => u && u.id === inv?.employee_id)
-                  : null;
-                return employee && (employee.role === 'employee' || employee.role === 'deputy');
-            })
-            .reduce((sum, inv) => sum + (inv?.total_amount || 0), 0)
-        : 0;
+      ? settlementInvoices.reduce((sum, inv) => sum + (inv?.total_amount || 0), 0)
+      : 0;
 
-    // حساب المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى بعد
-    const pendingDues = relevantOrders
-        .filter(order => order.receipt_received === true) // فواتير مستلمة
-        .reduce((sum, order) => {
-            // حساب ربح الموظف من هذا الطلب باستخدام calculateProfit
-            const employeeProfit = (order.items || []).reduce((itemSum, item) => {
-                return itemSum + calculateProfit(item, order.created_by);
-            }, 0);
-            return sum + employeeProfit;
-        }, 0);
+    // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
+    const pendingDues = deliveredOrders
+      .filter(order => order.receipt_received === true)
+      .reduce((sum, order) => {
+        // البحث عن سجل الربح
+        const profitRecord = profits?.find(p => p.order_id === order.id);
+        let employeeProfit = 0;
+        
+        if (profitRecord && !profitRecord.settled_at) {
+          // إذا كان هناك سجل ربح غير مُسوى
+          employeeProfit = profitRecord.employee_profit || 0;
+        } else if (!profitRecord) {
+          // إذا لم يكن هناك سجل ربح، احسب الربح
+          employeeProfit = (order.items || []).reduce((itemSum, item) => {
+            return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
+          }, 0);
+        }
+        
+        return sum + employeeProfit;
+      }, 0);
+
+    console.log('📊 الإحصائيات:', {
+      totalOrders: filteredOrders.length,
+      deliveredOrders: deliveredOrders.length,
+      totalSales,
+      totalManagerProfits,
+      pendingDues,
+      paidDues
+    });
 
     return {
       totalOrders: filteredOrders.length,
@@ -155,47 +212,68 @@ const EmployeeFollowUpPage = () => {
       pendingDues,
       paidDues
     };
-  }, [filteredOrders, calculateManagerProfit, settlementInvoices, allUsers]);
+  }, [filteredOrders, calculateManagerProfit, settlementInvoices, profits, calculateProfit]);
 
+  // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
+    console.log('🔧 تغيير الفلتر:', { name, value });
     setFilters(prev => ({ ...prev, [name]: value }));
   };
   
+  // معالج النقر على كارت الإحصائيات
   const handleStatCardClick = (profitStatus) => {
     setFilters(prev => ({ ...prev, profitStatus, status: 'all' }));
   };
 
-  const handleSync = async () => {
-    setSyncing(true);
-    toast({ title: "بدء المزامنة", description: "جاري مزامنة الطلبات من الوسيط..." });
-    await syncAlWaseetOrders();
-    await refetchProducts();
-    toast({ title: "اكتملت المزامنة", description: "تم تحديث جميع البيانات بنجاح." });
-    setSyncing(false);
-  };
-  
+  // معالج عرض تفاصيل الطلب
   const handleViewOrder = (order) => {
     setSelectedOrderDetails(order);
     setIsDetailsDialogOpen(true);
   };
 
+  // معالج استلام الطلبات الراجعة
   const handleReceiveReturned = async () => {
     if (selectedOrders.length === 0) {
-        toast({ title: "خطأ", description: "الرجاء تحديد طلبات راجعة أولاً.", variant: "destructive" });
-        return;
+      toast({ title: "خطأ", description: "الرجاء تحديد طلبات راجعة أولاً.", variant: "destructive" });
+      return;
     }
-    for (const orderId of selectedOrders) {
-      await updateOrder(orderId, { status: 'returned_in_stock', isArchived: true });
+    
+    try {
+      for (const orderId of selectedOrders) {
+        await updateOrder(orderId, { status: 'returned_in_stock', isArchived: true });
+      }
+      toast({ 
+        title: "تم الاستلام", 
+        description: `تم استلام ${selectedOrders.length} طلبات راجعة في المخزن وأرشفتها.` 
+      });
+      await refetchProducts();
+      setSelectedOrders([]);
+    } catch (error) {
+      console.error('خطأ في استلام الطلبات الراجعة:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "حدث خطأ أثناء استلام الطلبات الراجعة.", 
+        variant: "destructive" 
+      });
     }
-    toast({ title: "تم الاستلام", description: `تم استلام ${selectedOrders.length} طلبات راجعة في المخزن وأرشفتها.` });
-    await refetchProducts();
-    setSelectedOrders([]);
   };
 
+  // معالج تحديث حالة الطلب
   const handleUpdateStatus = async (orderId, newStatus) => {
-    await updateOrder(orderId, { status: newStatus });
+    try {
+      await updateOrder(orderId, { status: newStatus });
+      toast({ title: "تم التحديث", description: "تم تحديث حالة الطلب بنجاح." });
+    } catch (error) {
+      console.error('خطأ في تحديث حالة الطلب:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "حدث خطأ أثناء تحديث حالة الطلب.", 
+        variant: "destructive" 
+      });
+    }
   };
 
+  // معالج حذف الطلب
   const handleDeleteOrder = async (order) => {
     try {
       await deleteOrders([order.id]);
@@ -205,6 +283,7 @@ const EmployeeFollowUpPage = () => {
       });
       await refetchProducts();
     } catch (error) {
+      console.error('خطأ في حذف الطلب:', error);
       toast({ 
         title: "خطأ في الحذف", 
         description: "حدث خطأ أثناء حذف الطلب.", 
@@ -214,7 +293,11 @@ const EmployeeFollowUpPage = () => {
   };
 
   if (loading) {
-    return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <Loader />
+      </div>
+    );
   }
 
   return (
@@ -223,25 +306,24 @@ const EmployeeFollowUpPage = () => {
         <title>متابعة الموظفين - RYUS</title>
         <meta name="description" content="متابعة أداء وطلبات الموظفين" />
       </Helmet>
+      
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="space-y-6"
       >
+        {/* العنوان الرئيسي */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
-          <Button variant="outline" onClick={handleSync} disabled={syncing}>
-            {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
-            مزامنة الطلبات
-          </Button>
         </div>
 
+        {/* الفلاتر */}
         <Card>
-          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-center">
+          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
             <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="فلترة حسب الحالة" />
@@ -249,13 +331,15 @@ const EmployeeFollowUpPage = () => {
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
                 <SelectItem value="pending">قيد التجهيز</SelectItem>
-                <SelectItem value="processing">قيد التسليم</SelectItem>
                 <SelectItem value="shipped">تم الشحن</SelectItem>
+                <SelectItem value="delivery">قيد التوصيل</SelectItem>
                 <SelectItem value="delivered">تم التسليم</SelectItem>
+                <SelectItem value="completed">مكتمل</SelectItem>
                 <SelectItem value="returned">راجع</SelectItem>
                 <SelectItem value="cancelled">ملغي</SelectItem>
               </SelectContent>
             </Select>
+            
             <Select value={filters.employeeId} onValueChange={(value) => handleFilterChange('employeeId', value)}>
               <SelectTrigger>
                 <SelectValue placeholder="اختر موظف" />
@@ -263,32 +347,87 @@ const EmployeeFollowUpPage = () => {
               <SelectContent>
                 <SelectItem value="all">كل الموظفين</SelectItem>
                 {employees.map(emp => (
-                  <SelectItem key={emp.user_id} value={emp.user_id}>{emp.full_name || emp.name || 'غير معروف'}</SelectItem>
+                  <SelectItem key={emp.user_id} value={emp.user_id}>
+                    {emp.full_name || emp.name || 'غير معروف'}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={filters.profitStatus} onValueChange={(value) => handleFilterChange('profitStatus', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="حالة الربح" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الأرباح</SelectItem>
+                <SelectItem value="pending">معلقة</SelectItem>
+                <SelectItem value="settled">مسواة</SelectItem>
+              </SelectContent>
+            </Select>
+            
             <div className="flex items-center space-x-2">
-                <Checkbox id="archived" checked={filters.archived} onCheckedChange={(checked) => handleFilterChange('archived', checked)} />
-                <Label htmlFor="archived" className="cursor-pointer">عرض الأرشيف</Label>
+              <Checkbox 
+                id="archived" 
+                checked={filters.archived} 
+                onCheckedChange={(checked) => handleFilterChange('archived', checked)} 
+              />
+              <Label htmlFor="archived" className="cursor-pointer">عرض الأرشيف</Label>
             </div>
           </CardContent>
         </Card>
 
+        {/* الإحصائيات */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <StatCard title="إجمالي الطلبات" value={stats.totalOrders} icon={ShoppingCart} colors={['blue-500', 'sky-500']} />
-          <StatCard title="إجمالي المبيعات" value={stats.totalSales} icon={DollarSign} colors={['purple-500', 'violet-500']} format="currency" />
-          <StatCard title="أرباحي من الموظفين" value={stats.totalManagerProfits} icon={Users} colors={['green-500', 'emerald-500']} format="currency" />
-          <StatCard title="مستحقات معلقة" value={stats.pendingDues} icon={Hourglass} colors={['yellow-500', 'amber-500']} format="currency" onClick={() => handleStatCardClick('pending')} />
-          <StatCard title="مستحقات مدفوعة" value={stats.paidDues} icon={CheckCircle} colors={['teal-500', 'cyan-500']} format="currency" onClick={() => setIsDuesDialogOpen(true)} />
+          <StatCard 
+            title="إجمالي الطلبات" 
+            value={stats.totalOrders} 
+            icon={ShoppingCart} 
+            colors={['blue-500', 'sky-500']} 
+          />
+          <StatCard 
+            title="إجمالي المبيعات" 
+            value={stats.totalSales} 
+            icon={DollarSign} 
+            colors={['purple-500', 'violet-500']} 
+            format="currency" 
+          />
+          <StatCard 
+            title="أرباحي من الموظفين" 
+            value={stats.totalManagerProfits} 
+            icon={Users} 
+            colors={['green-500', 'emerald-500']} 
+            format="currency" 
+          />
+          <StatCard 
+            title="مستحقات معلقة" 
+            value={stats.pendingDues} 
+            icon={Hourglass} 
+            colors={['yellow-500', 'amber-500']} 
+            format="currency" 
+            onClick={() => handleStatCardClick('pending')} 
+          />
+          <StatCard 
+            title="مستحقات مدفوعة" 
+            value={stats.paidDues} 
+            icon={CheckCircle} 
+            colors={['teal-500', 'cyan-500']} 
+            format="currency" 
+            onClick={() => setIsDuesDialogOpen(true)} 
+          />
         </div>
 
+        {/* قائمة الطلبات */}
         <div className="bg-card p-4 rounded-xl border">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">قائمة الطلبات ({filteredOrders.length})</h2>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">
+              قائمة الطلبات ({filteredOrders.length})
+            </h2>
+          </div>
 
-            {filters.status === 'returned' && !filters.archived && (
-              <Card className="mb-4 p-4 bg-secondary rounded-lg border flex items-center justify-between">
+          {/* تنبيه للطلبات الراجعة */}
+          {filters.status === 'returned' && !filters.archived && (
+            <Card className="mb-4 p-4 bg-secondary rounded-lg border">
+              <div className="flex items-center justify-between">
                 <p className="font-medium">
                   {selectedOrders.length} طلبات راجعة محددة
                 </p>
@@ -296,65 +435,68 @@ const EmployeeFollowUpPage = () => {
                   <Archive className="w-4 h-4 ml-2" />
                   استلام الراجع في المخزن
                 </Button>
-              </Card>
-            )}
+              </div>
+            </Card>
+          )}
 
-            {highlightFromUrl === 'settlement' && selectedOrders.length > 0 && (
-              <Card className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-orange-200 dark:border-orange-800">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-orange-800 dark:text-orange-200">
-                      طلب تحاسب جديد - {selectedOrders.length} طلبات محددة
-                    </p>
-                    <p className="text-sm text-orange-600 dark:text-orange-300">
-                      الموظف يطلب تحاسب أرباحه من الطلبات المحددة
-                    </p>
-                  </div>
-                  <Button 
-                    variant="default" 
-                    className="bg-orange-600 hover:bg-orange-700 text-white"
-                    onClick={() => {
-                      // الانتقال لصفحة التسوية
-                      const employeeId = filters.employeeId;
-                      if (employeeId && employeeId !== 'all') {
-                        window.location.href = `/profit-settlement/${employeeId}?orders=${selectedOrders.join(',')}`;
-                      }
-                    }}
-                  >
-                    <DollarSign className="w-4 h-4 ml-2" />
-                    بدء التسوية
-                  </Button>
+          {/* تنبيه طلب التحاسب */}
+          {highlightFromUrl === 'settlement' && selectedOrders.length > 0 && (
+            <Card className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border-orange-200 dark:border-orange-800">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-orange-800 dark:text-orange-200">
+                    طلب تحاسب جديد - {selectedOrders.length} طلبات محددة
+                  </p>
+                  <p className="text-sm text-orange-600 dark:text-orange-300">
+                    الموظف يطلب تحاسب أرباحه من الطلبات المحددة
+                  </p>
                 </div>
-              </Card>
-            )}
+                <Button 
+                  variant="default" 
+                  className="bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={() => {
+                    const employeeId = filters.employeeId;
+                    if (employeeId && employeeId !== 'all') {
+                      navigate(`/profit-settlement/${employeeId}?orders=${selectedOrders.join(',')}`);
+                    }
+                  }}
+                >
+                  <DollarSign className="w-4 h-4 ml-2" />
+                  بدء التسوية
+                </Button>
+              </div>
+            </Card>
+          )}
 
-            <OrderList 
-                orders={filteredOrders} 
-                isLoading={loading} 
-                onViewOrder={handleViewOrder}
-                onUpdateStatus={handleUpdateStatus}
-                selectedOrders={selectedOrders}
-                setSelectedOrders={setSelectedOrders}
-                onDeleteOrder={handleDeleteOrder}
-            />
+          {/* قائمة الطلبات */}
+          <OrderList 
+            orders={filteredOrders} 
+            isLoading={loading} 
+            onViewOrder={handleViewOrder}
+            onUpdateStatus={handleUpdateStatus}
+            selectedOrders={selectedOrders}
+            setSelectedOrders={setSelectedOrders}
+            onDeleteOrder={handleDeleteOrder}
+            showEmployeeName={filters.employeeId === 'all'}
+          />
         </div>
 
+        {/* نوافذ حوارية */}
         <OrderDetailsDialog
-            order={selectedOrderDetails}
-            open={isDetailsDialogOpen}
-            onOpenChange={setIsDetailsDialogOpen}
-            onUpdate={updateOrder}
-            canEditStatus={hasPermission('manage_orders')}
-            sellerName={selectedOrderDetails ? usersMap.get(selectedOrderDetails.created_by) : null}
+          order={selectedOrderDetails}
+          open={isDetailsDialogOpen}
+          onOpenChange={setIsDetailsDialogOpen}
+          onUpdate={updateOrder}
+          canEditStatus={hasPermission('manage_orders')}
+          sellerName={selectedOrderDetails ? usersMap.get(selectedOrderDetails.created_by) : null}
         />
         
         <SettledDuesDialog
-            open={isDuesDialogOpen}
-            onOpenChange={setIsDuesDialogOpen}
-            invoices={settlementInvoices}
-            allUsers={allUsers}
+          open={isDuesDialogOpen}
+          onOpenChange={setIsDuesDialogOpen}
+          invoices={settlementInvoices}
+          allUsers={allUsers}
         />
-
       </motion.div>
     </>
   );
