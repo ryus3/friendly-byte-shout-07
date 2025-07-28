@@ -101,15 +101,18 @@ const EmployeeFollowUpPage = () => {
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [isSettlementRequestsOpen, setIsSettlementRequestsOpen] = useState(false);
   
-  console.log('🔍 EmployeeFollowUpPage Data:', {
+  console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
     ordersCount: orders?.length || 0,
+    ordersData: orders,
     usersCount: allUsers?.length || 0,
     profitsCount: profits?.length || 0,
     loading,
     filters,
     employeeFromUrl,
     ordersFromUrl,
-    highlightFromUrl
+    highlightFromUrl,
+    isOrdersArray: Array.isArray(orders),
+    isOrdersLoaded: !!orders
   });
   
   // إعداد تأثير URL parameters
