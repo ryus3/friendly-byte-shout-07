@@ -36,7 +36,7 @@ const ProfitFilters = ({
         </SelectContent>
       </Select>
       {canViewAll && filters.employeeId !== 'all' && filters.employeeId !== user.id && filters.employeeId !== 'employees' && (
-        <Button onClick={() => navigate(`/profit-settlement/${filters.employeeId}`)}>
+        <Button onClick={() => navigate(`/employee-follow-up?employee=${filters.employeeId}&highlight=settlement`)}>
           <UserCheck className="w-4 h-4 ml-2" />
           محاسبة {allUsers.find(u => u.id === filters.employeeId)?.full_name}
         </Button>

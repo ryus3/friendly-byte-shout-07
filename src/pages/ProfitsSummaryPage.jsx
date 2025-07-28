@@ -384,8 +384,8 @@ const ProfitsSummaryPage = () => {
            toast({ title: "خطأ", description: "لم يتم العثور على الموظف للطلبات المحددة.", variant: "destructive" });
            return;
       }
-      navigate(`/profit-settlement/${employeeId}?orders=${selectedOrders.join(',')}`);
-  };
+      // التوجيه لصفحة متابعة الموظفين مع تحديد البيانات
+      navigate(`/employee-follow-up?employee=${employeeId}&orders=${selectedOrders.join(',')}&highlight=settlement`);
 
   const handleArchiveSelected = async () => {
       for (const orderId of selectedOrders) {

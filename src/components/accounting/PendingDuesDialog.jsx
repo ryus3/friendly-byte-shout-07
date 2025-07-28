@@ -85,7 +85,8 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
             toast({ title: "خطأ", description: "الرجاء تحديد موظف أولاً لتسوية مستحقاته.", variant: "destructive" });
             return;
         }
-        navigate(`/profit-settlement/${selectedEmployee}?orders=${selectedOrders.join(',')}`);
+        // التوجيه لصفحة متابعة الموظفين مع تحديد البيانات
+        navigate(`/employee-follow-up?employee=${selectedEmployee}&orders=${selectedOrders.join(',')}&highlight=settlement`);
         onOpenChange(false);
     };
 
