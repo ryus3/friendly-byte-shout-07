@@ -1177,7 +1177,7 @@ export const InventoryProvider = ({ children }) => {
 
   const settleEmployeeProfits = async (employeeId, amount, employeeName, orderIds) => {
     try {
-      // 1. إنشاء سجلات أرباح للطلبات التي لا تملك سجل
+      // 1. إنشاء سجلات أرباح للطلبات التي لا تملك سجل وأرشفة الطلبات
       for (const orderId of orderIds) {
         const order = orders.find(o => o.id === orderId);
         if (!order) continue;
@@ -1200,6 +1200,20 @@ export const InventoryProvider = ({ children }) => {
         if (profitError) {
           console.error('Error creating/updating profit record:', profitError);
         }
+
+        // أرشفة الطلب تلقائياً بعد التسوية
+        const { error: orderError } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'completed',
+            isArchived: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+        
+        if (orderError) {
+          console.error('Error archiving order:', orderError);
+        }
       }
 
       // 2. إضافة المصروف
@@ -1219,7 +1233,7 @@ export const InventoryProvider = ({ children }) => {
         .insert({
           type: 'profit_settlement_completed',
           title: 'تمت تسوية الأرباح',
-          message: `تمت تسوية مستحقات ${employeeName} بقيمة ${amount.toLocaleString()} د.ع`,
+          message: `تمت تسوية مستحقات ${employeeName} بقيمة ${amount.toLocaleString()} د.ع وأرشفة ${orderIds.length} طلبات`,
           data: {
             employee_id: employeeId,
             employee_name: employeeName,
@@ -1235,9 +1249,12 @@ export const InventoryProvider = ({ children }) => {
         console.error('Error creating settlement notification:', notificationError);
       }
 
+      // 4. تحديث البيانات المحلية
+      await refreshOrders();
+
       toast({ 
         title: "تمت التسوية بنجاح", 
-        description: `تم تسوية مستحقات ${employeeName} بقيمة ${amount.toLocaleString()} د.ع`,
+        description: `تم تسوية مستحقات ${employeeName} بقيمة ${amount.toLocaleString()} د.ع وأرشفة ${orderIds.length} طلبات`,
         variant: "success"
       });
 
