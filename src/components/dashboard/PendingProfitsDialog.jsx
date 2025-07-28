@@ -43,8 +43,13 @@ const PendingProfitsDialog = ({
 
 
   const calculateOrderProfit = (order) => {
-    return (order.items || []).reduce((sum, item) => {
-      const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+    if (!order.items || !Array.isArray(order.items)) return 0;
+    
+    return order.items.reduce((sum, item) => {
+      const unitPrice = item.unit_price || item.price || 0;
+      const costPrice = item.cost_price || item.costPrice || 0;
+      const quantity = item.quantity || 0;
+      const profit = (unitPrice - costPrice) * quantity;
       return sum + profit;
     }, 0);
   };

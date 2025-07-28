@@ -106,6 +106,9 @@ const EmployeeFollowUpPage = () => {
     return map;
   }, [allUsers]);
 
+  // معرف المدير الرئيسي - تصفية طلباته
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+
   // الطلبات المفلترة
   const filteredOrders = useMemo(() => {
     console.log('🔄 تفلتر الطلبات:', { ordersLength: orders?.length, filters });
@@ -117,6 +120,11 @@ const EmployeeFollowUpPage = () => {
 
     const filtered = orders.filter(order => {
       if (!order) return false;
+      
+      // استبعاد طلبات المدير الرئيسي من الظهور في متابعة الموظفين
+      if (order.created_by === ADMIN_ID) {
+        return false;
+      }
       
       // فلتر الموظف
       const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;

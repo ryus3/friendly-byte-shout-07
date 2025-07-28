@@ -257,8 +257,8 @@ const NotificationsPanel = () => {
     } else if (notification.type === 'profit_settlement_request') {
       // طلب تحاسب من موظف - التنقل لصفحة متابعة الموظفين مع الطلبات المحددة
       const data = notification.data || {};
-      const employeeId = data.employeeId;
-      const orderIds = data.orderIds || [];
+      const employeeId = data.employee_id || data.employeeId;
+      const orderIds = data.order_ids || data.orderIds || [];
       
       if (employeeId && orderIds.length > 0) {
         navigate(`/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`);

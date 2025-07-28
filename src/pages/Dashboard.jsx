@@ -367,8 +367,13 @@ const Dashboard = () => {
         const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
         const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
-          const employeeProfit = (o.items || []).reduce((itemSum, item) => {
-            const profit = (item.unit_price - (item.cost_price || item.costPrice || 0)) * item.quantity;
+          if (!o.items || !Array.isArray(o.items)) return sum;
+          
+          const employeeProfit = o.items.reduce((itemSum, item) => {
+            const unitPrice = item.unit_price || item.price || 0;
+            const costPrice = item.cost_price || item.costPrice || 0;
+            const quantity = item.quantity || 0;
+            const profit = (unitPrice - costPrice) * quantity;
             return itemSum + profit;
           }, 0);
           
