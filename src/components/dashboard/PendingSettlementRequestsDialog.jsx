@@ -23,21 +23,33 @@ const PendingSettlementRequestsDialog = ({
     try {
       setLoading(true);
       
+      // جلب جميع الإشعارات غير المقروءة
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('type', 'profit_settlement_request')
-        .eq('is_read', false)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
 
       if (error) {
         console.error('خطأ في جلب طلبات التحاسب:', error);
+        toast({
+          title: "خطأ",
+          description: "حدث خطأ في جلب طلبات التحاسب",
+          variant: "destructive"
+        });
         return;
       }
 
+      console.log('طلبات التحاسب المجلبة:', data);
       setSettlementRequests(data || []);
     } catch (error) {
       console.error('خطأ في fetchSettlementRequests:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ في النظام",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -52,26 +64,43 @@ const PendingSettlementRequestsDialog = ({
   // معالج تحديد طلب التحاسب كمقروء والانتقال له
   const handleSelectRequest = async (request) => {
     try {
+      console.log('معالجة طلب التحاسب:', request);
+      
       // تحديد الإشعار كمقروء
-      await supabase
+      const { error: updateError } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', request.id);
 
-      // استخراج بيانات الطلب
-      const employeeId = request.data?.employeeId || request.data?.employee_id;
-      const orderIds = request.data?.orderIds || request.data?.order_ids || [];
+      if (updateError) {
+        console.error('خطأ في تحديث الإشعار:', updateError);
+      }
+
+      // استخراج بيانات الطلب من مختلف الأشكال الممكنة
+      const data = request.data || {};
+      const employeeId = data.employeeId || data.employee_id;
+      const orderIds = data.orderIds || data.order_ids || [];
+      
+      console.log('بيانات الطلب المستخرجة:', { employeeId, orderIds, data });
       
       if (employeeId && orderIds.length > 0) {
         // إغلاق النافذة والانتقال لصفحة متابعة الموظفين مع تحديد الطلبات
         onClose();
         onNavigateToSettlement(employeeId, orderIds);
-      } else {
+        
         toast({
-          title: "خطأ في البيانات",
-          description: "لا يمكن العثور على بيانات الطلب",
+          title: "تم التوجيه",
+          description: `تم التوجيه لطلبات الموظف (${orderIds.length} طلب)`
+        });
+      } else {
+        console.warn('بيانات غير كاملة:', { employeeId, orderIds });
+        toast({
+          title: "تنبيه",
+          description: "بيانات الطلب غير مكتملة، سيتم التوجيه للصفحة العامة",
           variant: "destructive"
         });
+        onClose();
+        onNavigateToSettlement(null, []);
       }
     } catch (error) {
       console.error('خطأ في معالجة طلب التحاسب:', error);
@@ -197,6 +226,7 @@ const PendingSettlementRequestsDialog = ({
                   <div className="text-center py-8 text-muted-foreground">
                     <PackageCheck className="h-8 w-8 sm:h-12 sm:w-12 mx-auto mb-4 opacity-50" />
                     <p className="text-sm">لا توجد طلبات تحاسب جديدة</p>
+                    <p className="text-xs mt-2">جميع الطلبات تم معالجتها أو لا يوجد طلبات</p>
                   </div>
                 ) : (
                   settlementRequests.map((request) => {
@@ -204,26 +234,32 @@ const PendingSettlementRequestsDialog = ({
                     const amount = request.data?.amount || request.data?.total_profit || 0;
                     const orderIds = request.data?.orderIds || request.data?.order_ids || [];
                     const ordersCount = request.data?.orders_count || orderIds.length;
+                    const isRead = request.is_read;
 
                     return (
                       <Card 
                         key={request.id} 
-                        className="cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-primary/20"
+                        className={`cursor-pointer transition-all hover:shadow-md hover:ring-2 hover:ring-primary/20 ${
+                          isRead ? 'opacity-75 bg-muted/30' : 'hover:scale-[1.02]'
+                        }`}
                         onClick={() => handleSelectRequest(request)}
                       >
                         <CardContent className="p-3">
                           <div className="space-y-3">
                             {/* الصف الأول: معلومات الموظف والحالة */}
                             <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="default" className="text-xs bg-blue-500">
-                                طلب جديد
+                              <Badge variant={isRead ? "secondary" : "default"} className="text-xs">
+                                {isRead ? "تم القراءة" : "طلب جديد"}
                               </Badge>
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-xs font-medium">
                                 {employeeName}
                               </Badge>
                               <Badge variant="secondary" className="text-xs">
                                 {ordersCount} طلب
                               </Badge>
+                              {!isRead && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              )}
                             </div>
 
                             {/* الصف الثاني: المبلغ والتاريخ */}

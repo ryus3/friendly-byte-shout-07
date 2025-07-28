@@ -419,9 +419,9 @@ const EmployeeFollowUpPage = () => {
           {/* زر طلبات التحاسب */}
           <Button 
             onClick={() => setIsSettlementRequestsOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2"
           >
-            <Bell className="w-4 h-4 ml-2" />
+            <Bell className="h-4 w-4" />
             طلبات التحاسب
           </Button>
         </div>
