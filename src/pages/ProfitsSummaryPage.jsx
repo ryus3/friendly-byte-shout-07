@@ -228,13 +228,10 @@ const ProfitsSummaryPage = () => {
         const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
         const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
       
-        // حساب أرباح المدير المعلقة من جميع الموظفين (ليس الأرباح الشخصية)
-        const managerPendingProfits = detailedProfits.filter(p => {
-          const profitStatus = p.profitStatus || 'pending';
-          return profitStatus === 'pending' && p.managerProfitShare > 0;
-        });
-        
-        const personalPendingProfit = managerPendingProfits.reduce((sum, p) => sum + p.managerProfitShare, 0);
+        // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)
+        const personalPendingProfit = personalProfits
+            .filter(p => (p.profitStatus || 'pending') === 'pending')
+            .reduce((sum, p) => sum + p.profit, 0);
 
         const personalSettledProfit = personalProfits
             .filter(p => p.profitStatus === 'settled')
