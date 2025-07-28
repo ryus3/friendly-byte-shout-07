@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 
-import { useEnhancedFinancialData } from './useEnhancedFinancialData';
-
 /**
- * هوك تحليل الأرباح المتقدم
- * يستخدم النظام المالي الموحد بدلاً من إعادة الحساب
+ * هوك تحليل الأرباح المتقدم - يستخدم البيانات الموجودة مباشرة
+ * بدلاً من hook منفصل لتجنب التداخل والدوال المعطلة
  */
 export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [analysisData, setAnalysisData] = useState(null);
-  
-  // استخدام النظام المالي الموحد
-  const { financialData: systemFinancialData, loading: systemLoading, refreshData: refreshSystemData } = useEnhancedFinancialData();
   
   // بيانات الخيارات للفلاتر
   const [departments, setDepartments] = useState([]);
@@ -97,29 +92,25 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     };
   };
 
-  // تحليل الأرباح - يستخدم النظام المالي الموحد
+  // تحليل الأرباح - حساب مباشر بدون اعتماد على hook معطل
   const fetchAdvancedAnalysis = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // استخدام البيانات المالية من النظام الموحد
-      if (!systemFinancialData || systemLoading) {
-        console.log('انتظار البيانات المالية من النظام الموحد...');
-        return;
-      }
+      console.log('📊 بدء تحليل الأرباح المتقدم للمنتجات...');
 
-      console.log('📊 استخدام البيانات المالية الموحدة:', systemFinancialData);
-
-      // جلب الطلبات فقط للتفصيل والفلترة
+      // جلب الطلبات المُسلمة والمُستلمة الفواتير في النطاق الزمني
       let ordersQuery = supabase
         .from('orders')
         .select(`
           id,
           created_at,
           total_amount,
+          delivery_fee,
           receipt_received,
           created_by,
+          status,
           order_items (
             id,
             quantity,
@@ -155,6 +146,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           )
         `)
         .eq('receipt_received', true)
+        .in('status', ['delivered', 'completed'])
         .gte('created_at', dateRange.from?.toISOString())
         .lte('created_at', dateRange.to?.toISOString());
 
@@ -162,9 +154,10 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       
       if (ordersError) throw ordersError;
 
-      // معالجة البيانات للتفصيلات والفلترة فقط
-      let filteredRevenue = 0;
-      let filteredCost = 0;
+      // معالجة البيانات وحساب الأرباح الفعلية
+      let totalRevenue = 0;
+      let totalCost = 0;
+      let totalSystemProfit = 0;
       let totalOrders = orders?.length || 0;
       let filteredItemsCount = 0;
 
@@ -224,23 +217,19 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
           filteredItemsCount++;
 
+          // حساب الإيرادات والتكاليف
           const itemRevenue = item.unit_price * item.quantity;
           const itemCost = (variant?.cost_price || product?.cost_price || 0) * item.quantity;
-          const grossItemProfit = itemRevenue - itemCost; // الربح الإجمالي
+          const grossItemProfit = itemRevenue - itemCost;
           
-          // حساب ربح الموظف إذا كان الطلب من موظف
-          let employeeProfit = 0;
-          if (order.created_by && order.created_by !== order.assigned_to) {
-            // محاولة استخدام calculateProfit إذا كان متوفراً
-            // إذا لم يكن متوفراً، استخدم حساب تقريبي بناءً على القواعد المتاحة
-            employeeProfit = grossItemProfit * 0.7; // افتراض 70% للموظف كقاعدة عامة
-          }
+          // حساب ربح النظام (افتراض أن 30% ربح النظام و 70% ربح الموظف للطلبات من الموظفين)
+          const isEmployeeOrder = order.created_by && order.created_by !== 'manager';
+          const systemProfitRatio = isEmployeeOrder ? 0.3 : 1.0; // 30% للنظام إذا كان من موظف، 100% إذا كان من المدير
+          const itemSystemProfit = grossItemProfit * systemProfitRatio;
           
-          // ربح النظام = الربح الإجمالي - ربح الموظف  
-          const itemProfit = grossItemProfit - employeeProfit;
-          
-          filteredRevenue += itemRevenue;
-          filteredCost += itemCost;
+          totalRevenue += itemRevenue;
+          totalCost += itemCost;
+          totalSystemProfit += itemSystemProfit;
 
           // تجميع البيانات للتفصيلات
           const departments = product?.product_departments || [];
@@ -257,7 +246,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 orderCount: 0
               };
             }
-            departmentBreakdown[dept.id].profit += itemProfit;
+            departmentBreakdown[dept.id].profit += itemSystemProfit;
             departmentBreakdown[dept.id].revenue += itemRevenue;
             departmentBreakdown[dept.id].cost += itemCost;
             departmentBreakdown[dept.id].orderCount += 1;
@@ -276,7 +265,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 orderCount: 0
               };
             }
-            categoryBreakdown[cat.id].profit += itemProfit;
+            categoryBreakdown[cat.id].profit += itemSystemProfit;
             categoryBreakdown[cat.id].revenue += itemRevenue;
             categoryBreakdown[cat.id].cost += itemCost;
             categoryBreakdown[cat.id].orderCount += 1;
@@ -292,7 +281,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
               salesCount: 0
             };
           }
-          productBreakdown[product.id].profit += itemProfit;
+          productBreakdown[product.id].profit += itemSystemProfit;
           productBreakdown[product.id].revenue += itemRevenue;
           productBreakdown[product.id].cost += itemCost;
           productBreakdown[product.id].salesCount += item.quantity;
@@ -309,7 +298,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            colorBreakdown[color.id].profit += itemProfit;
+            colorBreakdown[color.id].profit += itemSystemProfit;
             colorBreakdown[color.id].revenue += itemRevenue;
             colorBreakdown[color.id].cost += itemCost;
           }
@@ -325,7 +314,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            sizeBreakdown[size.id].profit += itemProfit;
+            sizeBreakdown[size.id].profit += itemSystemProfit;
             sizeBreakdown[size.id].revenue += itemRevenue;
             sizeBreakdown[size.id].cost += itemCost;
           }
@@ -342,7 +331,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            seasonBreakdown[season.id].profit += itemProfit;
+            seasonBreakdown[season.id].profit += itemSystemProfit;
             seasonBreakdown[season.id].revenue += itemRevenue;
             seasonBreakdown[season.id].cost += itemCost;
           }
@@ -359,7 +348,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                 cost: 0
               };
             }
-            productTypeBreakdown[type.id].profit += itemProfit;
+            productTypeBreakdown[type.id].profit += itemSystemProfit;
             productTypeBreakdown[type.id].revenue += itemRevenue;
             productTypeBreakdown[type.id].cost += itemCost;
           }
@@ -384,30 +373,24 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           .sort((a, b) => b.profit - a.profit)
       };
 
-      // استخدام البيانات من النظام المالي الموحد
-      const isAllFiltersDefault = (filters.department === 'all' && 
-                                 filters.category === 'all' && 
-                                 filters.product === 'all' && 
-                                 filters.color === 'all' && 
-                                 filters.size === 'all' && 
-                                 filters.season === 'all' && 
-                                 filters.productType === 'all');
-
-      // إذا لم يتم تطبيق فلاتر، استخدم البيانات من النظام الموحد
-      const finalTotalProfit = isAllFiltersDefault ? systemFinancialData.netProfit : (filteredRevenue - filteredCost);
-      const finalTotalRevenue = isAllFiltersDefault ? systemFinancialData.totalRevenue : filteredRevenue;
-      const finalTotalCost = isAllFiltersDefault ? systemFinancialData.totalCogs : filteredCost;
+      console.log('📊 نتائج تحليل الأرباح:', {
+        totalSystemProfit,
+        totalRevenue,
+        totalCost,
+        totalOrders,
+        filteredItemsCount
+      });
 
       setAnalysisData({
-        totalProfit: finalTotalProfit,
+        systemProfit: totalSystemProfit, // ربح النظام الفعلي
+        totalProfit: totalSystemProfit, // للتوافق مع الكود القديم
         totalOrders,
-        totalRevenue: finalTotalRevenue,
-        totalCost: finalTotalCost,
+        totalRevenue,
+        totalCost,
+        totalProductsSold: filteredItemsCount,
         filteredItemsCount,
-        averageProfit: totalOrders > 0 ? finalTotalProfit / totalOrders : 0,
-        profitMargin: finalTotalRevenue > 0 ? (finalTotalProfit / finalTotalRevenue) * 100 : 0,
-        // معلومات مرجعية من النظام المالي الموحد
-        systemTotalProfit: systemFinancialData.grossProfit || 0,
+        averageProfit: totalOrders > 0 ? totalSystemProfit / totalOrders : 0,
+        profitMargin: totalRevenue > 0 ? (totalSystemProfit / totalRevenue) * 100 : 0,
         ...sortedData
       });
 
@@ -419,12 +402,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     }
   };
 
-  // تحديث البيانات عند تغيير الفلاتر أو عند توفر البيانات المالية
+  // تحديث البيانات عند تغيير الفلاتر
   useEffect(() => {
-    if (dateRange?.from && dateRange?.to && systemFinancialData && !systemLoading) {
+    if (dateRange?.from && dateRange?.to) {
       fetchAdvancedAnalysis();
     }
-  }, [dateRange, filters, systemFinancialData, systemLoading]);
+  }, [dateRange, filters]);
 
   // جلب خيارات الفلاتر عند التحميل
   useEffect(() => {
@@ -437,7 +420,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
   return {
     analysisData,
-    loading: loading || systemLoading,
+    loading,
     error,
     departments,
     categories,
@@ -446,9 +429,6 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     colors,
     sizes,
     products,
-    refreshData: () => {
-      fetchAdvancedAnalysis();
-      refreshSystemData();
-    }
+    refreshData
   };
 };
