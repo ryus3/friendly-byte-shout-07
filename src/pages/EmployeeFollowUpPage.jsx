@@ -475,10 +475,12 @@ const EmployeeFollowUpPage = () => {
           {/* زر طلبات التحاسب */}
           <Button 
             onClick={() => setIsSettlementRequestsOpen(true)}
-            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0 gap-2"
+            className="relative bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-bold shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-110 transition-all duration-500 border-0 gap-2 px-6 py-3 rounded-xl overflow-hidden group"
           >
-            <Bell className="h-4 w-4" />
-            طلبات التحاسب
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <Bell className="h-5 w-5 relative z-10 group-hover:animate-pulse" />
+            <span className="relative z-10">طلبات التحاسب</span>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
           </Button>
         </div>
 
