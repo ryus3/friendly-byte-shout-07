@@ -227,11 +227,15 @@ import React, { useState, useEffect } from 'react';
                         {expenseCategories.map(cat => <SelectItem key={cat} value={cat} className="text-sm">{cat}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <DateRangePicker
-                      className="flex-1"
-                      date={filters.dateRange}
-                      onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
-                    />
+                    <div className="flex-1">
+                      <div className="relative">
+                        <DateRangePicker
+                          date={filters.dateRange}
+                          onDateChange={(range) => setFilters(f => ({...f, dateRange: range || {from: undefined, to: undefined}}))}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
                   </div>
                   
                   {/* قائمة المصاريف */}

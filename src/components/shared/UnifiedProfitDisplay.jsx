@@ -115,16 +115,6 @@ const UnifiedProfitDisplay = ({
             onClick: () => onFilterChange('employeeId', 'employees')
           },
           {
-            key: 'product-profit-analysis',
-            title: 'تحليل أرباح المنتجات',
-            value: analysisData?.systemProfit || 0,
-            icon: TrendingUp,
-            colors: ['green-500', 'emerald-500'],
-            format: 'currency',
-            onClick: () => window.open('/advanced-profits-analysis', '_blank'),
-            loading: analysisLoading
-          },
-          {
             key: 'total-expenses',
             title: 'المصاريف العامة',
             value: profitData.generalExpenses || 0,
@@ -158,35 +148,29 @@ const UnifiedProfitDisplay = ({
       );
     }
 
-    // إضافة بطاقات الأرباح المعلقة والمستلمة (للجميع)
-    cards.push(
-      {
+    // إضافة بطاقة الأرباح المعلقة فقط للجميع
+    if (canViewAll) {
+      cards.push({
         key: 'pending-profit',
         title: 'الأرباح المعلقة',
-        value: canViewAll 
-          ? (profitData.detailedProfits || [])
-              .filter(p => (p.profitStatus || 'pending') === 'pending')
-              .reduce((sum, p) => sum + p.profit, 0)
-          : profitData.personalPendingProfit || 0,
+        value: (profitData.detailedProfits || [])
+          .filter(p => (p.profitStatus || 'pending') === 'pending')
+          .reduce((sum, p) => sum + p.profit, 0),
         icon: Hourglass,
         colors: ['yellow-500', 'amber-500'],
         format: 'currency',
         onClick: () => onFilterChange('profitStatus', 'pending')
-      },
-      {
-        key: 'settled-profit',
-        title: 'الأرباح المستلمة',
-        value: canViewAll 
-          ? (profitData.detailedProfits || [])
-              .filter(p => p.profitStatus === 'settled')
-              .reduce((sum, p) => sum + p.profit, 0)
-          : profitData.personalSettledProfit || 0,
-        icon: CheckCircle,
-        colors: ['blue-500', 'sky-500'],
-        format: 'currency',
-        onClick: () => onFilterChange('profitStatus', 'settled')
-      }
-    );
+      });
+    } else {
+      cards.push({
+        key: 'my-pending-profit',
+        title: 'أرباحي المعلقة',
+        value: profitData.personalPendingProfit || 0,
+        icon: Hourglass,
+        colors: ['yellow-500', 'amber-500'],
+        format: 'currency'
+      });
+    }
 
     console.log('✅ تم بناء الكروت:', cards.map(c => ({ key: c.key, value: c.value })));
     return cards;

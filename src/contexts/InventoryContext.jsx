@@ -213,7 +213,7 @@ export const InventoryProvider = ({ children }) => {
   
   async function addExpense(expense) {
     try {
-      
+      // إدراج المصروف في قاعدة البيانات
       const { data: newExpense, error } = await supabase
         .from('expenses')
         .insert({
@@ -235,6 +235,33 @@ export const InventoryProvider = ({ children }) => {
         throw error;
       }
 
+      // خصم المبلغ من القاصة الرئيسية وتسجيل الحركة المالية
+      if (newExpense.status === 'approved' && expense.expense_type !== 'system') {
+        const { data: mainCashSource } = await supabase
+          .from('cash_sources')
+          .select('id')
+          .eq('name', 'القاصة الرئيسية')
+          .single();
+
+        if (mainCashSource) {
+          // تسجيل الحركة المالية
+          const { error: movementError } = await supabase
+            .rpc('update_cash_source_balance', {
+              p_cash_source_id: mainCashSource.id,
+              p_amount: newExpense.amount,
+              p_movement_type: 'out',
+              p_reference_type: 'expense',
+              p_reference_id: newExpense.id,
+              p_description: `مصروف: ${newExpense.description}`,
+              p_created_by: user?.user_id
+            });
+
+          if (movementError) {
+            console.error('خطأ في تسجيل الحركة المالية:', movementError);
+          }
+        }
+      }
+
       // تحديث الحالة المحلية
       setAccounting(prev => ({ 
         ...prev, 
@@ -247,7 +274,7 @@ export const InventoryProvider = ({ children }) => {
           expense.category !== 'تكاليف التحويل' && 
           expense.category !== 'مستحقات الموظفين') {
         toast({ 
-          title: "تمت إضافة المصروف", 
+          title: "تمت إضافة المصروف",
           description: `تم إضافة مصروف ${expense.description} بقيمة ${expense.amount.toLocaleString()} د.ع`,
           variant: "success" 
         });
