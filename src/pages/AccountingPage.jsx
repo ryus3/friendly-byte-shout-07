@@ -26,7 +26,6 @@ import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
-import { useEnhancedFinancialData } from '@/hooks/useEnhancedFinancialData';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formatCurrency = (amount) => {
@@ -158,7 +157,7 @@ const AccountingPage = () => {
         productType: 'all'
     };
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
-    const { financialData, loading: financialLoading, refreshData: refreshFinancialData } = useEnhancedFinancialData();
+    
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
     const [realCashBalance, setRealCashBalance] = useState(0);
@@ -207,7 +206,7 @@ const AccountingPage = () => {
     // جلب رأس المال الحقيقي من قاعدة البيانات
     useEffect(() => {
         const fetchData = async () => {
-            await refreshFinancialData();
+            await refreshAllFinancialData();
             
             // جلب بيانات الأرباح
             try {
@@ -500,14 +499,14 @@ const AccountingPage = () => {
           title: "تحليل أرباح المنتجات", 
           value: (() => {
             // استخدام صافي الربح من النظام المالي الموحد المُحدث
-            const netProfit = financialData?.netProfit || financialSummary?.netProfit || 0;
-            console.log('🔍 [DEBUG] Product Profit Card - netProfit:', netProfit, 'from financialData:', financialData?.netProfit, 'from summary:', financialSummary?.netProfit);
+            const netProfit = financialSummary?.netProfit || 0;
+            console.log('🔍 [DEBUG] Product Profit Card - netProfit:', netProfit, 'from summary:', financialSummary?.netProfit);
             return formatCurrency(netProfit);
           })(),
           subValue: (() => {
             // حساب هامش الربح من البيانات المالية الموحدة
-            const grossProfit = financialData?.grossProfit || financialSummary?.grossProfit || 0;
-            const totalRevenue = financialData?.totalRevenue || financialSummary?.totalRevenue || 0;
+            const grossProfit = financialSummary?.grossProfit || 0;
+            const totalRevenue = financialSummary?.totalRevenue || 0;
             const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
             
             console.log('🔍 [DEBUG] Profit Margin - grossProfit:', grossProfit, 'totalRevenue:', totalRevenue, 'margin:', profitMargin);
@@ -669,7 +668,7 @@ const AccountingPage = () => {
                     // تحديث فوري محلي
                     setInitialCapital(newCapital);
                     // تحديث شامل لجميع البيانات المترابطة
-                    await refreshFinancialData();
+                    await refreshAllFinancialData();
                 }}
             />
             <InventoryValueDialog
