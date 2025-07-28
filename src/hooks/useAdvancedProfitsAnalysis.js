@@ -181,19 +181,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
       for (const order of orders || []) {
         for (const item of order.order_items || []) {
-          // حساب الربح الفعلي
-          const analysisItem = await calculateRealProfit({
-            ...item,
-            order_date: order.created_at,
-            variant_cost_price: item.product_variants?.cost_price,
-            product_cost_price: item.products?.cost_price
-          }, purchaseHistory);
-
-          totalProfit += analysisItem.profit;
-          totalRevenue += analysisItem.revenue;
-          totalCost += (analysisItem.actualCost * analysisItem.quantity);
-
-          // تطبيق الفلاتر
+          // تطبيق الفلاتر أولاً
           const product = item.products;
           const variant = item.product_variants;
           
@@ -201,6 +189,19 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           if (filters.product !== 'all' && product?.id !== filters.product) continue;
           if (filters.color !== 'all' && variant?.color_id !== filters.color) continue;
           if (filters.size !== 'all' && variant?.size_id !== filters.size) continue;
+
+          // حساب الربح الفعلي فقط للعناصر المفلترة
+          const analysisItem = await calculateRealProfit({
+            ...item,
+            order_date: order.created_at,
+            variant_cost_price: item.product_variants?.cost_price,
+            product_cost_price: item.products?.cost_price
+          }, purchaseHistory);
+
+          // إضافة الأرباح للإجمالي فقط بعد تطبيق الفلاتر
+          totalProfit += analysisItem.profit;
+          totalRevenue += analysisItem.revenue;
+          totalCost += (analysisItem.actualCost * analysisItem.quantity);
 
           // تجميع البيانات حسب الأقسام
           const departments = product?.product_departments || [];
