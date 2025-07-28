@@ -47,11 +47,13 @@ const PendingProfitsDialog = ({
     if (!order.items || !Array.isArray(order.items)) return 0;
     
     return order.items.reduce((sum, item) => {
-      const unitPrice = item.unit_price || item.price || 0;
-      const costPrice = item.cost_price || item.costPrice || 0;
-      const quantity = item.quantity || 0;
+      const unitPrice = parseFloat(item.unit_price) || parseFloat(item.price) || 0;
+      const costPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      
+      // الربح = (سعر البيع - سعر التكلفة) × الكمية
       const profit = (unitPrice - costPrice) * quantity;
-      return sum + profit;
+      return sum + Math.max(0, profit); // تجنب الأرباح السالبة
     }, 0);
   };
 
@@ -67,7 +69,7 @@ const PendingProfitsDialog = ({
     if (selectedOrders.length === 0) {
       toast({
         title: "يرجى اختيار طلبات",
-        description: "اختر طلباً واحداً على الأقل لاستلام فاتورته",
+        description: "اختر طلباً واحداً على الأقل للتحاسب عليه",
         variant: "destructive"
       });
       return;
@@ -76,42 +78,69 @@ const PendingProfitsDialog = ({
     try {
       setIsProcessing(true);
 
-      // تحديث حالة استلام الفواتير للطلبات المختارة
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          receipt_received: true,
-          receipt_received_at: new Date().toISOString(),
-          receipt_received_by: user?.user_id || user?.id
-        })
-        .in('id', selectedOrders);
+      if (isEmployeeView) {
+        // للموظف: طلب تحاسب من المدير
+        const { error } = await supabase
+          .from('notifications')
+          .insert({
+            title: 'طلب تحاسب جديد',
+            message: `طلب ${user?.full_name || 'موظف'} تحاسب على ${selectedOrders.length} طلب بمبلغ ${selectedOrdersProfit.toLocaleString()} د.ع`,
+            type: 'profit_settlement_request',
+            priority: 'high',
+            data: {
+              employee_id: user?.user_id || user?.id,
+              employee_name: user?.full_name,
+              order_ids: selectedOrders,
+              total_profit: selectedOrdersProfit,
+              orders_count: selectedOrders.length
+            },
+            user_id: '91484496-b887-44f7-9e5d-be9db5567604' // المدير
+          });
 
-      if (error) {
-        throw new Error(`خطأ في تحديث حالة استلام الفواتير: ${error.message}`);
-      }
+        if (error) throw error;
 
-      // حساب الأرباح وإدخالها في جدول profits
-      for (const orderId of selectedOrders) {
-        try {
-          await supabase.rpc('calculate_order_profit', { order_id_input: orderId });
-        } catch (profitError) {
-          console.error('خطأ في حساب الأرباح للطلب:', orderId, profitError);
+        toast({
+          title: "تم إرسال طلب التحاسب",
+          description: `تم إرسال طلب تحاسب على ${selectedOrders.length} طلب للمدير بنجاح`,
+          variant: "success"
+        });
+        
+      } else {
+        // للمدير: استلام فواتير
+        const { error } = await supabase
+          .from('orders')
+          .update({
+            receipt_received: true,
+            receipt_received_at: new Date().toISOString(),
+            receipt_received_by: user?.user_id || user?.id
+          })
+          .in('id', selectedOrders);
+
+        if (error) throw error;
+
+        // حساب الأرباح وإدخالها في جدول profits
+        for (const orderId of selectedOrders) {
+          try {
+            await supabase.rpc('calculate_order_profit', { order_id_input: orderId });
+          } catch (profitError) {
+            console.error('خطأ في حساب الأرباح للطلب:', orderId, profitError);
+          }
         }
-      }
 
-      toast({
-        title: "تم استلام الفواتير بنجاح",
-        description: `تم استلام ${selectedOrders.length} فاتورة وتحويل الأرباح إلى المحاسبة`,
-        variant: "success"
-      });
+        toast({
+          title: "تم استلام الفواتير بنجاح",
+          description: `تم استلام ${selectedOrders.length} فاتورة وتحويل الأرباح إلى المحاسبة`,
+          variant: "success"
+        });
+      }
 
       if (onReceiveInvoices) onReceiveInvoices();
       onClose();
 
     } catch (error) {
-      console.error('خطأ في استلام الفواتير:', error);
+      console.error('خطأ في المعالجة:', error);
       toast({
-        title: "خطأ في استلام الفواتير",
+        title: isEmployeeView ? "خطأ في إرسال طلب التحاسب" : "خطأ في استلام الفواتير",
         description: error.message,
         variant: "destructive"
       });
@@ -283,7 +312,9 @@ const PendingProfitsDialog = ({
                                     <p className="text-sm sm:text-base font-bold text-green-600">
                                       {orderProfit.toLocaleString()} د.ع
                                     </p>
-                                    <p className="text-xs text-muted-foreground">ربح متوقع</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {isEmployeeView ? 'ربح الموظف' : 'ربح متوقع'}
+                                    </p>
                                   </div>
                                 </div>
                                 <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2">

@@ -267,6 +267,8 @@ const NotificationsPanel = () => {
       }
     } else if (notification.type === 'profit_settlement') {
       navigate('/employee-follow-up');
+    } else if (notification.type === 'profit_settlement_completed') {
+      navigate('/employee-follow-up');
     } else if (notification.related_entity_type) {
       // إشعارات النظام الجديد
       switch (notification.related_entity_type) {
