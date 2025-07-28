@@ -92,7 +92,7 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
-    const { profits } = useProfits();
+    const { profits: profitsData } = useProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -199,7 +199,7 @@ const Dashboard = () => {
         switch (type) {
             case 'pendingProfit':
                 query.set('profitStatus', 'pending');
-                navigate(`/employee-follow-up?${query.toString()}`);
+                navigate(`/profits-summary?${query.toString()}`);
                 break;
             case 'deliveredSales':
                 query.set('status', 'delivered');
@@ -363,27 +363,10 @@ const Dashboard = () => {
 
         const filteredTotalOrders = filterOrdersByPeriod(visibleOrders, periods.totalOrders);
         const deliveredOrders = visibleOrders.filter(o => o.status === 'delivered' || o.status === 'completed');
+        const deliveredOrdersWithoutReceipt = deliveredOrders.filter(o => !o.receipt_received);
+        const filteredDeliveredOrders = filterOrdersByPeriod(deliveredOrdersWithoutReceipt, periods.pendingProfit);
         
-        // للموظفين: الطلبات المُسلّمة التي لم يتم تحاسبها بعد (لا يوجد لها سجل في profits)
-        // للمديرين: الطلبات المحلية المُسلّمة التي لم تستلم فواتيرها
-        let pendingProfitOrdersFiltered;
-        if (canViewAllData) {
-          // للمديرين: الطلبات المحلية فقط التي لم تستلم فواتيرها
-          const localDeliveredOrders = deliveredOrders.filter(o => 
-            !o.receipt_received && 
-            o.delivery_method === 'local'
-          );
-          pendingProfitOrdersFiltered = filterOrdersByPeriod(localDeliveredOrders, periods.pendingProfit);
-        } else {
-          // للموظفين: طلباتهم المُسلّمة التي لم يتم تحاسبها (بغض النظر عن نوع التوصيل)
-          const employeeDeliveredOrders = deliveredOrders.filter(o => 
-            o.created_by === (user?.user_id || user?.id) &&
-            !profits.some(p => p.order_id === o.id && p.employee_settled)
-          );
-          pendingProfitOrdersFiltered = filterOrdersByPeriod(employeeDeliveredOrders, periods.pendingProfit);
-        }
-        
-        const pendingProfit = pendingProfitOrdersFiltered.reduce((sum, o) => {
+        const pendingProfit = filteredDeliveredOrders.reduce((sum, o) => {
           if (!o.items || !Array.isArray(o.items)) return sum;
           
           const employeeProfit = o.items.reduce((itemSum, item) => {
@@ -419,7 +402,7 @@ const Dashboard = () => {
             pendingProfit,
             deliveredSales,
             pendingSales,
-            pendingProfitOrders: pendingProfitOrdersFiltered,
+            pendingProfitOrders: filteredDeliveredOrders,
             deliveredSalesOrders,
             pendingSalesOrders,
             // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
@@ -435,8 +418,7 @@ const Dashboard = () => {
         periods.pendingSales, 
         user?.id, 
         user?.user_id, 
-        canViewAllData,
-        profits
+        canViewAllData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
@@ -453,7 +435,7 @@ const Dashboard = () => {
 
     // استخدام البيانات من Context مباشرة لتحسين الأداء
     const employeeProfitsData = useMemo(() => {
-        if (!profits) {
+        if (!profitsData) {
             return {
                 personalPendingProfit: 0,
                 personalSettledProfit: 0,
@@ -461,7 +443,7 @@ const Dashboard = () => {
             };
         }
         
-        const allProfits = [...(profitsLocalData.pending || []), ...(profitsLocalData.settled || [])];
+        const allProfits = [...(profitsData.pending || []), ...(profitsData.settled || [])];
         
         const userProfits = canViewAllData 
             ? allProfits 
@@ -478,7 +460,7 @@ const Dashboard = () => {
             personalSettledProfit: personalSettled.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
             totalPersonalProfit: userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
-    }, [profitsLocalData, canViewAllData, user?.id, user?.user_id]);
+    }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 
     
     // إظهار loader فقط عند تحميل البيانات الأساسية
@@ -575,7 +557,6 @@ const Dashboard = () => {
                             fetchProfitsData();
                         }}
                         pendingProfitOrders={dashboardData.pendingProfitOrders || []}
-                        isEmployeeView={!canViewAllData}
                         user={user}
                         onReceiveInvoices={() => {
                             console.log('تم استلام الفواتير بنجاح');
@@ -601,7 +582,7 @@ const Dashboard = () => {
                 {!canViewAllData && (
                     <SettlementRequestCard 
                         pendingProfit={employeeProfitsData.personalPendingProfit} 
-                        onSettle={() => navigate('/employee-follow-up')} 
+                        onSettle={() => navigate('/profits-summary')} 
                     />
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">

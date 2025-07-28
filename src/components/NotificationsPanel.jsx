@@ -267,8 +267,6 @@ const NotificationsPanel = () => {
       }
     } else if (notification.type === 'profit_settlement') {
       navigate('/employee-follow-up');
-    } else if (notification.type === 'profit_settlement_completed') {
-      navigate('/employee-follow-up');
     } else if (notification.related_entity_type) {
       // إشعارات النظام الجديد
       switch (notification.related_entity_type) {
@@ -279,7 +277,7 @@ const NotificationsPanel = () => {
           navigate(`/employee-follow-up`);
           break;
         case 'settlement_invoice':
-          navigate(`/employee-follow-up`);
+          navigate(`/profits-summary?invoice=${notification.related_entity_id}`);
           break;
         case 'product':
           navigate(`/inventory?product=${notification.related_entity_id}`);

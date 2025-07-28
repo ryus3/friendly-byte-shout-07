@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Receipt } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -20,7 +20,6 @@ import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import PendingSettlementRequestsDialog from '@/components/dashboard/PendingSettlementRequestsDialog';
 
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
@@ -51,7 +50,6 @@ const EmployeeFollowUpPage = () => {
     archived: false,
     profitStatus: filterFromUrl === 'pending_settlement' ? 'pending' : 'all',
   });
-  const [showSettlementRequests, setShowSettlementRequests] = useState(false);
   
   const [selectedOrders, setSelectedOrders] = useState(ordersFromUrl ? ordersFromUrl.split(',') : []);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
@@ -517,21 +515,6 @@ const EmployeeFollowUpPage = () => {
             <h2 className="text-xl font-semibold">
               قائمة الطلبات ({filteredOrders.length})
             </h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                onClick={() => setShowSettlementRequests(true)}
-                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white shadow-lg"
-                size="sm"
-              >
-                <Receipt className="w-4 h-4 ml-1" />
-                طلبات المحاسبة
-              </Button>
-              
-              <Button variant="outline" size="sm" onClick={() => setFilters({ ...filters, employeeId: 'all' })}>
-                <Users className="w-4 h-4 ml-1" />
-                جميع الموظفين
-              </Button>
-            </div>
           </div>
 
           {/* تنبيه للطلبات الراجعة */}
@@ -577,20 +560,6 @@ const EmployeeFollowUpPage = () => {
           onOpenChange={setIsDuesDialogOpen}
           invoices={settlementInvoices}
           allUsers={allUsers}
-        />
-        
-        {/* نافذة طلبات المحاسبة */}
-        <PendingSettlementRequestsDialog
-          open={showSettlementRequests}
-          onClose={() => setShowSettlementRequests(false)}
-          onSettlementSelect={(settlement) => {
-            const data = settlement.data || {};
-            if (data.employee_id && data.order_ids) {
-              setFilters({ ...filters, employeeId: data.employee_id });
-              setSelectedOrders(data.order_ids);
-              setHighlightSettlement(true);
-            }
-          }}
         />
       </motion.div>
     </>

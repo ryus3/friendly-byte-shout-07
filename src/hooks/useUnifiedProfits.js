@@ -88,22 +88,7 @@ export const useUnifiedProfits = (userId = null) => {
       };
 
       if (userId) {
-        console.log('🔍 حساب الأرباح الشخصية للموظف:', {
-          userId,
-          systemProfitsCount: systemProfits?.length,
-          completedOrderIds: completedOrderIds.length
-        });
-        
         const personalProfits = systemProfits?.filter(p => p.employee_id === userId && completedOrderIds.includes(p.order_id)) || [];
-        console.log('📊 أرباح الموظف المفلترة:', {
-          personalProfitsCount: personalProfits.length,
-          personalProfits: personalProfits.map(p => ({
-            order_id: p.order_id,
-            employee_profit: p.employee_profit,
-            status: p.status
-          }))
-        });
-        
         const pendingPersonalProfits = personalProfits.filter(p => p.status === 'pending');
         const settledPersonalProfits = personalProfits.filter(p => p.status === 'settled');
         
@@ -112,8 +97,6 @@ export const useUnifiedProfits = (userId = null) => {
           personalSettledProfit: settledPersonalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
           personalTotalProfit: personalProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0)
         };
-        
-        console.log('✅ البيانات الشخصية المحسوبة:', personalData);
       }
 
       // 6. إحصائيات إضافية

@@ -162,9 +162,9 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
                 <DialogFooter className="gap-2 sm:justify-between flex-wrap">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>إغلاق</Button>
                     <div className="flex gap-2 flex-wrap">
-                        <Button onClick={() => handleNavigate('/employee-follow-up')}>
+                        <Button onClick={() => handleNavigate('/profits-summary')}>
                             <User className="w-4 h-4 ml-2" />
-                            متابعة الموظفين
+                            ملخص الأرباح
                         </Button>
                          <Button onClick={() => handleNavigate('/employee-follow-up')}>
                             <DollarSign className="w-4 h-4 ml-2" />
