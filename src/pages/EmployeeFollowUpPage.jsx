@@ -17,7 +17,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
-import PendingSettlementRequestsDialog from '@/components/dashboard/PendingSettlementRequestsDialog';
+
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
@@ -58,7 +58,7 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
-  const [isSettlementRequestsOpen, setIsSettlementRequestsOpen] = useState(false);
+  
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
     ordersCount: orders?.length || 0,
@@ -141,10 +141,15 @@ const EmployeeFollowUpPage = () => {
           }
         }, 2000);
       } else {
-        // إشعار عام للتحاسب - فتح نافذة طلبات التحاسب
-        console.log('🔔 فتح نافذة طلبات التحاسب من الإشعار');
+        // إشعار عام للتحاسب - عرض رسالة توضيحية فقط
+        console.log('🔔 إشعار تحاسب عام');
         setTimeout(() => {
-          setIsSettlementRequestsOpen(true);
+          toast({
+            title: "طلبات تحاسب متاحة",
+            description: "راجع طلبات التحاسب في صفحة متابعة الموظفين واختر الطلبات المطلوبة لكل موظف",
+            variant: "default",
+            duration: 6000
+          });
         }, 1000);
       }
     }
@@ -546,16 +551,6 @@ const EmployeeFollowUpPage = () => {
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
           
-          {/* زر طلبات التحاسب */}
-          <Button 
-            onClick={() => setIsSettlementRequestsOpen(true)}
-            className="relative bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-bold shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-110 transition-all duration-500 border-0 gap-2 px-6 py-3 rounded-xl overflow-hidden group"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <Bell className="h-5 w-5 relative z-10 group-hover:animate-pulse" />
-            <span className="relative z-10">طلبات التحاسب</span>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-          </Button>
         </div>
 
         {/* الفلاتر */}
@@ -720,12 +715,6 @@ const EmployeeFollowUpPage = () => {
           onOpenChange={setIsDuesDialogOpen}
           invoices={settlementInvoices}
           allUsers={allUsers}
-        />
-        
-        <PendingSettlementRequestsDialog
-          open={isSettlementRequestsOpen}
-          onClose={() => setIsSettlementRequestsOpen(false)}
-          onNavigateToSettlement={handleNavigateToSettlement}
         />
       </motion.div>
     </>
