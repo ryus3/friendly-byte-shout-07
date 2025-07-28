@@ -45,13 +45,13 @@ const EmployeeFollowUpPage = () => {
   const [highlightFromUrl, setHighlightFromUrl] = useState(null);
   const filterFromUrl = searchParams.get('filter');
   
-  // استخراج المعاملات من URL وتطبيق الفلترة
+  // استخراج المعاملات من URL - بدون تطبيق فوري
   useEffect(() => {
     const employeeParam = searchParams.get('employee');
     const ordersParam = searchParams.get('orders');
     const highlightParam = searchParams.get('highlight');
     
-    console.log('🔔 معالجة URL parameters:', {
+    console.log('🔔 URL parameters extracted:', {
       employeeParam,
       ordersParam,
       highlightParam
@@ -60,23 +60,24 @@ const EmployeeFollowUpPage = () => {
     setEmployeeFromUrl(employeeParam);
     setOrdersFromUrl(ordersParam);
     setHighlightFromUrl(highlightParam);
-    
-    // إذا جاء من إشعار تحاسب، طبق الفلترة
-    if (employeeParam && highlightParam === 'settlement') {
-      console.log('✅ تطبيق فلترة التحاسب');
+  }, [searchParams]);
+
+  // تطبيق الفلترة بعد تحميل البيانات
+  useEffect(() => {
+    if (orders && employeeFromUrl && highlightFromUrl === 'settlement') {
+      console.log('✅ تطبيق فلترة التحاسب بعد تحميل البيانات');
       
       setFilters({
         status: 'all',
         archived: false,
-        employeeId: employeeParam,
+        employeeId: employeeFromUrl,
         profitStatus: 'pending'
       });
       
-      if (ordersParam) {
-        const ordersList = ordersParam.split(',');
+      if (ordersFromUrl) {
+        const ordersList = ordersFromUrl.split(',');
         setSelectedOrders(ordersList);
         
-        // toast للتوضيح
         setTimeout(() => {
           toast({
             title: "طلب تحاسب",
@@ -86,7 +87,7 @@ const EmployeeFollowUpPage = () => {
         }, 1000);
       }
     }
-  }, [searchParams]);
+  }, [orders, employeeFromUrl, ordersFromUrl, highlightFromUrl]); // تطبيق الفلترة عندما تتوفر البيانات
   
   const [filters, setFilters] = useState({
     status: 'all',
