@@ -76,11 +76,14 @@ const EmployeeFollowUpPage = () => {
   
   // إعداد تأثير URL parameters
   useEffect(() => {
-    console.log('🔄 URL Parameters:', { 
+    console.log('🔄 URL Parameters DETAILED:', { 
       highlightFromUrl, 
       employeeFromUrl, 
       ordersFromUrl,
-      allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl)
+      allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl),
+      fullSearchParams: searchParams.toString(),
+      allOrders: orders?.length || 0,
+      allUsers: allUsers?.length || 0
     });
     
     if (highlightFromUrl === 'settlement') {
@@ -203,13 +206,15 @@ const EmployeeFollowUpPage = () => {
     // استخدام employeeFromUrl إذا كان متوفراً، وإلا استخدام الفلتر العادي
     const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
     
-    console.log('🔄 تفلتر الطلبات:', { 
+    console.log('🔄 تفلتر الطلبات DETAILED:', { 
       ordersLength: orders?.length, 
       filters,
       employeeFromUrl,
       ordersFromUrl,
       highlightFromUrl,
-      effectiveEmployeeId // الموظف المؤثر الفعلي
+      effectiveEmployeeId, // الموظف المؤثر الفعلي
+      ordersArray: Array.isArray(orders),
+      ordersDataSample: orders?.slice(0, 3)?.map(o => ({ id: o.id, created_by: o.created_by, status: o.status }))
     });
     
     if (!orders || !Array.isArray(orders)) {
@@ -469,9 +474,21 @@ const EmployeeFollowUpPage = () => {
   const employeesWithSelectedOrders = useMemo(() => {
     const employeeGroups = {};
     
+    console.log('🧮 بناء employeesWithSelectedOrders:', {
+      selectedOrdersDataLength: selectedOrdersData.length,
+      employeesLength: employees.length,
+      selectedOrdersDataSample: selectedOrdersData.slice(0, 2).map(o => ({ id: o.id, created_by: o.created_by })),
+      employeesSample: employees.slice(0, 2).map(e => ({ user_id: e.user_id, name: e.full_name }))
+    });
+    
     selectedOrdersData.forEach(order => {
       if (!employeeGroups[order.created_by]) {
         const employee = employees.find(emp => emp.user_id === order.created_by);
+        console.log('🔍 البحث عن الموظف:', { 
+          orderCreatedBy: order.created_by, 
+          employeeFound: !!employee, 
+          employeeName: employee?.full_name 
+        });
         if (employee) {
           employeeGroups[order.created_by] = {
             employee,
@@ -484,7 +501,16 @@ const EmployeeFollowUpPage = () => {
       }
     });
     
-    return Object.values(employeeGroups);
+    const result = Object.values(employeeGroups);
+    console.log('✅ النتيجة النهائية employeesWithSelectedOrders:', {
+      count: result.length,
+      details: result.map(g => ({ 
+        employeeName: g.employee.full_name, 
+        ordersCount: g.orders.length 
+      }))
+    });
+    
+    return result;
   }, [selectedOrdersData, employees]);
 
   // معالج إلغاء تحديد الطلبات

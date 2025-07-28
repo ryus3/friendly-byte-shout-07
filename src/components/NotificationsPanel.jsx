@@ -259,8 +259,8 @@ const NotificationsPanel = () => {
       console.log('🔔 إشعار طلب التحاسب:', notification);
       
       const data = notification.data || {};
-      const employeeId = data.employeeId || data.employee_id;
-      const orderIds = data.orderIds || data.order_ids || [];
+      const employeeId = data.employee_id || data.employeeId;
+      const orderIds = data.order_ids || data.orderIds || [];
       
       console.log('🔍 بيانات طلب التحاسب:', { employeeId, orderIds, data });
       
