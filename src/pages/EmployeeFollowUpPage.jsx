@@ -53,7 +53,14 @@ const EmployeeFollowUpPage = () => {
   });
   
   const [selectedOrders, setSelectedOrders] = useState(() => {
-    return ordersFromUrl && highlightFromUrl === 'settlement' ? ordersFromUrl.split(',') : [];
+    const initialSelectedOrders = ordersFromUrl && highlightFromUrl === 'settlement' ? ordersFromUrl.split(',') : [];
+    console.log('🎯 تهيئة selectedOrders:', {
+      ordersFromUrl,
+      highlightFromUrl,
+      initialSelectedOrders,
+      ordersCount: initialSelectedOrders.length
+    });
+    return initialSelectedOrders;
   });
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
@@ -278,6 +285,18 @@ const EmployeeFollowUpPage = () => {
 
     console.log('📊 إجمالي الطلبات المتاحة:', orders.length);
     console.log('🎯 الموظف المطلوب:', effectiveEmployeeId);
+    console.log('📋 الطلبات المحددة من URL:', selectedOrders);
+
+    // فحص وجود الطلب المحدد في البيانات
+    if (ordersFromUrl && highlightFromUrl === 'settlement') {
+      const ordersList = ordersFromUrl.split(',');
+      const foundOrders = orders.filter(o => ordersList.includes(o.id));
+      console.log('🔍 البحث عن الطلبات المحددة:', {
+        requestedOrders: ordersList,
+        foundOrdersCount: foundOrders.length,
+        foundOrders: foundOrders.map(o => ({ id: o.id, number: o.order_number, status: o.status, created_by: o.created_by }))
+      });
+    }
 
     const filtered = orders.filter(order => {
       if (!order) {
