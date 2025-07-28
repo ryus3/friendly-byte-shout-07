@@ -16,7 +16,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import MiniChart from '@/components/dashboard/MiniChart';
 import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import { useNavigate } from 'react-router-dom';
-import ExpensesDialog from '@/components/accounting/ExpensesDialog';
+import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -571,14 +571,14 @@ const AccountingPage = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <StatCard 
-                        title="صافي أرباح المبيعات" 
-                        value={financialSummary.netProfit} 
-                        icon={PieChart} 
-                        colors={['blue-500', 'sky-500']} 
-                        format="currency" 
-                        onClick={() => setDialogs(d => ({...d, profitLoss: true}))}
-                        description="بعد خصم المصاريف العامة"
+                    {/* استخدام النظام المحاسبي الموحد */}
+                    <UnifiedProfitDisplay 
+                        displayMode="financial-center"
+                        datePeriod={datePeriod}
+                        canViewAll={hasPermission('view_all_profits')}
+                        onExpensesClick={() => setDialogs(d => ({...d, expenses: true}))}
+                        onSettledDuesClick={() => setDialogs(d => ({...d, settledDues: true}))}
+                        className="col-span-full"
                     />
                      <Card className="h-full">
                         <CardHeader>
