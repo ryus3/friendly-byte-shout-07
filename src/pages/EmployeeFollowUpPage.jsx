@@ -11,12 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
+import PendingSettlementRequestsDialog from '@/components/dashboard/PendingSettlementRequestsDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
@@ -55,6 +56,7 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
+  const [isSettlementRequestsOpen, setIsSettlementRequestsOpen] = useState(false);
   
   console.log('🔍 EmployeeFollowUpPage Data:', {
     ordersCount: orders?.length || 0,
@@ -369,6 +371,23 @@ const EmployeeFollowUpPage = () => {
     setSelectedOrders([]);
   };
 
+  // معالج الانتقال لتحاسب من الإشعار
+  const handleNavigateToSettlement = (employeeId, orderIds) => {
+    // تعيين فلتر الموظف
+    setFilters(prev => ({ ...prev, employeeId }));
+    
+    // تحديد الطلبات
+    setSelectedOrders(orderIds);
+    
+    // التمرير للكارت
+    setTimeout(() => {
+      const element = document.querySelector(`[data-employee-id="${employeeId}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 300);
+  };
+
   if (loading) {
     return (
       <div className="flex h-full w-full items-center justify-center">
@@ -396,6 +415,15 @@ const EmployeeFollowUpPage = () => {
             <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
+          
+          {/* زر طلبات التحاسب */}
+          <Button 
+            onClick={() => setIsSettlementRequestsOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Bell className="w-4 h-4 ml-2" />
+            طلبات التحاسب
+          </Button>
         </div>
 
         {/* الفلاتر */}
@@ -560,6 +588,12 @@ const EmployeeFollowUpPage = () => {
           onOpenChange={setIsDuesDialogOpen}
           invoices={settlementInvoices}
           allUsers={allUsers}
+        />
+        
+        <PendingSettlementRequestsDialog
+          open={isSettlementRequestsOpen}
+          onClose={() => setIsSettlementRequestsOpen(false)}
+          onNavigateToSettlement={handleNavigateToSettlement}
         />
       </motion.div>
     </>
