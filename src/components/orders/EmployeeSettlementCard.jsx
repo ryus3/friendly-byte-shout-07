@@ -5,7 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { DollarSign, Loader2, User, CheckCircle } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 // معرف المدير الرئيسي - يجب عدم عرض التسوية له
 const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';

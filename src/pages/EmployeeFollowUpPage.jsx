@@ -12,13 +12,14 @@ import { Button } from '@/components/ui/button';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
 import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
+
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
 
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();

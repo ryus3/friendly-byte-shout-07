@@ -1162,15 +1162,19 @@ export const InventoryProvider = ({ children }) => {
 
   const requestProfitSettlement = async (employeeId, amount, orderIds) => {
     const employee = user; // Assuming the user requesting is the employee
+    
+    // إرسال الإشعار للمديرين فقط
+    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+    
     addNotification({
       type: 'profit_settlement_request',
       title: 'طلب محاسبة جديد',
       message: `الموظف ${employee.full_name} يطلب محاسبته على مبلغ ${amount.toLocaleString()} د.ع.`,
-      link: `/profit-settlement/${employeeId}?orders=${orderIds.join(',')}`,
-      user_id: null, // send to all admins
+      link: `/employee-follow-up?employee=${employeeId}&orders=${orderIds.join(',')}&highlight=settlement`,
+      user_id: ADMIN_ID, // إرسال للمدير فقط
       data: { employeeId, employeeName: employee.full_name, amount, orderIds },
-      color: 'purple',
-      icon: 'UserPlus'
+      color: 'emerald',
+      icon: 'DollarSign'
     });
     toast({ title: "تم إرسال الطلب", description: "تم إرسال طلب المحاسبة إلى المدير.", variant: "success" });
   }
@@ -1226,7 +1230,8 @@ export const InventoryProvider = ({ children }) => {
         status: 'approved'
       });
 
-      // 3. تسجيل التسوية في الإشعارات
+      // 3. تسجيل التسوية في الإشعارات - للمديرين فقط
+      const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
       const invoiceNumber = `INV-${Date.now()}`;
       const { error: notificationError } = await supabase
         .from('notifications')
@@ -1242,7 +1247,7 @@ export const InventoryProvider = ({ children }) => {
             invoice_number: invoiceNumber,
             orders_count: orderIds.length
           },
-          user_id: null // للجميع
+          user_id: ADMIN_ID // للمدير فقط
         });
 
       if (notificationError) {

@@ -18,7 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import PendingRegistrations from './dashboard/PendingRegistrations';
@@ -45,6 +45,23 @@ const UserRegistrationIcon = () => (
   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="8" r="3" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
     <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
+  </svg>
+);
+
+const ProfitSettlementIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="6" width="18" height="12" rx="2" className="fill-emerald-50 stroke-emerald-500" strokeWidth="1.5"/>
+    <circle cx="12" cy="12" r="2" className="fill-emerald-500"/>
+    <path d="M8 12h8M10 9l2-2 2 2M10 15l2 2 2-2" className="stroke-emerald-600" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const AiOrderIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none">
+    <rect x="3" y="3" width="18" height="18" rx="2" className="fill-blue-50 stroke-blue-500" strokeWidth="1.5"/>
+    <circle cx="8" cy="8" r="1" className="fill-blue-500"/>
+    <circle cx="16" cy="8" r="1" className="fill-blue-500"/>
+    <path d="M8 14s1.5 2 4 2 4-2 4-2" className="stroke-blue-600" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
 );
 
@@ -78,7 +95,7 @@ const iconMap = {
   new_order: OrderIcon,
   new_registration: UserRegistrationIcon,
   profit_settlement: ProfitIcon,
-  profit_settlement_request: ProfitIcon,
+  profit_settlement_request: ProfitSettlementIcon,
   system: SystemIcon,
   // ألوان حسب النوع
   AlertTriangle: StockWarningIcon,
@@ -158,11 +175,11 @@ const typeColorMap = {
     dot: 'bg-yellow-500'
   },
   profit_settlement_request: { 
-    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    bg: 'bg-emerald-50/80 dark:bg-emerald-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
     text: 'text-foreground', 
-    icon: 'text-orange-600 dark:text-orange-400',
-    dot: 'bg-orange-500'
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    dot: 'bg-emerald-500'
   },
   system: { 
     bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
