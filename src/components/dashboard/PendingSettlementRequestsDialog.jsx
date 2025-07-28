@@ -35,7 +35,7 @@ const PendingSettlementRequestsDialog = ({
         .from('notifications')
         .select('*')
         .eq('type', 'profit_settlement_request')
-        .eq('is_read', false)
+        .is('read_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -57,7 +57,7 @@ const PendingSettlementRequestsDialog = ({
       // وضع علامة قراءة على الإشعار
       await supabase
         .from('notifications')
-        .update({ is_read: true })
+        .update({ read_at: new Date().toISOString() })
         .eq('id', settlement.id);
 
       // إغلاق النافذة والانتقال لصفحة متابعة الموظفين
