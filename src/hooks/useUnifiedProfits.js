@@ -70,10 +70,10 @@ export const useUnifiedProfits = (userId = null) => {
       const completedProfits = systemProfits?.filter(p => completedOrderIds.includes(p.order_id)) || [];
       const pendingProfits = systemProfits?.filter(p => !completedOrderIds.includes(p.order_id)) || [];
       
-      // استخدام النتائج المحسنة من الدالة الجديدة
-      const totalSystemProfit = Number(enhanced.gross_profit || 0); // الربح الخام الصحيح
+      // استخدام النتائج المحسنة من الدالة الجديدة - تصحيح لاستخدام system_profit
+      const totalSystemProfit = Number(enhanced.system_profit || 0); // ربح النظام الصحيح
       const totalEmployeeProfits = Number(enhanced.employee_profits || 0);
-      const totalManagerProfits = totalSystemProfit - totalEmployeeProfits;
+      const grossProfit = Number(enhanced.gross_profit || 0); // الربح الخام للإحصائيات
       
       // صافي الربح من النظام المحسن
       const netSystemProfit = Number(enhanced.net_profit || 0);
