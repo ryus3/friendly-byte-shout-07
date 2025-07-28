@@ -52,17 +52,22 @@ const PendingProfitsDialog = ({
       const costPrice = parseFloat(item.cost_price || item.costPrice) || 0;
       const quantity = parseInt(item.quantity) || 0;
       
-      console.log('💰 حساب الربح:', {
+      // للموظف: حساب ربحه فقط (لا يشمل ربح المدير)
+      // للمدير: حساب الربح الكامل للطلب
+      const profit = (unitPrice - costPrice) * quantity;
+      
+      console.log('💰 حساب الربح للطلب:', order.order_number, {
         product: item.product_name || item.name,
         unitPrice,
         costPrice,
         quantity,
-        profit: (unitPrice - costPrice) * quantity
+        profit,
+        isEmployeeView,
+        orderCreatedBy: order.created_by,
+        currentUser: user?.user_id || user?.id
       });
       
-      // الربح = (سعر البيع - سعر التكلفة) × الكمية
-      const profit = (unitPrice - costPrice) * quantity;
-      return sum + Math.max(0, profit); // تجنب الأرباح السالبة
+      return sum + Math.max(0, profit);
     }, 0);
   };
 
@@ -162,72 +167,78 @@ const PendingProfitsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[98vw] max-w-6xl h-[95vh] flex flex-col p-0 gap-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 border-none">
-        <DialogHeader className="flex-shrink-0 p-4 border-b border-white/10 bg-black/20 backdrop-blur-xl">
-          <DialogTitle className="text-xl font-bold flex items-center gap-3 text-white">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-white" />
+      <DialogContent className="w-[98vw] max-w-6xl h-[95vh] flex flex-col p-0 gap-0 bg-gradient-to-br from-white via-slate-50 to-blue-50 dark:from-slate-900 dark:via-slate-800 dark:to-blue-900">
+        <DialogHeader className="flex-shrink-0 p-6 border-b border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
+          <DialogTitle className="text-2xl font-bold flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+              <DollarSign className="h-6 w-6 text-white" />
             </div>
-            {isEmployeeView ? 'أرباحي المعلقة - طلبات للتحاسب' : 'الأرباح المعلقة - طلبات محلية'}
+            <div className="flex-1">
+              <h2 className="text-slate-800 dark:text-white">
+                {isEmployeeView ? 'أرباحي المعلقة - طلبات للتحاسب' : 'الأرباح المعلقة - طلبات محلية'}
+              </h2>
+              <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 font-normal">
+                {isEmployeeView ? 'طلباتك المُسلّمة والمنتظرة للتحاسب عليها' : 'الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية'}
+              </p>
+            </div>
           </DialogTitle>
-          <div className="text-sm text-blue-100 mt-2 opacity-90">
-            {isEmployeeView ? 'طلباتك المُسلّمة والمنتظرة للتحاسب عليها' : 'الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية'}
-          </div>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col min-h-0 p-4 gap-4">
-          {/* إحصائيات سريعة بتصميم احترافي */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0">
-            <Card className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-300/30 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                    <PackageCheck className="h-6 w-6 text-blue-400" />
+        <div className="flex-1 flex flex-col min-h-0 p-6 gap-6">
+          {/* إحصائيات سريعة بتصميم أنيق */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 flex-shrink-0">
+            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                    <PackageCheck className="h-7 w-7 text-white" />
                   </div>
-                  <div>
-                    <p className="text-xs text-blue-200">إجمالي الطلبات</p>
-                    <p className="text-2xl font-bold text-white">{pendingProfitOrders.length}</p>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي الطلبات</p>
+                    <p className="text-3xl font-bold text-slate-800 dark:text-white">{pendingProfitOrders.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-300/30 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-green-400" />
+            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                    <DollarSign className="h-7 w-7 text-white" />
                   </div>
-                  <div>
-                    <p className="text-xs text-green-200">إجمالي الأرباح المعلقة</p>
-                    <p className="text-2xl font-bold text-white">{totalPendingProfit.toLocaleString()}</p>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي الأرباح المعلقة</p>
+                    <p className="text-3xl font-bold text-green-600 dark:text-green-400">{totalPendingProfit.toLocaleString()}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">د.ع</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-300/30 backdrop-blur-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-amber-400" />
+            <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-slate-200 dark:border-slate-600 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                    <DollarSign className="h-7 w-7 text-white" />
                   </div>
-                  <div>
-                    <p className="text-xs text-amber-200">الأرباح المحددة</p>
-                    <p className="text-2xl font-bold text-white">{selectedOrdersProfit.toLocaleString()}</p>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">الأرباح المحددة</p>
+                    <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{selectedOrdersProfit.toLocaleString()}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">د.ع</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* أزرار التحكم بتصميم احترافي */}
+          {/* أزرار التحكم بتصميم أنيق */}
           <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
             <Button 
               onClick={selectAllOrders}
               variant="outline"
-              size="sm"
-              className="w-full sm:w-auto bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
+              size="lg"
+              className="w-full sm:w-auto bg-white/50 dark:bg-slate-800/50 border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 backdrop-blur-sm shadow-lg"
             >
               {selectedOrders.length === pendingProfitOrders.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
             </Button>
@@ -235,22 +246,22 @@ const PendingProfitsDialog = ({
             <Button 
               onClick={handleReceiveInvoices}
               disabled={selectedOrders.length === 0 || isProcessing}
-              size="sm"
-              className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg"
+              size="lg"
+              className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-xl hover:shadow-2xl transition-all duration-300 disabled:opacity-50"
             >
               {isProcessing ? (
                 <>
-                  <PackageCheck className="h-4 w-4 animate-spin ml-2" />
+                  <PackageCheck className="h-5 w-5 animate-spin ml-2" />
                   جاري المعالجة...
                 </>
               ) : isEmployeeView ? (
                 <>
-                  <DollarSign className="h-4 w-4 ml-2" />
+                  <DollarSign className="h-5 w-5 ml-2" />
                   طلب تحاسب ({selectedOrders.length})
                 </>
               ) : (
                 <>
-                  <PackageCheck className="h-4 w-4 ml-2" />
+                  <PackageCheck className="h-5 w-5 ml-2" />
                   استلام فواتير ({selectedOrders.length})
                 </>
               )}
@@ -267,64 +278,67 @@ const PendingProfitsDialog = ({
                     <p className="text-sm">{isEmployeeView ? 'لا توجد طلبات معلقة للتحاسب' : 'لا توجد طلبات معلقة لاستلام فواتير'}</p>
                   </div>
                 ) : (
-                  pendingProfitOrders.map((order) => {
+                 pendingProfitOrders.map((order) => {
                     const orderProfit = calculateOrderProfit(order);
                     const isSelected = selectedOrders.includes(order.id);
 
                     return (
                       <Card 
                         key={order.id} 
-                        className={`cursor-pointer transition-all hover:shadow-md ${
-                          isSelected ? 'ring-2 ring-primary bg-primary/5' : ''
+                        className={`cursor-pointer transition-all duration-300 hover:shadow-xl border-2 ${
+                          isSelected 
+                            ? 'border-green-500 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 shadow-lg' 
+                            : 'border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 hover:border-slate-300 dark:hover:border-slate-600'
                         }`}
                         onClick={() => toggleOrderSelection(order.id)}
                       >
-                        <CardContent className="p-3">
-                          <div className="space-y-3">
+                        <CardContent className="p-6">
+                          <div className="space-y-4">
                             {/* الصف الأول: معلومات الطلب والحالة */}
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline" className="text-xs font-mono">
+                            <div className="flex flex-wrap items-center gap-3">
+                              <Badge variant="outline" className="text-sm font-mono bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
                                 {order.order_number}
                               </Badge>
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-sm bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                                 {isEmployeeView ? 'مُسلّم' : 'مُوصل'}
                               </Badge>
                               {order.tracking_number && (
-                                <Badge variant="outline" className="text-xs font-mono">
+                                <Badge variant="outline" className="text-sm font-mono bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
                                   {order.tracking_number}
                                 </Badge>
                               )}
                               {isSelected && (
-                                <Badge variant="default" className="text-xs bg-green-500">
-                                  محدد
+                                <Badge className="text-sm bg-green-500 text-white shadow-md">
+                                  محدد ✓
                                 </Badge>
                               )}
                             </div>
 
                             {/* الصف الثاني: معلومات العميل */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-sm font-medium truncate">{order.customer_name}</span>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              <div className="space-y-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center shadow-md">
+                                    <User className="w-5 h-5 text-white" />
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-slate-800 dark:text-white">{order.customer_name}</p>
+                                    {order.customer_phone && (
+                                      <p className="text-sm text-slate-600 dark:text-slate-300 font-mono">{order.customer_phone}</p>
+                                    )}
+                                  </div>
                                 </div>
-                                {order.customer_phone && (
-                                  <div className="flex items-center gap-2">
-                                    <Phone className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-xs font-mono">{order.customer_phone}</span>
-                                  </div>
-                                )}
+                                
                                 {order.customer_province && (
-                                  <div className="flex items-center gap-2">
-                                    <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                    <span className="text-xs truncate">{order.customer_province}</span>
+                                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                                    <MapPin className="w-4 h-4" />
+                                    <span>{order.customer_province}</span>
                                   </div>
                                 )}
-                                <div className="flex items-center gap-2">
-                                  <Calendar className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                  <span className="text-xs">
-                                    {format(parseISO(order.created_at), 'dd MMM yyyy', { locale: ar })}
-                                  </span>
+                                
+                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>{format(parseISO(order.created_at), 'dd MMM yyyy', { locale: ar })}</span>
                                 </div>
                               </div>
 
