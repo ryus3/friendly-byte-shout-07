@@ -9,7 +9,142 @@ import { Card } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt } from 'lucide-react';
+
+// مكون معاينة الفاتورة الاحترافي
+const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
+  if (!invoice) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+        <ScrollArea className="h-full max-h-[80vh]">
+          <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+            {/* Header */}
+            <div className="text-center mb-6 pb-4 border-b-2 border-green-200">
+              <h1 className="text-3xl font-bold text-green-700 mb-2">فاتورة تسوية</h1>
+              <p className="text-lg text-green-600">مستحقات الموظف</p>
+            </div>
+
+            {/* Invoice Details Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Receipt className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">رقم الفاتورة</p>
+                    <p className="font-bold text-lg">{invoice.invoice_number}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <User className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">اسم الموظف</p>
+                    <p className="font-bold text-lg">{invoice.employee_name}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">تاريخ التسوية</p>
+                    <p className="font-bold text-lg">
+                      {invoice.settlement_date ? 
+                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy', { locale: ar }) :
+                        'غير محدد'
+                      }
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {invoice.settlement_date ? 
+                        format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
+                        ''
+                      }
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-3 bg-green-100 rounded-lg border-2 border-green-200">
+                  <DollarSign className="w-6 h-6 text-green-700" />
+                  <div>
+                    <p className="text-sm text-green-700">إجمالي المبلغ</p>
+                    <p className="font-bold text-2xl text-green-800">
+                      {invoice.settlement_amount?.toLocaleString()} د.ع
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-6">
+              <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                وصف التسوية
+              </h3>
+              <div className="p-4 bg-white/70 rounded-lg border">
+                <p className="text-gray-700">{invoice.description}</p>
+              </div>
+            </div>
+
+            {/* Metadata */}
+            {invoice.metadata && Object.keys(invoice.metadata).length > 0 && (
+              <div className="mb-6">
+                <h3 className="font-bold text-lg mb-3">تفاصيل إضافية</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {invoice.metadata.employee_name && (
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-600">اسم الموظف المدرج</p>
+                      <p className="font-semibold">{invoice.metadata.employee_name}</p>
+                    </div>
+                  )}
+                  {invoice.metadata.orders_count && (
+                    <div className="p-3 bg-orange-50 rounded-lg">
+                      <p className="text-sm text-orange-600">عدد الطلبات المسواة</p>
+                      <p className="font-semibold">{invoice.metadata.orders_count}</p>
+                    </div>
+                  )}
+                  {invoice.metadata.settlement_type && (
+                    <div className="p-3 bg-purple-50 rounded-lg">
+                      <p className="text-sm text-purple-600">نوع التسوية</p>
+                      <p className="font-semibold">
+                        {invoice.metadata.settlement_type === 'employee_profit' ? 'أرباح موظف' : invoice.metadata.settlement_type}
+                      </p>
+                    </div>
+                  )}
+                  {invoice.receipt_number && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600">رقم الإيصال</p>
+                      <p className="font-semibold">{invoice.receipt_number}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Status */}
+            <div className="text-center pt-4 border-t border-green-200">
+              <Badge className="bg-green-500 text-white px-6 py-2 text-lg">
+                ✅ تسوية مكتملة
+              </Badge>
+              <p className="text-sm text-gray-600 mt-2">تم إتمام التسوية بنجاح</p>
+            </div>
+          </div>
+        </ScrollArea>
+        
+        <DialogFooter className="p-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            إغلاق
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
   console.log('🚀 SettledDuesDialog مُحدّث:', {
@@ -23,6 +158,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
     employeeId: 'all',
     dateRange: { from: undefined, to: undefined },
   });
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
@@ -74,7 +211,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
       return [];
     }
     
-    // البحث عن مصاريف نوع "مستحقات الموظفين" - إزالة التكرار بالتجميع حسب receipt_number
+    // البحث عن مصاريف نوع "مستحقات الموظفين" - إزالة التكرار الشديد
     const settlements = invoices.filter(expense => {
       if (!expense) return false;
       
@@ -89,41 +226,63 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
         description: expense.description,
         amount: expense.amount,
         receipt_number: expense.receipt_number,
+        vendor_name: expense.vendor_name,
         isSettlement
       });
       
       return isSettlement;
     });
 
-    // تجميع المصاريف المكررة حسب receipt_number لتجنب العد المضاعف
+    // تجميع المصاريف المكررة بأقوى آلية للتخلص من التكرار
     const uniqueSettlements = settlements.reduce((unique, expense) => {
-      const key = expense.receipt_number || expense.id;
+      // استخدام مفاتيح متعددة للتأكد من عدم التكرار
+      const employeeName = expense.vendor_name || extractEmployeeNameFromDescription(expense.description);
+      const amount = Number(expense.amount);
+      const dateKey = new Date(expense.created_at).toDateString();
       
-      // إذا كان هذا رقم الفاتورة موجود، اختر الأحدث أو الأعلى مبلغاً
-      if (unique[key]) {
-        if (new Date(expense.created_at) > new Date(unique[key].created_at) || 
-            Number(expense.amount) > Number(unique[key].amount)) {
-          unique[key] = expense;
+      // مفتاح فريد يجمع الموظف والمبلغ واليوم
+      const uniqueKey = `${employeeName}-${amount}-${dateKey}`;
+      
+      console.log(`🔍 معالجة المصروف - المفتاح الفريد: ${uniqueKey}`, {
+        employee: employeeName,
+        amount: amount,
+        date: dateKey,
+        receipt_number: expense.receipt_number,
+        existing: !!unique[uniqueKey]
+      });
+      
+      // إذا كان هذا المفتاح موجود، اختر الأحدث أو الذي له receipt_number
+      if (unique[uniqueKey]) {
+        console.log(`⚠️ تم العثور على تكرار للمفتاح: ${uniqueKey}`);
+        
+        // اختر الأحدث أو الذي له receipt_number
+        if (expense.receipt_number && !unique[uniqueKey].receipt_number) {
+          unique[uniqueKey] = expense;
+          console.log(`✅ تم استبدال المصروف بالأحدث الذي له receipt_number`);
+        } else if (new Date(expense.created_at) > new Date(unique[uniqueKey].created_at)) {
+          unique[uniqueKey] = expense;
+          console.log(`✅ تم استبدال المصروف بالأحدث زمنياً`);
         }
       } else {
-        unique[key] = expense;
+        unique[uniqueKey] = expense;
+        console.log(`✅ تم إضافة مصروف جديد للمفتاح: ${uniqueKey}`);
       }
       
       return unique;
     }, {});
 
     const processedSettlements = Object.values(uniqueSettlements).map(expense => {
-      // استخراج اسم الموظف من وصف المصروف
-      const employeeName = extractEmployeeNameFromDescription(expense.description);
+      // استخراج اسم الموظف من وصف المصروف أو vendor_name
+      const employeeName = expense.vendor_name || extractEmployeeNameFromDescription(expense.description);
       
-      console.log(`🔍 استخراج اسم الموظف من "${expense.description}": "${employeeName}"`);
+      console.log(`🔍 معالجة المصروف النهائي - الموظف: "${employeeName}", المبلغ: ${expense.amount}`);
       
       return {
         id: expense.id,
-        invoice_number: `RY-${(expense.receipt_number || expense.id).slice(-6).toUpperCase()}`, // أرقام أصغر تبدأ بـ RY
+        invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
         employee_name: employeeName,
         settlement_amount: Number(expense.amount) || 0,
-        settlement_date: expense.created_at,
+        settlement_date: expense.created_at, // التاريخ الحقيقي من قاعدة البيانات
         status: 'completed',
         description: expense.description,
         metadata: expense.metadata || {},
@@ -131,9 +290,10 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
       };
     });
     
-    console.log('📋 فواتير التحاسب المعالجة (بدون تكرار):', {
+    console.log('📋 فواتير التحاسب المعالجة (بدون تكرار نهائياً):', {
       originalCount: settlements.length,
       uniqueCount: processedSettlements.length,
+      removedDuplicates: settlements.length - processedSettlements.length,
       settlements: processedSettlements
     });
     
@@ -192,6 +352,11 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
     
     return total;
   }, [filteredInvoices]);
+
+  const handlePreviewInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    setIsPreviewOpen(true);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -271,7 +436,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
                                 <p className="text-lg font-bold text-green-600">{invoice.settlement_amount?.toLocaleString()} د.ع</p>
                                 <p className="text-xs text-muted-foreground">
                                   {invoice.settlement_date ? 
-                                    format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                    format(parseISO(invoice.settlement_date), 'dd/MM/yyyy HH:mm', { locale: ar }) :
                                     'غير محدد'
                                   }
                                 </p>
@@ -285,23 +450,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
                                 variant="outline"
                                 size="sm"
                                 className="text-xs h-8"
-                                onClick={() => {
-                                  // فتح نافذة معاينة الفاتورة مع التفاصيل الكاملة
-                                  const details = `=== فاتورة التحاسب ===
-رقم الفاتورة: ${invoice.invoice_number}
-الموظف: ${invoice.employee_name}
-المبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع
-تاريخ التسوية: ${invoice.settlement_date ? format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) : 'غير محدد'}
-الوصف: ${invoice.description}
-الحالة: تم التحاسب بنجاح
-
-=== تفاصيل الفاتورة ===
-المعرف: ${invoice.id}
-رقم الإيصال: ${invoice.receipt_number || 'غير محدد'}
-البيانات الإضافية: ${JSON.stringify(invoice.metadata, null, 2)}`;
-                                  
-                                  alert(details);
-                                }}
+                                onClick={() => handlePreviewInvoice(invoice)}
                               >
                                 معاينة
                               </Button>
@@ -344,7 +493,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
                               </TableCell>
                               <TableCell>
                                 {invoice.settlement_date ? 
-                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy HH:mm', { locale: ar }) :
                                   'غير محدد'
                                 }
                               </TableCell>
@@ -358,23 +507,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => {
-                                      // فتح نافذة معاينة الفاتورة مع التفاصيل الكاملة
-                                      const details = `=== فاتورة التحاسب ===
-رقم الفاتورة: ${invoice.invoice_number}
-الموظف: ${invoice.employee_name}
-المبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع
-تاريخ التسوية: ${invoice.settlement_date ? format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) : 'غير محدد'}
-الوصف: ${invoice.description}
-الحالة: تم التحاسب بنجاح
-
-=== تفاصيل الفاتورة ===
-المعرف: ${invoice.id}
-رقم الإيصال: ${invoice.receipt_number || 'غير محدد'}
-البيانات الإضافية: ${JSON.stringify(invoice.metadata, null, 2)}`;
-                                      
-                                      alert(details);
-                                    }}
+                                    onClick={() => handlePreviewInvoice(invoice)}
                                   >
                                     معاينة الفاتورة
                                   </Button>
@@ -398,6 +531,13 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
           </div>
         </ScrollArea>
       </DialogContent>
+      
+      {/* معاينة الفاتورة الاحترافية */}
+      <InvoicePreviewDialog 
+        invoice={selectedInvoice}
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+      />
     </Dialog>
   );
 };

@@ -1263,21 +1263,25 @@ export const InventoryProvider = ({ children }) => {
         }
       }
 
-      // 2. إضافة المصروف مع فحص التكرار
-      const invoiceNumber = `RY-${Date.now().toString().slice(-6)}`;
+      // 2. إضافة المصروف مع فحص التكرار المحسن
+      const uniqueID = `${employeeId}-${Date.now()}`;
+      const invoiceNumber = `RY-${uniqueID.slice(-6).toUpperCase()}`;
       
-      // فحص إذا كان هناك مصروف بنفس رقم الفاتورة موجود مسبقاً لتجنب التكرار
+      // فحص إذا كان هناك مصروف موجود مسبقاً لنفس الموظف والطلبات
+      const orderIdsKey = orderIds.sort().join(',');
       const { data: existingExpense } = await supabase
         .from('expenses')
-        .select('id')
-        .eq('receipt_number', invoiceNumber)
+        .select('id, receipt_number')
         .eq('category', 'مستحقات الموظفين')
         .eq('expense_type', 'system')
+        .eq('vendor_name', employeeName)
+        .eq('amount', amount)
+        .gte('created_at', new Date(Date.now() - 60000).toISOString()) // آخر دقيقة
         .single();
 
       if (!existingExpense) {
         await addExpense({
-          date: new Date().toISOString(),
+          date: new Date().toISOString(), // التاريخ الحقيقي الحالي
           category: 'مستحقات الموظفين',
           description: `دفع مستحقات الموظف ${employeeName}`,
           amount: amount,
@@ -1290,12 +1294,15 @@ export const InventoryProvider = ({ children }) => {
             employee_id: employeeId,
             employee_name: employeeName,
             order_ids: orderIds,
-            orders_count: orderIds.length
+            orders_count: orderIds.length,
+            unique_settlement_id: uniqueID
           }
         });
         console.log('✅ تم إنشاء مصروف التسوية رقم:', invoiceNumber);
       } else {
-        console.log('⚠️ مصروف التسوية موجود مسبقاً، تم تجاهل التكرار');
+        console.log('⚠️ مصروف التسوية موجود مسبقاً، تم تجاهل التكرار:', existingExpense.receipt_number);
+        // استخدام رقم الفاتورة الموجود
+        invoiceNumber = existingExpense.receipt_number;
       }
 
       // 3. تسجيل التسوية في الإشعارات
