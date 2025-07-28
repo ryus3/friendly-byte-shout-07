@@ -33,9 +33,9 @@ export const useUnifiedProfits = (userId = null) => {
       setLoading(true);
       setError(null);
 
-      // استخدام النظام المحسن للحسابات المالية
+      // استخدام النظام المحسن للحسابات المالية (النسخة المحدثة)
       const { data: enhancedData, error: enhancedError } = await supabase
-        .rpc('calculate_enhanced_main_cash_balance');
+        .rpc('calculate_enhanced_main_cash_balance_v3');
 
       if (enhancedError) throw enhancedError;
 
