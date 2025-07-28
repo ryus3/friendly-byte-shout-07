@@ -31,7 +31,10 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage.jsx'));
 const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
 const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
 const ProfitsManagementPage = lazy(() => import('@/pages/ProfitsManagementPage.jsx'));
-const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
+const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx').catch(error => {
+  console.error('Failed to load AccountingPage:', error);
+  return { default: () => <div>Error loading page</div> };
+}));
 const CashManagementPage = lazy(() => import('@/pages/CashManagementPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
