@@ -173,7 +173,7 @@ const AdvancedProfitsAnalysisPage = () => {
       {/* العنوان والأدوات */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent">
+          <h1 className="text-xl md:text-3xl font-bold gradient-text">
             تحليل أرباح المنتجات
           </h1>
           <p className="text-muted-foreground mt-1 text-sm md:text-base">
@@ -382,7 +382,7 @@ const AdvancedProfitsAnalysisPage = () => {
       {/* بطاقات الملخص - كارت خارجي */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg bg-gradient-to-r from-purple-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent">
+          <CardTitle className="flex items-center gap-2 text-lg gradient-text">
             <TrendingUp className="w-5 h-5 text-primary" />
             تحليل أرباح المنتجات
           </CardTitle>

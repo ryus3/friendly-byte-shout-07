@@ -25,6 +25,7 @@ import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
+import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formatCurrency = (amount) => {
@@ -140,6 +141,22 @@ const AccountingPage = () => {
     const navigate = useNavigate();
     
     const [datePeriod, setDatePeriod] = useState('month');
+    
+    // جلب بيانات تحليل الأرباح لآخر 30 يوم
+    const dateRange = {
+        from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+        to: new Date()
+    };
+    const profitsFilters = {
+        department: 'all',
+        category: 'all',
+        product: 'all',
+        color: 'all',
+        size: 'all',
+        season: 'all',
+        productType: 'all'
+    };
+    const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(dateRange, profitsFilters);
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
     const [realCashBalance, setRealCashBalance] = useState(0);
@@ -477,17 +494,16 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // حساب صافي الربح الحقيقي (45 ألف) - ربح النظام من النظام المالي
-            const netProfit = financialSummary.netProfit || 0;
-            return formatCurrency(netProfit);
+            // استخدام البيانات الحقيقية من تحليل الأرباح
+            const totalProfit = profitsAnalysis?.totalProfit || financialSummary.netProfit || 0;
+            return formatCurrency(totalProfit);
           })(),
           subValue: (() => {
-            // حساب نسبة الربح من إجمالي المبيعات
-            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
-            const netProfit = financialSummary.netProfit || 0;
-            const profitMargin = revenue > 0 ? Math.round((netProfit / revenue) * 100) : 0;
+            // حساب نسبة الربح من تحليل الأرباح الحقيقي
+            const profitMargin = profitsAnalysis?.profitMargin || 0;
+            const ordersCount = profitsAnalysis?.totalOrders || 0;
             
-            return `${profitMargin}% هامش ربح`;
+            return profitMargin > 0 ? `${Math.round(profitMargin)}% هامش ربح` : (ordersCount > 0 ? `${ordersCount} طلب` : 'لا توجد بيانات');
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 
