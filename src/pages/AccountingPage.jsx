@@ -507,23 +507,20 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // استخدام صافي الربح من النظام المالي الموحد المُحدث
-            const netProfit = financialSummary?.netProfit || 0;
-            console.log('🔍 [DEBUG] Product Profit Card - netProfit:', netProfit, 'from summary:', financialSummary?.netProfit);
-            return formatCurrency(netProfit);
+            // استخدام بيانات تحليل الأرباح المتقدم من الصفحة المتخصصة
+            const totalSystemProfit = profitsAnalysis?.systemProfit || 0;
+            console.log('🔍 [DEBUG] Product Analysis Card - systemProfit:', totalSystemProfit, 'from profitsAnalysis');
+            return formatCurrency(totalSystemProfit);
           })(),
           subValue: (() => {
-            // حساب هامش الربح من البيانات المالية الموحدة
-            const grossProfit = financialSummary?.grossProfit || 0;
-            const totalRevenue = financialSummary?.totalRevenue || 0;
-            const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+            // حساب عدد المنتجات المباعة أو الطلبات من التحليل المتقدم
+            const totalOrders = profitsAnalysis?.totalOrders || 0;
+            const totalProductsSold = profitsAnalysis?.totalProductsSold || 0;
             
-            console.log('🔍 [DEBUG] Profit Margin - grossProfit:', grossProfit, 'totalRevenue:', totalRevenue, 'margin:', profitMargin);
-            
-            if (profitMargin > 0) {
-              return `${Math.round(profitMargin)}% هامش ربح`;
-            } else if (totalRevenue > 0) {
-              return `${formatCurrency(totalRevenue)} إيرادات`;
+            if (totalProductsSold > 0) {
+              return `${totalProductsSold} منتج مباع`;
+            } else if (totalOrders > 0) {
+              return `${totalOrders} طلب`;
             } else {
               return 'لا توجد مبيعات';
             }

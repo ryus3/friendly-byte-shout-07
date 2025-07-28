@@ -97,7 +97,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-expenses',
             title: 'المصاريف العامة',
-            value: profitData.totalExpenses || 0,
+            value: profitData.generalExpenses || 0,
             icon: TrendingDown,
             colors: ['red-500', 'orange-500'],
             format: 'currency',
