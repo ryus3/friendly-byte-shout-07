@@ -208,12 +208,16 @@ const EmployeeFollowUpPage = () => {
 
   // الطلبات المفلترة
   const filteredOrders = useMemo(() => {
+    // استخدام employeeFromUrl إذا كان متوفراً، وإلا استخدام الفلتر العادي
+    const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
+    
     console.log('🔄 تفلتر الطلبات:', { 
       ordersLength: orders?.length, 
       filters,
       employeeFromUrl,
       ordersFromUrl,
-      highlightFromUrl 
+      highlightFromUrl,
+      effectiveEmployeeId // الموظف المؤثر الفعلي
     });
     
     if (!orders || !Array.isArray(orders)) {
@@ -222,7 +226,7 @@ const EmployeeFollowUpPage = () => {
     }
 
     console.log('📊 إجمالي الطلبات المتاحة:', orders.length);
-    console.log('🎯 الموظف المطلوب:', filters.employeeId);
+    console.log('🎯 الموظف المطلوب:', effectiveEmployeeId);
 
     const filtered = orders.filter(order => {
       if (!order) return false;
@@ -232,8 +236,8 @@ const EmployeeFollowUpPage = () => {
         return false;
       }
       
-      // فلتر الموظف
-      const employeeMatch = filters.employeeId === 'all' || order.created_by === filters.employeeId;
+      // فلتر الموظف - استخدام effectiveEmployeeId
+      const employeeMatch = effectiveEmployeeId === 'all' || order.created_by === effectiveEmployeeId;
       
       // فلتر الحالة
       const statusMatch = filters.status === 'all' || order.status === filters.status;
@@ -262,7 +266,7 @@ const EmployeeFollowUpPage = () => {
       const matchResult = employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
       
       // تفصيل كامل لكل طلب
-      if (order.created_by === filters.employeeId || filters.employeeId === 'all') {
+      if (order.created_by === effectiveEmployeeId || effectiveEmployeeId === 'all') {
         console.log(`🔍 طلب ${order.order_number}:`, {
           id: order.id,
           employeeMatch,
@@ -272,7 +276,7 @@ const EmployeeFollowUpPage = () => {
           isManuallyArchived,
           status: order.status,
           created_by: order.created_by,
-          filters: filters.employeeId,
+          effectiveEmployeeId: effectiveEmployeeId,
           finalMatch: matchResult
         });
       }
