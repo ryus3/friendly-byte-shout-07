@@ -477,19 +477,17 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // حساب نسبة الربح
-            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
-            const profit = financialSummary.systemProfit || financialSummary.grossProfit || 0;
-            const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
-            
-            return `${profitMargin}%`;
+            // حساب صافي الربح الحقيقي (45 ألف) - ربح النظام من النظام المالي
+            const netProfit = financialSummary.netProfit || 0;
+            return formatCurrency(netProfit);
           })(),
           subValue: (() => {
-            // حساب عدد القطع المباعة
-            const totalPiecesSold = financialSummary.deliveredOrders?.reduce((sum, order) => 
-              sum + (order.order_items?.reduce((itemSum, item) => itemSum + (item.quantity || 0), 0) || 0), 0) || 0;
+            // حساب نسبة الربح من إجمالي المبيعات
+            const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
+            const netProfit = financialSummary.netProfit || 0;
+            const profitMargin = revenue > 0 ? Math.round((netProfit / revenue) * 100) : 0;
             
-            return totalPiecesSold > 0 ? `${totalPiecesSold} قطعة` : 'لا توجد مبيعات';
+            return `${profitMargin}% هامش ربح`;
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 

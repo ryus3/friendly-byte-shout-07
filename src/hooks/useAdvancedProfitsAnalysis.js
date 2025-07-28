@@ -384,7 +384,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           .sort((a, b) => b.profit - a.profit)
       };
 
-      // إذا لم يتم تطبيق فلاتر، استخدم الربح الإجمالي من النظام
+      // إذا لم يتم تطبيق فلاتر، استخدم صافي الربح الصحيح من النظام (45 ألف)
       const finalTotalProfit = (filters.department === 'all' && 
                                filters.category === 'all' && 
                                filters.product === 'all' && 
@@ -392,7 +392,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
                                filters.size === 'all' && 
                                filters.season === 'all' && 
                                filters.productType === 'all') 
-                               ? totalSystemProfit 
+                               ? enhancedFinancialData.net_profit // استخدام صافي الربح (45 ألف) بدلاً من الخام (52 ألف)
                                : totalProfit;
 
       setAnalysisData({
