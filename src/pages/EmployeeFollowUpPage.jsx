@@ -121,66 +121,70 @@ const EmployeeFollowUpPage = () => {
       allParamsReceived: !!(highlightFromUrl && employeeFromUrl && ordersFromUrl)
     });
     
-    if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
-      console.log('⚡ معالجة طلب التحاسب من الإشعار');
-      
-      // تعيين فلاتر محددة للتحاسب
-      setFilters(prev => ({ 
-        ...prev, 
-        employeeId: employeeFromUrl,
-        profitStatus: 'pending',  // فلترة الأرباح المعلقة فقط
-        status: 'all',  // إظهار كل الحالات للطلبات المحددة
-        archived: false  // إظهار غير المؤرشفة
-      }));
-      
-      // تحديد الطلبات المطلوب تسويتها
-      const orderList = ordersFromUrl.split(',');
-      setSelectedOrders(orderList);
-      
-      console.log('✅ تم تعيين:', {
-        employeeId: employeeFromUrl,
-        orders: orderList,
-        ordersCount: orderList.length
-      });
-      
-      // إضافة toast لتوضيح الإجراء المطلوب
-      setTimeout(() => {
-        toast({
-          title: "طلب تحاسب جاهز!",
-          description: `تم تحديد ${orderList.length} طلب للموظف. ستجد كارت التحاسب أدناه - اضغط "دفع المستحقات" لإكمال العملية.`,
-          variant: "default",
-          duration: 8000
+    if (highlightFromUrl === 'settlement') {
+      if (employeeFromUrl && ordersFromUrl) {
+        // طلب تحاسب محدد من الإشعار
+        console.log('⚡ معالجة طلب التحاسب من الإشعار');
+        
+        // تعيين فلاتر محددة للتحاسب
+        setFilters(prev => ({ 
+          ...prev, 
+          employeeId: employeeFromUrl,
+          profitStatus: 'pending',
+          status: 'all',
+          archived: false
+        }));
+        
+        // تحديد الطلبات المطلوب تسويتها
+        const orderList = ordersFromUrl.split(',');
+        setSelectedOrders(orderList);
+        
+        console.log('✅ تم تعيين:', {
+          employeeId: employeeFromUrl,
+          orders: orderList,
+          ordersCount: orderList.length
         });
-      }, 1500);
-      
-      // التمرير للكارت مع تأثير بصري قوي
-      setTimeout(() => {
-        const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // تأثير بصري مميز
-          element.style.transform = "scale(1.05)";
-          element.style.border = "3px solid #10b981";
-          element.style.borderRadius = "16px";
-          element.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.5)";
-          element.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))";
-          
-          setTimeout(() => {
-            element.style.transform = "";
-            element.style.border = "";
-            element.style.borderRadius = "";
-            element.style.boxShadow = "";
-            element.style.background = "";
-          }, 5000);
-        } else {
-          console.warn('⚠️ لم يتم العثور على كارت الموظف');
+        
+        // إضافة toast لتوضيح الإجراء المطلوب
+        setTimeout(() => {
           toast({
-            title: "تنبيه",
-            description: "لم يتم العثور على كارت الموظف. تحقق من وجود الطلبات.",
-            variant: "destructive"
+            title: "طلب تحاسب جاهز!",
+            description: `تم تحديد ${orderList.length} طلب للموظف. ستجد كارت التحاسب أدناه - اضغط "دفع المستحقات" لإكمال العملية.`,
+            variant: "default",
+            duration: 8000
           });
-        }
-      }, 2000);
+        }, 1500);
+        
+        // التمرير للكارت مع تأثير بصري قوي
+        setTimeout(() => {
+          const element = document.querySelector(`[data-employee-id="${employeeFromUrl}"]`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // تأثير بصري مميز
+            element.style.transform = "scale(1.05)";
+            element.style.border = "3px solid #10b981";
+            element.style.borderRadius = "16px";
+            element.style.boxShadow = "0 0 30px rgba(16, 185, 129, 0.5)";
+            element.style.background = "linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1))";
+            
+            setTimeout(() => {
+              element.style.transform = "";
+              element.style.border = "";
+              element.style.borderRadius = "";
+              element.style.boxShadow = "";
+              element.style.background = "";
+            }, 5000);
+          } else {
+            console.warn('⚠️ لم يتم العثور على كارت الموظف');
+          }
+        }, 2000);
+      } else {
+        // إشعار عام للتحاسب - فتح نافذة طلبات التحاسب
+        console.log('🔔 فتح نافذة طلبات التحاسب من الإشعار');
+        setTimeout(() => {
+          setIsSettlementRequestsOpen(true);
+        }, 1000);
+      }
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl, filterFromUrl]);
 
