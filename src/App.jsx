@@ -8,8 +8,8 @@ import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { usePermissions } from '@/hooks/usePermissions.js';
 import Layout from '@/components/Layout.jsx';
 import Loader from '@/components/ui/loader.jsx';
-// import { useAiChat } from './contexts/AiChatContext'; // Temporarily disabled
-// import AiChatDialog from './components/ai/AiChatDialog'; // Temporarily disabled
+import { useAiChat } from './contexts/AiChatContext';
+import AiChatDialog from './components/ai/AiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 
@@ -84,7 +84,7 @@ function ScrollToTop() {
 
 function AppContent() {
   const { user, loading } = useAuth();
-  // const { aiChatOpen, setAiChatOpen } = useAiChat(); // Temporarily disabled
+  const { aiChatOpen, setAiChatOpen } = useAiChat();
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
@@ -138,7 +138,7 @@ function AppContent() {
         </Routes>
       </Suspense>
       <Toaster />
-      {/* <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} /> */}
+      <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
     </div>
   )

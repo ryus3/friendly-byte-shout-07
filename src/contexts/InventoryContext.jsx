@@ -1280,27 +1280,6 @@ export const InventoryProvider = ({ children }) => {
         .single();
 
       if (!existingExpense) {
-        // جمع تفاصيل الطلبات المسواة
-        const ordersDetails = [];
-        for (const orderId of orderIds) {
-          const order = orders.find(o => o.id === orderId);
-          if (order) {
-            const employeeProfit = (order.items || []).reduce((itemSum, item) => {
-              return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
-            }, 0);
-            
-            ordersDetails.push({
-              id: order.id,
-              order_number: order.order_number,
-              customer_name: order.customer_name,
-              total_amount: order.final_amount || order.total_amount,
-              employee_profit: employeeProfit,
-              status: order.status,
-              created_at: order.created_at
-            });
-          }
-        }
-
         await addExpense({
           date: new Date().toISOString(), // التاريخ الحقيقي الحالي
           category: 'مستحقات الموظفين',
@@ -1316,8 +1295,7 @@ export const InventoryProvider = ({ children }) => {
             employee_name: employeeName,
             order_ids: orderIds,
             orders_count: orderIds.length,
-            unique_settlement_id: uniqueID,
-            orders_details: ordersDetails
+            unique_settlement_id: uniqueID
           }
         });
         console.log('✅ تم إنشاء مصروف التسوية رقم:', invoiceNumber);

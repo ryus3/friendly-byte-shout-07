@@ -16,35 +16,15 @@ const AiChatDialog = ({ open, onOpenChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef(null);
   const { user } = useAuth();
-  const inventoryContext = useInventory();
-  
-  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL LOGIC
+  const { createOrder } = useInventory();
+
   useEffect(() => {
     if (open && messages.length === 0) {
       setMessages([
-        { role: 'model', content: `أهلاً بك يا ${user?.fullName || 'المستخدم'}! كيف يمكنني مساعدتك اليوم؟\nيمكنني مساعدتك في إنشاء طلبات. فقط أخبرني بالتفاصيل.` }
+        { role: 'model', content: `أهلاً بك يا ${user.fullName}! كيف يمكنني مساعدتك اليوم؟\nيمكنني مساعدتك في إنشاء طلبات. فقط أخبرني بالتفاصيل.` }
       ]);
     }
   }, [open, messages, user]);
-
-  // NOW we can do conditional checks AFTER all hooks
-  if (!inventoryContext || !inventoryContext.createOrder) {
-    console.error('InventoryContext or createOrder function not available');
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>خطأ في النظام</DialogTitle>
-          </DialogHeader>
-          <div className="p-4 text-center text-red-600">
-            حدث خطأ في تحميل النظام. يرجى إعادة تحميل الصفحة.
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-  
-  const { createOrder } = inventoryContext;
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -60,34 +40,21 @@ const AiChatDialog = ({ open, onOpenChange }) => {
         const aiResponse = await mockProcessOrder(input);
         
         if (aiResponse.type === 'order') {
-            try {
-                const orderResult = await createOrder(
-                    aiResponse.data.customerInfo,
-                    aiResponse.data.items,
-                    null,
-                    0,
-                    'ai_pending' 
-                );
-                
-                // Add safety check for orderResult
-                if (orderResult && orderResult.success) {
-                    setMessages(prev => [...prev, {
-                        role: 'model',
-                        content: `تم إنشاء طلب جديد للزبون **${aiResponse.data.customerInfo.name}** برقم تتبع **${orderResult.trackingNumber || 'غير محدد'}**. سيظهر في قائمة طلبات الذكاء الاصطناعي للمراجعة والموافقة.`
-                    }]);
-                } else {
-                    console.error('CreateOrder failed or returned unexpected result:', orderResult);
-                    setMessages(prev => [...prev, { 
-                        role: 'model', 
-                        content: `حدث خطأ أثناء محاولة إنشاء الطلب: ${orderResult?.error || 'خطأ غير معروف'}. يرجى المحاولة مرة أخرى.` 
-                    }]);
-                }
-            } catch (createOrderError) {
-                console.error('Error calling createOrder:', createOrderError);
-                setMessages(prev => [...prev, { 
-                    role: 'model', 
-                    content: 'حدث خطأ أثناء محاولة إنشاء الطلب. يرجى المحاولة مرة أخرى.' 
+            const { success, trackingNumber } = await createOrder(
+                aiResponse.data.customerInfo,
+                aiResponse.data.items,
+                null,
+                0,
+                'ai_pending' 
+            );
+
+            if (success) {
+                setMessages(prev => [...prev, {
+                    role: 'model',
+                    content: `تم إنشاء طلب جديد للزبون **${aiResponse.data.customerInfo.name}** برقم تتبع **${trackingNumber}**. سيظهر في قائمة طلبات الذكاء الاصطناعي للمراجعة والموافقة.`
                 }]);
+            } else {
+                 setMessages(prev => [...prev, { role: 'model', content: 'حدث خطأ أثناء محاولة إنشاء الطلب. يرجى المحاولة مرة أخرى.' }]);
             }
 
         } else {

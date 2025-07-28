@@ -6,7 +6,7 @@ import CartDialog from '@/components/orders/CartDialog';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-// import { useAiChat } from '@/contexts/AiChatContext'; // Temporarily disabled
+import { useAiChat } from '@/contexts/AiChatContext';
 import { cn } from '@/lib/utils';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -302,7 +302,7 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
 const BottomNav = () => {
   const { cart } = useInventory();
   const { user } = useAuth();
-  // const { setAiChatOpen, canUseAiChat } = useAiChat(); // Temporarily disabled
+  const { setAiChatOpen, canUseAiChat } = useAiChat();
   const navigate = useNavigate();
   const location = useLocation();
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -322,12 +322,15 @@ const BottomNav = () => {
   };
 
   const handleAiChat = () => {
-    // Temporarily disabled
-    toast({
-      title: "قريباً",
-      description: "المساعد الذكي تحت التطوير",
-      variant: "default"
-    });
+    if (canUseAiChat) {
+      setAiChatOpen(true);
+    } else {
+      toast({
+        title: "غير متاح",
+        description: "المساعد الذكي غير متاح حالياً",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -365,12 +368,16 @@ const BottomNav = () => {
             whileHover={{ scale: 1.05 }}
             className={cn(
               "relative w-16 h-16 -mt-7 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 backdrop-blur-md border border-white/20",
-              "bg-gradient-to-br from-muted to-muted-foreground text-muted-foreground" // Temporarily disabled
+              canUseAiChat 
+                ? "bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 text-white hover:shadow-blue-500/30 hover:scale-110 hover:rotate-2" 
+                : "bg-gradient-to-br from-muted to-muted-foreground text-muted-foreground"
             )}
             onClick={handleAiChat}
           >
-            <Bot className="w-7 h-7 transition-all duration-300" />
-            {/* Temporarily disabled gradient overlay */}
+            <Bot className={cn("w-7 h-7 transition-all duration-300", canUseAiChat && "drop-shadow-lg")} />
+            {canUseAiChat && (
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent" />
+            )}
           </motion.button>
           
           {/* البحث */}

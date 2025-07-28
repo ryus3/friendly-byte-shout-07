@@ -13,8 +13,8 @@ import { toast } from '@/components/ui/use-toast.js';
 import { useTheme } from '@/contexts/ThemeContext.jsx';
 import NotificationsPanel from '@/components/NotificationsPanel.jsx';
 import BottomNav from '@/components/BottomNav.jsx';
-// import { useAiChat } from '@/contexts/AiChatContext.jsx'; // Temporarily disabled
-// import AiChatDialog from '@/components/ai/AiChatDialog.jsx'; // Temporarily disabled
+import { useAiChat } from '@/contexts/AiChatContext.jsx';
+import AiChatDialog from '@/components/ai/AiChatDialog.jsx';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
@@ -167,7 +167,7 @@ const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  // const { aiChatOpen, setAiChatOpen } = useAiChat(); // Temporarily disabled
+  const { aiChatOpen, setAiChatOpen } = useAiChat();
   const [dialogs, setDialogs] = useState({ cart: false, quickOrder: false });
   const [aiOrdersOpen, setAiOrdersOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -325,9 +325,9 @@ const Layout = ({ children }) => {
               >
                 <RefreshCw className="w-5 h-5 refresh-icon" />
               </Button>
-              {/* <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
+              <Button variant="ghost" size="icon" onClick={() => setAiChatOpen(true)} className="hidden md:inline-flex">
                 <Bot className="w-5 h-5" />
-              </Button> */}
+              </Button>
               <NotificationsPanel />
             </div>
           </div>
@@ -357,7 +357,7 @@ const Layout = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      {/* <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} /> */}
+      <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       <CartDialog 
         open={dialogs.cart} 
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, cart: open }))}
