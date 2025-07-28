@@ -16,7 +16,15 @@ const AiChatDialog = ({ open, onOpenChange }) => {
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaRef = useRef(null);
   const { user } = useAuth();
-  const { createOrder } = useInventory();
+  const inventoryContext = useInventory();
+  
+  // Add safety check for createOrder function
+  if (!inventoryContext || !inventoryContext.createOrder) {
+    console.error('InventoryContext or createOrder function not available');
+    return null;
+  }
+  
+  const { createOrder } = inventoryContext;
 
   useEffect(() => {
     if (open && messages.length === 0) {
@@ -40,21 +48,34 @@ const AiChatDialog = ({ open, onOpenChange }) => {
         const aiResponse = await mockProcessOrder(input);
         
         if (aiResponse.type === 'order') {
-            const { success, trackingNumber } = await createOrder(
-                aiResponse.data.customerInfo,
-                aiResponse.data.items,
-                null,
-                0,
-                'ai_pending' 
-            );
-
-            if (success) {
-                setMessages(prev => [...prev, {
-                    role: 'model',
-                    content: `تم إنشاء طلب جديد للزبون **${aiResponse.data.customerInfo.name}** برقم تتبع **${trackingNumber}**. سيظهر في قائمة طلبات الذكاء الاصطناعي للمراجعة والموافقة.`
+            try {
+                const orderResult = await createOrder(
+                    aiResponse.data.customerInfo,
+                    aiResponse.data.items,
+                    null,
+                    0,
+                    'ai_pending' 
+                );
+                
+                // Add safety check for orderResult
+                if (orderResult && orderResult.success) {
+                    setMessages(prev => [...prev, {
+                        role: 'model',
+                        content: `تم إنشاء طلب جديد للزبون **${aiResponse.data.customerInfo.name}** برقم تتبع **${orderResult.trackingNumber || 'غير محدد'}**. سيظهر في قائمة طلبات الذكاء الاصطناعي للمراجعة والموافقة.`
+                    }]);
+                } else {
+                    console.error('CreateOrder failed or returned unexpected result:', orderResult);
+                    setMessages(prev => [...prev, { 
+                        role: 'model', 
+                        content: `حدث خطأ أثناء محاولة إنشاء الطلب: ${orderResult?.error || 'خطأ غير معروف'}. يرجى المحاولة مرة أخرى.` 
+                    }]);
+                }
+            } catch (createOrderError) {
+                console.error('Error calling createOrder:', createOrderError);
+                setMessages(prev => [...prev, { 
+                    role: 'model', 
+                    content: 'حدث خطأ أثناء محاولة إنشاء الطلب. يرجى المحاولة مرة أخرى.' 
                 }]);
-            } else {
-                 setMessages(prev => [...prev, { role: 'model', content: 'حدث خطأ أثناء محاولة إنشاء الطلب. يرجى المحاولة مرة أخرى.' }]);
             }
 
         } else {
