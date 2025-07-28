@@ -19,6 +19,9 @@ const OrderList = ({
   setSelectedOrders = () => {},
   onDeleteOrder,
   viewMode = 'grid', // 'grid' or 'list'
+  calculateProfit,
+  profits,
+  showEmployeeName = false,
 }) => {
   if (isLoading) {
     return <div className="flex h-64 items-center justify-center"><Loader /></div>;
@@ -53,6 +56,9 @@ const OrderList = ({
               onSelect={() => handleSelect(order.id)}
               onUpdateStatus={onUpdateStatus}
               onDeleteOrder={onDeleteOrder}
+              calculateProfit={calculateProfit}
+              profits={profits}
+              showEmployeeName={showEmployeeName}
             />
           ))}
         </AnimatePresence>
@@ -81,6 +87,9 @@ const OrderList = ({
               onSelect={() => handleSelect(order.id)}
               onUpdateStatus={onUpdateStatus}
               onDeleteOrder={onDeleteOrder}
+              calculateProfit={calculateProfit}
+              profits={profits}
+              showEmployeeName={showEmployeeName}
             />
           </motion.div>
         ))}

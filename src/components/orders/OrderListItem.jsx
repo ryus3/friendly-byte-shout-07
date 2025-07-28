@@ -31,10 +31,19 @@ const OrderListItem = ({
   isSelected, 
   onUpdateStatus, 
   onDeleteOrder, 
-  onEditOrder
+  onEditOrder,
+  calculateProfit,
+  profits,
+  showEmployeeName = false
 }) => {
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // حساب ربح الموظف وحالة التسوية
+  const profitRecord = profits?.find(p => p.order_id === order.id);
+  const employeeProfit = calculateProfit ? 
+    (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0) : 0;
+  const isSettled = profitRecord?.settled_at ? true : false;
   
   // تحديد لون وأيقونة الحالة - نفس الشبكة
   const getStatusConfig = (status) => {
@@ -388,9 +397,15 @@ const OrderListItem = ({
           <div className="font-bold text-sm text-primary">
             {order.final_amount?.toLocaleString()} د.ع
           </div>
-          <div className="text-xs text-muted-foreground">
-            {order.delivery_fee > 0 ? 'شامل التوصيل' : 'بدون توصيل'}
-          </div>
+          {/* عرض ربح الموظف وحالة التسوية */}
+          {employeeProfit > 0 && (
+            <div className="text-xs text-emerald-600 font-medium">
+              ربح: {employeeProfit.toLocaleString()} د.ع 
+              <span className={`mr-1 px-1 rounded ${isSettled ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                {isSettled ? 'مدفوع' : 'معلق'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Status - قابل للنقر للطلبات المحلية */}

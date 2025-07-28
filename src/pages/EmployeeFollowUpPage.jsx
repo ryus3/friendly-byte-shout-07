@@ -35,7 +35,8 @@ const EmployeeFollowUpPage = () => {
     updateOrder, 
     refetchProducts, 
     settlementInvoices, 
-    deleteOrders 
+    deleteOrders,
+    expenses
   } = useInventory();
   const { profits } = useProfits();
   const [searchParams] = useSearchParams();
@@ -387,17 +388,17 @@ const EmployeeFollowUpPage = () => {
         profitStatusMatch = profitStatus === filters.profitStatus;
       }
       
-      // فلتر الأرشيف - إصلاح المنطق
-      // المؤرشفة يدوياً فقط، وليس التلقائية
-      const isManuallyArchived = order.isarchived === true || order.isArchived === true;
+      // فلتر الأرشيف - طلبات مؤرشفة من التسوية أو يدوياً
+      const isArchived = order.isarchived === true || order.isArchived === true;
+      const isSettled = order.status === 'completed' && isArchived; // مؤرشفة من التسوية
       let archiveMatch;
       
       if (filters.archived) {
-        // إذا اختار عرض الأرشيف، اعرض المؤرشفة يدوياً فقط
-        archiveMatch = isManuallyArchived;
+        // إذا اختار عرض الأرشيف، اعرض جميع المؤرشفة
+        archiveMatch = isArchived;
       } else {
-        // إذا لم يختر الأرشيف، اعرض غير المؤرشفة يدوياً (تشمل completed و returned_in_stock)
-        archiveMatch = !isManuallyArchived;
+        // إذا لم يختر الأرشيف، لا تعرض المؤرشفة (يدوياً أو من التسوية)
+        archiveMatch = !isArchived;
       }
       
       const matchResult = employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
@@ -867,9 +868,12 @@ const EmployeeFollowUpPage = () => {
             isLoading={loading} 
             onViewOrder={handleViewOrder}
             onUpdateStatus={handleUpdateStatus}
+            onDeleteOrder={handleDeleteOrder}
             selectedOrders={selectedOrders}
             setSelectedOrders={setSelectedOrders}
-            onDeleteOrder={handleDeleteOrder}
+            calculateProfit={calculateProfit}
+            profits={profits}
+            viewMode="list"
             showEmployeeName={filters.employeeId === 'all'}
           />
         </div>
@@ -887,7 +891,7 @@ const EmployeeFollowUpPage = () => {
         <SettledDuesDialog
           open={isDuesDialogOpen}
           onOpenChange={setIsDuesDialogOpen}
-          invoices={settlementInvoices}
+          invoices={expenses || []} // تمرير المصاريف بدلاً من settlementInvoices
           allUsers={allUsers}
         />
       </motion.div>
