@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useCashSources } from '@/hooks/useCashSources';
+import { useEnhancedFinancialData } from '@/hooks/useEnhancedFinancialData';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,15 +32,12 @@ const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
 };
 
 const AccountingPage = () => {
-    const { orders, purchases, accounting, products } = useInventory();
+    const { orders, products } = useInventory();
     const { user: currentUser } = useAuth();
     const { hasPermission } = usePermissions();
-    const { getTotalSourcesBalance, getMainCashBalance } = useCashSources();
+    const { financialData, loading: financialLoading, error: financialError, refreshData } = useEnhancedFinancialData();
     
     const [datePeriod, setDatePeriod] = useState('month');
-    const [allProfits, setAllProfits] = useState([]);
-    const [realCashBalance, setRealCashBalance] = useState(0);
-    const [initialCapital, setInitialCapital] = useState(0);
 
     const dateRange = useMemo(() => {
         const now = new Date();
@@ -54,85 +51,26 @@ const AccountingPage = () => {
         }
     }, [datePeriod]);
 
-    // جلب رأس المال من قاعدة البيانات
+    // تحديث البيانات عند تغيير الفترة
     useEffect(() => {
-        const fetchCapital = async () => {
-            try {
-                const { data: capitalData, error: capitalError } = await supabase
-                    .from('settings')
-                    .select('value')
-                    .eq('key', 'initial_capital')
-                    .single();
+        refreshData();
+    }, [datePeriod, refreshData]);
 
-                if (capitalError) throw capitalError;
-                
-                const capitalValue = Number(capitalData?.value) || 0;
-                setInitialCapital(capitalValue);
-                
-                // جلب الرصيد النقدي الفعلي
-                const totalMainBalance = await getMainCashBalance();
-                const otherSourcesBalance = getTotalSourcesBalance();
-                const totalRealBalance = totalMainBalance + otherSourcesBalance;
-                setRealCashBalance(totalRealBalance);
-                
-            } catch (error) {
-                console.error('❌ خطأ في جلب البيانات المالية:', error);
-            }
-        };
-        
-        fetchCapital();
-    }, [getMainCashBalance, getTotalSourcesBalance]);
-
+    // البيانات المالية المحسنة
     const financialSummary = useMemo(() => {
-        const { from, to } = dateRange;
-        
-        if (!orders || !Array.isArray(orders)) {
+        if (financialLoading || !financialData) {
             return {
-                totalRevenue: 0, totalSystemProfit: 0, netProfit: 0,
-                inventoryValue: 0, chartData: []
+                totalRevenue: 0,
+                totalSystemProfit: 0,
+                grossProfit: 0,
+                netProfit: 0,
+                inventoryValue: 0,
+                capitalValue: 0,
+                finalBalance: 0
             };
         }
-        
-        const safeOrders = Array.isArray(orders) ? orders : [];
-        
-        const filterByDate = (itemDateStr) => {
-            if (!from || !to || !itemDateStr) return true;
-            try {
-                const itemDate = parseISO(itemDateStr);
-                return isValid(itemDate) && itemDate >= from && itemDate <= to;
-            } catch (e) {
-                return false;
-            }
-        };
-        
-        // الطلبات المُستلمة الفواتير فقط
-        const deliveredOrders = safeOrders.filter(o => 
-            o && (o.status === 'delivered' || o.status === 'completed') && 
-            o.receipt_received === true && 
-            filterByDate(o.updated_at || o.created_at)
-        );
-        
-        // حساب إجمالي الإيرادات
-        const totalRevenue = deliveredOrders.reduce((sum, o) => {
-            const amount = o.final_amount || o.total_amount || 0;
-            return sum + amount;
-        }, 0);
-        
-        // حساب ربح النظام الكامل
-        const totalSystemProfit = deliveredOrders.reduce((sum, order) => {
-            if (!order.order_items || !Array.isArray(order.order_items)) return sum;
-            
-            const orderProfit = order.order_items.reduce((itemSum, item) => {
-                const sellPrice = item.unit_price || item.price || 0;
-                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                const quantity = item.quantity || 0;
-                return itemSum + ((sellPrice - costPrice) * quantity);
-            }, 0);
-            
-            return sum + orderProfit;
-        }, 0);
-        
-        // حساب قيمة المخزون
+
+        // حساب قيمة المخزون الحالية
         const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
             if (!p.variants || !Array.isArray(p.variants)) return sum;
             return sum + p.variants.reduce((variantSum, v) => {
@@ -141,21 +79,23 @@ const AccountingPage = () => {
                 return variantSum + (quantity * price);
             }, 0);
         }, 0) : 0;
-        
-        return {
-            totalRevenue,
-            totalSystemProfit,
-            netProfit: totalSystemProfit,
-            inventoryValue,
-            chartData: []
-        };
-    }, [dateRange, orders, products, allProfits, currentUser?.id]);
 
-    // حساب نسبة ربح المنتجات
+        return {
+            totalRevenue: financialData.totalRevenue || 0,
+            totalSystemProfit: financialData.systemProfit || 0,
+            grossProfit: financialData.grossProfit || 0,
+            netProfit: financialData.netProfit || 0,
+            inventoryValue,
+            capitalValue: financialData.capitalValue || 0,
+            finalBalance: financialData.finalBalance || 0
+        };
+    }, [financialData, financialLoading, products]);
+
+    // حساب نسبة ربح المنتجات الصحيحة
     const productProfitPercentage = useMemo(() => {
         if (financialSummary.totalRevenue === 0) return 0;
-        return ((financialSummary.totalSystemProfit / financialSummary.totalRevenue) * 100).toFixed(1);
-    }, [financialSummary.totalSystemProfit, financialSummary.totalRevenue]);
+        return ((financialSummary.grossProfit / financialSummary.totalRevenue) * 100).toFixed(1);
+    }, [financialSummary.grossProfit, financialSummary.totalRevenue]);
 
     return (
         <>
@@ -213,8 +153,11 @@ const AccountingPage = () => {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                {formatCurrency(financialSummary.totalSystemProfit)}
+                                {formatCurrency(financialSummary.grossProfit)}
                             </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                الربح الخام من المبيعات
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -264,21 +207,21 @@ const AccountingPage = () => {
                         <CardContent className="space-y-4">
                             <StatRow 
                                 label="رأس المال" 
-                                value={initialCapital} 
+                                value={financialSummary.capitalValue} 
                                 colorClass="text-blue-600 dark:text-blue-400" 
                             />
                             <StatRow 
-                                label="الرصيد النقدي الفعلي" 
-                                value={realCashBalance} 
+                                label="الرصيد النقدي النهائي" 
+                                value={financialSummary.finalBalance} 
                                 colorClass="text-green-600 dark:text-green-400" 
                             />
                             <StatRow 
-                                label="قيمة المخزون" 
+                                label="قيمة المخزون الحالية" 
                                 value={financialSummary.inventoryValue} 
                                 colorClass="text-purple-600 dark:text-purple-400" 
                             />
                             <StatRow 
-                                label="صافي الربح للفترة" 
+                                label="صافي الربح المحقق" 
                                 value={financialSummary.netProfit} 
                                 colorClass="text-orange-600 dark:text-orange-400" 
                             />
