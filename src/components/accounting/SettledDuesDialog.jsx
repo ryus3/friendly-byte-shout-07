@@ -246,7 +246,10 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
                       {invoice.settlement_amount?.toLocaleString()} د.ع
                     </TableCell>
                     <TableCell>
-                      {format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar })}
+                      {invoice.settlement_date ? 
+                        format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                        'غير محدد'
+                      }
                     </TableCell>
                     <TableCell>
                       <Badge className="bg-green-100 text-green-800 border-green-200">
@@ -264,7 +267,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
 رقم الفاتورة: ${invoice.invoice_number}
 الموظف: ${invoice.employee_name}
 المبلغ: ${invoice.settlement_amount.toLocaleString()} د.ع
-تاريخ التسوية: ${format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar })}
+تاريخ التسوية: ${invoice.settlement_date ? format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) : 'غير محدد'}
 الوصف: ${invoice.description}
 الحالة: تم التحاسب بنجاح`;
                             
