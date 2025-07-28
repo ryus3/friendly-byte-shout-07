@@ -46,11 +46,12 @@ export const useUnifiedProfits = (userId = null) => {
 
       if (systemError) throw systemError;
 
-      // 2. جلب المصاريف العامة
+      // 2. جلب المصاريف العامة (باستثناء مستحقات الموظفين)
       const { data: expenses, error: expensesError } = await supabase
         .from('expenses')
-        .select('amount')
-        .eq('status', 'approved');
+        .select('amount, category')
+        .eq('status', 'approved')
+        .neq('category', 'مستحقات الموظفين');
 
       if (expensesError) throw expensesError;
 
