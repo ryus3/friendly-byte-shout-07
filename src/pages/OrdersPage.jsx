@@ -373,7 +373,7 @@ const OrdersPage = () => {
     setDialogs(d => ({ ...d, returnReceipt: true }));
   }, []);
 
-  const profitsPagePath = '/employee-follow-up';
+  const profitsPagePath = hasPermission('view_all_data') ? '/employee-follow-up' : '/profits';
 
   return (
     <>
