@@ -177,22 +177,19 @@ const AccountingPage = () => {
         refreshFinancialData();
     }, []);
 
-    // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
+    // جلب الرصيد النقدي الفعلي (استخدام البيانات الموحدة)
     useEffect(() => {
         const fetchRealBalance = async () => {
             try {
-                // استخدام نفس الطريقة المباشرة والموحدة
-                const totalMainBalance = await getMainCashBalance();
-                const otherSourcesBalance = getTotalSourcesBalance();
-                const totalRealBalance = totalMainBalance + otherSourcesBalance;
+                // استخدام الرصيد المحسوب من الهوك الموحد
+                const mainBalance = await getMainCashBalance();
                 
-                console.log('💰 الرصيد النقدي الفعلي الموحد:', {
-                    mainBalance: totalMainBalance,
-                    otherSources: otherSourcesBalance,
-                    total: totalRealBalance
+                console.log('💰 رصيد القاصة الرئيسية من قاعدة البيانات:', {
+                    realBalance: mainBalance,
+                    formatted: mainBalance.toLocaleString()
                 });
                 
-                setRealCashBalance(totalRealBalance);
+                setRealCashBalance(mainBalance);
             } catch (error) {
                 console.error('❌ خطأ في حساب الرصيد النقدي الفعلي:', error);
                 setRealCashBalance(0);
@@ -200,7 +197,11 @@ const AccountingPage = () => {
         };
         
         fetchRealBalance();
-    }, [getMainCashBalance, getTotalSourcesBalance, initialCapital]); // إضافة getMainCashBalance كـ dependency
+        
+        // إعادة تحديث كل 30 ثانية لضمان البيانات الحديثة
+        const interval = setInterval(fetchRealBalance, 30000);
+        return () => clearInterval(interval);
+    }, [getMainCashBalance, settledDues.totalAmount]); // إضافة المستحقات كـ dependency
 
     const financialSummary = useMemo(() => {
         const { from, to } = dateRange;
