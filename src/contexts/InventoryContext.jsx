@@ -1188,21 +1188,43 @@ export const InventoryProvider = ({ children }) => {
         
         const employeeProfit = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
         
-        // محاولة إنشاء سجل ربح جديد أو تحديث الموجود
-        const { error: profitError } = await supabase
+        // البحث عن سجل الربح الموجود أولاً
+        const { data: existingProfit } = await supabase
           .from('profits')
-          .upsert({
-            order_id: orderId,
-            employee_profit: employeeProfit,
-            profit_amount: employeeProfit + calculateManagerProfit(order),
-            settled_at: new Date().toISOString(),
-            created_at: new Date().toISOString()
-          }, {
-            onConflict: 'order_id'
-          });
-        
-        if (profitError) {
-          console.error('Error creating/updating profit record:', profitError);
+          .select('*')
+          .eq('order_id', orderId)
+          .single();
+
+        if (existingProfit) {
+          // تحديث السجل الموجود بإضافة تاريخ التسوية
+          const { error: updateError } = await supabase
+            .from('profits')
+            .update({
+              settled_at: new Date().toISOString()
+            })
+            .eq('order_id', orderId);
+            
+          if (updateError) {
+            console.error('Error updating profit settlement:', updateError);
+            throw new Error(`خطأ في تحديث تاريخ التسوية: ${updateError.message}`);
+          }
+        } else {
+          // إنشاء سجل جديد مع التسوية
+          const { error: insertError } = await supabase
+            .from('profits')
+            .insert({
+              order_id: orderId,
+              employee_id: employeeId,
+              employee_profit: employeeProfit,
+              profit_amount: employeeProfit + calculateManagerProfit(order),
+              settled_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            });
+            
+          if (insertError) {
+            console.error('Error creating profit record:', insertError);
+            throw new Error(`خطأ في إنشاء سجل الربح: ${insertError.message}`);
+          }
         }
 
         // أرشفة الطلب تلقائياً بعد التسوية
