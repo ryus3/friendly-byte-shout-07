@@ -350,12 +350,34 @@ const AccountingPage = () => {
         // ربح النظام الصحيح
         const systemProfit = managerTotalProfit + employeeSystemProfit;
         
-        // المصاريف العامة (للعرض منفصلة وليس لطرحها من صافي الربح)
-        const generalExpenses = expensesInRange.filter(e => 
-          e.expense_type !== 'system' && 
-          e.category !== 'فئات_المصاريف' &&
-          e.related_data?.category !== 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + (e.amount || 0), 0);
+        // المصاريف العامة (استبعاد مستحقات الموظفين والمصاريف النظامية)
+        const generalExpenses = expensesInRange.filter(e => {
+          // استبعاد المصاريف النظامية (مثل مستحقات الموظفين)
+          if (e.expense_type === 'system') {
+            console.log('🔍 [TRACE] مصروف نظام مستبعد:', e.description, e.amount);
+            return false;
+          }
+          // استبعاد مستحقات الموظفين بجميع الطرق
+          if (e.category === 'مستحقات الموظفين') {
+            console.log('🔍 [TRACE] مستحقات موظف مستبعدة:', e.description, e.amount);
+            return false;
+          }
+          if (e.related_data?.category === 'مستحقات الموظفين') {
+            console.log('🔍 [TRACE] مستحقات موظف (related_data) مستبعدة:', e.description, e.amount);
+            return false;
+          }
+          if (e.description?.includes('مستحقات الموظف')) {
+            console.log('🔍 [TRACE] مستحقات موظف (description) مستبعدة:', e.description, e.amount);
+            return false;
+          }
+          // استبعاد الفئات غير المهمة
+          if (e.category === 'فئات_المصاريف') return false;
+          
+          console.log('✅ [TRACE] مصروف عام مقبول:', e.category, e.description, e.amount);
+          return true;
+        }).reduce((sum, e) => sum + (e.amount || 0), 0);
+        
+        console.log('📊 [TRACE] إجمالي المصاريف العامة النهائي:', generalExpenses);
         
         // مستحقات الموظفين المسددة
         const employeeSettledDues = expensesInRange.filter(e => 
@@ -494,16 +516,25 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            // استخدام البيانات الحقيقية من تحليل الأرباح
+            // استخدام البيانات الحقيقية من تحليل الأرباح أو النظام المالي
             const totalProfit = profitsAnalysis?.totalProfit || financialSummary.netProfit || 0;
             return formatCurrency(totalProfit);
           })(),
           subValue: (() => {
-            // حساب نسبة الربح من تحليل الأرباح الحقيقي
+            // إظهار هامش الربح أو عدد الطلبات أو عدد المنتجات المباعة
             const profitMargin = profitsAnalysis?.profitMargin || 0;
-            const ordersCount = profitsAnalysis?.totalOrders || 0;
+            const ordersCount = profitsAnalysis?.totalOrders || financialSummary.deliveredOrders?.length || 0;
+            const itemsCount = profitsAnalysis?.filteredItemsCount || 0;
             
-            return profitMargin > 0 ? `${Math.round(profitMargin)}% هامش ربح` : (ordersCount > 0 ? `${ordersCount} طلب` : 'لا توجد بيانات');
+            if (profitMargin > 0) {
+              return `${Math.round(profitMargin)}% هامش ربح`;
+            } else if (itemsCount > 0) {
+              return `${itemsCount} منتج مباع`;
+            } else if (ordersCount > 0) {
+              return `${ordersCount} طلب`;
+            } else {
+              return 'لا توجد بيانات';
+            }
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 
