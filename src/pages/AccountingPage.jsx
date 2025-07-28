@@ -484,12 +484,12 @@ const AccountingPage = () => {
               deliveredOrdersCount,
               deliveredOrders: financialSummary.deliveredOrders?.slice(0, 2),
               salesWithoutDelivery: financialSummary.salesWithoutDelivery,
-              grossProfit: financialSummary.grossProfit
+              systemProfit: financialSummary.totalSystemProfit
             });
             
-            // حساب نسبة الربح
+            // حساب نسبة الربح باستخدام ربح النظام الصحيح
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
-            const profit = financialSummary.grossProfit || 0;
+            const profit = financialSummary.totalSystemProfit || 0; // استخدام ربح النظام الصحيح
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
             // إذا كان هناك ربح، اعرض نسبة الربح
@@ -513,9 +513,9 @@ const AccountingPage = () => {
             // حساب عدد الطلبات المُستلمة
             const deliveredOrdersCount = financialSummary.deliveredOrders?.length || 0;
             
-            // حساب نسبة الربح
+            // حساب نسبة الربح باستخدام ربح النظام الصحيح
             const revenue = financialSummary.salesWithoutDelivery || financialSummary.totalRevenue || 0;
-            const profit = financialSummary.systemProfit || financialSummary.grossProfit || 0;
+            const profit = financialSummary.totalSystemProfit || 0; // استخدام ربح النظام الصحيح
             const profitMargin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
             
             // إذا كان هناك ربح، اعرض عدد القطع
@@ -531,7 +531,7 @@ const AccountingPage = () => {
               return "0%";
             }
           })(),
-          icon: BarChart, 
+          icon: BarChart3, 
           colors: ['orange-500', 'amber-500'], 
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
