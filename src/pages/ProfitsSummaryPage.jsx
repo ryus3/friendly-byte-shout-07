@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -40,6 +41,9 @@ const ProfitsSummaryPage = () => {
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
+  
+  // استخدام النظام الموحد للحصول على صافي الربح الموحد
+  const { profitData: unifiedProfitData } = useUnifiedProfits();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -240,21 +244,13 @@ const ProfitsSummaryPage = () => {
 
         const totalExpenses = generalExpenses + employeeSettledDues;
 
-        // حساب الإيرادات والتكاليف لصافي الربح (نفس حساب لوحة التحكم)
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
-        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-        const salesWithoutDelivery = totalRevenue - deliveryFees;
-        
-        const cogs = deliveredOrders.reduce((sum, o) => {
-            const orderCogs = (o.items || []).reduce((itemSum, item) => {
-                const costPrice = item.costPrice || item.cost_price || 0;
-                return itemSum + (costPrice * item.quantity);
-            }, 0);
-            return sum + orderCogs;
-        }, 0);
-
-        const grossProfit = salesWithoutDelivery - cogs;
-        const netProfit = grossProfit - totalExpenses;
+        // استخدام البيانات الموحدة لصافي الربح والإيرادات
+        const totalRevenue = unifiedProfitData?.totalRevenue || 0;
+        const deliveryFees = unifiedProfitData?.deliveryFees || 0;
+        const salesWithoutDelivery = unifiedProfitData?.salesWithoutDelivery || 0;
+        const cogs = unifiedProfitData?.cogs || 0;
+        const grossProfit = unifiedProfitData?.grossProfit || 0;
+        const netProfit = unifiedProfitData?.netProfit || 0;
 
         // حساب أرباح المدير الشخصية من طلباته الخاصة
         const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
@@ -295,13 +291,14 @@ const ProfitsSummaryPage = () => {
             personalPendingProfit,
             personalSettledProfit,
             totalSettledDues,
-            netProfit,
-            totalRevenue,
-            deliveryFees,
-            salesWithoutDelivery,
-            cogs,
-            grossProfit,
-            generalExpenses,
+            // استخدام البيانات الموحدة بدلاً من الحساب المحلي
+            netProfit: unifiedProfitData?.netProfit || 0,
+            totalRevenue: unifiedProfitData?.totalRevenue || 0,
+            deliveryFees: unifiedProfitData?.deliveryFees || 0,
+            salesWithoutDelivery: unifiedProfitData?.salesWithoutDelivery || 0,
+            cogs: unifiedProfitData?.cogs || 0,
+            grossProfit: unifiedProfitData?.grossProfit || 0,
+            generalExpenses: unifiedProfitData?.generalExpenses || 0,
             employeeSettledDues,
             generalExpensesFiltered: expensesInPeriod.filter(e => {
                 if (e.expense_type === 'system') return false;
@@ -310,7 +307,7 @@ const ProfitsSummaryPage = () => {
                 return true;
             })
         };
-    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
+    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
