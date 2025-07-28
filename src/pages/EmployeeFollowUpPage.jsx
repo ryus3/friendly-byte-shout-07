@@ -319,8 +319,16 @@ const EmployeeFollowUpPage = () => {
         return false;
       }
       
-      // فلتر الموظف - استخدام effectiveEmployeeId
-      const employeeMatch = effectiveEmployeeId === 'all' || order.created_by === effectiveEmployeeId;
+      // فلتر الموظف - إذا جاء من URL التحاسب، إظهار كل الطلبات أولاً
+      let employeeMatch = true;
+      if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
+        // إذا كان من URL التحاسب، نسمح بعرض الطلبات حتى لو لم تطابق الموظف
+        if (highlightFromUrl === 'settlement') {
+          employeeMatch = true; // إظهار جميع الطلبات عند التحاسب
+        } else {
+          employeeMatch = order.created_by === effectiveEmployeeId;
+        }
+      }
       
       // فلتر الحالة
       const statusMatch = filters.status === 'all' || order.status === filters.status;
