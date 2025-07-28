@@ -45,49 +45,63 @@ const EmployeeFollowUpPage = () => {
   const [highlightFromUrl, setHighlightFromUrl] = useState(null);
   const filterFromUrl = searchParams.get('filter');
   
-  // استخراج المعاملات من URL - بدون تطبيق فوري
+  // استخراج المعاملات من URL
   useEffect(() => {
     const employeeParam = searchParams.get('employee');
     const ordersParam = searchParams.get('orders');
     const highlightParam = searchParams.get('highlight');
-    
-    console.log('🔔 URL parameters extracted:', {
-      employeeParam,
-      ordersParam,
-      highlightParam
-    });
     
     setEmployeeFromUrl(employeeParam);
     setOrdersFromUrl(ordersParam);
     setHighlightFromUrl(highlightParam);
   }, [searchParams]);
 
-  // تطبيق الفلترة بعد تحميل البيانات
+  // تطبيق الفلترة ONLY بعد تحميل البيانات كاملة
   useEffect(() => {
-    if (orders && employeeFromUrl && highlightFromUrl === 'settlement') {
-      console.log('✅ تطبيق فلترة التحاسب بعد تحميل البيانات');
+    // تأكد من تحميل البيانات كاملة قبل التطبيق
+    if (!loading && orders && Array.isArray(orders) && orders.length > 0 && allUsers && Array.isArray(allUsers)) {
       
-      setFilters({
-        status: 'all',
-        archived: false,
-        employeeId: employeeFromUrl,
-        profitStatus: 'pending'
+      console.log('🚀 البيانات محملة - تطبيق فلترة التحاسب:', {
+        ordersCount: orders.length,
+        usersCount: allUsers.length,
+        employeeFromUrl,
+        highlightFromUrl
       });
       
-      if (ordersFromUrl) {
-        const ordersList = ordersFromUrl.split(',');
-        setSelectedOrders(ordersList);
+      if (employeeFromUrl && highlightFromUrl === 'settlement') {
+        console.log('✅ تطبيق فلترة التحاسب الآن');
         
+        // تطبيق الفلترة
+        setFilters({
+          status: 'all',
+          archived: false,
+          employeeId: employeeFromUrl,
+          profitStatus: 'pending'
+        });
+        
+        if (ordersFromUrl) {
+          const ordersList = ordersFromUrl.split(',');
+          setSelectedOrders(ordersList);
+        }
+        
+        // toast بعد التطبيق
         setTimeout(() => {
           toast({
-            title: "طلب تحاسب",
-            description: `تم فلترة الطلبات للموظف. يمكنك الآن دفع المستحقات.`,
-            duration: 4000
+            title: "✅ تم تطبيق الفلترة",
+            description: "تم فلترة طلبات التحاسب بنجاح",
+            duration: 3000
           });
-        }, 1000);
+        }, 500);
       }
+    } else {
+      console.log('⏳ انتظار تحميل البيانات...', {
+        loading,
+        ordersLoaded: !!orders,
+        ordersCount: orders?.length || 0,
+        usersLoaded: !!allUsers
+      });
     }
-  }, [orders, employeeFromUrl, ordersFromUrl, highlightFromUrl]); // تطبيق الفلترة عندما تتوفر البيانات
+  }, [loading, orders, allUsers, employeeFromUrl, ordersFromUrl, highlightFromUrl]);
   
   const [filters, setFilters] = useState({
     status: 'all',
