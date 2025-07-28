@@ -103,14 +103,24 @@ const EmployeeFollowUpPage = () => {
     }
   }, [loading, orders, allUsers, employeeFromUrl, ordersFromUrl, highlightFromUrl]);
   
-  const [filters, setFilters] = useState({
-    status: 'all',
-    employeeId: 'all', // سيتم تحديثه عبر useEffect
-    archived: false,
-    profitStatus: 'all', // سيتم تحديثه عبر useEffect
+  const [filters, setFilters] = useState(() => {
+    // استخراج المعاملات من URL مباشرة عند التهيئة
+    const employeeParam = new URLSearchParams(window.location.search).get('employee');
+    const highlightParam = new URLSearchParams(window.location.search).get('highlight');
+    
+    return {
+      status: 'all',
+      archived: false,
+      employeeId: (employeeParam && highlightParam === 'settlement') ? employeeParam : 'all',
+      profitStatus: (employeeParam && highlightParam === 'settlement') ? 'pending' : 'all'
+    };
   });
   
-  const [selectedOrders, setSelectedOrders] = useState([]);
+  const [selectedOrders, setSelectedOrders] = useState(() => {
+    // استخراج الطلبات من URL مباشرة عند التهيئة
+    const ordersParam = new URLSearchParams(window.location.search).get('orders');
+    return ordersParam ? ordersParam.split(',') : [];
+  });
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
