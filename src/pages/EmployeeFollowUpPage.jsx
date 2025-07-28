@@ -17,7 +17,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
-
+import PendingSettlementRequestsDialog from '@/components/dashboard/PendingSettlementRequestsDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
@@ -58,6 +58,7 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
+  const [isSettlementRequestsOpen, setIsSettlementRequestsOpen] = useState(false);
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
     ordersCount: orders?.length || 0,
@@ -140,9 +141,11 @@ const EmployeeFollowUpPage = () => {
           }
         }, 2000);
       } else {
-        // إشعار عام للتحاسب
-        console.log('🔔 إشعار عام للتحاسب');
-        // لا حاجة لفعل أي شيء إضافي
+        // إشعار عام للتحاسب - فتح نافذة طلبات التحاسب
+        console.log('🔔 فتح نافذة طلبات التحاسب من الإشعار');
+        setTimeout(() => {
+          setIsSettlementRequestsOpen(true);
+        }, 1000);
       }
     }
   }, [highlightFromUrl, employeeFromUrl, ordersFromUrl]);
@@ -463,6 +466,57 @@ const EmployeeFollowUpPage = () => {
     setSelectedOrders([]);
   };
 
+  // معالج الانتقال لتحاسب من الإشعار
+  const handleNavigateToSettlement = (employeeId, orderIds) => {
+    console.log('🔄 handleNavigateToSettlement called:', { employeeId, orderIds });
+    
+    if (!employeeId || !orderIds || orderIds.length === 0) {
+      console.warn('⚠️ بيانات غير مكتملة للتحاسب');
+      toast({
+        title: "تنبيه",
+        description: "بيانات طلب التحاسب غير مكتملة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // تعيين فلتر الموظف والحالة
+    setFilters(prev => ({ 
+      ...prev, 
+      employeeId,
+      profitStatus: 'pending', // فلترة الأرباح المعلقة فقط
+      status: 'all' // إظهار كل الحالات
+    }));
+    
+    // تحديد الطلبات المطلوب تسويتها
+    setSelectedOrders(orderIds);
+    
+    console.log('✅ تم تعيين الفلاتر والطلبات:', { employeeId, orderIds });
+    
+    // toast لتوضيح الإجراء
+    toast({
+      title: "طلبات التحاسب جاهزة",
+      description: `تم تحديد ${orderIds.length} طلب للتحاسب. اضغط على "دفع المستحقات" أدناه.`,
+      variant: "default"
+    });
+    
+    // التمرير للكارت مع تأثير بصري
+    setTimeout(() => {
+      const element = document.querySelector(`[data-employee-id="${employeeId}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // تأثير بصري
+        element.style.border = "3px solid #3b82f6";
+        element.style.borderRadius = "12px";
+        element.style.boxShadow = "0 0 20px rgba(59, 130, 246, 0.5)";
+        setTimeout(() => {
+          element.style.border = "";
+          element.style.borderRadius = "";
+          element.style.boxShadow = "";
+        }, 4000);
+      }
+    }, 1000);
+  };
 
   if (loading) {
     return (
@@ -492,7 +546,16 @@ const EmployeeFollowUpPage = () => {
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل.</p>
           </div>
           
-          {/* تم حذف زر طلبات التحاسب - سيتم التحديد تلقائياً من الإشعارات */}
+          {/* زر طلبات التحاسب */}
+          <Button 
+            onClick={() => setIsSettlementRequestsOpen(true)}
+            className="relative bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600 text-white font-bold shadow-2xl hover:shadow-emerald-500/25 transform hover:scale-110 transition-all duration-500 border-0 gap-2 px-6 py-3 rounded-xl overflow-hidden group"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-400/20 via-teal-400/20 to-cyan-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <Bell className="h-5 w-5 relative z-10 group-hover:animate-pulse" />
+            <span className="relative z-10">طلبات التحاسب</span>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+          </Button>
         </div>
 
         {/* الفلاتر */}
@@ -659,6 +722,11 @@ const EmployeeFollowUpPage = () => {
           allUsers={allUsers}
         />
         
+        <PendingSettlementRequestsDialog
+          open={isSettlementRequestsOpen}
+          onClose={() => setIsSettlementRequestsOpen(false)}
+          onNavigateToSettlement={handleNavigateToSettlement}
+        />
       </motion.div>
     </>
   );
