@@ -47,9 +47,18 @@ const PendingProfitsDialog = ({
     if (!order.items || !Array.isArray(order.items)) return 0;
     
     return order.items.reduce((sum, item) => {
-      const unitPrice = parseFloat(item.unit_price) || parseFloat(item.price) || 0;
-      const costPrice = parseFloat(item.cost_price) || parseFloat(item.costPrice) || 0;
+      // التأكد من التحويل الصحيح للأرقام
+      const unitPrice = parseFloat(item.unit_price || item.price) || 0;
+      const costPrice = parseFloat(item.cost_price || item.costPrice) || 0;
       const quantity = parseInt(item.quantity) || 0;
+      
+      console.log('💰 حساب الربح:', {
+        product: item.product_name || item.name,
+        unitPrice,
+        costPrice,
+        quantity,
+        profit: (unitPrice - costPrice) * quantity
+      });
       
       // الربح = (سعر البيع - سعر التكلفة) × الكمية
       const profit = (unitPrice - costPrice) * quantity;
@@ -153,64 +162,72 @@ const PendingProfitsDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="w-[98vw] max-w-5xl h-[95vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="flex-shrink-0 p-3 sm:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <DialogTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
-            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
+      <DialogContent className="w-[98vw] max-w-6xl h-[95vh] flex flex-col p-0 gap-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 border-none">
+        <DialogHeader className="flex-shrink-0 p-4 border-b border-white/10 bg-black/20 backdrop-blur-xl">
+          <DialogTitle className="text-xl font-bold flex items-center gap-3 text-white">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-white" />
+            </div>
             {isEmployeeView ? 'أرباحي المعلقة - طلبات للتحاسب' : 'الأرباح المعلقة - طلبات محلية'}
           </DialogTitle>
-          <div className="text-xs sm:text-sm text-muted-foreground mt-1">
+          <div className="text-sm text-blue-100 mt-2 opacity-90">
             {isEmployeeView ? 'طلباتك المُسلّمة والمنتظرة للتحاسب عليها' : 'الطلبات المُوصلة والمنتظرة لاستلام الفواتير لاحتساب الأرباح الفعلية'}
           </div>
         </DialogHeader>
 
-        <div className="flex-1 flex flex-col min-h-0 p-2 sm:p-4 gap-3">
-          {/* إحصائيات سريعة */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
-            <Card className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
-              <CardContent className="p-2 sm:p-3">
-                <div className="flex items-center gap-2">
-                  <PackageCheck className="h-3 w-3 sm:h-4 sm:w-4 text-blue-500" />
+        <div className="flex-1 flex flex-col min-h-0 p-4 gap-4">
+          {/* إحصائيات سريعة بتصميم احترافي */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0">
+            <Card className="bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border-blue-300/30 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <PackageCheck className="h-6 w-6 text-blue-400" />
+                  </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">إجمالي الطلبات</p>
-                    <p className="text-sm sm:text-base font-semibold">{pendingProfitOrders.length}</p>
+                    <p className="text-xs text-blue-200">إجمالي الطلبات</p>
+                    <p className="text-2xl font-bold text-white">{pendingProfitOrders.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
-              <CardContent className="p-2 sm:p-3">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+            <Card className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 border-green-300/30 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-green-400" />
+                  </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">إجمالي الأرباح المعلقة</p>
-                    <p className="text-sm sm:text-base font-semibold">{totalPendingProfit.toLocaleString()} د.ع</p>
+                    <p className="text-xs text-green-200">إجمالي الأرباح المعلقة</p>
+                    <p className="text-2xl font-bold text-white">{totalPendingProfit.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-r from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20">
-              <CardContent className="p-2 sm:p-3">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-orange-500" />
+            <Card className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-300/30 backdrop-blur-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-amber-400" />
+                  </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">الأرباح المحددة</p>
-                    <p className="text-sm sm:text-base font-semibold">{selectedOrdersProfit.toLocaleString()} د.ع</p>
+                    <p className="text-xs text-amber-200">الأرباح المحددة</p>
+                    <p className="text-2xl font-bold text-white">{selectedOrdersProfit.toLocaleString()}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* أزرار التحكم */}
-          <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
+          {/* أزرار التحكم بتصميم احترافي */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
             <Button 
               onClick={selectAllOrders}
               variant="outline"
               size="sm"
-              className="w-full sm:w-auto text-xs sm:text-sm"
+              className="w-full sm:w-auto bg-white/10 border-white/20 text-white hover:bg-white/20 backdrop-blur-sm"
             >
               {selectedOrders.length === pendingProfitOrders.length ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
             </Button>
@@ -219,17 +236,23 @@ const PendingProfitsDialog = ({
               onClick={handleReceiveInvoices}
               disabled={selectedOrders.length === 0 || isProcessing}
               size="sm"
-              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
+              className="w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg"
             >
               {isProcessing ? (
                 <>
-                  <PackageCheck className="h-3 w-3 sm:h-4 sm:w-4 animate-spin ml-1" />
-                  جاري الاستلام...
+                  <PackageCheck className="h-4 w-4 animate-spin ml-2" />
+                  جاري المعالجة...
                 </>
               ) : isEmployeeView ? (
-                <>طلب تحاسب ({selectedOrders.length})</>
+                <>
+                  <DollarSign className="h-4 w-4 ml-2" />
+                  طلب تحاسب ({selectedOrders.length})
+                </>
               ) : (
-                <>استلام فواتير ({selectedOrders.length})</>
+                <>
+                  <PackageCheck className="h-4 w-4 ml-2" />
+                  استلام فواتير ({selectedOrders.length})
+                </>
               )}
             </Button>
           </div>
