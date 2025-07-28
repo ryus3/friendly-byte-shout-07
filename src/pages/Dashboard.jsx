@@ -494,7 +494,7 @@ const Dashboard = () => {
             format: 'currency', 
             currentPeriod: periods.pendingProfit, 
             onPeriodChange: (p) => handlePeriodChange('pendingProfit', p), 
-            onClick: canViewAllData ? () => setIsPendingProfitsOpen(true) : () => navigate('/profits-summary?status=pending')
+            onClick: () => setIsPendingProfitsOpen(true)
         },
         {
             key: 'deliveredSales', 
