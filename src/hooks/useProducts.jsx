@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { generateUniqueBarcode } from '@/lib/barcode-utils';
 
 export const useProducts = (initialProducts, settings, addNotification, user, departments = [], allColors = [], sizes = []) => {

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdate, addNotification, hasPermission, user) => {
   const [orders, setOrders] = useState(initialOrders);

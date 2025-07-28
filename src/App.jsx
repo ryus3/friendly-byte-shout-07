@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
-import { toast } from '@/components/ui/use-toast.js';
+import { toast } from '@/hooks/use-toast';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { usePermissions } from '@/hooks/usePermissions.js';
@@ -31,10 +31,7 @@ const NotificationsPage = lazy(() => import('@/pages/NotificationsPage.jsx'));
 const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
 const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
 const ProfitsManagementPage = lazy(() => import('@/pages/ProfitsManagementPage.jsx'));
-const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx').catch(error => {
-  console.error('Failed to load AccountingPage:', error);
-  return { default: () => <div>Error loading page</div> };
-}));
+const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
 const CashManagementPage = lazy(() => import('@/pages/CashManagementPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));

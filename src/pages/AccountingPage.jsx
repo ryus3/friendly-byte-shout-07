@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
 import { format, parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import StatCard from '@/components/dashboard/StatCard';
 import MiniChart from '@/components/dashboard/MiniChart';

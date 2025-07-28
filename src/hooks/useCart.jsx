@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 export const useCart = () => {
   const [cart, setCart] = useState([]);

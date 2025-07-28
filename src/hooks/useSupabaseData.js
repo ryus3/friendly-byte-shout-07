@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSupabase } from '@/contexts/SupabaseContext';
-import { toast } from '@/components/ui/use-toast.js';
+import { toast } from '@/hooks/use-toast';
 
 // Generic hook for data operations
 export const useSupabaseData = (entityName, dependencies = []) => {
