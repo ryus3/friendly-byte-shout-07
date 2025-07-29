@@ -522,76 +522,95 @@ const ManagerProfitsDialog = ({
   );
 
   const OrderCard = ({ order }) => (
-    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/5 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1 group h-56">
+    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/5 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1 group">
       <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <CardContent className="p-4 relative z-10 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-3">
+      <CardContent className="p-4 relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
                 order.isPaid 
                   ? 'bg-gradient-to-br from-green-500 to-green-600' 
                   : 'bg-gradient-to-br from-yellow-500 to-orange-500'
               }`}>
                 {order.isPaid ? (
-                  <CheckCircle className="h-5 w-5 text-white" />
+                  <CheckCircle className="h-6 w-6 text-white" />
                 ) : (
-                  <Clock className="h-5 w-5 text-white" />
+                  <Clock className="h-6 w-6 text-white" />
                 )}
               </div>
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
                 #{order.order_number?.slice(-2) || '00'}
               </div>
             </div>
             <div className="flex-1">
-              <h4 className="font-bold text-sm text-foreground">{order.order_number}</h4>
-              <p className="text-xs text-muted-foreground font-medium">{order.customer_name}</p>
-              <p className="text-xs text-muted-foreground">{order.employee?.full_name || 'غير محدد'}</p>
+              <h4 className="font-bold text-base text-foreground">{order.order_number}</h4>
+              <p className="text-sm text-muted-foreground font-medium">{order.customer_name || 'عميل غير محدد'}</p>
+              <p className="text-sm text-blue-600 font-medium">{order.employee?.full_name || order.employeeName || 'موظف غير محدد'}</p>
             </div>
           </div>
           <div className="text-left">
-            <p className="text-lg font-bold text-green-600 mb-1">{formatCurrency(order.managerProfit)}</p>
-            <Badge variant={order.isPaid ? "default" : "secondary"} className="text-xs">
+            <p className="text-xl font-bold text-green-600 mb-1">{formatCurrency(order.managerProfit || order.systemProfit || 0)}</p>
+            <Badge variant={order.isPaid ? "default" : "secondary"} className="text-sm px-3 py-1">
               {order.isPaid ? 'مدفوع' : 'معلق'}
             </Badge>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 mb-3 flex-1">
-          <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
-            <p className="text-xs font-bold text-blue-600">{formatCurrency(order.orderTotal)}</p>
-            <p className="text-xs text-muted-foreground">إجمالي الطلب (بدون توصيل)</p>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
+            <p className="text-lg font-bold text-blue-600">{formatCurrency(order.orderTotal || order.totalWithoutDelivery || order.final_amount || order.total_amount || 0)}</p>
+            <p className="text-xs text-muted-foreground font-medium">إجمالي الطلب</p>
+            <p className="text-xs text-blue-500">(بدون توصيل)</p>
           </div>
-          <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
-            <p className="text-xs font-bold text-purple-600">{formatCurrency(order.employeeProfit)}</p>
-            <p className="text-xs text-muted-foreground">ربح الموظف</p>
+          <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
+            <p className="text-lg font-bold text-purple-600">{formatCurrency(order.employeeProfit || 0)}</p>
+            <p className="text-xs text-muted-foreground font-medium">ربح الموظف</p>
+            <p className="text-xs text-purple-500">مستحقات</p>
           </div>
-          <div className="p-2 rounded-xl bg-gray-50 dark:bg-gray-950/20 text-center">
-            <p className="text-xs font-bold text-gray-600">{format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}</p>
-            <p className="text-xs text-muted-foreground">التاريخ</p>
+          <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-950/20 text-center">
+            <p className="text-lg font-bold text-gray-600">{format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}</p>
+            <p className="text-xs text-muted-foreground font-medium">التاريخ</p>
+            <p className="text-xs text-gray-500">{format(new Date(order.created_at), 'HH:mm', { locale: ar })}</p>
           </div>
-          <div className="p-2 rounded-xl bg-green-50 dark:bg-green-950/20 text-center">
-            <p className="text-xs font-bold text-green-600">{order.profitPercentage}%</p>
-            <p className="text-xs text-muted-foreground">هامش الربح</p>
+          <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/20 text-center">
+            <p className="text-lg font-bold text-green-600">{order.profitPercentage || '0'}%</p>
+            <p className="text-xs text-muted-foreground font-medium">هامش الربح</p>
+            <p className="text-xs text-green-500">صافي</p>
+          </div>
+        </div>
+
+        {/* Additional Details */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20 text-center">
+            <p className="text-sm font-bold text-orange-600">{formatCurrency(order.totalProfit || 0)}</p>
+            <p className="text-xs text-muted-foreground">إجمالي الربح</p>
+          </div>
+          <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/20 text-center">
+            <p className="text-sm font-bold text-red-600">{formatCurrency(order.deliveryFee || 0)}</p>
+            <p className="text-xs text-muted-foreground">رسوم التوصيل</p>
           </div>
         </div>
         
+        {/* Products Section */}
         {order.items && order.items.length > 0 && (
-          <div className="pt-2 border-t border-border/50">
+          <div className="pt-3 border-t border-border/50">
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">المنتجات ({order.items.length})</p>
-              <Button variant="ghost" size="sm" className="h-5 px-2">
-                <Eye className="h-3 w-3" />
+              <p className="text-sm font-medium text-muted-foreground">المنتجات ({order.items.length})</p>
+              <Button variant="ghost" size="sm" className="h-6 px-2">
+                <Eye className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2">
               {order.items.slice(0, 3).map((item, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs bg-muted/30 hover:bg-muted/50 transition-colors">
-                  {item.product_name} × {item.quantity}
+                <Badge key={idx} variant="outline" className="text-xs bg-muted/30 hover:bg-muted/50 transition-colors px-2 py-1">
+                  {item.product_name || item.name || 'منتج'} × {item.quantity}
                 </Badge>
               ))}
               {order.items.length > 3 && (
-                <Badge variant="outline" className="text-xs bg-primary/10 text-primary">
+                <Badge variant="outline" className="text-xs bg-primary/10 text-primary px-2 py-1">
                   +{order.items.length - 3} آخر
                 </Badge>
               )}
@@ -600,7 +619,6 @@ const ManagerProfitsDialog = ({
         )}
       </CardContent>
     </Card>
-  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -836,23 +854,51 @@ const ManagerProfitsDialog = ({
             </TabsContent>
 
             <TabsContent value="employees" className="space-y-4">
-              {stats.topEmployees.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {stats.topEmployees.map((empData, idx) => (
-                    <EmployeeCard key={empData.employee?.user_id || idx} employeeData={empData} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
-                    <Users className="h-12 w-12 text-muted-foreground/50" />
+              {/* إضافة معالجة بديلة للموظفين من البيانات المفصلة */}
+              {(() => {
+                // حساب بيانات الموظفين من detailedProfits مباشرة
+                const employeeStats = {};
+                detailedProfits.forEach(order => {
+                  const employeeId = order.created_by;
+                  if (!employeeStats[employeeId]) {
+                    employeeStats[employeeId] = {
+                      employee: order.employee || { user_id: employeeId, full_name: order.employeeName || 'موظف غير محدد' },
+                      orders: 0,
+                      managerProfit: 0,
+                      employeeProfit: 0,
+                      revenue: 0
+                    };
+                  }
+                  employeeStats[employeeId].orders += 1;
+                  employeeStats[employeeId].managerProfit += Number(order.managerProfit) || 0;
+                  employeeStats[employeeId].employeeProfit += Number(order.employeeProfit) || 0;
+                  employeeStats[employeeId].revenue += Number(order.orderTotal) || 0;
+                });
+
+                const employeeList = Object.values(employeeStats)
+                  .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
+                  .slice(0, 10);
+
+                console.log('🧑‍💼 إحصائيات الموظفين المحسوبة:', employeeList);
+
+                return employeeList.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {employeeList.map((empData, idx) => (
+                      <EmployeeCard key={empData.employee?.user_id || idx} employeeData={empData} />
+                    ))}
                   </div>
-                  <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد بيانات موظفين</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    لا توجد بيانات أرباح للموظفين في الفترة المحددة
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
+                      <Users className="h-12 w-12 text-muted-foreground/50" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد بيانات موظفين</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      لا توجد بيانات أرباح للموظفين في الفترة المحددة
+                    </p>
+                  </div>
+                );
+              })()}
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-4">
