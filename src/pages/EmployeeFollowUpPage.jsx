@@ -18,6 +18,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
+import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -67,6 +68,7 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
+  const [isManagerProfitsDialogOpen, setIsManagerProfitsDialogOpen] = useState(false);
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -809,6 +811,7 @@ const EmployeeFollowUpPage = () => {
             icon={Users} 
             colors={['green-500', 'emerald-500']} 
             format="currency" 
+            onClick={() => setIsManagerProfitsDialogOpen(true)}
           />
           <StatCard 
             title="مستحقات معلقة" 
@@ -898,6 +901,16 @@ const EmployeeFollowUpPage = () => {
           onOpenChange={setIsDuesDialogOpen}
           invoices={expenses || []} // تمرير المصاريف بدلاً من settlementInvoices
           allUsers={allUsers}
+        />
+
+        <ManagerProfitsDialog
+          isOpen={isManagerProfitsDialogOpen}
+          onClose={() => setIsManagerProfitsDialogOpen(false)}
+          orders={orders}
+          employees={allUsers}
+          calculateProfit={calculateProfit}
+          profits={profits}
+          managerId={null}
         />
       </motion.div>
     </>
