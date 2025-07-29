@@ -328,21 +328,12 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      console.log('🔍 جلب بيانات الموظفين...');
-      
-      // جلب الموظفين - تحسين الاستعلام
-      const { data: employeesData, error: employeesError } = await supabase
+      // جلب الموظفين
+      const { data: employeesData } = await supabase
         .from('profiles')
         .select('user_id, full_name, role, status')
         .eq('status', 'active')
-        .neq('role', 'admin')
-        .order('full_name');
-      
-      if (employeesError) {
-        console.error('❌ خطأ في جلب الموظفين:', employeesError);
-      } else {
-        console.log('✅ تم جلب الموظفين:', employeesData);
-      }
+        .neq('role', 'admin');
       
       setEmployees(employeesData || []);
 
@@ -494,10 +485,10 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
                 الموظف
               </label>
               <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger className="h-9 text-sm bg-background/90 border-border/50 backdrop-blur-sm">
+                <SelectTrigger className="h-9 text-sm bg-background/50 border-border/50">
                   <SelectValue placeholder="جميع الموظفين" />
                 </SelectTrigger>
-                <SelectContent className="z-50 bg-background border border-border shadow-lg">
+                <SelectContent>
                   <SelectItem value="all">جميع الموظفين</SelectItem>
                   {employees.map(emp => (
                     <SelectItem key={emp.user_id} value={emp.user_id}>
