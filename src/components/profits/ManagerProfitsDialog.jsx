@@ -182,69 +182,96 @@ const ManagerProfitsDialog = ({
         try {
           console.log(`💰 حساب ربح مفصل للطلب ${order.order_number}:`, {
             orderId: order.id,
-            totalAmount: order.final_amount || order.total_amount,
+            finalAmount: order.final_amount,
+            totalAmount: order.total_amount,
+            deliveryFee: order.delivery_fee,
             items: order.items?.length || 0
+          });
+          
+          // حساب المبلغ بدون أجور التوصيل
+          const totalWithDelivery = Number(order.final_amount || order.total_amount || 0);
+          const deliveryFee = Number(order.delivery_fee || 0);
+          const totalWithoutDelivery = Math.max(0, totalWithDelivery - deliveryFee);
+          
+          console.log(`📊 تفاصيل المبالغ للطلب ${order.order_number}:`, {
+            totalWithDelivery,
+            deliveryFee,
+            totalWithoutDelivery
           });
           
           // حساب الربح بطريقة آمنة
           let managerProfit = 0;
           let employeeProfit = 0;
           let totalProfit = 0;
+          let systemProfit = 0;
 
           if (calculateProfit && typeof calculateProfit === 'function') {
             try {
-              const profitCalc = calculateProfit(order.id);
+              // جرب استدعاء الدالة بطرق مختلفة
+              let profitCalc;
+              try {
+                profitCalc = calculateProfit(order.id);
+              } catch (e) {
+                console.log('محاولة استدعاء بالطلب كاملاً...');
+                profitCalc = calculateProfit(order);
+              }
+              
               console.log(`📊 نتيجة حساب الربح من الدالة للطلب ${order.order_number}:`, profitCalc);
               
               if (profitCalc && typeof profitCalc === 'object') {
-                managerProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
+                // استخراج قيم الربح من النتيجة
+                systemProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
                 employeeProfit = Number(profitCalc.employeeProfit || 0);
-                totalProfit = Number(profitCalc.totalProfit || profitCalc.netProfit || 0);
-              } else {
+                totalProfit = Number(profitCalc.totalProfit || profitCalc.netProfit || (systemProfit + employeeProfit));
+                managerProfit = systemProfit; // ربح المدير = ربح النظام
+              } else if (typeof profitCalc === 'number') {
                 // الدالة ترجع قيمة واحدة فقط
-                managerProfit = Number(profitCalc || 0);
-                employeeProfit = managerProfit * 0.3; // 30% للموظف
-                totalProfit = managerProfit + employeeProfit;
+                totalProfit = Number(profitCalc || 0);
+                systemProfit = totalProfit * 0.7; // 70% للنظام
+                employeeProfit = totalProfit * 0.3; // 30% للموظف
+                managerProfit = systemProfit;
               }
             } catch (error) {
               console.error(`❌ خطأ في تنفيذ دالة حساب الربح للطلب ${order.order_number}:`, error);
               // استخدم حساب يدوي عند الخطأ
-              const orderTotal = Number(order.final_amount || order.total_amount || 0);
-              totalProfit = orderTotal * 0.15; // افتراض 15% ربح
-              managerProfit = totalProfit * 0.7; // 70% للمدير
-              employeeProfit = totalProfit * 0.3; // 30% للموظف
+              totalProfit = totalWithoutDelivery * 0.2; // افتراض 20% ربح
+              systemProfit = totalProfit * 0.6; // 60% للنظام  
+              employeeProfit = totalProfit * 0.4; // 40% للموظف
+              managerProfit = systemProfit;
             }
           } else {
             // حساب الربح يدوياً إذا لم تكن الدالة متوفرة
-            const orderTotal = Number(order.final_amount || order.total_amount || 0);
             console.log(`🧮 حساب يدوي للأرباح للطلب ${order.order_number}:`, {
-              orderTotal,
+              totalWithoutDelivery,
               orderId: order.id
             });
             
-            // نسب افتراضية للربح
-            totalProfit = orderTotal * 0.2; // افتراض 20% ربح من إجمالي المبلغ
-            managerProfit = totalProfit * 0.6; // 60% للمدير (12% من المجموع)
-            employeeProfit = totalProfit * 0.4; // 40% للموظف (8% من المجموع)
+            // نسب افتراضية للربح من المبلغ بدون التوصيل
+            totalProfit = totalWithoutDelivery * 0.25; // افتراض 25% ربح من المبلغ
+            systemProfit = totalProfit * 0.6; // 60% للنظام (15% من المجموع)
+            employeeProfit = totalProfit * 0.4; // 40% للموظف (10% من المجموع)
+            managerProfit = systemProfit;
             
             console.log(`🧮 نتائج الحساب اليدوي:`, {
-              orderTotal,
+              totalWithoutDelivery,
               totalProfit,
-              managerProfit,
+              systemProfit,
               employeeProfit,
-              profitPercentage: (totalProfit / orderTotal * 100).toFixed(1)
+              managerProfit,
+              profitPercentage: (totalProfit / totalWithoutDelivery * 100).toFixed(1)
             });
           }
           
           const employee = employees.find(emp => emp.user_id === order.created_by);
           const profitStatus = profits.find(p => p.order_id === order.id);
-          const orderTotal = Number(order.final_amount || order.total_amount || 0);
           
           console.log(`✅ نتيجة نهائية للطلب ${order.order_number}:`, {
+            totalWithoutDelivery,
+            deliveryFee,
             managerProfit,
             employeeProfit,
             totalProfit,
-            orderTotal,
+            systemProfit,
             employee: employee?.full_name || 'غير معروف',
             profitStatus: profitStatus?.status || 'غير معروف'
           });
@@ -252,10 +279,15 @@ const ManagerProfitsDialog = ({
           return {
             ...order,
             employee,
-            managerProfit,
-            employeeProfit,
-            totalProfit,
-            profitPercentage: orderTotal > 0 ? ((managerProfit / orderTotal) * 100).toFixed(1) : '0',
+            // استخدام المبلغ بدون التوصيل
+            orderTotal: totalWithoutDelivery,
+            deliveryFee: deliveryFee,
+            totalWithDelivery: totalWithDelivery,
+            managerProfit: Math.round(managerProfit),
+            employeeProfit: Math.round(employeeProfit),
+            totalProfit: Math.round(totalProfit),
+            systemProfit: Math.round(systemProfit),
+            profitPercentage: totalWithoutDelivery > 0 ? ((totalProfit / totalWithoutDelivery) * 100).toFixed(1) : '0',
             isPaid: profitStatus?.status === 'settled' || profitStatus?.settled_at,
             settledAt: profitStatus?.settled_at,
             items: order.items || []
@@ -308,7 +340,8 @@ const ManagerProfitsDialog = ({
 
     const totalManagerProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     const totalEmployeeProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.employeeProfit) || 0), 0);
-    const totalRevenue = detailedProfits.reduce((sum, order) => sum + (Number(order.final_amount || order.total_amount) || 0), 0);
+    // استخدام المبلغ بدون أجور التوصيل للإحصائيات
+    const totalRevenue = detailedProfits.reduce((sum, order) => sum + (Number(order.orderTotal) || 0), 0);
     const pendingProfit = detailedProfits.filter(order => !order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     const settledProfit = detailedProfits.filter(order => order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     
@@ -326,7 +359,8 @@ const ManagerProfitsDialog = ({
       employeeStats[order.created_by].orders += 1;
       employeeStats[order.created_by].managerProfit += Number(order.managerProfit) || 0;
       employeeStats[order.created_by].employeeProfit += Number(order.employeeProfit) || 0;
-      employeeStats[order.created_by].revenue += Number(order.final_amount || order.total_amount) || 0;
+      // استخدام المبلغ بدون أجور التوصيل
+      employeeStats[order.created_by].revenue += Number(order.orderTotal) || 0;
     });
 
     const calculatedStats = {
@@ -487,8 +521,8 @@ const ManagerProfitsDialog = ({
         
         <div className="grid grid-cols-2 gap-2 mb-3 flex-1">
           <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
-            <p className="text-xs font-bold text-blue-600">{formatCurrency(order.final_amount || order.total_amount)}</p>
-            <p className="text-xs text-muted-foreground">إجمالي الطلب</p>
+            <p className="text-xs font-bold text-blue-600">{formatCurrency(order.orderTotal)}</p>
+            <p className="text-xs text-muted-foreground">إجمالي الطلب (بدون توصيل)</p>
           </div>
           <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
             <p className="text-xs font-bold text-purple-600">{formatCurrency(order.employeeProfit)}</p>
