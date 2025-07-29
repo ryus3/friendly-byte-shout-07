@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -539,22 +540,37 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const filteredInvoices = useMemo(() => {
     console.log('🔄 فلترة الفواتير:', {
       settlementInvoicesCount: settlementInvoices.length,
-      filters: filters,
+      selectedEmployee,
+      selectedPeriod,
       employeesCount: employees.length
     });
     
     const filtered = settlementInvoices.filter(invoice => {
-      const employeeMatch = filters.employeeId === 'all' || 
+      const employeeMatch = selectedEmployee === 'all' || 
         invoice.employee_name?.toLowerCase().includes(
-          employees.find(e => e.user_id === filters.employeeId)?.full_name?.toLowerCase() || ''
+          employees.find(e => e.user_id === selectedEmployee)?.full_name?.toLowerCase() || ''
         ) ||
         invoice.employee_name?.toLowerCase().includes(
-          employees.find(e => e.user_id === filters.employeeId)?.name?.toLowerCase() || ''
+          employees.find(e => e.user_id === selectedEmployee)?.name?.toLowerCase() || ''
         );
       
-      const dateMatch = !filters.dateRange.from || 
-        (new Date(invoice.settlement_date) >= filters.dateRange.from && 
-         new Date(invoice.settlement_date) <= (filters.dateRange.to || new Date()));
+      // فلترة التاريخ حسب الفترة المحددة
+      const now = new Date();
+      let dateMatch = true;
+      
+      if (selectedPeriod === 'today') {
+        const today = new Date(now.setHours(0, 0, 0, 0));
+        const tomorrow = new Date(now.setHours(23, 59, 59, 999));
+        dateMatch = new Date(invoice.settlement_date) >= today && new Date(invoice.settlement_date) <= tomorrow;
+      } else if (selectedPeriod === 'week') {
+        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
+        dateMatch = new Date(invoice.settlement_date) >= weekStart && new Date(invoice.settlement_date) <= weekEnd;
+      } else if (selectedPeriod === 'month') {
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
+        dateMatch = new Date(invoice.settlement_date) >= monthStart && new Date(invoice.settlement_date) <= monthEnd;
+      }
       
       console.log(`🔍 فلترة الفاتورة ${invoice.id}:`, {
         employee_name: invoice.employee_name,
@@ -573,7 +589,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     });
     
     return filtered;
-  }, [settlementInvoices, filters, employees]);
+  }, [settlementInvoices, selectedEmployee, selectedPeriod, employees]);
 
   const totalAmount = useMemo(() => {
     const total = filteredInvoices.reduce((sum, inv) => {
@@ -633,7 +649,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                         <User className="w-4 h-4" />
                         الموظف
                       </label>
-                      <Select value={filters.employeeId} onValueChange={(value) => setFilters(prev => ({ ...prev, employeeId: value }))}>
+                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                         <SelectTrigger className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl">
                           <SelectValue placeholder="اختر الموظف" />
                         </SelectTrigger>
@@ -651,13 +667,19 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                     <div className="space-y-3">
                       <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
-                        فترة التاريخ
+                        الفترة الزمنية
                       </label>
-                      <DateRangePicker
-                        date={filters.dateRange}
-                        onDateChange={(range) => setFilters(prev => ({ ...prev, dateRange: range }))}
-                        className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl"
-                      />
+                      <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                        <SelectTrigger className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl">
+                          <SelectValue placeholder="اختر الفترة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="today">اليوم</SelectItem>
+                          <SelectItem value="week">هذا الأسبوع</SelectItem>
+                          <SelectItem value="month">هذا الشهر</SelectItem>
+                          <SelectItem value="year">هذا العام</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </CardContent>
