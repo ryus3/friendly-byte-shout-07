@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award } from 'lucide-react';
+import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award, Users, CreditCard } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 
 // مكون معاينة الفاتورة المبهر والاحترافي
@@ -79,12 +79,14 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                 <div className="inline-block bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg border border-white/50">
                   <div className="flex items-center gap-3">
                     <Calendar className="w-5 h-5 text-blue-600" />
-                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                      تاريخ الإصدار: {invoice.settlement_date ? 
-                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                        'غير محدد'
-                      }
-                    </p>
+                     <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                       تاريخ الإصدار: {invoice.settlement_date ? 
+                         format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                         invoice.created_at ? 
+                           format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                           'غير محدد'
+                       }
+                     </p>
                   </div>
                 </div>
               </div>
@@ -332,10 +334,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     profitsLength: profits?.length || 0,
     ordersLength: orders?.length || 0
   });
-  const [filters, setFilters] = useState({
-    employeeId: 'all',
-    dateRange: { from: undefined, to: undefined },
-  });
+  
+  const [selectedEmployee, setSelectedEmployee] = useState('all');
+  const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
@@ -521,44 +522,35 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     return processedSettlements;
   }, [invoices]);
   
+  // تطبيق الفلاتر
   const filteredInvoices = useMemo(() => {
-    console.log('🔄 فلترة الفواتير:', {
-      settlementInvoicesCount: settlementInvoices.length,
-      filters: filters,
-      employeesCount: employees.length
-    });
+    if (!Array.isArray(settlementInvoices)) {
+      console.warn('❌ settlementInvoices ليست مصفوفة');
+      return [];
+    }
     
-    const filtered = settlementInvoices.filter(invoice => {
-      const employeeMatch = filters.employeeId === 'all' || 
-        invoice.employee_name?.toLowerCase().includes(
-          employees.find(e => e.user_id === filters.employeeId)?.full_name?.toLowerCase() || ''
-        ) ||
-        invoice.employee_name?.toLowerCase().includes(
-          employees.find(e => e.user_id === filters.employeeId)?.name?.toLowerCase() || ''
-        );
-      
-      const dateMatch = !filters.dateRange.from || 
-        (new Date(invoice.settlement_date) >= filters.dateRange.from && 
-         new Date(invoice.settlement_date) <= (filters.dateRange.to || new Date()));
-      
-      console.log(`🔍 فلترة الفاتورة ${invoice.id}:`, {
-        employee_name: invoice.employee_name,
-        settlement_date: invoice.settlement_date,
-        employeeMatch,
-        dateMatch,
-        finalMatch: employeeMatch && dateMatch
+    let filtered = [...settlementInvoices];
+    
+    // فلتر الموظف
+    if (selectedEmployee && selectedEmployee !== 'all') {
+      filtered = filtered.filter(invoice => {
+        const employee = employees.find(emp => emp.user_id === selectedEmployee);
+        return employee && invoice.employee_name === (employee.full_name || employee.name);
       });
-      
-      return employeeMatch && dateMatch;
-    });
+    }
     
-    console.log('✅ الفواتير المفلترة:', {
-      count: filtered.length,
-      invoices: filtered
-    });
+    // فلتر التاريخ
+    if (dateRange?.from) {
+      filtered = filtered.filter(invoice => {
+        const invoiceDate = new Date(invoice.settlement_date);
+        const fromDate = new Date(dateRange.from);
+        const toDate = dateRange.to ? new Date(dateRange.to) : new Date();
+        return invoiceDate >= fromDate && invoiceDate <= toDate;
+      });
+    }
     
-    return filtered;
-  }, [settlementInvoices, filters, employees]);
+    return filtered.sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date));
+  }, [settlementInvoices, selectedEmployee, dateRange, employees]);
 
   const totalAmount = useMemo(() => {
     const total = filteredInvoices.reduce((sum, inv) => {
@@ -618,7 +610,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                         <User className="w-4 h-4" />
                         الموظف
                       </label>
-                      <Select value={filters.employeeId} onValueChange={(value) => setFilters(prev => ({ ...prev, employeeId: value }))}>
+                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                         <SelectTrigger className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl">
                           <SelectValue placeholder="اختر الموظف" />
                         </SelectTrigger>
@@ -639,8 +631,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                         فترة التاريخ
                       </label>
                       <DateRangePicker
-                        date={filters.dateRange}
-                        onDateChange={(range) => setFilters(prev => ({ ...prev, dateRange: range }))}
+                        date={dateRange}
+                        onDateChange={setDateRange}
                         className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl"
                       />
                     </div>
@@ -649,20 +641,20 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
               </Card>
             </div>
 
-            {/* إجمالي المبلغ المبهر */}
-            <div className="mx-6 sm:mx-8 mb-8 flex-shrink-0">
-              <Card className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 shadow-2xl overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                <CardContent className="p-8 relative z-10 text-center">
-                  <div className="flex items-center justify-center gap-4 mb-4">
-                    <div className="p-3 bg-white/20 rounded-full">
-                      <DollarSign className="w-8 h-8" />
+            {/* إجمالي المبلغ المدهش */}
+            <div className="mx-4 sm:mx-6 mb-4 flex-shrink-0">
+              <Card className="bg-gradient-to-r from-primary via-secondary to-accent text-primary-foreground border-0 shadow-2xl overflow-hidden relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-background/10 to-transparent"></div>
+                <CardContent className="p-6 relative z-10 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <div className="p-2 bg-background/20 rounded-full">
+                      <DollarSign className="w-6 h-6" />
                     </div>
-                    <h2 className="text-2xl font-black">إجمالي المستحقات المدفوعة</h2>
+                    <h2 className="text-xl font-black">إجمالي المستحقات المدفوعة</h2>
                   </div>
-                  <p className="text-5xl font-black mb-2 drop-shadow-lg">{totalAmount.toLocaleString()}</p>
-                  <p className="text-xl font-bold opacity-90">دينار عراقي</p>
-                  <div className="mt-4 flex items-center justify-center gap-2 text-sm opacity-75">
+                  <p className="text-4xl font-black mb-2 drop-shadow-lg">{totalAmount.toLocaleString()}</p>
+                  <p className="text-lg font-bold opacity-90">دينار عراقي</p>
+                  <div className="mt-3 flex items-center justify-center gap-2 text-sm opacity-75">
                     <Receipt className="w-4 h-4" />
                     <span>عدد الفواتير: {filteredInvoices.length}</span>
                   </div>
@@ -670,47 +662,47 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
               </Card>
             </div>
 
-            {/* الجدول المبهر */}
-            <div className="flex-1 px-6 sm:px-8 pb-6 sm:pb-8 min-h-0">
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-2xl h-full">
+            {/* قائمة الفواتير الجديدة */}
+            <div className="flex-1 px-4 sm:px-6 pb-4 sm:pb-6 min-h-0">
+              <Card className="bg-card/90 backdrop-blur-sm border shadow-xl h-full">
                 <CardContent className="p-0 h-full">
                   <ScrollArea className="h-full">
-                    {/* عرض mobile */}
-                    <div className="block lg:hidden">
-                      {filteredInvoices.length === 0 ? (
-                        <div className="p-12 text-center text-slate-500">
-                          <div className="relative mb-6">
-                            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center">
-                              <CheckCircle className="w-12 h-12 text-slate-400" />
-                            </div>
+                    {filteredInvoices.length === 0 ? (
+                      <div className="p-8 text-center text-muted-foreground">
+                        <div className="relative mb-4">
+                          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                            <CheckCircle className="w-8 h-8" />
                           </div>
-                          <h3 className="text-xl font-bold mb-2">لا توجد مستحقات مدفوعة</h3>
-                          <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
                         </div>
-                      ) : (
-                        <div className="space-y-4 p-4">
+                        <h3 className="text-lg font-bold mb-2">لا توجد مستحقات مدفوعة</h3>
+                        <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* عرض mobile */}
+                        <div className="block lg:hidden space-y-3 p-3">
                           {filteredInvoices.map((invoice) => (
-                            <Card key={invoice.id} className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-0 shadow-lg">
-                              <CardContent className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white">
-                                      <User className="w-5 h-5" />
+                            <Card key={invoice.id} className="bg-gradient-to-br from-card to-muted/30 border shadow-sm">
+                              <CardContent className="p-4">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-gradient-to-r from-primary to-secondary rounded-lg text-primary-foreground">
+                                      <User className="w-4 h-4" />
                                     </div>
                                     <div>
-                                      <p className="font-bold text-lg">{invoice.employee_name}</p>
-                                      <p className="text-sm text-slate-500 font-mono">{invoice.invoice_number}</p>
+                                      <p className="font-bold text-sm">{invoice.employee_name}</p>
+                                      <p className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</p>
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <p className="text-2xl font-black text-emerald-600">{invoice.settlement_amount?.toLocaleString()}</p>
-                                    <p className="text-sm text-slate-500">دينار عراقي</p>
+                                    <p className="text-lg font-black text-primary">{invoice.settlement_amount?.toLocaleString()}</p>
+                                    <p className="text-xs text-muted-foreground">دينار عراقي</p>
                                   </div>
                                 </div>
                                 
-                                <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                                  <Calendar className="w-4 h-4 text-blue-500" />
-                                  <p className="text-sm font-medium">
+                                <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg">
+                                  <Calendar className="w-3 h-3 text-primary" />
+                                  <p className="text-xs font-medium">
                                     {invoice.settlement_date ? 
                                       format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
                                       'غير محدد'
@@ -718,17 +710,17 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                                   </p>
                                 </div>
                                 
-                                <div className="flex justify-between items-center pt-4 border-t border-slate-200 dark:border-slate-700">
-                                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 px-4 py-2">
+                                <div className="flex justify-between items-center pt-3 border-t">
+                                  <Badge className="bg-primary text-primary-foreground border-0 px-2 py-1 text-xs">
                                     مكتملة
                                   </Badge>
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 hover:from-blue-600 hover:to-purple-600"
+                                    className="h-7 px-3 text-xs bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 hover:opacity-90"
                                     onClick={() => handlePreviewInvoice(invoice)}
                                   >
-                                    <Eye className="w-4 h-4 ml-2" />
+                                    <Eye className="w-3 h-3 ml-1" />
                                     معاينة
                                   </Button>
                                 </div>
@@ -736,99 +728,85 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                             </Card>
                           ))}
                         </div>
-                      )}
-                    </div>
 
-                    {/* عرض desktop */}
-                    <div className="hidden lg:block">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 border-0">
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4">رقم الفاتورة</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4">اسم الموظف</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4">المبلغ</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4">تاريخ التسوية</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4">الحالة</TableHead>
-                            <TableHead className="font-bold text-slate-700 dark:text-slate-300 py-4">الإجراءات</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredInvoices.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center py-16">
-                                <div className="relative mb-6">
-                                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-slate-200 to-slate-300 rounded-full flex items-center justify-center">
-                                    <CheckCircle className="w-12 h-12 text-slate-400" />
-                                  </div>
-                                </div>
-                                <h3 className="text-xl font-bold text-slate-600 mb-2">لا توجد مستحقات مدفوعة لعرضها</h3>
-                                <p className="text-sm text-slate-500">لم يتم العثور على فواتير تحاسب مكتملة</p>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            filteredInvoices.map((invoice, index) => (
-                              <TableRow key={invoice.id} className={`${index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/50 dark:bg-slate-900/50'} hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all duration-200`}>
-                                <TableCell className="py-4">
-                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-lg">
-                                    {invoice.invoice_number}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-white">
-                                      <User className="w-4 h-4" />
-                                    </div>
-                                    <span className="font-bold text-lg">{invoice.employee_name}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-black text-xl">
-                                    {invoice.settlement_amount?.toLocaleString()} د.ع
-                                  </span>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  <div className="flex items-center gap-2">
-                                    <Calendar className="w-4 h-4 text-blue-500" />
-                                    <span className="font-medium">
-                                      {invoice.settlement_date ? 
-                                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                        'غير محدد'
-                                      }
-                                    </span>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 px-4 py-2">
-                                    مكتملة
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="bg-gradient-to-r from-blue-500 to-purple-500 text-white border-0 hover:from-blue-600 hover:to-purple-600 transition-all duration-200"
-                                    onClick={() => handlePreviewInvoice(invoice)}
-                                  >
-                                    <Eye className="w-4 h-4 ml-2" />
-                                    معاينة الفاتورة
-                                  </Button>
-                                </TableCell>
+                        {/* عرض desktop */}
+                        <div className="hidden lg:block">
+                          <Table>
+                            <TableHeader>
+                              <TableRow className="bg-muted/50 border-0">
+                                <TableHead className="font-bold text-foreground py-3 text-sm">رقم الفاتورة</TableHead>
+                                <TableHead className="font-bold text-foreground py-3 text-sm">اسم الموظف</TableHead>
+                                <TableHead className="font-bold text-foreground py-3 text-sm">المبلغ</TableHead>
+                                <TableHead className="font-bold text-foreground py-3 text-sm">تاريخ التسوية</TableHead>
+                                <TableHead className="font-bold text-foreground py-3 text-sm">الحالة</TableHead>
+                                <TableHead className="font-bold text-foreground py-3 text-sm">الإجراءات</TableHead>
                               </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
+                            </TableHeader>
+                            <TableBody>
+                              {filteredInvoices.map((invoice, index) => (
+                                <TableRow key={invoice.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-primary/5 transition-all duration-200`}>
+                                  <TableCell className="py-3">
+                                    <span className="font-mono text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">
+                                      {invoice.invoice_number}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="flex items-center gap-2">
+                                      <div className="p-1.5 bg-gradient-to-r from-primary to-secondary rounded-lg text-primary-foreground">
+                                        <User className="w-3 h-3" />
+                                      </div>
+                                      <span className="font-bold text-sm">{invoice.employee_name}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <span className="text-primary font-black text-lg">
+                                      {invoice.settlement_amount?.toLocaleString()} د.ع
+                                    </span>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <div className="flex items-center gap-2">
+                                      <Calendar className="w-3 h-3 text-primary" />
+                                      <span className="font-medium text-sm">
+                                        {invoice.settlement_date ? 
+                                          format(parseISO(invoice.settlement_date), 'dd/MM/yyyy HH:mm', { locale: ar }) :
+                                          'غير محدد'
+                                        }
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <Badge className="bg-primary text-primary-foreground border-0 px-3 py-1 text-xs">
+                                      مكتملة
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="py-3">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 hover:opacity-90 transition-all duration-200"
+                                      onClick={() => handlePreviewInvoice(invoice)}
+                                    >
+                                      <Eye className="w-3 h-3 ml-1" />
+                                      معاينة الفاتورة
+                                    </Button>
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </>
+                    )}
                   </ScrollArea>
                 </CardContent>
               </Card>
             </div>
 
-            <DialogFooter className="p-6 sm:p-8 pt-4 flex-shrink-0 border-t bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+            <DialogFooter className="p-4 sm:p-6 pt-3 flex-shrink-0 border-t bg-muted/30">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange(false)} 
-                className="w-full sm:w-auto bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"
+                className="w-full sm:w-auto"
               >
                 إغلاق
               </Button>
