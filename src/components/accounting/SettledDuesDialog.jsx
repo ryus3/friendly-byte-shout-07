@@ -4,101 +4,33 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { Card, CardContent } from '@/components/ui/card';
+import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle2, FileText, Calendar, User, DollarSign, Receipt, Eye, Filter, Clock, Star, Package, ShoppingCart, TrendingUp, Calculator } from 'lucide-react';
+import { CheckCircle2, FileText, Calendar, User, DollarSign, Receipt, Eye, Filter, Clock, Star } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 
 // مكون معاينة الفاتورة
-const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
-  const [relatedOrders, setRelatedOrders] = useState([]);
-  const [relatedProfits, setRelatedProfits] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (open && invoice) {
-      fetchRelatedData();
-    }
-  }, [open, invoice]);
-
-  const fetchRelatedData = async () => {
-    if (!invoice?.metadata?.employee_id) return;
-    
-    setLoading(true);
-    try {
-      // جلب الأرباح المرتبطة بالموظف
-      const { data: profitsData } = await supabase
-        .from('profits')
-        .select(`
-          *,
-          orders!inner(
-            id, order_number, customer_name, total_amount, 
-            status, created_at, customer_phone
-          )
-        `)
-        .eq('employee_id', invoice.metadata.employee_id)
-        .eq('status', 'settled')
-        .gte('settled_at', new Date(invoice.created_at).toISOString().split('T')[0])
-        .lt('settled_at', new Date(new Date(invoice.created_at).getTime() + 24*60*60*1000).toISOString().split('T')[0]);
-
-      setRelatedProfits(profitsData || []);
-
-      // جلب الطلبات من الأرباح
-      const orderIds = profitsData?.map(p => p.order_id) || [];
-      if (orderIds.length > 0) {
-        const { data: ordersData } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items(
-              id, quantity, unit_price, total_price,
-              product_variants(
-                id,
-                products(name),
-                colors(name),
-                sizes(name)
-              )
-            )
-          `)
-          .in('id', orderIds);
-
-        setRelatedOrders(ordersData || []);
-      }
-    } catch (error) {
-      console.error('خطأ في جلب البيانات المرتبطة:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
   if (!invoice) return null;
-
-  // حساب الإحصائيات
-  const totalRevenue = relatedOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-  const totalProfit = relatedProfits.reduce((sum, profit) => sum + Number(profit.profit_amount || 0), 0);
-  const totalItems = relatedOrders.reduce((sum, order) => 
-    sum + (order.order_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0), 0
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] bg-gradient-to-br from-background via-muted/20 to-background border-0 shadow-2xl">
-        <ScrollArea className="h-full">
-          <div className="p-6 space-y-8">
+      <DialogContent className="max-w-4xl max-h-[90vh] bg-gradient-to-br from-background via-muted/30 to-background border-0 shadow-2xl">
+        <ScrollArea className="h-full max-h-[80vh]">
+          <div className="p-6">
             {/* Header */}
-            <div className="text-center pb-6 border-b border-border/60">
+            <div className="text-center mb-8 pb-6 border-b border-border/60">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <div className="p-3 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl text-white shadow-lg">
                   <Receipt className="w-8 h-8" />
                 </div>
                 <div>
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    فاتورة تسوية مفصلة
+                    فاتورة تسوية
                   </h1>
-                  <p className="text-sm text-muted-foreground">تفاصيل شاملة لمستحقات الموظف</p>
+                  <p className="text-sm text-muted-foreground">مستحقات الموظف</p>
                 </div>
               </div>
               
@@ -106,215 +38,95 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-primary" />
                   <p className="text-sm font-medium">
-                    تاريخ التسوية: {format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar })}
+                    تاريخ الإصدار: {invoice.settlement_date || invoice.created_at ? 
+                      format(parseISO(invoice.settlement_date || invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                      format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar })
+                    }
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* معلومات أساسية */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-card/50 backdrop-blur-sm border">
-                <CardHeader className="pb-3">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white">
-                      <User className="w-4 h-4" />
+            {/* معلومات الفاتورة */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* معلومات أساسية */}
+              <div className="lg:col-span-2 space-y-4">
+                <Card className="bg-card/50 backdrop-blur-sm border">
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+                      <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white">
+                        <User className="w-4 h-4" />
+                      </div>
+                      معلومات الموظف
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground font-medium">اسم الموظف</p>
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                          <Star className="w-4 h-4 text-primary" />
+                          <p className="font-semibold text-lg">{invoice.employee_name}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground font-medium">رقم الفاتورة</p>
+                        <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+                          <Receipt className="w-4 h-4 text-primary" />
+                          <p className="font-mono font-semibold text-primary">{invoice.invoice_number}</p>
+                        </div>
+                      </div>
                     </div>
-                    معلومات الموظف
-                  </h3>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">اسم الموظف</p>
-                      <p className="font-semibold">{invoice.employee_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">رقم الفاتورة</p>
-                      <p className="font-mono text-primary font-semibold">{invoice.invoice_number}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
 
-              <Card className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white border-0">
-                <CardHeader className="pb-3">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
-                    المبلغ المدفوع
-                  </h3>
-                </CardHeader>
-                <CardContent className="text-center">
-                  <p className="text-4xl font-bold mb-2">
-                    {invoice.settlement_amount?.toLocaleString()}
-                  </p>
-                  <p className="text-sm opacity-90">دينار عراقي</p>
-                  <Badge className="mt-3 bg-white/20 text-white border-0">
-                    <CheckCircle2 className="w-3 h-3 mr-1" />
-                    تسوية مكتملة
-                  </Badge>
-                </CardContent>
-              </Card>
+              {/* المبلغ المدفوع */}
+              <div className="space-y-4">
+                <Card className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 shadow-lg overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+                  <CardContent className="p-5 relative z-10 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-4">
+                      <div className="p-2 bg-white/20 rounded-lg">
+                        <DollarSign className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-lg font-bold">المبلغ المدفوع</h3>
+                    </div>
+                    <p className="text-4xl font-bold mb-2 drop-shadow-sm">
+                      {invoice.settlement_amount?.toLocaleString()}
+                    </p>
+                    <p className="text-sm font-medium opacity-90">دينار عراقي</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card/50 backdrop-blur-sm border">
+                  <CardContent className="p-4 text-center">
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg text-white">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-green-700 dark:text-green-400">تسوية مكتملة</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground">تم إتمام الدفع بنجاح</p>
+                    <div className="mt-3 flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>معالج تلقائياً بواسطة النظام</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-
-            {/* إحصائيات مالية */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <ShoppingCart className="w-5 h-5 text-blue-600" />
-                    <h4 className="font-semibold text-blue-700 dark:text-blue-300">إجمالي المبيعات</h4>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-600 mb-1">{totalRevenue.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">د.ع</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-green-600" />
-                    <h4 className="font-semibold text-green-700 dark:text-green-300">إجمالي الأرباح</h4>
-                  </div>
-                  <p className="text-2xl font-bold text-green-600 mb-1">{totalProfit.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">د.ع</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Package className="w-5 h-5 text-purple-600" />
-                    <h4 className="font-semibold text-purple-700 dark:text-purple-300">عدد المنتجات</h4>
-                  </div>
-                  <p className="text-2xl font-bold text-purple-600 mb-1">{totalItems}</p>
-                  <p className="text-xs text-muted-foreground">قطعة</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* جدول الطلبات */}
-            {relatedOrders.length > 0 && (
-              <Card className="bg-card/50 backdrop-blur-sm border">
-                <CardHeader>
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg text-white">
-                      <ShoppingCart className="w-4 h-4" />
-                    </div>
-                    الطلبات المرتبطة ({relatedOrders.length})
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-lg border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-right">رقم الطلب</TableHead>
-                          <TableHead className="text-right">العميل</TableHead>
-                          <TableHead className="text-right">المبلغ</TableHead>
-                          <TableHead className="text-right">المنتجات</TableHead>
-                          <TableHead className="text-right">التاريخ</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {relatedOrders.map((order) => (
-                          <TableRow key={order.id}>
-                            <TableCell className="font-mono font-semibold text-blue-600">
-                              {order.order_number}
-                            </TableCell>
-                            <TableCell className="font-medium">{order.customer_name}</TableCell>
-                            <TableCell className="font-semibold text-green-600">
-                              {Number(order.total_amount).toLocaleString()} د.ع
-                            </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                {order.order_items?.slice(0, 2).map((item, idx) => (
-                                  <div key={idx} className="text-xs">
-                                    {item.product_variants?.products?.name} - 
-                                    {item.product_variants?.colors?.name} - 
-                                    {item.product_variants?.sizes?.name} 
-                                    (×{item.quantity})
-                                  </div>
-                                ))}
-                                {order.order_items?.length > 2 && (
-                                  <div className="text-xs text-muted-foreground">
-                                    و {order.order_items.length - 2} منتجات أخرى...
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar })}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* تفاصيل الأرباح */}
-            {relatedProfits.length > 0 && (
-              <Card className="bg-card/50 backdrop-blur-sm border">
-                <CardHeader>
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg text-white">
-                      <Calculator className="w-4 h-4" />
-                    </div>
-                    تفاصيل الأرباح ({relatedProfits.length})
-                  </h3>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-lg border overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-right">رقم الطلب</TableHead>
-                          <TableHead className="text-right">مبلغ الربح</TableHead>
-                          <TableHead className="text-right">النسبة</TableHead>
-                          <TableHead className="text-right">تاريخ التسوية</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {relatedProfits.map((profit) => (
-                          <TableRow key={profit.id}>
-                            <TableCell className="font-mono font-semibold text-blue-600">
-                              {profit.orders?.order_number}
-                            </TableCell>
-                            <TableCell className="font-semibold text-green-600">
-                              {Number(profit.profit_amount).toLocaleString()} د.ع
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {profit.profit_percentage}%
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {format(parseISO(profit.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar })}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* وصف التسوية */}
             <Card className="bg-card/50 backdrop-blur-sm border">
-              <CardHeader>
-                <h3 className="font-semibold text-lg flex items-center gap-2">
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                   <div className="p-2 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg text-white">
                     <FileText className="w-4 h-4" />
                   </div>
                   وصف التسوية
                 </h3>
-              </CardHeader>
-              <CardContent>
                 <div className="p-4 bg-muted/50 rounded-lg border">
                   <p className="text-sm leading-relaxed">
-                    {invoice.description || 'لا يوجد وصف إضافي للتسوية'}
+                    {invoice.description}
                   </p>
                 </div>
               </CardContent>
@@ -322,7 +134,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
           </div>
         </ScrollArea>
         
-        <div className="p-4 border-t bg-muted/30">
+        <div className="p-6 border-t bg-muted/30">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
@@ -338,11 +150,8 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
 
 const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
   const [selectedEmployee, setSelectedEmployee] = useState(initialFilters.employee || 'all');
-  const [selectedPeriod, setSelectedPeriod] = useState(initialFilters.period || 'month'); // افتراضي: شهر
-  const [dateRange, setDateRange] = useState(initialFilters.dateRange || {
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date())
-  });
+  const [selectedPeriod, setSelectedPeriod] = useState(initialFilters.period || 'all');
+  const [dateRange, setDateRange] = useState(initialFilters.dateRange || null);
   const [settledDues, setSettledDues] = useState([]);
   const [settledProfits, setSettledProfits] = useState([]);
   const [allOrders, setAllOrders] = useState([]);
@@ -421,53 +230,14 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
     return 'غير محدد';
   };
 
-  // تطبيق فلتر الفترة على dateRange
-  useEffect(() => {
-    const now = new Date();
-    let newDateRange = null;
-
-    switch (selectedPeriod) {
-      case 'today':
-        newDateRange = { from: now, to: now };
-        break;
-      case 'week':
-        const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-        const endOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + 6));
-        newDateRange = { from: startOfWeek, to: endOfWeek };
-        break;
-      case 'month':
-        newDateRange = {
-          from: startOfMonth(new Date()),
-          to: endOfMonth(new Date())
-        };
-        break;
-      case 'quarter':
-        const currentMonth = new Date().getMonth();
-        const quarterStart = new Date(new Date().getFullYear(), Math.floor(currentMonth / 3) * 3, 1);
-        const quarterEnd = new Date(new Date().getFullYear(), Math.floor(currentMonth / 3) * 3 + 3, 0);
-        newDateRange = { from: quarterStart, to: quarterEnd };
-        break;
-      case 'all':
-      default:
-        newDateRange = null;
-        break;
-    }
-
-    if (selectedPeriod !== 'all') {
-      setDateRange(newDateRange);
-    }
-  }, [selectedPeriod]);
-
   // فلترة البيانات
   const filteredDues = useMemo(() => {
     return settledDues.filter(due => {
-      // فلتر الموظف
       const employeeMatch = selectedEmployee === 'all' || 
         due.employee_name?.toLowerCase().includes(
           employees.find(e => e.user_id === selectedEmployee)?.full_name?.toLowerCase() || ''
         );
       
-      // فلتر التاريخ
       const dateMatch = !dateRange?.from || 
         (new Date(due.settlement_date) >= dateRange.from && 
          new Date(due.settlement_date) <= (dateRange.to || new Date()));
@@ -519,7 +289,7 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
                 <SelectTrigger className="h-9 text-sm bg-background/50 border-border/50">
                   <SelectValue placeholder="جميع الموظفين" />
                 </SelectTrigger>
-                <SelectContent className="max-h-60">
+                <SelectContent>
                   <SelectItem value="all">جميع الموظفين</SelectItem>
                   {employees.map(emp => (
                     <SelectItem key={emp.user_id} value={emp.user_id}>
@@ -711,6 +481,8 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
         invoice={previewInvoice}
         open={!!previewInvoice}
         onOpenChange={(open) => !open && setPreviewInvoice(null)}
+        settledProfits={settledProfits}
+        allOrders={allOrders}
       />
     </Dialog>
   );
