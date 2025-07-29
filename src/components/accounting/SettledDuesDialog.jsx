@@ -15,52 +15,66 @@ import { supabase } from '@/lib/customSupabaseClient';
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
   const [relatedOrders, setRelatedOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [employeeData, setEmployeeData] = useState(null);
 
   useEffect(() => {
     if (open && invoice) {
-      fetchRelatedOrders();
+      fetchEmployeeAndOrders();
     }
   }, [open, invoice]);
 
-  const fetchRelatedOrders = async () => {
-    if (!invoice.metadata?.employee_id) return;
-    
+  const fetchEmployeeAndOrders = async () => {
     setLoading(true);
     try {
-      // جلب الطلبات المسواة للموظف
-      const { data: ordersData } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items(
-            *,
-            product_variants(
-              id,
-              selling_price,
-              cost_price,
-              products(name),
-              colors(name),
-              sizes(name)
-            )
-          )
-        `)
-        .eq('created_by', invoice.metadata.employee_id)
-        .eq('status', 'completed')
-        .eq('receipt_received', true)
-        .gte('created_at', new Date(new Date(invoice.settlement_date).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString())
-        .lte('created_at', invoice.settlement_date);
+      // البحث عن الموظف بالاسم
+      const { data: employeeProfile } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, role')
+        .eq('full_name', invoice.employee_name)
+        .single();
 
-      setRelatedOrders(ordersData || []);
+      setEmployeeData(employeeProfile);
+
+      if (employeeProfile) {
+        // جلب الطلبات المكتملة للموظف في فترة معينة
+        const settlementDate = new Date(invoice.settlement_date);
+        const monthBefore = new Date(settlementDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        const { data: ordersData } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items(
+              *,
+              product_variants(
+                id,
+                price as selling_price,
+                cost_price,
+                products(name),
+                colors(name),
+                sizes(name)
+              )
+            )
+          `)
+          .eq('created_by', employeeProfile.user_id)
+          .eq('status', 'completed')
+          .eq('receipt_received', true)
+          .gte('created_at', monthBefore.toISOString())
+          .lte('created_at', settlementDate.toISOString())
+          .order('created_at', { ascending: false });
+
+        setRelatedOrders(ordersData || []);
+      }
     } catch (error) {
-      console.error('خطأ في جلب الطلبات:', error);
+      console.error('خطأ في جلب البيانات:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // حساب الإحصائيات
+  // حساب الإحصائيات من الطلبات الفعلية
   const stats = useMemo(() => {
-    const totalRevenue = relatedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const totalRevenue = relatedOrders.reduce((sum, order) => sum + (order.total_amount - order.delivery_fee || 0), 0);
     const totalCosts = relatedOrders.reduce((sum, order) => {
       const orderCost = order.order_items?.reduce((itemSum, item) => {
         const costPrice = item.product_variants?.cost_price || 0;
@@ -222,16 +236,16 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
                         const costPrice = item.product_variants?.cost_price || 0;
                         return sum + (costPrice * item.quantity);
                       }, 0) || 0;
-                      const orderRevenue = order.total_amount || 0;
+                      const orderRevenue = (order.total_amount || 0) - (order.delivery_fee || 0);
                       const orderProfit = orderRevenue - orderCost;
                       
                       return (
-                        <div key={order.id} className="grid grid-cols-5 gap-4 p-3 bg-card/50 rounded-lg border text-sm">
-                          <span className="font-mono text-blue-600 dark:text-blue-400">{order.order_number}</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{orderRevenue.toLocaleString()}</span>
-                          <span className="text-orange-600 dark:text-orange-400 font-semibold">{orderCost.toLocaleString()}</span>
-                          <span className="text-purple-600 dark:text-purple-400 font-semibold">{orderProfit.toLocaleString()}</span>
-                          <span className="text-muted-foreground">
+                        <div key={order.id} className="grid grid-cols-5 gap-4 p-3 bg-card/50 rounded-lg border text-sm hover:bg-card/80 transition-colors">
+                          <span className="font-mono text-blue-600 dark:text-blue-400 font-semibold">{order.order_number}</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">{orderRevenue.toLocaleString()}</span>
+                          <span className="text-orange-600 dark:text-orange-400 font-bold">{orderCost.toLocaleString()}</span>
+                          <span className="text-purple-600 dark:text-purple-400 font-bold">{orderProfit.toLocaleString()}</span>
+                          <span className="text-muted-foreground font-medium">
                             {format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar })}
                           </span>
                         </div>
@@ -239,9 +253,12 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
                     })}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">لا توجد طلبات مسواة لهذه الفترة</p>
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-muted-foreground mb-2">لا توجد طلبات مسواة</h4>
+                    <p className="text-muted-foreground">
+                      لم يتم العثور على طلبات مكتملة لهذا الموظف في الفترة المحددة
+                    </p>
                   </div>
                 )}
               </CardContent>
