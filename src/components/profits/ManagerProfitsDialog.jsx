@@ -42,7 +42,7 @@ const ManagerProfitsDialog = ({
   managerId 
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [selectedPeriod, setSelectedPeriod] = useState('year'); // تغيير الافتراضي لهذا العام
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
 
@@ -109,13 +109,19 @@ const ManagerProfitsDialog = ({
           order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        console.log(`🔍 فحص الطلب ${order.order_number}:`, {
+        console.log(`🔍 فحص مفصل للطلب ${order.order_number}:`, {
+          orderId: order.id,
+          orderDate: orderDate.toISOString(),
+          dateRangeStart: dateRange.start.toISOString(),
+          dateRangeEnd: dateRange.end.toISOString(),
           withinPeriod,
-          isCompleted,
-          matchesEmployee,
-          matchesSearch,
           status: order.status,
+          isCompleted,
           created_by: order.created_by,
+          selectedEmployee,
+          matchesEmployee,
+          searchTerm,
+          matchesSearch,
           finalMatch: withinPeriod && isCompleted && matchesEmployee && matchesSearch
         });
         
@@ -123,7 +129,11 @@ const ManagerProfitsDialog = ({
       })
       .map(order => {
         try {
-          console.log(`💰 حساب ربح الطلب ${order.order_number}`);
+          console.log(`💰 حساب ربح مفصل للطلب ${order.order_number}:`, {
+            orderId: order.id,
+            totalAmount: order.final_amount || order.total_amount,
+            items: order.items?.length || 0
+          });
           
           // حساب الربح بطريقة آمنة
           let managerProfit = 0;
@@ -132,6 +142,8 @@ const ManagerProfitsDialog = ({
 
           if (calculateProfit && typeof calculateProfit === 'function') {
             const profitCalc = calculateProfit(order);
+            console.log(`📊 نتيجة حساب الربح من الدالة:`, profitCalc);
+            
             managerProfit = Number(profitCalc?.managerProfit || 0);
             employeeProfit = Number(profitCalc?.employeeProfit || 0);
             totalProfit = Number(profitCalc?.totalProfit || 0);
@@ -150,17 +162,27 @@ const ManagerProfitsDialog = ({
             totalProfit = orderTotal - totalCost;
             managerProfit = totalProfit * 0.6; // افتراض 60% للمدير
             employeeProfit = totalProfit * 0.4; // 40% للموظف
+            
+            console.log(`🧮 حساب يدوي للأرباح:`, {
+              orderTotal,
+              totalCost,
+              totalProfit,
+              managerProfit,
+              employeeProfit
+            });
           }
           
           const employee = employees.find(emp => emp.user_id === order.created_by);
           const profitStatus = profits.find(p => p.order_id === order.id);
           const orderTotal = Number(order.final_amount || order.total_amount || 0);
           
-          console.log(`✅ نتيجة حساب الطلب ${order.order_number}:`, {
+          console.log(`✅ نتيجة نهائية للطلب ${order.order_number}:`, {
             managerProfit,
             employeeProfit,
             totalProfit,
-            orderTotal
+            orderTotal,
+            employee: employee?.full_name || 'غير معروف',
+            profitStatus: profitStatus?.status || 'غير معروف'
           });
           
           return {
@@ -179,7 +201,19 @@ const ManagerProfitsDialog = ({
           return null;
         }
       })
-      .filter(order => order !== null && Number(order.managerProfit) > 0)
+      .filter(order => {
+        const isValid = order !== null;
+        const hasProfit = Number(order?.managerProfit || 0) > 0;
+        
+        console.log(`🔎 فحص صحة الطلب ${order?.order_number}:`, {
+          isValid,
+          managerProfit: order?.managerProfit,
+          hasProfit,
+          shouldInclude: isValid && hasProfit
+        });
+        
+        return isValid && hasProfit;
+      })
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     console.log('✅ الطلبات المعالجة النهائية:', {
