@@ -906,10 +906,10 @@ const EmployeeFollowUpPage = () => {
         <ManagerProfitsDialog
           isOpen={isManagerProfitsDialogOpen}
           onClose={() => setIsManagerProfitsDialogOpen(false)}
-          orders={orders}
-          employees={allUsers}
+          orders={filteredOrders || orders || []} 
+          employees={employees || allUsers || []}
           calculateProfit={calculateProfit}
-          profits={profits}
+          profits={profits || []}
           managerId={null}
         />
       </motion.div>

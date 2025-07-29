@@ -46,15 +46,50 @@ const ManagerProfitsDialog = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
 
-  console.log('🔍 ManagerProfitsDialog Props:', {
+  console.log('🔍 ManagerProfitsDialog Props DETAILED:', {
     isOpen,
     ordersCount: orders?.length || 0,
     employeesCount: employees?.length || 0,
     profitsCount: profits?.length || 0,
     calculateProfitExists: !!calculateProfit,
-    ordersData: orders?.slice(0, 3)?.map(o => ({ id: o.id, status: o.status, created_by: o.created_by })),
-    employeesData: employees?.slice(0, 3)?.map(e => ({ id: e.user_id, name: e.full_name }))
+    ordersData: orders?.slice(0, 3)?.map(o => ({ 
+      id: o.id, 
+      number: o.order_number,
+      status: o.status, 
+      created_by: o.created_by,
+      total: o.final_amount || o.total_amount,
+      created_at: o.created_at
+    })),
+    employeesData: employees?.slice(0, 3)?.map(e => ({ 
+      id: e.user_id, 
+      name: e.full_name 
+    })),
+    profitsData: profits?.slice(0, 3)?.map(p => ({
+      id: p.id,
+      order_id: p.order_id,
+      status: p.status,
+      settled_at: p.settled_at
+    }))
   });
+
+  // تحقق فوري من البيانات
+  if (!orders || !Array.isArray(orders) || orders.length === 0) {
+    console.error('❌ ManagerProfitsDialog: لا توجد طلبات!', { orders });
+  } else {
+    console.log('✅ ManagerProfitsDialog: طلبات متوفرة', { count: orders.length });
+  }
+
+  if (!employees || !Array.isArray(employees) || employees.length === 0) {
+    console.error('❌ ManagerProfitsDialog: لا يوجد موظفين!', { employees });
+  } else {
+    console.log('✅ ManagerProfitsDialog: موظفين متوفرين', { count: employees.length });
+  }
+
+  if (!calculateProfit || typeof calculateProfit !== 'function') {
+    console.error('❌ ManagerProfitsDialog: دالة حساب الأرباح غير متوفرة!', { calculateProfit });
+  } else {
+    console.log('✅ ManagerProfitsDialog: دالة حساب الأرباح متوفرة');
+  }
 
   // فلترة البيانات حسب الفترة
   const dateRange = useMemo(() => {
@@ -87,11 +122,15 @@ const ManagerProfitsDialog = ({
       return [];
     }
 
-    console.log('🔄 معالجة الطلبات للأرباح:', {
+    console.log('🔄 بدء معالجة الطلبات للأرباح - ManagerProfitsDialog:', {
       totalOrders: orders.length,
-      dateRange,
+      dateRange: {
+        start: dateRange.start.toISOString(),
+        end: dateRange.end.toISOString()
+      },
       selectedEmployee,
-      searchTerm
+      searchTerm,
+      selectedPeriod
     });
 
     const processed = orders
