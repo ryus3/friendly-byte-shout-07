@@ -25,27 +25,39 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
 
     // حساب البيانات الحقيقية للفاتورة
     const invoiceStats = useMemo(() => {
+        console.log('🔍 Settlement Invoice Data:', { 
+            invoice, 
+            settledOrdersDetails,
+            ordersCount: settledOrdersDetails.length 
+        });
+
         let totalRevenue = 0;
         let totalCost = 0;
         let totalOrders = settledOrdersDetails.length;
 
         settledOrdersDetails.forEach(order => {
+            console.log('📊 Processing Order:', order);
             totalRevenue += order.final_amount || order.total_amount || 0;
             
             // حساب التكلفة من المنتجات
             if (order.items && Array.isArray(order.items)) {
                 order.items.forEach(item => {
-                    totalCost += (item.costPrice || 0) * (item.quantity || 0);
+                    const itemCost = (item.costPrice || item.cost_price || 0) * (item.quantity || 0);
+                    totalCost += itemCost;
+                    console.log('💰 Item Cost:', { item, itemCost });
                 });
             }
         });
 
-        return {
+        const stats = {
             totalRevenue,
             totalCost,
             totalOrders,
             profit: totalRevenue - totalCost
         };
+
+        console.log('📈 Final Invoice Stats:', stats);
+        return stats;
     }, [settledOrdersDetails]);
 
     const handleViewOrder = (order) => {
@@ -61,6 +73,9 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                          <AlertDialogTitle className="text-center text-xl font-bold text-primary">
                              فاتورة تسوية مستحقات الموظفين
                          </AlertDialogTitle>
+                         <AlertDialogDescription className="text-center text-muted-foreground">
+                             تفاصيل فاتورة التسوية للمستحقات المدفوعة
+                         </AlertDialogDescription>
                      </AlertDialogHeader>
                      
                      {/* كروت المعلومات الأساسية في سطر واحد */}
