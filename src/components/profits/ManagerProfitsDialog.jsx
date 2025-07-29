@@ -252,7 +252,7 @@ const ManagerProfitsDialog = ({
             const profitRecord = profits?.find(p => p.order_id === order.id);
             
             if (profitRecord) {
-              // استخدام البيانات الحقيقية من جدول profits
+              // استخدام البيانات الحقيقية من جدول profits  
               systemProfit = Number(profitRecord.system_profit || profitRecord.manager_profit || 0);
               employeeProfit = Number(profitRecord.employee_profit || 0); 
               totalProfit = systemProfit + employeeProfit;
@@ -265,11 +265,29 @@ const ManagerProfitsDialog = ({
                 totalProfit,
                 managerProfit
               });
-            } else {
-              // حساب تقديري فقط في حالة عدم وجود بيانات
-              totalProfit = totalWithoutDelivery * 0.2; // افتراض 20% ربح من المبلغ
-              systemProfit = totalProfit * 0.6; // 60% للنظام 
-              employeeProfit = totalProfit * 0.4; // 40% للموظف
+            } else if (calculateProfit && typeof calculateProfit === 'function') {
+              // محاولة استخدام دالة حساب الأرباح كبديل
+              try {
+                let profitCalc = calculateProfit(order.id) || calculateProfit(order);
+                if (profitCalc && typeof profitCalc === 'object') {
+                  systemProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
+                  employeeProfit = Number(profitCalc.employeeProfit || 0);
+                  totalProfit = systemProfit + employeeProfit;
+                  managerProfit = systemProfit;
+                  
+                  console.log(`📋 استخدام دالة حساب الأرباح:`, { profitCalc, systemProfit, employeeProfit });
+                }
+              } catch (calcError) {
+                console.log('خطأ في دالة حساب الأرباح:', calcError);
+              }
+            }
+            
+            // إذا لم نحصل على أرباح حقيقية، استخدم حساب تقديري 
+            if (systemProfit === 0 && employeeProfit === 0 && totalProfit === 0) {
+              // حساب تقديري بناء على نسب واقعية
+              totalProfit = totalWithoutDelivery * 0.15; // افتراض 15% ربح إجمالي
+              systemProfit = totalProfit * 0.7; // 70% للنظام
+              employeeProfit = totalProfit * 0.3; // 30% للموظف 
               managerProfit = systemProfit;
               
               console.log(`🧮 حساب تقديري (لا توجد بيانات ربح حقيقية):`, {
@@ -467,156 +485,180 @@ const ManagerProfitsDialog = ({
     </Card>
   );
 
-  const EmployeeCard = ({ employeeData }) => (
-    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/10 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 group h-48">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <CardContent className="p-4 relative z-10 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300">
-                <Users className="h-6 w-6 text-primary-foreground" />
+  const EmployeeCard = ({ employeeData }) => {
+    // البحث عن فواتير الموظف المدفوعة
+    const employeeInvoices = profits?.filter(p => 
+      p.employee_id === employeeData.employee?.user_id && 
+      (p.status === 'settled' || p.settled_at)
+    ) || [];
+
+    const [showInvoices, setShowInvoices] = useState(false);
+
+    return (
+      <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/10 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 group">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <CardContent className="p-4 relative z-10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                  <Users className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                  {employeeData.orders}
+                </div>
               </div>
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
-                {employeeData.orders}
+              <div>
+                <h3 className="font-bold text-base text-foreground">{employeeData.employee?.full_name || 'غير محدد'}</h3>
+                <p className="text-xs text-muted-foreground font-medium">{employeeData.orders} طلب مكتمل</p>
               </div>
             </div>
-            <div>
-              <h3 className="font-bold text-base text-foreground">{employeeData.employee?.full_name || 'غير محدد'}</h3>
-              <p className="text-xs text-muted-foreground font-medium">{employeeData.orders} طلب مكتمل</p>
-            </div>
-          </div>
-          <div className="text-left">
-            <p className="text-lg font-bold text-green-600 mb-1">{formatCurrency(employeeData.managerProfit)}</p>
-            <Badge variant="secondary" className="text-xs">ربحي منه</Badge>
-          </div>
-        </div>
-        
-        <div className="space-y-3 flex-1">
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
-              <p className="text-sm font-bold text-blue-600">{formatCurrency(employeeData.revenue)}</p>
-              <p className="text-xs text-muted-foreground font-medium">إجمالي المبيعات</p>
-            </div>
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
-              <p className="text-sm font-bold text-purple-600">{formatCurrency(employeeData.employeeProfit)}</p>
-              <p className="text-xs text-muted-foreground font-medium">ربح الموظف</p>
+            <div className="text-left">
+              <p className="text-lg font-bold text-green-600 mb-1">{formatCurrency(employeeData.managerProfit)}</p>
+              <Badge variant="secondary" className="text-xs">ربحي منه</Badge>
             </div>
           </div>
           
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-medium text-muted-foreground">نسبة المساهمة</span>
-              <span className="text-xs font-bold text-primary">
-                {stats.totalManagerProfit > 0 ? ((employeeData.managerProfit / stats.totalManagerProfit) * 100).toFixed(1) : 0}%
-              </span>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
+                <p className="text-sm font-bold text-blue-600">{formatCurrency(employeeData.revenue)}</p>
+                <p className="text-xs text-muted-foreground font-medium">إجمالي المبيعات</p>
+              </div>
+              <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
+                <p className="text-sm font-bold text-purple-600">{formatCurrency(employeeData.employeeProfit)}</p>
+                <p className="text-xs text-muted-foreground font-medium">ربح الموظف</p>
+              </div>
             </div>
-            <Progress 
-              value={stats.totalManagerProfit > 0 ? (employeeData.managerProfit / stats.totalManagerProfit) * 100 : 0} 
-              className="h-2" 
-            />
+            
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-medium text-muted-foreground">نسبة المساهمة</span>
+                <span className="text-xs font-bold text-primary">
+                  {stats.totalManagerProfit > 0 ? ((employeeData.managerProfit / stats.totalManagerProfit) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <Progress 
+                value={stats.totalManagerProfit > 0 ? (employeeData.managerProfit / stats.totalManagerProfit) * 100 : 0} 
+                className="h-2" 
+              />
+            </div>
+
+            {/* قسم فواتير المستحقات */}
+            <div className="pt-3 border-t border-border/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">
+                    فواتير المستحقات ({employeeInvoices.length})
+                  </span>
+                </div>
+                {employeeInvoices.length > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 px-2"
+                    onClick={() => setShowInvoices(!showInvoices)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              
+              {showInvoices && employeeInvoices.length > 0 ? (
+                <ScrollArea className="h-24">
+                  <div className="space-y-1">
+                    {employeeInvoices.slice(0, 3).map((invoice, idx) => (
+                      <div key={invoice.id || idx} className="flex items-center justify-between p-2 rounded-lg bg-green-50 dark:bg-green-950/20 text-xs">
+                        <div>
+                          <p className="font-medium text-green-700">فاتورة #{idx + 1}</p>
+                          <p className="text-muted-foreground">
+                            {invoice.settled_at ? format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 'غير محدد'}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700 text-xs">
+                          مدفوع
+                        </Badge>
+                      </div>
+                    ))}
+                    {employeeInvoices.length > 3 && (
+                      <p className="text-xs text-muted-foreground text-center pt-1">
+                        +{employeeInvoices.length - 3} فاتورة أخرى
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              ) : (
+                employeeInvoices.length === 0 && (
+                  <div className="text-center py-2">
+                    <p className="text-xs text-muted-foreground">لا توجد فواتير مدفوعة</p>
+                  </div>
+                )
+              )}
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+        </CardContent>
+      </Card>
+    );
+  };
 
   const OrderCard = ({ order }) => (
-    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/5 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1 group">
-      <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <CardContent className="p-4 relative z-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/5 border-border/50 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
+      <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <CardContent className="p-3 relative z-10">
+        {/* Header - مضغوط */}
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
             <div className="relative">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
                 order.isPaid 
                   ? 'bg-gradient-to-br from-green-500 to-green-600' 
                   : 'bg-gradient-to-br from-yellow-500 to-orange-500'
               }`}>
                 {order.isPaid ? (
-                  <CheckCircle className="h-6 w-6 text-white" />
+                  <CheckCircle className="h-4 w-4 text-white" />
                 ) : (
-                  <Clock className="h-6 w-6 text-white" />
+                  <Clock className="h-4 w-4 text-white" />
                 )}
               </div>
-              <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
-                #{order.order_number?.slice(-2) || '00'}
-              </div>
             </div>
-            <div className="flex-1">
-              <h4 className="font-bold text-base text-foreground">{order.order_number}</h4>
-              <p className="text-sm text-muted-foreground font-medium">{order.customer_name || 'عميل غير محدد'}</p>
-              <p className="text-sm text-blue-600 font-medium">{order.employee?.full_name || order.employeeName || 'موظف غير محدد'}</p>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-sm text-foreground truncate">{order.order_number}</h4>
+              <p className="text-xs text-muted-foreground truncate">{order.customer_name || 'عميل غير محدد'}</p>
             </div>
           </div>
           <div className="text-left">
-            <p className="text-xl font-bold text-green-600 mb-1">{formatCurrency(order.managerProfit || order.systemProfit || 0)}</p>
-            <Badge variant={order.isPaid ? "default" : "secondary"} className="text-sm px-3 py-1">
+            <Badge variant={order.isPaid ? "default" : "secondary"} className="text-xs px-2 py-1">
               {order.isPaid ? 'مدفوع' : 'معلق'}
             </Badge>
           </div>
         </div>
         
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
-            <p className="text-lg font-bold text-blue-600">{formatCurrency(order.orderTotal || order.totalWithoutDelivery || order.final_amount || order.total_amount || 0)}</p>
-            <p className="text-xs text-muted-foreground font-medium">إجمالي الطلب</p>
-            <p className="text-xs text-blue-500">(بدون توصيل)</p>
+        {/* Main Stats - 2x2 Grid مضغوط */}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-center">
+            <p className="text-sm font-bold text-blue-600">{formatCurrency(order.orderTotal || order.totalWithoutDelivery || order.final_amount || order.total_amount || 0)}</p>
+            <p className="text-xs text-muted-foreground">الطلب</p>
           </div>
-          <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
-            <p className="text-lg font-bold text-purple-600">{formatCurrency(order.employeeProfit || 0)}</p>
-            <p className="text-xs text-muted-foreground font-medium">ربح الموظف</p>
-            <p className="text-xs text-purple-500">مستحقات</p>
+          <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950/20 text-center">
+            <p className="text-sm font-bold text-green-600">{formatCurrency(order.managerProfit || order.systemProfit || 0)}</p>
+            <p className="text-xs text-muted-foreground">ربحي</p>
           </div>
-          <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-950/20 text-center">
-            <p className="text-lg font-bold text-gray-600">{format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}</p>
-            <p className="text-xs text-muted-foreground font-medium">التاريخ</p>
-            <p className="text-xs text-gray-500">{format(new Date(order.created_at), 'HH:mm', { locale: ar })}</p>
+          <div className="p-2 rounded-lg bg-purple-50 dark:bg-purple-950/20 text-center">
+            <p className="text-sm font-bold text-purple-600">{formatCurrency(order.employeeProfit || 0)}</p>
+            <p className="text-xs text-muted-foreground">ربح الموظف</p>
           </div>
-          <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/20 text-center">
-            <p className="text-lg font-bold text-green-600">{order.profitPercentage || '0'}%</p>
-            <p className="text-xs text-muted-foreground font-medium">هامش الربح</p>
-            <p className="text-xs text-green-500">صافي</p>
+          <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20 text-center">
+            <p className="text-sm font-bold text-orange-600">{order.profitPercentage || '0'}%</p>
+            <p className="text-xs text-muted-foreground">هامش الربح</p>
           </div>
         </div>
 
-        {/* Additional Details */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-950/20 text-center">
-            <p className="text-sm font-bold text-orange-600">{formatCurrency(order.totalProfit || 0)}</p>
-            <p className="text-xs text-muted-foreground">إجمالي الربح</p>
-          </div>
-          <div className="p-2 rounded-lg bg-red-50 dark:bg-red-950/20 text-center">
-            <p className="text-sm font-bold text-red-600">{formatCurrency(order.deliveryFee || 0)}</p>
-            <p className="text-xs text-muted-foreground">رسوم التوصيل</p>
-          </div>
+        {/* Employee & Date - مضغوط */}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="truncate">{order.employee?.full_name || order.employeeName || 'موظف غير محدد'}</span>
+          <span>{format(new Date(order.created_at), 'dd/MM', { locale: ar })}</span>
         </div>
-        
-        {/* Products Section */}
-        {order.items && order.items.length > 0 && (
-          <div className="pt-3 border-t border-border/50">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-medium text-muted-foreground">المنتجات ({order.items.length})</p>
-              <Button variant="ghost" size="sm" className="h-6 px-2">
-                <Eye className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {order.items.slice(0, 3).map((item, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs bg-muted/30 hover:bg-muted/50 transition-colors px-2 py-1">
-                  {item.product_name || item.name || 'منتج'} × {item.quantity}
-                </Badge>
-              ))}
-              {order.items.length > 3 && (
-                <Badge variant="outline" className="text-xs bg-primary/10 text-primary px-2 py-1">
-                  +{order.items.length - 3} آخر
-                </Badge>
-              )}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
