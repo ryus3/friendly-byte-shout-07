@@ -143,22 +143,31 @@ const ManagerProfitsDialog = ({
   };
 
   const StatCard = ({ title, value, icon: Icon, color, percentage, trend }) => (
-    <Card className="bg-gradient-to-br from-card to-card/50 border-border/50 hover:shadow-lg transition-all duration-300">
-      <CardContent className="p-4">
+    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/20 border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1 group">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <CardContent className="p-6 relative z-10">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">{title}</p>
-            <p className={`text-xl font-bold ${color}`}>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground/80 tracking-wide">{title}</p>
+            <p className={`text-2xl font-bold ${color} tracking-tight`}>
               {typeof value === 'number' ? formatCurrency(value) : value}
             </p>
             {percentage && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {percentage}% من الإجمالي
-              </p>
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full bg-gradient-to-r ${color.replace('text-', 'from-').replace('-600', '-400')} to-${color.replace('text-', '').replace('-600', '-600')} rounded-full transition-all duration-1000`}
+                    style={{ width: `${Math.min(parseFloat(percentage), 100)}%` }}
+                  />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {percentage}%
+                </span>
+              </div>
             )}
           </div>
-          <div className={`p-3 rounded-full bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-500')} to-${color.replace('text-', '').replace('-600', '-600')} bg-opacity-20`}>
-            <Icon className={`h-5 w-5 ${color}`} />
+          <div className={`p-4 rounded-2xl bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-500/20')} to-${color.replace('text-', '').replace('-600', '-600/30')} group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+            <Icon className={`h-6 w-6 ${color} drop-shadow-sm`} />
           </div>
         </div>
       </CardContent>
@@ -166,92 +175,131 @@ const ManagerProfitsDialog = ({
   );
 
   const EmployeeCard = ({ employeeData }) => (
-    <Card className="hover:shadow-md transition-all duration-300 border-border/50">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary-foreground" />
+    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/10 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-2 group">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <CardContent className="p-6 relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-300">
+                <Users className="h-7 w-7 text-primary-foreground" />
+              </div>
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
+                {employeeData.orders}
+              </div>
             </div>
             <div>
-              <h3 className="font-semibold">{employeeData.employee?.full_name || 'غير محدد'}</h3>
-              <p className="text-sm text-muted-foreground">{employeeData.orders} طلب</p>
+              <h3 className="font-bold text-lg text-foreground">{employeeData.employee?.full_name || 'غير محدد'}</h3>
+              <p className="text-sm text-muted-foreground font-medium">{employeeData.orders} طلب مكتمل</p>
             </div>
           </div>
           <div className="text-left">
-            <p className="text-lg font-bold text-green-600">{formatCurrency(employeeData.managerProfit)}</p>
-            <p className="text-sm text-muted-foreground">ربحي منه</p>
+            <p className="text-xl font-bold text-green-600 mb-1">{formatCurrency(employeeData.managerProfit)}</p>
+            <Badge variant="secondary" className="text-xs">ربحي منه</Badge>
           </div>
         </div>
         
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>إجمالي المبيعات</span>
-            <span className="font-medium">{formatCurrency(employeeData.revenue)}</span>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
+              <p className="text-lg font-bold text-blue-600">{formatCurrency(employeeData.revenue)}</p>
+              <p className="text-xs text-muted-foreground font-medium">إجمالي المبيعات</p>
+            </div>
+            <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
+              <p className="text-lg font-bold text-purple-600">{formatCurrency(employeeData.employeeProfit)}</p>
+              <p className="text-xs text-muted-foreground font-medium">ربح الموظف</p>
+            </div>
           </div>
-          <div className="flex justify-between text-sm">
-            <span>ربح الموظف</span>
-            <span className="font-medium text-blue-600">{formatCurrency(employeeData.employeeProfit)}</span>
+          
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-medium text-muted-foreground">نسبة المساهمة</span>
+              <span className="text-sm font-bold text-primary">
+                {((employeeData.managerProfit / stats.totalManagerProfit) * 100).toFixed(1)}%
+              </span>
+            </div>
+            <Progress 
+              value={(employeeData.managerProfit / stats.totalManagerProfit) * 100} 
+              className="h-3" 
+            />
           </div>
-          <Progress 
-            value={(employeeData.managerProfit / stats.totalManagerProfit) * 100} 
-            className="h-2" 
-          />
         </div>
       </CardContent>
     </Card>
   );
 
   const OrderCard = ({ order }) => (
-    <Card className="hover:shadow-md transition-all duration-300">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${order.isPaid ? 'bg-green-500' : 'bg-yellow-500'}`} />
+    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/5 border-border/50 hover:shadow-xl hover:shadow-primary/5 transition-all duration-500 hover:-translate-y-1 group">
+      <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <CardContent className="p-6 relative z-10">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 ${
+                order.isPaid 
+                  ? 'bg-gradient-to-br from-green-500 to-green-600' 
+                  : 'bg-gradient-to-br from-yellow-500 to-orange-500'
+              }`}>
+                {order.isPaid ? (
+                  <CheckCircle className="h-6 w-6 text-white" />
+                ) : (
+                  <Clock className="h-6 w-6 text-white" />
+                )}
+              </div>
+              <div className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-xs font-bold text-primary-foreground">
+                #{order.order_number?.slice(-2) || '00'}
+              </div>
+            </div>
             <div>
-              <h4 className="font-semibold">{order.order_number}</h4>
-              <p className="text-sm text-muted-foreground">{order.customer_name}</p>
+              <h4 className="font-bold text-lg text-foreground">{order.order_number}</h4>
+              <p className="text-sm text-muted-foreground font-medium">{order.customer_name}</p>
+              <p className="text-xs text-muted-foreground">{order.employee?.full_name || 'غير محدد'}</p>
             </div>
           </div>
           <div className="text-left">
-            <p className="text-lg font-bold text-green-600">{formatCurrency(order.managerProfit)}</p>
-            <Badge variant={order.isPaid ? "default" : "secondary"}>
+            <p className="text-xl font-bold text-green-600 mb-1">{formatCurrency(order.managerProfit)}</p>
+            <Badge variant={order.isPaid ? "default" : "secondary"} className="text-xs">
               {order.isPaid ? 'مدفوع' : 'معلق'}
             </Badge>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-muted-foreground">إجمالي الطلب:</span>
-            <p className="font-medium">{formatCurrency(order.final_amount || order.total_amount)}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-center">
+            <p className="text-sm font-bold text-blue-600">{formatCurrency(order.final_amount || order.total_amount)}</p>
+            <p className="text-xs text-muted-foreground">إجمالي الطلب</p>
           </div>
-          <div>
-            <span className="text-muted-foreground">ربح الموظف:</span>
-            <p className="font-medium text-blue-600">{formatCurrency(order.employeeProfit)}</p>
+          <div className="p-3 rounded-xl bg-purple-50 dark:bg-purple-950/20 text-center">
+            <p className="text-sm font-bold text-purple-600">{formatCurrency(order.employeeProfit)}</p>
+            <p className="text-xs text-muted-foreground">ربح الموظف</p>
           </div>
-          <div>
-            <span className="text-muted-foreground">التاريخ:</span>
-            <p className="font-medium">{format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}</p>
+          <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-950/20 text-center">
+            <p className="text-sm font-bold text-gray-600">{format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar })}</p>
+            <p className="text-xs text-muted-foreground">التاريخ</p>
           </div>
-          <div>
-            <span className="text-muted-foreground">الموظف:</span>
-            <p className="font-medium">{order.employee?.full_name || 'غير محدد'}</p>
+          <div className="p-3 rounded-xl bg-green-50 dark:bg-green-950/20 text-center">
+            <p className="text-sm font-bold text-green-600">{order.profitPercentage}%</p>
+            <p className="text-xs text-muted-foreground">هامش الربح</p>
           </div>
         </div>
         
-        {order.items.length > 0 && (
-          <div className="mt-3 pt-3 border-t">
-            <p className="text-sm text-muted-foreground mb-2">المنتجات ({order.items.length}):</p>
-            <div className="flex flex-wrap gap-1">
-              {order.items.slice(0, 3).map((item, idx) => (
-                <Badge key={idx} variant="outline" className="text-xs">
-                  {item.product_name} x{item.quantity}
+        {order.items && order.items.length > 0 && (
+          <div className="pt-4 border-t border-border/50">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-muted-foreground">المنتجات ({order.items.length})</p>
+              <Button variant="ghost" size="sm" className="h-6 px-2">
+                <Eye className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {order.items.slice(0, 4).map((item, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs bg-muted/30 hover:bg-muted/50 transition-colors">
+                  {item.product_name} × {item.quantity}
                 </Badge>
               ))}
-              {order.items.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{order.items.length - 3} أخرى
+              {order.items.length > 4 && (
+                <Badge variant="outline" className="text-xs bg-primary/10 text-primary">
+                  +{order.items.length - 4} منتج آخر
                 </Badge>
               )}
             </div>
