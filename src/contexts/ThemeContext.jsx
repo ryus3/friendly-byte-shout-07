@@ -11,35 +11,48 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }) {
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem(storageKey) || defaultTheme
-  );
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem(storageKey) || defaultTheme;
+    } catch {
+      return defaultTheme;
+    }
+  });
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    try {
+      const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark");
+      root.classList.remove("light", "dark");
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
+      if (theme === "system") {
+        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+          .matches
+          ? "dark"
+          : "light";
 
-      root.classList.add(systemTheme);
-      return;
+        root.classList.add(systemTheme);
+        return;
+      }
+
+      root.classList.add(theme);
+    } catch (error) {
+      console.warn("Theme application failed:", error);
     }
-
-    root.classList.add(theme);
   }, [theme]);
 
-  const value = {
+  const value = React.useMemo(() => ({
     theme,
-    setTheme: (theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
+    setTheme: (newTheme) => {
+      try {
+        localStorage.setItem(storageKey, newTheme);
+        setTheme(newTheme);
+      } catch (error) {
+        console.warn("Theme storage failed:", error);
+        setTheme(newTheme);
+      }
     },
-  };
+  }), [theme, storageKey]);
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
