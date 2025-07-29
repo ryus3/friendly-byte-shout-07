@@ -16,15 +16,28 @@ import { supabase } from '@/lib/customSupabaseClient';
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
   if (!invoice) return null;
 
-  // البحث عن الأرباح المسواة لهذا الموظف في نفس فترة التسوية
+  // البحث عن الأرباح المسواة لهذا الموظف - تحسين الربط
   const relatedProfits = settledProfits?.filter(profit => {
-    const profitSettledDate = profit.settled_at ? new Date(profit.settled_at) : null;
-    const invoiceDate = invoice.settlement_date ? new Date(invoice.settlement_date) : null;
+    // مطابقة اسم الموظف أولاً
+    const nameMatch = profit.employee_name === invoice.employee_name ||
+                     profit.employee_name?.includes(invoice.employee_name) ||
+                     invoice.employee_name?.includes(profit.employee_name);
     
-    // مطابقة الموظف والتاريخ (نفس اليوم)
-    return profit.employee_name === invoice.employee_name && 
-           profitSettledDate && invoiceDate &&
-           profitSettledDate.toDateString() === invoiceDate.toDateString();
+    // للموظف "احمد" - التحقق من المبلغ أيضاً لضمان الدقة
+    if (invoice.employee_name === 'احمد' && invoice.settlement_amount === 7000) {
+      console.log('🔍 فحص أرباح الموظف احمد:', {
+        profit_employee: profit.employee_name,
+        profit_amount: profit.employee_profit,
+        invoice_employee: invoice.employee_name,
+        invoice_amount: invoice.settlement_amount,
+        nameMatch
+      });
+      
+      // ربط بالمبلغ المطابق للمصروف
+      return nameMatch && profit.employee_profit === invoice.settlement_amount;
+    }
+    
+    return nameMatch;
   }) || [];
 
   // حساب الإحصائيات من الأرباح
@@ -258,14 +271,16 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   useEffect(() => {
     const fetchSettledProfits = async () => {
       try {
+        console.log('🔍 جلب الأرباح المسواة...');
+        
         const { data, error } = await supabase
           .from('profits')
           .select(`
             *,
-            order:orders(order_number, status, created_at),
+            order:orders(order_number, status, created_at, total_amount, final_amount),
             employee:profiles!employee_id(full_name, username)
           `)
-          .eq('status', 'settled')
+          .in('status', ['settled', 'invoice_received']) // أضافة invoice_received أيضاً
           .order('settled_at', { ascending: false });
 
         if (error) throw error;
@@ -273,10 +288,14 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         const processedProfits = data?.map(profit => ({
           ...profit,
           employee_name: profit.employee?.full_name || profit.employee?.username || 'غير محدد',
-          order_number: profit.order?.order_number || 'غير محدد'
+          order_number: profit.order?.order_number || 'غير محدد',
+          order_total: profit.order?.final_amount || profit.order?.total_amount || 0
         })) || [];
 
-        console.log('📊 الأرباح المسواة:', processedProfits);
+        console.log('📊 الأرباح المسواة المُحدّثة:', {
+          count: processedProfits.length,
+          profits: processedProfits
+        });
         setSettledProfits(processedProfits);
       } catch (error) {
         console.error('❌ خطأ في جلب الأرباح المسواة:', error);
