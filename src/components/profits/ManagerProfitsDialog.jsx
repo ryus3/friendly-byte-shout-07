@@ -252,14 +252,21 @@ const ManagerProfitsDialog = ({
             const profitRecord = profits?.find(p => p.order_id === order.id);
             
             if (profitRecord) {
-              // استخدام البيانات الحقيقية من جدول profits  
-              systemProfit = Number(profitRecord.system_profit || profitRecord.manager_profit || 0);
-              employeeProfit = Number(profitRecord.employee_profit || 0); 
-              totalProfit = systemProfit + employeeProfit;
-              managerProfit = systemProfit;
+              // استخدام البيانات الحقيقية من جدول profits
+              const totalProfitFromDB = Number(profitRecord.profit_amount || 0);
+              const employeeProfitFromDB = Number(profitRecord.employee_profit || 0); 
+              const managerProfitFromDB = totalProfitFromDB - employeeProfitFromDB; // ربح النظام = الإجمالي - ربح الموظف
+              
+              systemProfit = managerProfitFromDB;
+              employeeProfit = employeeProfitFromDB; 
+              totalProfit = totalProfitFromDB;
+              managerProfit = managerProfitFromDB;
               
               console.log(`💎 استخدام بيانات الربح الحقيقية من قاعدة البيانات:`, {
                 profitRecord,
+                totalProfitFromDB,
+                employeeProfitFromDB,
+                managerProfitFromDB,
                 systemProfit,
                 employeeProfit,
                 totalProfit,
@@ -486,11 +493,17 @@ const ManagerProfitsDialog = ({
   );
 
   const EmployeeCard = ({ employeeData }) => {
-    // البحث عن فواتير الموظف المدفوعة
+    // البحث عن فواتير الموظف المدفوعة مع التفاصيل الكاملة
     const employeeInvoices = profits?.filter(p => 
       p.employee_id === employeeData.employee?.user_id && 
-      (p.status === 'settled' || p.settled_at)
+      (p.status === 'settled' || p.status === 'invoice_received' || p.settled_at)
     ) || [];
+
+    console.log(`🧾 فواتير الموظف ${employeeData.employee?.full_name}:`, {
+      employeeId: employeeData.employee?.user_id,
+      invoicesCount: employeeInvoices.length,
+      invoices: employeeInvoices
+    });
 
     const [showInvoices, setShowInvoices] = useState(false);
 
@@ -566,19 +579,51 @@ const ManagerProfitsDialog = ({
               </div>
               
               {showInvoices && employeeInvoices.length > 0 ? (
-                <ScrollArea className="h-24">
-                  <div className="space-y-1">
-                    {employeeInvoices.slice(0, 3).map((invoice, idx) => (
-                      <div key={invoice.id || idx} className="flex items-center justify-between p-2 rounded-lg bg-green-50 dark:bg-green-950/20 text-xs">
-                        <div>
-                          <p className="font-medium text-green-700">فاتورة #{idx + 1}</p>
-                          <p className="text-muted-foreground">
-                            {invoice.settled_at ? format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 'غير محدد'}
-                          </p>
+                <ScrollArea className="h-32">
+                  <div className="space-y-2">
+                    {employeeInvoices.map((invoice, idx) => (
+                      <div key={invoice.id || idx} className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <p className="font-medium text-green-700 text-sm">طلب #{invoice.order_id?.slice(-4) || 'غير محدد'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {invoice.settled_at ? format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 'غير محدد'}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700 text-xs">
+                            {invoice.status === 'settled' ? 'مسوى' : invoice.status === 'invoice_received' ? 'مستلم' : 'مدفوع'}
+                          </Badge>
                         </div>
-                        <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700 text-xs">
-                          مدفوع
-                        </Badge>
+                        
+                        {/* تفاصيل الفاتورة */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <p className="text-muted-foreground">إجمالي الربح</p>
+                            <p className="font-bold text-green-600">{formatCurrency(invoice.profit_amount || 0)}</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <p className="text-muted-foreground">ربح الموظف</p>
+                            <p className="font-bold text-purple-600">{formatCurrency(invoice.employee_profit || 0)}</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <p className="text-muted-foreground">إجمالي الإيرادات</p>
+                            <p className="font-bold text-blue-600">{formatCurrency(invoice.total_revenue || 0)}</p>
+                          </div>
+                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                            <p className="text-muted-foreground">التكلفة</p>
+                            <p className="font-bold text-orange-600">{formatCurrency(invoice.total_cost || 0)}</p>
+                          </div>
+                        </div>
+                        
+                        {/* نسبة الموظف */}
+                        {invoice.employee_percentage && (
+                          <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-muted-foreground">نسبة الموظف</span>
+                              <span className="font-bold text-purple-600">{Number(invoice.employee_percentage).toFixed(1)}%</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                     {employeeInvoices.length > 3 && (
