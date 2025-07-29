@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,110 +10,203 @@ import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt } from 'lucide-react';
+import { supabase } from '@/lib/customSupabaseClient';
 
-// مكون معاينة الفاتورة الاحترافي
-const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
+// مكون معاينة الفاتورة الاحترافي - محسن مع تفاصيل الطلبات
+const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
   if (!invoice) return null;
+
+  // البحث عن الأرباح المسواة لهذا الموظف في نفس فترة التسوية
+  const relatedProfits = settledProfits?.filter(profit => {
+    const profitSettledDate = profit.settled_at ? new Date(profit.settled_at) : null;
+    const invoiceDate = invoice.settlement_date ? new Date(invoice.settlement_date) : null;
+    
+    // مطابقة الموظف والتاريخ (نفس اليوم)
+    return profit.employee_name === invoice.employee_name && 
+           profitSettledDate && invoiceDate &&
+           profitSettledDate.toDateString() === invoiceDate.toDateString();
+  }) || [];
+
+  // حساب الإحصائيات من الأرباح
+  const profitStats = relatedProfits.reduce((stats, profit) => {
+    return {
+      totalProfit: stats.totalProfit + (profit.employee_profit || 0),
+      totalRevenue: stats.totalRevenue + (profit.total_revenue || 0),
+      totalCost: stats.totalCost + (profit.total_cost || 0),
+      ordersCount: stats.ordersCount + 1
+    };
+  }, { totalProfit: 0, totalRevenue: 0, totalCost: 0, ordersCount: 0 });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
-        <ScrollArea className="h-full max-h-[80vh]">
-          <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-            {/* Header */}
-            <div className="text-center mb-6 pb-4 border-b-2 border-green-200">
-              <h1 className="text-3xl font-bold text-green-700 mb-2">فاتورة تسوية</h1>
-              <p className="text-lg text-green-600">مستحقات الموظف</p>
-            </div>
-
-            {/* Invoice Details Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* Right Column */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
-                  <Receipt className="w-5 h-5 text-green-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">رقم الفاتورة</p>
-                    <p className="font-bold text-lg">{invoice.invoice_number}</p>
-                  </div>
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+        <ScrollArea className="h-full max-h-[85vh]">
+          <div className="p-6 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20">
+            {/* Header الاحترافي */}
+            <div className="text-center mb-8 pb-6 border-b-2 border-green-300">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full text-white">
+                  <Receipt className="w-8 h-8" />
                 </div>
-                
-                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
-                  <User className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">اسم الموظف</p>
-                    <p className="font-bold text-lg">{invoice.employee_name}</p>
-                  </div>
+                <div>
+                  <h1 className="text-4xl font-bold text-green-700 mb-1">فاتورة تسوية</h1>
+                  <p className="text-lg text-green-600 font-medium">مستحقات الموظف</p>
                 </div>
               </div>
-
-              {/* Left Column */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
-                  <Calendar className="w-5 h-5 text-purple-600" />
-                  <div>
-                    <p className="text-sm text-gray-600">تاريخ التسوية</p>
-                    <p className="font-bold text-lg">
-                      {invoice.settlement_date ? 
-                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy', { locale: ar }) :
-                        'غير محدد'
-                      }
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {invoice.settlement_date ? 
-                        format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
-                        ''
-                      }
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-green-100 rounded-lg border-2 border-green-200">
-                  <DollarSign className="w-6 h-6 text-green-700" />
-                  <div>
-                    <p className="text-sm text-green-700">إجمالي المبلغ</p>
-                    <p className="font-bold text-2xl text-green-800">
-                      {invoice.settlement_amount?.toLocaleString()} د.ع
-                    </p>
-                  </div>
-                </div>
+              <div className="bg-white/70 rounded-full px-6 py-2 inline-block">
+                <p className="text-sm text-gray-600 font-medium">
+                  تاريخ الإصدار: {invoice.settlement_date ? 
+                    format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                    'غير محدد'
+                  }
+                </p>
               </div>
             </div>
 
-            {/* Description */}
-            <div className="mb-6">
+            {/* معلومات الفاتورة */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* معلومات أساسية */}
+              <div className="lg:col-span-2 space-y-4">
+                <div className="bg-white/70 rounded-xl p-5 border border-green-200">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-blue-600" />
+                    معلومات الموظف
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">اسم الموظف</p>
+                      <p className="font-bold text-xl text-gray-800">{invoice.employee_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">رقم الفاتورة</p>
+                      <p className="font-mono text-lg font-semibold text-blue-600">{invoice.invoice_number}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* إحصائيات الأرباح */}
+                {profitStats.ordersCount > 0 && (
+                  <div className="bg-white/70 rounded-xl p-5 border border-blue-200">
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-green-600" />
+                      ملخص الأرباح
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-600">عدد الطلبات</p>
+                        <p className="text-2xl font-bold text-blue-700">{profitStats.ordersCount}</p>
+                      </div>
+                      <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <p className="text-sm text-green-600">إجمالي الإيرادات</p>
+                        <p className="text-xl font-bold text-green-700">{profitStats.totalRevenue.toLocaleString()}</p>
+                      </div>
+                      <div className="text-center p-3 bg-orange-50 rounded-lg">
+                        <p className="text-sm text-orange-600">إجمالي التكاليف</p>
+                        <p className="text-xl font-bold text-orange-700">{profitStats.totalCost.toLocaleString()}</p>
+                      </div>
+                      <div className="text-center p-3 bg-purple-50 rounded-lg">
+                        <p className="text-sm text-purple-600">ربح الموظف</p>
+                        <p className="text-xl font-bold text-purple-700">{profitStats.totalProfit.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* المبلغ المدفوع */}
+              <div className="space-y-4">
+                <div className="bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl p-6 border-2 border-green-300 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <DollarSign className="w-8 h-8 text-green-700" />
+                    <h3 className="text-lg font-bold text-green-700">المبلغ المدفوع</h3>
+                  </div>
+                  <p className="text-4xl font-bold text-green-800 mb-2">
+                    {invoice.settlement_amount?.toLocaleString()}
+                  </p>
+                  <p className="text-lg text-green-600 font-medium">دينار عراقي</p>
+                </div>
+
+                <div className="bg-white/70 rounded-xl p-4 border border-gray-200">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                    <p className="text-lg font-semibold text-green-700">تسوية مكتملة</p>
+                  </div>
+                  <p className="text-sm text-gray-600 text-center">تم إتمام الدفع بنجاح</p>
+                </div>
+              </div>
+            </div>
+
+            {/* تفاصيل الطلبات المسواة */}
+            {relatedProfits.length > 0 && (
+              <div className="bg-white/70 rounded-xl p-5 border border-gray-200 mb-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  تفاصيل الطلبات المسواة
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-right py-3 px-2 font-semibold">رقم الطلب</th>
+                        <th className="text-right py-3 px-2 font-semibold">الإيرادات</th>
+                        <th className="text-right py-3 px-2 font-semibold">التكاليف</th>
+                        <th className="text-right py-3 px-2 font-semibold">ربح الموظف</th>
+                        <th className="text-right py-3 px-2 font-semibold">تاريخ التسوية</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {relatedProfits.map((profit, index) => (
+                        <tr key={profit.id} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                          <td className="py-3 px-2 font-mono text-blue-600">{profit.order_number}</td>
+                          <td className="py-3 px-2 text-green-600 font-semibold">
+                            {profit.total_revenue?.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-2 text-orange-600 font-semibold">
+                            {profit.total_cost?.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-2 text-purple-600 font-bold">
+                            {profit.employee_profit?.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-2 text-gray-600">
+                            {profit.settled_at ? 
+                              format(parseISO(profit.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) :
+                              'غير محدد'
+                            }
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* وصف التسوية */}
+            <div className="bg-white/70 rounded-xl p-5 border border-gray-200 mb-6">
               <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
+                <FileText className="w-5 h-5 text-gray-600" />
                 وصف التسوية
               </h3>
-              <div className="p-4 bg-white/70 rounded-lg border">
-                <p className="text-gray-700">{invoice.description}</p>
+              <div className="p-4 bg-gray-50 rounded-lg border">
+                <p className="text-gray-700 leading-relaxed">{invoice.description}</p>
               </div>
             </div>
 
-            {/* Metadata */}
+            {/* معلومات إضافية */}
             {invoice.metadata && Object.keys(invoice.metadata).length > 0 && (
-              <div className="mb-6">
-                <h3 className="font-bold text-lg mb-3">تفاصيل إضافية</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {invoice.metadata.employee_name && (
+              <div className="bg-white/70 rounded-xl p-5 border border-gray-200">
+                <h3 className="font-bold text-lg mb-4">معلومات النظام</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {invoice.metadata.employee_id && (
                     <div className="p-3 bg-blue-50 rounded-lg">
-                      <p className="text-sm text-blue-600">اسم الموظف المدرج</p>
-                      <p className="font-semibold">{invoice.metadata.employee_name}</p>
+                      <p className="text-sm text-blue-600">معرف الموظف</p>
+                      <p className="font-mono text-sm">{invoice.metadata.employee_id}</p>
                     </div>
                   )}
-                  {invoice.metadata.orders_count && (
-                    <div className="p-3 bg-orange-50 rounded-lg">
-                      <p className="text-sm text-orange-600">عدد الطلبات المسواة</p>
-                      <p className="font-semibold">{invoice.metadata.orders_count}</p>
-                    </div>
-                  )}
-                  {invoice.metadata.settlement_type && (
-                    <div className="p-3 bg-purple-50 rounded-lg">
-                      <p className="text-sm text-purple-600">نوع التسوية</p>
-                      <p className="font-semibold">
-                        {invoice.metadata.settlement_type === 'employee_profit' ? 'أرباح موظف' : invoice.metadata.settlement_type}
-                      </p>
+                  {invoice.metadata.payment_type && (
+                    <div className="p-3 bg-green-50 rounded-lg">
+                      <p className="text-sm text-green-600">نوع الدفع</p>
+                      <p className="font-semibold">{invoice.metadata.payment_type}</p>
                     </div>
                   )}
                   {invoice.receipt_number && (
@@ -125,19 +218,15 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
                 </div>
               </div>
             )}
-
-            {/* Status */}
-            <div className="text-center pt-4 border-t border-green-200">
-              <Badge className="bg-green-500 text-white px-6 py-2 text-lg">
-                ✅ تسوية مكتملة
-              </Badge>
-              <p className="text-sm text-gray-600 mt-2">تم إتمام التسوية بنجاح</p>
-            </div>
           </div>
         </ScrollArea>
         
-        <DialogFooter className="p-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="p-6 border-t bg-gray-50">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="min-w-[120px]"
+          >
             إغلاق
           </Button>
         </DialogFooter>
@@ -146,13 +235,15 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
   );
 };
 
-const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
+const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [] }) => {
   console.log('🚀 SettledDuesDialog مُحدّث:', {
     open,
     invoicesReceived: invoices,
     invoicesLength: invoices?.length || 0,
     invoicesType: typeof invoices,
-    allUsersLength: allUsers?.length || 0
+    allUsersLength: allUsers?.length || 0,
+    profitsLength: profits?.length || 0,
+    ordersLength: orders?.length || 0
   });
   const [filters, setFilters] = useState({
     employeeId: 'all',
@@ -160,6 +251,42 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
   });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // جلب الأرباح المسواة مع تفاصيل الطلبات
+  const [settledProfits, setSettledProfits] = useState([]);
+  
+  useEffect(() => {
+    const fetchSettledProfits = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profits')
+          .select(`
+            *,
+            order:orders(order_number, status, created_at),
+            employee:profiles!employee_id(full_name, username)
+          `)
+          .eq('status', 'settled')
+          .order('settled_at', { ascending: false });
+
+        if (error) throw error;
+        
+        const processedProfits = data?.map(profit => ({
+          ...profit,
+          employee_name: profit.employee?.full_name || profit.employee?.username || 'غير محدد',
+          order_number: profit.order?.order_number || 'غير محدد'
+        })) || [];
+
+        console.log('📊 الأرباح المسواة:', processedProfits);
+        setSettledProfits(processedProfits);
+      } catch (error) {
+        console.error('❌ خطأ في جلب الأرباح المسواة:', error);
+      }
+    };
+
+    if (open) {
+      fetchSettledProfits();
+    }
+  }, [open]);
 
   const employees = useMemo(() => {
     if (!Array.isArray(allUsers)) return [];
@@ -537,6 +664,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers }) => {
         invoice={selectedInvoice}
         open={isPreviewOpen}
         onOpenChange={setIsPreviewOpen}
+        settledProfits={settledProfits}
+        allOrders={orders}
       />
     </Dialog>
   );
