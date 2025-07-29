@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle2, FileText, Calendar, User, DollarSign, Receipt, Eye, Filter, Clock, Star } from 'lucide-react';
+import { CheckCircle2, FileText, Calendar, User, DollarSign, Receipt, Eye, Filter, Clock, Star, TrendingUp, Banknote } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 
 // مكون معاينة الفاتورة المفصلة
@@ -16,8 +16,6 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
   const [relatedOrders, setRelatedOrders] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  if (!invoice) return null;
 
   // جلب الطلبات والعناصر المرتبطة بالفاتورة
   useEffect(() => {
@@ -75,6 +73,8 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
     }
   };
 
+  if (!invoice) return null;
+  
   // حساب الإحصائيات التفصيلية
   const stats = useMemo(() => {
     const orders = relatedOrders || [];
