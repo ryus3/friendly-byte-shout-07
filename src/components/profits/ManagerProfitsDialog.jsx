@@ -42,7 +42,7 @@ const ManagerProfitsDialog = ({
   managerId 
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState('year'); // تغيير الافتراضي لهذا العام
+  const [selectedPeriod, setSelectedPeriod] = useState('month'); // تغيير الافتراضي لهذا الشهر
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
 
@@ -240,26 +240,46 @@ const ManagerProfitsDialog = ({
               managerProfit = systemProfit;
             }
           } else {
-            // حساب الربح يدوياً إذا لم تكن الدالة متوفرة
+            // حساب الربح يدوياً باستخدام البيانات الحقيقية من النظام
             console.log(`🧮 حساب يدوي للأرباح للطلب ${order.order_number}:`, {
               totalWithoutDelivery,
-              orderId: order.id
+              orderId: order.id,
+              orderItems: order.items
             });
             
-            // نسب افتراضية للربح من المبلغ بدون التوصيل
-            totalProfit = totalWithoutDelivery * 0.25; // افتراض 25% ربح من المبلغ
-            systemProfit = totalProfit * 0.6; // 60% للنظام (15% من المجموع)
-            employeeProfit = totalProfit * 0.4; // 40% للموظف (10% من المجموع)
-            managerProfit = systemProfit;
+            // البحث عن بيانات الربح من جدول profits
+            const profitRecord = profits?.find(p => p.order_id === order.id);
             
-            console.log(`🧮 نتائج الحساب اليدوي:`, {
-              totalWithoutDelivery,
-              totalProfit,
-              systemProfit,
-              employeeProfit,
-              managerProfit,
-              profitPercentage: (totalProfit / totalWithoutDelivery * 100).toFixed(1)
-            });
+            if (profitRecord) {
+              // استخدام البيانات الحقيقية من جدول profits
+              systemProfit = Number(profitRecord.system_profit || profitRecord.manager_profit || 0);
+              employeeProfit = Number(profitRecord.employee_profit || 0); 
+              totalProfit = systemProfit + employeeProfit;
+              managerProfit = systemProfit;
+              
+              console.log(`💎 استخدام بيانات الربح الحقيقية من قاعدة البيانات:`, {
+                profitRecord,
+                systemProfit,
+                employeeProfit,
+                totalProfit,
+                managerProfit
+              });
+            } else {
+              // حساب تقديري فقط في حالة عدم وجود بيانات
+              totalProfit = totalWithoutDelivery * 0.2; // افتراض 20% ربح من المبلغ
+              systemProfit = totalProfit * 0.6; // 60% للنظام 
+              employeeProfit = totalProfit * 0.4; // 40% للموظف
+              managerProfit = systemProfit;
+              
+              console.log(`🧮 حساب تقديري (لا توجد بيانات ربح حقيقية):`, {
+                totalWithoutDelivery,
+                totalProfit,
+                systemProfit,
+                employeeProfit,
+                managerProfit,
+                profitPercentage: (totalProfit / totalWithoutDelivery * 100).toFixed(1)
+              });
+            }
           }
           
           const employee = employees.find(emp => emp.user_id === order.created_by);
