@@ -27,7 +27,9 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
     
     setLoading(true);
     try {
-      // جلب الطلبات المسواة للموظف
+      console.log('🔍 Fetching orders for employee:', invoice.metadata.employee_id);
+      
+      // جلب الطلبات المسواة للموظف في فترة التسوية
       const { data: ordersData } = await supabase
         .from('orders')
         .select(`
@@ -36,7 +38,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
             *,
             product_variants(
               id,
-              selling_price,
+              price,
               cost_price,
               products(name),
               colors(name),
@@ -47,9 +49,10 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
         .eq('created_by', invoice.metadata.employee_id)
         .eq('status', 'completed')
         .eq('receipt_received', true)
-        .gte('created_at', new Date(new Date(invoice.settlement_date).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString())
-        .lte('created_at', invoice.settlement_date);
+        .gte('receipt_received_at', new Date(new Date(invoice.settlement_date).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .lte('receipt_received_at', invoice.settlement_date);
 
+      console.log('📊 Found related orders:', ordersData);
       setRelatedOrders(ordersData || []);
     } catch (error) {
       console.error('خطأ في جلب الطلبات:', error);
@@ -344,19 +347,29 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
         .order('created_at', { ascending: false });
 
       // معالجة البيانات
-      const processedDues = expensesData?.map(expense => ({
-        id: expense.id,
-        invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
-        employee_name: expense.vendor_name || extractEmployeeNameFromDescription(expense.description),
-        settlement_amount: Number(expense.amount) || 0,
-        settlement_date: expense.created_at, // استخدام created_at كتاريخ التسوية
-        status: 'completed',
-        description: expense.description,
-        metadata: expense.metadata || {},
-        receipt_number: expense.receipt_number,
-        created_at: expense.created_at
-      })) || [];
+      const processedDues = expensesData?.map(expense => {
+        // استخراج معرف الموظف من metadata أو البحث في قاعدة البيانات
+        const employeeId = expense.metadata?.employee_id || 
+          employees.find(emp => emp.full_name === extractEmployeeNameFromDescription(expense.description))?.user_id;
+        
+        return {
+          id: expense.id,
+          invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
+          employee_name: expense.vendor_name || extractEmployeeNameFromDescription(expense.description),
+          settlement_amount: Number(expense.amount) || 0,
+          settlement_date: expense.created_at,
+          status: 'completed',
+          description: expense.description,
+          metadata: {
+            ...expense.metadata,
+            employee_id: employeeId // إضافة معرف الموظف للبحث عن الطلبات
+          },
+          receipt_number: expense.receipt_number,
+          created_at: expense.created_at
+        };
+      }) || [];
 
+      console.log('🏗️ Processed dues with employee IDs:', processedDues);
       setSettledDues(processedDues);
 
     } catch (error) {
