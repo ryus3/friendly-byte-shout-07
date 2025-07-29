@@ -1,15 +1,39 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { format, parseISO } from 'date-fns';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award } from 'lucide-react';
+import { 
+  CheckCircle, 
+  FileText, 
+  Calendar, 
+  User, 
+  DollarSign, 
+  Receipt, 
+  Eye, 
+  TrendingUp, 
+  Banknote, 
+  Clock, 
+  Star, 
+  Award,
+  Crown,
+  Coins,
+  Filter,
+  Download,
+  BarChart3,
+  PieChart,
+  Target,
+  Package
+} from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 
 // مكون معاينة الفاتورة المبهر والاحترافي
@@ -323,19 +347,10 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 };
 
 const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [] }) => {
-  console.log('🚀 SettledDuesDialog مُحدّث:', {
-    open,
-    invoicesReceived: invoices,
-    invoicesLength: invoices?.length || 0,
-    invoicesType: typeof invoices,
-    allUsersLength: allUsers?.length || 0,
-    profitsLength: profits?.length || 0,
-    ordersLength: orders?.length || 0
-  });
-  const [filters, setFilters] = useState({
-    employeeId: 'all',
-    dateRange: { from: undefined, to: undefined },
-  });
+  const [selectedEmployee, setSelectedEmployee] = useState('all');
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTab, setSelectedTab] = useState('overview');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
