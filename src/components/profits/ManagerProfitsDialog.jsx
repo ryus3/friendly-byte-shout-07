@@ -144,14 +144,14 @@ const ManagerProfitsDialog = ({
           return false;
         }
         
-        // فلترة التاريخ - مبسطة
+        // فلترة التاريخ - مؤقتاً معطلة للاختبار
         let withinPeriod = true;
-        if (order.created_at && dateRange.start && dateRange.end) {
-          const orderDate = new Date(order.created_at);
-          if (!isNaN(orderDate.getTime())) {
-            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
-          }
-        }
+        // if (order.created_at && dateRange.start && dateRange.end) {
+        //   const orderDate = new Date(order.created_at);
+        //   if (!isNaN(orderDate.getTime())) {
+        //     withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+        //   }
+        // }
         
         // فلترة الحالة - أكثر مرونة
         const isValidStatus = ['delivered', 'completed', 'pending', 'processing'].includes(order.status);
@@ -166,15 +166,20 @@ const ManagerProfitsDialog = ({
         
         const finalResult = withinPeriod && isValidStatus && matchesEmployee && matchesSearch;
         
-        console.log(`🔍 فحص الطلب ${order.order_number || order.id}:`, {
+        console.log(`🔍 فحص الطلب ${order.order_number || order.id} - تفصيلي:`, {
           orderId: order.id,
+          orderNumber: order.order_number,
           status: order.status,
           created_by: order.created_by,
+          selectedEmployee,
+          searchTerm,
           withinPeriod,
           isValidStatus,
           matchesEmployee,
           matchesSearch,
-          finalResult
+          finalResult,
+          orderDate: order.created_at,
+          dateRange: { start: dateRange.start, end: dateRange.end }
         });
         
         return finalResult;
@@ -250,6 +255,13 @@ const ManagerProfitsDialog = ({
             
             // البحث عن بيانات الربح من جدول profits
             const profitRecord = profits?.find(p => p.order_id === order.id);
+            
+            console.log(`🔍 البحث عن ربح الطلب ${order.order_number}:`, {
+              orderId: order.id,
+              profitsArray: profits?.map(p => ({ order_id: p.order_id, profit_amount: p.profit_amount, employee_profit: p.employee_profit })),
+              profitRecord,
+              foundMatch: !!profitRecord
+            });
             
             if (profitRecord) {
               // استخدام البيانات الحقيقية من جدول profits
