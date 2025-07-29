@@ -311,71 +311,89 @@ const ManagerProfitsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Crown className="h-6 w-6 text-yellow-500" />
-            تفاصيل أرباحي من الموظفين
-            <Badge variant="outline" className="mr-2">
-              {formatCurrency(stats.totalManagerProfit)}
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          {/* الفلاتر */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">الفترة الزمنية</label>
-                  <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="today">اليوم</SelectItem>
-                      <SelectItem value="week">هذا الأسبوع</SelectItem>
-                      <SelectItem value="month">هذا الشهر</SelectItem>
-                      <SelectItem value="year">هذا العام</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">الموظف</label>
-                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">كل الموظفين</SelectItem>
-                      {employees.map(emp => (
-                        <SelectItem key={emp.user_id} value={emp.user_id}>
-                          {emp.full_name || emp.name || 'غير محدد'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">البحث</label>
-                  <Input
-                    placeholder="رقم الطلب أو اسم العميل..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-
-                <div className="flex items-end">
-                  <Button variant="outline" className="w-full">
-                    <Download className="h-4 w-4 mr-2" />
-                    تصدير التقرير
-                  </Button>
-                </div>
+      <DialogContent className="max-w-6xl w-full max-h-[95vh] overflow-hidden p-0">
+        <div className="bg-gradient-to-br from-background via-background to-muted/20 border-0 shadow-2xl rounded-2xl overflow-hidden">
+          <DialogHeader className="bg-gradient-to-l from-primary/10 via-primary/5 to-transparent p-6 border-b border-border/50">
+            <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 shadow-lg">
+                <Crown className="h-7 w-7 text-yellow-600" />
               </div>
-            </CardContent>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-foreground">تفاصيل أرباحي من الموظفين</h2>
+                <p className="text-sm text-muted-foreground font-medium mt-1">
+                  إجمالي الأرباح: {formatCurrency(stats.totalManagerProfit)} • {stats.totalOrders} طلب
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary font-bold px-4 py-2 text-lg">
+                {formatCurrency(stats.totalManagerProfit)}
+              </Badge>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+            {/* الفلاتر */}
+            <Card className="border border-border/50 bg-gradient-to-br from-muted/30 to-muted/10 shadow-lg">
+              <CardContent className="p-5">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div>
+                    <label className="text-sm font-semibold mb-2 block text-foreground/80 flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      الفترة الزمنية
+                    </label>
+                    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                      <SelectTrigger className="bg-background/80 border-border/50 hover:border-primary/50 transition-colors">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="today">اليوم</SelectItem>
+                        <SelectItem value="week">هذا الأسبوع</SelectItem>
+                        <SelectItem value="month">هذا الشهر</SelectItem>
+                        <SelectItem value="year">هذا العام</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold mb-2 block text-foreground/80 flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      الموظف
+                    </label>
+                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                      <SelectTrigger className="bg-background/80 border-border/50 hover:border-primary/50 transition-colors">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">كل الموظفين</SelectItem>
+                        {employees.map(emp => (
+                          <SelectItem key={emp.user_id} value={emp.user_id}>
+                            {emp.full_name || emp.name || 'غير محدد'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold mb-2 block text-foreground/80 flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      البحث
+                    </label>
+                    <Input
+                      placeholder="رقم الطلب أو اسم العميل..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="bg-background/80 border-border/50 hover:border-primary/50 transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex items-end">
+                    <Button variant="outline" className="w-full bg-background/80 hover:bg-primary/10 border-border/50 hover:border-primary/50 transition-all">
+                      <Download className="h-4 w-4 mr-2" />
+                      تصدير التقرير
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
           </Card>
 
           {/* الإحصائيات الرئيسية */}
@@ -503,15 +521,28 @@ const ManagerProfitsDialog = ({
             </TabsContent>
 
             <TabsContent value="orders" className="space-y-4">
-              <ScrollArea className="h-96">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {detailedProfits.map((order) => (
-                    <OrderCard key={order.id} order={order} />
-                  ))}
+              {detailedProfits.length > 0 ? (
+                <ScrollArea className="h-96">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {detailedProfits.map((order) => (
+                      <OrderCard key={order.id} order={order} />
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
+                    <FileText className="h-12 w-12 text-muted-foreground/50" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طلبات</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    لا توجد طلبات مطابقة للفلاتر المحددة في الفترة الزمنية المختارة
+                  </p>
                 </div>
-              </ScrollArea>
+              )}
             </TabsContent>
           </Tabs>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
