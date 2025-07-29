@@ -65,46 +65,77 @@ const ManagerProfitsDialog = ({
 
   // حساب الأرباح المفصلة
   const detailedProfits = useMemo(() => {
+    if (!orders || !Array.isArray(orders) || !calculateProfit) {
+      console.log('❌ detailedProfits: بيانات غير متاحة', { orders: !!orders, calculateProfit: !!calculateProfit });
+      return [];
+    }
+
     return orders
       .filter(order => {
+        if (!order) return false;
+        
         const orderDate = new Date(order.created_at);
         const withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
         const isDelivered = order.status === 'delivered' || order.status === 'completed';
-        const hasProfit = calculateProfit(order).managerProfit > 0;
         const matchesEmployee = selectedEmployee === 'all' || order.created_by === selectedEmployee;
         const matchesSearch = searchTerm === '' || 
           order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        return withinPeriod && isDelivered && hasProfit && matchesEmployee && matchesSearch;
+        return withinPeriod && isDelivered && matchesEmployee && matchesSearch;
       })
       .map(order => {
-        const profitCalc = calculateProfit(order);
-        const employee = employees.find(emp => emp.user_id === order.created_by);
-        const profitStatus = profits.find(p => p.order_id === order.id);
-        
-        return {
-          ...order,
-          employee,
-          managerProfit: profitCalc.managerProfit,
-          employeeProfit: profitCalc.employeeProfit,
-          totalProfit: profitCalc.totalProfit,
-          profitPercentage: ((profitCalc.managerProfit / (order.total_amount || 1)) * 100).toFixed(1),
-          isPaid: profitStatus?.status === 'settled',
-          settledAt: profitStatus?.settled_at,
-          items: order.items || []
-        };
+        try {
+          const profitCalc = calculateProfit(order);
+          const employee = employees.find(emp => emp.user_id === order.created_by);
+          const profitStatus = profits.find(p => p.order_id === order.id);
+          
+          const managerProfit = Number(profitCalc?.managerProfit || 0);
+          const employeeProfit = Number(profitCalc?.employeeProfit || 0);
+          const totalProfit = Number(profitCalc?.totalProfit || 0);
+          const orderTotal = Number(order.final_amount || order.total_amount || 0);
+          
+          return {
+            ...order,
+            employee,
+            managerProfit,
+            employeeProfit,
+            totalProfit,
+            profitPercentage: orderTotal > 0 ? ((managerProfit / orderTotal) * 100).toFixed(1) : '0',
+            isPaid: profitStatus?.status === 'settled',
+            settledAt: profitStatus?.settled_at,
+            items: order.items || []
+          };
+        } catch (error) {
+          console.error('خطأ في حساب الربح للطلب:', order.id, error);
+          return null;
+        }
       })
+      .filter(order => order !== null && order.managerProfit > 0)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [orders, dateRange, selectedEmployee, searchTerm, calculateProfit, employees, profits]);
 
   // إحصائيات شاملة
   const stats = useMemo(() => {
-    const totalManagerProfit = detailedProfits.reduce((sum, order) => sum + order.managerProfit, 0);
-    const totalEmployeeProfit = detailedProfits.reduce((sum, order) => sum + order.employeeProfit, 0);
-    const totalRevenue = detailedProfits.reduce((sum, order) => sum + (order.final_amount || order.total_amount), 0);
-    const pendingProfit = detailedProfits.filter(order => !order.isPaid).reduce((sum, order) => sum + order.managerProfit, 0);
-    const settledProfit = detailedProfits.filter(order => order.isPaid).reduce((sum, order) => sum + order.managerProfit, 0);
+    if (!detailedProfits || !Array.isArray(detailedProfits)) {
+      return {
+        totalManagerProfit: 0,
+        totalEmployeeProfit: 0,
+        totalRevenue: 0,
+        pendingProfit: 0,
+        settledProfit: 0,
+        totalOrders: 0,
+        averageOrderValue: 0,
+        profitMargin: '0.0',
+        topEmployees: []
+      };
+    }
+
+    const totalManagerProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
+    const totalEmployeeProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.employeeProfit) || 0), 0);
+    const totalRevenue = detailedProfits.reduce((sum, order) => sum + (Number(order.final_amount || order.total_amount) || 0), 0);
+    const pendingProfit = detailedProfits.filter(order => !order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
+    const settledProfit = detailedProfits.filter(order => order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     
     const employeeStats = {};
     detailedProfits.forEach(order => {
@@ -118,9 +149,9 @@ const ManagerProfitsDialog = ({
         };
       }
       employeeStats[order.created_by].orders += 1;
-      employeeStats[order.created_by].managerProfit += order.managerProfit;
-      employeeStats[order.created_by].employeeProfit += order.employeeProfit;
-      employeeStats[order.created_by].revenue += (order.final_amount || order.total_amount);
+      employeeStats[order.created_by].managerProfit += Number(order.managerProfit) || 0;
+      employeeStats[order.created_by].employeeProfit += Number(order.employeeProfit) || 0;
+      employeeStats[order.created_by].revenue += Number(order.final_amount || order.total_amount) || 0;
     });
 
     return {
@@ -130,10 +161,10 @@ const ManagerProfitsDialog = ({
       pendingProfit,
       settledProfit,
       totalOrders: detailedProfits.length,
-      averageOrderValue: totalRevenue / (detailedProfits.length || 1),
-      profitMargin: ((totalManagerProfit / (totalRevenue || 1)) * 100).toFixed(1),
+      averageOrderValue: detailedProfits.length > 0 ? totalRevenue / detailedProfits.length : 0,
+      profitMargin: totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0',
       topEmployees: Object.values(employeeStats)
-        .sort((a, b) => b.managerProfit - a.managerProfit)
+        .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
         .slice(0, 5)
     };
   }, [detailedProfits]);
@@ -142,33 +173,44 @@ const ManagerProfitsDialog = ({
     return `${(amount || 0).toLocaleString()} د.ع`;
   };
 
-  const StatCard = ({ title, value, icon: Icon, color, percentage, trend }) => (
-    <Card className="relative overflow-hidden bg-gradient-to-br from-background to-muted/20 border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1 group">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <CardContent className="p-6 relative z-10">
-        <div className="flex items-center justify-between">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground/80 tracking-wide">{title}</p>
-            <p className={`text-2xl font-bold ${color} tracking-tight`}>
+  const StatCard = ({ title, value, icon: Icon, color, percentage, gradient }) => (
+    <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
+      <CardContent className="p-0">
+        <div className={`text-center space-y-3 bg-gradient-to-br ${gradient} text-white rounded-lg p-5 relative overflow-hidden`}>
+          {/* الأيقونة */}
+          <div className="flex justify-center">
+            <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+              <Icon className="w-6 h-6" />
+            </div>
+          </div>
+          
+          {/* العنوان والقيمة */}
+          <div>
+            <p className="text-xs font-medium text-white/90 mb-1">{title}</p>
+            <p className="text-lg font-bold text-white">
               {typeof value === 'number' ? formatCurrency(value) : value}
             </p>
-            {percentage && (
-              <div className="flex items-center gap-2">
-                <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full bg-gradient-to-r ${color.replace('text-', 'from-').replace('-600', '-400')} to-${color.replace('text-', '').replace('-600', '-600')} rounded-full transition-all duration-1000`}
-                    style={{ width: `${Math.min(parseFloat(percentage), 100)}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-muted-foreground">
-                  {percentage}%
-                </span>
+          </div>
+          
+          {/* نسبة مئوية إن وجدت */}
+          {percentage && !isNaN(parseFloat(percentage)) && (
+            <div className="pt-2 border-t border-white/20">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-white/80">النسبة</span>
+                <span className="text-xs font-bold text-white">{percentage}%</span>
               </div>
-            )}
-          </div>
-          <div className={`p-4 rounded-2xl bg-gradient-to-br ${color.replace('text-', 'from-').replace('-600', '-500/20')} to-${color.replace('text-', '').replace('-600', '-600/30')} group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-            <Icon className={`h-6 w-6 ${color} drop-shadow-sm`} />
-          </div>
+              <div className="w-full bg-white/20 rounded-full h-1 mt-1">
+                <div 
+                  className="bg-white rounded-full h-1 transition-all duration-1000"
+                  style={{ width: `${Math.min(parseFloat(percentage) || 0, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+          
+          {/* تأثيرات الخلفية */}
+          <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white/10 rounded-full"></div>
+          <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/10 rounded-full"></div>
         </div>
       </CardContent>
     </Card>
@@ -311,30 +353,49 @@ const ManagerProfitsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full max-h-[95vh] overflow-hidden p-0">
-        <div className="bg-gradient-to-br from-background via-background to-muted/20 border-0 shadow-2xl rounded-2xl overflow-hidden">
-          <DialogHeader className="bg-gradient-to-l from-primary/10 via-primary/5 to-transparent p-6 border-b border-border/50">
-            <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
-              <div className="p-3 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 shadow-lg">
-                <Crown className="h-7 w-7 text-yellow-600" />
+      <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-hidden p-0">
+        <div className="bg-gradient-to-br from-background via-background to-muted/10 border-0 shadow-xl rounded-xl overflow-hidden">
+          <DialogHeader className="bg-gradient-to-l from-primary/5 via-primary/3 to-transparent p-4 border-b border-border/30">
+            <DialogTitle className="flex items-center gap-3 text-xl font-bold">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-yellow-500/20 to-orange-500/20 shadow-md">
+                <Crown className="h-6 w-6 text-yellow-600" />
               </div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold text-foreground">تفاصيل أرباحي من الموظفين</h2>
+                <h2 className="text-lg font-bold text-foreground">تفاصيل أرباحي من الموظفين</h2>
                 <p className="text-sm text-muted-foreground font-medium mt-1">
-                  إجمالي الأرباح: {formatCurrency(stats.totalManagerProfit)} • {stats.totalOrders} طلب
+                  إجمالي الأرباح: {formatCurrency(stats.totalManagerProfit || 0)} • {stats.totalOrders || 0} طلب
                 </p>
               </div>
-              <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary font-bold px-4 py-2 text-lg">
-                {formatCurrency(stats.totalManagerProfit)}
+              <Badge variant="outline" className="bg-primary/10 border-primary/20 text-primary font-bold px-3 py-1">
+                {formatCurrency(stats.totalManagerProfit || 0)}
               </Badge>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+          <div className="p-4 space-y-4 max-h-[75vh] overflow-y-auto">
+            {/* التحقق من وجود البيانات */}
+            {!orders || !Array.isArray(orders) || orders.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
+                  <FileText className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">لا توجد طلبات</h3>
+                <p className="text-muted-foreground">لا توجد طلبات متاحة لعرض الأرباح</p>
+              </div>
+            ) : !employees || employees.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
+                  <Users className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">لا يوجد موظفين</h3>
+                <p className="text-muted-foreground">لا يوجد موظفين متاحين لعرض أرباحهم</p>
+              </div>
+            ) : (
+              <>
             {/* الفلاتر */}
-            <Card className="border border-border/50 bg-gradient-to-br from-muted/30 to-muted/10 shadow-lg">
-              <CardContent className="p-5">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="border border-border/30 bg-gradient-to-br from-muted/20 to-muted/5 shadow-md">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   <div>
                     <label className="text-sm font-semibold mb-2 block text-foreground/80 flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
@@ -397,32 +458,32 @@ const ManagerProfitsDialog = ({
           </Card>
 
           {/* الإحصائيات الرئيسية */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard
               title="إجمالي أرباحي"
-              value={stats.totalManagerProfit}
+              value={stats.totalManagerProfit || 0}
               icon={Crown}
-              color="text-yellow-600"
+              gradient="from-yellow-500 to-orange-600"
             />
             <StatCard
               title="الأرباح المعلقة"
-              value={stats.pendingProfit}
+              value={stats.pendingProfit || 0}
               icon={Clock}
-              color="text-orange-600"
-              percentage={((stats.pendingProfit / stats.totalManagerProfit) * 100).toFixed(1)}
+              gradient="from-orange-500 to-red-600"
+              percentage={stats.totalManagerProfit > 0 ? (((stats.pendingProfit || 0) / stats.totalManagerProfit) * 100).toFixed(1) : '0'}
             />
             <StatCard
               title="الأرباح المدفوعة"
-              value={stats.settledProfit}
+              value={stats.settledProfit || 0}
               icon={CheckCircle}
-              color="text-green-600"
-              percentage={((stats.settledProfit / stats.totalManagerProfit) * 100).toFixed(1)}
+              gradient="from-emerald-500 to-teal-600"
+              percentage={stats.totalManagerProfit > 0 ? (((stats.settledProfit || 0) / stats.totalManagerProfit) * 100).toFixed(1) : '0'}
             />
             <StatCard
               title="هامش الربح"
-              value={`${stats.profitMargin}%`}
+              value={`${stats.profitMargin || '0.0'}%`}
               icon={TrendingUp}
-              color="text-blue-600"
+              gradient="from-blue-500 to-purple-600"
             />
           </div>
 
@@ -542,6 +603,8 @@ const ManagerProfitsDialog = ({
               )}
             </TabsContent>
           </Tabs>
+              </>
+            )}
           </div>
         </div>
       </DialogContent>
