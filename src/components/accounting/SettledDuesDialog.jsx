@@ -1,15 +1,38 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { format, parseISO } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  Clock, 
+  CheckCircle, 
+  FileText,
+  Calendar,
+  Filter,
+  Eye,
+  Download,
+  BarChart3,
+  PieChart,
+  Target,
+  Award,
+  Crown,
+  Coins,
+  Package,
+  ShoppingBag,
+  Receipt,
+  User,
+  Banknote,
+  Star
+} from 'lucide-react';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 
 // مكون معاينة الفاتورة المبهر والاحترافي
