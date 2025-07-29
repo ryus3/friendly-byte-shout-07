@@ -619,6 +619,7 @@ const ManagerProfitsDialog = ({
         )}
       </CardContent>
     </Card>
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
