@@ -1,26 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
-  // الحصول على الـ auth context أولاً - يجب استدعاء الهوك دائماً في المستوى الأعلى
+  // تعريف الـ state أولاً
   const [userRoles, setUserRoles] = useState([]);
   const [userPermissions, setUserPermissions] = useState([]);
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.warn('Auth context not available:', error);
-    auth = null;
-  }
-
+  // استدعاء useAuth دائماً في المستوى الأعلى - بدون try-catch
+  const auth = useAuth();
+  
+  // تحديد المستخدم - passedUser له الأولوية
   const user = passedUser || auth?.user;
-
-  // إذا لم يكن لدينا auth context أو user، نعيد قيم افتراضية
-  const hasValidContext = auth || passedUser;
+  
+  // التحقق من صحة السياق
+  const hasValidContext = user && (passedUser || auth);
 
   // جلب أدوار وصلاحيات المستخدم
   useEffect(() => {
