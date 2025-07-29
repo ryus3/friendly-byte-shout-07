@@ -39,7 +39,8 @@ const ManagerProfitsDialog = ({
   employees = [], 
   calculateProfit,
   profits = [],
-  managerId 
+  managerId,
+  stats: externalStats // الإحصائيات المحسوبة من الصفحة الرئيسية
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [selectedPeriod, setSelectedPeriod] = useState('month'); // تغيير الافتراضي لهذا الشهر
@@ -341,10 +342,27 @@ const ManagerProfitsDialog = ({
     return processed;
   }, [orders, dateRange, selectedEmployee, searchTerm, calculateProfit, employees, profits]);
 
-  // إحصائيات شاملة
+  // إحصائيات شاملة - استخدم الإحصائيات الخارجية إذا كانت متوفرة
   const stats = useMemo(() => {
+    // إذا كانت الإحصائيات متوفرة من الصفحة الرئيسية، استخدمها
+    if (externalStats && typeof externalStats === 'object') {
+      console.log('📊 استخدام الإحصائيات من الصفحة الرئيسية:', externalStats);
+      return {
+        totalManagerProfit: externalStats.totalManagerProfits || 0,
+        totalEmployeeProfit: 0, // سيتم حسابها من detailedProfits
+        totalRevenue: externalStats.totalSales || 0,
+        pendingProfit: externalStats.pendingDues || 0,
+        settledProfit: externalStats.paidDues || 0,
+        totalOrders: externalStats.totalOrders || 0,
+        averageOrderValue: externalStats.totalOrders > 0 ? (externalStats.totalSales / externalStats.totalOrders) : 0,
+        profitMargin: externalStats.totalSales > 0 ? ((externalStats.totalManagerProfits / externalStats.totalSales) * 100).toFixed(1) : '0.0',
+        topEmployees: [] // سيتم حسابها من detailedProfits
+      };
+    }
+
+    // إذا لم تكن متوفرة، احسبها من detailedProfits
     if (!detailedProfits || !Array.isArray(detailedProfits)) {
-      console.log('❌ stats: لا توجد أرباح مفصلة');
+      console.log('❌ stats: لا توجد أرباح مفصلة ولا إحصائيات خارجية');
       return {
         totalManagerProfit: 0,
         totalEmployeeProfit: 0,
@@ -397,10 +415,10 @@ const ManagerProfitsDialog = ({
         .slice(0, 5)
     };
 
-    console.log('📊 الإحصائيات المحسوبة:', calculatedStats);
+    console.log('📊 الإحصائيات المحسوبة داخلياً:', calculatedStats);
 
     return calculatedStats;
-  }, [detailedProfits]);
+  }, [detailedProfits, externalStats]);
 
   const formatCurrency = (amount) => {
     return `${(Number(amount) || 0).toLocaleString()} د.ع`;

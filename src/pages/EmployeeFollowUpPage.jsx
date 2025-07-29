@@ -462,9 +462,13 @@ const EmployeeFollowUpPage = () => {
       }, {})
     });
     
-    const totalSales = deliveredOrders.reduce((sum, order) => 
-      sum + (order?.final_amount || order?.total_amount || 0), 0
-    );
+    // إجمالي المبيعات بدون أجور التوصيل
+    const totalSales = deliveredOrders.reduce((sum, order) => {
+      const totalWithDelivery = order?.final_amount || order?.total_amount || 0;
+      const deliveryFee = order?.delivery_fee || 0;
+      const totalWithoutDelivery = Math.max(0, totalWithDelivery - deliveryFee);
+      return sum + totalWithoutDelivery;
+    }, 0);
     
     // أرباح المدير من الموظفين
     const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
@@ -908,9 +912,10 @@ const EmployeeFollowUpPage = () => {
           onClose={() => setIsManagerProfitsDialogOpen(false)}
           orders={filteredOrders || orders || []} 
           employees={employees || allUsers || []}
-          calculateProfit={calculateProfit}
+          calculateProfit={calculateManagerProfit || calculateProfit} // استخدام calculateManagerProfit أولاً
           profits={profits || []}
           managerId={null}
+          stats={stats} // تمرير الإحصائيات المحسوبة مباشرة
         />
       </motion.div>
     </>
