@@ -236,22 +236,6 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
               </Card>
             )}
 
-            {/* وصف التسوية */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <h3 className="font-bold text-xl mb-4 flex items-center gap-3">
-                  <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                    <FileText className="w-6 h-6 text-slate-600" />
-                  </div>
-                  وصف التسوية
-                </h3>
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-                  <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed">
-                    {invoice.description}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
 
             {/* حالة التسوية */}
             <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
