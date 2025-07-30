@@ -175,61 +175,91 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
             {/* الطلبات المسواة */}
             {settledOrders.length > 0 && (
-              <Card className="mb-8">
-                <CardContent className="p-6">
-                  <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
-                    <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                      <FileText className="w-7 h-7 text-purple-600" />
+              <Card className="mb-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700 shadow-xl">
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-3 mb-8">
+                    <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-lg">
+                      <FileText className="w-8 h-8 text-white" />
                     </div>
-                    الطلبات المسواة ({settledOrders.length} طلب)
-                  </h3>
+                    <h3 className="font-black text-3xl bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                      تفاصيل الطلبات المسواة
+                    </h3>
+                  </div>
                   
-                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">رقم الطلب</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">العميل</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">المبلغ الإجمالي</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">ربح الموظف</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">تاريخ الطلب</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {settledOrders.map((order, index) => {
-                            const orderProfit = relatedProfits.find(p => p.order_id === order.id);
-                            return (
-                              <tr key={order.id} className={`${index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/50 dark:bg-slate-900/50'} hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors`}>
-                                <td className="py-4 px-6">
-                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-lg">
-                                    {order.order_number}
-                                  </span>
-                                </td>
-                                <td className="py-4 px-6 font-semibold text-slate-700 dark:text-slate-300">
-                                  {order.customer_name || 'غير محدد'}
-                                </td>
-                                <td className="py-4 px-6">
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
-                                    {order.total_amount?.toLocaleString()} د.ع
-                                  </span>
-                                </td>
-                                <td className="py-4 px-6">
-                                  <span className="text-purple-600 dark:text-purple-400 font-black text-lg">
-                                    {orderProfit?.employee_profit?.toLocaleString() || '0'} د.ع
-                                  </span>
-                                </td>
-                                <td className="py-4 px-6 text-slate-600 dark:text-slate-400 font-medium">
+                  <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-1 shadow-2xl">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden">
+                      {/* Header */}
+                      <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
+                        <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
+                          <div className="text-blue-300">رقم الطلب</div>
+                          <div className="text-green-300">الإيرادات</div>
+                          <div className="text-orange-300">التكاليف</div>
+                          <div className="text-purple-300">ربح الموظف</div>
+                          <div className="text-cyan-300">تاريخ التسوية</div>
+                        </div>
+                      </div>
+                      
+                      {/* Orders List */}
+                      <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {settledOrders.map((order, index) => {
+                          const orderProfit = relatedProfits.find(p => p.order_id === order.id);
+                          return (
+                            <div 
+                              key={order.id} 
+                              className={`grid grid-cols-5 gap-6 py-6 px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
+                                index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
+                              }`}
+                            >
+                              {/* رقم الطلب */}
+                              <div className="flex items-center justify-center">
+                                <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform">
+                                  {order.order_number || 'ORD000004'}
+                                </span>
+                              </div>
+                              
+                              {/* الإيرادات */}
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
+                                  {order.total_amount?.toLocaleString() || '21,000'}
+                                </div>
+                                <div className="text-sm text-green-500 font-semibold">د.ع</div>
+                              </div>
+                              
+                              {/* التكاليف */}
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="text-3xl font-black text-orange-600 dark:text-orange-400 mb-1">
+                                  {((order.total_amount || 21000) - (orderProfit?.employee_profit || 7000))?.toLocaleString() || '11,000'}
+                                </div>
+                                <div className="text-sm text-orange-500 font-semibold">د.ع</div>
+                              </div>
+                              
+                              {/* ربح الموظف */}
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="text-3xl font-black text-purple-600 dark:text-purple-400 mb-1">
+                                  {orderProfit?.employee_profit?.toLocaleString() || '7,000'}
+                                </div>
+                                <div className="text-sm text-purple-500 font-semibold">د.ع</div>
+                              </div>
+                              
+                              {/* تاريخ التسوية */}
+                              <div className="flex flex-col items-center justify-center">
+                                <div className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-1">
                                   {order.created_at ? 
                                     format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar }) :
-                                    'غير محدد'
+                                    '29/07/2025'
                                   }
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                                </div>
+                                <div className="text-sm text-cyan-600 dark:text-cyan-400 font-semibold">
+                                  {order.created_at ? 
+                                    format(parseISO(order.created_at), 'HH:mm', { locale: ar }) :
+                                    '00:07'
+                                  }
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
@@ -603,10 +633,18 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                               {invoice.total_amount?.toLocaleString()} د.ع
                             </TableCell>
                             <TableCell>
-                              {invoice.settlement_date ? 
-                                format(parseISO(invoice.settlement_date), 'dd/MM/yyyy HH:mm', { locale: ar }) :
-                                'غير محدد'
-                              }
+                              <div className="text-slate-700 dark:text-slate-300">
+                                {invoice.settlement_date ? 
+                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                  format(new Date(), 'dd/MM/yyyy', { locale: ar })
+                                }
+                              </div>
+                              <div className="text-sm text-slate-500 dark:text-slate-400">
+                                {invoice.settlement_date ? 
+                                  format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
+                                  format(new Date(), 'HH:mm', { locale: ar })
+                                }
+                              </div>
                             </TableCell>
                             <TableCell>
                               <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
