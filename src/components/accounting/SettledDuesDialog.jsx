@@ -339,8 +339,8 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // جلب جميع الموظفين النشطين (بما في ذلك المديرين مع الأدوار)
-      const { data: employeesData } = await supabase
+      // جلب جميع الموظفين النشطين مع أدوارهم
+      const { data: employeesData, error: employeesError } = await supabase
         .from('profiles')
         .select(`
           user_id, 
@@ -358,23 +358,32 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
         .eq('status', 'active')
         .order('full_name', { ascending: true });
 
-      console.log('👥 Raw employees data:', employeesData);
-      
-      // تحسين معالجة بيانات الموظفين
-      const processedEmployees = employeesData?.filter(emp => 
-        emp.full_name && emp.full_name.trim() !== ''
-      ).map(emp => ({
-        ...emp,
-        display_name: emp.full_name,
-        role_display: emp.user_roles?.[0]?.roles?.display_name || 'موظف'
-      })) || [];
+      if (employeesError) {
+        console.error('❌ خطأ في جلب الموظفين:', employeesError);
+      }
 
-      console.log('👥 Processed employees:', processedEmployees);
+      console.log('👥 البيانات الخام للموظفين:', employeesData);
       
-      console.log('👥 جميع الموظفين المتاحين:', employeesData);
+      // معالجة وتصفية بيانات الموظفين
+      const validEmployees = employeesData?.filter(emp => 
+        emp && 
+        emp.full_name && 
+        emp.full_name.trim() !== ''
+      ).map(emp => {
+        // البحث عن دور نشط
+        const activeRole = emp.user_roles?.find(ur => ur.is_active && ur.roles);
+        return {
+          user_id: emp.user_id,
+          full_name: emp.full_name.trim(),
+          status: emp.status,
+          role_display: activeRole?.roles?.display_name || 'موظف',
+          role_name: activeRole?.roles?.name || 'employee'
+        };
+      }) || [];
+
+      console.log('👥 الموظفين المعالجين:', validEmployees);
       
-      // استخدام البيانات المعاد معالجتها
-      setEmployees(processedEmployees);
+      setEmployees(validEmployees);
 
       // جلب المصاريف المدفوعة (المستحقات المدفوعة)
       const { data: expensesData } = await supabase
