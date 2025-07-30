@@ -23,47 +23,89 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
   }, [open, invoice]);
 
   const fetchRelatedOrders = async () => {
-    if (!invoice.metadata?.employee_id) {
-      console.log('⚠️ لا يوجد معرف موظف في الفاتورة:', invoice);
+    console.log('🔍 فحص بيانات الفاتورة الكاملة:', invoice);
+    
+    // البحث عن معرف الموظف من مصادر مختلفة
+    const employeeId = invoice.metadata?.employee_id || 
+                      invoice.settled_by_id || 
+                      invoice.created_by ||
+                      invoice.employee_id;
+                      
+    console.log('👤 معرف الموظف المستخرج:', employeeId);
+    
+    if (!employeeId) {
+      console.log('⚠️ لا يوجد معرف موظف في الفاتورة');
       return;
     }
     
     setLoading(true);
     try {
-      console.log('🔍 جلب طلبات الموظف:', invoice.metadata.employee_id);
+      // البحث عن الطلبات المرتبطة بالفاتورة
+      // أولاً البحث في order_ids إذا كانت موجودة
+      let ordersData = [];
       
-      // حساب فترة التسوية (شهر واحد قبل تاريخ التسوية)
-      const settlementDate = new Date(invoice.settlement_date);
-      const startDate = new Date(settlementDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-      
-      console.log('📅 فترة البحث:', {
-        من: startDate.toISOString(),
-        إلى: settlementDate.toISOString()
-      });
-      
-      // جلب الطلبات المسواة للموظف - بشكل أكثر مرونة
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items(
+      if (invoice.order_ids && invoice.order_ids.length > 0) {
+        console.log('🎯 البحث باستخدام order_ids:', invoice.order_ids);
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
             *,
-            product_variants(
-              id,
-              price,
-              cost_price,
-              products(name),
-              colors(name),
-              sizes(name)
+            order_items(
+              *,
+              product_variants(
+                id,
+                price,
+                cost_price,
+                products(name),
+                colors(name),
+                sizes(name)
+              )
             )
-          )
-        `)
-        .eq('created_by', invoice.metadata.employee_id)
-        .in('status', ['completed', 'delivered'])
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', settlementDate.toISOString());
+          `)
+          .in('id', invoice.order_ids);
+          
+        if (error) {
+          console.error('خطأ في جلب الطلبات بـ order_ids:', error);
+        } else {
+          ordersData = data || [];
+        }
+      }
+      
+      // إذا لم نجد طلبات، نبحث حسب الموظف والفترة الزمنية
+      if (ordersData.length === 0) {
+        console.log('🔍 البحث حسب الموظف والفترة الزمنية');
+        const settlementDate = new Date(invoice.settlement_date || invoice.created_at);
+        const startDate = new Date(settlementDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+        
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items(
+              *,
+              product_variants(
+                id,
+                price,
+                cost_price,
+                products(name),
+                colors(name),
+                sizes(name)
+              )
+            )
+          `)
+          .eq('created_by', employeeId)
+          .in('status', ['completed', 'delivered'])
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', settlementDate.toISOString());
 
-      console.log('📊 Found related orders:', ordersData);
+        if (error) {
+          console.error('خطأ في جلب الطلبات بالفترة الزمنية:', error);
+        } else {
+          ordersData = data || [];
+        }
+      }
+
+      console.log('✅ الطلبات المرتبطة المسترجعة:', ordersData);
       setRelatedOrders(ordersData || []);
     } catch (error) {
       console.error('خطأ في جلب الطلبات:', error);
