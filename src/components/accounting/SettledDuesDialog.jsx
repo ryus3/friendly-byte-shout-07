@@ -76,17 +76,19 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                   </div>
                 </div>
                 
-                <div className="inline-block bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg border border-white/50">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                      تاريخ الإصدار: {invoice.settlement_date ? 
-                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                        'غير محدد'
-                      }
-                    </p>
+                  <div className="inline-block bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg border border-white/50">
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-5 h-5 text-blue-600" />
+                      <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
+                        تاريخ التسوية: {invoice.settlement_date ? 
+                          format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                          invoice.created_at ? 
+                            format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                            'غير محدد'
+                        }
+                      </p>
+                    </div>
                   </div>
-                </div>
               </div>
             </div>
 
@@ -500,6 +502,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         employee_name: employeeName,
         settlement_amount: Number(expense.amount) || 0,
         settlement_date: expense.created_at, // استخدام created_at مباشرة
+        created_at: expense.created_at, // إضافة created_at أيضاً
         status: 'completed',
         description: expense.description,
         metadata: expense.metadata || {},
@@ -710,11 +713,13 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                                 
                                 <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                                   <Calendar className="w-4 h-4 text-blue-500" />
-                                  <p className="text-sm font-medium">
-                                    {invoice.settlement_date ? 
-                                      format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                      'غير محدد'
-                                    }
+                                    <p className="text-sm font-medium">
+                                      {invoice.settlement_date ? 
+                                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                        invoice.created_at ? 
+                                          format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                          'غير محدد'
+                                      }
                                   </p>
                                 </div>
                                 
@@ -789,11 +794,13 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                                 <TableCell className="py-4">
                                   <div className="flex items-center gap-2">
                                     <Calendar className="w-4 h-4 text-blue-500" />
-                                    <span className="font-medium">
-                                      {invoice.settlement_date ? 
-                                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                        'غير محدد'
-                                      }
+                                      <span className="font-medium">
+                                        {invoice.settlement_date ? 
+                                          format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                          invoice.created_at ? 
+                                            format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                            'غير محدد'
+                                        }
                                     </span>
                                   </div>
                                 </TableCell>
