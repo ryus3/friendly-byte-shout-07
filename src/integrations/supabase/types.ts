@@ -3213,15 +3213,6 @@ export type Database = {
         Args: { p_employee_code: string; p_telegram_chat_id: number }
         Returns: boolean
       }
-      pay_employee_dues: {
-        Args: {
-          p_employee_id: string
-          p_amount: number
-          p_description?: string
-          p_paid_by?: string
-        }
-        Returns: Json
-      }
       pay_employee_dues_with_invoice: {
         Args: {
           p_employee_id: string
