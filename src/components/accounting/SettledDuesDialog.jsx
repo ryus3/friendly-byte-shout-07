@@ -340,11 +340,24 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // جلب جميع الموظفين النشطين (بما في ذلك المديرين)
+      // جلب جميع الموظفين النشطين (بما في ذلك المديرين مع الأدوار)
       const { data: employeesData } = await supabase
         .from('profiles')
-        .select('user_id, full_name, role, status')
+        .select(`
+          user_id, 
+          full_name, 
+          status,
+          user_roles!inner(
+            is_active,
+            roles(
+              name,
+              display_name,
+              hierarchy_level
+            )
+          )
+        `)
         .eq('status', 'active')
+        .eq('user_roles.is_active', true)
         .order('full_name', { ascending: true });
       
       console.log('👥 جميع الموظفين المتاحين:', employeesData);
@@ -526,15 +539,18 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
                 </SelectTrigger>
                 <SelectContent className="bg-background border border-border z-50 shadow-lg">
                   <SelectItem value="all">جميع الموظفين</SelectItem>
-                  {employees?.length > 0 ? (
-                    employees.map(emp => (
-                      <SelectItem key={emp.user_id} value={emp.user_id}>
-                        {emp.full_name} ({emp.role === 'admin' ? 'مدير عام' : emp.role === 'manager' ? 'مدير' : 'موظف'})
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no_employees" disabled>لا توجد موظفين متاحين</SelectItem>
-                  )}
+                   {employees?.length > 0 ? (
+                     employees.map(emp => {
+                       const roleDisplay = emp.user_roles?.[0]?.roles?.display_name || 'موظف';
+                       return (
+                         <SelectItem key={emp.user_id} value={emp.user_id}>
+                           {emp.full_name} ({roleDisplay})
+                         </SelectItem>
+                       );
+                     })
+                   ) : (
+                     <SelectItem value="no_employees" disabled>لا توجد موظفين متاحين</SelectItem>
+                   )}
                 </SelectContent>
               </Select>
             </div>
