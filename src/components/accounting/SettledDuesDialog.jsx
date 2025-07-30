@@ -533,7 +533,7 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="" disabled>لا توجد موظفين متاحين</SelectItem>
+                    <SelectItem value="no_employees" disabled>لا توجد موظفين متاحين</SelectItem>
                   )}
                 </SelectContent>
               </Select>
