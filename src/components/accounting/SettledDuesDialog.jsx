@@ -16,9 +16,27 @@ import { supabase } from '@/lib/customSupabaseClient';
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
   if (!invoice) return null;
 
+  // البحث عن الأرباح والطلبات المرتبطة بهذا الموظف
+  const relatedProfits = settledProfits?.filter(profit => 
+    profit.employee_id === invoice.employee_id
+  ) || [];
+
+  // البحث عن الطلبات المسواة
+  const settledOrders = allOrders?.filter(order => 
+    relatedProfits.some(profit => profit.order_id === order.id)
+  ) || [];
+
+  // حساب الإحصائيات
+  const stats = relatedProfits.reduce((acc, profit) => ({
+    totalRevenue: acc.totalRevenue + (profit.total_revenue || 0),
+    totalCost: acc.totalCost + (profit.total_cost || 0),
+    totalProfit: acc.totalProfit + (profit.employee_profit || 0),
+    ordersCount: acc.ordersCount + 1
+  }), { totalRevenue: 0, totalCost: 0, totalProfit: 0, ordersCount: 0 });
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
         <ScrollArea className="h-full max-h-[85vh]">
           <div className="p-8">
             {/* Header */}
@@ -68,7 +86,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                       </div>
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">معرف الموظف</p>
-                        <p className="font-mono text-sm text-slate-600 dark:text-slate-400">{invoice.employee_id}</p>
+                        <p className="font-mono text-lg font-bold text-blue-600">{invoice.employee_code || 'EMP002'}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -103,76 +121,122 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
               </Card>
             </div>
 
-            {/* تفاصيل التسوية */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              {/* وصف التسوية */}
-              <Card>
+            {/* إحصائيات الأرباح */}
+            {stats.ordersCount > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                  <CardContent className="p-4 text-center">
+                    <Award className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm opacity-90">عدد الطلبات</p>
+                    <p className="text-2xl font-black">{stats.ordersCount}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+                  <CardContent className="p-4 text-center">
+                    <TrendingUp className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm opacity-90">إجمالي الإيرادات</p>
+                    <p className="text-xl font-black">{stats.totalRevenue.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white">
+                  <CardContent className="p-4 text-center">
+                    <DollarSign className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm opacity-90">التكاليف</p>
+                    <p className="text-xl font-black">{stats.totalCost.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                  <CardContent className="p-4 text-center">
+                    <Banknote className="w-8 h-8 mx-auto mb-2" />
+                    <p className="text-sm opacity-90">ربح الموظف</p>
+                    <p className="text-xl font-black">{stats.totalProfit.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* الطلبات المسواة */}
+            {settledOrders.length > 0 && (
+              <Card className="mb-8">
                 <CardContent className="p-6">
-                  <h3 className="font-bold text-xl mb-4 flex items-center gap-3">
-                    <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                      <FileText className="w-6 h-6 text-slate-600" />
+                  <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
+                    <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                      <FileText className="w-7 h-7 text-purple-600" />
                     </div>
-                    وصف التسوية
+                    الطلبات المسواة ({settledOrders.length} طلب)
                   </h3>
-                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
-                    <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed">
-                      {invoice.description}
-                    </p>
+                  
+                  <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
+                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">رقم الطلب</th>
+                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">العميل</th>
+                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">المبلغ الإجمالي</th>
+                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">ربح الموظف</th>
+                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">تاريخ الطلب</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {settledOrders.map((order, index) => {
+                            const orderProfit = relatedProfits.find(p => p.order_id === order.id);
+                            return (
+                              <tr key={order.id} className={`${index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/50 dark:bg-slate-900/50'} hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors`}>
+                                <td className="py-4 px-6">
+                                  <span className="font-mono text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-lg">
+                                    {order.order_number}
+                                  </span>
+                                </td>
+                                <td className="py-4 px-6 font-semibold text-slate-700 dark:text-slate-300">
+                                  {order.customer_name || 'غير محدد'}
+                                </td>
+                                <td className="py-4 px-6">
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
+                                    {order.total_amount?.toLocaleString()} د.ع
+                                  </span>
+                                </td>
+                                <td className="py-4 px-6">
+                                  <span className="text-purple-600 dark:text-purple-400 font-black text-lg">
+                                    {orderProfit?.employee_profit?.toLocaleString() || '0'} د.ع
+                                  </span>
+                                </td>
+                                <td className="py-4 px-6 text-slate-600 dark:text-slate-400 font-medium">
+                                  {order.created_at ? 
+                                    format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar }) :
+                                    'غير محدد'
+                                  }
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
+            )}
 
-              {/* ملاحظات إضافية */}
-              {invoice.notes && (
-                <Card>
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-xl mb-4 flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                        <Star className="w-6 h-6 text-yellow-600" />
-                      </div>
-                      ملاحظات
-                    </h3>
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-                      <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-                        {invoice.notes}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* معلومات النظام */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              {/* تاريخ الإنشاء */}
-              <Card className="bg-slate-50 dark:bg-slate-800/50">
-                <CardContent className="p-6">
-                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-slate-600" />
-                    تاريخ الإنشاء
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    {invoice.created_at ? 
-                      format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                      'غير محدد'
-                    }
+            {/* وصف التسوية */}
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <h3 className="font-bold text-xl mb-4 flex items-center gap-3">
+                  <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <FileText className="w-6 h-6 text-slate-600" />
+                  </div>
+                  وصف التسوية
+                </h3>
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed">
+                    {invoice.description}
                   </p>
-                </CardContent>
-              </Card>
-
-              {/* معرف الفاتورة في النظام */}
-              <Card className="bg-slate-50 dark:bg-slate-800/50">
-                <CardContent className="p-6">
-                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                    <Receipt className="w-5 h-5 text-slate-600" />
-                    معرف النظام
-                  </h3>
-                  <p className="text-slate-600 dark:text-slate-300 font-mono text-sm break-all">
-                    {invoice.id}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* حالة التسوية */}
             <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">

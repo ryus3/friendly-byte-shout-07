@@ -2018,6 +2018,7 @@ export type Database = {
           default_page: string | null
           delivery_partner_access: boolean | null
           email: string
+          employee_code: string | null
           full_name: string
           id: string
           is_active: boolean
@@ -2037,6 +2038,7 @@ export type Database = {
           default_page?: string | null
           delivery_partner_access?: boolean | null
           email: string
+          employee_code?: string | null
           full_name: string
           id?: string
           is_active?: boolean
@@ -2056,6 +2058,7 @@ export type Database = {
           default_page?: string | null
           delivery_partner_access?: boolean | null
           email?: string
+          employee_code?: string | null
           full_name?: string
           id?: string
           is_active?: boolean
@@ -2581,6 +2584,7 @@ export type Database = {
           order_ids: string[] | null
           payment_method: string
           profit_ids: string[] | null
+          settled_orders: Json | null
           settlement_date: string
           status: string
           total_amount: number
@@ -2598,6 +2602,7 @@ export type Database = {
           order_ids?: string[] | null
           payment_method?: string
           profit_ids?: string[] | null
+          settled_orders?: Json | null
           settlement_date?: string
           status?: string
           total_amount?: number
@@ -2615,6 +2620,7 @@ export type Database = {
           order_ids?: string[] | null
           payment_method?: string
           profit_ids?: string[] | null
+          settled_orders?: Json | null
           settlement_date?: string
           status?: string
           total_amount?: number
@@ -3124,6 +3130,10 @@ export type Database = {
       }
       generate_customer_promo_code: {
         Args: { customer_id_param: string }
+        Returns: string
+      }
+      generate_employee_code: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       generate_employee_telegram_code: {
