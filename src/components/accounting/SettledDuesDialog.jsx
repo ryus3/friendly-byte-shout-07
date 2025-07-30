@@ -1,827 +1,762 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { format, parseISO } from 'date-fns';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { format, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
-import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award, Users, CreditCard } from 'lucide-react';
+import { CheckCircle2, FileText, Calendar, User, DollarSign, Receipt, Eye, Filter, Clock, Star, TrendingUp, Package, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 
-// مكون معاينة الفاتورة المبهر والاحترافي
-const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
-  if (!invoice) return null;
+// مكون معاينة الفاتورة
+const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
+  const [relatedOrders, setRelatedOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // البحث عن الأرباح المسواة لهذا الموظف - تحسين الربط
-  const relatedProfits = settledProfits?.filter(profit => {
-    // مطابقة اسم الموظف أولاً
-    const nameMatch = profit.employee_name === invoice.employee_name ||
-                     profit.employee_name?.includes(invoice.employee_name) ||
-                     invoice.employee_name?.includes(profit.employee_name);
-    
-    // للموظف "احمد" - التحقق من المبلغ أيضاً لضمان الدقة
-    if (invoice.employee_name === 'احمد' && invoice.settlement_amount === 7000) {
-      console.log('🔍 فحص أرباح الموظف احمد:', {
-        profit_employee: profit.employee_name,
-        profit_amount: profit.employee_profit,
-        invoice_employee: invoice.employee_name,
-        invoice_amount: invoice.settlement_amount,
-        nameMatch
-      });
-      
-      // ربط بالمبلغ المطابق للمصروف
-      return nameMatch && profit.employee_profit === invoice.settlement_amount;
+  useEffect(() => {
+    if (open && invoice) {
+      fetchRelatedOrders();
+    }
+  }, [open, invoice]);
+
+  const fetchRelatedOrders = async () => {
+    if (!invoice.metadata?.employee_id) {
+      console.log('⚠️ لا يوجد معرف موظف في الفاتورة:', invoice);
+      return;
     }
     
-    return nameMatch;
-  }) || [];
+    setLoading(true);
+    try {
+      console.log('🔍 جلب طلبات الموظف:', invoice.metadata.employee_id);
+      
+      // حساب فترة التسوية (شهر واحد قبل تاريخ التسوية)
+      const settlementDate = new Date(invoice.settlement_date);
+      const startDate = new Date(settlementDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+      
+      console.log('📅 فترة البحث:', {
+        من: startDate.toISOString(),
+        إلى: settlementDate.toISOString()
+      });
+      
+      // جلب الطلبات المسواة للموظف - بشكل أكثر مرونة
+      const { data: ordersData, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(
+            *,
+            product_variants(
+              id,
+              price,
+              cost_price,
+              products(name),
+              colors(name),
+              sizes(name)
+            )
+          )
+        `)
+        .eq('created_by', invoice.metadata.employee_id)
+        .in('status', ['completed', 'delivered'])
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', settlementDate.toISOString());
 
-  // حساب الإحصائيات من الأرباح
-  const profitStats = relatedProfits.reduce((stats, profit) => {
+      console.log('📊 Found related orders:', ordersData);
+      setRelatedOrders(ordersData || []);
+    } catch (error) {
+      console.error('خطأ في جلب الطلبات:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // حساب الإحصائيات
+  const stats = useMemo(() => {
+    const totalRevenue = relatedOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const totalCosts = relatedOrders.reduce((sum, order) => {
+      const orderCost = order.order_items?.reduce((itemSum, item) => {
+        const costPrice = item.product_variants?.cost_price || 0;
+        return itemSum + (costPrice * item.quantity);
+      }, 0) || 0;
+      return sum + orderCost;
+    }, 0);
+    const totalOrders = relatedOrders.length;
+    const totalItems = relatedOrders.reduce((sum, order) => {
+      return sum + (order.order_items?.reduce((itemSum, item) => itemSum + item.quantity, 0) || 0);
+    }, 0);
+    
     return {
-      totalProfit: stats.totalProfit + (profit.employee_profit || 0),
-      totalRevenue: stats.totalRevenue + (profit.total_revenue || 0),
-      totalCost: stats.totalCost + (profit.total_cost || 0),
-      ordersCount: stats.ordersCount + 1
+      totalRevenue,
+      totalCosts,
+      grossProfit: totalRevenue - totalCosts,
+      totalOrders,
+      totalItems,
+      profitMargin: totalRevenue > 0 ? ((totalRevenue - totalCosts) / totalRevenue * 100) : 0
     };
-  }, { totalProfit: 0, totalRevenue: 0, totalCost: 0, ordersCount: 0 });
+  }, [relatedOrders]);
+
+  if (!invoice) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20">
+      <DialogContent className="max-w-7xl max-h-[95vh] bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 dark:from-slate-900 dark:via-slate-800/50 dark:to-slate-900 border-0 shadow-2xl">
         <ScrollArea className="h-full max-h-[85vh]">
-          <div className="p-8">
-            {/* Header المبهر */}
-            <div className="relative text-center mb-10 pb-8">
-              {/* خلفية مزخرفة */}
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 rounded-3xl blur-3xl"></div>
-              
-              <div className="relative z-10">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-full blur-lg opacity-70"></div>
-                    <div className="relative p-4 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-full text-white shadow-2xl">
-                      <Receipt className="w-10 h-10" />
-                    </div>
-                  </div>
-                  <div>
-                    <h1 className="text-5xl font-black bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                      فاتورة تسوية
-                    </h1>
-                    <p className="text-xl text-slate-600 dark:text-slate-300 font-medium">مستحقات الموظف</p>
-                  </div>
+          <div className="p-6">
+            {/* Header أنيق */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-3 mb-4 p-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl text-white shadow-xl">
+                <div className="p-2 bg-white/20 rounded-xl">
+                  <Receipt className="w-8 h-8" />
                 </div>
-                
-                <div className="inline-block bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl px-8 py-4 shadow-lg border border-white/50">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                     <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                       تاريخ الإصدار: {invoice.settlement_date ? 
-                         format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                         invoice.created_at ? 
-                           format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                           'غير محدد'
-                       }
-                     </p>
-                  </div>
+                <div className="text-right">
+                  <h1 className="text-2xl font-bold">فاتورة تسوية</h1>
+                  <p className="text-blue-100 text-sm">معلومات الموظف</p>
                 </div>
               </div>
             </div>
 
-            {/* معلومات الفاتورة */}
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-10">
-              {/* معلومات أساسية */}
-              <div className="xl:col-span-2 space-y-6">
-                <Card className="bg-gradient-to-br from-white to-blue-50/50 dark:from-slate-800 dark:to-blue-900/20 border-0 shadow-xl">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white">
-                        <User className="w-6 h-6" />
-                      </div>
-                      معلومات الموظف
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">اسم الموظف</p>
-                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl border border-blue-200/50">
-                          <Star className="w-5 h-5 text-blue-600" />
-                          <p className="font-bold text-2xl text-slate-800 dark:text-slate-100">{invoice.employee_name}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">رقم الفاتورة</p>
-                        <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30 rounded-xl border border-purple-200/50">
-                          <Receipt className="w-5 h-5 text-purple-600" />
-                          <p className="font-mono text-xl font-bold text-purple-700 dark:text-purple-300">{invoice.invoice_number}</p>
-                        </div>
-                      </div>
+            {/* معلومات الموظف - تصميم مشابه للصورة */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-white/20 rounded-xl">
+                      <User className="w-6 h-6" />
                     </div>
-                  </CardContent>
-                </Card>
-
-                {/* إحصائيات الأرباح */}
-                {profitStats.ordersCount > 0 && (
-                  <Card className="bg-gradient-to-br from-white to-emerald-50/50 dark:from-slate-800 dark:to-emerald-900/20 border-0 shadow-xl">
-                    <CardContent className="p-6">
-                      <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-white">
-                          <TrendingUp className="w-6 h-6" />
-                        </div>
-                        ملخص الأرباح والإنجازات
-                      </h3>
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white shadow-lg">
-                          <Award className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm opacity-90">عدد الطلبات</p>
-                          <p className="text-3xl font-black">{profitStats.ordersCount}</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white shadow-lg">
-                          <DollarSign className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm opacity-90">إجمالي الإيرادات</p>
-                          <p className="text-2xl font-black">{profitStats.totalRevenue.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl text-white shadow-lg">
-                          <Receipt className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm opacity-90">إجمالي التكاليف</p>
-                          <p className="text-2xl font-black">{profitStats.totalCost.toLocaleString()}</p>
-                        </div>
-                        <div className="text-center p-4 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl text-white shadow-lg">
-                          <Banknote className="w-8 h-8 mx-auto mb-2" />
-                          <p className="text-sm opacity-90">ربح الموظف</p>
-                          <p className="text-2xl font-black">{profitStats.totalProfit.toLocaleString()}</p>
-                        </div>
+                    <div>
+                      <h3 className="text-lg font-bold">اسم الموظف</h3>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Star className="w-5 h-5 text-yellow-300" />
+                        <span className="text-2xl font-bold">{invoice.employee_name}</span>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* المبلغ المدفوع */}
-              <div className="space-y-6">
-                <Card className="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 text-white border-0 shadow-2xl overflow-hidden relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
-                  <CardContent className="p-8 relative z-10 text-center">
-                    <div className="flex items-center justify-center gap-3 mb-6">
-                      <div className="p-3 bg-white/20 rounded-full">
-                        <DollarSign className="w-10 h-10" />
-                      </div>
-                      <h3 className="text-2xl font-black">المبلغ المدفوع</h3>
-                    </div>
-                    <p className="text-6xl font-black mb-4 drop-shadow-lg">
-                      {invoice.settlement_amount?.toLocaleString()}
-                    </p>
-                    <p className="text-xl font-bold opacity-90">دينار عراقي</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gradient-to-br from-white to-green-50 dark:from-slate-800 dark:to-green-900/20 border-0 shadow-xl">
-                  <CardContent className="p-6 text-center">
-                    <div className="flex items-center justify-center gap-3 mb-4">
-                      <div className="p-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full text-white">
-                        <CheckCircle className="w-8 h-8" />
-                      </div>
-                      <h3 className="text-xl font-bold text-green-700 dark:text-green-400">تسوية مكتملة</h3>
-                    </div>
-                    <p className="text-slate-600 dark:text-slate-300 font-medium">تم إتمام الدفع بنجاح</p>
-                    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
-                      <Clock className="w-4 h-4" />
-                      <span>معالج تلقائياً بواسطة النظام</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-
-            {/* تفاصيل الطلبات المسواة */}
-            {relatedProfits.length > 0 && (
-              <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border-0 shadow-2xl mb-8">
-                <CardContent className="p-8">
-                  <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white">
-                      <FileText className="w-7 h-7" />
-                    </div>
-                    تفاصيل الطلبات المسواة
-                  </h3>
-                  <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">رقم الطلب</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">الإيرادات</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">التكاليف</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">ربح الموظف</th>
-                            <th className="text-right py-4 px-6 font-bold text-slate-700 dark:text-slate-300">تاريخ التسوية</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {relatedProfits.map((profit, index) => (
-                            <tr key={profit.id} className={`${index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-slate-50/50 dark:bg-slate-900/50'} hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors`}>
-                              <td className="py-4 px-6">
-                                <span className="font-mono text-blue-600 dark:text-blue-400 font-bold bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-lg">
-                                  {profit.order_number}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6">
-                                <span className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
-                                  {profit.total_revenue?.toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6">
-                                <span className="text-orange-600 dark:text-orange-400 font-bold text-lg">
-                                  {profit.total_cost?.toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6">
-                                <span className="text-purple-600 dark:text-purple-400 font-black text-xl">
-                                  {profit.employee_profit?.toLocaleString()}
-                                </span>
-                              </td>
-                              <td className="py-4 px-6 text-slate-600 dark:text-slate-400 font-medium">
-                                {profit.settled_at ? 
-                                  format(parseISO(profit.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) :
-                                  'غير محدد'
-                                }
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
 
-            {/* وصف التسوية */}
-            <Card className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 border-0 shadow-xl mb-8">
-              <CardContent className="p-8">
-                <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
-                  <div className="p-3 bg-gradient-to-r from-slate-600 to-slate-700 rounded-lg text-white">
-                    <FileText className="w-7 h-7" />
+              <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-white/20 rounded-xl">
+                      <Receipt className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">رقم الفاتورة</h3>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-2xl font-bold font-mono">{invoice.invoice_number}</span>
+                      </div>
+                    </div>
                   </div>
-                  وصف التسوية
-                </h3>
-                <div className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600">
-                  <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed font-medium">
-                    {invoice.description}
-                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* ملخص الأرباح والإنجازات - تصميم مشابه للصورة */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg">
+                <CardContent className="p-4 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <ShoppingCart className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-medium mb-1">عدد الطلبات</h3>
+                  <p className="text-2xl font-bold">{stats.totalOrders}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0 shadow-lg">
+                <CardContent className="p-4 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <DollarSign className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-medium mb-1">إجمالي الإيرادات</h3>
+                  <p className="text-2xl font-bold">{stats.totalRevenue.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-lg">
+                <CardContent className="p-4 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <Package className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-medium mb-1">إجمالي التكاليف</h3>
+                  <p className="text-2xl font-bold">{stats.totalCosts.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-lg">
+                <CardContent className="p-4 text-center">
+                  <div className="flex items-center justify-center mb-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <TrendingUp className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <h3 className="text-sm font-medium mb-1">ربح الموظف</h3>
+                  <p className="text-2xl font-bold">{invoice.settlement_amount?.toLocaleString()}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* تفاصيل الطلبات المسواة */}
+            <Card className="mb-6 bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border border-border/50">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg text-white">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-bold">تفاصيل الطلبات المسواة</h3>
                 </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                    <p className="text-muted-foreground mt-2">جاري تحميل الطلبات...</p>
+                  </div>
+                ) : relatedOrders.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Header للجدول */}
+                    <div className="grid grid-cols-5 gap-4 p-3 bg-muted/50 rounded-lg font-semibold text-sm">
+                      <span>رقم الطلب</span>
+                      <span>الإيرادات</span>
+                      <span>التكاليف</span>
+                      <span>ربح الموظف</span>
+                      <span>تاريخ التسوية</span>
+                    </div>
+                    
+                    {relatedOrders.map((order) => {
+                      const orderCost = order.order_items?.reduce((sum, item) => {
+                        const costPrice = item.product_variants?.cost_price || 0;
+                        return sum + (costPrice * item.quantity);
+                      }, 0) || 0;
+                      const orderRevenue = order.total_amount || 0;
+                      const orderProfit = orderRevenue - orderCost;
+                      
+                      return (
+                        <div key={order.id} className="grid grid-cols-5 gap-4 p-3 bg-card/50 rounded-lg border text-sm">
+                          <span className="font-mono text-blue-600 dark:text-blue-400">{order.order_number}</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{orderRevenue.toLocaleString()}</span>
+                          <span className="text-orange-600 dark:text-orange-400 font-semibold">{orderCost.toLocaleString()}</span>
+                          <span className="text-purple-600 dark:text-purple-400 font-semibold">{orderProfit.toLocaleString()}</span>
+                          <span className="text-muted-foreground">
+                            {format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">لا توجد طلبات مسواة لهذه الفترة</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* معلومات إضافية */}
-            {invoice.metadata && Object.keys(invoice.metadata).length > 0 && (
-              <Card className="bg-gradient-to-br from-white to-indigo-50 dark:from-slate-800 dark:to-indigo-900/20 border-0 shadow-xl">
-                <CardContent className="p-8">
-                  <h3 className="font-bold text-2xl mb-6 flex items-center gap-3">
-                    <div className="p-3 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white">
-                      <Star className="w-7 h-7" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-200 dark:border-emerald-800">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg text-white">
+                      <CheckCircle2 className="w-5 h-5" />
                     </div>
-                    معلومات النظام
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {invoice.metadata.employee_id && (
-                      <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl border border-blue-200/50">
-                        <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mb-1">معرف الموظف</p>
-                        <p className="font-mono text-sm text-slate-700 dark:text-slate-300">{invoice.metadata.employee_id}</p>
-                      </div>
-                    )}
-                    {invoice.metadata.payment_type && (
-                      <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-xl border border-green-200/50">
-                        <p className="text-sm text-green-600 dark:text-green-400 font-medium mb-1">نوع الدفع</p>
-                        <p className="font-semibold text-slate-700 dark:text-slate-300">{invoice.metadata.payment_type}</p>
-                      </div>
-                    )}
-                    {invoice.receipt_number && (
-                      <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl border border-purple-200/50">
-                        <p className="text-sm text-purple-600 dark:text-purple-400 font-medium mb-1">رقم الإيصال</p>
-                        <p className="font-semibold text-slate-700 dark:text-slate-300">{invoice.receipt_number}</p>
-                      </div>
-                    )}
+                    <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">حالة التسوية</h3>
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">تم إتمام الدفع بنجاح</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="w-3 h-3" />
+                      <span>معالج تلقائياً بواسطة النظام</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            )}
+
+              <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-200 dark:border-blue-800">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white">
+                      <Calendar className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-blue-700 dark:text-blue-400">تاريخ الإصدار</h3>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {invoice.settlement_date || invoice.created_at ? 
+                      format(parseISO(invoice.settlement_date || invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                      format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar })
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </ScrollArea>
         
-        <DialogFooter className="p-6 border-t bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+        <div className="p-4 border-t bg-muted/30">
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
-            className="min-w-[120px] bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-700"
+            className="w-full"
           >
             إغلاق
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
 };
 
-const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [] }) => {
-  console.log('🚀 SettledDuesDialog مُحدّث:', {
-    open,
-    invoicesReceived: invoices,
-    invoicesLength: invoices?.length || 0,
-    invoicesType: typeof invoices,
-    allUsersLength: allUsers?.length || 0,
-    profitsLength: profits?.length || 0,
-    ordersLength: orders?.length || 0
+const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
+  const [selectedEmployee, setSelectedEmployee] = useState(initialFilters.employee || 'all');
+  const [selectedPeriod, setSelectedPeriod] = useState(initialFilters.period || 'month');
+  const [dateRange, setDateRange] = useState(initialFilters.dateRange || {
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
   });
-  
-  const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
-  // جلب الأرباح المسواة مع تفاصيل الطلبات
+  const [settledDues, setSettledDues] = useState([]);
   const [settledProfits, setSettledProfits] = useState([]);
-  
+  const [allOrders, setAllOrders] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [previewInvoice, setPreviewInvoice] = useState(null);
+
+  // جلب البيانات
   useEffect(() => {
-    const fetchSettledProfits = async () => {
-      try {
-        console.log('🔍 جلب الأرباح المسواة...');
-        
-        const { data, error } = await supabase
-          .from('profits')
-          .select(`
-            *,
-            order:orders(order_number, status, created_at, total_amount, final_amount),
-            employee:profiles!employee_id(full_name, username)
-          `)
-          .in('status', ['settled', 'invoice_received']) // أضافة invoice_received أيضاً
-          .order('settled_at', { ascending: false });
-
-        if (error) throw error;
-        
-        const processedProfits = data?.map(profit => ({
-          ...profit,
-          employee_name: profit.employee?.full_name || profit.employee?.username || 'غير محدد',
-          order_number: profit.order?.order_number || 'غير محدد',
-          order_total: profit.order?.final_amount || profit.order?.total_amount || 0
-        })) || [];
-
-        console.log('📊 الأرباح المسواة المُحدّثة:', {
-          count: processedProfits.length,
-          profits: processedProfits
-        });
-        setSettledProfits(processedProfits);
-      } catch (error) {
-        console.error('❌ خطأ في جلب الأرباح المسواة:', error);
-      }
-    };
-
     if (open) {
-      fetchSettledProfits();
+      fetchData();
     }
   }, [open]);
 
-  const employees = useMemo(() => {
-    if (!Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u.status === 'active' && u.role !== 'admin');
-  }, [allUsers]);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // جلب جميع الموظفين النشطين مع أدوارهم
+      const { data: employeesData, error: employeesError } = await supabase
+        .from('profiles')
+        .select(`
+          user_id, 
+          full_name, 
+          status,
+          user_roles(
+            is_active,
+            roles(
+              name,
+              display_name,
+              hierarchy_level
+            )
+          )
+        `)
+        .eq('status', 'active')
+        .order('full_name', { ascending: true });
 
-  // استخراج اسم الموظف من وصف المصروف - محسن
+      if (employeesError) {
+        console.error('❌ خطأ في جلب الموظفين:', employeesError);
+      }
+
+      console.log('👥 البيانات الخام للموظفين:', employeesData);
+      
+      // معالجة وتصفية بيانات الموظفين
+      const validEmployees = employeesData?.filter(emp => 
+        emp && 
+        emp.full_name && 
+        emp.full_name.trim() !== ''
+      ).map(emp => {
+        // البحث عن دور نشط
+        const activeRole = emp.user_roles?.find(ur => ur.is_active && ur.roles);
+        return {
+          user_id: emp.user_id,
+          full_name: emp.full_name.trim(),
+          status: emp.status,
+          role_display: activeRole?.roles?.display_name || 'موظف',
+          role_name: activeRole?.roles?.name || 'employee'
+        };
+      }) || [];
+
+      console.log('👥 الموظفين المعالجين:', validEmployees);
+      
+      setEmployees(validEmployees);
+
+      // جلب المصاريف المدفوعة (المستحقات المدفوعة)
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('category', 'مستحقات الموظفين')
+        .eq('expense_type', 'system')
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+      // معالجة البيانات مع ربط أفضل للموظفين
+      const processedDues = expensesData?.map(expense => {
+        // استخراج معرف الموظف من metadata أولاً
+        let employeeId = expense.metadata?.employee_id;
+        let employeeName = expense.metadata?.employee_name;
+        
+        // إذا لم يوجد في metadata، حاول البحث بالاسم في الوصف
+        if (!employeeId) {
+          const extractedName = extractEmployeeNameFromDescription(expense.description);
+          const foundEmployee = employeesData?.find(emp => 
+            emp.full_name?.toLowerCase().includes(extractedName.toLowerCase()) ||
+            extractedName.toLowerCase().includes(emp.full_name?.toLowerCase())
+          );
+          
+          if (foundEmployee) {
+            employeeId = foundEmployee.user_id;
+            employeeName = foundEmployee.full_name;
+          }
+        }
+        
+        console.log('💰 معالجة فاتورة:', {
+          expense_id: expense.id,
+          employee_id: employeeId,
+          employee_name: employeeName,
+          description: expense.description
+        });
+        
+        return {
+          id: expense.id,
+          invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
+          employee_name: employeeName || expense.vendor_name || extractEmployeeNameFromDescription(expense.description),
+          settlement_amount: Number(expense.amount) || 0,
+          settlement_date: expense.created_at,
+          status: 'completed',
+          description: expense.description,
+          metadata: {
+            ...expense.metadata,
+            employee_id: employeeId,
+            employee_name: employeeName
+          },
+          receipt_number: expense.receipt_number,
+          created_at: expense.created_at
+        };
+      }) || [];
+
+      console.log('🏗️ Processed dues with employee IDs:', processedDues);
+      setSettledDues(processedDues);
+
+    } catch (error) {
+      console.error('خطأ في جلب البيانات:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // استخراج اسم الموظف من الوصف
   const extractEmployeeNameFromDescription = (description) => {
     if (!description || typeof description !== 'string') {
-      console.warn('⚠️ وصف المصروف فارغ أو غير صالح:', description);
       return 'غير محدد';
     }
     
-    console.log('🔍 معالجة الوصف:', description);
-    
-    // تنظيف النص
     const cleanDesc = description.trim();
-    
-    // محاولة استخراج الاسم بعد "الموظف"
     const match = cleanDesc.match(/الموظف\s+(.+?)(?:\s*$)/i);
     if (match && match[1]) {
-      const extractedName = match[1].trim();
-      console.log(`✅ تم استخراج الاسم: "${extractedName}"`);
-      return extractedName;
+      return match[1].trim();
     }
     
-    // محاولة أخذ آخر كلمة
     const words = cleanDesc.split(/\s+/);
     if (words.length >= 2) {
-      const lastName = words[words.length - 1];
-      console.log(`⚠️ استخراج آخر كلمة: "${lastName}"`);
-      return lastName;
+      return words[words.length - 1];
     }
     
-    console.log('❌ فشل في استخراج الاسم، استخدام القيمة الافتراضية');
     return 'غير محدد';
   };
 
-  // جلب فواتير التحاسب من جدول expenses مع نوع system - تحسين التاريخ
-  const settlementInvoices = useMemo(() => {
-    console.log('🔄 معالجة بيانات المصاريف:', {
-      invoicesLength: invoices?.length || 0,
-      invoicesArray: Array.isArray(invoices),
-      sampleData: invoices?.slice(0, 2)
-    });
-    
-    if (!Array.isArray(invoices) || invoices.length === 0) {
-      console.warn('❌ لا توجد مصاريف أو البيانات ليست مصفوفة');
-      return [];
-    }
-    
-    // البحث عن مصاريف نوع "مستحقات الموظفين"
-    const settlements = invoices.filter(expense => {
-      if (!expense) return false;
+  // فلترة البيانات
+  const filteredDues = useMemo(() => {
+    return settledDues.filter(due => {
+      const employeeMatch = selectedEmployee === 'all' || 
+        due.employee_name?.toLowerCase().includes(
+          employees.find(e => e.user_id === selectedEmployee)?.full_name?.toLowerCase() || ''
+        );
       
-      const isSettlement = expense.category === 'مستحقات الموظفين' && 
-                          expense.expense_type === 'system' &&
-                          expense.status === 'approved';
+      let dateMatch = true;
       
-      console.log(`💰 فحص المصروف ${expense.id}:`, {
-        category: expense.category,
-        expense_type: expense.expense_type,
-        status: expense.status,
-        description: expense.description,
-        amount: expense.amount,
-        created_at: expense.created_at, // إضافة التاريخ للتحقق
-        isSettlement
-      });
-      
-      return isSettlement;
-    });
-
-    // تجميع المصاريف المكررة
-    const uniqueSettlements = settlements.reduce((unique, expense) => {
-      const employeeName = expense.vendor_name || extractEmployeeNameFromDescription(expense.description);
-      const amount = Number(expense.amount);
-      const dateKey = new Date(expense.created_at).toDateString();
-      
-      const uniqueKey = `${employeeName}-${amount}-${dateKey}`;
-      
-      console.log(`🔍 معالجة المصروف - المفتاح الفريد: ${uniqueKey}`, {
-        employee: employeeName,
-        amount: amount,
-        date: dateKey,
-        created_at: expense.created_at, // تحقق من التاريخ
-        existing: !!unique[uniqueKey]
-      });
-      
-      if (unique[uniqueKey]) {
-        console.log(`⚠️ تم العثور على تكرار للمفتاح: ${uniqueKey}`);
+      // تطبيق فلتر الفترة
+      if (selectedPeriod !== 'all') {
+        const dueDate = new Date(due.settlement_date);
+        const now = new Date();
         
-        if (expense.receipt_number && !unique[uniqueKey].receipt_number) {
-          unique[uniqueKey] = expense;
-        } else if (new Date(expense.created_at) > new Date(unique[uniqueKey].created_at)) {
-          unique[uniqueKey] = expense;
+        switch (selectedPeriod) {
+          case 'today':
+            dateMatch = dueDate.toDateString() === now.toDateString();
+            break;
+          case 'week':
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            dateMatch = dueDate >= weekAgo;
+            break;
+          case 'month':
+            const monthStart = startOfMonth(now);
+            const monthEnd = endOfMonth(now);
+            dateMatch = dueDate >= monthStart && dueDate <= monthEnd;
+            break;
+          case 'quarter':
+            const quarterStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1);
+            dateMatch = dueDate >= quarterStart;
+            break;
         }
-      } else {
-        unique[uniqueKey] = expense;
-        console.log(`✅ تم إضافة مصروف جديد للمفتاح: ${uniqueKey}`);
       }
       
-      return unique;
-    }, {});
-
-    const processedSettlements = Object.values(uniqueSettlements).map(expense => {
-      const employeeName = expense.vendor_name || extractEmployeeNameFromDescription(expense.description);
+      // تطبيق فلتر التاريخ المخصص
+      if (dateRange?.from) {
+        dateMatch = dateMatch && 
+          new Date(due.settlement_date) >= dateRange.from && 
+          new Date(due.settlement_date) <= (dateRange.to || new Date());
+      }
       
-      console.log(`🔍 معالجة المصروف النهائي:`, {
-        employee: employeeName,
-        amount: expense.amount,
-        created_at: expense.created_at,
-        settlement_date: expense.created_at // التأكد من استخدام created_at كتاريخ التسوية
-      });
-      
-      return {
-        id: expense.id,
-        invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
-        employee_name: employeeName,
-        settlement_amount: Number(expense.amount) || 0,
-        settlement_date: expense.created_at, // استخدام created_at مباشرة
-        status: 'completed',
-        description: expense.description,
-        metadata: expense.metadata || {},
-        receipt_number: expense.receipt_number
-      };
+      return employeeMatch && dateMatch;
     });
-    
-    console.log('📋 فواتير التحاسب المعالجة (بتاريخ صحيح):', {
-      originalCount: settlements.length,
-      uniqueCount: processedSettlements.length,
-      settlements: processedSettlements.map(s => ({
-        id: s.id,
-        employee: s.employee_name,
-        amount: s.settlement_amount,
-        date: s.settlement_date
-      }))
-    });
-    
-    return processedSettlements;
-  }, [invoices]);
-  
-  // تطبيق الفلاتر
-  const filteredInvoices = useMemo(() => {
-    if (!Array.isArray(settlementInvoices)) {
-      console.warn('❌ settlementInvoices ليست مصفوفة');
-      return [];
-    }
-    
-    let filtered = [...settlementInvoices];
-    
-    // فلتر الموظف
-    if (selectedEmployee && selectedEmployee !== 'all') {
-      filtered = filtered.filter(invoice => {
-        const employee = employees.find(emp => emp.user_id === selectedEmployee);
-        return employee && invoice.employee_name === (employee.full_name || employee.name);
-      });
-    }
-    
-    // فلتر التاريخ
-    if (dateRange?.from) {
-      filtered = filtered.filter(invoice => {
-        const invoiceDate = new Date(invoice.settlement_date);
-        const fromDate = new Date(dateRange.from);
-        const toDate = dateRange.to ? new Date(dateRange.to) : new Date();
-        return invoiceDate >= fromDate && invoiceDate <= toDate;
-      });
-    }
-    
-    return filtered.sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date));
-  }, [settlementInvoices, selectedEmployee, dateRange, employees]);
+  }, [settledDues, selectedEmployee, selectedPeriod, dateRange, employees]);
 
+  // حساب الإجمالي
   const totalAmount = useMemo(() => {
-    const total = filteredInvoices.reduce((sum, inv) => {
-      const amount = Number(inv.settlement_amount) || 0;
-      return sum + amount;
-    }, 0);
-    
-    console.log('💰 حساب الإجمالي:', {
-      invoicesCount: filteredInvoices.length,
-      total: total,
-      invoices: filteredInvoices.map(inv => ({ id: inv.id, amount: inv.settlement_amount }))
-    });
-    
-    return total;
-  }, [filteredInvoices]);
-
-  const handlePreviewInvoice = (invoice) => {
-    setSelectedInvoice(invoice);
-    setIsPreviewOpen(true);
-  };
+    return filteredDues.reduce((sum, due) => sum + (Number(due.settlement_amount) || 0), 0);
+  }, [filteredDues]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] sm:max-w-7xl h-[98vh] flex flex-col p-0 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20">
-        <ScrollArea className="h-full">
-          <div className="flex flex-col min-h-full">
-            {/* Header مبهر */}
-            <div className="relative p-6 sm:p-8 pb-4 flex-shrink-0">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 rounded-t-3xl"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-full blur-lg opacity-70"></div>
-                    <div className="relative p-3 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-full text-white shadow-2xl">
-                      <CheckCircle className="w-8 h-8" />
-                    </div>
+      <DialogContent className="max-w-6xl h-[95vh] bg-gradient-to-br from-background via-muted/20 to-background border-0 shadow-2xl">
+        {/* Header محسن ومدمج */}
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 rounded-t-2xl"></div>
+          <DialogHeader className="relative z-10 p-6 text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-xl blur-md opacity-60"></div>
+                <div className="relative p-3 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-xl text-white shadow-lg">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+              </div>
+              <div className="text-right">
+                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  المستحقات المدفوعة
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  عرض وإدارة فواتير التحاسب المكتملة للموظفين
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
+
+        <ScrollArea className="flex-1 px-4">
+          {/* فلاتر مدمجة وأنيقة */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-6 p-4 bg-card/50 backdrop-blur-sm rounded-xl border">
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <User className="w-3.5 h-3.5" />
+                الموظف
+              </label>
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger className="h-9 text-sm bg-background/50 border-border/50">
+                  <SelectValue placeholder="جميع الموظفين" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border border-border shadow-lg max-h-[200px] overflow-y-auto" style={{ zIndex: 9999 }}>
+                  <SelectItem value="all">جميع الموظفين</SelectItem>
+                   {employees?.length > 0 ? (
+                     employees.map(emp => {
+                       const roleDisplay = emp.role_display || emp.user_roles?.[0]?.roles?.display_name || 'موظف';
+                       return (
+                         <SelectItem key={emp.user_id} value={emp.user_id}>
+                           {emp.full_name} ({roleDisplay})
+                         </SelectItem>
+                       );
+                     })
+                   ) : (
+                     <SelectItem value="no_employees" disabled>لا توجد موظفين متاحين</SelectItem>
+                   )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Calendar className="w-3.5 h-3.5" />
+                فترة التاريخ
+              </label>
+              <DateRangePicker
+                date={dateRange}
+                onDateChange={setDateRange}
+                className="h-9 text-sm"
+                placeholder="اختر تاريخين"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Filter className="w-3.5 h-3.5" />
+                الفترة
+              </label>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger className="h-9 text-sm bg-background/50 border-border/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كافة الفترات</SelectItem>
+                  <SelectItem value="today">اليوم</SelectItem>
+                  <SelectItem value="week">هذا الأسبوع</SelectItem>
+                  <SelectItem value="month">هذا الشهر</SelectItem>
+                  <SelectItem value="quarter">هذا الربع</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* كارت الإحصائيات المحسن */}
+          <Card className="mb-6 bg-gradient-to-br from-emerald-500/90 via-teal-500/90 to-cyan-500/90 text-white border-0 shadow-xl overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
+            <CardContent className="p-5 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                    <DollarSign className="w-8 h-8" />
                   </div>
                   <div>
-                    <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
-                      المستحقات المدفوعة
-                    </h1>
-                    <p className="text-lg text-slate-600 dark:text-slate-300 font-medium">
-                      عرض وإدارة فواتير التحاسب المكتملة للموظفين
-                    </p>
+                    <h3 className="text-xl font-bold mb-1">إجمالي المستحقات المدفوعة</h3>
+                    <p className="text-white/80 text-sm">المبلغ الكلي للتسويات المكتملة</p>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-4xl font-black mb-1 drop-shadow-lg">
+                    {totalAmount.toLocaleString()}
+                  </p>
+                  <p className="text-lg font-semibold opacity-90">دينار عراقي</p>
+                  <div className="flex items-center justify-center gap-2 mt-2 text-white/80">
+                    <Receipt className="w-4 h-4" />
+                    <span className="text-sm font-medium">عدد الفواتير: {filteredDues.length}</span>
                   </div>
                 </div>
               </div>
-            </div>
-            
-            {/* فلاتر محسنة */}
-            <div className="px-6 sm:px-8 flex-shrink-0 mb-6">
-              <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        الموظف
-                      </label>
-                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                        <SelectTrigger className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl">
-                          <SelectValue placeholder="اختر الموظف" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">جميع الموظفين</SelectItem>
-                          {employees.map(employee => (
-                            <SelectItem key={employee.user_id} value={employee.user_id}>
-                              {employee.full_name || employee.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        فترة التاريخ
-                      </label>
-                      <DateRangePicker
-                        date={dateRange}
-                        onDateChange={setDateRange}
-                        className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* إجمالي المبلغ المدهش */}
-            <div className="mx-4 sm:mx-6 mb-4 flex-shrink-0">
-              <Card className="bg-gradient-to-r from-primary via-secondary to-accent text-primary-foreground border-0 shadow-2xl overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-background/10 to-transparent"></div>
-                <CardContent className="p-6 relative z-10 text-center">
-                  <div className="flex items-center justify-center gap-3 mb-3">
-                    <div className="p-2 bg-background/20 rounded-full">
-                      <DollarSign className="w-6 h-6" />
-                    </div>
-                    <h2 className="text-xl font-black">إجمالي المستحقات المدفوعة</h2>
-                  </div>
-                  <p className="text-4xl font-black mb-2 drop-shadow-lg">{totalAmount.toLocaleString()}</p>
-                  <p className="text-lg font-bold opacity-90">دينار عراقي</p>
-                  <div className="mt-3 flex items-center justify-center gap-2 text-sm opacity-75">
-                    <Receipt className="w-4 h-4" />
-                    <span>عدد الفواتير: {filteredInvoices.length}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* قائمة الفواتير الجديدة */}
-            <div className="flex-1 px-4 sm:px-6 pb-4 sm:pb-6 min-h-0">
-              <Card className="bg-card/90 backdrop-blur-sm border shadow-xl h-full">
-                <CardContent className="p-0 h-full">
-                  <ScrollArea className="h-full">
-                    {filteredInvoices.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        <div className="relative mb-4">
-                          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                            <CheckCircle className="w-8 h-8" />
-                          </div>
+          {/* جدول البيانات المحسن */}
+          {filteredDues.length > 0 ? (
+            <div className="space-y-3">
+              {filteredDues.map((due, index) => (
+                <Card key={due.id} className="bg-card/80 backdrop-blur-sm border border-border/50 shadow-md hover:shadow-lg transition-all group">
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
+                      {/* رقم الفاتورة */}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white group-hover:scale-105 transition-transform">
+                          <Receipt className="w-4 h-4" />
                         </div>
-                        <h3 className="text-lg font-bold mb-2">لا توجد مستحقات مدفوعة</h3>
-                        <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                        <div>
+                          <p className="text-xs text-muted-foreground">رقم الفاتورة</p>
+                          <p className="font-mono text-sm font-bold text-blue-600 dark:text-blue-400">
+                            {due.invoice_number}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <>
-                        {/* عرض mobile */}
-                        <div className="block lg:hidden space-y-3 p-3">
-                          {filteredInvoices.map((invoice) => (
-                            <Card key={invoice.id} className="bg-gradient-to-br from-card to-muted/30 border shadow-sm">
-                              <CardContent className="p-4">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="p-1.5 bg-gradient-to-r from-primary to-secondary rounded-lg text-primary-foreground">
-                                      <User className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <p className="font-bold text-sm">{invoice.employee_name}</p>
-                                      <p className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-lg font-black text-primary">{invoice.settlement_amount?.toLocaleString()}</p>
-                                    <p className="text-xs text-muted-foreground">دينار عراقي</p>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg">
-                                  <Calendar className="w-3 h-3 text-primary" />
-                                  <p className="text-xs font-medium">
-                                    {invoice.settlement_date ? 
-                                      format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                      'غير محدد'
-                                    }
-                                  </p>
-                                </div>
-                                
-                                <div className="flex justify-between items-center pt-3 border-t">
-                                  <Badge className="bg-primary text-primary-foreground border-0 px-2 py-1 text-xs">
-                                    مكتملة
-                                  </Badge>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 px-3 text-xs bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 hover:opacity-90"
-                                    onClick={() => handlePreviewInvoice(invoice)}
-                                  >
-                                    <Eye className="w-3 h-3 ml-1" />
-                                    معاينة
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
 
-                        {/* عرض desktop */}
-                        <div className="hidden lg:block">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/50 border-0">
-                                <TableHead className="font-bold text-foreground py-3 text-sm">رقم الفاتورة</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">اسم الموظف</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">المبلغ</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">تاريخ التسوية</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">الحالة</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">الإجراءات</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filteredInvoices.map((invoice, index) => (
-                                <TableRow key={invoice.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-primary/5 transition-all duration-200`}>
-                                  <TableCell className="py-3">
-                                    <span className="font-mono text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">
-                                      {invoice.invoice_number}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="p-1.5 bg-gradient-to-r from-primary to-secondary rounded-lg text-primary-foreground">
-                                        <User className="w-3 h-3" />
-                                      </div>
-                                      <span className="font-bold text-sm">{invoice.employee_name}</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <span className="text-primary font-black text-lg">
-                                      {invoice.settlement_amount?.toLocaleString()} د.ع
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex items-center gap-2">
-                                      <Calendar className="w-3 h-3 text-primary" />
-                                      <span className="font-medium text-sm">
-                                        {invoice.settlement_date ? 
-                                          format(parseISO(invoice.settlement_date), 'dd/MM/yyyy HH:mm', { locale: ar }) :
-                                          'غير محدد'
-                                        }
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <Badge className="bg-primary text-primary-foreground border-0 px-3 py-1 text-xs">
-                                      مكتملة
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 hover:opacity-90 transition-all duration-200"
-                                      onClick={() => handlePreviewInvoice(invoice)}
-                                    >
-                                      <Eye className="w-3 h-3 ml-1" />
-                                      معاينة الفاتورة
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                      {/* اسم الموظف */}
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full text-white">
+                          <User className="w-4 h-4" />
                         </div>
-                      </>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                        <div>
+                          <p className="text-xs text-muted-foreground">الموظف</p>
+                          <p className="font-semibold text-foreground">
+                            {due.employee_name}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* المبلغ */}
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-emerald-600" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">المبلغ</p>
+                          <p className="text-emerald-600 dark:text-emerald-400 font-bold text-lg">
+                            {due.settlement_amount?.toLocaleString()} د.ع
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* تاريخ التسوية - محسن */}
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-blue-600" />
+                        <div>
+                          <p className="text-xs text-muted-foreground">تاريخ التسوية</p>
+                          <p className="text-sm font-medium text-foreground">
+                            {due.settlement_date || due.created_at ? 
+                              format(parseISO(due.settlement_date || due.created_at), 'dd/MM/yyyy', { locale: ar }) :
+                              format(new Date(), 'dd/MM/yyyy', { locale: ar })
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* الحالة */}
+                      <div className="flex justify-center">
+                        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0 shadow-sm">
+                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          مكتملة
+                        </Badge>
+                      </div>
+
+                      {/* الإجراءات */}
+                      <div className="flex justify-center">
+                        <Button
+                          onClick={() => setPreviewInvoice(due)}
+                          size="sm"
+                          className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white border-0 shadow-sm hover:shadow-md transition-all"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          معاينة
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
-
-            <DialogFooter className="p-4 sm:p-6 pt-3 flex-shrink-0 border-t bg-muted/30">
-              <Button 
-                variant="outline" 
-                onClick={() => onOpenChange(false)} 
-                className="w-full sm:w-auto"
-              >
-                إغلاق
-              </Button>
-            </DialogFooter>
-          </div>
+          ) : (
+            <Card className="bg-card/80 backdrop-blur-sm border-0 shadow-lg text-center py-12">
+              <CardContent>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="p-4 bg-gradient-to-br from-muted to-muted/50 rounded-full">
+                    <FileText className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">
+                      لا توجد مستحقات مدفوعة
+                    </h3>
+                    <p className="text-muted-foreground">
+                      لم يتم العثور على أي فواتير تسوية مطابقة للمرشحات المحددة
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </ScrollArea>
+
+        {/* Footer */}
+        <div className="p-4 border-t bg-muted/30 flex justify-end">
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className="min-w-[120px]"
+          >
+            إغلاق
+          </Button>
+        </div>
       </DialogContent>
       
-      {/* معاينة الفاتورة الاحترافية */}
+      {/* معاينة الفاتورة */}
       <InvoicePreviewDialog 
-        invoice={selectedInvoice}
-        open={isPreviewOpen}
-        onOpenChange={setIsPreviewOpen}
-        settledProfits={settledProfits}
-        allOrders={orders}
+        invoice={previewInvoice}
+        open={!!previewInvoice}
+        onOpenChange={(open) => !open && setPreviewInvoice(null)}
       />
     </Dialog>
   );
