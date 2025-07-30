@@ -16,30 +16,62 @@ import { supabase } from '@/lib/customSupabaseClient';
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
   if (!invoice) return null;
 
+  console.log('🔍 فحص بيانات الفاتورة:', {
+    invoice_number: invoice.invoice_number,
+    employee_id: invoice.employee_id,
+    order_ids: invoice.order_ids,
+    profit_ids: invoice.profit_ids,
+    settled_orders: invoice.settled_orders
+  });
+
+  console.log('🔍 الأرباح المسواة المرسلة:', settledProfits?.length || 0);
+  console.log('🔍 الطلبات المرسلة:', allOrders?.length || 0);
+
   // البحث عن الأرباح والطلبات المرتبطة بهذا الموظف
   const relatedProfits = settledProfits?.filter(profit => 
     profit.employee_id === invoice.employee_id
   ) || [];
 
-  // البحث عن الطلبات المسواة - أولاً من البيانات المحفوظة ثم من قاعدة البيانات
+  console.log('🔍 الأرباح المرتبطة بالموظف:', relatedProfits);
+
+  // البحث عن الطلبات المسواة
   let settledOrders = [];
   
-  // إذا كانت الفاتورة تحتوي على طلبات محفوظة، استخدمها
-  if (invoice.settled_orders && Array.isArray(invoice.settled_orders) && invoice.settled_orders.length > 0) {
+  // أولاً: البحث عن الطلبات من order_ids إذا كانت موجودة
+  if (invoice.order_ids && Array.isArray(invoice.order_ids) && invoice.order_ids.length > 0) {
+    console.log('✅ استخدام order_ids من الفاتورة:', invoice.order_ids);
+    settledOrders = allOrders?.filter(order => 
+      invoice.order_ids.includes(order.id)
+    ) || [];
+  }
+  // ثانياً: البحث في settled_orders إذا كانت موجودة  
+  else if (invoice.settled_orders && Array.isArray(invoice.settled_orders) && invoice.settled_orders.length > 0) {
+    console.log('✅ استخدام settled_orders من الفاتورة:', invoice.settled_orders);
     settledOrders = invoice.settled_orders.map(savedOrder => ({
       id: savedOrder.order_id,
       order_number: savedOrder.order_number,
       customer_name: savedOrder.customer_name,
       total_amount: savedOrder.order_total,
       employee_profit: savedOrder.employee_profit,
-      created_at: savedOrder.order_date || new Date().toISOString() // fallback date
+      created_at: savedOrder.order_date || new Date().toISOString()
     }));
-  } else {
-    // إذا لم توجد طلبات محفوظة، ابحث في قاعدة البيانات
+  }
+  // ثالثاً: البحث عن طلبات الموظف من الأرباح المسواة
+  else if (relatedProfits.length > 0) {
+    console.log('✅ استخدام الأرباح المسواة للبحث عن الطلبات');
     settledOrders = allOrders?.filter(order => 
       relatedProfits.some(profit => profit.order_id === order.id)
     ) || [];
   }
+  // رابعاً: البحث عن طلبات الموظف مباشرة
+  else {
+    console.log('⚠️ البحث عن طلبات الموظف مباشرة');
+    settledOrders = allOrders?.filter(order => 
+      order.created_by === invoice.employee_id
+    ) || [];
+  }
+
+  console.log('📋 الطلبات المسواة النهائية:', settledOrders);
 
   // حساب الإحصائيات
   const stats = relatedProfits.reduce((acc, profit) => ({
@@ -306,21 +338,23 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
   const [loadingRealInvoices, setLoadingRealInvoices] = useState(false);
 
-  // جلب الأرباح المسواة
+  // جلب الأرباح المسواة والطلبات
   useEffect(() => {
     const fetchSettledProfits = async () => {
       try {
+        console.log('🔄 جلب الأرباح المسواة...');
         const { data, error } = await supabase
           .from('profits')
           .select(`
             *,
-            orders!inner(order_number, customer_name)
+            orders!inner(order_number, customer_name, total_amount, created_at)
           `)
           .eq('status', 'settled');
 
         if (error) {
-          console.error('خطأ في جلب الأرباح المسواة:', error);
+          console.error('❌ خطأ في جلب الأرباح المسواة:', error);
         } else {
+          console.log('✅ تم جلب الأرباح المسواة:', data?.length || 0);
           const profitsWithOrderData = data?.map(profit => ({
             ...profit,
             order_number: profit.orders?.order_number,
@@ -329,14 +363,35 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           })) || [];
           
           setSettledProfits(profitsWithOrderData);
+          console.log('📊 الأرباح مع بيانات الطلبات:', profitsWithOrderData);
         }
       } catch (error) {
-        console.error('خطأ غير متوقع:', error);
+        console.error('❌ خطأ غير متوقع:', error);
+      }
+    };
+
+    // جلب جميع الطلبات للموظف المحدد
+    const fetchAllOrdersForEmployee = async () => {
+      try {
+        console.log('🔄 جلب جميع الطلبات للموظف المحدد...');
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('created_by', 'fba59dfc-451c-4906-8882-ae4601ff34d4'); // معرف موظف احمد
+
+        if (error) {
+          console.error('❌ خطأ في جلب الطلبات:', error);
+        } else {
+          console.log('✅ تم جلب طلبات الموظف:', data?.length || 0, data);
+        }
+      } catch (error) {
+        console.error('❌ خطأ غير متوقع في جلب الطلبات:', error);
       }
     };
 
     if (open) {
       fetchSettledProfits();
+      fetchAllOrdersForEmployee();
     }
   }, [open, allUsers]);
 
