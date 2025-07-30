@@ -9,7 +9,7 @@ import { CheckCircle, FileText, Calendar, User, DollarSign, Eye, TrendingUp } fr
 import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
 
 const SettledDuesDialog = ({ open, onOpenChange, settledProfits, allUsers, allOrders }) => {
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('this-month');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
@@ -49,7 +49,7 @@ const SettledDuesDialog = ({ open, onOpenChange, settledProfits, allUsers, allOr
   // تصفية الفواتير
   const filteredInvoices = useMemo(() => {
     return settlementInvoices.filter(invoice => {
-      if (selectedEmployee && invoice.employee_name !== selectedEmployee) {
+      if (selectedEmployee !== 'all' && invoice.employee_name !== selectedEmployee) {
         return false;
       }
       return true;
@@ -106,7 +106,7 @@ const SettledDuesDialog = ({ open, onOpenChange, settledProfits, allUsers, allOr
                     <SelectValue placeholder="جميع الموظفين" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-600 z-[9999]">
-                    <SelectItem value="">جميع الموظفين</SelectItem>
+                    <SelectItem value="all">جميع الموظفين</SelectItem>
                     {uniqueEmployees.map((employee) => (
                       <SelectItem key={employee} value={employee} className="text-white">
                         {employee}
