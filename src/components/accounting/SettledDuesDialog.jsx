@@ -574,25 +574,23 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] sm:max-w-7xl h-[98vh] flex flex-col p-0 overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20">
+      <DialogContent className="max-w-[98vw] sm:max-w-md h-[98vh] flex flex-col p-0 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
         <ScrollArea className="h-full">
           <div className="flex flex-col min-h-full">
-            {/* Header مبهر */}
-            <div className="relative p-6 sm:p-8 pb-4 flex-shrink-0">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-blue-500/10 to-purple-500/10 rounded-t-3xl"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-4 mb-6">
+            {/* Header أنيق مع خلفية متدرجة */}
+            <div className="relative p-6 pb-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-blue-500 rounded-full blur-lg opacity-70"></div>
-                    <div className="relative p-3 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-full text-white shadow-2xl">
-                      <CheckCircle className="w-8 h-8" />
+                    <div className="p-3 bg-gradient-to-br from-teal-400 to-teal-500 rounded-full text-white shadow-lg">
+                      <CheckCircle className="w-6 h-6" />
                     </div>
                   </div>
                   <div>
-                    <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    <h1 className="text-2xl font-black text-teal-400 mb-1">
                       المستحقات المدفوعة
                     </h1>
-                    <p className="text-lg text-slate-600 dark:text-slate-300 font-medium">
+                    <p className="text-sm text-slate-300 font-medium">
                       عرض وإدارة فواتير التحاسب المكتملة للموظفين
                     </p>
                   </div>
@@ -600,217 +598,183 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
               </div>
             </div>
             
-            {/* فلاتر محسنة */}
-            <div className="px-6 sm:px-8 flex-shrink-0 mb-6">
-              <Card className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border-0 shadow-xl">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        الموظف
-                      </label>
-                      <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                        <SelectTrigger className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl">
-                          <SelectValue placeholder="اختر الموظف" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">جميع الموظفين</SelectItem>
-                          {employees.map(employee => (
-                            <SelectItem key={employee.user_id} value={employee.user_id}>
-                              {employee.full_name || employee.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <label className="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" />
-                        فترة التاريخ
-                      </label>
-                      <DateRangePicker
-                        date={dateRange}
-                        onDateChange={setDateRange}
-                        className="h-12 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            {/* فلاتر بتصميم أنيق */}
+            <div className="px-6 flex-shrink-0 mb-6 space-y-4">
+              {/* فلتر الموظف */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  الموظف
+                </label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger className="h-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white">
+                    <SelectValue placeholder="جميع الموظفين" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-600">
+                    <SelectItem value="all" className="text-white focus:bg-slate-700">جميع الموظفين</SelectItem>
+                    {employees.map(employee => (
+                      <SelectItem key={employee.user_id} value={employee.user_id} className="text-white focus:bg-slate-700">
+                        {employee.full_name || employee.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* فلتر التاريخ */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  فترة التاريخ
+                </label>
+                <DateRangePicker
+                  date={dateRange}
+                  onDateChange={setDateRange}
+                  className="h-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white"
+                />
+              </div>
+              
+              {/* فلتر الفترة */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  الفترة
+                </label>
+                <Select value="month" onValueChange={() => {}}>
+                  <SelectTrigger className="h-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white">
+                    <SelectValue placeholder="هذا الشهر" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-600">
+                    <SelectItem value="month" className="text-white focus:bg-slate-700">هذا الشهر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* إجمالي المبلغ المدهش */}
-            <div className="mx-4 sm:mx-6 mb-4 flex-shrink-0">
-              <Card className="bg-gradient-to-r from-primary via-secondary to-accent text-primary-foreground border-0 shadow-2xl overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-background/10 to-transparent"></div>
-                <CardContent className="p-6 relative z-10 text-center">
-                  <div className="flex items-center justify-center gap-3 mb-3">
-                    <div className="p-2 bg-background/20 rounded-full">
-                      <DollarSign className="w-6 h-6" />
+            {/* كارت إجمالي المستحقات بتصميم مطابق للصورة */}
+            <div className="mx-6 mb-6 flex-shrink-0">
+              <div className="bg-gradient-to-r from-teal-400 to-teal-500 rounded-3xl p-6 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-full">
+                      <DollarSign className="w-8 h-8 text-white" />
                     </div>
-                    <h2 className="text-xl font-black">إجمالي المستحقات المدفوعة</h2>
+                    <div>
+                      <h2 className="text-lg font-bold text-white mb-1">إجمالي المستحقات المدفوعة</h2>
+                      <p className="text-sm text-white/80">المبلغ الكلي للتسويات المكتملة</p>
+                    </div>
                   </div>
-                  <p className="text-4xl font-black mb-2 drop-shadow-lg">{totalAmount.toLocaleString()}</p>
-                  <p className="text-lg font-bold opacity-90">دينار عراقي</p>
-                  <div className="mt-3 flex items-center justify-center gap-2 text-sm opacity-75">
-                    <Receipt className="w-4 h-4" />
-                    <span>عدد الفواتير: {filteredInvoices.length}</span>
+                  <div className="text-right">
+                    <p className="text-3xl font-black text-white">{totalAmount.toLocaleString()}</p>
+                    <p className="text-sm text-white/80">دينار عراقي</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Receipt className="w-3 h-3 text-white/60" />
+                      <span className="text-xs text-white/60">عدد الفواتير: {filteredInvoices.length}</span>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
-            {/* قائمة الفواتير الجديدة */}
-            <div className="flex-1 px-4 sm:px-6 pb-4 sm:pb-6 min-h-0">
-              <Card className="bg-card/90 backdrop-blur-sm border shadow-xl h-full">
-                <CardContent className="p-0 h-full">
-                  <ScrollArea className="h-full">
-                    {filteredInvoices.length === 0 ? (
-                      <div className="p-8 text-center text-muted-foreground">
-                        <div className="relative mb-4">
-                          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                            <CheckCircle className="w-8 h-8" />
+            {/* قائمة الفواتير بتصميم مطابق للصورة */}
+            <div className="flex-1 px-6 pb-6 min-h-0">
+              <div className="space-y-4">
+                {filteredInvoices.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <div className="relative mb-4">
+                      <div className="w-16 h-16 mx-auto bg-slate-700 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-8 h-8 text-slate-400" />
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-bold mb-2 text-white">لا توجد مستحقات مدفوعة</h3>
+                    <p className="text-sm text-slate-400">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* كروت الفواتير بتصميم مطابق للصورة */}
+                    {filteredInvoices.map((invoice) => (
+                      <div key={invoice.id} className="bg-slate-800/50 rounded-2xl p-4 border border-slate-600">
+                        {/* رقم الفاتورة */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
+                            <Receipt className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-400">رقم الفاتورة</p>
+                            <p className="font-bold text-white text-lg">{invoice.invoice_number}</p>
                           </div>
                         </div>
-                        <h3 className="text-lg font-bold mb-2">لا توجد مستحقات مدفوعة</h3>
-                        <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                        
+                        {/* اسم الموظف */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg">
+                            <User className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-400">الموظف</p>
+                            <p className="font-bold text-white text-lg">{invoice.employee_name}</p>
+                          </div>
+                        </div>
+                        
+                        {/* المبلغ */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg">
+                            <DollarSign className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-400">المبلغ</p>
+                            <p className="font-bold text-teal-400 text-xl">{invoice.settlement_amount?.toLocaleString()} د.ع</p>
+                          </div>
+                        </div>
+                        
+                        {/* تاريخ التسوية */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg">
+                            <Calendar className="w-5 h-5 text-white" />
+                          </div>
+                          <div>
+                            <p className="text-sm text-slate-400">تاريخ التسوية</p>
+                            <p className="font-medium text-white">
+                              {invoice.settlement_date ? 
+                                format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                'غير محدد'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* الأزرار بتصميم مطابق للصورة */}
+                        <div className="flex gap-3 mt-4">
+                          <Button className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white border-0 rounded-xl h-10">
+                            <CheckCircle className="w-4 h-4 ml-2" />
+                            مكتملة
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white border-0 rounded-xl h-10"
+                            onClick={() => handlePreviewInvoice(invoice)}
+                          >
+                            <Eye className="w-4 h-4 ml-2" />
+                            معاينة
+                          </Button>
+                        </div>
                       </div>
-                    ) : (
-                      <>
-                        {/* عرض mobile */}
-                        <div className="block lg:hidden space-y-3 p-3">
-                          {filteredInvoices.map((invoice) => (
-                            <Card key={invoice.id} className="bg-gradient-to-br from-card to-muted/30 border shadow-sm">
-                              <CardContent className="p-4">
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="p-1.5 bg-gradient-to-r from-primary to-secondary rounded-lg text-primary-foreground">
-                                      <User className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <p className="font-bold text-sm">{invoice.employee_name}</p>
-                                      <p className="text-xs text-muted-foreground font-mono">{invoice.invoice_number}</p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-lg font-black text-primary">{invoice.settlement_amount?.toLocaleString()}</p>
-                                    <p className="text-xs text-muted-foreground">دينار عراقي</p>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2 mb-3 p-2 bg-muted/50 rounded-lg">
-                                  <Calendar className="w-3 h-3 text-primary" />
-                                  <p className="text-xs font-medium">
-                                    {invoice.settlement_date ? 
-                                      format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                      'غير محدد'
-                                    }
-                                  </p>
-                                </div>
-                                
-                                <div className="flex justify-between items-center pt-3 border-t">
-                                  <Badge className="bg-primary text-primary-foreground border-0 px-2 py-1 text-xs">
-                                    مكتملة
-                                  </Badge>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 px-3 text-xs bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 hover:opacity-90"
-                                    onClick={() => handlePreviewInvoice(invoice)}
-                                  >
-                                    <Eye className="w-3 h-3 ml-1" />
-                                    معاينة
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-
-                        {/* عرض desktop */}
-                        <div className="hidden lg:block">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className="bg-muted/50 border-0">
-                                <TableHead className="font-bold text-foreground py-3 text-sm">رقم الفاتورة</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">اسم الموظف</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">المبلغ</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">تاريخ التسوية</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">الحالة</TableHead>
-                                <TableHead className="font-bold text-foreground py-3 text-sm">الإجراءات</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {filteredInvoices.map((invoice, index) => (
-                                <TableRow key={invoice.id} className={`${index % 2 === 0 ? 'bg-card' : 'bg-muted/30'} hover:bg-primary/5 transition-all duration-200`}>
-                                  <TableCell className="py-3">
-                                    <span className="font-mono text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">
-                                      {invoice.invoice_number}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="p-1.5 bg-gradient-to-r from-primary to-secondary rounded-lg text-primary-foreground">
-                                        <User className="w-3 h-3" />
-                                      </div>
-                                      <span className="font-bold text-sm">{invoice.employee_name}</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <span className="text-primary font-black text-lg">
-                                      {invoice.settlement_amount?.toLocaleString()} د.ع
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <div className="flex items-center gap-2">
-                                      <Calendar className="w-3 h-3 text-primary" />
-                                      <span className="font-medium text-sm">
-                                        {invoice.settlement_date ? 
-                                          format(parseISO(invoice.settlement_date), 'dd/MM/yyyy HH:mm', { locale: ar }) :
-                                          'غير محدد'
-                                        }
-                                      </span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <Badge className="bg-primary text-primary-foreground border-0 px-3 py-1 text-xs">
-                                      مكتملة
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="py-3">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="h-8 px-3 text-xs bg-gradient-to-r from-primary to-secondary text-primary-foreground border-0 hover:opacity-90 transition-all duration-200"
-                                      onClick={() => handlePreviewInvoice(invoice)}
-                                    >
-                                      <Eye className="w-3 h-3 ml-1" />
-                                      معاينة الفاتورة
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      </>
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+                    ))}
+                  </>
+                )}
+              </div>
             </div>
 
-            <DialogFooter className="p-4 sm:p-6 pt-3 flex-shrink-0 border-t bg-muted/30">
+            {/* زر الإغلاق */}
+            <div className="p-6 flex-shrink-0">
               <Button 
                 variant="outline" 
                 onClick={() => onOpenChange(false)} 
-                className="w-full sm:w-auto"
+                className="w-full bg-slate-700/50 hover:bg-slate-600/50 text-white border-slate-600"
               >
                 إغلاق
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
