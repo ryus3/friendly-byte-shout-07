@@ -41,7 +41,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
         إلى: settlementDate.toISOString()
       });
       
-      // جلب الطلبات المسواة للموظف
+      // جلب الطلبات المسواة للموظف - بشكل أكثر مرونة
       const { data: ordersData, error } = await supabase
         .from('orders')
         .select(`
@@ -59,10 +59,9 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
           )
         `)
         .eq('created_by', invoice.metadata.employee_id)
-        .eq('status', 'completed')
-        .eq('receipt_received', true)
-        .gte('receipt_received_at', startDate.toISOString())
-        .lte('receipt_received_at', settlementDate.toISOString());
+        .in('status', ['completed', 'delivered'])
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', settlementDate.toISOString());
 
       console.log('📊 Found related orders:', ordersData);
       setRelatedOrders(ordersData || []);
@@ -347,7 +346,7 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
           user_id, 
           full_name, 
           status,
-          user_roles!inner(
+          user_roles(
             is_active,
             roles(
               name,
@@ -357,12 +356,25 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
           )
         `)
         .eq('status', 'active')
-        .eq('user_roles.is_active', true)
         .order('full_name', { ascending: true });
+
+      console.log('👥 Raw employees data:', employeesData);
+      
+      // تحسين معالجة بيانات الموظفين
+      const processedEmployees = employeesData?.filter(emp => 
+        emp.full_name && emp.full_name.trim() !== ''
+      ).map(emp => ({
+        ...emp,
+        display_name: emp.full_name,
+        role_display: emp.user_roles?.[0]?.roles?.display_name || 'موظف'
+      })) || [];
+
+      console.log('👥 Processed employees:', processedEmployees);
       
       console.log('👥 جميع الموظفين المتاحين:', employeesData);
       
-      setEmployees(employeesData || []);
+      // استخدام البيانات المعاد معالجتها
+      setEmployees(processedEmployees);
 
       // جلب المصاريف المدفوعة (المستحقات المدفوعة)
       const { data: expensesData } = await supabase
@@ -537,11 +549,11 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
                 <SelectTrigger className="h-9 text-sm bg-background/50 border-border/50">
                   <SelectValue placeholder="جميع الموظفين" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border border-border z-50 shadow-lg">
+                <SelectContent className="bg-background border border-border shadow-lg max-h-[200px] overflow-y-auto" style={{ zIndex: 9999 }}>
                   <SelectItem value="all">جميع الموظفين</SelectItem>
                    {employees?.length > 0 ? (
                      employees.map(emp => {
-                       const roleDisplay = emp.user_roles?.[0]?.roles?.display_name || 'موظف';
+                       const roleDisplay = emp.role_display || emp.user_roles?.[0]?.roles?.display_name || 'موظف';
                        return (
                          <SelectItem key={emp.user_id} value={emp.user_id}>
                            {emp.full_name} ({roleDisplay})
