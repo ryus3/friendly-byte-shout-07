@@ -40,7 +40,6 @@
     "@react-pdf/font": "^4.0.2",
     "@react-pdf/renderer": "^3.4.4",
     "@supabase/supabase-js": "2.30.0",
-    "@tailwindcss/postcss": "^4.1.11",
     "@vitejs/plugin-react": "^4.7.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -83,7 +82,7 @@
     "eslint": "^8.57.1",
     "eslint-config-react-app": "^7.0.1",
     "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.11",
+    "tailwindcss": "^3.4.17",
     "vite-plugin-pwa": "^0.20.5"
   }
 }
