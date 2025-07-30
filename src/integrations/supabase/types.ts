@@ -2576,6 +2576,7 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          employee_code: string | null
           employee_id: string
           employee_name: string
           id: string
@@ -2594,6 +2595,7 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          employee_code?: string | null
           employee_id: string
           employee_name: string
           id?: string
@@ -2612,6 +2614,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          employee_code?: string | null
           employee_id?: string
           employee_name?: string
           id?: string

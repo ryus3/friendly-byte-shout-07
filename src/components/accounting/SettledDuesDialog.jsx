@@ -21,10 +21,25 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
     profit.employee_id === invoice.employee_id
   ) || [];
 
-  // البحث عن الطلبات المسواة
-  const settledOrders = allOrders?.filter(order => 
-    relatedProfits.some(profit => profit.order_id === order.id)
-  ) || [];
+  // البحث عن الطلبات المسواة - أولاً من البيانات المحفوظة ثم من قاعدة البيانات
+  let settledOrders = [];
+  
+  // إذا كانت الفاتورة تحتوي على طلبات محفوظة، استخدمها
+  if (invoice.settled_orders && Array.isArray(invoice.settled_orders) && invoice.settled_orders.length > 0) {
+    settledOrders = invoice.settled_orders.map(savedOrder => ({
+      id: savedOrder.order_id,
+      order_number: savedOrder.order_number,
+      customer_name: savedOrder.customer_name,
+      total_amount: savedOrder.order_total,
+      employee_profit: savedOrder.employee_profit,
+      created_at: savedOrder.order_date || new Date().toISOString() // fallback date
+    }));
+  } else {
+    // إذا لم توجد طلبات محفوظة، ابحث في قاعدة البيانات
+    settledOrders = allOrders?.filter(order => 
+      relatedProfits.some(profit => profit.order_id === order.id)
+    ) || [];
+  }
 
   // حساب الإحصائيات
   const stats = relatedProfits.reduce((acc, profit) => ({
@@ -351,6 +366,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         invoice_number: invoice.invoice_number,
         employee_name: invoice.employee_name,
         employee_id: invoice.employee_id,
+        employee_code: invoice.employee_code, // المعرف الصغير
         total_amount: invoice.total_amount,
         settlement_date: invoice.settlement_date,
         created_at: invoice.created_at,
@@ -358,7 +374,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         status: invoice.status || 'completed',
         type: 'real_settlement',
         payment_method: invoice.payment_method,
-        notes: invoice.notes
+        notes: invoice.notes,
+        settled_orders: invoice.settled_orders || [] // الطلبات المسواة
       }));
       
       allInvoices = [...realInvoices];
