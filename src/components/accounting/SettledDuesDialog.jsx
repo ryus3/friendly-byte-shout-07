@@ -80,12 +80,24 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                     <div className="flex items-center gap-3">
                       <Calendar className="w-5 h-5 text-blue-600" />
                       <p className="text-lg font-semibold text-slate-700 dark:text-slate-200">
-                        تاريخ التسوية: {invoice.settlement_date ? 
-                          format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                          invoice.created_at ? 
-                            format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                            'غير محدد'
-                        }
+                        تاريخ التسوية: {(() => {
+                          // تسجيل البيانات للتشخيص
+                          if (invoice.invoice_number === 'RY-EDC11E') {
+                            console.log('🔍 عرض تاريخ RY-EDC11E:', {
+                              settlement_date: invoice.settlement_date,
+                              created_at: invoice.created_at,
+                              invoice_obj: invoice
+                            });
+                          }
+                          
+                          if (invoice.settlement_date) {
+                            return format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar });
+                          } else if (invoice.created_at) {
+                            return format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar });
+                          } else {
+                            return 'غير محدد';
+                          }
+                        })()}
                       </p>
                     </div>
                   </div>
@@ -496,7 +508,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         settlement_date: expense.created_at // التأكد من استخدام created_at كتاريخ التسوية
       });
       
-      return {
+      const finalInvoice = {
         id: expense.id,
         invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
         employee_name: employeeName,
@@ -508,6 +520,21 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         metadata: expense.metadata || {},
         receipt_number: expense.receipt_number
       };
+      
+      // تسجيل مفصل للفاتورة RY-EDC11E
+      if (finalInvoice.invoice_number === 'RY-EDC11E') {
+        console.log('🔍 فاتورة RY-EDC11E - البيانات الكاملة:', {
+          id: expense.id,
+          created_at: expense.created_at,
+          settlement_date: finalInvoice.settlement_date,
+          employee_name: employeeName,
+          amount: expense.amount,
+          description: expense.description,
+          receipt_number: expense.receipt_number
+        });
+      }
+      
+      return finalInvoice;
     });
     
     console.log('📋 فواتير التحاسب المعالجة (بتاريخ صحيح):', {
