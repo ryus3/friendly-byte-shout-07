@@ -23,89 +23,36 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange }) => {
   }, [open, invoice]);
 
   const fetchRelatedOrders = async () => {
-    console.log('🔍 فحص بيانات الفاتورة الكاملة:', invoice);
-    
-    // البحث عن معرف الموظف من مصادر مختلفة
-    const employeeId = invoice.metadata?.employee_id || 
-                      invoice.settled_by_id || 
-                      invoice.created_by ||
-                      invoice.employee_id;
-                      
-    console.log('👤 معرف الموظف المستخرج:', employeeId);
-    
-    if (!employeeId) {
-      console.log('⚠️ لا يوجد معرف موظف في الفاتورة');
-      return;
-    }
+    if (!invoice.metadata?.employee_id) return;
     
     setLoading(true);
     try {
-      // البحث عن الطلبات المرتبطة بالفاتورة
-      // أولاً البحث في order_ids إذا كانت موجودة
-      let ordersData = [];
+      console.log('🔍 Fetching orders for employee:', invoice.metadata.employee_id);
       
-      if (invoice.order_ids && invoice.order_ids.length > 0) {
-        console.log('🎯 البحث باستخدام order_ids:', invoice.order_ids);
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
+      // جلب الطلبات المسواة للموظف في فترة التسوية
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items(
             *,
-            order_items(
-              *,
-              product_variants(
-                id,
-                price,
-                cost_price,
-                products(name),
-                colors(name),
-                sizes(name)
-              )
+            product_variants(
+              id,
+              price,
+              cost_price,
+              products(name),
+              colors(name),
+              sizes(name)
             )
-          `)
-          .in('id', invoice.order_ids);
-          
-        if (error) {
-          console.error('خطأ في جلب الطلبات بـ order_ids:', error);
-        } else {
-          ordersData = data || [];
-        }
-      }
-      
-      // إذا لم نجد طلبات، نبحث حسب الموظف والفترة الزمنية
-      if (ordersData.length === 0) {
-        console.log('🔍 البحث حسب الموظف والفترة الزمنية');
-        const settlementDate = new Date(invoice.settlement_date || invoice.created_at);
-        const startDate = new Date(settlementDate.getTime() - 30 * 24 * 60 * 60 * 1000);
-        
-        const { data, error } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items(
-              *,
-              product_variants(
-                id,
-                price,
-                cost_price,
-                products(name),
-                colors(name),
-                sizes(name)
-              )
-            )
-          `)
-          .eq('created_by', employeeId)
-          .in('status', ['completed', 'delivered'])
-          .gte('created_at', startDate.toISOString())
-          .lte('created_at', settlementDate.toISOString());
+          )
+        `)
+        .eq('created_by', invoice.metadata.employee_id)
+        .eq('status', 'completed')
+        .eq('receipt_received', true)
+        .gte('receipt_received_at', new Date(new Date(invoice.settlement_date).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString())
+        .lte('receipt_received_at', invoice.settlement_date);
 
-        if (error) {
-          console.error('خطأ في جلب الطلبات بالفترة الزمنية:', error);
-        } else {
-          ordersData = data || [];
-        }
-      }
-
-      console.log('✅ الطلبات المرتبطة المسترجعة:', ordersData);
+      console.log('📊 Found related orders:', ordersData);
       setRelatedOrders(ordersData || []);
     } catch (error) {
       console.error('خطأ في جلب الطلبات:', error);
@@ -381,51 +328,14 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // جلب جميع الموظفين النشطين مع أدوارهم
-      const { data: employeesData, error: employeesError } = await supabase
+      // جلب الموظفين
+      const { data: employeesData } = await supabase
         .from('profiles')
-        .select(`
-          user_id, 
-          full_name, 
-          status,
-          user_roles(
-            is_active,
-            roles(
-              name,
-              display_name,
-              hierarchy_level
-            )
-          )
-        `)
+        .select('user_id, full_name, role, status')
         .eq('status', 'active')
-        .order('full_name', { ascending: true });
-
-      if (employeesError) {
-        console.error('❌ خطأ في جلب الموظفين:', employeesError);
-      }
-
-      console.log('👥 البيانات الخام للموظفين:', employeesData);
+        .neq('role', 'admin');
       
-      // معالجة وتصفية بيانات الموظفين
-      const validEmployees = employeesData?.filter(emp => 
-        emp && 
-        emp.full_name && 
-        emp.full_name.trim() !== ''
-      ).map(emp => {
-        // البحث عن دور نشط
-        const activeRole = emp.user_roles?.find(ur => ur.is_active && ur.roles);
-        return {
-          user_id: emp.user_id,
-          full_name: emp.full_name.trim(),
-          status: emp.status,
-          role_display: activeRole?.roles?.display_name || 'موظف',
-          role_name: activeRole?.roles?.name || 'employee'
-        };
-      }) || [];
-
-      console.log('👥 الموظفين المعالجين:', validEmployees);
-      
-      setEmployees(validEmployees);
+      setEmployees(employeesData || []);
 
       // جلب المصاريف المدفوعة (المستحقات المدفوعة)
       const { data: expensesData } = await supabase
@@ -436,45 +346,23 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
         .eq('status', 'approved')
         .order('created_at', { ascending: false });
 
-      // معالجة البيانات مع ربط أفضل للموظفين
+      // معالجة البيانات
       const processedDues = expensesData?.map(expense => {
-        // استخراج معرف الموظف من metadata أولاً
-        let employeeId = expense.metadata?.employee_id;
-        let employeeName = expense.metadata?.employee_name;
-        
-        // إذا لم يوجد في metadata، حاول البحث بالاسم في الوصف
-        if (!employeeId) {
-          const extractedName = extractEmployeeNameFromDescription(expense.description);
-          const foundEmployee = employeesData?.find(emp => 
-            emp.full_name?.toLowerCase().includes(extractedName.toLowerCase()) ||
-            extractedName.toLowerCase().includes(emp.full_name?.toLowerCase())
-          );
-          
-          if (foundEmployee) {
-            employeeId = foundEmployee.user_id;
-            employeeName = foundEmployee.full_name;
-          }
-        }
-        
-        console.log('💰 معالجة فاتورة:', {
-          expense_id: expense.id,
-          employee_id: employeeId,
-          employee_name: employeeName,
-          description: expense.description
-        });
+        // استخراج معرف الموظف من metadata أو البحث في قاعدة البيانات
+        const employeeId = expense.metadata?.employee_id || 
+          employees.find(emp => emp.full_name === extractEmployeeNameFromDescription(expense.description))?.user_id;
         
         return {
           id: expense.id,
           invoice_number: expense.receipt_number || `RY-${expense.id.slice(-6).toUpperCase()}`,
-          employee_name: employeeName || expense.vendor_name || extractEmployeeNameFromDescription(expense.description),
+          employee_name: expense.vendor_name || extractEmployeeNameFromDescription(expense.description),
           settlement_amount: Number(expense.amount) || 0,
           settlement_date: expense.created_at,
           status: 'completed',
           description: expense.description,
           metadata: {
             ...expense.metadata,
-            employee_id: employeeId,
-            employee_name: employeeName
+            employee_id: employeeId // إضافة معرف الموظف للبحث عن الطلبات
           },
           receipt_number: expense.receipt_number,
           created_at: expense.created_at
@@ -600,20 +488,13 @@ const SettledDuesDialog = ({ open, onOpenChange, initialFilters = {} }) => {
                 <SelectTrigger className="h-9 text-sm bg-background/50 border-border/50">
                   <SelectValue placeholder="جميع الموظفين" />
                 </SelectTrigger>
-                <SelectContent className="bg-background border border-border shadow-lg max-h-[200px] overflow-y-auto" style={{ zIndex: 9999 }}>
+                <SelectContent>
                   <SelectItem value="all">جميع الموظفين</SelectItem>
-                   {employees?.length > 0 ? (
-                     employees.map(emp => {
-                       const roleDisplay = emp.role_display || emp.user_roles?.[0]?.roles?.display_name || 'موظف';
-                       return (
-                         <SelectItem key={emp.user_id} value={emp.user_id}>
-                           {emp.full_name} ({roleDisplay})
-                         </SelectItem>
-                       );
-                     })
-                   ) : (
-                     <SelectItem value="no_employees" disabled>لا توجد موظفين متاحين</SelectItem>
-                   )}
+                  {employees.map(emp => (
+                    <SelectItem key={emp.user_id} value={emp.user_id}>
+                      {emp.full_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
