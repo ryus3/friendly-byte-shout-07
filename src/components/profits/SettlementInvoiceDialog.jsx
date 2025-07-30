@@ -19,32 +19,43 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     if (!invoice) return null;
 
     const settledBy = allUsers.find(u => u.id === invoice.settled_by_id);
-    const settledOrdersDetails = (invoice.settled_orders || []).map(orderId => {
-        return orders.find(o => o.id === orderId);
-    }).filter(Boolean);
+    
+    // البحث عن الطلبات المسواة بطرق مختلفة حسب هيكل البيانات
+    const settledOrdersDetails = useMemo(() => {
+        console.log('🔍 Settlement Invoice Full Data:', invoice);
+        
+        // البحث في order_ids أو settled_orders
+        const orderIds = invoice.order_ids || invoice.settled_orders || [];
+        console.log('📋 Order IDs found:', orderIds);
+        
+        const foundOrders = orderIds.map(orderId => {
+            const order = orders.find(o => o.id === orderId);
+            console.log(`🔎 Looking for order ${orderId}:`, order);
+            return order;
+        }).filter(Boolean);
+        
+        console.log('✅ Found orders:', foundOrders);
+        return foundOrders;
+    }, [invoice, orders]);
 
     // حساب البيانات الحقيقية للفاتورة
     const invoiceStats = useMemo(() => {
-        console.log('🔍 Settlement Invoice Data:', { 
-            invoice, 
-            settledOrdersDetails,
-            ordersCount: settledOrdersDetails.length 
-        });
+        console.log('📊 Calculating stats for orders:', settledOrdersDetails);
 
         let totalRevenue = 0;
         let totalCost = 0;
         let totalOrders = settledOrdersDetails.length;
 
         settledOrdersDetails.forEach(order => {
-            console.log('📊 Processing Order:', order);
-            totalRevenue += order.final_amount || order.total_amount || 0;
+            const orderAmount = order.final_amount || order.total_amount || 0;
+            totalRevenue += orderAmount;
+            console.log(`💰 Order ${order.id}: ${orderAmount} د.ع`);
             
             // حساب التكلفة من المنتجات
             if (order.items && Array.isArray(order.items)) {
                 order.items.forEach(item => {
                     const itemCost = (item.costPrice || item.cost_price || 0) * (item.quantity || 0);
                     totalCost += itemCost;
-                    console.log('💰 Item Cost:', { item, itemCost });
                 });
             }
         });
