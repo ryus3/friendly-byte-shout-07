@@ -2568,6 +2568,60 @@ export type Database = {
         }
         Relationships: []
       }
+      settlement_invoices: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          employee_id: string
+          employee_name: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          order_ids: string[] | null
+          payment_method: string
+          profit_ids: string[] | null
+          settlement_date: string
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          employee_id: string
+          employee_name: string
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          order_ids?: string[] | null
+          payment_method?: string
+          profit_ids?: string[] | null
+          settlement_date?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          employee_id?: string
+          employee_name?: string
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          order_ids?: string[] | null
+          payment_method?: string
+          profit_ids?: string[] | null
+          settlement_date?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       settlement_requests: {
         Row: {
           approved_amount: number | null
@@ -2998,6 +3052,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      calculate_main_cash_balance_v3: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       calculate_missing_profits: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -3161,6 +3219,17 @@ export type Database = {
           p_amount: number
           p_description?: string
           p_paid_by?: string
+        }
+        Returns: Json
+      }
+      pay_employee_dues_with_invoice: {
+        Args: {
+          p_employee_id: string
+          p_amount: number
+          p_description?: string
+          p_paid_by?: string
+          p_order_ids?: string[]
+          p_profit_ids?: string[]
         }
         Returns: Json
       }

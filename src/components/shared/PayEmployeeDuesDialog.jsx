@@ -65,13 +65,15 @@ const PayEmployeeDuesDialog = ({
     setLoading(true);
     
     try {
-      // استخدام الدالة المحسنة لدفع المستحقات
+      // استخدام الدالة الجديدة لدفع المستحقات مع إنشاء فاتورة حقيقية
       const { data, error } = await supabase
-        .rpc('pay_employee_dues', {
+        .rpc('pay_employee_dues_with_invoice', {
           p_employee_id: employee.user_id,
           p_amount: paymentAmount,
           p_description: description || `دفع مستحقات ${employee.full_name}`,
-          p_paid_by: null // سيستخدم المستخدم الحالي
+          p_paid_by: null, // سيستخدم المستخدم الحالي
+          p_order_ids: '{}', // يمكن إضافة معرفات الطلبات لاحقاً
+          p_profit_ids: '{}' // يمكن إضافة معرفات الأرباح لاحقاً
         });
 
       if (error) throw error;
