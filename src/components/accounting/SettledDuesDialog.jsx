@@ -286,6 +286,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const [showPreview, setShowPreview] = useState(false);
   const [dateRange, setDateRange] = useState(null);
   const [settledProfits, setSettledProfits] = useState([]);
+  const [timePeriod, setTimePeriod] = useState('month'); // فلتر الفترة الزمنية - افتراضي شهر
 
   // جلب فواتير التسوية الحقيقية
   const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
@@ -325,15 +326,54 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     }
   }, [open, allUsers]);
 
-  // جلب فواتير التسوية الحقيقية
+  // جلب فواتير التسوية الحقيقية مع فلتر الفترة الزمنية
   useEffect(() => {
     const fetchRealSettlementInvoices = async () => {
       setLoadingRealInvoices(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from('settlement_invoices')
-          .select('*')
-          .order('settlement_date', { ascending: false });
+          .select('*');
+
+        // تطبيق فلتر الفترة الزمنية
+        const now = new Date();
+        let startDate;
+        
+        switch (timePeriod) {
+          case 'day':
+            startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            break;
+          case 'week':
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay());
+            weekStart.setHours(0, 0, 0, 0);
+            startDate = weekStart;
+            break;
+          case 'month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+          case 'year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+          default:
+            startDate = null;
+        }
+
+        if (startDate) {
+          query = query.gte('settlement_date', startDate.toISOString());
+        }
+
+        // تطبيق فلتر النطاق الزمني المخصص إذا كان موجوداً
+        if (dateRange?.from) {
+          query = query.gte('settlement_date', dateRange.from.toISOString());
+        }
+        if (dateRange?.to) {
+          const endOfDay = new Date(dateRange.to);
+          endOfDay.setHours(23, 59, 59, 999);
+          query = query.lte('settlement_date', endOfDay.toISOString());
+        }
+
+        const { data, error } = await query.order('settlement_date', { ascending: false });
 
         if (error) {
           console.error('خطأ في جلب فواتير التسوية الحقيقية:', error);
@@ -351,7 +391,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     if (open) {
       fetchRealSettlementInvoices();
     }
-  }, [open]);
+  }, [open, timePeriod, dateRange]);
 
   // معالجة فواتير التحاسب - الفواتير الحقيقية أولاً
   const settlementInvoices = useMemo(() => {
@@ -474,7 +514,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           <div className="space-y-6">
             {/* الفلاتر */}
             <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex-1 min-w-[250px]">
+              <div className="flex-1 min-w-[200px]">
                 <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="جميع الموظفين" />
@@ -487,12 +527,26 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex-1 min-w-[180px]">
+                <Select value={timePeriod} onValueChange={setTimePeriod}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="الفترة الزمنية" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">اليوم</SelectItem>
+                    <SelectItem value="week">الأسبوع</SelectItem>
+                    <SelectItem value="month">الشهر (افتراضي)</SelectItem>
+                    <SelectItem value="year">السنة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               
-              <div className="flex-1 min-w-[300px]">
+              <div className="flex-1 min-w-[280px]">
                 <DateRangePicker
-                  value={dateRange}
-                  onChange={setDateRange}
-                  placeholder="اختر فترة زمنية"
+                  date={dateRange}
+                  onDateChange={setDateRange}
+                  placeholder="اختر نطاق زمني مخصص"
                 />
               </div>
             </div>
