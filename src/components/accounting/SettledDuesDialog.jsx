@@ -574,9 +574,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] sm:max-w-md h-[98vh] flex flex-col p-0 overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        <ScrollArea className="h-full">
-          <div className="flex flex-col min-h-full">
+      <DialogContent className="max-w-[98vw] sm:max-w-md h-[98vh] flex flex-col p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-background via-background to-muted/10 border-0 shadow-xl rounded-xl overflow-hidden flex flex-col min-h-full">
+          <ScrollArea className="h-full">
             {/* Header أنيق مع خلفية متدرجة */}
             <div className="relative p-6 pb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-6">
@@ -736,7 +736,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                             <p className="text-sm text-slate-400">تاريخ التسوية</p>
                             <p className="font-medium text-white">
                               {invoice.settlement_date ? 
-                                format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
                                 'غير محدد'
                               }
                             </p>
