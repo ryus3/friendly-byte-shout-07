@@ -336,6 +336,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   });
   
   const [selectedEmployee, setSelectedEmployee] = useState('all');
+  const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -574,26 +575,26 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-hidden p-0">
-        <div className="bg-gradient-to-br from-background via-background to-muted/10 border-0 shadow-xl rounded-xl overflow-hidden">
-          <DialogHeader className="bg-gradient-to-l from-primary/5 via-primary/3 to-transparent p-4 border-b border-border/30">
-            <DialogTitle className="flex items-center gap-3 text-xl font-bold">
+      <DialogContent className="max-w-[98vw] sm:max-w-5xl h-[98vh] flex flex-col p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-background via-background to-muted/10 border-0 shadow-xl rounded-xl overflow-hidden flex flex-col h-full">
+          <DialogHeader className="bg-gradient-to-l from-primary/5 via-primary/3 to-transparent p-4 sm:p-6 border-b border-border/30 flex-shrink-0">
+            <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl font-bold">
               <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 shadow-md">
-                <CheckCircle className="h-6 w-6 text-teal-600" />
+                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-teal-600" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-bold text-foreground">المستحقات المدفوعة</h2>
-                <p className="text-sm text-muted-foreground font-medium mt-1">
+                <h2 className="text-base sm:text-lg font-bold text-foreground">المستحقات المدفوعة</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-1">
                   عرض وإدارة فواتير التحاسب المكتملة للموظفين
                 </p>
               </div>
             </DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="max-h-[70vh]">
-            <div className="p-6 space-y-6">
-              {/* فلاتر بتصميم أنيق */}
-              <div className="space-y-4">
+          <ScrollArea className="flex-1 overflow-auto">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+              {/* فلاتر محسنة ومتجاوبة */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* فلتر الموظف */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -601,10 +602,10 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                     الموظف
                   </label>
                   <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                    <SelectTrigger className="h-12 bg-background border border-border rounded-xl">
+                    <SelectTrigger className="h-10 sm:h-12 bg-background border border-border rounded-xl">
                       <SelectValue placeholder="جميع الموظفين" />
                     </SelectTrigger>
-                    <SelectContent className="bg-background border-border">
+                    <SelectContent className="bg-background border-border z-50">
                       <SelectItem value="all" className="focus:bg-muted">جميع الموظفين</SelectItem>
                       {employees.map(employee => (
                         <SelectItem key={employee.user_id} value={employee.user_id} className="focus:bg-muted">
@@ -615,7 +616,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   </Select>
                 </div>
                 
-                {/* فلتر التاريخ */}
+                {/* فلتر التاريخ محسن */}
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
@@ -624,8 +625,53 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   <DateRangePicker
                     date={dateRange}
                     onDateChange={setDateRange}
-                    className="h-12 bg-background border border-border rounded-xl"
+                    className="h-10 sm:h-12 bg-background border border-border rounded-xl w-full"
+                    placeholder="اختر الفترة"
                   />
+                </div>
+
+                {/* فلتر الفترة المضاف */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    الفترة
+                  </label>
+                  <Select value={selectedPeriod} onValueChange={(value) => {
+                    setSelectedPeriod(value);
+                    const now = new Date();
+                    switch(value) {
+                      case 'today':
+                        setDateRange({ 
+                          from: new Date(now.setHours(0,0,0,0)), 
+                          to: new Date(now.setHours(23,59,59,999)) 
+                        });
+                        break;
+                      case 'week':
+                        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+                        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
+                        setDateRange({ from: weekStart, to: weekEnd });
+                        break;
+                      case 'month':
+                        setDateRange({ 
+                          from: new Date(now.getFullYear(), now.getMonth(), 1), 
+                          to: new Date(now.getFullYear(), now.getMonth() + 1, 0) 
+                        });
+                        break;
+                      case 'all':
+                        setDateRange({ from: undefined, to: undefined });
+                        break;
+                    }
+                  }}>
+                    <SelectTrigger className="h-10 sm:h-12 bg-background border border-border rounded-xl">
+                      <SelectValue placeholder="اختر الفترة" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border-border z-50">
+                      <SelectItem value="all" className="focus:bg-muted">جميع الفترات</SelectItem>
+                      <SelectItem value="today" className="focus:bg-muted">اليوم</SelectItem>
+                      <SelectItem value="week" className="focus:bg-muted">هذا الأسبوع</SelectItem>
+                      <SelectItem value="month" className="focus:bg-muted">هذا الشهر</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
