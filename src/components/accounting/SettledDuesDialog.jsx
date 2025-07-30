@@ -336,7 +336,6 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   });
   
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [dateRange, setDateRange] = useState({ from: undefined, to: undefined });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -575,120 +574,98 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[98vw] sm:max-w-5xl h-[98vh] flex flex-col p-0 overflow-hidden">
-        <div className="bg-gradient-to-br from-background via-background to-muted/10 border-0 shadow-xl rounded-xl overflow-hidden flex flex-col h-full">
-          <DialogHeader className="bg-gradient-to-l from-primary/5 via-primary/3 to-transparent p-4 sm:p-6 border-b border-border/30 flex-shrink-0">
-            <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl font-bold">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-600/20 shadow-md">
-                <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-teal-600" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-base sm:text-lg font-bold text-foreground">المستحقات المدفوعة</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-1">
-                  عرض وإدارة فواتير التحاسب المكتملة للموظفين
-                </p>
-              </div>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <ScrollArea className="flex-1 overflow-auto">
-            <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* فلاتر محسنة ومتجاوبة */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* فلتر الموظف */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    الموظف
-                  </label>
-                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                    <SelectTrigger className="h-10 sm:h-12 bg-background border border-border rounded-xl">
-                      <SelectValue placeholder="جميع الموظفين" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border z-50">
-                      <SelectItem value="all" className="focus:bg-muted">جميع الموظفين</SelectItem>
-                      {employees.map(employee => (
-                        <SelectItem key={employee.user_id} value={employee.user_id} className="focus:bg-muted">
-                          {employee.full_name || employee.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+      <DialogContent className="max-w-[98vw] sm:max-w-md h-[98vh] flex flex-col p-0 overflow-hidden">
+        <div className="bg-gradient-to-br from-background via-background to-muted/10 border-0 shadow-xl rounded-xl overflow-hidden flex flex-col min-h-full">
+          <ScrollArea className="h-full">
+            {/* Header أنيق مع خلفية متدرجة */}
+            <div className="relative p-6 pb-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="p-3 bg-gradient-to-br from-teal-400 to-teal-500 rounded-full text-white shadow-lg">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-black text-teal-400 mb-1">
+                      المستحقات المدفوعة
+                    </h1>
+                    <p className="text-sm text-slate-300 font-medium">
+                      عرض وإدارة فواتير التحاسب المكتملة للموظفين
+                    </p>
+                  </div>
                 </div>
-                
-                {/* فلتر التاريخ محسن */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    فترة التاريخ
-                  </label>
-                  <DateRangePicker
-                    date={dateRange}
-                    onDateChange={setDateRange}
-                    className="h-10 sm:h-12 bg-background border border-border rounded-xl w-full"
-                    placeholder="اختر الفترة"
-                  />
-                </div>
+              </div>
+            </div>
+            
+            {/* فلاتر بتصميم أنيق */}
+            <div className="px-6 flex-shrink-0 mb-6 space-y-4">
+              {/* فلتر الموظف */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  الموظف
+                </label>
+                <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                  <SelectTrigger className="h-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white">
+                    <SelectValue placeholder="جميع الموظفين" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-600">
+                    <SelectItem value="all" className="text-white focus:bg-slate-700">جميع الموظفين</SelectItem>
+                    {employees.map(employee => (
+                      <SelectItem key={employee.user_id} value={employee.user_id} className="text-white focus:bg-slate-700">
+                        {employee.full_name || employee.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* فلتر التاريخ */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  فترة التاريخ
+                </label>
+                <DateRangePicker
+                  date={dateRange}
+                  onDateChange={setDateRange}
+                  className="h-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white"
+                />
+              </div>
+              
+              {/* فلتر الفترة */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  الفترة
+                </label>
+                <Select value="month" onValueChange={() => {}}>
+                  <SelectTrigger className="h-12 bg-slate-800/50 border border-slate-600 rounded-xl text-white">
+                    <SelectValue placeholder="هذا الشهر" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-600">
+                    <SelectItem value="month" className="text-white focus:bg-slate-700">هذا الشهر</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-                {/* فلتر الفترة المضاف */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    الفترة
-                  </label>
-                  <Select value={selectedPeriod} onValueChange={(value) => {
-                    setSelectedPeriod(value);
-                    const now = new Date();
-                    switch(value) {
-                      case 'today':
-                        setDateRange({ 
-                          from: new Date(now.setHours(0,0,0,0)), 
-                          to: new Date(now.setHours(23,59,59,999)) 
-                        });
-                        break;
-                      case 'week':
-                        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-                        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
-                        setDateRange({ from: weekStart, to: weekEnd });
-                        break;
-                      case 'month':
-                        setDateRange({ 
-                          from: new Date(now.getFullYear(), now.getMonth(), 1), 
-                          to: new Date(now.getFullYear(), now.getMonth() + 1, 0) 
-                        });
-                        break;
-                      case 'all':
-                        setDateRange({ from: undefined, to: undefined });
-                        break;
-                    }
-                  }}>
-                    <SelectTrigger className="h-10 sm:h-12 bg-background border border-border rounded-xl">
-                      <SelectValue placeholder="اختر الفترة" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border-border z-50">
-                      <SelectItem value="all" className="focus:bg-muted">جميع الفترات</SelectItem>
-                      <SelectItem value="today" className="focus:bg-muted">اليوم</SelectItem>
-                      <SelectItem value="week" className="focus:bg-muted">هذا الأسبوع</SelectItem>
-                      <SelectItem value="month" className="focus:bg-muted">هذا الشهر</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* كارت إجمالي المستحقات */}
-              <div className="bg-gradient-to-r from-teal-500 to-teal-600 rounded-3xl p-6 shadow-lg text-white">
+            {/* كارت إجمالي المستحقات بتصميم مطابق للصورة */}
+            <div className="mx-6 mb-6 flex-shrink-0">
+              <div className="bg-gradient-to-r from-teal-400 to-teal-500 rounded-3xl p-6 shadow-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="p-3 bg-white/20 rounded-full">
-                      <DollarSign className="w-8 h-8" />
+                      <DollarSign className="w-8 h-8 text-white" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold mb-1">إجمالي المستحقات المدفوعة</h2>
+                      <h2 className="text-lg font-bold text-white mb-1">إجمالي المستحقات المدفوعة</h2>
                       <p className="text-sm text-white/80">المبلغ الكلي للتسويات المكتملة</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-3xl font-black">{totalAmount.toLocaleString()}</p>
+                    <p className="text-3xl font-black text-white">{totalAmount.toLocaleString()}</p>
                     <p className="text-sm text-white/80">دينار عراقي</p>
                     <div className="flex items-center gap-1 mt-1">
                       <Receipt className="w-3 h-3 text-white/60" />
@@ -697,32 +674,34 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* قائمة الفواتير */}
+            {/* قائمة الفواتير بتصميم مطابق للصورة */}
+            <div className="flex-1 px-6 pb-6 min-h-0">
               <div className="space-y-4">
                 {filteredInvoices.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground">
+                  <div className="p-8 text-center">
                     <div className="relative mb-4">
-                      <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-8 h-8" />
+                      <div className="w-16 h-16 mx-auto bg-slate-700 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-8 h-8 text-slate-400" />
                       </div>
                     </div>
-                    <h3 className="text-lg font-bold mb-2">لا توجد مستحقات مدفوعة</h3>
-                    <p className="text-sm">لم يتم العثور على فواتير تحاسب مكتملة</p>
+                    <h3 className="text-lg font-bold mb-2 text-white">لا توجد مستحقات مدفوعة</h3>
+                    <p className="text-sm text-slate-400">لم يتم العثور على فواتير تحاسب مكتملة</p>
                   </div>
                 ) : (
                   <>
-                    {/* كروت الفواتير */}
+                    {/* كروت الفواتير بتصميم مطابق للصورة */}
                     {filteredInvoices.map((invoice) => (
-                      <div key={invoice.id} className="bg-card/50 rounded-2xl p-4 border border-border shadow-sm">
+                      <div key={invoice.id} className="bg-slate-800/50 rounded-2xl p-4 border border-slate-600">
                         {/* رقم الفاتورة */}
                         <div className="flex items-center gap-3 mb-4">
                           <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg">
                             <Receipt className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">رقم الفاتورة</p>
-                            <p className="font-bold text-foreground text-lg">{invoice.invoice_number}</p>
+                            <p className="text-sm text-slate-400">رقم الفاتورة</p>
+                            <p className="font-bold text-white text-lg">{invoice.invoice_number}</p>
                           </div>
                         </div>
                         
@@ -732,8 +711,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                             <User className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">الموظف</p>
-                            <p className="font-bold text-foreground text-lg">{invoice.employee_name}</p>
+                            <p className="text-sm text-slate-400">الموظف</p>
+                            <p className="font-bold text-white text-lg">{invoice.employee_name}</p>
                           </div>
                         </div>
                         
@@ -743,37 +722,28 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                             <DollarSign className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">المبلغ</p>
-                            <p className="font-bold text-teal-600 text-xl">{invoice.settlement_amount?.toLocaleString()} د.ع</p>
+                            <p className="text-sm text-slate-400">المبلغ</p>
+                            <p className="font-bold text-teal-400 text-xl">{invoice.settlement_amount?.toLocaleString()} د.ع</p>
                           </div>
                         </div>
                         
-                        {/* تاريخ التسوية - محسن */}
+                        {/* تاريخ التسوية */}
                         <div className="flex items-center gap-3 mb-4">
                           <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg">
                             <Calendar className="w-5 h-5 text-white" />
                           </div>
                           <div>
-                            <p className="text-sm text-muted-foreground">تاريخ التسوية</p>
-                            <p className="font-medium text-foreground">
-                              {(() => {
-                                // محاولة مع created_at أولاً، ثم settlement_date
-                                const dateToUse = invoice.created_at || invoice.settlement_date;
-                                if (dateToUse) {
-                                  try {
-                                    return format(parseISO(dateToUse), 'dd/MM/yyyy - HH:mm', { locale: ar });
-                                  } catch (error) {
-                                    console.warn('خطأ في تحويل التاريخ:', dateToUse, error);
-                                    return new Date(dateToUse).toLocaleDateString('ar-IQ') + ' - ' + new Date(dateToUse).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' });
-                                  }
-                                }
-                                return 'غير محدد';
-                              })()}
+                            <p className="text-sm text-slate-400">تاريخ التسوية</p>
+                            <p className="font-medium text-white">
+                              {invoice.settlement_date ? 
+                                format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
+                                'غير محدد'
+                              }
                             </p>
                           </div>
                         </div>
                         
-                        {/* الأزرار */}
+                        {/* الأزرار بتصميم مطابق للصورة */}
                         <div className="flex gap-3 mt-4">
                           <Button className="flex-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white border-0 rounded-xl h-10">
                             <CheckCircle className="w-4 h-4 ml-2" />
@@ -794,18 +764,19 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                 )}
               </div>
             </div>
-          </ScrollArea>
 
-          <DialogFooter className="p-6 pt-3 flex-shrink-0 border-t bg-muted/30">
-            <Button 
-              variant="outline" 
-              onClick={() => onOpenChange(false)} 
-              className="w-full"
-            >
-              إغلاق
-            </Button>
-          </DialogFooter>
-        </div>
+            {/* زر الإغلاق */}
+            <div className="p-6 flex-shrink-0">
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenChange(false)} 
+                className="w-full bg-slate-700/50 hover:bg-slate-600/50 text-white border-slate-600"
+              >
+                إغلاق
+              </Button>
+            </div>
+          </div>
+        </ScrollArea>
       </DialogContent>
       
       {/* معاينة الفاتورة الاحترافية */}
