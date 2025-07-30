@@ -18,95 +18,181 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
         <ScrollArea className="h-full max-h-[85vh]">
-          <div className="p-6">
+          <div className="p-8">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-4 mb-4">
-                <div className="p-3 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full text-white">
-                  <Receipt className="w-8 h-8" />
+              <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="p-3 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full text-white shadow-lg">
+                  <Receipt className="w-10 h-10" />
                 </div>
-                <h1 className="text-3xl font-bold">فاتورة تسوية</h1>
+                <div>
+                  <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">فاتورة تسوية</h1>
+                  <p className="text-lg text-slate-600 dark:text-slate-400">مستحقات الموظف</p>
+                </div>
               </div>
               
-              <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-6 py-3 inline-block">
+              <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-8 py-4 inline-block shadow-md border">
                 <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <p className="text-lg font-semibold">
-                    تاريخ التسوية: {invoice.settlement_date ? 
-                      format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                      'غير محدد'
-                    }
-                  </p>
+                  <Calendar className="w-6 h-6 text-blue-600" />
+                  <div className="text-right">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
+                    <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                      {invoice.settlement_date ? 
+                        format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                        'غير محدد'
+                      }
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* معلومات الفاتورة */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* معلومات الموظف */}
+              <Card className="lg:col-span-2">
                 <CardContent className="p-6">
-                  <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
-                    <User className="w-6 h-6 text-blue-600" />
-                    معلومات الموظف
-                  </h3>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">اسم الموظف</p>
-                      <p className="font-bold text-xl">{invoice.employee_name}</p>
+                  <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                      <User className="w-6 h-6 text-blue-600" />
                     </div>
-                    <div>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">رقم الفاتورة</p>
-                      <p className="font-mono font-bold text-lg text-purple-700">{invoice.invoice_number}</p>
+                    معلومات الموظف والفاتورة
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">اسم الموظف</p>
+                        <p className="font-bold text-2xl text-slate-800 dark:text-slate-100">{invoice.employee_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">معرف الموظف</p>
+                        <p className="font-mono text-sm text-slate-600 dark:text-slate-400">{invoice.employee_id}</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">رقم الفاتورة</p>
+                        <p className="font-mono font-bold text-lg text-purple-700 dark:text-purple-400">{invoice.invoice_number}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">طريقة الدفع</p>
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-emerald-500 to-blue-600 text-white">
+              {/* المبلغ المدفوع */}
+              <Card className="bg-gradient-to-br from-emerald-500 to-blue-600 text-white shadow-xl">
                 <CardContent className="p-6 text-center">
                   <div className="flex items-center justify-center gap-3 mb-4">
-                    <DollarSign className="w-8 h-8" />
+                    <DollarSign className="w-10 h-10" />
                     <h3 className="text-xl font-bold">المبلغ المدفوع</h3>
                   </div>
-                  <p className="text-4xl font-black mb-2">
+                  <p className="text-5xl font-black mb-2 drop-shadow-lg">
                     {invoice.total_amount?.toLocaleString()}
                   </p>
                   <p className="text-lg font-bold opacity-90">دينار عراقي</p>
+                  <div className="mt-4 text-sm opacity-80">
+                    تم الدفع بنجاح ✓
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* وصف التسوية */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
-                  <FileText className="w-6 h-6" />
-                  وصف التسوية
-                </h3>
-                <p className="text-slate-700 dark:text-slate-300 text-lg">
-                  {invoice.description}
-                </p>
-              </CardContent>
-            </Card>
+            {/* تفاصيل التسوية */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              {/* وصف التسوية */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-bold text-xl mb-4 flex items-center gap-3">
+                    <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                      <FileText className="w-6 h-6 text-slate-600" />
+                    </div>
+                    وصف التسوية
+                  </h3>
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                    <p className="text-slate-700 dark:text-slate-300 text-lg leading-relaxed">
+                      {invoice.description}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ملاحظات إضافية */}
+              {invoice.notes && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="font-bold text-xl mb-4 flex items-center gap-3">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                        <Star className="w-6 h-6 text-yellow-600" />
+                      </div>
+                      ملاحظات
+                    </h3>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                      <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                        {invoice.notes}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* معلومات النظام */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* تاريخ الإنشاء */}
+              <Card className="bg-slate-50 dark:bg-slate-800/50">
+                <CardContent className="p-6">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-slate-600" />
+                    تاريخ الإنشاء
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300">
+                    {invoice.created_at ? 
+                      format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                      'غير محدد'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* معرف الفاتورة في النظام */}
+              <Card className="bg-slate-50 dark:bg-slate-800/50">
+                <CardContent className="p-6">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <Receipt className="w-5 h-5 text-slate-600" />
+                    معرف النظام
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-300 font-mono text-sm break-all">
+                    {invoice.id}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* حالة التسوية */}
-            <Card className="bg-green-50 dark:bg-green-900/20">
+            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
               <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
-                  <h3 className="text-xl font-bold text-green-700 dark:text-green-400">تسوية مكتملة</h3>
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <CheckCircle className="w-10 h-10 text-green-600" />
+                  <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">تسوية مكتملة</h3>
                 </div>
-                <p className="text-green-600 dark:text-green-400">تم إتمام الدفع بنجاح</p>
+                <p className="text-green-600 dark:text-green-400 text-lg">تم إتمام الدفع وتسجيل جميع البيانات بنجاح</p>
+                <div className="mt-3 text-sm text-green-600 dark:text-green-400 opacity-80">
+                  ✓ تم خصم المبلغ من القاصة الرئيسية
+                </div>
               </CardContent>
             </Card>
           </div>
         </ScrollArea>
         
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)} variant="outline">
-            إغلاق
+        <DialogFooter className="px-8 pb-6">
+          <Button onClick={() => onOpenChange(false)} variant="outline" className="w-full">
+            إغلاق الفاتورة
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -368,7 +454,6 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                         <TableHead className="text-right font-bold">اسم الموظف</TableHead>
                         <TableHead className="text-right font-bold">المبلغ</TableHead>
                         <TableHead className="text-right font-bold">تاريخ التسوية</TableHead>
-                        <TableHead className="text-right font-bold">النوع</TableHead>
                         <TableHead className="text-right font-bold">الحالة</TableHead>
                         <TableHead className="text-center font-bold">الإجراءات</TableHead>
                       </TableRow>
@@ -376,13 +461,13 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                     <TableBody>
                       {loadingRealInvoices ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
+                          <TableCell colSpan={6} className="text-center py-8">
                             جاري تحميل البيانات...
                           </TableCell>
                         </TableRow>
                       ) : filteredInvoices.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                          <TableCell colSpan={6} className="text-center py-8 text-slate-500">
                             لا توجد فواتير تسوية
                           </TableCell>
                         </TableRow>
@@ -405,12 +490,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                               }
                             </TableCell>
                             <TableCell>
-                              <Badge variant={invoice.type === 'real_settlement' ? 'default' : 'secondary'}>
-                                {invoice.type === 'real_settlement' ? 'فاتورة حقيقية' : 'قديمة'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="default" className="bg-green-100 text-green-800">
+                              <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                                 مكتملة
                               </Badge>
                             </TableCell>
