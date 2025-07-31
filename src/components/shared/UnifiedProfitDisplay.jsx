@@ -37,14 +37,16 @@ const UnifiedProfitDisplay = ({
   className = '',
   datePeriod = 'month' // إضافة فترة التاريخ
 }) => {
-  const { orders, accounting } = useInventory();
+  const { orders, accounting, settlementInvoices } = useInventory();
   const { user: currentUser } = useAuth();
   const [allProfits, setAllProfits] = useState([]);
+  const [settledDuesFromDB, setSettledDuesFromDB] = useState(0);
 
-  // جلب بيانات الأرباح من قاعدة البيانات
+  // جلب بيانات الأرباح والمستحقات المدفوعة من قاعدة البيانات
   useEffect(() => {
-    const fetchProfits = async () => {
+    const fetchData = async () => {
       try {
+        // جلب بيانات الأرباح
         const { data: profitsData } = await supabase
           .from('profits')
           .select(`
@@ -53,13 +55,29 @@ const UnifiedProfitDisplay = ({
             employee:profiles!employee_id(full_name)
           `);
         setAllProfits(profitsData || []);
+
+        // جلب المستحقات المدفوعة من الفترة المحددة
+        const { data: settledData } = await supabase
+          .from('settlement_invoices')
+          .select('total_amount, settlement_date')
+          .gte('settlement_date', dateRange.from?.toISOString())
+          .lte('settlement_date', dateRange.to?.toISOString());
+
+        const totalSettled = settledData?.reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0) || 0;
+        setSettledDuesFromDB(totalSettled);
+
+        console.log('💳 UnifiedProfitDisplay - جلب المستحقات المدفوعة:', {
+          dateRange,
+          settledData,
+          totalSettled
+        });
       } catch (error) {
-        console.error('خطأ في جلب بيانات الأرباح:', error);
+        console.error('خطأ في جلب البيانات:', error);
       }
     };
     
-    fetchProfits();
-  }, []);
+    fetchData();
+  }, [dateRange]);
 
   // حساب النطاق الزمني بناءً على datePeriod
   const dateRange = useMemo(() => {
@@ -206,6 +224,11 @@ const UnifiedProfitDisplay = ({
     };
   }, [orders, accounting, allProfits, dateRange, currentUser]);
 
+  // دالة حساب المستحقات المدفوعة من قاعدة البيانات
+  const calculateSettledDuesFromDB = () => {
+    return settledDuesFromDB;
+  };
+
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
     if (displayMode === 'financial-center') {
@@ -287,7 +310,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-settled-dues',
             title: 'المستحقات المدفوعة',
-            value: profitData.totalSettledDues || 0,
+            value: calculateSettledDuesFromDB(), // استخدام دالة حساب من قاعدة البيانات
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',

@@ -18,7 +18,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
-import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
+import ManagerProfitsDialogV2 from '@/components/profits/ManagerProfitsDialogV2';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
