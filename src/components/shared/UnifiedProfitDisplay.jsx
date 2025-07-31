@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatCard from '@/components/dashboard/StatCard';
+import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -37,7 +38,7 @@ const UnifiedProfitDisplay = ({
   className = '',
   datePeriod = 'month' // إضافة فترة التاريخ
 }) => {
-  const { orders, accounting } = useInventory();
+  const { orders, accounting, profits: contextProfits, allUsers } = useInventory();
   const { user: currentUser } = useAuth();
   const [allProfits, setAllProfits] = useState([]);
   const [settlementInvoices, setSettlementInvoices] = useState([]);
@@ -284,14 +285,15 @@ const UnifiedProfitDisplay = ({
             colors: ['green-500', 'emerald-500'],
             format: 'currency'
           },
+          // استخدام النظام الجديد المعتمد لأرباح المدير من الموظفين
           {
-            key: 'manager-profit-from-employees',
-            title: 'أرباح من الموظفين',
-            value: unifiedFinancialData.managerProfitFromEmployees,
-            icon: Users,
-            colors: ['indigo-500', 'violet-500'],
-            format: 'currency',
-            onClick: () => onFilterChange('employeeId', 'employees')
+            key: 'manager-profit-from-employees-unified',
+            component: 'ManagerProfitsCard',
+            title: 'أرباحي من الموظفين',
+            orders: orders || [],
+            employees: allUsers || [],
+            profits: contextProfits || [],
+            cardSize: 'default'
           },
           {
             key: 'total-expenses',
@@ -359,14 +361,26 @@ const UnifiedProfitDisplay = ({
 
   return (
     <div className={`${getLayoutClasses()} ${className}`}>
-      {cards.map(({ key, ...cardProps }) => (
-        <StatCard 
-          key={key} 
-          {...cardProps}
-          // إضافة ستايل خاص للمركز المالي
-          className={displayMode === 'financial-center' ? 'financial-card' : ''}
-        />
-      ))}
+      {cards.map(({ key, component, ...cardProps }) => {
+        // استخدام النظام الجديد المعتمد لأرباح المدير من الموظفين
+        if (component === 'ManagerProfitsCard') {
+          return (
+            <ManagerProfitsCard 
+              key={key}
+              {...cardProps}
+            />
+          );
+        }
+        
+        // الكروت العادية الأخرى
+        return (
+          <StatCard 
+            key={key} 
+            {...cardProps}
+            className={displayMode === 'financial-center' ? 'financial-card' : ''}
+          />
+        );
+      })}
     </div>
   );
 };

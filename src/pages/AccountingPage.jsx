@@ -13,6 +13,7 @@ import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import StatCard from '@/components/dashboard/StatCard';
+import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import MiniChart from '@/components/dashboard/MiniChart';
 import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import { useNavigate } from 'react-router-dom';
@@ -532,7 +533,16 @@ const AccountingPage = () => {
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
-        { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.systemProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
+        // استخدام النظام الجديد المعتمد لأرباح المدير من الموظفين
+        { 
+          key: 'employeeProfitUnified', 
+          component: 'ManagerProfitsCard',
+          title: "أرباحي من الموظفين", 
+          orders: orders || [], 
+          employees: allUsers || [], 
+          profits: allProfits || [],
+          cardSize: 'default'
+        },
         { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
 
@@ -567,9 +577,24 @@ const AccountingPage = () => {
                 </div>
                 
                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {profitCards.map((card, index) => (
-                        <StatCard key={index} {...card} />
-                    ))}
+                    {profitCards.map((card, index) => {
+                        // استخدام النظام الجديد المعتمد لأرباح المدير من الموظفين
+                        if (card.component === 'ManagerProfitsCard') {
+                            return (
+                                <ManagerProfitsCard 
+                                    key={index}
+                                    orders={card.orders}
+                                    employees={card.employees}
+                                    profits={card.profits}
+                                    title={card.title}
+                                    cardSize={card.cardSize}
+                                />
+                            );
+                        }
+                        
+                        // الكروت العادية الأخرى
+                        return <StatCard key={index} {...card} />;
+                    })}
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
