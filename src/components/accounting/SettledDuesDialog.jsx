@@ -106,7 +106,10 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                     <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
                       {invoice.settlement_date ? 
                         format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                        'غير محدد'
+                        (invoice.created_at ? 
+                          format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                          format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar })
+                        )
                       }
                     </p>
                   </div>
@@ -133,7 +136,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                       </div>
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">معرف الموظف</p>
-                        <p className="font-mono text-lg font-bold text-blue-600">{invoice.employee_code || 'EMP002'}</p>
+                        <p className="font-mono text-lg font-bold text-blue-600">{invoice.employee_code || 'غير محدد'}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -245,22 +248,22 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                               {/* رقم الطلب */}
                               <div className="flex items-center justify-center">
                                 <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform">
-                                  {order.order_number || 'ORD000004'}
+                                  {order.order_number || order.trackingnumber || 'N/A'}
                                 </span>
                               </div>
                               
                               {/* الإيرادات */}
                               <div className="flex flex-col items-center justify-center">
                                 <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
-                                  {order.total_amount?.toLocaleString() || '21,000'}
+                                  {(orderProfit?.total_revenue || order.total_amount || order.total || 0).toLocaleString()}
                                 </div>
                                 <div className="text-sm text-green-500 font-semibold">د.ع</div>
                               </div>
                               
-                              {/* التكاليف */}
+                              {/* التكاليف الحقيقية */}
                               <div className="flex flex-col items-center justify-center">
                                 <div className="text-3xl font-black text-orange-600 dark:text-orange-400 mb-1">
-                                  {((order.total_amount || 21000) - (orderProfit?.employee_profit || 7000))?.toLocaleString() || '11,000'}
+                                  {(orderProfit?.total_cost || 0).toLocaleString()}
                                 </div>
                                 <div className="text-sm text-orange-500 font-semibold">د.ع</div>
                               </div>
@@ -268,23 +271,29 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                               {/* ربح الموظف */}
                               <div className="flex flex-col items-center justify-center">
                                 <div className="text-3xl font-black text-purple-600 dark:text-purple-400 mb-1">
-                                  {orderProfit?.employee_profit?.toLocaleString() || '7,000'}
+                                  {(orderProfit?.employee_profit || 0).toLocaleString()}
                                 </div>
                                 <div className="text-sm text-purple-500 font-semibold">د.ع</div>
                               </div>
                               
-                              {/* تاريخ التسوية */}
+                              {/* تاريخ التسوية الحقيقي */}
                               <div className="flex flex-col items-center justify-center">
                                 <div className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  {order.created_at ? 
-                                    format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar }) :
-                                    '29/07/2025'
+                                  {invoice.settlement_date ? 
+                                    format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                    (orderProfit?.settled_at ? 
+                                      format(parseISO(orderProfit.settled_at), 'dd/MM/yyyy', { locale: ar }) :
+                                      'غير محدد'
+                                    )
                                   }
                                 </div>
                                 <div className="text-sm text-cyan-600 dark:text-cyan-400 font-semibold">
-                                  {order.created_at ? 
-                                    format(parseISO(order.created_at), 'HH:mm', { locale: ar }) :
-                                    '00:07'
+                                  {invoice.settlement_date ? 
+                                    format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
+                                    (orderProfit?.settled_at ? 
+                                      format(parseISO(orderProfit.settled_at), 'HH:mm', { locale: ar }) :
+                                      '00:00'
+                                    )
                                   }
                                 </div>
                               </div>

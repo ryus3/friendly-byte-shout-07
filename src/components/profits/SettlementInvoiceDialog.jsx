@@ -49,8 +49,14 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                         <Calendar className="w-6 h-6 text-blue-600" />
                                         <div className="text-right">
                                             <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
-                                            <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                                                {format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar })}
+                                             <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                                                {invoice.settlement_date ? 
+                                                  format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                                  (invoice.created_at ? 
+                                                    format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                                    format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar })
+                                                  )
+                                                }
                                             </p>
                                         </div>
                                     </div>
@@ -143,10 +149,10 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                             </div>
                                                         </div>
                                                         
-                                                        {/* المبلغ */}
+                                                         {/* المبلغ */}
                                                         <div className="flex flex-col items-center justify-center">
                                                             <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
-                                                                {order.total?.toLocaleString() || 'غير محدد'}
+                                                                {(order.total_amount || order.total)?.toLocaleString() || 'غير محدد'}
                                                             </div>
                                                             <div className="text-sm text-green-500 font-semibold">د.ع</div>
                                                         </div>
