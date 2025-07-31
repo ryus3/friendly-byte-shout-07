@@ -286,7 +286,7 @@ const UnifiedProfitDisplay = ({
           },
           {
             key: 'manager-profit-from-employees',
-            title: 'أرباح من الموظفين',
+            title: 'أرباحي من الموظفين',
             value: unifiedFinancialData.managerProfitFromEmployees,
             icon: Users,
             colors: ['indigo-500', 'violet-500'],
