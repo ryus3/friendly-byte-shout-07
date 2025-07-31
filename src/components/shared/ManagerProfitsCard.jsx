@@ -27,66 +27,85 @@ const ManagerProfitsCard = ({
   const finalProfits = profits.length > 0 ? profits : contextProfits || [];
   const finalCalculateProfit = calculateProfit || contextCalculateProfit;
 
-  // حساب أرباح المدير من الموظفين - نفس منطق متابعة الموظفين
+  // حساب أرباح المدير من الموظفين - نفس منطق متابعة الموظفين بالضبط
   const managerProfitFromEmployees = useMemo(() => {
     if (!finalOrders || !Array.isArray(finalOrders) || !allUsers || !Array.isArray(allUsers)) {
       return 0;
     }
 
-    // معرف المدير الرئيسي لاستبعاد طلباته
+    // معرف المدير الرئيسي لاستبعاد طلباته - نفس القيمة من متابعة الموظفين
     const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
-    // فلترة طلبات الموظفين فقط (استبعاد المدير الرئيسي)
+    console.log('🔍 ManagerProfitsCard: البيانات المستلمة:', {
+      ordersCount: finalOrders.length,
+      usersCount: allUsers.length,
+      profitsCount: finalProfits.length
+    });
+
+    // تطبيق نفس فلترة متابعة الموظفين: استبعاد المدير + فقط الطلبات المكتملة/المسلمة + فقط طلبات الموظفين النشطين
     const employeeOrders = finalOrders.filter(order => {
       if (!order || !order.created_by) return false;
+      
+      // استبعاد طلبات المدير الرئيسي
       if (order.created_by === ADMIN_ID) return false;
       
       // فقط الطلبات المكتملة أو المُوصلة
       if (!['completed', 'delivered'].includes(order.status)) return false;
       
-      // التأكد من أن منشئ الطلب موظف
+      // التأكد من أن منشئ الطلب موظف نشط
       const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
-      return orderCreator && orderCreator.status === 'active';
+      return orderCreator && orderCreator.status === 'active' && (orderCreator.role === 'employee' || orderCreator.role === 'deputy');
     });
 
-    console.log('🔍 ManagerProfitsCard: حساب أرباح المدير من الموظفين:', {
-      totalOrders: finalOrders.length,
-      employeeOrders: employeeOrders.length,
-      excludedAdminId: ADMIN_ID
+    console.log('🔍 ManagerProfitsCard: بعد الفلترة:', {
+      employeeOrdersCount: employeeOrders.length,
+      employeeOrdersSample: employeeOrders.slice(0, 3).map(o => ({ 
+        id: o.id, 
+        number: o.order_number, 
+        created_by: o.created_by,
+        status: o.status 
+      }))
     });
 
-    // حساب أرباح المدير من كل طلب موظف
-    const totalManagerProfit = employeeOrders.reduce((total, order) => {
+    // حساب الأرباح - نفس منطق متابعة الموظفين
+    let totalManagerProfit = 0;
+
+    employeeOrders.forEach(order => {
       // البحث عن سجل الأرباح في قاعدة البيانات
       const profitRecord = finalProfits.find(p => p.order_id === order.id);
       
-      let managerProfitFromOrder = 0;
-      
       if (profitRecord) {
-        // إذا كان هناك سجل في قاعدة البيانات، استخدم ربح النظام
+        // استخدام البيانات من قاعدة البيانات
         const totalProfit = profitRecord.profit_amount || 0;
         const employeeProfit = profitRecord.employee_profit || 0;
-        managerProfitFromOrder = totalProfit - employeeProfit;
-      } else if (finalCalculateProfit) {
-        // إذا لم يكن هناك سجل، احسب باستخدام الدالة التقليدية
+        const managerProfitFromOrder = totalProfit - employeeProfit;
+        totalManagerProfit += managerProfitFromOrder;
+        
+        console.log(`💰 طلب ${order.order_number}: ربح إجمالي ${totalProfit}, ربح موظف ${employeeProfit}, ربح مدير ${managerProfitFromOrder}`);
+      } else {
+        // استخدام الحساب التقليدي إذا لم يكن هناك سجل في قاعدة البيانات
         const orderItems = order.order_items || order.items || [];
-        managerProfitFromOrder = orderItems.reduce((sum, item) => {
-          const itemProfit = finalCalculateProfit(item, order.created_by);
-          // ربح المدير = الربح الإجمالي - ربح الموظف
-          // نفترض أن دالة calculateProfit تُرجع ربح الموظف، فربح المدير هو الباقي
+        let managerProfitFromOrder = 0;
+        
+        orderItems.forEach(item => {
           const sellPrice = item.unit_price || item.price || 0;
           const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-          const totalItemProfit = (sellPrice - costPrice) * (item.quantity || 0);
-          return sum + (totalItemProfit - itemProfit);
-        }, 0);
+          const quantity = item.quantity || 0;
+          const totalItemProfit = (sellPrice - costPrice) * quantity;
+          
+          // في الحساب التقليدي، ربح المدير هو الربح الإجمالي ناقص ربح الموظف
+          const employeeProfit = finalCalculateProfit ? finalCalculateProfit(item, order.created_by) : 0;
+          managerProfitFromOrder += (totalItemProfit - employeeProfit);
+        });
+        
+        totalManagerProfit += managerProfitFromOrder;
+        console.log(`💰 طلب ${order.order_number} (حساب تقليدي): ربح مدير ${managerProfitFromOrder}`);
       }
-
-      return total + managerProfitFromOrder;
-    }, 0);
+    });
 
     console.log('✅ ManagerProfitsCard: النتيجة النهائية:', {
-      managerProfitFromEmployees: totalManagerProfit,
-      employeeOrdersCount: employeeOrders.length
+      totalManagerProfit,
+      ordersProcessed: employeeOrders.length
     });
 
     return totalManagerProfit;
