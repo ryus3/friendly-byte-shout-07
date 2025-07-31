@@ -1210,18 +1210,47 @@ export const InventoryProvider = ({ children }) => {
     const productInfo = allProducts.find(p => p.id === item.productId);
     if (!productInfo) return 0;
 
-    const specificRule = profitRules.find(r => r.rule_type === 'product' && r.target_id === String(item.productId));
-    if(specificRule?.profit_amount > 0) {
-      return specificRule.profit_amount * item.quantity;
+    // 1. قاعدة المنتج المحدد (أولوية عالية)
+    const productRule = profitRules.find(r => r.rule_type === 'product' && r.target_id === String(item.productId));
+    if (productRule?.profit_amount > 0) {
+      return productRule.profit_amount * item.quantity;
     }
 
+    // 2. قاعدة المتغير المحدد (variant)
+    if (item.variantId) {
+      const variantRule = profitRules.find(r => r.rule_type === 'variant' && r.target_id === String(item.variantId));
+      if (variantRule?.profit_amount > 0) {
+        return variantRule.profit_amount * item.quantity;
+      }
+    }
+
+    // 3. قاعدة الفئة الرئيسية
     if (productInfo.categories?.main_category) {
-        const categoryRule = profitRules.find(r => r.rule_type === 'category' && r.target_id === productInfo.categories.main_category);
-        if(categoryRule?.profit_amount > 0) {
-            return categoryRule.profit_amount * item.quantity;
-        }
+      const categoryRule = profitRules.find(r => r.rule_type === 'category' && r.target_id === String(productInfo.categories.main_category));
+      if (categoryRule?.profit_amount > 0) {
+        return categoryRule.profit_amount * item.quantity;
+      }
     }
 
+    // 4. قاعدة القسم
+    if (productInfo.departments && productInfo.departments.length > 0) {
+      const departmentRule = profitRules.find(r => r.rule_type === 'department' && 
+        productInfo.departments.some(dept => String(dept.id) === r.target_id || String(dept) === r.target_id));
+      if (departmentRule?.profit_amount > 0) {
+        return departmentRule.profit_amount * item.quantity;
+      }
+    }
+
+    // 5. قاعدة نوع المنتج
+    if (productInfo.product_types && productInfo.product_types.length > 0) {
+      const productTypeRule = profitRules.find(r => r.rule_type === 'product_type' && 
+        productInfo.product_types.some(type => String(type.id) === r.target_id || String(type) === r.target_id));
+      if (productTypeRule?.profit_amount > 0) {
+        return productTypeRule.profit_amount * item.quantity;
+      }
+    }
+
+    // 6. القاعدة الافتراضية (هامش الربح الطبيعي)
     const defaultProfit = (item.price - item.cost_price) * item.quantity;
     return defaultProfit > 0 ? defaultProfit : 0;
   }, [employeeProfitRules, allProducts]);
