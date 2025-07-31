@@ -120,71 +120,68 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             {/* معلومات الفاتورة */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               {/* معلومات الموظف */}
-              <Card className="lg:col-span-2 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 opacity-95"></div>
-                <div className="absolute inset-0 bg-black/10"></div>
-                <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center gap-4 mb-8">
-                    <div className="p-4 bg-white/15 rounded-2xl backdrop-blur-sm border border-white/20">
-                      <User className="w-8 h-8 drop-shadow-lg" />
+              <Card className="lg:col-span-2 relative overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-xl p-6 relative overflow-hidden">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <User className="w-8 h-8" />
+                      </div>
+                      <h3 className="font-bold text-2xl">معلومات الموظف والفاتورة</h3>
                     </div>
-                    <h3 className="font-black text-3xl drop-shadow-lg">معلومات الموظف والفاتورة</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">اسم الموظف</p>
+                          <p className="font-bold text-xl">{invoice.employee_name}</p>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">معرف الموظف</p>
+                          <p className="font-mono text-lg font-bold text-blue-300">{invoice.employee_code || 'غير محدد'}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">رقم الفاتورة</p>
+                          <p className="font-mono font-bold text-lg text-purple-300">{invoice.invoice_number}</p>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">طريقة الدفع</p>
+                          <p className="font-semibold">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
+                        </div>
+                      </div>
+                    </div>
+                    {/* تأثيرات بصرية */}
+                    <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-6">
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/10 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-semibold mb-2 text-blue-200">اسم الموظف</p>
-                        <p className="font-black text-2xl drop-shadow-lg">{invoice.employee_name}</p>
-                      </div>
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/10 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-semibold mb-2 text-cyan-200">معرف الموظف</p>
-                        <p className="font-mono text-xl font-black text-cyan-300 drop-shadow-lg">{invoice.employee_code || 'غير محدد'}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-6">
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/10 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-semibold mb-2 text-purple-200">رقم الفاتورة</p>
-                        <p className="font-mono font-black text-xl text-purple-300 drop-shadow-lg">{invoice.invoice_number}</p>
-                      </div>
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/10 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-semibold mb-2 text-emerald-200">طريقة الدفع</p>
-                        <p className="font-black text-lg text-emerald-300 drop-shadow-lg">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
-                      </div>
-                    </div>
-                  </div>
-                  {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-6 -left-6 w-20 h-20 bg-white/5 rounded-full"></div>
-                  <div className="absolute top-1/2 left-1/2 w-4 h-4 bg-white/10 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
                 </CardContent>
               </Card>
 
               {/* المبلغ المدفوع */}
-              <Card className="relative overflow-hidden group cursor-pointer">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 opacity-95"></div>
-                <div className="absolute inset-0 bg-black/10"></div>
-                <CardContent className="relative p-8 text-white text-center">
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                    <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 group-hover:scale-110 transition-all duration-300">
-                      <DollarSign className="w-10 h-10 drop-shadow-lg" />
+              <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+                <CardContent className="p-6 text-center">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl p-6 relative overflow-hidden">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <DollarSign className="w-10 h-10" />
+                      </div>
+                      <h3 className="text-xl font-bold">المبلغ المدفوع</h3>
                     </div>
-                    <h3 className="text-2xl font-black drop-shadow-lg">المبلغ المدفوع</h3>
-                  </div>
-                  <p className="text-6xl font-black mb-4 drop-shadow-2xl">
-                    {invoice.total_amount?.toLocaleString()}
-                  </p>
-                  <p className="text-xl font-bold opacity-90 mb-6 drop-shadow-lg">دينار عراقي</p>
-                  <div className="bg-white/15 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
-                    <div className="flex items-center justify-center gap-3 text-lg">
-                      <CheckCircle className="w-6 h-6" />
-                      <span className="font-bold">تم الدفع بنجاح</span>
+                    <p className="text-5xl font-black mb-3 drop-shadow-lg">
+                      {invoice.total_amount?.toLocaleString()}
+                    </p>
+                    <p className="text-lg font-bold opacity-90 mb-3">دينار عراقي</p>
+                    <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                      <div className="flex items-center justify-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>تم الدفع بنجاح</span>
+                      </div>
                     </div>
+                    {/* تأثيرات بصرية */}
+                    <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-4 -left-4 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
-                  {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-6 -left-6 w-20 h-20 bg-white/5 rounded-full"></div>
-                  <div className="absolute top-1/4 right-1/4 w-3 h-3 bg-white/10 rounded-full"></div>
-                  <div className="absolute bottom-1/4 left-1/4 w-5 h-5 bg-white/10 rounded-full"></div>
                 </CardContent>
               </Card>
             </div>
@@ -496,39 +493,26 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         switch (timePeriod) {
           case 'day':
             startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-            query = query.gte('settlement_date', startDate.toISOString())
-                         .lte('settlement_date', endDate.toISOString());
-            console.log('🔍 فلتر اليوم:', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
             break;
           case 'week':
             const weekStart = new Date(now);
             weekStart.setDate(now.getDate() - now.getDay());
             weekStart.setHours(0, 0, 0, 0);
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
-            weekEnd.setHours(23, 59, 59, 999);
-            query = query.gte('settlement_date', weekStart.toISOString())
-                         .lte('settlement_date', weekEnd.toISOString());
+            startDate = weekStart;
             break;
           case 'month':
             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-            const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-            query = query.gte('settlement_date', startDate.toISOString())
-                         .lte('settlement_date', monthEnd.toISOString());
             break;
           case 'year':
             startDate = new Date(now.getFullYear(), 0, 1);
-            const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
-            query = query.gte('settlement_date', startDate.toISOString())
-                         .lte('settlement_date', yearEnd.toISOString());
             break;
           default:
             startDate = null;
         }
 
-        // لا نطبق فلتر إضافي إذا كان timePeriod محدد بالفعل
-        if (!timePeriod || timePeriod === 'all') {
+        if (startDate) {
+          query = query.gte('settlement_date', startDate.toISOString());
+        }
 
         // تطبيق فلتر النطاق الزمني المخصص إذا كان موجوداً
         if (dateRange?.from) {
@@ -538,7 +522,6 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           const endOfDay = new Date(dateRange.to);
           endOfDay.setHours(23, 59, 59, 999);
           query = query.lte('settlement_date', endOfDay.toISOString());
-        }
         }
 
         const { data, error } = await query.order('settlement_date', { ascending: false });
@@ -849,14 +832,14 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                             <div className="min-w-0">
                               <p className="font-medium text-purple-600 text-sm">
                                 {invoice.settlement_date ? 
-                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
+                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
                                   (invoice.created_at ? 
-                                    format(parseISO(invoice.created_at), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
+                                    format(parseISO(invoice.created_at), 'dd/MM/yyyy', { locale: ar }) :
                                     'غير محدد'
                                   )
                                 }
                               </p>
-                              <p className="text-xs text-muted-foreground">التاريخ والوقت</p>
+                              <p className="text-xs text-muted-foreground">التاريخ</p>
                             </div>
                           </div>
                           
