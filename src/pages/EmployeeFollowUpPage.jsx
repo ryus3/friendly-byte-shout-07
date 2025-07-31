@@ -436,14 +436,8 @@ const EmployeeFollowUpPage = () => {
     return filtered;
   }, [orders, filters, usersMap, profits]);
 
-  // الإحصائيات المحسنة
+  // الإحصائيات
   const stats = useMemo(() => {
-    console.log('🔢 بدء حساب الإحصائيات:', {
-      filteredOrdersCount: filteredOrders?.length || 0,
-      profitsCount: profits?.length || 0,
-      expensesCount: expenses?.length || 0
-    });
-
     if (!filteredOrders || !Array.isArray(filteredOrders)) {
       return {
         totalOrders: 0,
@@ -476,98 +470,13 @@ const EmployeeFollowUpPage = () => {
       return sum + totalWithoutDelivery;
     }, 0);
     
-    // أرباح المدير من الموظفين - حساب محسن
-    const totalManagerProfits = deliveredOrders
-      .filter(order => order.receipt_received === true) // فقط الطلبات المستلمة فواتيرها
-      .reduce((sum, order) => {
-        // البحث عن سجل الربح الحقيقي أولاً
-        const profitRecord = profits?.find(p => p.order_id === order.id);
-        
-        if (profitRecord) {
-          // استخدام البيانات الحقيقية من جدول profits
-          const totalProfit = Number(profitRecord.profit_amount || 0);
-          const employeeProfit = Number(profitRecord.employee_profit || 0);
-          const managerProfit = Math.max(0, totalProfit - employeeProfit);
-          
-          console.log(`💰 ربح المدير للطلب ${order.order_number}:`, {
-            totalProfit,
-            employeeProfit,
-            managerProfit,
-            source: 'database'
-          });
-          
-          return sum + managerProfit;
-        } else if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
-          // استخدام دالة النظام الصحيحة
-          const calculatedProfit = calculateManagerProfit(order) || 0;
-          
-          console.log(`💰 ربح المدير المحسوب للطلب ${order.order_number}:`, {
-            calculatedProfit,
-            source: 'calculateManagerProfit'
-          });
-          
-          return sum + calculatedProfit;
-        } else {
-          // حساب باستخدام دالة calculateProfit للموظف ثم طرحها من الإجمالي
-          if (calculateProfit && typeof calculateProfit === 'function') {
-            const employeeProfit = (order.items || []).reduce((itemSum, item) => {
-              return itemSum + (calculateProfit(item, order.created_by) || 0);
-            }, 0);
-            
-            // حساب إجمالي الربح من بنود الطلب
-            const totalItemProfit = (order.items || []).reduce((itemSum, item) => {
-              const sellPrice = Number(item.unit_price || item.price || 0);
-              const costPrice = Number(item.cost_price || 0);
-              const quantity = Number(item.quantity || 0);
-              return itemSum + Math.max(0, (sellPrice - costPrice) * quantity);
-            }, 0);
-            
-            const managerProfit = Math.max(0, totalItemProfit - employeeProfit);
-            
-            console.log(`💰 ربح المدير المحسوب يدوياً للطلب ${order.order_number}:`, {
-              totalItemProfit,
-              employeeProfit,
-              managerProfit,
-              source: 'manual_calculation'
-            });
-            
-            return sum + managerProfit;
-          }
-          
-        }
-      }, 0);
-
-    // المستحقات المعلقة - استخدام النظام الموجود  
-    const pendingDues = deliveredOrders
-      .filter(order => order.receipt_received === true)
-      .reduce((sum, order) => {
-        // البحث عن سجل الربح
-        const profitRecord = profits?.find(p => p.order_id === order.id);
-        let employeeProfit = 0;
-        
-        if (profitRecord && !profitRecord.settled_at) {
-          // إذا كان هناك سجل ربح غير مُسوى
-          employeeProfit = Number(profitRecord.employee_profit || 0);
-          
-          console.log(`🔄 مستحقات معلقة للطلب ${order.order_number}:`, {
-            employeeProfit,
-            settled_at: profitRecord.settled_at,
-            source: 'database_pending'
-          });
-        } else if (!profitRecord && calculateProfit && typeof calculateProfit === 'function') {
-          // استخدام دالة النظام لحساب ربح الموظف
-          employeeProfit = (order.items || []).reduce((itemSum, item) => {
-            return itemSum + (calculateProfit(item, order.created_by) || 0);
-          }, 0);
-          
-          console.log(`🔄 مستحقات محسوبة للطلب ${order.order_number}:`, {
-            employeeProfit,
-            source: 'calculateProfit'
-          });
-        }
-        
-        return sum + employeeProfit;
-      }, 0);
+    // أرباح المدير من الموظفين
+    const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
+      if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
+        return sum + (calculateManagerProfit(order) || 0);
+      }
+      return sum;
+    }, 0);
 
     // المستحقات المدفوعة (من المصاريف المحاسبية)
     const paidDues = expenses && Array.isArray(expenses)
@@ -578,6 +487,26 @@ const EmployeeFollowUpPage = () => {
         ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
       : 0;
 
+    // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
+    const pendingDues = deliveredOrders
+      .filter(order => order.receipt_received === true)
+      .reduce((sum, order) => {
+        // البحث عن سجل الربح
+        const profitRecord = profits?.find(p => p.order_id === order.id);
+        let employeeProfit = 0;
+        
+        if (profitRecord && !profitRecord.settled_at) {
+          // إذا كان هناك سجل ربح غير مُسوى
+          employeeProfit = profitRecord.employee_profit || 0;
+        } else if (!profitRecord) {
+          // إذا لم يكن هناك سجل ربح، احسب الربح
+          employeeProfit = (order.items || []).reduce((itemSum, item) => {
+            return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
+          }, 0);
+        }
+        
+        return sum + employeeProfit;
+      }, 0);
 
     console.log('📊 الإحصائيات:', {
       totalOrders: filteredOrders.length,
