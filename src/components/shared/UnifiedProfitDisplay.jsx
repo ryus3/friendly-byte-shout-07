@@ -5,6 +5,7 @@ import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import useSettledDues from '@/hooks/useSettledDues';
 import { 
   User, 
   Hourglass, 
@@ -40,33 +41,26 @@ const UnifiedProfitDisplay = ({
   const { orders, accounting } = useInventory();
   const { user: currentUser } = useAuth();
   const [allProfits, setAllProfits] = useState([]);
-  const [settlementInvoices, setSettlementInvoices] = useState([]);
 
-  // جلب بيانات الأرباح وفواتير التسوية من قاعدة البيانات
+  // جلب بيانات الأرباح من قاعدة البيانات
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProfits = async () => {
       try {
-        const [profitsResponse, invoicesResponse] = await Promise.all([
-          supabase
-            .from('profits')
-            .select(`
-              *,
-              order:orders(order_number, status, receipt_received),
-              employee:profiles!employee_id(full_name)
-            `),
-          supabase
-            .from('settlement_invoices')
-            .select('*')
-        ]);
-        
+        const profitsResponse = await supabase
+          .from('profits')
+          .select(`
+            *,
+            order:orders(order_number, status, receipt_received),
+            employee:profiles!employee_id(full_name)
+          `);
+          
         setAllProfits(profitsResponse.data || []);
-        setSettlementInvoices(invoicesResponse.data || []);
       } catch (error) {
         console.error('خطأ في جلب البيانات:', error);
       }
     };
     
-    fetchData();
+    fetchProfits();
   }, []);
 
   // حساب النطاق الزمني بناءً على datePeriod
@@ -98,6 +92,9 @@ const UnifiedProfitDisplay = ({
     
     return { from, to };
   }, [datePeriod]);
+
+  // استخدام hook المستحقات المدفوعة مع النطاق الزمني
+  const { getTotalSettledDues } = useSettledDues(dateRange);
 
   // حساب البيانات المالية باستخدام نفس منطق AccountingPage
   const unifiedFinancialData = useMemo(() => {
@@ -190,14 +187,8 @@ const UnifiedProfitDisplay = ({
       .filter(p => deliveredOrders.some(o => o.id === p.order_id))
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
-    // المستحقات المدفوعة - نفس منطق متابعة الموظفين (من المصاريف المحاسبية)
-    const totalSettledDues = expensesInRange
-      .filter(expense => 
-        expense.category === 'مستحقات الموظفين' && 
-        expense.expense_type === 'system' && 
-        expense.status === 'approved'
-      )
-      .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+    // المستحقات المدفوعة - من الـ hook الموحد
+    const totalSettledDues = getTotalSettledDues();
     
     console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
       totalRevenue,
@@ -222,7 +213,7 @@ const UnifiedProfitDisplay = ({
       totalEmployeeProfits,
       totalSettledDues
     };
-  }, [orders, accounting, allProfits, dateRange, currentUser, settlementInvoices]);
+  }, [orders, accounting, allProfits, dateRange, currentUser, getTotalSettledDues]);
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {

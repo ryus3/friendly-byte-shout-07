@@ -33,7 +33,7 @@ import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
 import ProfitDetailsMobile from '@/components/profits/ProfitDetailsMobile';
 import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
 import ExpensesDialog from '@/components/accounting/ExpensesDialog';
-import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
+import SettledDuesUnified from '@/components/shared/SettledDuesUnified';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
@@ -569,11 +569,10 @@ const ProfitsSummaryPage = () => {
             addExpense={addExpense}
             deleteExpense={deleteExpense}
           />
-          <UnifiedSettledDuesDialog
+          <SettledDuesUnified
             open={dialogs.settledDues}
             onOpenChange={(open) => setDialogs(d => ({...d, settledDues: open}))}
-            invoices={settlementInvoices}
-            allUsers={allUsers}
+            title="المستحقات المدفوعة - ملخص الأرباح"
           />
         </>
       )}

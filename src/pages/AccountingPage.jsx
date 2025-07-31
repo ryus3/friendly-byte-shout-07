@@ -17,7 +17,7 @@ import MiniChart from '@/components/dashboard/MiniChart';
 import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import { useNavigate } from 'react-router-dom';
 import ExpensesDialog from '@/components/accounting/ExpensesDialog';
-import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
+import SettledDuesUnified from '@/components/shared/SettledDuesUnified';
 import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
@@ -648,11 +648,10 @@ const AccountingPage = () => {
                 currentCapital={initialCapital}
                 onSave={(newCapital) => setInitialCapital(newCapital)}
             />
-            <UnifiedSettledDuesDialog
+            <SettledDuesUnified
                 open={dialogs.settledDues}
                 onOpenChange={(open) => setDialogs(d => ({...d, settledDues: open}))}
-                invoices={settlementInvoices}
-                allUsers={allUsers}
+                title="المستحقات المدفوعة - المركز المالي"
             />
             <PendingDuesDialog
                 open={dialogs.pendingDues}
