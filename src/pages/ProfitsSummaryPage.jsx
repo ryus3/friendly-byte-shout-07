@@ -35,6 +35,7 @@ import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialo
 import ExpensesDialog from '@/components/accounting/ExpensesDialog';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
+import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
@@ -56,7 +57,7 @@ const ProfitsSummaryPage = () => {
   const [dateRange, setDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false, managerProfits: false });
+  const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -454,14 +455,16 @@ const ProfitsSummaryPage = () => {
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
         </div>
 
-        <ProfitStats 
-            profitData={profitData}
-            canViewAll={canViewAll}
-            onFilterChange={handleFilterChange}
-            onExpensesClick={() => setDialogs(d => ({...d, expenses: true}))}
-            onSettledDuesClick={() => setDialogs(d => ({...d, settledDues: true}))}
-            onManagerProfitsClick={() => setDialogs(d => ({...d, managerProfits: true}))}
-        />
+        {/* استبدال ProfitStats بعرض مخصص يشمل ManagerProfitsCard */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+          <ManagerProfitsCard 
+            orders={orders || []}
+            allUsers={allUsers || []}
+            calculateProfit={calculateProfit}
+            profits={profits || []}
+          />
+          {/* يمكن إضافة كارتات أخرى هنا */}
+        </div>
 
         <Card>
           <CardHeader>
@@ -576,16 +579,6 @@ const ProfitsSummaryPage = () => {
             onOpenChange={(open) => setDialogs(d => ({...d, settledDues: open}))}
             invoices={settlementInvoices}
             allUsers={allUsers}
-          />
-          <ManagerProfitsDialog
-            isOpen={dialogs.managerProfits}
-            onClose={() => setDialogs(d => ({...d, managerProfits: false}))}
-            orders={orders || []} 
-            employees={employees || allUsers || []}
-            calculateProfit={calculateProfit}
-            profits={profits || []}
-            managerId={user?.id}
-            stats={profitData} // تمرير بيانات الأرباح المحسوبة
           />
         </>
       )}

@@ -285,6 +285,7 @@ const UnifiedProfitDisplay = ({
             colors: ['green-500', 'emerald-500'],
             format: 'currency'
           },
+          // سيتم استبدالها بـ ManagerProfitsCard في الصفحات
           {
             key: 'manager-profit-from-employees',
             title: 'أرباحي من الموظفين',
@@ -292,7 +293,7 @@ const UnifiedProfitDisplay = ({
             icon: Users,
             colors: ['indigo-500', 'violet-500'],
             format: 'currency',
-            onClick: onManagerProfitsClick // استخدام النافذة المخصصة
+            onClick: onManagerProfitsClick // مؤقت حتى يتم الاستبدال الكامل
           },
           {
             key: 'total-expenses',

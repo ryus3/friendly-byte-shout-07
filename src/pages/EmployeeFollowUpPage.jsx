@@ -17,6 +17,7 @@ import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loa
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
+import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 
@@ -68,7 +69,6 @@ const EmployeeFollowUpPage = () => {
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
-  const [isManagerProfitsDialogOpen, setIsManagerProfitsDialogOpen] = useState(false);
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
@@ -813,13 +813,11 @@ const EmployeeFollowUpPage = () => {
             colors={['purple-500', 'violet-500']} 
             format="currency" 
           />
-          <StatCard 
-            title="أرباحي من الموظفين" 
-            value={stats.totalManagerProfits} 
-            icon={Users} 
-            colors={['green-500', 'emerald-500']} 
-            format="currency" 
-            onClick={() => setIsManagerProfitsDialogOpen(true)}
+          <ManagerProfitsCard 
+            orders={filteredOrders || orders || []}
+            allUsers={allUsers || []}
+            calculateProfit={calculateProfit}
+            profits={profits || []}
           />
           <StatCard 
             title="مستحقات معلقة" 
@@ -913,16 +911,6 @@ const EmployeeFollowUpPage = () => {
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
         />
 
-        <ManagerProfitsDialog
-          isOpen={isManagerProfitsDialogOpen}
-          onClose={() => setIsManagerProfitsDialogOpen(false)}
-          orders={filteredOrders || orders || []} 
-          employees={employees || allUsers || []}
-          calculateProfit={calculateProfit} // استخدام calculateProfit للموظفين
-          profits={profits || []}
-          managerId={null}
-          stats={stats} // تمرير الإحصائيات المحسوبة مباشرة
-        />
       </motion.div>
     </>
   );
