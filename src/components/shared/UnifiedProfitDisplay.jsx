@@ -190,13 +190,14 @@ const UnifiedProfitDisplay = ({
       .filter(p => deliveredOrders.some(o => o.id === p.order_id))
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
-    // حساب المستحقات المدفوعة من فواتير التسوية
-    const totalSettledDues = settlementInvoices
-      .filter(invoice => {
-        const invoiceDate = parseISO(invoice.settlement_date || invoice.created_at);
-        return isValid(invoiceDate) && invoiceDate >= dateRange.from && invoiceDate <= dateRange.to;
-      })
-      .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+    // المستحقات المدفوعة - نفس منطق متابعة الموظفين (من المصاريف المحاسبية)
+    const totalSettledDues = expensesInRange
+      .filter(expense => 
+        expense.category === 'مستحقات الموظفين' && 
+        expense.expense_type === 'system' && 
+        expense.status === 'approved'
+      )
+      .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
     
     console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
       totalRevenue,
