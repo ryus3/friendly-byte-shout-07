@@ -121,11 +121,12 @@ const ManagerProfitsDialog = ({
     }
   }, [selectedPeriod]);
 
-  // حساب الأرباح المفصلة - استخدام البيانات المحاسبية الموجودة
+  // حساب الأرباح المفصلة - فقط للطلبات التي أنشأها الموظفون
   const detailedProfits = useMemo(() => {
-    console.log('🚀 بدء معالجة detailedProfits من جدول profits المحاسبي:', {
+    console.log('🚀 بدء معالجة detailedProfits لأرباح المدير من الموظفين فقط:', {
       profitsCount: profits?.length || 0,
       employeesCount: employees?.length || 0,
+      managerId,
       selectedPeriod,
       selectedEmployee,
       searchTerm,
@@ -137,8 +138,40 @@ const ManagerProfitsDialog = ({
       return [];
     }
 
-    // المعالجة من جدول profits مباشرة
-    const processed = profits
+    if (!managerId) {
+      console.log('❌ detailedProfits: لا يوجد معرف المدير');
+      return [];
+    }
+
+    // فلترة الأرباح للطلبات التي أنشأها الموظفون فقط (ليس المدير)
+    const employeeProfits = profits.filter(profit => {
+      // العثور على الطلب المرتبط
+      const relatedOrder = orders?.find(order => order.id === profit.order_id);
+      
+      // تجاهل الأرباح إذا كان الطلب أنشأه المدير نفسه أو لا يوجد منشئ
+      const isManagerOrder = !relatedOrder?.created_by || relatedOrder.created_by === managerId;
+      
+      console.log(`🔍 فحص ربح ${profit.id}:`, {
+        profit_id: profit.id,
+        order_id: profit.order_id,
+        order_created_by: relatedOrder?.created_by,
+        managerId,
+        isManagerOrder,
+        employee_id: profit.employee_id,
+        order_number: relatedOrder?.order_number
+      });
+      
+      return !isManagerOrder; // عرض فقط طلبات الموظفين
+    });
+
+    console.log('✅ أرباح الموظفين بعد الفلترة:', {
+      originalCount: profits.length,
+      employeeProfitsCount: employeeProfits.length,
+      filteredOut: profits.length - employeeProfits.length
+    });
+
+    // المعالجة من أرباح الموظفين المفلترة
+    const processed = employeeProfits
       .filter(profit => {
         if (!profit || !profit.id) {
           console.log('❌ ربح فارغ أو بدون ID تم تجاهله');
@@ -159,15 +192,16 @@ const ManagerProfitsDialog = ({
         
         // فلترة البحث (عبر رقم الطلب أو اسم الموظف)
         const employee = employees.find(emp => emp.user_id === profit.employee_id);
+        const relatedOrder = orders?.find(order => order.id === profit.order_id);
         const matchesSearch = !searchTerm || 
-          profit.order_id?.toString().includes(searchTerm) ||
+          relatedOrder?.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           employee?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
         
         const finalResult = withinPeriod && matchesEmployee && matchesSearch;
         
-        console.log(`🔍 فحص الربح ${profit.id}:`, {
+        console.log(`🔍 فحص فلترة الربح ${profit.id}:`, {
           profitId: profit.id,
-          order_id: profit.order_id,
+          order_number: relatedOrder?.order_number,
           employee_id: profit.employee_id,
           employee_name: employee?.full_name,
           selectedEmployee,
