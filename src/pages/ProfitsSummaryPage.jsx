@@ -455,15 +455,26 @@ const ProfitsSummaryPage = () => {
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
         </div>
 
-        {/* استبدال ProfitStats بعرض مخصص يشمل ManagerProfitsCard */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-          <ManagerProfitsCard 
-            orders={orders || []}
-            allUsers={allUsers || []}
-            calculateProfit={calculateProfit}
-            profits={profits || []}
+        {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}
+        <div className="space-y-6">
+          {/* الكروت الأساسية من ProfitStats */}
+          <ProfitStats
+            profitData={profitData}
+            canViewAll={canViewAll}
+            onFilterChange={handleFilterChange}
+            onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
+            onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
           />
-          {/* يمكن إضافة كارتات أخرى هنا */}
+
+          {/* كارت أرباح المدير من الموظفين - منفصل ومدمج */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            <ManagerProfitsCard 
+              orders={orders || []}
+              allUsers={allUsers || []}
+              calculateProfit={calculateProfit}
+              profits={profits || []}
+            />
+          </div>
         </div>
 
         <Card>

@@ -275,45 +275,35 @@ const UnifiedProfitDisplay = ({
           }
         );
       } else {
-        // في لوحة التحكم: عرض شامل
-        cards.push(
-          {
-            key: 'net-profit',
-            title: 'صافي الربح',
-            value: unifiedFinancialData.netProfit,
-            icon: User,
-            colors: ['green-500', 'emerald-500'],
-            format: 'currency'
-          },
-          // سيتم استبدالها بـ ManagerProfitsCard في الصفحات
-          {
-            key: 'manager-profit-from-employees',
-            title: 'أرباحي من الموظفين',
-            value: unifiedFinancialData.managerProfitFromEmployees,
-            icon: Users,
-            colors: ['indigo-500', 'violet-500'],
-            format: 'currency',
-            onClick: onManagerProfitsClick // مؤقت حتى يتم الاستبدال الكامل
-          },
-          {
-            key: 'total-expenses',
-            title: 'المصاريف العامة',
-            value: unifiedFinancialData.generalExpenses,
-            icon: TrendingDown,
-            colors: ['red-500', 'orange-500'],
-            format: 'currency',
-            onClick: onExpensesClick
-          },
-          {
-            key: 'total-settled-dues',
-            title: 'المستحقات المدفوعة',
-            value: unifiedFinancialData.totalSettledDues || profitData.totalSettledDues || 0,
-            icon: PackageCheck,
-            colors: ['purple-500', 'violet-500'],
-            format: 'currency',
-            onClick: onSettledDuesClick
-          }
-        );
+          // في لوحة التحكم: عرض شامل (بدون كارت أرباح المدير من الموظفين - سيكون منفصل)
+          cards.push(
+            {
+              key: 'net-profit',
+              title: 'صافي الربح',
+              value: unifiedFinancialData.netProfit,
+              icon: User,
+              colors: ['green-500', 'emerald-500'],
+              format: 'currency'
+            },
+            {
+              key: 'total-expenses',
+              title: 'المصاريف العامة',
+              value: unifiedFinancialData.generalExpenses,
+              icon: TrendingDown,
+              colors: ['red-500', 'orange-500'],
+              format: 'currency',
+              onClick: onExpensesClick
+            },
+            {
+              key: 'total-settled-dues',
+              title: 'المستحقات المدفوعة',
+              value: unifiedFinancialData.totalSettledDues || profitData.totalSettledDues || 0,
+              icon: PackageCheck,
+              colors: ['purple-500', 'violet-500'],
+              format: 'currency',
+              onClick: onSettledDuesClick
+            }
+          );
       }
     } else {
       // للموظف: البيانات الشخصية فقط
