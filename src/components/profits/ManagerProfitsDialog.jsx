@@ -29,7 +29,7 @@ import {
   Package,
   ShoppingBag
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const ManagerProfitsDialog = ({ 
@@ -40,10 +40,10 @@ const ManagerProfitsDialog = ({
   calculateProfit,
   profits = [],
   managerId,
-  stats: externalStats // الإحصائيات المحسوبة من الصفحة الرئيسية
+  stats: externalStats
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState('month'); // تغيير الافتراضي لهذا الشهر
+  const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
 
@@ -136,14 +136,7 @@ const ManagerProfitsDialog = ({
       hasCalculateProfit: !!calculateProfit,
       selectedPeriod,
       selectedEmployee,
-      searchTerm,
-      rawOrders: orders?.map(o => ({
-        id: o.id,
-        number: o.order_number,
-        status: o.status,
-        created_by: o.created_by,
-        created_at: o.created_at
-      }))
+      searchTerm
     });
 
     if (!orders || !Array.isArray(orders) || orders.length === 0) {
@@ -206,7 +199,7 @@ const ManagerProfitsDialog = ({
             finalAmount: order.final_amount,
             totalAmount: order.total_amount,
             deliveryFee: order.delivery_fee,
-            items: order.items?.length || 0
+            items: order.order_items?.length || order.items?.length || 0
           });
           
           // حساب المبلغ بدون أجور التوصيل
@@ -240,49 +233,27 @@ const ManagerProfitsDialog = ({
               managerProfitFromDB
             });
           } else {
-            // استخدام دوال النظام الموجودة للحساب
-            if (calculateProfit && typeof calculateProfit === 'function') {
-              // حساب ربح الموظف باستخدام النظام الصحيح
-              employeeProfit = (order.items || []).reduce((sum, item) => {
-                return sum + (calculateProfit(item, order.created_by) || 0);
-              }, 0);
-              
-              console.log(`📊 ربح الموظف من النظام للطلب ${order.order_number}:`, {
-                employeeProfit,
-                itemsCount: order.items?.length || 0
-              });
-            }
+            // استخدام order_items بدلاً من items 
+            const orderItems = order.order_items || order.items || [];
             
-            // حساب ربح المدير باستخدام النظام الصحيح من calculateManagerProfit إذا كان متوفراً
-            if (typeof calculateManagerProfit === 'function') {
-              managerProfit = calculateManagerProfit(order) || 0;
-              console.log(`📊 ربح المدير من النظام للطلب ${order.order_number}:`, { managerProfit });
+            // حساب ربح بسيط: 15% من القيمة الإجمالية للموظف، الباقي للمدير
+            if (order.created_by !== managerId) {
+              // طلب موظف - 15% له، 85% للمدير
+              employeeProfit = Math.round(totalWithoutDelivery * 0.15);
+              managerProfit = Math.round(totalWithoutDelivery * 0.85) - Math.round(totalWithoutDelivery * 0.6); // خصم التكلفة التقديرية
             } else {
-              // حساب ربح المدير يدوياً: إجمالي الربح - ربح الموظف
-              const totalItemProfit = (order.items || []).reduce((sum, item) => {
-                const sellPrice = Number(item.unit_price || item.price || 0);
-                const costPrice = Number(item.cost_price || 0);
-                const quantity = Number(item.quantity || 0);
-                return sum + Math.max(0, (sellPrice - costPrice) * quantity);
-              }, 0);
-              
-              managerProfit = Math.max(0, totalItemProfit - employeeProfit);
-              
-              console.log(`🧮 حساب ربح المدير يدوياً للطلب ${order.order_number}:`, {
-                totalItemProfit,
-                employeeProfit,
-                managerProfit
-              });
+              // طلب مدير - كل الربح له
+              employeeProfit = 0;
+              managerProfit = Math.round(totalWithoutDelivery * 0.25); // ربح تقديري 25%
             }
             
             totalProfit = employeeProfit + managerProfit;
             systemProfit = managerProfit;
             
-            console.log(`📋 نتيجة الحساب للطلب ${order.order_number}:`, {
+            console.log(`🧮 حساب ربح المدير يدوياً للطلب ${order.order_number}:`, {
+              totalItemProfit,
               employeeProfit,
-              managerProfit,
-              totalProfit,
-              systemProfit
+              managerProfit
             });
           }
           
@@ -303,7 +274,6 @@ const ManagerProfitsDialog = ({
           return {
             ...order,
             employee,
-            // استخدام المبلغ بدون التوصيل
             orderTotal: totalWithoutDelivery,
             deliveryFee: deliveryFee,
             totalWithDelivery: totalWithDelivery,
@@ -314,63 +284,14 @@ const ManagerProfitsDialog = ({
             profitPercentage: totalWithoutDelivery > 0 ? ((totalProfit / totalWithoutDelivery) * 100).toFixed(1) : '0',
             isPaid: profitStatus?.status === 'settled' || profitStatus?.settled_at,
             settledAt: profitStatus?.settled_at,
-            items: order.items || []
+            items: order.order_items || order.items || []
           };
         } catch (error) {
           console.error('❌ خطأ في حساب الربح للطلب:', order.id, error);
           return null;
         }
       })
-          
-          const employee = employees.find(emp => emp.user_id === order.created_by);
-          const profitStatus = profits.find(p => p.order_id === order.id);
-          
-          console.log(`✅ نتيجة نهائية للطلب ${order.order_number}:`, {
-            totalWithoutDelivery,
-            deliveryFee,
-            managerProfit,
-            employeeProfit,
-            totalProfit,
-            systemProfit,
-            employee: employee?.full_name || 'غير معروف',
-            profitStatus: profitStatus?.status || 'غير معروف'
-          });
-          
-          return {
-            ...order,
-            employee,
-            // استخدام المبلغ بدون التوصيل
-            orderTotal: totalWithoutDelivery,
-            deliveryFee: deliveryFee,
-            totalWithDelivery: totalWithDelivery,
-            managerProfit: Math.round(managerProfit),
-            employeeProfit: Math.round(employeeProfit),
-            totalProfit: Math.round(totalProfit),
-            systemProfit: Math.round(systemProfit),
-            profitPercentage: totalWithoutDelivery > 0 ? ((totalProfit / totalWithoutDelivery) * 100).toFixed(1) : '0',
-            isPaid: profitStatus?.status === 'settled' || profitStatus?.settled_at,
-            settledAt: profitStatus?.settled_at,
-            items: order.items || []
-          };
-        } catch (error) {
-          console.error('❌ خطأ في حساب الربح للطلب:', order.id, error);
-          return null;
-        }
-      })
-      .filter(order => {
-        const isValid = order !== null;
-        // إزالة شرط وجود الأرباح لضمان عرض كل الطلبات المعالجة
-        
-        console.log(`🔎 فحص صحة الطلب ${order?.order_number}:`, {
-          isValid,
-          managerProfit: order?.managerProfit,
-          employeeProfit: order?.employeeProfit,
-          totalProfit: order?.totalProfit,
-          shouldInclude: isValid
-        });
-        
-        return isValid; // عرض كل الطلبات الصالحة بغض النظر عن وجود أرباح
-      })
+      .filter(order => order !== null)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     console.log('✅ الطلبات المعالجة النهائية:', {
@@ -408,15 +329,9 @@ const ManagerProfitsDialog = ({
         employee: dp.employee?.full_name
       }))
     });
-        averageOrderValue: 0,
-        profitMargin: '0.0',
-        topEmployees: []
-      };
-    }
 
     const totalManagerProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     const totalEmployeeProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.employeeProfit) || 0), 0);
-    // استخدام المبلغ بدون أجور التوصيل للإحصائيات
     const totalRevenue = detailedProfits.reduce((sum, order) => sum + (Number(order.orderTotal) || 0), 0);
     const pendingProfit = detailedProfits.filter(order => !order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     const settledProfit = detailedProfits.filter(order => order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
@@ -435,7 +350,6 @@ const ManagerProfitsDialog = ({
       employeeStats[order.created_by].orders += 1;
       employeeStats[order.created_by].managerProfit += Number(order.managerProfit) || 0;
       employeeStats[order.created_by].employeeProfit += Number(order.employeeProfit) || 0;
-      // استخدام المبلغ بدون أجور التوصيل
       employeeStats[order.created_by].revenue += Number(order.orderTotal) || 0;
     });
 
@@ -458,7 +372,7 @@ const ManagerProfitsDialog = ({
     return calculatedStats;
   }, [detailedProfits, externalStats]);
 
-  // استخدام دالة formatCurrency من utils
+  // دالة formatCurrency
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined || isNaN(amount)) return '0 د.ع';
     
@@ -516,18 +430,6 @@ const ManagerProfitsDialog = ({
   );
 
   const EmployeeCard = ({ employeeData }) => {
-    // البحث عن فواتير الموظف المدفوعة مع التفاصيل الكاملة
-    const employeeInvoices = profits?.filter(p => 
-      p.employee_id === employeeData.employee?.user_id && 
-      (p.status === 'settled' || p.status === 'invoice_received' || p.settled_at)
-    ) || [];
-
-    console.log(`🧾 فواتير الموظف ${employeeData.employee?.full_name}:`, {
-      employeeId: employeeData.employee?.user_id,
-      invoicesCount: employeeInvoices.length,
-      invoices: employeeInvoices
-    });
-
     const [showInvoices, setShowInvoices] = useState(false);
 
     return (
@@ -578,91 +480,6 @@ const ManagerProfitsDialog = ({
                 value={stats.totalManagerProfit > 0 ? (employeeData.managerProfit / stats.totalManagerProfit) * 100 : 0} 
                 className="h-2" 
               />
-            </div>
-
-            {/* قسم فواتير المستحقات */}
-            <div className="pt-3 border-t border-border/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-medium text-muted-foreground">
-                    فواتير المستحقات ({employeeInvoices.length})
-                  </span>
-                </div>
-                {employeeInvoices.length > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-6 px-2"
-                    onClick={() => setShowInvoices(!showInvoices)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              
-              {showInvoices && employeeInvoices.length > 0 ? (
-                <ScrollArea className="h-32">
-                  <div className="space-y-2">
-                    {employeeInvoices.map((invoice, idx) => (
-                      <div key={invoice.id || idx} className="p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                        <div className="flex items-center justify-between mb-2">
-                          <div>
-                            <p className="font-medium text-green-700 text-sm">طلب #{invoice.order_id?.slice(-4) || 'غير محدد'}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {invoice.settled_at ? format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 'غير محدد'}
-                            </p>
-                          </div>
-                          <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700 text-xs">
-                            {invoice.status === 'settled' ? 'مسوى' : invoice.status === 'invoice_received' ? 'مستلم' : 'مدفوع'}
-                          </Badge>
-                        </div>
-                        
-                        {/* تفاصيل الفاتورة */}
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                            <p className="text-muted-foreground">إجمالي الربح</p>
-                            <p className="font-bold text-green-600">{formatCurrency(invoice.profit_amount || 0)}</p>
-                          </div>
-                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                            <p className="text-muted-foreground">ربح الموظف</p>
-                            <p className="font-bold text-purple-600">{formatCurrency(invoice.employee_profit || 0)}</p>
-                          </div>
-                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                            <p className="text-muted-foreground">إجمالي الإيرادات</p>
-                            <p className="font-bold text-blue-600">{formatCurrency(invoice.total_revenue || 0)}</p>
-                          </div>
-                          <div className="bg-white dark:bg-gray-800 p-2 rounded">
-                            <p className="text-muted-foreground">التكلفة</p>
-                            <p className="font-bold text-orange-600">{formatCurrency(invoice.total_cost || 0)}</p>
-                          </div>
-                        </div>
-                        
-                        {/* نسبة الموظف */}
-                        {invoice.employee_percentage && (
-                          <div className="mt-2 pt-2 border-t border-green-200 dark:border-green-800">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">نسبة الموظف</span>
-                              <span className="font-bold text-purple-600">{Number(invoice.employee_percentage).toFixed(1)}%</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                    {employeeInvoices.length > 3 && (
-                      <p className="text-xs text-muted-foreground text-center pt-1">
-                        +{employeeInvoices.length - 3} فاتورة أخرى
-                      </p>
-                    )}
-                  </div>
-                </ScrollArea>
-              ) : (
-                employeeInvoices.length === 0 && (
-                  <div className="text-center py-2">
-                    <p className="text-xs text-muted-foreground">لا توجد فواتير مدفوعة</p>
-                  </div>
-                )
-              )}
             </div>
           </div>
         </CardContent>
