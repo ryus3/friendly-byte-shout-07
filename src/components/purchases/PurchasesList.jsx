@@ -45,7 +45,10 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
             <TableRow key={purchase.id}>
               <TableCell className="font-mono text-xs">{purchase.purchase_number || purchase.id}</TableCell>
               <TableCell className="font-semibold">{purchase.supplier_name || purchase.supplier || 'غير محدد'}</TableCell>
-              <TableCell>{format(new Date(purchase.purchase_date || purchase.created_at), 'd MMM yyyy', { locale: ar })}</TableCell>
+              <TableCell>{(purchase.purchase_date || purchase.created_at) && !isNaN(new Date(purchase.purchase_date || purchase.created_at).getTime()) ? 
+                format(new Date(purchase.purchase_date || purchase.created_at), 'd MMM yyyy', { locale: ar }) : 
+                'غير محدد'
+              }</TableCell>
               <TableCell>
                 <Badge variant="secondary">{purchase.items?.length || 0}</Badge>
               </TableCell>

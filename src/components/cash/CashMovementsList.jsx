@@ -196,7 +196,10 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
                         <div className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
                           <span>
-                            {format(new Date(movement.created_at), 'dd/MM/yyyy HH:mm', { locale: ar })}
+                            {movement.created_at && !isNaN(new Date(movement.created_at).getTime()) ? 
+                              format(new Date(movement.created_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 
+                              'غير محدد'
+                            }
                           </span>
                         </div>
                         

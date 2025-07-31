@@ -82,7 +82,9 @@ const ProfitsManagementPage = () => {
   };
 
   const formatDate = (dateString) => {
-    return format(new Date(dateString), 'dd/MM/yyyy', { locale: ar });
+    return dateString && !isNaN(new Date(dateString).getTime()) ? 
+      format(new Date(dateString), 'dd/MM/yyyy', { locale: ar }) : 
+      'غير محدد';
   };
 
   const formatCurrency = (amount) => {

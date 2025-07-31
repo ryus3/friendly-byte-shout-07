@@ -139,7 +139,10 @@ const SettledDuesUnified = ({
                         
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="h-4 w-4" />
-                          {format(new Date(expense.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar })}
+                          {expense.created_at && !isNaN(new Date(expense.created_at).getTime()) ? 
+                            format(new Date(expense.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) : 
+                            'غير محدد'
+                          }
                         </div>
                         
                         {invoiceNumber && (
@@ -193,7 +196,10 @@ const SettledDuesUnified = ({
                 
                 <div>
                   <label className="text-sm font-medium">التاريخ</label>
-                  <div>{format(new Date(selectedExpense.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar })}</div>
+                  <div>{selectedExpense.created_at && !isNaN(new Date(selectedExpense.created_at).getTime()) ? 
+                    format(new Date(selectedExpense.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) : 
+                    'غير محدد'
+                  }</div>
                 </div>
                 
                 {selectedExpense.receipt_number && (

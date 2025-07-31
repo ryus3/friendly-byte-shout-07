@@ -442,7 +442,10 @@ const ManagerProfitsDialog = ({
                           <div>
                             <p className="font-medium text-green-700 text-sm">طلب #{invoice.order_id?.slice(-4) || 'غير محدد'}</p>
                             <p className="text-xs text-muted-foreground">
-                              {invoice.settled_at ? format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 'غير محدد'}
+                              {invoice.settled_at && !isNaN(new Date(invoice.settled_at).getTime()) ? 
+                                format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 
+                                'غير محدد'
+                              }
                             </p>
                           </div>
                           <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700 text-xs">
@@ -557,7 +560,10 @@ const ManagerProfitsDialog = ({
         {/* Employee & Date - مضغوط */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="truncate">{order.employee?.full_name || order.employeeName || 'موظف غير محدد'}</span>
-          <span>{format(new Date(order.created_at), 'dd/MM', { locale: ar })}</span>
+          <span>{order.created_at && !isNaN(new Date(order.created_at).getTime()) ? 
+            format(new Date(order.created_at), 'dd/MM', { locale: ar }) : 
+            'غير محدد'
+          }</span>
         </div>
       </CardContent>
     </Card>
