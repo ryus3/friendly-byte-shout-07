@@ -34,7 +34,6 @@ const UnifiedProfitDisplay = ({
   onFilterChange = () => {},
   onExpensesClick = () => {},
   onSettledDuesClick = () => {},
-  onManagerProfitsClick = () => {}, // إضافة handler لنافذة أرباح المدير من الموظفين
   className = '',
   datePeriod = 'month' // إضافة فترة التاريخ
 }) => {
@@ -100,7 +99,7 @@ const UnifiedProfitDisplay = ({
     return { from, to };
   }, [datePeriod]);
 
-  // حساب البيانات المالية باستخدام نفس منطق EmployeeFollowUpPage
+  // حساب البيانات المالية باستخدام نفس منطق AccountingPage
   const unifiedFinancialData = useMemo(() => {
     if (!orders || !Array.isArray(orders)) {
       return {
@@ -123,67 +122,20 @@ const UnifiedProfitDisplay = ({
       }
     };
     
-    // معرف المدير الرئيسي - تصفية طلباته
-    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
-
-    // الطلبات المفلترة (نفس منطق EmployeeFollowUpPage)
-    const filteredOrders = safeOrders.filter(order => {
-      if (!order) return false;
-      
-      // استبعاد طلبات المدير الرئيسي
-      if (order.created_by === ADMIN_ID) return false;
-      
-      // فلترة التاريخ
-      const orderDate = order.created_at ? parseISO(order.created_at) : null;
-      if (!filterByDate(order.created_at)) return false;
-      
-      return true;
-    });
-
-    // الطلبات المسلمة فقط
-    const deliveredOrders = filteredOrders.filter(order => 
-      (order.status === 'delivered' || order.status === 'completed') && 
-      order.receipt_received === true
+    // الطلبات المُستلمة الفواتير فقط
+    const deliveredOrders = safeOrders.filter(o => 
+      o && (o.status === 'delivered' || o.status === 'completed') && 
+      o.receipt_received === true && 
+      filterByDate(o.updated_at || o.created_at)
     );
     
-    // حساب إجمالي المبيعات (نفس منطق EmployeeFollowUpPage)
-    const totalSales = deliveredOrders.reduce((sum, order) => {
-      return sum + (order.final_amount || order.total_amount || 0);
-    }, 0);
-
-    // حساب أرباح المدير من الموظفين (نفس منطق EmployeeFollowUpPage)
-    const managerProfitFromEmployees = deliveredOrders.reduce((sum, order) => {
-      // البحث عن سجل الربح
-      const profitRecord = allProfits?.find(p => p.order_id === order.id);
-      
-      if (profitRecord) {
-        // ربح النظام = إجمالي الربح - ربح الموظف
-        const systemProfit = (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0);
-        return sum + systemProfit;
-      }
-      return sum;
-    }, 0);
-
-    // المصاريف العامة (نفس منطق EmployeeFollowUpPage)
     const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
-    const generalExpenses = expensesInRange.filter(e => {
-      if (e.expense_type === 'system') return false;
-      if (e.category === 'مستحقات الموظفين') return false;
-      if (e.related_data?.category === 'شراء بضاعة') return false;
-      if (e.related_data?.type === 'employee_settlement') return false;
-      if (e.related_data?.type === 'purchase') return false;
-      return true;
-    }).reduce((sum, e) => sum + (e.amount || 0), 0);
-
-    // المستحقات المدفوعة (نفس منطق EmployeeFollowUpPage)
-    const totalSettledDues = expensesInRange
-      .filter(expense => 
-        expense.category === 'مستحقات الموظفين' && 
-        expense.expense_type === 'system' && 
-        expense.status === 'approved'
-      )
-      .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
-
+    
+    // حساب إجمالي الإيرادات
+    const totalRevenue = deliveredOrders.reduce((sum, o) => {
+      return sum + (o.final_amount || o.total_amount || 0);
+    }, 0);
+    
     // حساب تكلفة البضاعة المباعة
     const cogs = deliveredOrders.reduce((sum, o) => {
       if (!o.order_items || !Array.isArray(o.order_items)) return sum;
@@ -195,38 +147,78 @@ const UnifiedProfitDisplay = ({
       }, 0);
       return sum + orderCogs;
     }, 0);
-
+    
     const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-    const salesWithoutDelivery = totalSales - deliveryFees;
+    const salesWithoutDelivery = totalRevenue - deliveryFees;
     const grossProfit = salesWithoutDelivery - cogs;
     
+    // حساب ربح النظام (نفس منطق AccountingPage)
+    const managerOrdersInRange = deliveredOrders.filter(o => !o.created_by || o.created_by === currentUser?.id);
+    const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== currentUser?.id);
+    
+    const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
+      const orderProfit = (order.items || []).reduce((itemSum, item) => {
+        const sellPrice = item.unit_price || item.price || 0;
+        const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+        return itemSum + ((sellPrice - costPrice) * item.quantity);
+      }, 0);
+      return sum + orderProfit;
+    }, 0);
+    
+    // حساب ربح النظام من طلبات الموظفين
+    const employeeSystemProfit = employeeOrdersInRange.reduce((sum, order) => {
+      return sum + getSystemProfitFromOrder(order.id, allProfits);
+    }, 0);
+    
+    const systemProfit = managerTotalProfit + employeeSystemProfit;
+    
+    // المصاريف العامة (استبعاد المصاريف النظامية ومستحقات الموظفين)
+    const generalExpenses = expensesInRange.filter(e => {
+      if (e.expense_type === 'system') return false;
+      if (e.category === 'مستحقات الموظفين') return false;
+      if (e.related_data?.category === 'شراء بضاعة') return false;
+      if (e.related_data?.type === 'employee_settlement') return false;
+      if (e.related_data?.type === 'purchase') return false;
+      return true;
+    }).reduce((sum, e) => sum + (e.amount || 0), 0);
+    
     // صافي الربح = ربح النظام - المصاريف العامة
-    const netProfit = managerProfitFromEmployees - generalExpenses;
-
+    const netProfit = systemProfit - generalExpenses;
+    
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits
       .filter(p => deliveredOrders.some(o => o.id === p.order_id))
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
-
-    console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة (نفس منطق EmployeeFollowUpPage):', {
-      filteredOrdersCount: filteredOrders.length,
-      deliveredOrdersCount: deliveredOrders.length,
-      totalSales,
-      managerProfitFromEmployees,
+    
+    // المستحقات المدفوعة - نفس منطق متابعة الموظفين (من المصاريف المحاسبية)
+    const totalSettledDues = expensesInRange
+      .filter(expense => 
+        expense.category === 'مستحقات الموظفين' && 
+        expense.expense_type === 'system' && 
+        expense.status === 'approved'
+      )
+      .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
+    
+    console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
+      totalRevenue,
+      cogs,
+      grossProfit,
+      systemProfit,
       generalExpenses,
       netProfit,
       totalEmployeeProfits,
-      totalSettledDues
+      deliveredOrdersCount: deliveredOrders.length,
+      expensesCount: expensesInRange.length
     });
     
     return {
-      totalRevenue: totalSales,
+      totalRevenue,
       cogs,
       grossProfit,
-      systemProfit: managerProfitFromEmployees,
+      systemProfit,
       generalExpenses,
       netProfit,
-      managerProfitFromEmployees, // هذا هو الرقم الصحيح
+      managerProfitFromEmployees: systemProfit,
       totalEmployeeProfits,
       totalSettledDues
     };
@@ -299,7 +291,7 @@ const UnifiedProfitDisplay = ({
             icon: Users,
             colors: ['indigo-500', 'violet-500'],
             format: 'currency',
-            onClick: onManagerProfitsClick // استخدام الـ handler الجديد
+            onClick: () => onFilterChange('employeeId', 'employees')
           },
           {
             key: 'total-expenses',
