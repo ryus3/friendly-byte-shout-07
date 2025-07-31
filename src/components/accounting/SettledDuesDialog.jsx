@@ -893,7 +893,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   </div>
                 </CardContent>
               </Card>
-          </div>
+            </div>
+          </ScrollArea>
 
           <DialogFooter>
             <Button onClick={() => onOpenChange(false)} variant="outline">
