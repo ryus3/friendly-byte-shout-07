@@ -470,10 +470,14 @@ const EmployeeFollowUpPage = () => {
       return sum + totalWithoutDelivery;
     }, 0);
     
-    // أرباح المدير من الموظفين
+    // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
     const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
-      if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
-        return sum + (calculateManagerProfit(order) || 0);
+      // البحث عن سجل الربح الحقيقي
+      const profitRecord = profits?.find(p => p.order_id === order.id);
+      if (profitRecord) {
+        // ربح النظام = إجمالي الربح - ربح الموظف
+        const systemProfit = (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0);
+        return sum + systemProfit;
       }
       return sum;
     }, 0);
