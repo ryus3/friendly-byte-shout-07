@@ -29,9 +29,45 @@ import {
   Package,
   ShoppingBag
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { ar } from 'date-fns/locale';
 import { formatCurrency } from '@/lib/utils';
+
+// دالة آمنة لتنسيق التاريخ
+const safeFormatDate = (dateValue, formatString = 'dd/MM/yyyy') => {
+  try {
+    if (!dateValue) return 'غير محدد';
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return 'تاريخ غير صالح';
+    
+    // تنسيق بسيط بدون استخدام date-fns للتجنب مشاكل التوافق
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    if (formatString.includes('HH:mm')) {
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+    return `${day}/${month}`;
+  } catch (error) {
+    console.warn('⚠️ خطأ في تنسيق التاريخ:', dateValue, error);
+    return 'تاريخ غير صالح';
+  }
+};
+
+// دالة آمنة لحساب بداية ونهاية الشهر
+const getSafeMonthRange = (date) => {
+  try {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const start = new Date(year, month, 1, 0, 0, 0, 0);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    return { start, end };
+  } catch (error) {
+    console.error('❌ خطأ في حساب نطاق الشهر:', error);
+    return null;
+  }
+};
 
 const ManagerProfitsDialog = ({ 
   isOpen, 
@@ -93,38 +129,66 @@ const ManagerProfitsDialog = ({
     console.log('✅ ManagerProfitsDialog: دالة حساب الأرباح متوفرة');
   }
 
-  // فلترة البيانات حسب الفترة - إصلاح الحسابات
+  // فلترة البيانات حسب الفترة - إصلاح حساب التواريخ مع معالجة الأخطاء
   const dateRange = useMemo(() => {
-    const today = new Date();
-    
-    switch (selectedPeriod) {
-      case 'today': {
-        const start = new Date(today);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(today);
-        end.setHours(23, 59, 59, 999);
-        return { start, end };
+    try {
+      const today = new Date();
+      
+      // التحقق من صحة التاريخ الحالي
+      if (!today || isNaN(today.getTime())) {
+        console.error('❌ تاريخ اليوم غير صالح');
+        return { start: null, end: null };
       }
-      case 'week': {
-        const start = new Date(today);
-        start.setDate(today.getDate() - today.getDay());
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setDate(start.getDate() + 6);
-        end.setHours(23, 59, 59, 999);
-        return { start, end };
+      
+      switch (selectedPeriod) {
+        case 'today': {
+          const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0);
+          const end = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
+          return { start, end };
+        }
+        case 'week': {
+          const currentDay = today.getDay();
+          const weekStart = new Date(today);
+          weekStart.setDate(today.getDate() - currentDay);
+          weekStart.setHours(0, 0, 0, 0);
+          
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekStart.getDate() + 6);
+          weekEnd.setHours(23, 59, 59, 999);
+          
+          return { start: weekStart, end: weekEnd };
+        }
+        case 'month': {
+          const monthRange = getSafeMonthRange(today);
+          if (monthRange) {
+            return monthRange;
+          }
+          // fallback في حالة الخطأ
+          const start = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+          const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+          return { start, end };
+        }
+        case 'year': {
+          const start = new Date(today.getFullYear(), 0, 1, 0, 0, 0, 0);
+          const end = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+          return { start, end };
+        }
+        default: {
+          // الافتراضي: هذا الشهر مع حساب آمن
+          const monthRange = getSafeMonthRange(today);
+          if (monthRange) {
+            return monthRange;
+          }
+          // fallback نهائي
+          const start = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0, 0);
+          const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+          return { start, end };
+        }
       }
-      case 'month': {
-        return { start: startOfMonth(today), end: endOfMonth(today) };
-      }
-      case 'year': {
-        const start = new Date(today.getFullYear(), 0, 1);
-        const end = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
-        return { start, end };
-      }
-      default: {
-        return { start: startOfMonth(today), end: endOfMonth(today) };
-      }
+    } catch (error) {
+      console.error('❌ خطأ في حساب نطاق التواريخ:', error);
+      // إرجاع null في حالة الخطأ لتجنب معالجة تواريخ غير صالحة
+      return { start: null, end: null };
     }
   }, [selectedPeriod]);
 
@@ -161,12 +225,18 @@ const ManagerProfitsDialog = ({
           return false;
         }
         
-        // فلترة التاريخ - تفعيل الفلترة بطريقة صحيحة
+        // فلترة التاريخ مع معالجة آمنة للتواريخ
         let withinPeriod = true;
         if (order.created_at && dateRange.start && dateRange.end) {
-          const orderDate = new Date(order.created_at);
-          if (!isNaN(orderDate.getTime())) {
-            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+          try {
+            const orderDate = new Date(order.created_at);
+            // التحقق من صحة تاريخ الطلب وتواريخ النطاق
+            if (!isNaN(orderDate.getTime()) && !isNaN(dateRange.start.getTime()) && !isNaN(dateRange.end.getTime())) {
+              withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+            }
+          } catch (error) {
+            console.warn('⚠️ خطأ في معالجة تاريخ الطلب:', order.created_at, error);
+            withinPeriod = true; // اقبل الطلب في حالة خطأ التاريخ
           }
         }
         
@@ -619,7 +689,7 @@ const ManagerProfitsDialog = ({
                           <div>
                             <p className="font-medium text-green-700 text-sm">طلب #{invoice.order_id?.slice(-4) || 'غير محدد'}</p>
                             <p className="text-xs text-muted-foreground">
-                              {invoice.settled_at ? format(new Date(invoice.settled_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : 'غير محدد'}
+                              {safeFormatDate(invoice.settled_at, 'dd/MM/yyyy HH:mm')}
                             </p>
                           </div>
                           <Badge variant="outline" className="bg-green-100 border-green-300 text-green-700 text-xs">
@@ -734,7 +804,7 @@ const ManagerProfitsDialog = ({
         {/* Employee & Date - مضغوط */}
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="truncate">{order.employee?.full_name || order.employeeName || 'موظف غير محدد'}</span>
-          <span>{format(new Date(order.created_at), 'dd/MM', { locale: ar })}</span>
+          <span>{safeFormatDate(order.created_at, 'dd/MM')}</span>
         </div>
       </CardContent>
     </Card>
