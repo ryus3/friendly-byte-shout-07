@@ -244,68 +244,88 @@ const UnifiedSettledDuesCard = ({
         </DialogContent>
       </Dialog>
 
-      {/* نافذة معاينة الفاتورة */}
+      {/* نافذة معاينة الفاتورة - بالتصميم الأصلي الجميل */}
       {selectedInvoice && (
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
             <ScrollArea className="h-full max-h-[85vh]">
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl font-bold">فاتورة تسوية</h2>
-                  <p className="text-muted-foreground">تفاصيل المستحقات المدفوعة</p>
+              <div className="p-8">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <div className="flex items-center justify-center gap-4 mb-6">
+                    <div className="p-3 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full text-white shadow-lg">
+                      <Receipt className="w-10 h-10" />
+                    </div>
+                    <div>
+                      <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">فاتورة تسوية</h1>
+                      <p className="text-lg text-slate-600 dark:text-slate-400">مستحقات الموظف</p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <Card>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold mb-3">معلومات الفاتورة</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>رقم الفاتورة:</span>
-                          <span className="font-mono">{selectedInvoice.invoice_number}</span>
+                {/* معلومات الفاتورة */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                  {/* معلومات الموظف */}
+                  <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-background border-border">
+                    <CardContent className="relative p-5">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 group-hover:scale-110 transition-all duration-300">
+                          <User className="w-6 h-6 text-primary" />
                         </div>
-                        <div className="flex justify-between">
-                          <span>اسم الموظف:</span>
-                          <span>{selectedInvoice.employee_name}</span>
+                        <h3 className="font-bold text-lg text-foreground">معلومات الموظف والفاتورة</h3>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-3">
+                          <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-300 relative overflow-hidden">
+                            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                            <p className="text-xs opacity-90 font-medium mb-1.5">اسم الموظف</p>
+                            <p className="font-bold text-base">{selectedInvoice.employee_name}</p>
+                          </div>
+                          <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-emerald-600 hover:to-green-700 transition-all duration-300 relative overflow-hidden">
+                            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                            <p className="text-xs opacity-90 font-medium mb-1.5">معرف الموظف</p>
+                            <p className="font-mono font-bold text-sm">{selectedInvoice.employee_code || 'غير محدد'}</p>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span>المبلغ:</span>
-                          <span className="font-bold text-emerald-600">
-                            {selectedInvoice.total_amount?.toLocaleString()} د.ع
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>طريقة الدفع:</span>
-                          <span>{selectedInvoice.payment_method === 'cash' ? 'نقدي' : selectedInvoice.payment_method}</span>
+                        <div className="space-y-3">
+                          <div className="bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-purple-600 hover:to-violet-700 transition-all duration-300 relative overflow-hidden">
+                            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                            <p className="text-xs opacity-90 font-medium mb-1.5">رقم الفاتورة</p>
+                            <p className="font-mono font-bold text-sm">{selectedInvoice.invoice_number}</p>
+                          </div>
+                          <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-orange-600 hover:to-amber-700 transition-all duration-300 relative overflow-hidden">
+                            <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                            <p className="text-xs opacity-90 font-medium mb-1.5">طريقة الدفع</p>
+                            <p className="font-bold text-sm">{selectedInvoice.payment_method === 'cash' ? 'نقدي' : selectedInvoice.payment_method}</p>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="p-4">
-                      <h3 className="font-bold mb-3">التفاصيل الإضافية</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span>تاريخ التسوية:</span>
-                          <span>
-                            {selectedInvoice.settlement_date ? 
-                              format(parseISO(selectedInvoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
-                              'غير محدد'
-                            }
-                          </span>
+                  {/* المبلغ المدفوع */}
+                  <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl group cursor-pointer">
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 opacity-90"></div>
+                    <div className="absolute inset-0 bg-black/10"></div>
+                    <CardContent className="relative p-5 text-white text-center">
+                      <div className="flex items-center justify-center gap-3 mb-4">
+                        <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 group-hover:scale-110 transition-all duration-300">
+                          <DollarSign className="w-8 h-8 drop-shadow-lg" />
                         </div>
-                        <div className="flex justify-between">
-                          <span>الحالة:</span>
-                          <Badge className="bg-emerald-500 text-white">مكتملة</Badge>
-                        </div>
-                        {selectedInvoice.notes && (
-                          <div>
-                            <span>الملاحظات:</span>
-                            <p className="text-sm text-muted-foreground mt-1">{selectedInvoice.notes}</p>
-                          </div>
-                        )}
+                        <h3 className="text-lg font-bold drop-shadow-lg">المبلغ المدفوع</h3>
                       </div>
+                      <p className="text-4xl font-black mb-3 drop-shadow-2xl">
+                        {selectedInvoice.total_amount?.toLocaleString()}
+                      </p>
+                      <p className="text-base font-bold opacity-90 mb-4 drop-shadow-lg">دينار عراقي</p>
+                      <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/20">
+                        <div className="flex items-center justify-center gap-2 text-sm font-bold">
+                          <CheckCircle className="w-5 h-5" />
+                          <span>تم الدفع بنجاح</span>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                      <div className="absolute -top-3 -left-3 w-12 h-12 bg-white/5 rounded-full"></div>
                     </CardContent>
                   </Card>
                 </div>
