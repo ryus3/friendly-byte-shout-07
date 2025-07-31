@@ -93,225 +93,207 @@ const ManagerProfitsDialog = ({
     console.log('✅ ManagerProfitsDialog: دالة حساب الأرباح متوفرة');
   }
 
-  // فلترة البيانات حسب الفترة
+  // فلترة البيانات حسب الفترة - إصلاح الفلترة
   const dateRange = useMemo(() => {
     const now = new Date();
+    let start, end;
+    
     switch (selectedPeriod) {
       case 'today':
-        return { start: new Date(now.setHours(0, 0, 0, 0)), end: new Date(now.setHours(23, 59, 59, 999)) };
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        break;
       case 'week':
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
-        return { start: weekStart, end: weekEnd };
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        start = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate(), 0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        break;
       case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
       case 'year':
-        return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
+        start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        break;
+      case 'all':
+        start = new Date(2020, 0, 1); // تاريخ بعيد في الماضي
+        end = new Date(2030, 11, 31); // تاريخ بعيد في المستقبل
+        break;
       default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
+        start = startOfMonth(now);
+        end = endOfMonth(now);
+        break;
     }
+    
+    console.log(`📅 فلترة التاريخ للفترة ${selectedPeriod}:`, { start, end });
+    return { start, end };
   }, [selectedPeriod]);
 
-  // حساب الأرباح المفصلة
+  // حساب الأرباح المفصلة - استخدام البيانات الحقيقية من profits و settlement_invoices
   const detailedProfits = useMemo(() => {
-    console.log('🚀 بدء معالجة detailedProfits - البيانات الخام:', {
-      ordersCount: orders?.length || 0,
-      employeesCount: employees?.length || 0,
+    console.log('🚀 بدء معالجة detailedProfits من البيانات الحقيقية:', {
       profitsCount: profits?.length || 0,
-      hasCalculateProfit: !!calculateProfit,
       selectedPeriod,
       selectedEmployee,
       searchTerm,
-      rawOrders: orders?.map(o => ({
-        id: o.id,
-        number: o.order_number,
-        status: o.status,
-        created_by: o.created_by,
-        created_at: o.created_at
+      dateRange,
+      profits: profits?.map(p => ({
+        id: p.id,
+        order_id: p.order_id,
+        employee_id: p.employee_id,
+        status: p.status,
+        settled_at: p.settled_at,
+        profit_amount: p.profit_amount,
+        employee_profit: p.employee_profit
       }))
     });
 
-    if (!orders || !Array.isArray(orders) || orders.length === 0) {
-      console.log('❌ detailedProfits: لا توجد طلبات');
+    // استخدام البيانات الحقيقية من جدول profits مباشرة
+    if (!profits || !Array.isArray(profits) || profits.length === 0) {
+      console.log('❌ detailedProfits: لا توجد أرباح مسددة');
       return [];
     }
 
-    console.log('🔄 معالجة الطلبات مع فلترة مبسطة:');
+    console.log('🔄 معالجة الأرباح من جدول profits:');
 
-    const processed = orders
-      .filter(order => {
-        if (!order || !order.id) {
-          console.log('❌ طلب فارغ أو بدون ID تم تجاهله');
+    const processed = profits
+      .filter(profit => {
+        if (!profit || !profit.id) {
+          console.log('❌ ربح فارغ أو بدون ID تم تجاهله');
           return false;
         }
         
-        // فلترة التاريخ - تفعيل الفلترة
+        // فلترة التاريخ باستخدام settled_at بدلاً من created_at
         let withinPeriod = true;
-        if (order.created_at && dateRange.start && dateRange.end) {
-          const orderDate = new Date(order.created_at);
-          if (!isNaN(orderDate.getTime())) {
-            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+        if (profit.settled_at && dateRange.start && dateRange.end) {
+          const settledDate = new Date(profit.settled_at);
+          if (!isNaN(settledDate.getTime())) {
+            withinPeriod = settledDate >= dateRange.start && settledDate <= dateRange.end;
           }
         }
         
-        // فلترة الحالة - أكثر مرونة
-        const isValidStatus = ['delivered', 'completed', 'pending', 'processing'].includes(order.status);
+        // فلترة الحالة - فقط المسددة
+        const isSettled = profit.status === 'settled' && profit.settled_at;
         
         // فلترة الموظف
-        const matchesEmployee = selectedEmployee === 'all' || order.created_by === selectedEmployee;
+        const matchesEmployee = selectedEmployee === 'all' || profit.employee_id === selectedEmployee;
         
-        // فلترة البحث
-        const matchesSearch = !searchTerm || 
-          order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        // فلترة البحث (ستطبق على رقم الطلب لاحقاً)
         
-        const finalResult = withinPeriod && isValidStatus && matchesEmployee && matchesSearch;
+        const finalResult = withinPeriod && isSettled && matchesEmployee;
         
-        console.log(`🔍 فحص الطلب ${order.order_number || order.id} - تفصيلي:`, {
-          orderId: order.id,
-          orderNumber: order.order_number,
-          status: order.status,
-          created_by: order.created_by,
+        console.log(`🔍 فحص الربح ${profit.id} - تفصيلي:`, {
+          profitId: profit.id,
+          orderId: profit.order_id,
+          employeeId: profit.employee_id,
+          status: profit.status,
+          settled_at: profit.settled_at,
           selectedEmployee,
-          searchTerm,
           withinPeriod,
-          isValidStatus,
+          isSettled,
           matchesEmployee,
-          matchesSearch,
           finalResult,
-          orderDate: order.created_at,
+          settledDate: profit.settled_at,
           dateRange: { start: dateRange.start, end: dateRange.end }
         });
         
         return finalResult;
       })
-      .map(order => {
+      .map(profit => {
         try {
-          console.log(`💰 حساب ربح مفصل للطلب ${order.order_number}:`, {
-            orderId: order.id,
-            finalAmount: order.final_amount,
-            totalAmount: order.total_amount,
-            deliveryFee: order.delivery_fee,
-            items: order.items?.length || 0
+          console.log(`💰 معالجة ربح مسدد:`, {
+            profitId: profit.id,
+            orderId: profit.order_id,
+            employeeId: profit.employee_id,
+            profitAmount: profit.profit_amount,
+            employeeProfit: profit.employee_profit,
+            settledAt: profit.settled_at
           });
           
-          // حساب المبلغ بدون أجور التوصيل
-          const totalWithDelivery = Number(order.final_amount || order.total_amount || 0);
-          const deliveryFee = Number(order.delivery_fee || 0);
-          const totalWithoutDelivery = Math.max(0, totalWithDelivery - deliveryFee);
+          // حساب ربح النظام (المدير) = إجمالي الربح - ربح الموظف
+          const totalProfit = Number(profit.profit_amount || 0);
+          const employeeProfit = Number(profit.employee_profit || 0);
+          const systemProfit = totalProfit - employeeProfit;
+          const managerProfit = systemProfit;
           
-          console.log(`📊 تفاصيل المبالغ للطلب ${order.order_number}:`, {
-            totalWithDelivery,
-            deliveryFee,
-            totalWithoutDelivery
-          });
+          // العثور على بيانات الموظف
+          const employee = employees.find(emp => emp.user_id === profit.employee_id);
           
-          // حساب الربح بأولوية البيانات الحقيقية من جدول profits
-          let managerProfit = 0;
-          let employeeProfit = 0;
-          let totalProfit = 0;
-          let systemProfit = 0;
-
-          // البحث عن بيانات الربح الحقيقية من جدول profits أولاً
-          const profitRecord = profits?.find(p => p.order_id === order.id);
+          // العثور على بيانات الطلب للحصول على رقم الطلب والتفاصيل
+          const relatedOrder = orders?.find(o => o.id === profit.order_id);
           
-          if (profitRecord) {
-            // استخدام البيانات الحقيقية من قاعدة البيانات
-            totalProfit = Number(profitRecord.profit_amount || 0);
-            employeeProfit = Number(profitRecord.employee_profit || 0); 
-            systemProfit = totalProfit - employeeProfit; // ربح النظام = الإجمالي - ربح الموظف
-            managerProfit = systemProfit;
-            
-            console.log(`💎 استخدام بيانات الربح الحقيقية للطلب ${order.order_number}:`, {
-              totalProfit,
-              employeeProfit,
-              systemProfit,
-              managerProfit
-            });
-          } else if (calculateProfit && typeof calculateProfit === 'function') {
-            // البديل: استخدام دالة حساب الأرباح
-            try {
-              const profitCalc = calculateProfit(order.id) || calculateProfit(order);
-              if (profitCalc && typeof profitCalc === 'object') {
-                systemProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
-                employeeProfit = Number(profitCalc.employeeProfit || 0);
-                totalProfit = systemProfit + employeeProfit;
-                managerProfit = systemProfit;
-              } else if (typeof profitCalc === 'number') {
-                totalProfit = Number(profitCalc || 0);
-                systemProfit = totalProfit * 0.7;
-                employeeProfit = totalProfit * 0.3;
-                managerProfit = systemProfit;
-              }
-              
-              console.log(`📋 استخدام دالة حساب الأرباح للطلب ${order.order_number}:`, {
-                totalProfit,
-                employeeProfit,
-                systemProfit
-              });
-            } catch (error) {
-              console.error(`❌ خطأ في دالة حساب الربح للطلب ${order.order_number}:`, error);
+          // فلترة البحث على رقم الطلب
+          if (searchTerm && relatedOrder) {
+            const matchesSearch = relatedOrder.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                relatedOrder.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+            if (!matchesSearch) {
+              return null; // تجاهل إذا لم يطابق البحث
             }
           }
           
-          const employee = employees.find(emp => emp.user_id === order.created_by);
-          const profitStatus = profits.find(p => p.order_id === order.id);
-          
-          console.log(`✅ نتيجة نهائية للطلب ${order.order_number}:`, {
-            totalWithoutDelivery,
-            deliveryFee,
-            managerProfit,
-            employeeProfit,
+          console.log(`✅ ربح مسدد نهائي:`, {
+            profitId: profit.id,
+            orderNumber: relatedOrder?.order_number || 'غير معروف',
             totalProfit,
+            employeeProfit,
             systemProfit,
-            employee: employee?.full_name || 'غير معروف',
-            profitStatus: profitStatus?.status || 'غير معروف'
+            managerProfit,
+            employee: employee?.full_name || 'غير معروف'
           });
           
           return {
-            ...order,
+            id: profit.id,
+            order_id: profit.order_id,
+            order_number: relatedOrder?.order_number || `طلب-${profit.order_id?.slice(-4)}`,
+            customer_name: relatedOrder?.customer_name || 'غير محدد',
+            created_at: profit.settled_at, // استخدام تاريخ التسديد
+            created_by: profit.employee_id,
             employee,
-            // استخدام المبلغ بدون التوصيل
-            orderTotal: totalWithoutDelivery,
-            deliveryFee: deliveryFee,
-            totalWithDelivery: totalWithDelivery,
+            // القيم المالية
+            orderTotal: Number(profit.total_revenue || 0),
+            deliveryFee: relatedOrder?.delivery_fee || 0,
+            totalWithDelivery: Number(profit.total_revenue || 0) + (relatedOrder?.delivery_fee || 0),
             managerProfit: Math.round(managerProfit),
             employeeProfit: Math.round(employeeProfit),
             totalProfit: Math.round(totalProfit),
             systemProfit: Math.round(systemProfit),
-            profitPercentage: totalWithoutDelivery > 0 ? ((totalProfit / totalWithoutDelivery) * 100).toFixed(1) : '0',
-            isPaid: profitStatus?.status === 'settled' || profitStatus?.settled_at,
-            settledAt: profitStatus?.settled_at,
-            items: order.items || []
+            profitPercentage: profit.total_revenue > 0 ? ((totalProfit / profit.total_revenue) * 100).toFixed(1) : '0',
+            isPaid: true, // دائماً مسدد
+            settledAt: profit.settled_at,
+            status: 'completed',
+            items: relatedOrder?.items || []
           };
         } catch (error) {
-          console.error('❌ خطأ في حساب الربح للطلب:', order.id, error);
+          console.error('❌ خطأ في معالجة الربح:', profit.id, error);
           return null;
         }
       })
-      .filter(order => {
-        const isValid = order !== null;
-        // إزالة شرط وجود الأرباح لضمان عرض كل الطلبات المعالجة
+      .filter(profit => {
+        const isValid = profit !== null;
         
-        console.log(`🔎 فحص صحة الطلب ${order?.order_number}:`, {
+        console.log(`🔎 فحص صحة الربح ${profit?.order_number}:`, {
           isValid,
-          managerProfit: order?.managerProfit,
-          employeeProfit: order?.employeeProfit,
-          totalProfit: order?.totalProfit,
-          shouldInclude: isValid
+          managerProfit: profit?.managerProfit,
+          employeeProfit: profit?.employeeProfit,
+          totalProfit: profit?.totalProfit
         });
         
-        return isValid; // عرض كل الطلبات الصالحة بغض النظر عن وجود أرباح
+        return isValid;
       })
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    console.log('✅ الطلبات المعالجة النهائية:', {
+    console.log('✅ الأرباح المسددة المعالجة النهائية:', {
       processedCount: processed.length,
-      totalManagerProfit: processed.reduce((sum, order) => sum + order.managerProfit, 0)
+      totalManagerProfit: processed.reduce((sum, profit) => sum + (profit.managerProfit || 0), 0),
+      sampleData: processed.slice(0, 2)
     });
 
     return processed;
-  }, [orders, dateRange, selectedEmployee, searchTerm, calculateProfit, employees, profits]);
+  }, [profits, dateRange, selectedEmployee, searchTerm, employees, orders]);
 
   // إحصائيات شاملة - استخدم الإحصائيات الخارجية إذا كانت متوفرة
   const stats = useMemo(() => {
@@ -703,12 +685,13 @@ const ManagerProfitsDialog = ({
                       <SelectTrigger className="bg-background/80 border-border/50 hover:border-primary/50 transition-colors">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="today">اليوم</SelectItem>
-                        <SelectItem value="week">هذا الأسبوع</SelectItem>
-                        <SelectItem value="month">هذا الشهر</SelectItem>
-                        <SelectItem value="year">هذا العام</SelectItem>
-                      </SelectContent>
+                       <SelectContent>
+                         <SelectItem value="all">كل الفترات</SelectItem>
+                         <SelectItem value="today">اليوم</SelectItem>
+                         <SelectItem value="week">هذا الأسبوع</SelectItem>
+                         <SelectItem value="month">هذا الشهر</SelectItem>
+                         <SelectItem value="year">هذا العام</SelectItem>
+                       </SelectContent>
                     </Select>
                   </div>
 
