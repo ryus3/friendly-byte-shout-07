@@ -903,7 +903,7 @@ const EmployeeFollowUpPage = () => {
         <UnifiedSettledDuesDialog
           open={isDuesDialogOpen}
           onOpenChange={setIsDuesDialogOpen}
-          invoices={expenses || []} // تمرير المصاريف بدلاً من settlementInvoices
+          invoices={settlementInvoices || []} // ✅ توحيد استخدام settlementInvoices
           allUsers={allUsers}
           profits={profits || []} // تمرير بيانات الأرباح
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
