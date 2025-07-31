@@ -40,6 +40,7 @@ const UnifiedProfitDisplay = ({
   const { orders, accounting } = useInventory();
   const { user: currentUser } = useAuth();
   const [allProfits, setAllProfits] = useState([]);
+  const [settledDuesTotal, setSettledDuesTotal] = useState(0);
 
   // جلب بيانات الأرباح من قاعدة البيانات
   useEffect(() => {
@@ -60,6 +61,33 @@ const UnifiedProfitDisplay = ({
     
     fetchProfits();
   }, []);
+
+  // جلب المستحقات المدفوعة من قاعدة البيانات
+  useEffect(() => {
+    const fetchSettledDues = async () => {
+      try {
+        const { data: settlementsData } = await supabase
+          .from('settlement_invoices')
+          .select('total_amount, settlement_date');
+        
+        if (settlementsData) {
+          const totalSettled = settlementsData
+            .filter(s => {
+              if (!dateRange.from || !dateRange.to) return true;
+              const settlementDate = new Date(s.settlement_date);
+              return settlementDate >= dateRange.from && settlementDate <= dateRange.to;
+            })
+            .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+          
+          setSettledDuesTotal(totalSettled);
+        }
+      } catch (error) {
+        console.error('خطأ في جلب المستحقات المدفوعة:', error);
+      }
+    };
+    
+    fetchSettledDues();
+  }, [dateRange]);
 
   // حساب النطاق الزمني بناءً على datePeriod
   const dateRange = useMemo(() => {
@@ -287,7 +315,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-settled-dues',
             title: 'المستحقات المدفوعة',
-            value: profitData.totalSettledDues || 0,
+            value: settledDuesTotal,
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',
