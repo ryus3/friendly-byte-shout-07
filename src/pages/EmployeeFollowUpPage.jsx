@@ -436,8 +436,14 @@ const EmployeeFollowUpPage = () => {
     return filtered;
   }, [orders, filters, usersMap, profits]);
 
-  // الإحصائيات
+  // الإحصائيات المحسنة
   const stats = useMemo(() => {
+    console.log('🔢 بدء حساب الإحصائيات:', {
+      filteredOrdersCount: filteredOrders?.length || 0,
+      profitsCount: profits?.length || 0,
+      expensesCount: expenses?.length || 0
+    });
+
     if (!filteredOrders || !Array.isArray(filteredOrders)) {
       return {
         totalOrders: 0,
@@ -470,13 +476,53 @@ const EmployeeFollowUpPage = () => {
       return sum + totalWithoutDelivery;
     }, 0);
     
-    // أرباح المدير من الموظفين
-    const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
-      if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
-        return sum + (calculateManagerProfit(order) || 0);
-      }
-      return sum;
-    }, 0);
+    // أرباح المدير من الموظفين - حساب محسن
+    const totalManagerProfits = deliveredOrders
+      .filter(order => order.receipt_received === true) // فقط الطلبات المستلمة فواتيرها
+      .reduce((sum, order) => {
+        // البحث عن سجل الربح الحقيقي أولاً
+        const profitRecord = profits?.find(p => p.order_id === order.id);
+        
+        if (profitRecord) {
+          // استخدام البيانات الحقيقية من جدول profits
+          const totalProfit = Number(profitRecord.profit_amount || 0);
+          const employeeProfit = Number(profitRecord.employee_profit || 0);
+          const managerProfit = Math.max(0, totalProfit - employeeProfit);
+          
+          console.log(`💰 ربح المدير للطلب ${order.order_number}:`, {
+            totalProfit,
+            employeeProfit,
+            managerProfit,
+            source: 'database'
+          });
+          
+          return sum + managerProfit;
+        } else if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
+          // استخدام دالة الحساب كبديل
+          const calculatedProfit = calculateManagerProfit(order) || 0;
+          
+          console.log(`💰 ربح المدير المحسوب للطلب ${order.order_number}:`, {
+            calculatedProfit,
+            source: 'function'
+          });
+          
+          return sum + calculatedProfit;
+        } else {
+          // حساب يدوي من بنود الطلب
+          const orderTotal = (order.final_amount || order.total_amount || 0) - (order.delivery_fee || 0);
+          const estimatedProfit = orderTotal * 0.15; // نسبة ربح تقديرية 15%
+          const managerShare = estimatedProfit * 0.7; // 70% للمدير
+          
+          console.log(`💰 ربح المدير التقديري للطلب ${order.order_number}:`, {
+            orderTotal,
+            estimatedProfit,
+            managerShare,
+            source: 'estimated'
+          });
+          
+          return sum + managerShare;
+        }
+      }, 0);
 
     // المستحقات المدفوعة (من المصاريف المحاسبية)
     const paidDues = expenses && Array.isArray(expenses)
@@ -497,12 +543,25 @@ const EmployeeFollowUpPage = () => {
         
         if (profitRecord && !profitRecord.settled_at) {
           // إذا كان هناك سجل ربح غير مُسوى
-          employeeProfit = profitRecord.employee_profit || 0;
+          employeeProfit = Number(profitRecord.employee_profit || 0);
+          
+          console.log(`🔄 مستحقات معلقة للطلب ${order.order_number}:`, {
+            employeeProfit,
+            settled_at: profitRecord.settled_at,
+            source: 'database_pending'
+          });
         } else if (!profitRecord) {
-          // إذا لم يكن هناك سجل ربح، احسب الربح
-          employeeProfit = (order.items || []).reduce((itemSum, item) => {
-            return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
-          }, 0);
+          // حساب تقديري لربح الموظف
+          const orderTotal = (order.final_amount || order.total_amount || 0) - (order.delivery_fee || 0);
+          const estimatedProfit = orderTotal * 0.15; // نسبة ربح تقديرية 15%
+          employeeProfit = estimatedProfit * 0.3; // 30% للموظف
+          
+          console.log(`🔄 مستحقات تقديرية للطلب ${order.order_number}:`, {
+            orderTotal,
+            estimatedProfit,
+            employeeProfit,
+            source: 'estimated_pending'
+          });
         }
         
         return sum + employeeProfit;

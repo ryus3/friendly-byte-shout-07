@@ -92,22 +92,38 @@ const ManagerProfitsDialog = ({
     console.log('✅ ManagerProfitsDialog: دالة حساب الأرباح متوفرة');
   }
 
-  // فلترة البيانات حسب الفترة
+  // فلترة البيانات حسب الفترة - استخدام JavaScript عادي
   const dateRange = useMemo(() => {
     const now = new Date();
+    
     switch (selectedPeriod) {
       case 'today':
-        return { start: new Date(now.setHours(0, 0, 0, 0)), end: new Date(now.setHours(23, 59, 59, 999)) };
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        return { start: todayStart, end: todayEnd };
+        
       case 'week':
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
+        const currentDay = now.getDay(); // 0 = أحد, 1 = اثنين...
+        const daysToStartOfWeek = currentDay === 0 ? 6 : currentDay - 1; // جعل الأسبوع يبدأ من الاثنين
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysToStartOfWeek, 0, 0, 0, 0);
+        const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6, 23, 59, 59, 999);
         return { start: weekStart, end: weekEnd };
+        
       case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return { start: monthStart, end: monthEnd };
+        
       case 'year':
-        return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
+        const yearStart = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+        const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        return { start: yearStart, end: yearEnd };
+        
       default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
+        // افتراضي: الشهر الحالي
+        const defaultStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        const defaultEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        return { start: defaultStart, end: defaultEnd };
     }
   }, [selectedPeriod]);
 
@@ -144,17 +160,20 @@ const ManagerProfitsDialog = ({
           return false;
         }
         
-        // فلترة التاريخ - مؤقتاً معطلة للاختبار
+        // فلترة التاريخ - مفعلة ومحسنة
         let withinPeriod = true;
-        // if (order.created_at && dateRange.start && dateRange.end) {
-        //   const orderDate = new Date(order.created_at);
-        //   if (!isNaN(orderDate.getTime())) {
-        //     withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
-        //   }
-        // }
+        if (order.created_at && dateRange.start && dateRange.end) {
+          const orderDate = new Date(order.created_at);
+          if (!isNaN(orderDate.getTime())) {
+            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+          } else {
+            console.warn(`⚠️ تاريخ غير صحيح للطلب ${order.order_number}:`, order.created_at);
+            withinPeriod = false;
+          }
+        }
         
-        // فلترة الحالة - أكثر مرونة
-        const isValidStatus = ['delivered', 'completed', 'pending', 'processing'].includes(order.status);
+        // فلترة الحالة - التركيز على الطلبات المكتملة والمستلمة
+        const isValidStatus = ['delivered', 'completed'].includes(order.status) && order.receipt_received === true;
         
         // فلترة الموظف
         const matchesEmployee = selectedEmployee === 'all' || order.created_by === selectedEmployee;
@@ -166,21 +185,17 @@ const ManagerProfitsDialog = ({
         
         const finalResult = withinPeriod && isValidStatus && matchesEmployee && matchesSearch;
         
-        console.log(`🔍 فحص الطلب ${order.order_number || order.id} - تفصيلي:`, {
-          orderId: order.id,
-          orderNumber: order.order_number,
-          status: order.status,
-          created_by: order.created_by,
-          selectedEmployee,
-          searchTerm,
-          withinPeriod,
-          isValidStatus,
-          matchesEmployee,
-          matchesSearch,
-          finalResult,
-          orderDate: order.created_at,
-          dateRange: { start: dateRange.start, end: dateRange.end }
-        });
+        if (order.order_number && finalResult) {
+          console.log(`✅ طلب مقبول ${order.order_number}:`, {
+            orderId: order.id,
+            status: order.status,
+            receipt_received: order.receipt_received,
+            created_by: order.created_by,
+            created_at: order.created_at,
+            withinPeriod,
+            selectedPeriod
+          });
+        }
         
         return finalResult;
       })
@@ -253,69 +268,56 @@ const ManagerProfitsDialog = ({
               orderItems: order.items
             });
             
-            // البحث عن بيانات الربح من جدول profits
+            // أولوية استخدام البيانات الحقيقية من جدول profits
             const profitRecord = profits?.find(p => p.order_id === order.id);
-            
-            console.log(`🔍 البحث عن ربح الطلب ${order.order_number}:`, {
-              orderId: order.id,
-              profitsArray: profits?.map(p => ({ order_id: p.order_id, profit_amount: p.profit_amount, employee_profit: p.employee_profit })),
-              profitRecord,
-              foundMatch: !!profitRecord
-            });
             
             if (profitRecord) {
               // استخدام البيانات الحقيقية من جدول profits
               const totalProfitFromDB = Number(profitRecord.profit_amount || 0);
               const employeeProfitFromDB = Number(profitRecord.employee_profit || 0); 
-              const managerProfitFromDB = totalProfitFromDB - employeeProfitFromDB; // ربح النظام = الإجمالي - ربح الموظف
+              const managerProfitFromDB = Math.max(0, totalProfitFromDB - employeeProfitFromDB);
               
               systemProfit = managerProfitFromDB;
               employeeProfit = employeeProfitFromDB; 
               totalProfit = totalProfitFromDB;
               managerProfit = managerProfitFromDB;
               
-              console.log(`💎 استخدام بيانات الربح الحقيقية من قاعدة البيانات:`, {
-                profitRecord,
+              console.log(`💎 بيانات ربح حقيقية للطلب ${order.order_number}:`, {
                 totalProfitFromDB,
                 employeeProfitFromDB,
-                managerProfitFromDB,
-                systemProfit,
-                employeeProfit,
-                totalProfit,
-                managerProfit
+                managerProfitFromDB
               });
-            } else if (calculateProfit && typeof calculateProfit === 'function') {
-              // محاولة استخدام دالة حساب الأرباح كبديل
-              try {
-                let profitCalc = calculateProfit(order.id) || calculateProfit(order);
-                if (profitCalc && typeof profitCalc === 'object') {
-                  systemProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
-                  employeeProfit = Number(profitCalc.employeeProfit || 0);
-                  totalProfit = systemProfit + employeeProfit;
-                  managerProfit = systemProfit;
-                  
-                  console.log(`📋 استخدام دالة حساب الأرباح:`, { profitCalc, systemProfit, employeeProfit });
-                }
-              } catch (calcError) {
-                console.log('خطأ في دالة حساب الأرباح:', calcError);
+            } else {
+              // حساب يدوي من بنود الطلب
+              let calculatedProfit = 0;
+              
+              if (order.order_items && Array.isArray(order.order_items)) {
+                calculatedProfit = order.order_items.reduce((sum, item) => {
+                  const sellPrice = Number(item.unit_price || 0);
+                  const costPrice = Number(item.product_variants?.cost_price || item.products?.cost_price || 0);
+                  const quantity = Number(item.quantity || 0);
+                  const itemProfit = (sellPrice - costPrice) * quantity;
+                  return sum + Math.max(0, itemProfit);
+                }, 0);
               }
-            }
-            
-            // إذا لم نحصل على أرباح حقيقية، استخدم حساب تقديري 
-            if (systemProfit === 0 && employeeProfit === 0 && totalProfit === 0) {
-              // حساب تقديري بناء على نسب واقعية
-              totalProfit = totalWithoutDelivery * 0.15; // افتراض 15% ربح إجمالي
-              systemProfit = totalProfit * 0.7; // 70% للنظام
-              employeeProfit = totalProfit * 0.3; // 30% للموظف 
+              
+              // إذا لم نجد بنود طلب، استخدم نسبة تقديرية
+              if (calculatedProfit === 0) {
+                calculatedProfit = totalWithoutDelivery * 0.15; // 15% نسبة ربح متوسطة
+              }
+              
+              // توزيع الربح (70% للنظام، 30% للموظف)
+              totalProfit = calculatedProfit;
+              systemProfit = calculatedProfit * 0.7;
+              employeeProfit = calculatedProfit * 0.3;
               managerProfit = systemProfit;
               
-              console.log(`🧮 حساب تقديري (لا توجد بيانات ربح حقيقية):`, {
-                totalWithoutDelivery,
+              console.log(`🧮 حساب ربح يدوي للطلب ${order.order_number}:`, {
+                calculatedProfit,
                 totalProfit,
                 systemProfit,
                 employeeProfit,
-                managerProfit,
-                profitPercentage: (totalProfit / totalWithoutDelivery * 100).toFixed(1)
+                itemsCount: order.order_items?.length || 0
               });
             }
           }
@@ -379,27 +381,10 @@ const ManagerProfitsDialog = ({
     return processed;
   }, [orders, dateRange, selectedEmployee, searchTerm, calculateProfit, employees, profits]);
 
-  // إحصائيات شاملة - استخدم الإحصائيات الخارجية إذا كانت متوفرة
+  // إحصائيات شاملة ومحسنة
   const stats = useMemo(() => {
-    // إذا كانت الإحصائيات متوفرة من الصفحة الرئيسية، استخدمها
-    if (externalStats && typeof externalStats === 'object') {
-      console.log('📊 استخدام الإحصائيات من الصفحة الرئيسية:', externalStats);
-      return {
-        totalManagerProfit: externalStats.totalManagerProfits || 0,
-        totalEmployeeProfit: 0, // سيتم حسابها من detailedProfits
-        totalRevenue: externalStats.totalSales || 0,
-        pendingProfit: externalStats.pendingDues || 0,
-        settledProfit: externalStats.paidDues || 0,
-        totalOrders: externalStats.totalOrders || 0,
-        averageOrderValue: externalStats.totalOrders > 0 ? (externalStats.totalSales / externalStats.totalOrders) : 0,
-        profitMargin: externalStats.totalSales > 0 ? ((externalStats.totalManagerProfits / externalStats.totalSales) * 100).toFixed(1) : '0.0',
-        topEmployees: [] // سيتم حسابها من detailedProfits
-      };
-    }
-
-    // إذا لم تكن متوفرة، احسبها من detailedProfits
-    if (!detailedProfits || !Array.isArray(detailedProfits)) {
-      console.log('❌ stats: لا توجد أرباح مفصلة ولا إحصائيات خارجية');
+    if (!detailedProfits || !Array.isArray(detailedProfits) || detailedProfits.length === 0) {
+      console.log('❌ لا توجد أرباح مفصلة للحساب');
       return {
         totalManagerProfit: 0,
         totalEmployeeProfit: 0,
@@ -407,6 +392,22 @@ const ManagerProfitsDialog = ({
         pendingProfit: 0,
         settledProfit: 0,
         totalOrders: 0,
+        averageOrderValue: 0,
+        profitMargin: '0.0',
+        topEmployees: []
+      };
+    }
+
+    console.log('🔢 بدء حساب الإحصائيات من الأرباح المفصلة:', {
+      detailedProfitsCount: detailedProfits.length,
+      sampleData: detailedProfits.slice(0, 3).map(dp => ({
+        order_number: dp.order_number,
+        managerProfit: dp.managerProfit,
+        employeeProfit: dp.employeeProfit,
+        orderTotal: dp.orderTotal,
+        employee: dp.employee?.full_name
+      }))
+    });
         averageOrderValue: 0,
         profitMargin: '0.0',
         topEmployees: []
@@ -457,8 +458,18 @@ const ManagerProfitsDialog = ({
     return calculatedStats;
   }, [detailedProfits, externalStats]);
 
+  // استخدام دالة formatCurrency من utils
   const formatCurrency = (amount) => {
-    return `${(Number(amount) || 0).toLocaleString()} د.ع`;
+    if (amount === null || amount === undefined || isNaN(amount)) return '0 د.ع';
+    
+    const number = Number(amount);
+    if (isNaN(number)) return '0 د.ع';
+    
+    return new Intl.NumberFormat('ar-IQ', {
+      style: 'decimal',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(number) + ' د.ع';
   };
 
   const StatCard = ({ title, value, icon: Icon, gradient, percentage }) => (
