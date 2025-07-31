@@ -470,22 +470,11 @@ const EmployeeFollowUpPage = () => {
       return sum + totalWithoutDelivery;
     }, 0);
     
-    // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
+    // أرباح المدير من الموظفين
     const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
-      // البحث عن سجل الربح من قاعدة البيانات أولاً
-      const profitRecord = profits?.find(p => p.order_id === order.id);
-      
-      if (profitRecord) {
-        // استخدام البيانات الحقيقية من قاعدة البيانات
-        const totalProfit = Number(profitRecord.profit_amount || 0);
-        const employeeProfit = Number(profitRecord.employee_profit || 0);
-        const managerProfit = totalProfit - employeeProfit;
-        return sum + managerProfit;
-      } else if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
-        // استخدام دالة الحساب كبديل
+      if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
         return sum + (calculateManagerProfit(order) || 0);
       }
-      
       return sum;
     }, 0);
 
@@ -502,20 +491,18 @@ const EmployeeFollowUpPage = () => {
     const pendingDues = deliveredOrders
       .filter(order => order.receipt_received === true)
       .reduce((sum, order) => {
-        // البحث عن سجل الربح من قاعدة البيانات
+        // البحث عن سجل الربح
         const profitRecord = profits?.find(p => p.order_id === order.id);
         let employeeProfit = 0;
         
-        if (profitRecord && profitRecord.status === 'pending') {
-          // إذا كان هناك سجل ربح معلق (لم يُسوى)
-          employeeProfit = Number(profitRecord.employee_profit || 0);
-        } else if (!profitRecord && calculateProfit) {
-          // إذا لم يكن هناك سجل ربح، احسب الربح تقديرياً
-          const totalWithDelivery = order.final_amount || order.total_amount || 0;
-          const deliveryFee = order.delivery_fee || 0;
-          const totalWithoutDelivery = Math.max(0, totalWithDelivery - deliveryFee);
-          // افتراض 30% للموظف من 15% ربح إجمالي
-          employeeProfit = totalWithoutDelivery * 0.15 * 0.3;
+        if (profitRecord && !profitRecord.settled_at) {
+          // إذا كان هناك سجل ربح غير مُسوى
+          employeeProfit = profitRecord.employee_profit || 0;
+        } else if (!profitRecord) {
+          // إذا لم يكن هناك سجل ربح، احسب الربح
+          employeeProfit = (order.items || []).reduce((itemSum, item) => {
+            return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
+          }, 0);
         }
         
         return sum + employeeProfit;
