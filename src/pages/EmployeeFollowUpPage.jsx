@@ -470,16 +470,8 @@ const EmployeeFollowUpPage = () => {
       return sum + totalWithoutDelivery;
     }, 0);
     
-    // أرباح المدير من الموظفين - حساب محسن
+    // أرباح المدير من الموظفين
     const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
-      // البحث عن سجل الربح الحقيقي أولاً
-      const profitRecord = profits?.find(p => p.order_id === order.id);
-      if (profitRecord) {
-        const managerProfit = Number(profitRecord.profit_amount || 0) - Number(profitRecord.employee_profit || 0);
-        return sum + Math.max(0, managerProfit);
-      }
-      
-      // استخدام دالة حساب الأرباح كبديل
       if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
         return sum + (calculateManagerProfit(order) || 0);
       }
@@ -505,19 +497,12 @@ const EmployeeFollowUpPage = () => {
         
         if (profitRecord && !profitRecord.settled_at) {
           // إذا كان هناك سجل ربح غير مُسوى
-          employeeProfit = Number(profitRecord.employee_profit || 0);
-        } else if (!profitRecord && calculateProfit && typeof calculateProfit === 'function') {
-          // إذا لم يكن هناك سجل ربح، احسب الربح التقديري
-          try {
-            const profitCalc = calculateProfit(order.id) || calculateProfit(order);
-            if (profitCalc && typeof profitCalc === 'object') {
-              employeeProfit = Number(profitCalc.employeeProfit || 0);
-            } else if (typeof profitCalc === 'number') {
-              employeeProfit = Number(profitCalc || 0) * 0.35; // 35% للموظف تقديرياً
-            }
-          } catch (error) {
-            console.log('خطأ في حساب ربح الموظف:', error);
-          }
+          employeeProfit = profitRecord.employee_profit || 0;
+        } else if (!profitRecord) {
+          // إذا لم يكن هناك سجل ربح، احسب الربح
+          employeeProfit = (order.items || []).reduce((itemSum, item) => {
+            return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
+          }, 0);
         }
         
         return sum + employeeProfit;
