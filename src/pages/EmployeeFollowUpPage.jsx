@@ -18,7 +18,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
-import ManagerProfitsDialogV2 from '@/components/profits/ManagerProfitsDialogV2';
+import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -914,10 +914,10 @@ const EmployeeFollowUpPage = () => {
           onClose={() => setIsManagerProfitsDialogOpen(false)}
           orders={filteredOrders || orders || []} 
           employees={employees || allUsers || []}
-          calculateProfit={calculateManagerProfit || calculateProfit}
+          calculateProfit={calculateManagerProfit || calculateProfit} // استخدام calculateManagerProfit أولاً
           profits={profits || []}
           managerId={null}
-          stats={stats}
+          stats={stats} // تمرير الإحصائيات المحسوبة مباشرة
         />
       </motion.div>
     </>
