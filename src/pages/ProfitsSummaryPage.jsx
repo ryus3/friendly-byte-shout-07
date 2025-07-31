@@ -12,7 +12,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { toast } from '@/components/ui/use-toast';
-import { DollarSign, Archive, Trash2, User, TrendingDown } from 'lucide-react';
+import { DollarSign, Archive, Trash2 } from 'lucide-react';
 import { 
   AlertDialog, 
   AlertDialogTrigger, 
@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Refactored Components
-import StatCard from '@/components/dashboard/StatCard';
+import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import SettlementRequest from '@/components/profits/SettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
@@ -34,7 +34,6 @@ import ProfitDetailsMobile from '@/components/profits/ProfitDetailsMobile';
 import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
 import ExpensesDialog from '@/components/accounting/ExpensesDialog';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
-import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
@@ -54,12 +53,12 @@ const ProfitsSummaryPage = () => {
   });
   
   const [dateRange, setDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
-      const [selectedOrder, setSelectedOrder] = useState(null);
-      const [selectedInvoice, setSelectedInvoice] = useState(null);
-      const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
-      const isMobile = useMediaQuery("(max-width: 768px)");
-      const [isRequesting, setIsRequesting] = useState(false);
-      const [selectedOrders, setSelectedOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
+  const isMobile = useMediaQuery("(max-width: 768px)");
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [selectedOrders, setSelectedOrders] = useState([]);
 
   // تحديد الصلاحيات بناءً على الدور والصلاحيات
   const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');
@@ -454,34 +453,13 @@ const ProfitsSummaryPage = () => {
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
         </div>
 
-        {/* استخدام النظام المعتمد مباشرة بدلاً من UnifiedProfitDisplay */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <StatCard 
-            title="صافي الربح"
-            value={profitData?.netProfit || 0}
-            icon={DollarSign}
-            colors={['green-500', 'emerald-500']}
-            format="currency"
-          />
-          
-          <ManagerProfitsCard
-            orders={orders || []} 
-            employees={allUsers || []}
-            profits={profits || []}
-            title="أرباحي من الموظفين"
-            cardSize="default"
-            showDetailedButton={true}
-          />
-          
-          <StatCard 
-            title="المصاريف العامة"
-            value={profitData?.totalExpenses || 0}
-            icon={TrendingDown}
-            colors={['red-500', 'orange-500']}
-            format="currency"
-            onClick={() => setDialogs(d => ({...d, expenses: true}))}
-          />
-        </div>
+        <ProfitStats 
+            profitData={profitData}
+            canViewAll={canViewAll}
+            onFilterChange={handleFilterChange}
+            onExpensesClick={() => setDialogs(d => ({...d, expenses: true}))}
+            onSettledDuesClick={() => setDialogs(d => ({...d, settledDues: true}))}
+        />
 
         <Card>
           <CardHeader>

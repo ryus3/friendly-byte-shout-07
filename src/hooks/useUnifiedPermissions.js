@@ -3,43 +3,23 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
 export const useUnifiedPermissions = (passedUser) => {
-  // استدعاء useAuth أولاً مع معالجة الأخطاء
-  let auth;
-  try {
-    auth = useAuth();
-  } catch (error) {
-    console.warn('useAuth hook called outside React context');
-    // إرجاع قيم افتراضية آمنة
-    return {
-      userRoles: [],
-      userPermissions: [],
-      productPermissions: {},
-      loading: false,
-      isAdmin: false,
-      isDepartmentManager: false,
-      isSalesEmployee: false,
-      isWarehouseEmployee: false,
-      isCashier: false,
-      hasRole: () => false,
-      hasPermission: () => false,
-      canViewAllData: false,
-      canManageEmployees: false,
-      canManageFinances: false,
-      filterDataByUser: (data) => data || [],
-      filterProductsByPermissions: (products) => products || [],
-      getEmployeeStats: () => ({ total: 0, personal: 0 })
-    };
-  }
-  
-  // تعريف الـ state بعد التحقق من السياق
+  // تعريف الـ state أولاً
   const [userRoles, setUserRoles] = useState([]);
   const [userPermissions, setUserPermissions] = useState([]);
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   
+  // استدعاء useAuth مع معالجة الأخطاء
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.warn('useAuth hook called outside React context');
+    auth = null;
+  }
+  
   // تحديد المستخدم - passedUser له الأولوية
   const user = passedUser || auth?.user;
-
   
   // التحقق من صحة السياق
   const hasValidContext = user && (passedUser || auth);
