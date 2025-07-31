@@ -102,41 +102,40 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             {/* معلومات الفاتورة */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* معلومات الموظف */}
-              <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-secondary/70 to-accent/80"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent"></div>
-                <CardContent className="relative p-5 text-primary-foreground">
+              <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-background border-border">
+                <CardContent className="relative p-5">
                   <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2.5 bg-background/15 rounded-xl backdrop-blur-sm border border-primary-foreground/25 group-hover:scale-110 transition-all duration-300">
-                      <User className="w-6 h-6 drop-shadow-lg" />
+                    <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 group-hover:scale-110 transition-all duration-300">
+                      <User className="w-6 h-6 text-primary" />
                     </div>
-                    <h3 className="font-bold text-lg drop-shadow-lg">معلومات الموظف والفاتورة</h3>
+                    <h3 className="font-bold text-lg text-foreground">معلومات الموظف والفاتورة</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-3">
-                      <div className="bg-gradient-to-r from-blue-500/30 to-blue-600/30 rounded-lg p-3 backdrop-blur-sm border border-blue-300/30 hover:from-blue-400/35 hover:to-blue-500/35 transition-all duration-300">
-                        <p className="text-xs opacity-90 font-medium mb-1.5 text-blue-100">اسم الموظف</p>
-                        <p className="font-bold text-base drop-shadow-sm">{invoice.employee_name}</p>
+                      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                        <p className="text-xs opacity-90 font-medium mb-1.5">اسم الموظف</p>
+                        <p className="font-bold text-base">{invoice.employee_name}</p>
                       </div>
-                      <div className="bg-gradient-to-r from-emerald-500/30 to-green-600/30 rounded-lg p-3 backdrop-blur-sm border border-emerald-300/30 hover:from-emerald-400/35 hover:to-green-500/35 transition-all duration-300">
-                        <p className="text-xs opacity-90 font-medium mb-1.5 text-emerald-100">معرف الموظف</p>
-                        <p className="font-mono font-bold text-sm text-emerald-200 drop-shadow-sm">{invoice.employee_code || 'غير محدد'}</p>
+                      <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-emerald-600 hover:to-green-700 transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                        <p className="text-xs opacity-90 font-medium mb-1.5">معرف الموظف</p>
+                        <p className="font-mono font-bold text-sm">{invoice.employee_code || 'غير محدد'}</p>
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <div className="bg-gradient-to-r from-purple-500/30 to-violet-600/30 rounded-lg p-3 backdrop-blur-sm border border-purple-300/30 hover:from-purple-400/35 hover:to-violet-500/35 transition-all duration-300">
-                        <p className="text-xs opacity-90 font-medium mb-1.5 text-purple-100">رقم الفاتورة</p>
-                        <p className="font-mono font-bold text-sm text-purple-200 drop-shadow-sm">{invoice.invoice_number}</p>
+                      <div className="bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-purple-600 hover:to-violet-700 transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                        <p className="text-xs opacity-90 font-medium mb-1.5">رقم الفاتورة</p>
+                        <p className="font-mono font-bold text-sm">{invoice.invoice_number}</p>
                       </div>
-                      <div className="bg-gradient-to-r from-orange-500/30 to-red-600/30 rounded-lg p-3 backdrop-blur-sm border border-orange-300/30 hover:from-orange-400/35 hover:to-red-500/35 transition-all duration-300">
-                        <p className="text-xs opacity-90 font-medium mb-1.5 text-orange-100">طريقة الدفع</p>
-                        <p className="font-bold text-sm text-orange-200 drop-shadow-sm">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
+                      <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg p-3 backdrop-blur-sm hover:from-orange-600 hover:to-amber-700 transition-all duration-300 relative overflow-hidden">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
+                        <p className="text-xs opacity-90 font-medium mb-1.5">طريقة الدفع</p>
+                        <p className="font-bold text-sm">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
                       </div>
                     </div>
                   </div>
-                  {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-background/5 rounded-full"></div>
-                  <div className="absolute -top-3 -left-3 w-12 h-12 bg-background/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
