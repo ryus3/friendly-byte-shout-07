@@ -748,9 +748,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden p-3 md:p-6">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="text-xl font-bold text-center flex items-center justify-center gap-3">
+        <DialogContent className="!w-[96vw] !max-w-[96vw] sm:!max-w-5xl !max-h-[92vh] overflow-hidden !p-2 md:!p-6 !m-1">
+          <DialogHeader className="!pb-2 sm:!pb-4 !px-1">
+            <DialogTitle className="!text-lg sm:!text-xl font-bold text-center flex items-center justify-center gap-2 sm:gap-3">
               <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg text-white">
                 <CheckCircle className="w-5 h-5" />
               </div>
