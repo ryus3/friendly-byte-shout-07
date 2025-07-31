@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 
@@ -9,8 +9,14 @@ export const useUnifiedPermissions = (passedUser) => {
   const [productPermissions, setProductPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   
-  // استدعاء useAuth دائماً في المستوى الأعلى - بدون try-catch
-  const auth = useAuth();
+  // استدعاء useAuth مع معالجة الأخطاء
+  let auth;
+  try {
+    auth = useAuth();
+  } catch (error) {
+    console.warn('useAuth hook called outside React context');
+    auth = null;
+  }
   
   // تحديد المستخدم - passedUser له الأولوية
   const user = passedUser || auth?.user;
