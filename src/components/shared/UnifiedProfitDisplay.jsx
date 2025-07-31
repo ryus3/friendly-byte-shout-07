@@ -40,25 +40,33 @@ const UnifiedProfitDisplay = ({
   const { orders, accounting } = useInventory();
   const { user: currentUser } = useAuth();
   const [allProfits, setAllProfits] = useState([]);
+  const [settlementInvoices, setSettlementInvoices] = useState([]);
 
-  // جلب بيانات الأرباح من قاعدة البيانات
+  // جلب بيانات الأرباح وفواتير التسوية من قاعدة البيانات
   useEffect(() => {
-    const fetchProfits = async () => {
+    const fetchData = async () => {
       try {
-        const { data: profitsData } = await supabase
-          .from('profits')
-          .select(`
-            *,
-            order:orders(order_number, status, receipt_received),
-            employee:profiles!employee_id(full_name)
-          `);
-        setAllProfits(profitsData || []);
+        const [profitsResponse, invoicesResponse] = await Promise.all([
+          supabase
+            .from('profits')
+            .select(`
+              *,
+              order:orders(order_number, status, receipt_received),
+              employee:profiles!employee_id(full_name)
+            `),
+          supabase
+            .from('settlement_invoices')
+            .select('*')
+        ]);
+        
+        setAllProfits(profitsResponse.data || []);
+        setSettlementInvoices(invoicesResponse.data || []);
       } catch (error) {
-        console.error('خطأ في جلب بيانات الأرباح:', error);
+        console.error('خطأ في جلب البيانات:', error);
       }
     };
     
-    fetchProfits();
+    fetchData();
   }, []);
 
   // حساب النطاق الزمني بناءً على datePeriod
@@ -182,6 +190,14 @@ const UnifiedProfitDisplay = ({
       .filter(p => deliveredOrders.some(o => o.id === p.order_id))
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
+    // حساب المستحقات المدفوعة من فواتير التسوية
+    const totalSettledDues = settlementInvoices
+      .filter(invoice => {
+        const invoiceDate = parseISO(invoice.settlement_date || invoice.created_at);
+        return isValid(invoiceDate) && invoiceDate >= dateRange.from && invoiceDate <= dateRange.to;
+      })
+      .reduce((sum, invoice) => sum + (invoice.total_amount || 0), 0);
+    
     console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
       totalRevenue,
       cogs,
@@ -202,9 +218,10 @@ const UnifiedProfitDisplay = ({
       generalExpenses,
       netProfit,
       managerProfitFromEmployees: systemProfit,
-      totalEmployeeProfits
+      totalEmployeeProfits,
+      totalSettledDues
     };
-  }, [orders, accounting, allProfits, dateRange, currentUser]);
+  }, [orders, accounting, allProfits, dateRange, currentUser, settlementInvoices]);
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -287,7 +304,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-settled-dues',
             title: 'المستحقات المدفوعة',
-            value: profitData.totalSettledDues || 0,
+            value: unifiedFinancialData.totalSettledDues || profitData.totalSettledDues || 0,
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',
