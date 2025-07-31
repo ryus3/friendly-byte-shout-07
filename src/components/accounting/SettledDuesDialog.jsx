@@ -748,7 +748,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="!w-[96vw] !max-w-[96vw] sm:!max-w-5xl !max-h-[92vh] overflow-hidden !p-2 md:!p-6 !m-1">
+        <DialogContent className="!w-[96vw] !max-w-[96vw] sm:!max-w-5xl !h-[92vh] !max-h-[92vh] !p-2 md:!p-6 !m-1 flex flex-col">
           <DialogHeader className="!pb-2 sm:!pb-4 !px-1">
             <DialogTitle className="!text-lg sm:!text-xl font-bold text-center flex items-center justify-center gap-2 sm:gap-3">
               <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg text-white">
@@ -761,7 +761,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <ScrollArea className="flex-1 !overflow-y-auto !max-h-[calc(100vh-200px)]">
+            <div className="space-y-4 pr-4">
             {/* الفلاتر */}
             <div className="flex flex-col sm:flex-row gap-3 p-3 bg-muted/30 rounded-lg">
               <div className="flex-1">
@@ -967,8 +968,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   ))}
                 </div>
               )}
-            </ScrollArea>
-          </div>
+             </div>
+          </ScrollArea>
 
           <DialogFooter>
             <Button onClick={() => onOpenChange(false)} variant="outline">
