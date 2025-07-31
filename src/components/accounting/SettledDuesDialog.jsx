@@ -120,52 +120,67 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             {/* معلومات الفاتورة */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               {/* معلومات الموظف */}
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-2 relative overflow-hidden">
                 <CardContent className="p-6">
-                  <h3 className="font-bold text-xl mb-6 flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      <User className="w-6 h-6 text-blue-600" />
+                  <div className="bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-xl p-6 relative overflow-hidden">
+                    <div className="flex items-center gap-4 mb-6">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <User className="w-8 h-8" />
+                      </div>
+                      <h3 className="font-bold text-2xl">معلومات الموظف والفاتورة</h3>
                     </div>
-                    معلومات الموظف والفاتورة
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">اسم الموظف</p>
-                        <p className="font-bold text-2xl text-slate-800 dark:text-slate-100">{invoice.employee_name}</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">اسم الموظف</p>
+                          <p className="font-bold text-xl">{invoice.employee_name}</p>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">معرف الموظف</p>
+                          <p className="font-mono text-lg font-bold text-blue-300">{invoice.employee_code || 'غير محدد'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">معرف الموظف</p>
-                        <p className="font-mono text-lg font-bold text-blue-600">{invoice.employee_code || 'غير محدد'}</p>
+                      <div className="space-y-4">
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">رقم الفاتورة</p>
+                          <p className="font-mono font-bold text-lg text-purple-300">{invoice.invoice_number}</p>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-4 backdrop-blur-sm">
+                          <p className="text-sm opacity-90 font-medium mb-1">طريقة الدفع</p>
+                          <p className="font-semibold">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">رقم الفاتورة</p>
-                        <p className="font-mono font-bold text-lg text-purple-700 dark:text-purple-400">{invoice.invoice_number}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">طريقة الدفع</p>
-                        <p className="font-semibold text-slate-700 dark:text-slate-300">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
-                      </div>
-                    </div>
+                    {/* تأثيرات بصرية */}
+                    <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-2 -left-2 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* المبلغ المدفوع */}
-              <Card className="bg-gradient-to-br from-emerald-500 to-blue-600 text-white shadow-xl">
+              <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl">
                 <CardContent className="p-6 text-center">
-                  <div className="flex items-center justify-center gap-3 mb-4">
-                    <DollarSign className="w-10 h-10" />
-                    <h3 className="text-xl font-bold">المبلغ المدفوع</h3>
-                  </div>
-                  <p className="text-5xl font-black mb-2 drop-shadow-lg">
-                    {invoice.total_amount?.toLocaleString()}
-                  </p>
-                  <p className="text-lg font-bold opacity-90">دينار عراقي</p>
-                  <div className="mt-4 text-sm opacity-80">
-                    تم الدفع بنجاح ✓
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-xl p-6 relative overflow-hidden">
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <DollarSign className="w-10 h-10" />
+                      </div>
+                      <h3 className="text-xl font-bold">المبلغ المدفوع</h3>
+                    </div>
+                    <p className="text-5xl font-black mb-3 drop-shadow-lg">
+                      {invoice.total_amount?.toLocaleString()}
+                    </p>
+                    <p className="text-lg font-bold opacity-90 mb-3">دينار عراقي</p>
+                    <div className="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                      <div className="flex items-center justify-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4" />
+                        <span>تم الدفع بنجاح</span>
+                      </div>
+                    </div>
+                    {/* تأثيرات بصرية */}
+                    <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-4 -left-4 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -174,35 +189,63 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             {/* إحصائيات الأرباح */}
             {stats.ordersCount > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+                <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardContent className="p-4 text-center">
-                    <Award className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm opacity-90">عدد الطلبات</p>
-                    <p className="text-2xl font-black">{stats.ordersCount}</p>
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-4 relative overflow-hidden">
+                      <div className="flex justify-center mb-2">
+                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                          <Award className="w-6 h-6" />
+                        </div>
+                      </div>
+                      <p className="text-xs opacity-90 mb-1">عدد الطلبات</p>
+                      <p className="text-2xl font-black">{stats.ordersCount}</p>
+                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                    </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
+                <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardContent className="p-4 text-center">
-                    <TrendingUp className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm opacity-90">إجمالي الإيرادات</p>
-                    <p className="text-xl font-black">{stats.totalRevenue.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden">
+                      <div className="flex justify-center mb-2">
+                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                          <TrendingUp className="w-6 h-6" />
+                        </div>
+                      </div>
+                      <p className="text-xs opacity-90 mb-1">إجمالي الإيرادات</p>
+                      <p className="text-lg font-black">{stats.totalRevenue.toLocaleString()}</p>
+                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                    </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white">
+                <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardContent className="p-4 text-center">
-                    <DollarSign className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm opacity-90">التكاليف</p>
-                    <p className="text-xl font-black">{stats.totalCost.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden">
+                      <div className="flex justify-center mb-2">
+                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                          <DollarSign className="w-6 h-6" />
+                        </div>
+                      </div>
+                      <p className="text-xs opacity-90 mb-1">التكاليف</p>
+                      <p className="text-lg font-black">{stats.totalCost.toLocaleString()}</p>
+                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                    </div>
                   </CardContent>
                 </Card>
                 
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
+                <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardContent className="p-4 text-center">
-                    <Banknote className="w-8 h-8 mx-auto mb-2" />
-                    <p className="text-sm opacity-90">ربح الموظف</p>
-                    <p className="text-xl font-black">{stats.totalProfit.toLocaleString()}</p>
+                    <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-4 relative overflow-hidden">
+                      <div className="flex justify-center mb-2">
+                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                          <Banknote className="w-6 h-6" />
+                        </div>
+                      </div>
+                      <p className="text-xs opacity-90 mb-1">ربح الموظف</p>
+                      <p className="text-lg font-black">{stats.totalProfit.toLocaleString()}</p>
+                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -210,98 +253,128 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
             {/* الطلبات المسواة */}
             {settledOrders.length > 0 && (
-              <Card className="mb-8 bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700 shadow-xl">
+              <Card className="mb-8 relative overflow-hidden shadow-2xl">
                 <CardContent className="p-8">
-                  <div className="flex items-center gap-3 mb-8">
-                    <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-lg">
-                      <FileText className="w-8 h-8 text-white" />
+                  <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-2xl p-8 relative overflow-hidden">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-sm">
+                        <FileText className="w-10 h-10" />
+                      </div>
+                      <h3 className="font-black text-3xl">
+                        تفاصيل الطلبات المسواة
+                      </h3>
                     </div>
-                    <h3 className="font-black text-3xl bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
-                      تفاصيل الطلبات المسواة
-                    </h3>
-                  </div>
-                  
-                  <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-700 dark:to-slate-600 rounded-2xl p-1 shadow-2xl">
-                    <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden">
-                      {/* Header */}
-                      <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
-                        <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
-                          <div className="text-blue-300">رقم الطلب</div>
-                          <div className="text-green-300">الإيرادات</div>
-                          <div className="text-orange-300">التكاليف</div>
-                          <div className="text-purple-300">ربح الموظف</div>
-                          <div className="text-cyan-300">تاريخ التسوية</div>
+                    
+                    <div className="bg-white/10 rounded-2xl p-1 backdrop-blur-sm">
+                      <div className="bg-slate-900/80 rounded-xl overflow-hidden">
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
+                          <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
+                            <div className="text-blue-300 flex items-center justify-center gap-2">
+                              <FileText className="w-5 h-5" />
+                              رقم الطلب
+                            </div>
+                            <div className="text-green-300 flex items-center justify-center gap-2">
+                              <TrendingUp className="w-5 h-5" />
+                              الإيرادات
+                            </div>
+                            <div className="text-orange-300 flex items-center justify-center gap-2">
+                              <DollarSign className="w-5 h-5" />
+                              التكاليف
+                            </div>
+                            <div className="text-purple-300 flex items-center justify-center gap-2">
+                              <Banknote className="w-5 h-5" />
+                              ربح الموظف
+                            </div>
+                            <div className="text-cyan-300 flex items-center justify-center gap-2">
+                              <Calendar className="w-5 h-5" />
+                              تاريخ التسوية
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Orders List */}
+                        <div className="divide-y divide-slate-700">
+                          {settledOrders.map((order, index) => {
+                            const orderProfit = relatedProfits.find(p => p.order_id === order.id);
+                            return (
+                              <div 
+                                key={order.id} 
+                                className={`grid grid-cols-5 gap-6 py-6 px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-900/20 hover:to-purple-900/20 ${
+                                  index % 2 === 0 ? 'bg-slate-800/50' : 'bg-slate-900/30'
+                                }`}
+                              >
+                                {/* رقم الطلب */}
+                                <div className="flex items-center justify-center">
+                                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform relative overflow-hidden">
+                                    {order.order_number || order.trackingnumber || 'N/A'}
+                                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-white/20 rounded-full"></div>
+                                  </div>
+                                </div>
+                                
+                                {/* الإيرادات */}
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-xl p-3 shadow-lg">
+                                    <div className="text-2xl font-black mb-1">
+                                      {(orderProfit?.total_revenue || order.total_amount || order.total || 0).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs opacity-90 font-semibold">د.ع</div>
+                                  </div>
+                                </div>
+                                
+                                {/* التكاليف الحقيقية */}
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-xl p-3 shadow-lg">
+                                    <div className="text-2xl font-black mb-1">
+                                      {(orderProfit?.total_cost || 0).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs opacity-90 font-semibold">د.ع</div>
+                                  </div>
+                                </div>
+                                
+                                {/* ربح الموظف */}
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-xl p-3 shadow-lg">
+                                    <div className="text-2xl font-black mb-1">
+                                      {(orderProfit?.employee_profit || 0).toLocaleString()}
+                                    </div>
+                                    <div className="text-xs opacity-90 font-semibold">د.ع</div>
+                                  </div>
+                                </div>
+                                
+                                {/* تاريخ التسوية الحقيقي */}
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-xl p-3 shadow-lg">
+                                    <div className="text-lg font-bold mb-1">
+                                      {invoice.settlement_date ? 
+                                        format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                        (orderProfit?.settled_at ? 
+                                          format(parseISO(orderProfit.settled_at), 'dd/MM/yyyy', { locale: ar }) :
+                                          'غير محدد'
+                                        )
+                                      }
+                                    </div>
+                                    <div className="text-xs opacity-90 font-semibold">
+                                      {invoice.settlement_date ? 
+                                        format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
+                                        (orderProfit?.settled_at ? 
+                                          format(parseISO(orderProfit.settled_at), 'HH:mm', { locale: ar }) :
+                                          '00:00'
+                                        )
+                                      }
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                      
-                      {/* Orders List */}
-                      <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                        {settledOrders.map((order, index) => {
-                          const orderProfit = relatedProfits.find(p => p.order_id === order.id);
-                          return (
-                            <div 
-                              key={order.id} 
-                              className={`grid grid-cols-5 gap-6 py-6 px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
-                                index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
-                              }`}
-                            >
-                              {/* رقم الطلب */}
-                              <div className="flex items-center justify-center">
-                                <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform">
-                                  {order.order_number || order.trackingnumber || 'N/A'}
-                                </span>
-                              </div>
-                              
-                              {/* الإيرادات */}
-                              <div className="flex flex-col items-center justify-center">
-                                <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
-                                  {(orderProfit?.total_revenue || order.total_amount || order.total || 0).toLocaleString()}
-                                </div>
-                                <div className="text-sm text-green-500 font-semibold">د.ع</div>
-                              </div>
-                              
-                              {/* التكاليف الحقيقية */}
-                              <div className="flex flex-col items-center justify-center">
-                                <div className="text-3xl font-black text-orange-600 dark:text-orange-400 mb-1">
-                                  {(orderProfit?.total_cost || 0).toLocaleString()}
-                                </div>
-                                <div className="text-sm text-orange-500 font-semibold">د.ع</div>
-                              </div>
-                              
-                              {/* ربح الموظف */}
-                              <div className="flex flex-col items-center justify-center">
-                                <div className="text-3xl font-black text-purple-600 dark:text-purple-400 mb-1">
-                                  {(orderProfit?.employee_profit || 0).toLocaleString()}
-                                </div>
-                                <div className="text-sm text-purple-500 font-semibold">د.ع</div>
-                              </div>
-                              
-                              {/* تاريخ التسوية الحقيقي */}
-                              <div className="flex flex-col items-center justify-center">
-                                <div className="text-lg font-bold text-slate-700 dark:text-slate-300 mb-1">
-                                  {invoice.settlement_date ? 
-                                    format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
-                                    (orderProfit?.settled_at ? 
-                                      format(parseISO(orderProfit.settled_at), 'dd/MM/yyyy', { locale: ar }) :
-                                      'غير محدد'
-                                    )
-                                  }
-                                </div>
-                                <div className="text-sm text-cyan-600 dark:text-cyan-400 font-semibold">
-                                  {invoice.settlement_date ? 
-                                    format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
-                                    (orderProfit?.settled_at ? 
-                                      format(parseISO(orderProfit.settled_at), 'HH:mm', { locale: ar }) :
-                                      '00:00'
-                                    )
-                                  }
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
                     </div>
+                    
+                    {/* تأثيرات بصرية */}
+                    <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-4 -left-4 w-20 h-20 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
