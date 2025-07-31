@@ -265,22 +265,10 @@ const ProfitsSummaryPage = () => {
             .filter(p => p.profitStatus === 'settled')
             .reduce((sum, p) => sum + p.profit, 0);
 
-        // حساب مستحقات مدفوعة من فواتير التسوية الفعلية في الفترة المحددة
         const totalSettledDues = settlementInvoices?.filter(inv => {
             const invDate = parseISO(inv.settlement_date);
             return isValid(invDate) && invDate >= from && invDate <= to;
         }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
-        
-        console.log('🔍 [DEBUG] فحص مستحقات مدفوعة في ملخص الأرباح:', {
-            settlementInvoicesTotal: settlementInvoices?.length || 0,
-            filteredInvoicesCount: settlementInvoices?.filter(inv => {
-                const invDate = parseISO(inv.settlement_date);
-                return isValid(invDate) && invDate >= from && invDate <= to;
-            }).length || 0,
-            totalSettledDues,
-            employeeSettledDuesFromExpenses: employeeSettledDues,
-            dateRange: { from, to }
-        });
         
         console.log('📊 نتائج الحساب:', {
             deliveredOrdersCount: deliveredOrders.length,
@@ -311,7 +299,7 @@ const ProfitsSummaryPage = () => {
             cogs: unifiedProfitData?.cogs || 0,
             grossProfit: unifiedProfitData?.grossProfit || 0,
             generalExpenses: unifiedProfitData?.generalExpenses || 0,
-            employeeSettledDues: totalSettledDues, // استخدام فواتير التسوية بدلاً من المصاريف
+            employeeSettledDues,
             generalExpensesFiltered: expensesInPeriod.filter(e => {
                 if (e.expense_type === 'system') return false;
                 if (e.category === 'مستحقات الموظفين') return false;

@@ -97,26 +97,7 @@ const ManagerProfitsDialog = ({
     const now = new Date();
     switch (selectedPeriod) {
       case 'today':
-        const today = new Date();
-        return { 
-          start: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0), 
-          end: new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59) 
-        };
-      case 'week':
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-        return { start: weekStart, end: weekEnd };
-      case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'all':
-      default:
-        return { start: new Date(2020, 0, 1), end: new Date(2030, 11, 31) };
-    }
-  }, [selectedPeriod]);
+        return { start: new Date(now.setHours(0, 0, 0, 0)), end: new Date(now.setHours(23, 59, 59, 999)) };
       case 'week':
         const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
         const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
