@@ -256,7 +256,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 };
 
 // المكون الرئيسي
-export const SettledDuesDialog = ({ open, onOpenChange, settledDues = [], allUsers = [] }) => {
+const SettledDuesDialog = ({ open, onOpenChange, settledDues = [], allUsers = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [selectedUser, setSelectedUser] = useState('all');
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
@@ -569,3 +569,5 @@ export const SettledDuesDialog = ({ open, onOpenChange, settledDues = [], allUse
     </Dialog>
   );
 };
+
+export default SettledDuesDialog;
