@@ -34,6 +34,7 @@ const UnifiedProfitDisplay = ({
   onFilterChange = () => {},
   onExpensesClick = () => {},
   onSettledDuesClick = () => {},
+  onManagerProfitsClick = () => {}, // إضافة handler لنافذة أرباح المدير من الموظفين
   className = '',
   datePeriod = 'month' // إضافة فترة التاريخ
 }) => {
@@ -291,7 +292,7 @@ const UnifiedProfitDisplay = ({
             icon: Users,
             colors: ['indigo-500', 'violet-500'],
             format: 'currency',
-            onClick: () => onFilterChange('employeeId', 'employees')
+            onClick: onManagerProfitsClick // استخدام الـ handler الجديد
           },
           {
             key: 'total-expenses',
