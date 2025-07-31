@@ -819,6 +819,7 @@ const EmployeeFollowUpPage = () => {
             profits={profits || []}
             title="أرباحي من الموظفين"
             cardSize="default"
+            showDetailedButton={true}
           />
           <StatCard 
             title="مستحقات معلقة" 

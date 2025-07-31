@@ -25,6 +25,14 @@ const ManagerProfitsCard = ({
     'month' // افتراضي شهر
   );
 
+  console.log('🔍 ManagerProfitsCard البيانات المستلمة:', {
+    ordersCount: orders?.length || 0,
+    employeesCount: employees?.length || 0,
+    profitsCount: profits?.length || 0,
+    stats: stats,
+    title
+  });
+
   const formatCurrency = (amount) => {
     return `${(Number(amount) || 0).toLocaleString()} د.ع`;
   };
@@ -76,7 +84,10 @@ const ManagerProfitsCard = ({
 
   return (
     <>
-      <Card className={`cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30 ${getCardClasses()}`}>
+      <Card 
+        className={`cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30 ${getCardClasses()}`}
+        onClick={() => setShowDialog(true)}
+      >
         <CardContent className={`${getContentClasses()} h-full`}>
           <div className="bg-gradient-to-br from-amber-500 to-orange-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
             {/* Header */}
@@ -120,7 +131,10 @@ const ManagerProfitsCard = ({
                   variant="outline" 
                   size="sm"
                   className="w-full bg-white/20 hover:bg-white/30 border-white/30 hover:border-white/50 text-white text-xs transition-all"
-                  onClick={() => setShowDialog(true)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDialog(true);
+                  }}
                 >
                   <Eye className="h-3 w-3 mr-1" />
                   التفاصيل

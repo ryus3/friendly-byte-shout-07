@@ -589,6 +589,7 @@ const AccountingPage = () => {
                                     profits={card.profits}
                                     title={card.title}
                                     cardSize={card.cardSize}
+                                    showDetailedButton={true}
                                 />
                             );
                         }
