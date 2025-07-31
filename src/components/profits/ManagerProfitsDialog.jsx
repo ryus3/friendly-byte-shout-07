@@ -266,27 +266,16 @@ const ManagerProfitsDialog = ({
     return processed;
   }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm]);
 
-  // إحصائيات شاملة - استخدم الإحصائيات الخارجية إذا كانت متوفرة
+  // إحصائيات شاملة - مفلترة حسب الفترة المختارة
   const stats = useMemo(() => {
-    // إذا كانت الإحصائيات متوفرة من الصفحة الرئيسية، استخدمها
-    if (externalStats && typeof externalStats === 'object') {
-      console.log('📊 استخدام الإحصائيات من الصفحة الرئيسية:', externalStats);
-      return {
-        totalManagerProfit: externalStats.totalManagerProfits || 0,
-        totalEmployeeProfit: 0, // سيتم حسابها من detailedProfits
-        totalRevenue: externalStats.totalSales || 0,
-        pendingProfit: externalStats.pendingDues || 0,
-        settledProfit: externalStats.paidDues || 0,
-        totalOrders: externalStats.totalOrders || 0,
-        averageOrderValue: externalStats.totalOrders > 0 ? (externalStats.totalSales / externalStats.totalOrders) : 0,
-        profitMargin: externalStats.totalSales > 0 ? ((externalStats.totalManagerProfits / externalStats.totalSales) * 100).toFixed(1) : '0.0',
-        topEmployees: [] // سيتم حسابها من detailedProfits
-      };
-    }
+    console.log('📊 حساب الإحصائيات من detailedProfits المفلترة:', {
+      detailedProfitsCount: detailedProfits?.length || 0,
+      selectedPeriod,
+      dateRange
+    });
 
-    // إذا لم تكن متوفرة، احسبها من detailedProfits
-    if (!detailedProfits || !Array.isArray(detailedProfits)) {
-      console.log('❌ stats: لا توجد أرباح مفصلة ولا إحصائيات خارجية');
+    if (!detailedProfits || !Array.isArray(detailedProfits) || detailedProfits.length === 0) {
+      console.log('❌ stats: لا توجد أرباح مفصلة للفترة المختارة');
       return {
         totalManagerProfit: 0,
         totalEmployeeProfit: 0,
@@ -300,31 +289,38 @@ const ManagerProfitsDialog = ({
       };
     }
 
-    const totalManagerProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
-    const totalEmployeeProfit = detailedProfits.reduce((sum, order) => sum + (Number(order.employeeProfit) || 0), 0);
-    // استخدام المبلغ بدون أجور التوصيل للإحصائيات
-    const totalRevenue = detailedProfits.reduce((sum, order) => sum + (Number(order.orderTotal) || 0), 0);
-    const pendingProfit = detailedProfits.filter(order => !order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
-    const settledProfit = detailedProfits.filter(order => order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
-    
+    // حساب الإحصائيات من الأرباح المفلترة حسب الفترة
+    const totalManagerProfit = detailedProfits.reduce((sum, profit) => sum + (profit.managerProfit || 0), 0);
+    const totalEmployeeProfit = detailedProfits.reduce((sum, profit) => sum + (profit.employeeProfit || 0), 0);
+    const totalRevenue = detailedProfits.reduce((sum, profit) => sum + (profit.orderTotal || 0), 0);
+    const pendingProfit = detailedProfits.filter(p => p.status === 'pending').reduce((sum, profit) => sum + (profit.managerProfit || 0), 0);
+    const settledProfit = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (profit.managerProfit || 0), 0);
+    const totalOrders = detailedProfits.length;
+    const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+    const profitMargin = totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0';
+
+    // حساب أفضل الموظفين
     const employeeStats = {};
     detailedProfits.forEach(profit => {
-      const employeeId = profit.employee_id; // استخدام employee_id من جدول profits
-      if (!employeeStats[employeeId]) {
-        employeeStats[employeeId] = {
+      const empId = profit.employee_id;
+      if (!employeeStats[empId]) {
+        employeeStats[empId] = {
           employee: profit.employee,
           orders: 0,
+          revenue: 0,
           managerProfit: 0,
-          employeeProfit: 0,
-          revenue: 0
+          employeeProfit: 0
         };
       }
-      employeeStats[employeeId].orders += 1;
-      employeeStats[employeeId].managerProfit += Number(profit.managerProfit) || 0;
-      employeeStats[employeeId].employeeProfit += Number(profit.employeeProfit) || 0;
-      // استخدام المبلغ بدون أجور التوصيل
-      employeeStats[employeeId].revenue += Number(profit.orderTotal) || 0;
+      employeeStats[empId].orders += 1;
+      employeeStats[empId].revenue += profit.orderTotal || 0;
+      employeeStats[empId].managerProfit += profit.managerProfit || 0;
+      employeeStats[empId].employeeProfit += profit.employeeProfit || 0;
     });
+
+    const topEmployees = Object.values(employeeStats)
+      .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
+      .slice(0, 5);
 
     const calculatedStats = {
       totalManagerProfit,
@@ -332,18 +328,14 @@ const ManagerProfitsDialog = ({
       totalRevenue,
       pendingProfit,
       settledProfit,
-      totalOrders: detailedProfits.length,
-      averageOrderValue: detailedProfits.length > 0 ? totalRevenue / detailedProfits.length : 0,
-      profitMargin: totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0',
-      topEmployees: Object.values(employeeStats)
-        .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
-        .slice(0, 5)
+      totalOrders,
+      averageOrderValue,
+      profitMargin,
+      topEmployees
     };
 
-    console.log('📊 الإحصائيات المحسوبة داخلياً:', calculatedStats);
-
-    return calculatedStats;
-  }, [detailedProfits, externalStats]);
+    console.log('✅ الإحصائيات المحسوبة للفترة:', calculatedStats);
+  }, [detailedProfits]);
 
   const formatCurrency = (amount) => {
     return `${(Number(amount) || 0).toLocaleString()} د.ع`;
