@@ -1,8 +1,8 @@
 import React from 'react';
-import UnifiedSettledDuesCard from './UnifiedSettledDuesCard';
+import SettledDuesDialog from '@/components/accounting/SettledDuesDialog';
 
 /**
- * مكون موحد لعرض مستحقات مدفوعة - محدث ومتوافق مع الهاتف
+ * مكون موحد لعرض مستحقات مدفوعة
  * يستخدم في 3 أماكن:
  * 1. متابعة الموظفين (EmployeeFollowUpPage)
  * 2. ملخص الأرباح (ProfitsSummaryPage) 
@@ -11,15 +11,19 @@ import UnifiedSettledDuesCard from './UnifiedSettledDuesCard';
 const UnifiedSettledDuesDialog = ({ 
   open, 
   onOpenChange, 
-  allUsers = [],
-  dateRange = null
+  invoices, 
+  allUsers, 
+  profits = [], 
+  orders = [] 
 }) => {
   return (
-    <UnifiedSettledDuesCard
+    <SettledDuesDialog
       open={open}
       onOpenChange={onOpenChange}
+      invoices={invoices}
       allUsers={allUsers}
-      dateRange={dateRange}
+      profits={profits}
+      orders={orders}
     />
   );
 };

@@ -265,18 +265,10 @@ const ProfitsSummaryPage = () => {
             .filter(p => p.profitStatus === 'settled')
             .reduce((sum, p) => sum + p.profit, 0);
 
-        // حساب المستحقات المدفوعة من فواتير التسوية
         const totalSettledDues = settlementInvoices?.filter(inv => {
-            const invDate = parseISO(inv.settlement_date || inv.created_at);
+            const invDate = parseISO(inv.settlement_date);
             return isValid(invDate) && invDate >= from && invDate <= to;
-        }).reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-        
-        console.log('💰 حساب المستحقات المدفوعة:', {
-            totalSettledDues,
-            employeeSettledDues,
-            settlementInvoicesCount: settlementInvoices?.length || 0,
-            dateRange: { from, to }
-        });
+        }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
         
         console.log('📊 نتائج الحساب:', {
             deliveredOrdersCount: deliveredOrders.length,
