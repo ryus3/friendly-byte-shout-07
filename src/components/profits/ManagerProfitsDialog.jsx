@@ -448,7 +448,7 @@ const ManagerProfitsDialog = ({
 
     console.log('📊 الإحصائيات المحسوبة داخلياً:', {
       ...calculatedStats,
-      topEmployeesCount: topEmployees.length,
+      topEmployeesCount: calculatedStats.topEmployees.length,
       employeeStatsKeys: Object.keys(employeeStats)
     });
 
