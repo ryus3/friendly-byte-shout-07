@@ -31,6 +31,7 @@ const EmployeeFollowUpPage = () => {
   const { 
     orders, 
     loading, 
+    calculateManagerProfit, 
     calculateProfit, 
     updateOrder, 
     refetchProducts, 
@@ -471,22 +472,8 @@ const EmployeeFollowUpPage = () => {
     
     // أرباح المدير من الموظفين
     const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
-      if (calculateProfit && typeof calculateProfit === 'function') {
-        // حساب إجمالي ربح الطلب
-        const orderTotal = order?.final_amount || order?.total_amount || 0;
-        const deliveryFee = order?.delivery_fee || 0;
-        const totalCost = order?.items?.reduce((itemSum, item) => {
-          const costPrice = item.cost_price || item.costPrice || 0;
-          return itemSum + (costPrice * item.quantity);
-        }, 0) || 0;
-        const totalOrderProfit = (orderTotal - deliveryFee) - totalCost;
-        
-        // حساب ربح الموظف
-        const employeeProfit = calculateProfit(order, order.created_by) || 0;
-        
-        // ربح المدير = إجمالي ربح الطلب - ربح الموظف
-        const managerProfit = Math.max(0, totalOrderProfit - employeeProfit);
-        return sum + managerProfit;
+      if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
+        return sum + (calculateManagerProfit(order) || 0);
       }
       return sum;
     }, 0);
@@ -537,7 +524,7 @@ const EmployeeFollowUpPage = () => {
       pendingDues,
       paidDues
     };
-  }, [filteredOrders, calculateProfit, settlementInvoices, profits]);
+  }, [filteredOrders, calculateManagerProfit, settlementInvoices, profits, calculateProfit]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {

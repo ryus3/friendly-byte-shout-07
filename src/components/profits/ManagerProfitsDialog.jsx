@@ -144,14 +144,14 @@ const ManagerProfitsDialog = ({
           return false;
         }
         
-        // فلترة التاريخ
+        // فلترة التاريخ - مؤقتاً معطلة للاختبار
         let withinPeriod = true;
-        if (order.created_at && dateRange.start && dateRange.end) {
-          const orderDate = new Date(order.created_at);
-          if (!isNaN(orderDate.getTime())) {
-            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
-          }
-        }
+        // if (order.created_at && dateRange.start && dateRange.end) {
+        //   const orderDate = new Date(order.created_at);
+        //   if (!isNaN(orderDate.getTime())) {
+        //     withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+        //   }
+        // }
         
         // فلترة الحالة - أكثر مرونة
         const isValidStatus = ['delivered', 'completed', 'pending', 'processing'].includes(order.status);
@@ -253,12 +253,12 @@ const ManagerProfitsDialog = ({
               orderItems: order.items
             });
             
-            // البحث عن بيانات الربح من جدول profits أولاً
+            // البحث عن بيانات الربح من جدول profits
             const profitRecord = profits?.find(p => p.order_id === order.id);
             
             console.log(`🔍 البحث عن ربح الطلب ${order.order_number}:`, {
               orderId: order.id,
-              profitsArray: profits?.slice(0, 3)?.map(p => ({ order_id: p.order_id, profit_amount: p.profit_amount, employee_profit: p.employee_profit })),
+              profitsArray: profits?.map(p => ({ order_id: p.order_id, profit_amount: p.profit_amount, employee_profit: p.employee_profit })),
               profitRecord,
               foundMatch: !!profitRecord
             });
@@ -267,43 +267,34 @@ const ManagerProfitsDialog = ({
               // استخدام البيانات الحقيقية من جدول profits
               const totalProfitFromDB = Number(profitRecord.profit_amount || 0);
               const employeeProfitFromDB = Number(profitRecord.employee_profit || 0); 
-              const managerProfitFromDB = totalProfitFromDB - employeeProfitFromDB;
+              const managerProfitFromDB = totalProfitFromDB - employeeProfitFromDB; // ربح النظام = الإجمالي - ربح الموظف
               
               systemProfit = managerProfitFromDB;
               employeeProfit = employeeProfitFromDB; 
               totalProfit = totalProfitFromDB;
               managerProfit = managerProfitFromDB;
               
-              console.log(`💎 استخدام بيانات الربح الحقيقية من قاعدة البيانات للطلب ${order.order_number}:`, {
+              console.log(`💎 استخدام بيانات الربح الحقيقية من قاعدة البيانات:`, {
+                profitRecord,
                 totalProfitFromDB,
                 employeeProfitFromDB,
-                managerProfitFromDB
+                managerProfitFromDB,
+                systemProfit,
+                employeeProfit,
+                totalProfit,
+                managerProfit
               });
             } else if (calculateProfit && typeof calculateProfit === 'function') {
-              // محاولة استخدام دالة حساب الأرباح للموظف
+              // محاولة استخدام دالة حساب الأرباح كبديل
               try {
-                const employeeProfitCalc = calculateProfit(order, order.created_by);
-                if (typeof employeeProfitCalc === 'number') {
-                  employeeProfit = Number(employeeProfitCalc || 0);
-                  
-                  // حساب إجمالي ربح الطلب
-                  const totalCost = order.items?.reduce((sum, item) => {
-                    const costPrice = item.cost_price || item.costPrice || 0;
-                    const quantity = item.quantity || 0;
-                    return sum + (costPrice * quantity);
-                  }, 0) || 0;
-                  
-                  totalProfit = totalWithoutDelivery - totalCost;
-                  systemProfit = totalProfit - employeeProfit;
+                let profitCalc = calculateProfit(order.id) || calculateProfit(order);
+                if (profitCalc && typeof profitCalc === 'object') {
+                  systemProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
+                  employeeProfit = Number(profitCalc.employeeProfit || 0);
+                  totalProfit = systemProfit + employeeProfit;
                   managerProfit = systemProfit;
                   
-                  console.log(`📋 حساب الأرباح باستخدام دالة calculateProfit للطلب ${order.order_number}:`, {
-                    totalWithoutDelivery,
-                    totalCost,
-                    totalProfit,
-                    employeeProfit: employeeProfitCalc,
-                    systemProfit
-                  });
+                  console.log(`📋 استخدام دالة حساب الأرباح:`, { profitCalc, systemProfit, employeeProfit });
                 }
               } catch (calcError) {
                 console.log('خطأ في دالة حساب الأرباح:', calcError);

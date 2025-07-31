@@ -1258,25 +1258,21 @@ export const InventoryProvider = ({ children }) => {
   const calculateManagerProfit = useCallback((order) => {
     if (!order || !order.items || !order.created_by) return 0;
     
-    // حساب التكلفة الإجمالية من العناصر
-    const totalCost = order.items.reduce((sum, item) => {
-      const costPrice = item.cost_price || item.costPrice || item.product_variants?.cost_price || item.products?.cost_price || 0;
+    // حساب إجمالي الربح من الطلب
+    const totalProfit = order.items.reduce((sum, item) => {
+      const sellPrice = item.unit_price || item.price || 0;
+      const costPrice = item.cost_price || item.product_variants?.cost_price || item.products?.cost_price || 0;
       const quantity = item.quantity || 0;
-      return sum + (costPrice * quantity);
+      return sum + ((sellPrice - costPrice) * quantity);
     }, 0);
     
-    // حساب إجمالي ربح الطلب
-    const orderTotal = order.final_amount || order.total_amount || 0;
-    const deliveryFee = order.delivery_fee || 0;
-    const totalOrderProfit = (orderTotal - deliveryFee) - totalCost;
+    // حساب ربح الموظف
+    const employeeProfitShare = order.items.reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
     
-    // حساب ربح الموظف للطلب كاملاً
-    const employeeProfit = calculateProfit(order, order.created_by);
+    // ربح المدير = إجمالي الربح - ربح الموظف
+    const managerProfit = Math.max(0, totalProfit - employeeProfitShare);
     
-    // ربح المدير = إجمالي ربح الطلب - ربح الموظف
-    const managerProfit = totalOrderProfit - employeeProfit;
-    
-    return Math.max(0, managerProfit);
+    return managerProfit;
   }, [calculateProfit]);
 
   const updateSettings = async (newSettings) => {
