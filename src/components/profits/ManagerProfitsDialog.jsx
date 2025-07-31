@@ -97,22 +97,17 @@ const ManagerProfitsDialog = ({
     const now = new Date();
     switch (selectedPeriod) {
       case 'today':
-        const today = new Date();
-        return { start: new Date(today.setHours(0, 0, 0, 0)), end: new Date(today.setHours(23, 59, 59, 999)) };
+        return { start: new Date(now.setHours(0, 0, 0, 0)), end: new Date(now.setHours(23, 59, 59, 999)) };
       case 'week':
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - now.getDay());
-        weekStart.setHours(0, 0, 0, 0);
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
+        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
         return { start: weekStart, end: weekEnd };
       case 'month':
-        return { start: startOfMonth(new Date()), end: endOfMonth(new Date()) };
+        return { start: startOfMonth(now), end: endOfMonth(now) };
       case 'year':
         return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
       default:
-        return { start: startOfMonth(new Date()), end: endOfMonth(new Date()) };
+        return { start: startOfMonth(now), end: endOfMonth(now) };
     }
   }, [selectedPeriod]);
 
@@ -149,17 +144,17 @@ const ManagerProfitsDialog = ({
           return false;
         }
         
-        // فلترة التاريخ
+        // فلترة التاريخ - مؤقتاً معطلة للاختبار
         let withinPeriod = true;
-        if (order.created_at && dateRange.start && dateRange.end) {
-          const orderDate = new Date(order.created_at);
-          if (!isNaN(orderDate.getTime())) {
-            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
-          }
-        }
+        // if (order.created_at && dateRange.start && dateRange.end) {
+        //   const orderDate = new Date(order.created_at);
+        //   if (!isNaN(orderDate.getTime())) {
+        //     withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+        //   }
+        // }
         
-        // فلترة الحالة - التركيز على الطلبات المكتملة التي استُلمت فواتيرها
-        const isValidStatus = (order.status === 'delivered' || order.status === 'completed') && order.receipt_received === true;
+        // فلترة الحالة - أكثر مرونة
+        const isValidStatus = ['delivered', 'completed', 'pending', 'processing'].includes(order.status);
         
         // فلترة الموظف
         const matchesEmployee = selectedEmployee === 'all' || order.created_by === selectedEmployee;
