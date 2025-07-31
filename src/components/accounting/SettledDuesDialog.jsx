@@ -103,40 +103,40 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* معلومات الموظف */}
               <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-400 via-indigo-500 to-blue-600 opacity-85"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                <CardContent className="relative p-6 text-white">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3 bg-white/15 rounded-xl backdrop-blur-sm border border-white/25 group-hover:scale-110 transition-all duration-300">
-                      <User className="w-7 h-7 drop-shadow-lg" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-secondary/70 to-accent/80"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-background/20 to-transparent"></div>
+                <CardContent className="relative p-5 text-primary-foreground">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="p-2.5 bg-background/15 rounded-xl backdrop-blur-sm border border-primary-foreground/25 group-hover:scale-110 transition-all duration-300">
+                      <User className="w-6 h-6 drop-shadow-lg" />
                     </div>
-                    <h3 className="font-bold text-xl drop-shadow-lg">معلومات الموظف والفاتورة</h3>
+                    <h3 className="font-bold text-lg drop-shadow-lg">معلومات الموظف والفاتورة</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-4">
-                      <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl p-4 backdrop-blur-sm border border-blue-300/20 hover:from-blue-400/25 hover:to-blue-500/25 transition-all duration-300">
-                        <p className="text-xs opacity-80 font-medium mb-2 text-blue-100">اسم الموظف</p>
-                        <p className="font-bold text-lg drop-shadow-sm">{invoice.employee_name}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-3">
+                      <div className="bg-gradient-to-r from-blue-500/30 to-blue-600/30 rounded-lg p-3 backdrop-blur-sm border border-blue-300/30 hover:from-blue-400/35 hover:to-blue-500/35 transition-all duration-300">
+                        <p className="text-xs opacity-90 font-medium mb-1.5 text-blue-100">اسم الموظف</p>
+                        <p className="font-bold text-base drop-shadow-sm">{invoice.employee_name}</p>
                       </div>
-                      <div className="bg-gradient-to-r from-green-500/20 to-emerald-600/20 rounded-xl p-4 backdrop-blur-sm border border-green-300/20 hover:from-green-400/25 hover:to-emerald-500/25 transition-all duration-300">
-                        <p className="text-xs opacity-80 font-medium mb-2 text-green-100">معرف الموظف</p>
-                        <p className="font-mono font-bold text-base text-green-200 drop-shadow-sm">{invoice.employee_code || 'غير محدد'}</p>
+                      <div className="bg-gradient-to-r from-emerald-500/30 to-green-600/30 rounded-lg p-3 backdrop-blur-sm border border-emerald-300/30 hover:from-emerald-400/35 hover:to-green-500/35 transition-all duration-300">
+                        <p className="text-xs opacity-90 font-medium mb-1.5 text-emerald-100">معرف الموظف</p>
+                        <p className="font-mono font-bold text-sm text-emerald-200 drop-shadow-sm">{invoice.employee_code || 'غير محدد'}</p>
                       </div>
                     </div>
-                    <div className="space-y-4">
-                      <div className="bg-gradient-to-r from-purple-500/20 to-violet-600/20 rounded-xl p-4 backdrop-blur-sm border border-purple-300/20 hover:from-purple-400/25 hover:to-violet-500/25 transition-all duration-300">
-                        <p className="text-xs opacity-80 font-medium mb-2 text-purple-100">رقم الفاتورة</p>
-                        <p className="font-mono font-bold text-base text-purple-200 drop-shadow-sm">{invoice.invoice_number}</p>
+                    <div className="space-y-3">
+                      <div className="bg-gradient-to-r from-purple-500/30 to-violet-600/30 rounded-lg p-3 backdrop-blur-sm border border-purple-300/30 hover:from-purple-400/35 hover:to-violet-500/35 transition-all duration-300">
+                        <p className="text-xs opacity-90 font-medium mb-1.5 text-purple-100">رقم الفاتورة</p>
+                        <p className="font-mono font-bold text-sm text-purple-200 drop-shadow-sm">{invoice.invoice_number}</p>
                       </div>
-                      <div className="bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-xl p-4 backdrop-blur-sm border border-cyan-300/20 hover:from-cyan-400/25 hover:to-blue-500/25 transition-all duration-300">
-                        <p className="text-xs opacity-80 font-medium mb-2 text-cyan-100">طريقة الدفع</p>
-                        <p className="font-bold text-base text-cyan-200 drop-shadow-sm">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
+                      <div className="bg-gradient-to-r from-orange-500/30 to-red-600/30 rounded-lg p-3 backdrop-blur-sm border border-orange-300/30 hover:from-orange-400/35 hover:to-red-500/35 transition-all duration-300">
+                        <p className="text-xs opacity-90 font-medium mb-1.5 text-orange-100">طريقة الدفع</p>
+                        <p className="font-bold text-sm text-orange-200 drop-shadow-sm">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
                       </div>
                     </div>
                   </div>
                   {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-4 -left-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-background/5 rounded-full"></div>
+                  <div className="absolute -top-3 -left-3 w-12 h-12 bg-background/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
@@ -144,89 +144,89 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
               <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl group cursor-pointer">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700 opacity-90"></div>
                 <div className="absolute inset-0 bg-black/10"></div>
-                <CardContent className="relative p-8 text-white text-center">
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                    <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 group-hover:scale-110 transition-all duration-300">
-                      <DollarSign className="w-12 h-12 drop-shadow-lg" />
+                <CardContent className="relative p-5 text-white text-center">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 group-hover:scale-110 transition-all duration-300">
+                      <DollarSign className="w-8 h-8 drop-shadow-lg" />
                     </div>
-                    <h3 className="text-2xl font-black drop-shadow-lg">المبلغ المدفوع</h3>
+                    <h3 className="text-lg font-bold drop-shadow-lg">المبلغ المدفوع</h3>
                   </div>
-                  <p className="text-6xl font-black mb-4 drop-shadow-2xl">
+                  <p className="text-4xl font-black mb-3 drop-shadow-2xl">
                     {invoice.total_amount?.toLocaleString()}
                   </p>
-                  <p className="text-xl font-black opacity-90 mb-6 drop-shadow-lg">دينار عراقي</p>
-                  <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm border border-white/20">
-                    <div className="flex items-center justify-center gap-3 text-lg font-bold">
-                      <CheckCircle className="w-6 h-6" />
+                  <p className="text-base font-bold opacity-90 mb-4 drop-shadow-lg">دينار عراقي</p>
+                  <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/20">
+                    <div className="flex items-center justify-center gap-2 text-sm font-bold">
+                      <CheckCircle className="w-5 h-5" />
                       <span>تم الدفع بنجاح</span>
                     </div>
                   </div>
                   {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-6 -left-6 w-24 h-24 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-3 -left-3 w-12 h-12 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
             </div>
 
             {/* إحصائيات الأرباح */}
             {stats.ordersCount > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                 <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                  <CardContent className="p-4 text-center">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-4 relative overflow-hidden">
+                  <CardContent className="p-3 text-center">
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-3 relative overflow-hidden">
                       <div className="flex justify-center mb-2">
-                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                          <Award className="w-6 h-6" />
+                        <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                          <Award className="w-5 h-5" />
                         </div>
                       </div>
                       <p className="text-xs opacity-90 mb-1">عدد الطلبات</p>
-                      <p className="text-2xl font-black">{stats.ordersCount}</p>
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                      <p className="text-xl font-black">{stats.ordersCount}</p>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white/5 rounded-full"></div>
                     </div>
                   </CardContent>
                 </Card>
                 
                 <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                  <CardContent className="p-4 text-center">
-                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden">
+                  <CardContent className="p-3 text-center">
+                    <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-3 relative overflow-hidden">
                       <div className="flex justify-center mb-2">
-                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                          <TrendingUp className="w-6 h-6" />
+                        <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                          <TrendingUp className="w-5 h-5" />
                         </div>
                       </div>
                       <p className="text-xs opacity-90 mb-1">إجمالي الإيرادات</p>
-                      <p className="text-lg font-black">{stats.totalRevenue.toLocaleString()}</p>
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                      <p className="text-base font-black">{stats.totalRevenue.toLocaleString()}</p>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white/5 rounded-full"></div>
                     </div>
                   </CardContent>
                 </Card>
                 
                 <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                  <CardContent className="p-4 text-center">
-                    <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden">
+                  <CardContent className="p-3 text-center">
+                    <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-3 relative overflow-hidden">
                       <div className="flex justify-center mb-2">
-                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                          <DollarSign className="w-6 h-6" />
+                        <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                          <DollarSign className="w-5 h-5" />
                         </div>
                       </div>
                       <p className="text-xs opacity-90 mb-1">التكاليف</p>
-                      <p className="text-lg font-black">{stats.totalCost.toLocaleString()}</p>
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                      <p className="text-base font-black">{stats.totalCost.toLocaleString()}</p>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white/5 rounded-full"></div>
                     </div>
                   </CardContent>
                 </Card>
                 
                 <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl">
-                  <CardContent className="p-4 text-center">
-                    <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-4 relative overflow-hidden">
+                  <CardContent className="p-3 text-center">
+                    <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-3 relative overflow-hidden">
                       <div className="flex justify-center mb-2">
-                        <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                          <Banknote className="w-6 h-6" />
+                        <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                          <Banknote className="w-5 h-5" />
                         </div>
                       </div>
                       <p className="text-xs opacity-90 mb-1">ربح الموظف</p>
-                      <p className="text-lg font-black">{stats.totalProfit.toLocaleString()}</p>
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                      <p className="text-base font-black">{stats.totalProfit.toLocaleString()}</p>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white/5 rounded-full"></div>
                     </div>
                   </CardContent>
                 </Card>
