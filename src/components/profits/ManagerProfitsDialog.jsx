@@ -288,7 +288,7 @@ const ManagerProfitsDialog = ({
     });
 
     return processed;
-  }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm]);
+  }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm, currentUser?.id]);
 
   // إحصائيات شاملة - مفلترة حسب الفترة المختارة
   const stats = useMemo(() => {
@@ -298,68 +298,76 @@ const ManagerProfitsDialog = ({
       dateRange
     });
 
-    if (!detailedProfits || !Array.isArray(detailedProfits) || detailedProfits.length === 0) {
-      console.log('❌ stats: لا توجد أرباح مفصلة للفترة المختارة');
-      return {
-        totalManagerProfit: 0,
-        totalEmployeeProfit: 0,
-        totalRevenue: 0,
-        pendingProfit: 0,
-        settledProfit: 0,
-        totalOrders: 0,
-        averageOrderValue: 0,
-        profitMargin: '0.0',
-        topEmployees: []
-      };
-    }
-
-    // حساب الإحصائيات من الأرباح المفلترة حسب الفترة
-    const totalManagerProfit = detailedProfits.reduce((sum, profit) => sum + (profit.managerProfit || 0), 0);
-    const totalEmployeeProfit = detailedProfits.reduce((sum, profit) => sum + (profit.employeeProfit || 0), 0);
-    const totalRevenue = detailedProfits.reduce((sum, profit) => sum + (profit.orderTotal || 0), 0);
-    const pendingProfit = detailedProfits.filter(p => p.status === 'pending').reduce((sum, profit) => sum + (profit.managerProfit || 0), 0);
-    const settledProfit = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (profit.managerProfit || 0), 0);
-    const totalOrders = detailedProfits.length;
-    const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
-    const profitMargin = totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0';
-
-    // حساب أفضل الموظفين
-    const employeeStats = {};
-    detailedProfits.forEach(profit => {
-      const empId = profit.employee_id;
-      if (!employeeStats[empId]) {
-        employeeStats[empId] = {
-          employee: profit.employee,
-          orders: 0,
-          revenue: 0,
-          managerProfit: 0,
-          employeeProfit: 0
-        };
-      }
-      employeeStats[empId].orders += 1;
-      employeeStats[empId].revenue += profit.orderTotal || 0;
-      employeeStats[empId].managerProfit += profit.managerProfit || 0;
-      employeeStats[empId].employeeProfit += profit.employeeProfit || 0;
-    });
-
-    const topEmployees = Object.values(employeeStats)
-      .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
-      .slice(0, 5);
-
-    const calculatedStats = {
-      totalManagerProfit,
-      totalEmployeeProfit,
-      totalRevenue,
-      pendingProfit,
-      settledProfit,
-      totalOrders,
-      averageOrderValue,
-      profitMargin,
-      topEmployees
+    // إنشاء كائن افتراضي للإحصائيات
+    const defaultStats = {
+      totalManagerProfit: 0,
+      totalEmployeeProfit: 0,
+      totalRevenue: 0,
+      pendingProfit: 0,
+      settledProfit: 0,
+      totalOrders: 0,
+      averageOrderValue: 0,
+      profitMargin: '0.0',
+      topEmployees: []
     };
 
-    console.log('✅ الإحصائيات المحسوبة للفترة:', calculatedStats);
-    return calculatedStats;
+    if (!detailedProfits || !Array.isArray(detailedProfits) || detailedProfits.length === 0) {
+      console.log('❌ stats: لا توجد أرباح مفصلة للفترة المختارة');
+      return defaultStats;
+    }
+
+    try {
+      // حساب الإحصائيات من الأرباح المفلترة حسب الفترة
+      const totalManagerProfit = detailedProfits.reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
+      const totalEmployeeProfit = detailedProfits.reduce((sum, profit) => sum + (Number(profit.employeeProfit) || 0), 0);
+      const totalRevenue = detailedProfits.reduce((sum, profit) => sum + (Number(profit.orderTotal) || 0), 0);
+      const pendingProfit = detailedProfits.filter(p => p.status === 'pending').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
+      const settledProfit = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
+      const totalOrders = detailedProfits.length;
+      const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
+      const profitMargin = totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0';
+
+      // حساب أفضل الموظفين
+      const employeeStats = {};
+      detailedProfits.forEach(profit => {
+        const empId = profit.employee_id;
+        if (!employeeStats[empId]) {
+          employeeStats[empId] = {
+            employee: profit.employee,
+            orders: 0,
+            revenue: 0,
+            managerProfit: 0,
+            employeeProfit: 0
+          };
+        }
+        employeeStats[empId].orders += 1;
+        employeeStats[empId].revenue += Number(profit.orderTotal) || 0;
+        employeeStats[empId].managerProfit += Number(profit.managerProfit) || 0;
+        employeeStats[empId].employeeProfit += Number(profit.employeeProfit) || 0;
+      });
+
+      const topEmployees = Object.values(employeeStats)
+        .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
+        .slice(0, 5);
+
+      const calculatedStats = {
+        totalManagerProfit,
+        totalEmployeeProfit,
+        totalRevenue,
+        pendingProfit,
+        settledProfit,
+        totalOrders,
+        averageOrderValue,
+        profitMargin,
+        topEmployees
+      };
+
+      console.log('✅ الإحصائيات المحسوبة للفترة:', calculatedStats);
+      return calculatedStats;
+    } catch (error) {
+      console.error('❌ خطأ في حساب الإحصائيات:', error);
+      return defaultStats;
+    }
   }, [detailedProfits]);
 
   const formatCurrency = (amount) => {
