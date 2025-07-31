@@ -9,7 +9,7 @@ import { AlertTriangle, User, DollarSign, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
     const navigate = useNavigate();
