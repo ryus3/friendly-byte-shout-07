@@ -304,6 +304,7 @@ const ManagerProfitsDialog = ({
       totalRevenue: 0,
       pendingProfit: 0,
       settledProfit: 0,
+      settledEmployeeDues: 0, // إضافة للافتراضي
       totalOrders: 0,
       averageOrderValue: 0,
       profitMargin: '0.0',
@@ -322,6 +323,8 @@ const ManagerProfitsDialog = ({
       const totalRevenue = detailedProfits.reduce((sum, profit) => sum + (Number(profit.orderTotal) || 0), 0);
       const pendingProfit = detailedProfits.filter(p => p.status === 'pending').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
       const settledProfit = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
+      // حساب مستحقات الموظفين المدفوعة (الحقيقية)
+      const settledEmployeeDues = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.employeeProfit) || 0), 0);
       const totalOrders = detailedProfits.length;
       const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
       const profitMargin = totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0';
@@ -355,6 +358,7 @@ const ManagerProfitsDialog = ({
         totalRevenue,
         pendingProfit,
         settledProfit,
+        settledEmployeeDues, // مستحقات الموظفين المدفوعة الحقيقية
         totalOrders,
         averageOrderValue,
         profitMargin,
@@ -745,10 +749,10 @@ const ManagerProfitsDialog = ({
             />
             <StatCard
               title="مستحقات موظفين مدفوعة"
-              value={stats.settledProfit || 0}
+              value={stats.settledEmployeeDues || 0}
               icon={CheckCircle}
               gradient="from-emerald-500 to-teal-600"
-              percentage={stats.totalManagerProfit > 0 ? (((stats.settledProfit || 0) / stats.totalManagerProfit) * 100).toFixed(1) : '0'}
+              percentage={stats.totalEmployeeProfit > 0 ? (((stats.settledEmployeeDues || 0) / stats.totalEmployeeProfit) * 100).toFixed(1) : '0'}
             />
             <StatCard
               title="هامش الربح"
