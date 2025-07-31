@@ -901,12 +901,8 @@ const EmployeeFollowUpPage = () => {
         />
         
         <SettledDuesDialog
-          open={isDuesDialogOpen}
-          onOpenChange={setIsDuesDialogOpen}
-          invoices={expenses || []} // تمرير المصاريف بدلاً من settlementInvoices
-          allUsers={allUsers}
-          profits={profits || []} // تمرير بيانات الأرباح
-          orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
+          isOpen={isDuesDialogOpen}
+          onClose={() => setIsDuesDialogOpen(false)}
         />
 
         <ManagerProfitsDialog

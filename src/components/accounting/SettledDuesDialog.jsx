@@ -58,22 +58,31 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800">
                 <CardContent className="p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      <User className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <h3 className="font-bold text-lg">معلومات الموظف</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-muted-foreground">اسم الموظف</p>
-                      <p className="font-bold text-lg">{invoice.employee_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">رقم الفاتورة</p>
-                      <p className="font-mono font-bold text-purple-600">{invoice.invoice_number}</p>
-                    </div>
-                  </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <User className="w-5 h-5 text-blue-600" />
+                </div>
+                <h3 className="font-bold text-lg">معلومات الموظف</h3>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">اسم الموظف</p>
+                  <p className="font-bold text-lg">{invoice.employee_name}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">رقم الفاتورة</p>
+                  <p className="font-mono font-bold text-purple-600">{invoice.invoice_number}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">تاريخ التسوية</p>
+                  <p className="font-bold text-lg text-blue-600">
+                    {invoice.settlement_date ? 
+                      format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
+                      'غير محدد'
+                    }
+                  </p>
+                </div>
+              </div>
                 </CardContent>
               </Card>
 
