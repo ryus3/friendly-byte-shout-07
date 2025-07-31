@@ -909,15 +909,11 @@ const EmployeeFollowUpPage = () => {
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
         />
 
-        <ManagerProfitsDialog
+        {/* نافذة أرباح الموظفين المحسّنة */}
+        <ManagerProfitsDialogV2
           isOpen={isManagerProfitsDialogOpen}
           onClose={() => setIsManagerProfitsDialogOpen(false)}
-          orders={filteredOrders || orders || []} 
-          employees={employees || allUsers || []}
-          calculateProfit={calculateManagerProfit || calculateProfit} // استخدام calculateManagerProfit أولاً
-          profits={profits || []}
-          managerId={null}
-          stats={stats} // تمرير الإحصائيات المحسوبة مباشرة
+          employees={employees}
         />
       </motion.div>
     </>
