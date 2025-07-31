@@ -863,7 +863,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
             </div>
 
             {/* كروت الفواتير */}
-            <ScrollArea className="h-[450px]">
+            <div className="max-h-[400px] overflow-y-auto">
               {loadingRealInvoices ? (
                 <div className="text-center py-8">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -968,7 +968,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                   ))}
                 </div>
               )}
-             </div>
+            </div>
+            </div>
           </ScrollArea>
 
           <DialogFooter>
