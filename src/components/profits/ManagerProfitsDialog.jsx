@@ -96,16 +96,29 @@ const ManagerProfitsDialog = ({
   const dateRange = useMemo(() => {
     const now = new Date();
     switch (selectedPeriod) {
-      case 'today':
-        return { start: new Date(now.setHours(0, 0, 0, 0)), end: new Date(now.setHours(23, 59, 59, 999)) };
-      case 'week':
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
+      case 'today': {
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+        return { start: startOfDay, end: endOfDay };
+      }
+      case 'week': {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
         return { start: weekStart, end: weekEnd };
+      }
       case 'month':
         return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'year':
-        return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
+      case 'year': {
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+        const yearEnd = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+        return { start: yearStart, end: yearEnd };
+      }
       default:
         return { start: startOfMonth(now), end: endOfMonth(now) };
     }
