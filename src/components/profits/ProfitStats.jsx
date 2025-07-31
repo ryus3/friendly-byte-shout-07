@@ -11,6 +11,7 @@ const ProfitStats = ({
   onFilterChange,
   onExpensesClick,
   onSettledDuesClick,
+  onManagerProfitsClick, // إضافة handler لنافذة أرباح المدير
   user,
 }) => {
   return (
@@ -21,6 +22,7 @@ const ProfitStats = ({
       onFilterChange={onFilterChange}
       onExpensesClick={onExpensesClick}
       onSettledDuesClick={onSettledDuesClick}
+      onManagerProfitsClick={onManagerProfitsClick}
     />
   );
 };
