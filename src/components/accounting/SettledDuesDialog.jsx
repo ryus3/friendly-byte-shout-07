@@ -830,27 +830,27 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                               <Calendar className="w-3 h-3 text-purple-600" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-medium text-purple-600 text-sm">
-                                {invoice.settlement_date ? 
-                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
-                                  (invoice.created_at ? 
-                                    format(parseISO(invoice.created_at), 'dd/MM/yyyy', { locale: ar }) :
-                                    'غير محدد'
-                                  )
-                                }
-                              </p>
+                               <p className="font-medium text-purple-600 text-sm">
+                                 {invoice.settlement_date ? 
+                                   format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
+                                   (invoice.created_at ? 
+                                     format(parseISO(invoice.created_at), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
+                                     'غير محدد'
+                                   )
+                                 }
+                               </p>
                               <p className="text-xs text-muted-foreground">التاريخ</p>
                             </div>
                           </div>
                           
                           {/* الحالة والإجراءات */}
                           <div className="flex items-center gap-3 flex-shrink-0">
-                            <Badge 
-                              variant="secondary" 
-                              className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800 text-xs"
-                            >
-                              مكتملة
-                            </Badge>
+                             <Badge 
+                               variant="secondary" 
+                               className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 text-xs font-bold hover:from-emerald-600 hover:to-green-700 transition-all duration-300"
+                             >
+                               مكتملة
+                             </Badge>
                             <Button
                               variant="outline"
                               size="sm"
