@@ -140,25 +140,35 @@ const ManagerProfitsDialog = ({
     }
 
     // المعالجة من جدول profits مباشرة - فقط طلبات الموظفين
+    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير الرئيسي الثابت
+    
     const employeeOrdersOnly = profits.filter(profit => {
       // العثور على الطلب المرتبط
       const relatedOrder = orders?.find(order => order.id === profit.order_id);
       if (!relatedOrder) return false;
       
-      // تجاهل طلبات المدير - فقط طلبات الموظفين
-      const isManagerOrder = relatedOrder.created_by === currentUser?.id;
+      // تجاهل طلبات المدير الرئيسي - استخدام المعرف الثابت
+      const isManagerOrder = relatedOrder.created_by === ADMIN_ID;
       if (isManagerOrder) {
-        console.log(`🚫 تجاهل طلب المدير: ${relatedOrder.order_number}`);
+        console.log(`🚫 تجاهل طلب المدير: ${relatedOrder.order_number} - ${ADMIN_ID}`);
         return false;
       }
       
-      console.log(`✅ طلب موظف: ${relatedOrder.order_number} - منشئ: ${relatedOrder.created_by}`);
+      // التأكد من أن منشئ الطلب موظف نشط
+      const orderCreator = employees.find(emp => emp.user_id === relatedOrder.created_by);
+      if (!orderCreator || orderCreator.status !== 'active') {
+        console.log(`🚫 تجاهل طلب من مستخدم غير نشط: ${relatedOrder.order_number}`);
+        return false;
+      }
+      
+      console.log(`✅ طلب موظف: ${relatedOrder.order_number} - منشئ: ${relatedOrder.created_by} - موظف: ${orderCreator.full_name}`);
       return true;
     });
 
     console.log('📋 فلترة طلبات الموظفين:', {
       totalProfits: profits.length,
       employeeProfits: employeeOrdersOnly.length,
+      excludedAdminId: ADMIN_ID,
       currentUserId: currentUser?.id
     });
 
@@ -704,14 +714,16 @@ const ManagerProfitsDialog = ({
                       <SelectTrigger className="bg-background/80 border-border/50 hover:border-primary/50 transition-colors">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">كل الموظفين</SelectItem>
-                        {employees.map(emp => (
-                          <SelectItem key={emp.user_id} value={emp.user_id}>
-                            {emp.full_name || emp.name || 'غير محدد'}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent>
+                         <SelectItem value="all">كل الموظفين</SelectItem>
+                         {employees
+                           .filter(emp => emp.user_id !== '91484496-b887-44f7-9e5d-be9db5567604') // استبعاد المدير الرئيسي
+                           .map(emp => (
+                             <SelectItem key={emp.user_id} value={emp.user_id}>
+                               {emp.full_name || emp.name || 'غير محدد'}
+                             </SelectItem>
+                           ))}
+                       </SelectContent>
                     </Select>
                   </div>
 
