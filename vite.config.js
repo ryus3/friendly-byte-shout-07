@@ -126,10 +126,19 @@ logger.error = (msg, options) => {
     loggerError(msg, options);
 };
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
+    const isDev = process.env.NODE_ENV !== 'production';
+    let inlineEditPlugin, editModeDevPlugin;
+
+    if (isDev) {
+        inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
+        editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
+    }
+
     return {
         customLogger: logger,
         plugins: [
+            ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
             react(),
             addTransformIndexHtml,
         ],
@@ -146,13 +155,13 @@ export default defineConfig(({ mode }) => {
         },
         build: {
             rollupOptions: {
-                output: {
-                    manualChunks: undefined,
-                },
+                external: [
+                    '@babel/parser',
+                    '@babel/traverse',
+                    '@babel/generator',
+                    '@babel/types',
+                ],
             },
-        },
-        optimizeDeps: {
-            include: ['react', 'react-dom'],
         },
     };
 });
