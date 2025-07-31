@@ -457,24 +457,23 @@ const ProfitsSummaryPage = () => {
 
         {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}
         <div className="space-y-6">
-          {/* الكروت الأساسية من ProfitStats */}
+          {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير */}
           <ProfitStats
             profitData={profitData}
             canViewAll={canViewAll}
             onFilterChange={handleFilterChange}
             onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
             onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
+            dateRange={dateRange}
+            unifiedNetProfit={unifiedProfitData?.netProfit}
+            showManagerProfitsCard={true}
+            managerProfitsCardProps={{
+              orders: orders || [],
+              allUsers: allUsers || [],
+              calculateProfit: calculateProfit,
+              profits: profits || []
+            }}
           />
-
-          {/* كارت أرباح المدير من الموظفين - منفصل ومدمج */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            <ManagerProfitsCard 
-              orders={orders || []}
-              allUsers={allUsers || []}
-              calculateProfit={calculateProfit}
-              profits={profits || []}
-            />
-          </div>
         </div>
 
         <Card>
