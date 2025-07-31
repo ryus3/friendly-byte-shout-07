@@ -649,25 +649,25 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-right flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg text-white">
-                <CheckCircle className="w-7 h-7" />
+        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-xl font-bold text-center flex items-center justify-center gap-3">
+              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg text-white">
+                <CheckCircle className="w-5 h-5" />
               </div>
               المستحقات المدفوعة
             </DialogTitle>
-            <DialogDescription className="text-right text-lg">
+            <DialogDescription className="text-center text-muted-foreground text-sm">
               عرض جميع فواتير التسوية المكتملة للموظفين
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* الفلاتر */}
-            <div className="flex flex-wrap gap-4 items-center">
-              <div className="flex-1 min-w-[200px]">
+            <div className="flex flex-col sm:flex-row gap-3 p-3 bg-muted/30 rounded-lg">
+              <div className="flex-1">
                 <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="جميع الموظفين" />
                   </SelectTrigger>
                   <SelectContent>
@@ -679,9 +679,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                 </Select>
               </div>
 
-              <div className="flex-1 min-w-[180px]">
+              <div className="flex-1">
                 <Select value={timePeriod} onValueChange={setTimePeriod}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue placeholder="الفترة الزمنية" />
                   </SelectTrigger>
                   <SelectContent>
@@ -693,120 +693,164 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                 </Select>
               </div>
               
-              <div className="flex-1 min-w-[280px]">
+              <div className="flex-1">
                 <DateRangePicker
                   date={dateRange}
                   onDateChange={setDateRange}
-                  placeholder="اختر نطاق زمني مخصص"
+                  placeholder="اختر نطاق زمني"
                 />
               </div>
             </div>
 
             {/* الإحصائيات */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <FileText className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-sm opacity-90">عدد الفواتير</p>
-                  <p className="text-2xl font-bold">{filteredInvoices.length}</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xl font-bold text-purple-600">{employees.length}</p>
+                      <p className="text-xs text-muted-foreground">عدد الموظفين</p>
+                    </div>
+                    <div className="p-2 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg text-white group-hover:scale-110 transition-transform">
+                      <User className="w-5 h-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              
-              <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <DollarSign className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-sm opacity-90">إجمالي المبلغ</p>
-                  <p className="text-2xl font-bold">{totalAmount.toLocaleString()}</p>
+
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xl font-bold text-green-600">{totalAmount.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">إجمالي المبلغ (د.ع)</p>
+                    </div>
+                    <div className="p-2 bg-gradient-to-br from-green-500 to-green-600 rounded-lg text-white group-hover:scale-110 transition-transform">
+                      <DollarSign className="w-5 h-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-              
-              <Card className="bg-gradient-to-r from-purple-500 to-purple-600 text-white">
-                <CardContent className="p-4 text-center">
-                  <User className="w-8 h-8 mx-auto mb-2" />
-                  <p className="text-sm opacity-90">عدد الموظفين</p>
-                  <p className="text-2xl font-bold">{employees.length}</p>
+
+              <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xl font-bold text-blue-600">{filteredInvoices.length}</p>
+                      <p className="text-xs text-muted-foreground">عدد الفواتير</p>
+                    </div>
+                    <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white group-hover:scale-110 transition-transform">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* جدول الفواتير */}
-            <Card>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[500px]">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-800 z-10">
-                      <TableRow>
-                        <TableHead className="text-right font-bold">رقم الفاتورة</TableHead>
-                        <TableHead className="text-right font-bold">اسم الموظف</TableHead>
-                        <TableHead className="text-right font-bold">المبلغ</TableHead>
-                        <TableHead className="text-right font-bold">تاريخ التسوية</TableHead>
-                        <TableHead className="text-right font-bold">الحالة</TableHead>
-                        <TableHead className="text-center font-bold">الإجراءات</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loadingRealInvoices ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8">
-                            جاري تحميل البيانات...
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredInvoices.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-slate-500">
-                            لا توجد فواتير تسوية
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredInvoices.map((invoice) => (
-                          <TableRow key={invoice.id} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                            <TableCell className="font-mono font-bold text-blue-600">
-                              {invoice.invoice_number}
-                            </TableCell>
-                            <TableCell className="font-semibold">
-                              {invoice.employee_name}
-                            </TableCell>
-                            <TableCell className="font-bold text-green-600">
-                              {invoice.total_amount?.toLocaleString()} د.ع
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-slate-700 dark:text-slate-300">
-                                {invoice.settlement_date ? 
-                                  format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
-                                  format(new Date(), 'dd/MM/yyyy', { locale: ar })
-                                }
+            {/* كروت الفواتير */}
+            <ScrollArea className="h-[450px]">
+              {loadingRealInvoices ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="mt-2 text-sm text-muted-foreground">جاري تحميل البيانات...</p>
+                </div>
+              ) : filteredInvoices.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-muted-foreground mx-auto" />
+                  </div>
+                  <p className="text-muted-foreground">لا توجد فواتير تسوية</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {filteredInvoices.map((invoice) => (
+                    <Card 
+                      key={invoice.id} 
+                      className="group hover:shadow-md transition-all duration-200 border-l-4 border-l-blue-500 bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                          {/* معلومات الفاتورة */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white flex-shrink-0">
+                                <Receipt className="w-4 h-4" />
                               </div>
-                              <div className="text-sm text-slate-500 dark:text-slate-400">
-                                {invoice.settlement_date ? 
-                                  format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
-                                  format(new Date(), 'HH:mm', { locale: ar })
-                                }
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-bold text-blue-600 font-mono text-sm truncate">
+                                  {invoice.invoice_number}
+                                </h3>
+                                <p className="text-xs text-muted-foreground">رقم الفاتورة</p>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                مكتملة
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handlePreviewInvoice(invoice)}
-                                className="gap-2"
-                              >
-                                <Eye className="w-4 h-4" />
-                                معاينة الفاتورة
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="p-1 bg-green-100 rounded dark:bg-green-900/30">
+                                  <User className="w-3 h-3 text-green-600" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-green-700 dark:text-green-400 truncate">
+                                    {invoice.employee_name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">الموظف</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <div className="p-1 bg-emerald-100 rounded dark:bg-emerald-900/30">
+                                  <DollarSign className="w-3 h-3 text-emerald-600" />
+                                </div>
+                                <div>
+                                  <p className="font-bold text-emerald-600">
+                                    {invoice.total_amount?.toLocaleString()} د.ع
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">المبلغ</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <div className="p-1 bg-purple-100 rounded dark:bg-purple-900/30">
+                                  <Calendar className="w-3 h-3 text-purple-600" />
+                                </div>
+                                <div>
+                                  <p className="font-medium text-purple-600">
+                                    {invoice.settlement_date ? 
+                                      format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                      format(new Date(), 'dd/MM/yyyy', { locale: ar })
+                                    }
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">تاريخ التسوية</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* حالة الفاتورة والإجراءات */}
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <Badge 
+                              variant="secondary" 
+                              className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800"
+                            >
+                              مكتملة
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePreviewInvoice(invoice)}
+                              className="gap-2 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                              <span className="hidden sm:inline">معاينة</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
           </div>
 
           <DialogFooter>
