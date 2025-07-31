@@ -28,6 +28,7 @@ import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -425,10 +426,40 @@ const AccountingPage = () => {
             return sum + (orderTotal - deliveryFee);
         }, 0);
         
-        // حساب أرباح النظام من طلبات الموظفين (باستخدام البيانات الفعلية)
-        const systemProfitFromEmployees = employeeOrdersDelivered.reduce((sum, o) => {
-          return sum + getSystemProfitFromOrder(o.id, allProfits);
+        // حساب أرباح المدير من الموظفين - نفس منطق ManagerProfitsCard بالضبط
+        const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير الرئيسي الثابت
+        
+        // الطلبات المسلمة أو المكتملة للإحصائيات (نفس منطق ManagerProfitsCard)
+        const deliveredOrdersForManagerProfits = deliveredOrders.filter(order => {
+          if (!order) return false;
+          // استبعاد طلبات المدير الرئيسي
+          if (order.created_by === ADMIN_ID) return false;
+          // فقط الطلبات المسلمة أو المكتملة
+          return order.status === 'delivered' || order.status === 'completed';
+        });
+
+        console.log('🔍 AccountingPage: حساب أرباح المدير من الموظفين:', {
+          totalOrders: deliveredOrders.length,
+          deliveredOrdersForManagerProfits: deliveredOrdersForManagerProfits.length,
+          excludedAdminId: ADMIN_ID
+        });
+
+        // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
+        const systemProfitFromEmployees = deliveredOrdersForManagerProfits.reduce((sum, order) => {
+          // البحث عن سجل الربح الحقيقي
+          const profitRecord = allProfits?.find(p => p.order_id === order.id);
+          if (profitRecord) {
+            // ربح النظام = إجمالي الربح - ربح الموظف
+            const systemProfit = (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0);
+            return sum + systemProfit;
+          }
+          return sum;
         }, 0);
+
+        console.log('✅ AccountingPage: النتيجة النهائية:', {
+          managerProfitFromEmployees: systemProfitFromEmployees,
+          deliveredOrdersCount: deliveredOrdersForManagerProfits.length
+        });
         
         const totalSystemProfit = myProfit + systemProfitFromEmployees;
     
@@ -532,7 +563,7 @@ const AccountingPage = () => {
           format: 'custom', 
           onClick: () => navigate('/advanced-profits-analysis') 
         },
-        { key: 'employeeProfit', title: "أرباح من الموظفين", value: financialSummary.systemProfitFromEmployees, icon: Users, colors: ['fuchsia-500', 'purple-500'], format: 'currency', onClick: () => navigate('/employee-follow-up') },
+        // تم استبدال هذا الكارت بـ ManagerProfitsCard الموحد
         { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
 
@@ -566,10 +597,17 @@ const AccountingPage = () => {
                     ))}
                 </div>
                 
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {profitCards.map((card, index) => (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {profitCards.filter(card => card.key !== 'employeeProfit').map((card, index) => (
                         <StatCard key={index} {...card} />
                     ))}
+                    {/* كارت أرباحي من الموظفين الموحد */}
+                    <ManagerProfitsCard 
+                        orders={orders || []}
+                        allUsers={allUsers || []}
+                        calculateProfit={calculateProfit}
+                        profits={allProfits || []}
+                    />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
