@@ -498,42 +498,46 @@ const EmployeeFollowUpPage = () => {
           
           return sum + managerProfit;
         } else if (calculateManagerProfit && typeof calculateManagerProfit === 'function') {
-          // استخدام دالة الحساب كبديل
+          // استخدام دالة النظام الصحيحة
           const calculatedProfit = calculateManagerProfit(order) || 0;
           
           console.log(`💰 ربح المدير المحسوب للطلب ${order.order_number}:`, {
             calculatedProfit,
-            source: 'function'
+            source: 'calculateManagerProfit'
           });
           
           return sum + calculatedProfit;
         } else {
-          // حساب يدوي من بنود الطلب
-          const orderTotal = (order.final_amount || order.total_amount || 0) - (order.delivery_fee || 0);
-          const estimatedProfit = orderTotal * 0.15; // نسبة ربح تقديرية 15%
-          const managerShare = estimatedProfit * 0.7; // 70% للمدير
+          // حساب باستخدام دالة calculateProfit للموظف ثم طرحها من الإجمالي
+          if (calculateProfit && typeof calculateProfit === 'function') {
+            const employeeProfit = (order.items || []).reduce((itemSum, item) => {
+              return itemSum + (calculateProfit(item, order.created_by) || 0);
+            }, 0);
+            
+            // حساب إجمالي الربح من بنود الطلب
+            const totalItemProfit = (order.items || []).reduce((itemSum, item) => {
+              const sellPrice = Number(item.unit_price || item.price || 0);
+              const costPrice = Number(item.cost_price || 0);
+              const quantity = Number(item.quantity || 0);
+              return itemSum + Math.max(0, (sellPrice - costPrice) * quantity);
+            }, 0);
+            
+            const managerProfit = Math.max(0, totalItemProfit - employeeProfit);
+            
+            console.log(`💰 ربح المدير المحسوب يدوياً للطلب ${order.order_number}:`, {
+              totalItemProfit,
+              employeeProfit,
+              managerProfit,
+              source: 'manual_calculation'
+            });
+            
+            return sum + managerProfit;
+          }
           
-          console.log(`💰 ربح المدير التقديري للطلب ${order.order_number}:`, {
-            orderTotal,
-            estimatedProfit,
-            managerShare,
-            source: 'estimated'
-          });
-          
-          return sum + managerShare;
         }
       }, 0);
 
-    // المستحقات المدفوعة (من المصاريف المحاسبية)
-    const paidDues = expenses && Array.isArray(expenses)
-      ? expenses.filter(expense => 
-          expense.category === 'مستحقات الموظفين' && 
-          expense.expense_type === 'system' && 
-          expense.status === 'approved'
-        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-      : 0;
-
-    // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
+    // المستحقات المعلقة - استخدام النظام الموجود  
     const pendingDues = deliveredOrders
       .filter(order => order.receipt_received === true)
       .reduce((sum, order) => {
@@ -550,22 +554,30 @@ const EmployeeFollowUpPage = () => {
             settled_at: profitRecord.settled_at,
             source: 'database_pending'
           });
-        } else if (!profitRecord) {
-          // حساب تقديري لربح الموظف
-          const orderTotal = (order.final_amount || order.total_amount || 0) - (order.delivery_fee || 0);
-          const estimatedProfit = orderTotal * 0.15; // نسبة ربح تقديرية 15%
-          employeeProfit = estimatedProfit * 0.3; // 30% للموظف
+        } else if (!profitRecord && calculateProfit && typeof calculateProfit === 'function') {
+          // استخدام دالة النظام لحساب ربح الموظف
+          employeeProfit = (order.items || []).reduce((itemSum, item) => {
+            return itemSum + (calculateProfit(item, order.created_by) || 0);
+          }, 0);
           
-          console.log(`🔄 مستحقات تقديرية للطلب ${order.order_number}:`, {
-            orderTotal,
-            estimatedProfit,
+          console.log(`🔄 مستحقات محسوبة للطلب ${order.order_number}:`, {
             employeeProfit,
-            source: 'estimated_pending'
+            source: 'calculateProfit'
           });
         }
         
         return sum + employeeProfit;
       }, 0);
+
+    // المستحقات المدفوعة (من المصاريف المحاسبية)
+    const paidDues = expenses && Array.isArray(expenses)
+      ? expenses.filter(expense => 
+          expense.category === 'مستحقات الموظفين' && 
+          expense.expense_type === 'system' && 
+          expense.status === 'approved'
+        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+      : 0;
+
 
     console.log('📊 الإحصائيات:', {
       totalOrders: filteredOrders.length,

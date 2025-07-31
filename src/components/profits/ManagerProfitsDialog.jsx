@@ -201,7 +201,7 @@ const ManagerProfitsDialog = ({
       })
       .map(order => {
         try {
-          console.log(`💰 حساب ربح مفصل للطلب ${order.order_number}:`, {
+          console.log(`💰 حساب ربح للطلب ${order.order_number}:`, {
             orderId: order.id,
             finalAmount: order.final_amount,
             totalAmount: order.total_amount,
@@ -214,113 +214,113 @@ const ManagerProfitsDialog = ({
           const deliveryFee = Number(order.delivery_fee || 0);
           const totalWithoutDelivery = Math.max(0, totalWithDelivery - deliveryFee);
           
-          console.log(`📊 تفاصيل المبالغ للطلب ${order.order_number}:`, {
-            totalWithDelivery,
-            deliveryFee,
-            totalWithoutDelivery
-          });
-          
-          // حساب الربح بطريقة آمنة
+          // استخدام النظام الموجود من InventoryContext
           let managerProfit = 0;
           let employeeProfit = 0;
           let totalProfit = 0;
           let systemProfit = 0;
 
-          if (calculateProfit && typeof calculateProfit === 'function') {
-            try {
-              // جرب استدعاء الدالة بطرق مختلفة
-              let profitCalc;
-              try {
-                profitCalc = calculateProfit(order.id);
-              } catch (e) {
-                console.log('محاولة استدعاء بالطلب كاملاً...');
-                profitCalc = calculateProfit(order);
-              }
-              
-              console.log(`📊 نتيجة حساب الربح من الدالة للطلب ${order.order_number}:`, profitCalc);
-              
-              if (profitCalc && typeof profitCalc === 'object') {
-                // استخراج قيم الربح من النتيجة
-                systemProfit = Number(profitCalc.systemProfit || profitCalc.managerProfit || 0);
-                employeeProfit = Number(profitCalc.employeeProfit || 0);
-                totalProfit = Number(profitCalc.totalProfit || profitCalc.netProfit || (systemProfit + employeeProfit));
-                managerProfit = systemProfit; // ربح المدير = ربح النظام
-              } else if (typeof profitCalc === 'number') {
-                // الدالة ترجع قيمة واحدة فقط
-                totalProfit = Number(profitCalc || 0);
-                systemProfit = totalProfit * 0.7; // 70% للنظام
-                employeeProfit = totalProfit * 0.3; // 30% للموظف
-                managerProfit = systemProfit;
-              }
-            } catch (error) {
-              console.error(`❌ خطأ في تنفيذ دالة حساب الربح للطلب ${order.order_number}:`, error);
-              // استخدم حساب يدوي عند الخطأ
-              totalProfit = totalWithoutDelivery * 0.2; // افتراض 20% ربح
-              systemProfit = totalProfit * 0.6; // 60% للنظام  
-              employeeProfit = totalProfit * 0.4; // 40% للموظف
-              managerProfit = systemProfit;
-            }
-          } else {
-            // حساب الربح يدوياً باستخدام البيانات الحقيقية من النظام
-            console.log(`🧮 حساب يدوي للأرباح للطلب ${order.order_number}:`, {
-              totalWithoutDelivery,
-              orderId: order.id,
-              orderItems: order.items
+          // أولوية استخدام البيانات الحقيقية من جدول profits
+          const profitRecord = profits?.find(p => p.order_id === order.id);
+          
+          if (profitRecord) {
+            // استخدام البيانات الحقيقية من جدول profits
+            const totalProfitFromDB = Number(profitRecord.profit_amount || 0);
+            const employeeProfitFromDB = Number(profitRecord.employee_profit || 0); 
+            const managerProfitFromDB = Math.max(0, totalProfitFromDB - employeeProfitFromDB);
+            
+            systemProfit = managerProfitFromDB;
+            employeeProfit = employeeProfitFromDB; 
+            totalProfit = totalProfitFromDB;
+            managerProfit = managerProfitFromDB;
+            
+            console.log(`💎 بيانات ربح حقيقية للطلب ${order.order_number}:`, {
+              totalProfitFromDB,
+              employeeProfitFromDB,
+              managerProfitFromDB
             });
-            
-            // أولوية استخدام البيانات الحقيقية من جدول profits
-            const profitRecord = profits?.find(p => p.order_id === order.id);
-            
-            if (profitRecord) {
-              // استخدام البيانات الحقيقية من جدول profits
-              const totalProfitFromDB = Number(profitRecord.profit_amount || 0);
-              const employeeProfitFromDB = Number(profitRecord.employee_profit || 0); 
-              const managerProfitFromDB = Math.max(0, totalProfitFromDB - employeeProfitFromDB);
+          } else {
+            // استخدام دوال النظام الموجودة للحساب
+            if (calculateProfit && typeof calculateProfit === 'function') {
+              // حساب ربح الموظف باستخدام النظام الصحيح
+              employeeProfit = (order.items || []).reduce((sum, item) => {
+                return sum + (calculateProfit(item, order.created_by) || 0);
+              }, 0);
               
-              systemProfit = managerProfitFromDB;
-              employeeProfit = employeeProfitFromDB; 
-              totalProfit = totalProfitFromDB;
-              managerProfit = managerProfitFromDB;
-              
-              console.log(`💎 بيانات ربح حقيقية للطلب ${order.order_number}:`, {
-                totalProfitFromDB,
-                employeeProfitFromDB,
-                managerProfitFromDB
-              });
-            } else {
-              // حساب يدوي من بنود الطلب
-              let calculatedProfit = 0;
-              
-              if (order.order_items && Array.isArray(order.order_items)) {
-                calculatedProfit = order.order_items.reduce((sum, item) => {
-                  const sellPrice = Number(item.unit_price || 0);
-                  const costPrice = Number(item.product_variants?.cost_price || item.products?.cost_price || 0);
-                  const quantity = Number(item.quantity || 0);
-                  const itemProfit = (sellPrice - costPrice) * quantity;
-                  return sum + Math.max(0, itemProfit);
-                }, 0);
-              }
-              
-              // إذا لم نجد بنود طلب، استخدم نسبة تقديرية
-              if (calculatedProfit === 0) {
-                calculatedProfit = totalWithoutDelivery * 0.15; // 15% نسبة ربح متوسطة
-              }
-              
-              // توزيع الربح (70% للنظام، 30% للموظف)
-              totalProfit = calculatedProfit;
-              systemProfit = calculatedProfit * 0.7;
-              employeeProfit = calculatedProfit * 0.3;
-              managerProfit = systemProfit;
-              
-              console.log(`🧮 حساب ربح يدوي للطلب ${order.order_number}:`, {
-                calculatedProfit,
-                totalProfit,
-                systemProfit,
+              console.log(`📊 ربح الموظف من النظام للطلب ${order.order_number}:`, {
                 employeeProfit,
-                itemsCount: order.order_items?.length || 0
+                itemsCount: order.items?.length || 0
               });
             }
+            
+            // حساب ربح المدير باستخدام النظام الصحيح من calculateManagerProfit إذا كان متوفراً
+            if (typeof calculateManagerProfit === 'function') {
+              managerProfit = calculateManagerProfit(order) || 0;
+              console.log(`📊 ربح المدير من النظام للطلب ${order.order_number}:`, { managerProfit });
+            } else {
+              // حساب ربح المدير يدوياً: إجمالي الربح - ربح الموظف
+              const totalItemProfit = (order.items || []).reduce((sum, item) => {
+                const sellPrice = Number(item.unit_price || item.price || 0);
+                const costPrice = Number(item.cost_price || 0);
+                const quantity = Number(item.quantity || 0);
+                return sum + Math.max(0, (sellPrice - costPrice) * quantity);
+              }, 0);
+              
+              managerProfit = Math.max(0, totalItemProfit - employeeProfit);
+              
+              console.log(`🧮 حساب ربح المدير يدوياً للطلب ${order.order_number}:`, {
+                totalItemProfit,
+                employeeProfit,
+                managerProfit
+              });
+            }
+            
+            totalProfit = employeeProfit + managerProfit;
+            systemProfit = managerProfit;
+            
+            console.log(`📋 نتيجة الحساب للطلب ${order.order_number}:`, {
+              employeeProfit,
+              managerProfit,
+              totalProfit,
+              systemProfit
+            });
           }
+          
+          const employee = employees.find(emp => emp.user_id === order.created_by);
+          const profitStatus = profits.find(p => p.order_id === order.id);
+          
+          console.log(`✅ نتيجة نهائية للطلب ${order.order_number}:`, {
+            totalWithoutDelivery,
+            deliveryFee,
+            managerProfit,
+            employeeProfit,
+            totalProfit,
+            systemProfit,
+            employee: employee?.full_name || 'غير معروف',
+            profitStatus: profitStatus?.status || 'غير معروف'
+          });
+          
+          return {
+            ...order,
+            employee,
+            // استخدام المبلغ بدون التوصيل
+            orderTotal: totalWithoutDelivery,
+            deliveryFee: deliveryFee,
+            totalWithDelivery: totalWithDelivery,
+            managerProfit: Math.round(managerProfit),
+            employeeProfit: Math.round(employeeProfit),
+            totalProfit: Math.round(totalProfit),
+            systemProfit: Math.round(systemProfit),
+            profitPercentage: totalWithoutDelivery > 0 ? ((totalProfit / totalWithoutDelivery) * 100).toFixed(1) : '0',
+            isPaid: profitStatus?.status === 'settled' || profitStatus?.settled_at,
+            settledAt: profitStatus?.settled_at,
+            items: order.items || []
+          };
+        } catch (error) {
+          console.error('❌ خطأ في حساب الربح للطلب:', order.id, error);
+          return null;
+        }
+      })
           
           const employee = employees.find(emp => emp.user_id === order.created_by);
           const profitStatus = profits.find(p => p.order_id === order.id);
