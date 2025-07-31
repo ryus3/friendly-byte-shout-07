@@ -21,7 +21,6 @@ import {
   Calendar,
   Filter,
   Eye,
-  Download,
   BarChart3,
   PieChart,
   Target,
@@ -45,7 +44,7 @@ const ManagerProfitsDialog = ({
   stats: externalStats // الإحصائيات المحسوبة من الصفحة الرئيسية
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState('all'); // جميع الفترات كافتراضي
+  const [selectedPeriod, setSelectedPeriod] = useState('month'); // شهر كافتراضي
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
   const { currentUser } = useAuth();
@@ -672,7 +671,7 @@ const ManagerProfitsDialog = ({
             {/* الفلاتر */}
             <Card className="border border-border/30 bg-gradient-to-br from-muted/20 to-muted/5 shadow-md">
               <CardContent className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div>
                     <label className="text-sm font-semibold mb-2 block text-foreground/80 flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
@@ -725,12 +724,6 @@ const ManagerProfitsDialog = ({
                     />
                   </div>
 
-                  <div className="flex items-end">
-                    <Button variant="outline" className="w-full bg-background/80 hover:bg-primary/10 border-border/50 hover:border-primary/50 transition-all">
-                      <Download className="h-4 w-4 mr-2" />
-                      تصدير التقرير
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
           </Card>
@@ -751,7 +744,7 @@ const ManagerProfitsDialog = ({
               percentage={stats.totalManagerProfit > 0 ? (((stats.pendingProfit || 0) / stats.totalManagerProfit) * 100).toFixed(1) : '0'}
             />
             <StatCard
-              title="مستحقات مدفوعة"
+              title="مستحقات موظفين مدفوعة"
               value={stats.settledProfit || 0}
               icon={CheckCircle}
               gradient="from-emerald-500 to-teal-600"
