@@ -101,43 +101,42 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
             {/* معلومات الفاتورة */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-              {/* معلومات الموظف */}
+            {/* معلومات الموظف */}
               <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-indigo-600 to-blue-700 opacity-90"></div>
-                <div className="absolute inset-0 bg-black/10"></div>
-                <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center gap-6 mb-8">
-                    <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 group-hover:scale-110 transition-all duration-300">
-                      <User className="w-10 h-10 drop-shadow-lg" />
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-400 via-indigo-500 to-blue-600 opacity-85"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                <CardContent className="relative p-6 text-white">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="p-3 bg-white/15 rounded-xl backdrop-blur-sm border border-white/25 group-hover:scale-110 transition-all duration-300">
+                      <User className="w-7 h-7 drop-shadow-lg" />
                     </div>
-                    <h3 className="font-black text-3xl drop-shadow-lg">معلومات الموظف والفاتورة</h3>
+                    <h3 className="font-bold text-xl drop-shadow-lg">معلومات الموظف والفاتورة</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-6">
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-bold mb-3 text-blue-200">اسم الموظف</p>
-                        <p className="font-black text-2xl drop-shadow-lg">{invoice.employee_name}</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-xl p-4 backdrop-blur-sm border border-blue-300/20 hover:from-blue-400/25 hover:to-blue-500/25 transition-all duration-300">
+                        <p className="text-xs opacity-80 font-medium mb-2 text-blue-100">اسم الموظف</p>
+                        <p className="font-bold text-lg drop-shadow-sm">{invoice.employee_name}</p>
                       </div>
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-bold mb-3 text-green-200">معرف الموظف</p>
-                        <p className="font-mono text-xl font-black text-green-300 drop-shadow-lg">{invoice.employee_code || 'غير محدد'}</p>
+                      <div className="bg-gradient-to-r from-green-500/20 to-emerald-600/20 rounded-xl p-4 backdrop-blur-sm border border-green-300/20 hover:from-green-400/25 hover:to-emerald-500/25 transition-all duration-300">
+                        <p className="text-xs opacity-80 font-medium mb-2 text-green-100">معرف الموظف</p>
+                        <p className="font-mono font-bold text-base text-green-200 drop-shadow-sm">{invoice.employee_code || 'غير محدد'}</p>
                       </div>
                     </div>
-                    <div className="space-y-6">
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-bold mb-3 text-purple-200">رقم الفاتورة</p>
-                        <p className="font-mono font-black text-xl text-purple-300 drop-shadow-lg">{invoice.invoice_number}</p>
+                    <div className="space-y-4">
+                      <div className="bg-gradient-to-r from-purple-500/20 to-violet-600/20 rounded-xl p-4 backdrop-blur-sm border border-purple-300/20 hover:from-purple-400/25 hover:to-violet-500/25 transition-all duration-300">
+                        <p className="text-xs opacity-80 font-medium mb-2 text-purple-100">رقم الفاتورة</p>
+                        <p className="font-mono font-bold text-base text-purple-200 drop-shadow-sm">{invoice.invoice_number}</p>
                       </div>
-                      <div className="bg-white/10 rounded-2xl p-6 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all duration-300">
-                        <p className="text-sm opacity-90 font-bold mb-3 text-cyan-200">طريقة الدفع</p>
-                        <p className="font-black text-xl text-cyan-300 drop-shadow-lg">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
+                      <div className="bg-gradient-to-r from-cyan-500/20 to-blue-600/20 rounded-xl p-4 backdrop-blur-sm border border-cyan-300/20 hover:from-cyan-400/25 hover:to-blue-500/25 transition-all duration-300">
+                        <p className="text-xs opacity-80 font-medium mb-2 text-cyan-100">طريقة الدفع</p>
+                        <p className="font-bold text-base text-cyan-200 drop-shadow-sm">{invoice.payment_method === 'cash' ? 'نقدي' : invoice.payment_method}</p>
                       </div>
                     </div>
                   </div>
                   {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-6 -left-6 w-24 h-24 bg-white/5 rounded-full"></div>
-                  <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-white/5 rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+                  <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-4 -left-4 w-16 h-16 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
 
@@ -364,19 +363,6 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
             )}
 
 
-            {/* حالة التسوية */}
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
-              <CardContent className="p-6 text-center">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <CheckCircle className="w-10 h-10 text-green-600" />
-                  <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">تسوية مكتملة</h3>
-                </div>
-                <p className="text-green-600 dark:text-green-400 text-lg">تم إتمام الدفع وتسجيل جميع البيانات بنجاح</p>
-                <div className="mt-3 text-sm text-green-600 dark:text-green-400 opacity-80">
-                  ✓ تم خصم المبلغ من القاصة الرئيسية
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </ScrollArea>
         
@@ -925,8 +911,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                           <div className="flex items-center gap-3 flex-shrink-0">
                              <Badge 
                                variant="secondary" 
-                               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 text-xs font-bold transition-all duration-300 hover:scale-105"
+                               className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 text-xs font-bold transition-all duration-300 hover:scale-105 px-3 py-1 rounded-md gap-2"
                              >
+                               <CheckCircle className="w-3 h-3" />
                                مكتملة
                              </Badge>
                             <Button
