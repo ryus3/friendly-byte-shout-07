@@ -1,5 +1,6 @@
 // نافذة تفاصيل أرباح المدير من الموظفين - محدثة
 import React, { useState, useMemo } from 'react';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -47,6 +48,7 @@ const ManagerProfitsDialog = ({
   const [selectedPeriod, setSelectedPeriod] = useState('all'); // جميع الفترات كافتراضي
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
+  const { currentUser } = useAuth();
 
   console.log('🔍 ManagerProfitsDialog Props DETAILED:', {
     isOpen,
@@ -138,8 +140,30 @@ const ManagerProfitsDialog = ({
       return [];
     }
 
-    // المعالجة من جدول profits مباشرة - جميع الأرباح
-    const processed = profits
+    // المعالجة من جدول profits مباشرة - فقط طلبات الموظفين
+    const employeeOrdersOnly = profits.filter(profit => {
+      // العثور على الطلب المرتبط
+      const relatedOrder = orders?.find(order => order.id === profit.order_id);
+      if (!relatedOrder) return false;
+      
+      // تجاهل طلبات المدير - فقط طلبات الموظفين
+      const isManagerOrder = relatedOrder.created_by === currentUser?.id;
+      if (isManagerOrder) {
+        console.log(`🚫 تجاهل طلب المدير: ${relatedOrder.order_number}`);
+        return false;
+      }
+      
+      console.log(`✅ طلب موظف: ${relatedOrder.order_number} - منشئ: ${relatedOrder.created_by}`);
+      return true;
+    });
+
+    console.log('📋 فلترة طلبات الموظفين:', {
+      totalProfits: profits.length,
+      employeeProfits: employeeOrdersOnly.length,
+      currentUserId: currentUser?.id
+    });
+
+    const processed = employeeOrdersOnly
       .filter(profit => {
         if (!profit || !profit.id) {
           console.log('❌ ربح فارغ أو بدون ID تم تجاهله');
@@ -335,6 +359,7 @@ const ManagerProfitsDialog = ({
     };
 
     console.log('✅ الإحصائيات المحسوبة للفترة:', calculatedStats);
+    return calculatedStats;
   }, [detailedProfits]);
 
   const formatCurrency = (amount) => {
