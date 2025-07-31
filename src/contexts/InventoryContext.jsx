@@ -1257,9 +1257,22 @@ export const InventoryProvider = ({ children }) => {
 
   const calculateManagerProfit = useCallback((order) => {
     if (!order || !order.items || !order.created_by) return 0;
+    
+    // حساب إجمالي الربح من الطلب
+    const totalProfit = order.items.reduce((sum, item) => {
+      const sellPrice = item.unit_price || item.price || 0;
+      const costPrice = item.cost_price || item.product_variants?.cost_price || item.products?.cost_price || 0;
+      const quantity = item.quantity || 0;
+      return sum + ((sellPrice - costPrice) * quantity);
+    }, 0);
+    
+    // حساب ربح الموظف
     const employeeProfitShare = order.items.reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
-    const totalProfit = order.items.reduce((sum, item) => sum + ((item.price || 0) - (item.cost_price || 0)) * item.quantity, 0);
-    return totalProfit - employeeProfitShare;
+    
+    // ربح المدير = إجمالي الربح - ربح الموظف
+    const managerProfit = Math.max(0, totalProfit - employeeProfitShare);
+    
+    return managerProfit;
   }, [calculateProfit]);
 
   const updateSettings = async (newSettings) => {

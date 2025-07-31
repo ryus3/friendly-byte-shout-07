@@ -914,7 +914,7 @@ const EmployeeFollowUpPage = () => {
           onClose={() => setIsManagerProfitsDialogOpen(false)}
           orders={filteredOrders || orders || []} 
           employees={employees || allUsers || []}
-          calculateProfit={calculateManagerProfit || calculateProfit} // استخدام calculateManagerProfit أولاً
+          calculateProfit={calculateProfit} // استخدام calculateProfit للموظفين
           profits={profits || []}
           managerId={null}
           stats={stats} // تمرير الإحصائيات المحسوبة مباشرة
