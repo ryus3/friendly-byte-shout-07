@@ -83,7 +83,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
+      <DialogContent className="max-w-7xl w-full max-h-[95vh] overflow-hidden">
         <ScrollArea className="h-full max-h-[85vh]">
           <div className="p-8">
             {/* Header */}
@@ -712,7 +712,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+        <DialogContent className="w-full max-w-7xl max-h-[95vh] overflow-hidden p-0 sm:p-6">
           <DialogHeader className="pb-4">
             <DialogTitle className="text-xl font-bold text-center flex items-center justify-center gap-3">
               <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg text-white">
@@ -725,9 +725,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-4 p-4 sm:p-0">
             {/* الفلاتر */}
-            <div className="flex flex-col sm:flex-row gap-3 p-3 bg-muted/30 rounded-lg">
+            <div className="flex flex-col gap-3 p-3 bg-muted/30 rounded-lg">
               <div className="flex-1">
                 <Select value={selectedEmployeeFilter} onValueChange={setSelectedEmployeeFilter}>
                   <SelectTrigger className="h-9">
@@ -847,70 +847,76 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                       className="group hover:shadow-lg transition-all duration-300 border border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50/80 to-white dark:from-slate-900/80 dark:to-slate-800"
                     >
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between gap-4">
-                          {/* رقم الفاتورة */}
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white flex-shrink-0">
-                              <Receipt className="w-4 h-4" />
+                        <div className="block">
+                          {/* الصف الأول - معلومات أساسية */}
+                          <div className="flex items-center justify-between gap-4 mb-3">
+                            {/* رقم الفاتورة */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg text-white flex-shrink-0">
+                                <Receipt className="w-3 h-3" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-blue-600 font-mono text-xs truncate">
+                                  {invoice.invoice_number}
+                                </p>
+                                <p className="text-xs text-muted-foreground">الفاتورة</p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-blue-600 font-mono text-sm truncate">
-                                {invoice.invoice_number}
-                              </p>
-                              <p className="text-xs text-muted-foreground">رقم الفاتورة</p>
-                            </div>
-                          </div>
-                          
-                          {/* اسم الموظف */}
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="p-1 bg-green-100 rounded dark:bg-green-900/30 flex-shrink-0">
-                              <User className="w-3 h-3 text-green-600" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-semibold text-green-700 dark:text-green-400 text-sm truncate">
-                                {invoice.employee_name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">الموظف</p>
-                            </div>
-                          </div>
-                          
-                          {/* المبلغ */}
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="p-1 bg-emerald-100 rounded dark:bg-emerald-900/30 flex-shrink-0">
-                              <DollarSign className="w-3 h-3 text-emerald-600" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-emerald-600 text-sm">
-                                {invoice.total_amount?.toLocaleString()} د.ع
-                              </p>
-                              <p className="text-xs text-muted-foreground">المبلغ</p>
+                            
+                            {/* اسم الموظف */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="p-1 bg-green-100 rounded dark:bg-green-900/30 flex-shrink-0">
+                                <User className="w-3 h-3 text-green-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-green-700 dark:text-green-400 text-xs truncate">
+                                  {invoice.employee_name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">الموظف</p>
+                              </div>
                             </div>
                           </div>
                           
-                          {/* التاريخ */}
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div className="p-1 bg-purple-100 rounded dark:bg-purple-900/30 flex-shrink-0">
-                              <Calendar className="w-3 h-3 text-purple-600" />
+                          {/* الصف الثاني - المبلغ والتاريخ */}
+                          <div className="flex items-center justify-between gap-4 mb-3">
+                            {/* المبلغ */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="p-1 bg-emerald-100 rounded dark:bg-emerald-900/30 flex-shrink-0">
+                                <DollarSign className="w-3 h-3 text-emerald-600" />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-emerald-600 text-sm">
+                                  {invoice.total_amount?.toLocaleString()} د.ع
+                                </p>
+                                <p className="text-xs text-muted-foreground">المبلغ</p>
+                              </div>
                             </div>
-                            <div className="min-w-0">
-                               <p className="font-medium text-purple-600 text-sm">
-                                 {invoice.settlement_date ? 
-                                   format(parseISO(invoice.settlement_date), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
-                                   (invoice.created_at ? 
-                                     format(parseISO(invoice.created_at), 'dd/MM/yyyy - HH:mm', { locale: ar }) :
-                                     'غير محدد'
-                                   )
-                                 }
-                               </p>
-                              <p className="text-xs text-muted-foreground">التاريخ</p>
+                            
+                            {/* التاريخ */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <div className="p-1 bg-purple-100 rounded dark:bg-purple-900/30 flex-shrink-0">
+                                <Calendar className="w-3 h-3 text-purple-600" />
+                              </div>
+                              <div className="min-w-0">
+                                 <p className="font-medium text-purple-600 text-xs">
+                                   {invoice.settlement_date ? 
+                                     format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                     (invoice.created_at ? 
+                                       format(parseISO(invoice.created_at), 'dd/MM/yyyy', { locale: ar }) :
+                                       'غير محدد'
+                                     )
+                                   }
+                                 </p>
+                                <p className="text-xs text-muted-foreground">التاريخ</p>
+                              </div>
                             </div>
                           </div>
                           
-                          {/* الحالة والإجراءات */}
-                          <div className="flex items-center gap-3 flex-shrink-0">
+                          {/* الصف الثالث - الحالة والإجراءات */}
+                          <div className="flex items-center justify-between gap-3">
                              <Badge 
                                variant="secondary" 
-                               className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 text-xs font-bold transition-all duration-300 hover:scale-105 px-3 py-1 rounded-md gap-2"
+                               className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 text-xs font-bold transition-all duration-300 hover:scale-105 px-2 py-1 rounded-md gap-1"
                              >
                                <CheckCircle className="w-3 h-3" />
                                مكتملة
@@ -919,10 +925,10 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
                               variant="outline"
                               size="sm"
                               onClick={() => handlePreviewInvoice(invoice)}
-                              className="gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none hover:from-indigo-600 hover:to-purple-700 hover:shadow-lg transition-all duration-300 flex-shrink-0"
+                              className="gap-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-none hover:from-indigo-600 hover:to-purple-700 hover:shadow-lg transition-all duration-300 flex-shrink-0 text-xs px-3 py-1"
                             >
-                              <Eye className="w-4 h-4" />
-                              <span className="hidden lg:inline">معاينة</span>
+                              <Eye className="w-3 h-3" />
+                              معاينة
                             </Button>
                           </div>
                         </div>

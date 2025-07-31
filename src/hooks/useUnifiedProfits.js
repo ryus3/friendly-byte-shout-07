@@ -138,10 +138,13 @@ export const useUnifiedProfits = (userId = null) => {
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // مستحقات الموظفين المسددة
+      // مستحقات الموظفين المسددة (المستحقات المدفوعة)
       const employeeSettledDues = expensesInRange.filter(e => 
         e.related_data?.category === 'مستحقات الموظفين'
       ).reduce((sum, e) => sum + (e.amount || 0), 0);
+      
+      // نفس القيمة باسم مختلف للتوافق
+      const totalSettledDues = employeeSettledDues;
 
       // صافي الربح
       const netProfit = systemProfit - generalExpenses;
@@ -175,6 +178,7 @@ export const useUnifiedProfits = (userId = null) => {
         netProfit,
         generalExpenses, // إضافة المصاريف العامة
         employeeSettledDues,
+        totalSettledDues, // إضافة للتوافق مع UnifiedProfitDisplay
         managerSales,
         employeeSales,
         chartData
