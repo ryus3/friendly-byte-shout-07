@@ -207,6 +207,7 @@ const SettledDuesDialog = ({
 
   // جلب فواتير التسوية من قاعدة البيانات
   const fetchSettlementInvoices = async () => {
+    console.log('🔄 جاري جلب فواتير التسوية...');
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -219,6 +220,7 @@ const SettledDuesDialog = ({
         return;
       }
 
+      console.log('✅ تم جلب فواتير التسوية:', data?.length || 0);
       setSettlementInvoices(data || []);
     } catch (error) {
       console.error('خطأ في جلب فواتير التسوية:', error);
@@ -228,7 +230,9 @@ const SettledDuesDialog = ({
   };
 
   useEffect(() => {
+    console.log('🔍 SettledDuesDialog useEffect:', { isOpen, isOpenType: typeof isOpen });
     if (isOpen) {
+      console.log('✅ النافذة مفتوحة، بدء جلب البيانات...');
       fetchSettlementInvoices();
     }
   }, [isOpen]);
@@ -277,6 +281,15 @@ const SettledDuesDialog = ({
       totalInvoices: acc.totalInvoices + 1
     }), { totalAmount: 0, totalInvoices: 0 });
   }, [filteredInvoices]);
+
+  console.log('🔍 SettledDuesDialog Props:', {
+    isOpen,
+    settledProfitsCount: settledProfits?.length || 0,
+    allOrdersCount: allOrders?.length || 0,
+    employeesCount: employees?.length || 0,
+    settlementInvoicesCount: settlementInvoices?.length || 0,
+    loading
+  });
 
   return (
     <>
