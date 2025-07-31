@@ -18,7 +18,7 @@ import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
-import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
+import FixedManagerProfitsDialog from '@/components/profits/FixedManagerProfitsDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -478,14 +478,22 @@ const EmployeeFollowUpPage = () => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة (من المصاريف المحاسبية)
-    const paidDues = expenses && Array.isArray(expenses)
-      ? expenses.filter(expense => 
-          expense.category === 'مستحقات الموظفين' && 
-          expense.expense_type === 'system' && 
-          expense.status === 'approved'
-        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+    // المستحقات المدفوعة (من فواتير التسوية الحقيقية)
+    const paidDues = settlementInvoices && Array.isArray(settlementInvoices)
+      ? settlementInvoices.reduce((sum, invoice) => sum + (Number(invoice.total_amount) || 0), 0)
       : 0;
+    
+    console.log('🔍 [DEBUG] مستحقات مدفوعة في متابعة الموظفين:', {
+      settlementInvoicesCount: settlementInvoices?.length || 0,
+      paidDues,
+      expensesPaidDues: expenses && Array.isArray(expenses)
+        ? expenses.filter(expense => 
+            expense.category === 'مستحقات الموظفين' && 
+            expense.expense_type === 'system' && 
+            expense.status === 'approved'
+          ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+        : 0
+    });
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
     const pendingDues = deliveredOrders
@@ -524,7 +532,7 @@ const EmployeeFollowUpPage = () => {
       pendingDues,
       paidDues
     };
-  }, [filteredOrders, calculateManagerProfit, settlementInvoices, profits, calculateProfit]);
+  }, [filteredOrders, calculateManagerProfit, settlementInvoices, profits, calculateProfit, expenses]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
@@ -909,12 +917,19 @@ const EmployeeFollowUpPage = () => {
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
         />
 
-        <ManagerProfitsDialog
+        <FixedManagerProfitsDialog
           isOpen={isManagerProfitsDialogOpen}
           onClose={() => setIsManagerProfitsDialogOpen(false)}
           orders={filteredOrders || orders || []} 
           employees={employees || allUsers || []}
-          calculateProfit={calculateManagerProfit || calculateProfit} // استخدام calculateManagerProfit أولاً
+          calculateProfit={calculateManagerProfit || calculateProfit}
+          stats={{
+            totalManagerProfits: stats.totalManagerProfits,
+            totalSales: stats.totalSales,
+            totalOrders: stats.totalOrders,
+            pendingDues: stats.pendingDues,
+            paidDues: stats.paidDues
+          }}
           profits={profits || []}
           managerId={null}
           stats={stats} // تمرير الإحصائيات المحسوبة مباشرة
