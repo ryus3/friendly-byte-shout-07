@@ -38,8 +38,8 @@ const UnifiedProfitDisplay = ({
   className = '',
   datePeriod = 'month' // إضافة فترة التاريخ
 }) => {
-  const { orders, accounting, profits: contextProfits, allUsers } = useInventory();
-  const { user: currentUser } = useAuth();
+  const { orders, accounting, profits: contextProfits } = useInventory();
+  const { user: currentUser, allUsers } = useAuth();
   const [allProfits, setAllProfits] = useState([]);
   const [settlementInvoices, setSettlementInvoices] = useState([]);
 

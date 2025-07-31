@@ -541,7 +541,8 @@ const AccountingPage = () => {
           orders: orders || [], 
           employees: allUsers || [], 
           profits: allProfits || [],
-          cardSize: 'default'
+          cardSize: 'default',
+          showDetailedButton: true
         },
         { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
