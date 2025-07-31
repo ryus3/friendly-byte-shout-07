@@ -27,7 +27,6 @@ import {
 
 // Refactored Components
 import StatCard from '@/components/dashboard/StatCard';
-import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import SettlementRequest from '@/components/profits/SettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
@@ -55,12 +54,12 @@ const ProfitsSummaryPage = () => {
   });
   
   const [dateRange, setDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
-  const isMobile = useMediaQuery("(max-width: 768px)");
-  const [isRequesting, setIsRequesting] = useState(false);
-  const [selectedOrders, setSelectedOrders] = useState([]);
+      const [selectedOrder, setSelectedOrder] = useState(null);
+      const [selectedInvoice, setSelectedInvoice] = useState(null);
+      const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
+      const isMobile = useMediaQuery("(max-width: 768px)");
+      const [isRequesting, setIsRequesting] = useState(false);
+      const [selectedOrders, setSelectedOrders] = useState([]);
 
   // تحديد الصلاحيات بناءً على الدور والصلاحيات
   const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');
@@ -460,7 +459,7 @@ const ProfitsSummaryPage = () => {
           <StatCard 
             title="صافي الربح"
             value={profitData?.netProfit || 0}
-            icon={User}
+            icon={DollarSign}
             colors={['green-500', 'emerald-500']}
             format="currency"
           />
