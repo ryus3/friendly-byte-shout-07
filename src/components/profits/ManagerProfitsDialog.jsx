@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { formatCurrency } from '@/lib/utils';
 
 const ManagerProfitsDialog = ({ 
   isOpen, 
@@ -92,22 +93,38 @@ const ManagerProfitsDialog = ({
     console.log('✅ ManagerProfitsDialog: دالة حساب الأرباح متوفرة');
   }
 
-  // فلترة البيانات حسب الفترة
+  // فلترة البيانات حسب الفترة - إصلاح الحسابات
   const dateRange = useMemo(() => {
-    const now = new Date();
+    const today = new Date();
+    
     switch (selectedPeriod) {
-      case 'today':
-        return { start: new Date(now.setHours(0, 0, 0, 0)), end: new Date(now.setHours(23, 59, 59, 999)) };
-      case 'week':
-        const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-        const weekEnd = new Date(now.setDate(weekStart.getDate() + 6));
-        return { start: weekStart, end: weekEnd };
-      case 'month':
-        return { start: startOfMonth(now), end: endOfMonth(now) };
-      case 'year':
-        return { start: new Date(now.getFullYear(), 0, 1), end: new Date(now.getFullYear(), 11, 31) };
-      default:
-        return { start: startOfMonth(now), end: endOfMonth(now) };
+      case 'today': {
+        const start = new Date(today);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(today);
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
+      }
+      case 'week': {
+        const start = new Date(today);
+        start.setDate(today.getDate() - today.getDay());
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        return { start, end };
+      }
+      case 'month': {
+        return { start: startOfMonth(today), end: endOfMonth(today) };
+      }
+      case 'year': {
+        const start = new Date(today.getFullYear(), 0, 1);
+        const end = new Date(today.getFullYear(), 11, 31, 23, 59, 59, 999);
+        return { start, end };
+      }
+      default: {
+        return { start: startOfMonth(today), end: endOfMonth(today) };
+      }
     }
   }, [selectedPeriod]);
 
@@ -144,27 +161,28 @@ const ManagerProfitsDialog = ({
           return false;
         }
         
-        // فلترة التاريخ - مؤقتاً معطلة للاختبار
+        // فلترة التاريخ - تفعيل الفلترة بطريقة صحيحة
         let withinPeriod = true;
-        // if (order.created_at && dateRange.start && dateRange.end) {
-        //   const orderDate = new Date(order.created_at);
-        //   if (!isNaN(orderDate.getTime())) {
-        //     withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
-        //   }
-        // }
+        if (order.created_at && dateRange.start && dateRange.end) {
+          const orderDate = new Date(order.created_at);
+          if (!isNaN(orderDate.getTime())) {
+            withinPeriod = orderDate >= dateRange.start && orderDate <= dateRange.end;
+          }
+        }
         
-        // فلترة الحالة - أكثر مرونة
-        const isValidStatus = ['delivered', 'completed', 'pending', 'processing'].includes(order.status);
+        // فلترة الحالة - قبول الطلبات المسلمة والمكتملة
+        const isValidStatus = ['delivered', 'completed'].includes(order.status);
         
-        // فلترة الموظف
+        // فلترة الموظف - استبعاد طلبات المدير
         const matchesEmployee = selectedEmployee === 'all' || order.created_by === selectedEmployee;
+        const isNotAdmin = order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604';
         
         // فلترة البحث
         const matchesSearch = !searchTerm || 
           order.order_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const finalResult = withinPeriod && isValidStatus && matchesEmployee && matchesSearch;
+        const finalResult = withinPeriod && isValidStatus && matchesEmployee && matchesSearch && isNotAdmin;
         
         console.log(`🔍 فحص الطلب ${order.order_number || order.id} - تفصيلي:`, {
           orderId: order.id,
@@ -177,6 +195,7 @@ const ManagerProfitsDialog = ({
           isValidStatus,
           matchesEmployee,
           matchesSearch,
+          isNotAdmin,
           finalResult,
           orderDate: order.created_at,
           dateRange: { start: dateRange.start, end: dateRange.end }
@@ -420,22 +439,25 @@ const ManagerProfitsDialog = ({
     const pendingProfit = detailedProfits.filter(order => !order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     const settledProfit = detailedProfits.filter(order => order.isPaid).reduce((sum, order) => sum + (Number(order.managerProfit) || 0), 0);
     
+    // حساب إحصائيات الموظفين من البيانات الحقيقية
     const employeeStats = {};
     detailedProfits.forEach(order => {
-      if (!employeeStats[order.created_by]) {
-        employeeStats[order.created_by] = {
-          employee: order.employee,
-          orders: 0,
-          managerProfit: 0,
-          employeeProfit: 0,
-          revenue: 0
+      if (order.created_by && order.employee) {
+        if (!employeeStats[order.created_by]) {
+          employeeStats[order.created_by] = {
+            employee: order.employee,
+            orders: 0,
+            managerProfit: 0,
+            employeeProfit: 0,
+            revenue: 0
         };
+        }
+        employeeStats[order.created_by].orders += 1;
+        employeeStats[order.created_by].managerProfit += Number(order.managerProfit) || 0;
+        employeeStats[order.created_by].employeeProfit += Number(order.employeeProfit) || 0;
+        // استخدام المبلغ بدون أجور التوصيل
+        employeeStats[order.created_by].revenue += Number(order.orderTotal) || 0;
       }
-      employeeStats[order.created_by].orders += 1;
-      employeeStats[order.created_by].managerProfit += Number(order.managerProfit) || 0;
-      employeeStats[order.created_by].employeeProfit += Number(order.employeeProfit) || 0;
-      // استخدام المبلغ بدون أجور التوصيل
-      employeeStats[order.created_by].revenue += Number(order.orderTotal) || 0;
     });
 
     const calculatedStats = {
@@ -448,6 +470,7 @@ const ManagerProfitsDialog = ({
       averageOrderValue: detailedProfits.length > 0 ? totalRevenue / detailedProfits.length : 0,
       profitMargin: totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0',
       topEmployees: Object.values(employeeStats)
+        .filter(emp => emp.employee && emp.employee.full_name) // التأكد من وجود بيانات الموظف
         .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
         .slice(0, 5)
     };
@@ -457,9 +480,6 @@ const ManagerProfitsDialog = ({
     return calculatedStats;
   }, [detailedProfits, externalStats]);
 
-  const formatCurrency = (amount) => {
-    return `${(Number(amount) || 0).toLocaleString()} د.ع`;
-  };
 
   const StatCard = ({ title, value, icon: Icon, gradient, percentage }) => (
     <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30 h-32">
