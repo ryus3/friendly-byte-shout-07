@@ -34,14 +34,8 @@ const PurchasesStats = ({ purchases, onCardClick, onFilterChange }) => {
     const startOfYear = new Date(now.getFullYear(), 0, 1);
 
     const totalCost = purchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
-    const monthPurchases = purchases.filter(p => {
-      const purchaseDate = p.purchase_date || p.created_at;
-      return purchaseDate && !isNaN(new Date(purchaseDate).getTime()) && new Date(purchaseDate) >= startOfMonth;
-    });
-    const yearPurchases = purchases.filter(p => {
-      const purchaseDate = p.purchase_date || p.created_at;
-      return purchaseDate && !isNaN(new Date(purchaseDate).getTime()) && new Date(purchaseDate) >= startOfYear;
-    });
+    const monthPurchases = purchases.filter(p => new Date(p.purchase_date || p.created_at) >= startOfMonth);
+    const yearPurchases = purchases.filter(p => new Date(p.purchase_date || p.created_at) >= startOfYear);
     
     const totalMonthCost = monthPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);
     const totalYearCost = yearPurchases.reduce((sum, p) => sum + (p.total_amount || 0), 0);

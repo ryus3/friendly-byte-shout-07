@@ -77,10 +77,7 @@ const PurchaseCard = ({ purchase, onViewDetails, onDelete, index }) => {
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span className="text-sm">
-              {(purchase.purchase_date || purchase.created_at) && !isNaN(new Date(purchase.purchase_date || purchase.created_at).getTime()) ? 
-                format(new Date(purchase.purchase_date || purchase.created_at), 'd MMM yyyy', { locale: ar }) : 
-                'غير محدد'
-              }
+              {format(new Date(purchase.purchase_date || purchase.created_at), 'd MMM yyyy', { locale: ar })}
             </span>
           </div>
         </div>

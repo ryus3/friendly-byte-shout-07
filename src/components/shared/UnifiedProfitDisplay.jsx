@@ -5,7 +5,6 @@ import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import useSettledDues from '@/hooks/useSettledDues';
 import { 
   User, 
   Hourglass, 
@@ -46,17 +45,16 @@ const UnifiedProfitDisplay = ({
   useEffect(() => {
     const fetchProfits = async () => {
       try {
-        const profitsResponse = await supabase
+        const { data: profitsData } = await supabase
           .from('profits')
           .select(`
             *,
             order:orders(order_number, status, receipt_received),
             employee:profiles!employee_id(full_name)
           `);
-          
-        setAllProfits(profitsResponse.data || []);
+        setAllProfits(profitsData || []);
       } catch (error) {
-        console.error('خطأ في جلب البيانات:', error);
+        console.error('خطأ في جلب بيانات الأرباح:', error);
       }
     };
     
@@ -92,9 +90,6 @@ const UnifiedProfitDisplay = ({
     
     return { from, to };
   }, [datePeriod]);
-
-  // استخدام hook المستحقات المدفوعة مع النطاق الزمني
-  const { getTotalSettledDues } = useSettledDues(dateRange);
 
   // حساب البيانات المالية باستخدام نفس منطق AccountingPage
   const unifiedFinancialData = useMemo(() => {
@@ -187,9 +182,6 @@ const UnifiedProfitDisplay = ({
       .filter(p => deliveredOrders.some(o => o.id === p.order_id))
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
-    // المستحقات المدفوعة - من الـ hook الموحد
-    const totalSettledDues = getTotalSettledDues();
-    
     console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
       totalRevenue,
       cogs,
@@ -210,10 +202,9 @@ const UnifiedProfitDisplay = ({
       generalExpenses,
       netProfit,
       managerProfitFromEmployees: systemProfit,
-      totalEmployeeProfits,
-      totalSettledDues
+      totalEmployeeProfits
     };
-  }, [orders, accounting, allProfits, dateRange, currentUser, getTotalSettledDues]);
+  }, [orders, accounting, allProfits, dateRange, currentUser]);
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -296,7 +287,7 @@ const UnifiedProfitDisplay = ({
           {
             key: 'total-settled-dues',
             title: 'المستحقات المدفوعة',
-            value: unifiedFinancialData.totalSettledDues || profitData.totalSettledDues || 0,
+            value: profitData.totalSettledDues || 0,
             icon: PackageCheck,
             colors: ['purple-500', 'violet-500'],
             format: 'currency',

@@ -16,7 +16,7 @@ import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loa
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
-import SettledDuesUnified from '@/components/shared/SettledDuesUnified';
+import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
 import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 
@@ -900,10 +900,13 @@ const EmployeeFollowUpPage = () => {
           sellerName={selectedOrderDetails ? usersMap.get(selectedOrderDetails.created_by) : null}
         />
         
-        <SettledDuesUnified
+        <UnifiedSettledDuesDialog
           open={isDuesDialogOpen}
           onOpenChange={setIsDuesDialogOpen}
-          title="مستحقات مدفوعة - متابعة الموظفين"
+          invoices={expenses || []} // تمرير المصاريف بدلاً من settlementInvoices
+          allUsers={allUsers}
+          profits={profits || []} // تمرير بيانات الأرباح
+          orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
         />
 
         <ManagerProfitsDialog
