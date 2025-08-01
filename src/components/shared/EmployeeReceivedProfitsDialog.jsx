@@ -11,11 +11,10 @@ import {
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote, Eye } from 'lucide-react';
+import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote } from 'lucide-react';
 import { format, parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 /**
  * نافذة تفاصيل الأرباح المستلمة للموظف
@@ -29,8 +28,6 @@ const EmployeeReceivedProfitsDialog = ({
 }) => {
   const { user } = useAuth();
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   
   // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار
   const [periodFilter, setPeriodFilter] = useState(() => {
@@ -439,26 +436,12 @@ const EmployeeReceivedProfitsDialog = ({
                                   <div className="text-purple-300">
                                     {format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar })}
                                   </div>
-                                   <div className="text-orange-300">
-                                     {getPayerName(invoice.created_by)}
-                                   </div>
-                                   <div className="text-cyan-300 flex items-center justify-center gap-2">
-                                     <span className="truncate" title={invoice.description}>
-                                       {invoice.description || 'لا يوجد وصف'}
-                                     </span>
-                                     <Button
-                                       variant="ghost"
-                                       size="sm"
-                                       onClick={(e) => {
-                                         e.stopPropagation();
-                                         setSelectedInvoice(invoice);
-                                         setShowInvoiceDialog(true);
-                                       }}
-                                       className="text-blue-300 hover:text-blue-200 hover:bg-blue-500/20 h-6 px-2"
-                                     >
-                                       <Eye className="w-3 h-3" />
-                                     </Button>
-                                   </div>
+                                  <div className="text-orange-300">
+                                    {getPayerName(invoice.created_by)}
+                                  </div>
+                                  <div className="text-cyan-300 truncate" title={invoice.description}>
+                                    {invoice.description || 'لا يوجد وصف'}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -473,19 +456,6 @@ const EmployeeReceivedProfitsDialog = ({
           </div>
         </ScrollArea>
       </DialogContent>
-      
-      {/* نافذة معاينة الفاتورة */}
-      {selectedInvoice && (
-        <SettlementInvoiceDialog
-          isOpen={showInvoiceDialog}
-          onClose={() => {
-            setShowInvoiceDialog(false);
-            setSelectedInvoice(null);
-          }}
-          invoice={selectedInvoice}
-          allUsers={allUsers}
-        />
-      )}
     </Dialog>
   );
 };
