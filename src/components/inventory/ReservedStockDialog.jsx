@@ -32,6 +32,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
         const { supabase } = await import('@/lib/customSupabaseClient');
 
         // جلب الطلبات المعلقة مع المنتجات المحجوزة
+        console.log('🚀 Starting fetch for user:', user?.id);
+        
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
           .select(`
@@ -60,18 +62,26 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                 colors (name),
                 sizes (name)
               )
-            ),
-            profiles!orders_created_by_fkey (
-              user_id,
-              full_name,
-              username,
-              employee_code
             )
           `)
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
 
-        if (ordersError) throw ordersError;
+        console.log('📊 Orders fetch result:', {
+          error: ordersError,
+          ordersCount: orders?.length || 0,
+          orders: orders?.map(o => ({
+            id: o.id,
+            order_number: o.order_number,
+            created_by: o.created_by,
+            status: o.status
+          }))
+        });
+
+        if (ordersError) {
+          console.error('❌ Orders Error:', ordersError);
+          throw ordersError;
+        }
 
         // جلب جميع الموظفين النشطين
         const { data: allEmployees, error: employeesError } = await supabase
@@ -80,7 +90,20 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
           .eq('is_active', true)
           .order('full_name');
 
-        if (employeesError) throw employeesError;
+        console.log('👥 Employees fetch result:', {
+          error: employeesError,
+          employeesCount: allEmployees?.length || 0,
+          employees: allEmployees?.map(e => ({
+            user_id: e.user_id,
+            full_name: e.full_name,
+            username: e.username
+          }))
+        });
+
+        if (employeesError) {
+          console.error('❌ Employees Error:', employeesError);
+          throw employeesError;
+        }
 
         // تحويل البيانات للشكل المطلوب
         const processedOrders = orders?.map(order => ({
@@ -97,11 +120,17 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
           })) || []
         })) || [];
 
+        console.log('✅ Final processed data:', {
+          processedOrdersCount: processedOrders?.length || 0,
+          employeesCount: allEmployees?.length || 0,
+          currentUser: user?.id
+        });
+
         setRealReservedOrders(processedOrders);
         setEmployees(allEmployees || []);
 
       } catch (error) {
-        console.error('خطأ في جلب بيانات المخزون المحجوز:', error);
+        console.error('❌ خطأ في جلب بيانات المخزون المحجوز:', error);
       }
     };
 
@@ -113,23 +142,53 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     if (!realReservedOrders || !employees) return [];
     
     const employeeIds = [...new Set(realReservedOrders.map(o => o.created_by))];
-    return employees.filter(emp => employeeIds.includes(emp.user_id));
-  }, [realReservedOrders, employees]);
+    console.log('🎯 Employee filtering:', {
+      totalOrders: realReservedOrders.length,
+      uniqueEmployeeIds: employeeIds,
+      totalEmployees: employees.length,
+      currentUser: user?.id
+    });
+    
+    const involved = employees.filter(emp => employeeIds.includes(emp.user_id));
+    console.log('📋 Employees involved:', involved.map(e => ({ id: e.user_id, name: e.full_name })));
+    
+    return involved;
+  }, [realReservedOrders, employees, user?.id]);
 
   // فلترة الطلبات حسب الموظف المختار
   const filteredDisplayOrders = useMemo(() => {
     if (!realReservedOrders?.length) return [];
     
+    console.log('🔍 Filtering orders:', {
+      totalOrders: realReservedOrders.length,
+      isAdmin,
+      selectedEmployee,
+      currentUserId: user?.id
+    });
+    
+    let filtered = [];
+    
     if (isAdmin) {
       if (selectedEmployee === 'all') {
-        return realReservedOrders;
+        filtered = realReservedOrders;
       } else {
-        return realReservedOrders.filter(o => o.created_by === selectedEmployee);
+        filtered = realReservedOrders.filter(o => o.created_by === selectedEmployee);
       }
     } else {
       // للموظف العادي - يرى طلباته فقط
-      return realReservedOrders.filter(o => o.created_by === user?.id);
+      filtered = realReservedOrders.filter(o => {
+        const match = o.created_by === user?.id;
+        console.log(`👤 Order ${o.order_number}: created_by=${o.created_by}, user=${user?.id}, match=${match}`);
+        return match;
+      });
     }
+    
+    console.log('✅ Final filtered orders:', {
+      count: filtered.length,
+      orders: filtered.map(o => ({ id: o.id, number: o.order_number, created_by: o.created_by }))
+    });
+    
+    return filtered;
   }, [realReservedOrders, selectedEmployee, isAdmin, user?.id]);
 
   const formatDate = (dateString) => {
