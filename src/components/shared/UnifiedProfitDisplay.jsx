@@ -180,10 +180,11 @@ const UnifiedProfitDisplay = ({
         const profitRecord = allProfits.find(p => p.order_id === o.id);
         const isSettled = (o.status === 'completed' || o.status === 'delivered') && profitRecord?.status === 'settled';
         
-        // التأكد من أن التاريخ ضمن النطاق المطلوب
-        const orderInDateRange = filterByDate(o.updated_at || o.created_at);
+        // الطلبات المكتملة ويوجد لها profit record مسواة (حتى لو خارج نطاق التاريخ)
+        const hasSettledProfit = profitRecord?.status === 'settled';
         
-        return orderInDateRange && (isManuallyArchived || isSettled);
+        // عدم تطبيق فلتر التاريخ على الأرشيف - عرض كل الطلبات المؤرشفة
+        return (isManuallyArchived || isSettled || hasSettledProfit);
       }).length;
       
       personalData.archivedOrdersCount = userArchivedCount;
