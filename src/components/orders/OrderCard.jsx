@@ -201,12 +201,14 @@ const OrderCard = ({
   const paymentStatus = useMemo(() => {
     const profitRecord = profits?.find(p => p.order_id === order.id);
     
-    if (order.status === 'completed' && order.isarchived) {
+    // فقط الطلبات المكتملة والمؤرشفة تظهر كمدفوعة
+    if (order.status === 'completed' && order.receipt_received && order.isarchived) {
       return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
-    } else if (profitRecord && !profitRecord.settled_at && order.receipt_received) {
+    } else if (order.status === 'completed' && order.receipt_received && !order.isarchived) {
       return { status: 'pending', label: 'معلق', color: 'bg-orange-500' };
     } else {
-      return { status: 'not_due', label: 'مدفوع', color: 'bg-emerald-500' };
+      // للطلبات غير المكتملة لا تظهر حالة دفع
+      return null;
     }
   }, [order, profits]);
 
@@ -433,11 +435,13 @@ const OrderCard = ({
                       <span className="text-xs text-primary/70 font-bold">د.ع</span>
                     </div>
                     
-                    {/* حالة الدفع */}
-                    <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
-                      <span className="text-xs font-medium">{paymentStatus.label}</span>
-                    </div>
+                    {/* حالة الدفع - فقط للطلبات المكتملة */}
+                    {paymentStatus && (
+                      <div className="flex items-center gap-1">
+                        <div className={`w-2 h-2 rounded-full ${paymentStatus.color}`}></div>
+                        <span className="text-xs font-medium">{paymentStatus.label}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

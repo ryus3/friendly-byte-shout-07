@@ -93,6 +93,7 @@ const iconMap = {
   order_completed: OrderSuccessIcon,
   order_shipped: OrderIcon,
   new_order: OrderIcon,
+  new_order_employee: OrderIcon,
   new_registration: UserRegistrationIcon,
   profit_settlement: ProfitIcon,
   profit_settlement_request: ProfitSettlementIcon,
@@ -153,6 +154,13 @@ const typeColorMap = {
     text: 'text-foreground', 
     icon: 'text-primary',
     dot: 'bg-primary'
+  },
+  new_order_employee: { 
+    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-purple-500 dark:border-purple-400',
+    text: 'text-foreground', 
+    icon: 'text-purple-600 dark:text-purple-400',
+    dot: 'bg-purple-500'
   },
   ai_order: { 
     bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
@@ -241,16 +249,26 @@ const NotificationsPanel = () => {
       } else {
         navigate('/inventory?filter=low_stock');
       }
-    } else if (notification.type === 'order_status_update' || notification.type === 'new_order') {
-      // استخراج رقم الطلب من الرسالة
-      const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
-      const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
-      
-      if (orderNumber) {
-        // التنقل للطلبات مع البحث عن الطلب المحدد
-        navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
+    } else if (notification.type === 'order_status_update' || notification.type === 'new_order' || notification.type === 'new_order_employee') {
+      // لطلبات الموظفين - توجيه لصفحة متابعة الموظفين
+      if (notification.type === 'new_order_employee') {
+        const data = notification.data || {};
+        const orderId = data.order_id;
+        const employeeName = data.employee_name;
+        
+        console.log('🔔 إشعار طلب موظف:', { orderId, employeeName, data });
+        navigate(`/employee-follow-up?highlight=${orderId}`);
       } else {
-        navigate('/orders?status=pending');
+        // استخراج رقم الطلب من الرسالة
+        const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+        const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+        
+        if (orderNumber) {
+          // التنقل للطلبات مع البحث عن الطلب المحدد
+          navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
+        } else {
+          navigate('/orders?status=pending');
+        }
       }
     } else if (notification.type === 'order_completed') {
       // استخراج رقم الطلب المكتمل
