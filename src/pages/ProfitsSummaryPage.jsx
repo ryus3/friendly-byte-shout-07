@@ -190,8 +190,6 @@ const ProfitsSummaryPage = () => {
         settled: settledProfit
       };
     }, [orders, user?.id, calculateProfit, profits, dateRange]);
-    return allUsers?.filter(u => u.role === 'employee' || u.role === 'deputy') || [];
-  }, [allUsers]);
 
     const profitData = useMemo(() => {
         const { from, to } = dateRange;
