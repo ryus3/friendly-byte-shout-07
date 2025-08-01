@@ -393,15 +393,19 @@ const EmployeeFollowUpPage = () => {
       // فلتر الأرشيف - طلبات مؤرشفة من التسوية أو يدوياً
       const isArchived = order.isarchived === true || order.isArchived === true;
       const isManuallyArchived = isArchived && order.status !== 'completed'; // مؤرشفة يدوياً
-      const isSettled = order.status === 'completed' && isArchived; // مؤرشفة من التسوية
+      
+      // الطلبات المسواة (المكتملة والمدفوعة مستحقاتها)
+      const profitRecord = profits?.find(p => p.order_id === order.id);
+      const isSettled = order.status === 'completed' && profitRecord?.status === 'settled';
+      
       let archiveMatch;
       
       if (filters.archived) {
-        // إذا اختار عرض الأرشيف، اعرض جميع المؤرشفة
-        archiveMatch = isArchived;
+        // إذا اختار عرض الأرشيف العادي، اعرض المؤرشفة يدوياً فقط
+        archiveMatch = isManuallyArchived;
       } else {
-        // إذا لم يختر الأرشيف، لا تعرض المؤرشفة (يدوياً أو من التسوية)
-        archiveMatch = !isArchived;
+        // في الطلبات العادية، إخفاء المؤرشفة والمسواة
+        archiveMatch = !isArchived && !isSettled;
       }
       
       const matchResult = employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
@@ -521,11 +525,14 @@ const EmployeeFollowUpPage = () => {
       paidDues
     });
 
-    // عدد الطلبات المسواة (في الأرشيف)
+    // عدد الطلبات المسواة (في الأرشيف) - يجب أن تظهر الطلبات المسدودة مستحقاتها
     const safeOrders = Array.isArray(orders) ? orders : [];
-    const settledOrdersCount = safeOrders.filter(o => 
-      o && o.isArchived === true && o.status === 'completed'
-    ).length;
+    const settledOrdersCount = safeOrders.filter(o => {
+      if (!o) return false;
+      // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
+      const profitRecord = profits?.find(p => p.order_id === o.id);
+      return o.status === 'completed' && profitRecord?.status === 'settled';
+    }).length;
 
     return {
       totalOrders: filteredOrders.length,

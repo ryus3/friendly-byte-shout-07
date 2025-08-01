@@ -258,8 +258,8 @@ const OrdersPage = () => {
       // للمديرين: إظهار صافي الربح للنظام من الطلبات المكتملة
       return profitData?.netProfit || 0;
     } else {
-      // للموظفين: إظهار إجمالي الأرباح الشخصية من الطلبات المكتملة
-      return profitData?.personalTotalProfit || 0;
+      // للموظفين: إظهار إجمالي الأرباح الشخصية من الطلبات المكتملة (تعديل: استخدام البيانات الصحيحة)
+      return profitData?.totalPersonalProfit || profitData?.personalTotalProfit || 0;
     }
   }, [profitData, hasPermission]);
 
@@ -268,8 +268,8 @@ const OrdersPage = () => {
     if (hasPermission('view_all_data')) {
       return profitData?.netProfit || 0;
     } else {
-      // للموظفين: حساب الأرباح الحقيقية من UnifiedProfitDisplay
-      return profitData?.personalTotalProfit || 0;
+      // للموظفين: حساب الأرباح الحقيقية من UnifiedProfitDisplay (تعديل: استخدام البيانات الصحيحة)
+      return profitData?.totalPersonalProfit || profitData?.personalTotalProfit || 0;
     }
   }, [profitData, hasPermission]);
   
