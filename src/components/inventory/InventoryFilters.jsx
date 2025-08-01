@@ -148,19 +148,9 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
 
   return (
     <div className="bg-card rounded-xl p-4 border space-y-4 flex-grow">
-        <div className="flex flex-col md:flex-row items-center gap-4">
-          <div className="flex items-center gap-2 flex-grow">
-            {/* QR Scanner button - يمين */}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onBarcodeSearch}
-              className="flex-shrink-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
-              title="قراءة QR Code"
-            >
-              <QrCode className="w-5 h-5" />
-            </Button>
-            
+        <div className="flex flex-col gap-4">
+          {/* الصف الأول للهاتف: البحث وزر QR */}
+          <div className="flex items-center gap-2">
             <div className="relative flex-grow">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
@@ -170,9 +160,21 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
                 className="pr-10"
               />
             </div>
+            
+            {/* QR Scanner button في طرف الشريط */}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onBarcodeSearch}
+              className="flex-shrink-0 bg-gradient-to-r from-blue-500 via-blue-600 to-purple-600 hover:from-blue-600 hover:via-blue-700 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl"
+              title="قراءة QR Code"
+            >
+              <QrCode className="w-5 h-5" />
+            </Button>
           </div>
           
-          <div className="flex items-center gap-2 w-full md:w-auto flex-grow">
+          {/* الصف الثاني: فلاتر المخزون والأقسام */}
+          <div className="flex items-center gap-2 w-full">
             
             <Select value={filters.stockFilter} onValueChange={(value) => handleFilterChange('stockFilter', value)}>
               <SelectTrigger className="w-full flex-grow">

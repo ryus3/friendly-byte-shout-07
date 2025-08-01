@@ -848,10 +848,10 @@ const InventoryPage = () => {
         onScanSuccess={handleBarcodeScan}
       />
       
-      <ReservedStockDialog
-        open={isReservedStockDialogOpen}
+      <ReservedStockDialog 
+        open={isReservedStockDialogOpen} 
         onOpenChange={setIsReservedStockDialogOpen}
-        reservedOrders={reservedOrders}
+        reservedOrders={isAdmin ? reservedOrders : reservedOrders?.filter(order => order.created_by === user?.id)}
         allUsers={allUsers}
       />
     </>
