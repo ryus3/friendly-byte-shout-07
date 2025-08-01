@@ -507,15 +507,13 @@ const EmployeeFollowUpPage = () => {
     }, 0);
 
     // المستحقات المدفوعة (من المصاريف المحاسبية) - فورية بدون تحميل
-    const paidDues = useMemo(() => {
-      return expenses && Array.isArray(expenses)
-        ? expenses.filter(expense => 
-            expense.category === 'مستحقات الموظفين' && 
-            expense.expense_type === 'system' && 
-            expense.status === 'approved'
-          ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-        : 0;
-    }, [expenses]);
+    const paidDues = expenses && Array.isArray(expenses)
+      ? expenses.filter(expense => 
+          expense.category === 'مستحقات الموظفين' && 
+          expense.expense_type === 'system' && 
+          expense.status === 'approved'
+        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+      : 0;
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
     const pendingDues = statsOrders
