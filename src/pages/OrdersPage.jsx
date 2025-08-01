@@ -36,7 +36,7 @@ const OrdersPage = () => {
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  const { profitData } = useUnifiedProfits(hasPermission('view_all_data') ? null : user?.id);
+  const { profitData } = useUnifiedProfits();
   const navigate = useNavigate();
   const location = useLocation();
   
