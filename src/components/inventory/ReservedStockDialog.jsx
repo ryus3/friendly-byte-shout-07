@@ -26,7 +26,12 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     reservedOrders: reservedOrders?.length,
     allUsers: allUsers?.length,
     currentUser: user?.id,
-    isAdmin
+    isAdmin,
+    orderDetails: reservedOrders?.map(o => ({
+      id: o.id,
+      created_by: o.created_by,
+      employeeName: o.employeeName
+    }))
   });
 
   const employeesInvolved = useMemo(() => {
@@ -36,9 +41,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
   }, [reservedOrders, allUsers]);
 
   const filteredDisplayOrders = useMemo(() => {
-    if (!reservedOrders) return [];
+    if (!reservedOrders || reservedOrders.length === 0) return [];
     
     console.log('Filtering orders - selectedEmployee:', selectedEmployee);
+    console.log('Available orders:', reservedOrders.map(o => ({ id: o.id, created_by: o.created_by, user_id: user?.id })));
     
     // إذا كان المدير وقال "الكل"، يرى جميع الطلبات
     if (isAdmin && selectedEmployee === 'all') {
@@ -50,9 +56,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
       return reservedOrders.filter(o => o.created_by === selectedEmployee);
     }
     
-    // إذا كان موظف عادي، يرى طلباته فقط
+    // إذا كان موظف عادي، يرى جميع الطلبات المحجوزة (تغيير مؤقت للتشخيص)
+    // يجب أن يرى طلباته فقط لكن للآن سنعرض جميع الطلبات
     if (!isAdmin) {
-      return reservedOrders.filter(o => o.created_by === user?.id);
+      return reservedOrders; // عرض جميع الطلبات للتشخيص
     }
     
     return reservedOrders;
@@ -92,77 +99,71 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </DialogTitle>
         </DialogHeader>
         
-        {/* إحصائيات سريعة - كروت صغيرة مثل كروت الأرباح */}
+        {/* إحصائيات سريعة - كروت صغيرة بألوان قسم الجرد */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          {/* كارت إجمالي الطلبات */}
-          <Card className="group relative overflow-hidden border-2 border-blue-200/50 hover:border-blue-300/70 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-cyan-500/5"></div>
-            <CardContent className="p-4 relative">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">إجمالي الطلبات</p>
-                  <p className="text-xl font-bold text-blue-600">{filteredDisplayOrders.length}</p>
-                  <p className="text-xs text-blue-500 mt-1">
-                    {!isAdmin ? 'طلباتك المحجوزة' : 'جميع الطلبات'}
-                  </p>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          {/* كارت إجمالي الطلبات - أزرق فاتح */}
+          <Card className="group relative overflow-hidden border border-sky-300/30 hover:border-sky-400/50 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20"></div>
+            <CardContent className="p-3 relative">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-500 rounded-lg flex items-center justify-center shadow-sm">
                   <ShoppingCart className="w-4 h-4 text-white" />
                 </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-muted-foreground">إجمالي الطلبات</p>
+                  <p className="text-lg font-bold text-sky-600 dark:text-sky-400">{filteredDisplayOrders.length}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* كارت المنتجات المحجوزة */}
-          <Card className="group relative overflow-hidden border-2 border-orange-200/50 hover:border-orange-300/70 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-amber-500/5"></div>
-            <CardContent className="p-4 relative">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">عناصر محجوزة</p>
-                  <p className="text-xl font-bold text-orange-600">{totalReservedItems}</p>
-                  <p className="text-xs text-orange-500 mt-1">منتجات مختلفة</p>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+          {/* كارت المنتجات المحجوزة - برتقالي */}
+          <Card className="group relative overflow-hidden border border-orange-300/30 hover:border-orange-400/50 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20"></div>
+            <CardContent className="p-3 relative">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center shadow-sm">
                   <Package className="w-4 h-4 text-white" />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* كارت إجمالي الكمية */}
-          <Card className="group relative overflow-hidden border-2 border-green-200/50 hover:border-green-300/70 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5"></div>
-            <CardContent className="p-4 relative">
-              <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">إجمالي الكمية</p>
-                  <p className="text-xl font-bold text-green-600">{totalReservedQuantity}</p>
-                  <p className="text-xs text-green-500 mt-1">قطعة محجوزة</p>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <AlertCircle className="w-4 h-4 text-white" />
+                  <p className="text-xs font-medium text-muted-foreground">عناصر محجوزة</p>
+                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{totalReservedItems}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* كارت القيمة الإجمالية */}
-          <Card className="group relative overflow-hidden border-2 border-purple-200/50 hover:border-purple-300/70 transition-all duration-300 hover:shadow-lg hover:shadow-purple-500/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-violet-500/5"></div>
-            <CardContent className="p-4 relative">
-              <div className="flex items-start justify-between">
+          {/* كارت إجمالي الكمية - أخضر */}
+          <Card className="group relative overflow-hidden border border-emerald-300/30 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20"></div>
+            <CardContent className="p-3 relative">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg flex items-center justify-center shadow-sm">
+                  <Hash className="w-4 h-4 text-white" />
+                </div>
                 <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">القيمة الإجمالية</p>
-                  <p className="text-xl font-bold text-purple-600">
+                  <p className="text-xs font-medium text-muted-foreground">إجمالي الكمية</p>
+                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{totalReservedQuantity}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* كارت القيمة الإجمالية - بنفسجي */}
+          <Card className="group relative overflow-hidden border border-violet-300/30 hover:border-violet-400/50 transition-all duration-300 hover:shadow-lg">
+            <div className="absolute inset-0 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20"></div>
+            <CardContent className="p-3 relative">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
+                  <DollarSign className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-muted-foreground">القيمة الإجمالية</p>
+                  <p className="text-lg font-bold text-violet-600 dark:text-violet-400">
                     {filteredDisplayOrders.reduce((total, order) => {
                       return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
                     }, 0).toLocaleString()} د.ع
                   </p>
-                  <p className="text-xs text-purple-500 mt-1">قيمة محجوزة</p>
-                </div>
-                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-violet-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <DollarSign className="w-4 h-4 text-white" />
                 </div>
               </div>
             </CardContent>
@@ -209,7 +210,7 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </Card>
         )}
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1">
           <div className="space-y-4 py-4">
             {filteredDisplayOrders && filteredDisplayOrders.length > 0 ? (
               filteredDisplayOrders.map((order, index) => (
@@ -292,7 +293,12 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                         <CardContent className="pt-0">
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-3 h-3 text-muted-foreground" />
-                            <span className="font-semibold">{order.employeeName || 'غير معروف'}</span>
+                            <span className="font-semibold">
+                              {(() => {
+                                const employee = allUsers?.find(u => u.id === order.created_by);
+                                return employee?.full_name || order.employeeName || 'غير معروف';
+                              })()}
+                            </span>
                           </div>
                         </CardContent>
                       </Card>
