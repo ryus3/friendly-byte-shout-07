@@ -144,6 +144,7 @@ const ProfitsSummaryPage = () => {
     }
   }, [location.search, settlementInvoices, navigate, location.pathname]);
 
+  // تعريف الموظفين مبكراً لضمان الوصول إليهم
   const employees = useMemo(() => {
     return allUsers?.filter(u => u.role === 'employee' || u.role === 'deputy') || [];
   }, [allUsers]);
