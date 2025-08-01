@@ -10,8 +10,9 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote } from 'lucide-react';
-import { format, parseISO, startOfMonth, endOfMonth, isValid } from 'date-fns';
+import { format, parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
@@ -28,11 +29,45 @@ const EmployeeReceivedProfitsDialog = ({
   const { user } = useAuth();
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
   
-  // فلتر الفترة الزمنية - افتراضي 12 شهر للخلف لإظهار جميع البيانات
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getFullYear() - 1, 0, 1), // بداية العام الماضي
-    to: new Date(new Date().getFullYear() + 1, 11, 31)  // نهاية العام القادم
-  });
+  // فلتر الفترة الزمنية - قائمة منسدلة
+  const [periodFilter, setPeriodFilter] = useState('month'); // افتراضي: شهر
+  
+  // حساب نطاق التاريخ بناء على الفلتر المحدد
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    switch (periodFilter) {
+      case 'day':
+        return {
+          from: startOfDay(now),
+          to: endOfDay(now)
+        };
+      case 'week':
+        return {
+          from: startOfWeek(now, { weekStartsOn: 6 }), // السبت بداية الأسبوع
+          to: endOfWeek(now, { weekStartsOn: 6 })
+        };
+      case 'month':
+        return {
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        };
+      case 'year':
+        return {
+          from: startOfYear(now),
+          to: endOfYear(now)
+        };
+      case 'all':
+        return {
+          from: new Date('2020-01-01'), // تاريخ بداية شامل
+          to: new Date('2030-12-31')   // تاريخ نهاية شامل
+        };
+      default:
+        return {
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        };
+    }
+  }, [periodFilter]);
 
   // جلب فواتير التسوية باستخدام المعرف الصغير employee_code بدلاً من UUID - نفس منطق الكارت الخارجي
   useEffect(() => {
@@ -86,8 +121,13 @@ const EmployeeReceivedProfitsDialog = ({
   }, [user?.employee_code, user?.full_name]);
 
   const getPayerName = (createdBy) => {
+    // إذا كان المدير العام
+    if (createdBy === '91484496-b887-44f7-9e5d-be9db5567604') {
+      return 'المدير العام';
+    }
+    
     const payer = allUsers.find(u => u.id === createdBy);
-    return payer ? payer.full_name : 'غير محدد';
+    return payer ? payer.full_name : 'النظام';
   };
 
   // فلترة الفواتير حسب الفترة الزمنية المحددة
@@ -132,7 +172,7 @@ const EmployeeReceivedProfitsDialog = ({
               </div>
             </div>
 
-            {/* فلتر الفترة الزمنية */}
+            {/* فلتر الفترة الزمنية - قائمة منسدلة */}
             <div className="mb-6">
               <Card className="border-border bg-background/50 backdrop-blur-sm">
                 <CardContent className="p-4">
@@ -141,10 +181,18 @@ const EmployeeReceivedProfitsDialog = ({
                       <Calendar className="w-5 h-5 text-primary" />
                       <span className="font-semibold text-foreground">فترة العرض:</span>
                     </div>
-                    <DateRangePicker 
-                      date={dateRange} 
-                      onDateChange={setDateRange}
-                    />
+                    <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="اختر الفترة الزمنية" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="day">اليوم</SelectItem>
+                        <SelectItem value="week">هذا الأسبوع</SelectItem>
+                        <SelectItem value="month">هذا الشهر</SelectItem>
+                        <SelectItem value="year">هذه السنة</SelectItem>
+                        <SelectItem value="all">كل الفترات</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </CardContent>
               </Card>
