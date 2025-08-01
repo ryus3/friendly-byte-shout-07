@@ -46,11 +46,11 @@ const EmployeeReceivedProfitsDialog = ({
           fullName: user.full_name
         });
 
-        // جلب الفواتير من settlement_invoices باستخدام employee_id مباشرة
+        // جلب الفواتير من settlement_invoices باستخدام employee_code
         const { data: invoices, error } = await supabase
           .from('settlement_invoices')
           .select('*')
-          .eq('employee_id', user.id)  // استخدام UUID مباشرة
+          .eq('employee_code', user.employee_code || 'EMP002')  // استخدام employee_code
           .eq('status', 'completed')
           .order('settlement_date', { ascending: false });
 
@@ -62,8 +62,8 @@ const EmployeeReceivedProfitsDialog = ({
         console.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة:', {
           invoicesCount: invoices?.length || 0,
           invoices: invoices || [],
-          searchBy: 'employee_id',
-          searchValue: user.id
+          searchBy: 'employee_code',
+          searchValue: user.employee_code || 'EMP002'
         });
 
         setRealTimeInvoices(invoices || []);
@@ -73,7 +73,7 @@ const EmployeeReceivedProfitsDialog = ({
     };
 
     fetchEmployeeInvoices();
-  }, [user?.id, isOpen]);
+  }, [user?.employee_code, isOpen]);
 
   const getPayerName = (createdBy) => {
     const payer = allUsers.find(u => u.id === createdBy);
