@@ -395,96 +395,42 @@ const InventoryPage = () => {
   const reservedOrders = useMemo(() => {
     const safeOrders = Array.isArray(orders) ? orders : [];
     const safeUsers = Array.isArray(allUsers) ? allUsers : [];
-    
-    console.log('🔍 Reserved Orders Debug - Raw Data:', {
-      ordersCount: safeOrders.length,
-      usersCount: safeUsers.length,
-      currentUserId: user?.id,
-      isAdmin,
-      allOrdersDetails: safeOrders.map(o => ({
-        id: o.id,
-        status: o.status,
-        created_by: o.created_by,
-        customer_name: o.customer_name,
-        items_count: o.order_items?.length || 0
-      }))
-    });
-    
-    const pendingOrders = safeOrders.filter(o => o.status === 'pending');
-    console.log('📋 Pending Orders:', {
-      count: pendingOrders.length,
-      orders: pendingOrders.map(o => ({
-        id: o.id,
-        created_by: o.created_by,
-        customer_name: o.customer_name,
-        tracking_number: o.tracking_number,
-        order_number: o.order_number
-      }))
-    });
-    
-    const processedOrders = pendingOrders.map(o => {
-      // تحويل عناصر الطلب إلى الشكل المطلوب
-      const items = (o.order_items || []).map(item => ({
-        id: item.id,
-        name: item.products?.name || 'منتج غير معروف',
-        productId: item.product_id,
-        variantId: item.variant_id,
-        productName: item.products?.name || 'منتج غير معروف',
-        quantity: item.quantity,
-        price: item.unit_price,
-        color: item.product_variants?.colors?.name || 'لون غير محدد',
-        size: item.product_variants?.sizes?.name || 'مقاس غير محدد',
-        variant_details: {
-          color: item.product_variants?.colors?.name || null,
-          size: item.product_variants?.sizes?.name || null
-        },
-        image: (item.product_variants?.images && item.product_variants.images.length > 0) 
-          ? item.product_variants.images[0] 
-          : (item.products?.images && item.products.images.length > 0)
-          ? item.products.images[0]
-          : '/placeholder.png'
-      }));
+    return safeOrders
+      .filter(o => o.status === 'pending')
+      .map(o => {
+        // تحويل عناصر الطلب إلى الشكل المطلوب
+        const items = (o.order_items || []).map(item => ({
+          id: item.id,
+          productId: item.product_id,
+          variantId: item.variant_id,
+          productName: item.products?.name || 'منتج غير معروف',
+          quantity: item.quantity,
+          price: item.unit_price,
+          color: item.product_variants?.colors?.name || 'لون غير محدد',
+          size: item.product_variants?.sizes?.name || 'مقاس غير محدد',
+          image: (item.product_variants?.images && item.product_variants.images.length > 0) 
+            ? item.product_variants.images[0] 
+            : (item.products?.images && item.products.images.length > 0)
+            ? item.products.images[0]
+            : '/placeholder.png'
+        }));
 
-      const employeeUser = safeUsers.find(u => u.id === o.created_by);
-      console.log(`👤 Employee for order ${o.id}:`, {
-        created_by: o.created_by,
-        found_employee: employeeUser ? {
-          id: employeeUser.id,
-          full_name: employeeUser.full_name,
-          username: employeeUser.username,
-          email: employeeUser.email
-        } : null
+        return {
+          ...o,
+          items,
+          employeeName: safeUsers.find(u => u.id === o.created_by)?.full_name || 'غير معروف',
+          // إضافة معلومات العميل بشكل صحيح
+          customerinfo: {
+            name: o.customer_name,
+            phone: o.customer_phone,
+            address: o.customer_address,
+            city: o.customer_city,
+            province: o.customer_province
+          },
+          trackingnumber: o.tracking_number || o.order_number
+        };
       });
-
-      return {
-        ...o,
-        items,
-        employeeName: employeeUser?.full_name || employeeUser?.username || 'غير معروف',
-        // إضافة معلومات العميل بشكل صحيح
-        customerinfo: {
-          name: o.customer_name,
-          phone: o.customer_phone,
-          address: o.customer_address,
-          city: o.customer_city,
-          province: o.customer_province
-        },
-        trackingnumber: o.tracking_number || o.order_number
-      };
-    });
-    
-    console.log('✅ Final Reserved Orders:', {
-      count: processedOrders.length,
-      orders: processedOrders.map(o => ({
-        id: o.id,
-        created_by: o.created_by,
-        employeeName: o.employeeName,
-        items_count: o.items?.length || 0,
-        customer_name: o.customerinfo?.name
-      }))
-    });
-    
-    return processedOrders;
-  }, [orders, allUsers, user?.id, isAdmin]);
+  }, [orders, allUsers]);
 
   const filteredItems = useMemo(() => {
     if (!Array.isArray(inventoryItems)) return [];
@@ -926,7 +872,7 @@ const InventoryPage = () => {
           console.log('ReservedStockDialog onOpenChange:', open);
           setIsReservedStockDialogOpen(open);
         }}
-        reservedOrders={reservedOrders}
+        reservedOrders={isAdmin ? reservedOrders : reservedOrders?.filter(order => order.created_by === user?.id)}
         allUsers={allUsers}
       />
     </>
