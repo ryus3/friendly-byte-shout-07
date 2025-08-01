@@ -1,6 +1,7 @@
 import React from 'react';
 import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
+import EmployeeReceivedProfitsCard from '@/components/shared/EmployeeReceivedProfitsCard';
 
 /**
  * مكون عرض الأرباح في لوحة التحكم - يستخدم العنصر الموحد
@@ -16,7 +17,9 @@ const ProfitStats = ({
   dateRange,
   unifiedNetProfit,
   showManagerProfitsCard = false,
-  managerProfitsCardProps = {}
+  managerProfitsCardProps = {},
+  showEmployeeReceivedCard = false,
+  employeeReceivedCardProps = {}
 }) => {
   return (
     <>
@@ -35,6 +38,13 @@ const ProfitStats = ({
       {showManagerProfitsCard && (
         <div className="mt-4">
           <ManagerProfitsCard {...managerProfitsCardProps} />
+        </div>
+      )}
+      
+      {/* كارت أرباحي المستلمة للموظفين */}
+      {showEmployeeReceivedCard && (
+        <div className="mt-4">
+          <EmployeeReceivedProfitsCard {...employeeReceivedCardProps} />
         </div>
       )}
     </>

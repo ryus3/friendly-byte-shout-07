@@ -457,7 +457,7 @@ const ProfitsSummaryPage = () => {
 
         {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}
         <div className="space-y-6">
-          {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير */}
+          {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير وكارت الموظف */}
           <ProfitStats
             profitData={profitData}
             canViewAll={canViewAll}
@@ -472,6 +472,11 @@ const ProfitsSummaryPage = () => {
               allUsers: allUsers || [],
               calculateProfit: calculateProfit,
               profits: profits || []
+            }}
+            showEmployeeReceivedCard={!canViewAll}
+            employeeReceivedCardProps={{
+              settlementInvoices: settlementInvoices || [],
+              allUsers: allUsers || []
             }}
           />
         </div>
