@@ -178,9 +178,12 @@ const UnifiedProfitDisplay = ({
         
         // الطلبات المسواة (مكتملة ومدفوعة مستحقاتها)
         const profitRecord = allProfits.find(p => p.order_id === o.id);
-        const isSettled = o.status === 'completed' && profitRecord?.status === 'settled';
+        const isSettled = (o.status === 'completed' || o.status === 'delivered') && profitRecord?.status === 'settled';
         
-        return isManuallyArchived || isSettled;
+        // التأكد من أن التاريخ ضمن النطاق المطلوب
+        const orderInDateRange = filterByDate(o.updated_at || o.created_at);
+        
+        return orderInDateRange && (isManuallyArchived || isSettled);
       }).length;
       
       personalData.archivedOrdersCount = userArchivedCount;
