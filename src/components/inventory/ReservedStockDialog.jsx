@@ -299,14 +299,11 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                           const empOrdersCount = reservedOrders?.filter(o => o.created_by === emp.id).length || 0;
                           return (
                             <SelectItem key={emp.id} value={emp.id} className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
-                              <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                              <div className="flex items-center gap-2 md:gap-3">
                                 <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex-shrink-0"></div>
-                                <span className="font-medium text-sm md:text-base flex-1 min-w-0">
+                                <span className="font-medium text-sm md:text-base">
                                   {emp.full_name || emp.username} ({empOrdersCount} طلب)
                                 </span>
-                                <Badge variant="outline" className="text-xs flex-shrink-0">
-                                  {getEmployeeCode(emp.id)}
-                                </Badge>
                               </div>
                             </SelectItem>
                           );
@@ -336,9 +333,6 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                               <h3 className="font-black text-2xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
                                 {order.order_number}
                               </h3>
-                              <Badge variant="outline" className="text-xs">
-                                {getEmployeeCode(order.created_by)}
-                              </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="w-4 h-4" />
@@ -364,71 +358,22 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
 
                       <Separator className="my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
 
-                      {/* معلومات العميل والموظف */}
-                      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-                        {/* معلومات العميل */}
-                        <Card className="border-2 border-blue-200/60 hover:border-blue-400/80 transition-all duration-300 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20">
-                          <CardHeader className="pb-4">
+                       {/* معلومات الموظف المسؤول فقط */}
+                      <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 mb-6">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-4">
+                            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                              <Building2 className="w-4 h-4 text-white" />
+                            </div>
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
-                                <User className="w-4 h-4 text-white" />
-                              </div>
-                              <h4 className="font-bold text-lg text-blue-700 dark:text-blue-300">معلومات العميل</h4>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                            <div className="flex items-center gap-3 text-sm">
-                              <User className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium text-muted-foreground min-w-[60px]">الاسم:</span>
-                              <span className="font-semibold">{order.customerinfo?.name || order.customer_name || 'غير معروف'}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-sm">
-                              <Phone className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium text-muted-foreground min-w-[60px]">الهاتف:</span>
-                              <span className="font-semibold">{order.customerinfo?.phone || order.customer_phone || 'غير معروف'}</span>
-                            </div>
-                            <div className="flex items-start gap-3 text-sm">
-                              <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                              <span className="font-medium text-muted-foreground min-w-[60px]">العنوان:</span>
-                              <span className="flex-1 font-semibold text-xs leading-relaxed">
-                                {[
-                                  order.customerinfo?.address || order.customer_address,
-                                  order.customerinfo?.city || order.customer_city,
-                                  order.customerinfo?.province || order.customer_province
-                                ].filter(Boolean).join(', ') || 'غير محدد'}
+                              <span className="font-bold text-green-700 dark:text-green-300">الموظف المسؤول:</span>
+                              <span className="font-semibold text-lg">
+                                {getEmployeeName(order.created_by)}
                               </span>
                             </div>
-                          </CardContent>
-                        </Card>
-
-                        {/* معلومات الموظف */}
-                        <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20">
-                          <CardHeader className="pb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                                <Building2 className="w-4 h-4 text-white" />
-                              </div>
-                              <h4 className="font-bold text-lg text-green-700 dark:text-green-300">الموظف المسؤول</h4>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="pt-0 space-y-3">
-                             <div className="flex items-center gap-3 text-sm">
-                               <User className="w-4 h-4 text-muted-foreground" />
-                               <span className="font-medium text-muted-foreground min-w-[60px]">الاسم:</span>
-                               <span className="font-semibold">
-                                 {getEmployeeName(order.created_by)}
-                               </span>
-                             </div>
-                            <div className="flex items-center gap-3 text-sm">
-                              <Hash className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium text-muted-foreground min-w-[60px]">المعرف:</span>
-                              <Badge variant="outline" className="text-xs font-mono">
-                                {getEmployeeCode(order.created_by)}
-                              </Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
+                          </div>
+                        </CardContent>
+                      </Card>
 
                       <Separator className="my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
 
