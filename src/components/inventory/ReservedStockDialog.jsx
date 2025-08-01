@@ -21,73 +21,95 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
 
-  // تسجيل مفصل للتشخيص
-  console.log('🔍 ReservedStockDialog - COMPLETE Debug Info:', {
-    reservedOrdersCount: reservedOrders?.length || 0,
-    allUsersCount: allUsers?.length || 0,
+  // 🔧 تشخيص شامل ومبسط
+  console.log('═══════════════════════════════════════');
+  console.log('🔍 RESERVED STOCK DIALOG - FULL DEBUG');
+  console.log('═══════════════════════════════════════');
+  console.log('📊 Basic Info:', {
+    isDialogOpen: open,
     currentUserId: user?.id,
-    isAdmin: isAdmin,
-    userPermissions: { isAdmin },
-    
-    // تفاصيل كل الطلبات المحجوزة
-    reservedOrdersDetails: reservedOrders?.map(o => {
-      const employee = allUsers?.find(u => u.id === o.created_by);
-      return {
-        orderId: o.id,
-        orderNumber: o.order_number,
-        createdBy: o.created_by,
-        customerName: o.customer_name,
-        status: o.status,
-        itemsCount: o.items?.length || 0,
-        employeeFound: !!employee,
-        employeeName: employee?.full_name,
-        employeeCode: employee?.employee_code,
-        employeeUsername: employee?.username,
-        employeeEmail: employee?.email
-      };
-    }) || [],
-    
-    // تفاصيل كل المستخدمين
-    allUsersDetails: allUsers?.map(u => ({
-      id: u.id,
-      fullName: u.full_name,
-      username: u.username,
-      employeeCode: u.employee_code,
-      email: u.email
-    })) || []
+    isUserAdmin: isAdmin,
+    reservedOrdersCount: reservedOrders?.length || 0,
+    allUsersCount: allUsers?.length || 0
   });
 
-  const employeesInvolved = useMemo(() => {
-    if (!reservedOrders || !allUsers) return [];
-    const employeeIds = [...new Set(reservedOrders.map(o => o.created_by))];
-    const employees = allUsers.filter(u => employeeIds.includes(u.id));
-    console.log('📋 Employees involved:', employees.map(e => ({ 
-      id: e.id, 
-      name: e.full_name || e.username,
-      orders: reservedOrders.filter(o => o.created_by === e.id).length
-    })));
-    return employees;
-  }, [reservedOrders, allUsers]);
+  // فحص الطلبات المحجوزة بالتفصيل
+  if (reservedOrders && reservedOrders.length > 0) {
+    console.log('📋 RESERVED ORDERS DETAILS:');
+    reservedOrders.forEach((order, index) => {
+      const employee = allUsers?.find(u => u.id === order.created_by);
+      console.log(`📦 Order ${index + 1}:`, {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        createdBy: order.created_by,
+        customerName: order.customer_name,
+        status: order.status,
+        itemsCount: order.items?.length || 0,
+        employee: employee ? {
+          id: employee.id,
+          fullName: employee.full_name,
+          username: employee.username,
+          employeeCode: employee.employee_code,
+          email: employee.email
+        } : 'NOT FOUND'
+      });
+    });
+  } else {
+    console.log('❌ NO RESERVED ORDERS FOUND');
+  }
 
-  const filteredDisplayOrders = useMemo(() => {
-    if (!reservedOrders || reservedOrders.length === 0) {
-      console.log('❌ No reserved orders available');
+  // فحص المستخدمين
+  if (allUsers && allUsers.length > 0) {
+    console.log('👥 ALL USERS DETAILS:');
+    allUsers.forEach((user, index) => {
+      console.log(`👤 User ${index + 1}:`, {
+        id: user.id,
+        fullName: user.full_name,
+        username: user.username,
+        employeeCode: user.employee_code,
+        email: user.email
+      });
+    });
+  } else {
+    console.log('❌ NO USERS DATA FOUND');
+  }
+
+  // الموظفون المشاركون في الطلبات المحجوزة
+  const employeesInvolved = useMemo(() => {
+    if (!reservedOrders || !allUsers) {
+      console.log('❌ Cannot calculate employees - missing data');
       return [];
     }
     
-    console.log('🔧 Filtering logic:', {
-      isAdmin,
-      selectedEmployee,
-      currentUserId: user?.id,
-      totalOrders: reservedOrders.length
+    const employeeIds = [...new Set(reservedOrders.map(o => o.created_by))];
+    const employees = allUsers.filter(u => employeeIds.includes(u.id));
+    
+    console.log('🎯 EMPLOYEES INVOLVED:', {
+      uniqueEmployeeIds: employeeIds,
+      foundEmployees: employees.map(e => ({
+        id: e.id,
+        name: e.full_name,
+        code: e.employee_code,
+        ordersCount: reservedOrders.filter(o => o.created_by === e.id).length
+      }))
     });
+    
+    return employees;
+  }, [reservedOrders, allUsers]);
+
+  // فلترة الطلبات حسب الموظف المختار
+  const filteredDisplayOrders = useMemo(() => {
+    if (!reservedOrders || reservedOrders.length === 0) {
+      console.log('❌ No orders to filter');
+      return [];
+    }
     
     let filtered = [];
     
     if (isAdmin) {
       if (selectedEmployee === 'all') {
         filtered = reservedOrders;
-        console.log('👑 Admin viewing all orders:', filtered.length);
+        console.log('👑 Admin viewing ALL orders:', filtered.length);
       } else {
         filtered = reservedOrders.filter(o => o.created_by === selectedEmployee);
         console.log('👑 Admin viewing orders for employee:', selectedEmployee, 'Count:', filtered.length);
@@ -98,9 +120,15 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
       console.log('👤 Employee viewing own orders:', {
         userId: user?.id,
         foundOrders: filtered.length,
-        orderIds: filtered.map(o => o.id)
+        orderNumbers: filtered.map(o => o.order_number)
       });
     }
+    
+    console.log('✅ FINAL FILTERED ORDERS:', filtered.map(o => ({
+      id: o.id,
+      number: o.order_number,
+      createdBy: o.created_by
+    })));
     
     return filtered;
   }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
@@ -124,22 +152,17 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
   }, 0);
 
-  // الحصول على معرف الموظف الحقيقي من قاعدة البيانات
+  // دوال مساعدة مبسطة
   const getEmployeeCode = (employeeId) => {
     const employee = allUsers?.find(u => u.id === employeeId);
     return employee?.employee_code || 'غير محدد';
   };
 
-  // الحصول على اسم الموظف المسؤول
   const getEmployeeName = (employeeId) => {
     const employee = allUsers?.find(u => u.id === employeeId);
-    console.log('🔍 Getting employee name for:', { 
-      employeeId, 
-      found: !!employee, 
-      name: employee?.full_name,
-      code: employee?.employee_code 
-    });
-    return employee?.full_name || employee?.username || 'موظف غير معروف';
+    const name = employee?.full_name || employee?.username || 'موظف غير معروف';
+    console.log(`🏷️ Getting name for employee ${employeeId}:`, { found: !!employee, name });
+    return name;
   };
 
   return (
