@@ -869,10 +869,16 @@ const InventoryPage = () => {
       <ReservedStockDialog 
         open={isReservedStockDialogOpen} 
         onOpenChange={(open) => {
-          console.log('ReservedStockDialog onOpenChange:', open);
+          console.log('🔍 ReservedStockDialog onOpenChange:', { 
+            opening: open, 
+            reservedOrdersCount: reservedOrders?.length,
+            allUsersCount: allUsers?.length,
+            currentUserId: user?.id,
+            isAdmin 
+          });
           setIsReservedStockDialogOpen(open);
         }}
-        reservedOrders={isAdmin ? reservedOrders : reservedOrders?.filter(order => order.created_by === user?.id)}
+        reservedOrders={reservedOrders}
         allUsers={allUsers}
       />
     </>

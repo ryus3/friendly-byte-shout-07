@@ -342,22 +342,20 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
                               <h3 className="font-black text-2xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                                {order.order_number || `ORD-${(index + 1).toString().padStart(6, '0')}`}
+                                {order.order_number}
                               </h3>
-                              {order.tracking_number && (
-                                <Badge variant="outline" className="text-xs">
-                                  {order.tracking_number}
-                                </Badge>
-                              )}
-                              {!isAdmin && (
-                                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 text-xs px-3 py-1">
-                                  {getEmployeeCode(user?.id)}
-                                </Badge>
-                              )}
+                              <Badge variant="outline" className="text-xs">
+                                {getEmployeeCode(order.created_by)}
+                              </Badge>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="w-4 h-4" />
                               <span className="font-medium">{formatDate(order.created_at)}</span>
+                              {!isAdmin && (
+                                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 text-xs px-3 py-1 ml-2">
+                                  {getEmployeeCode(user?.id)}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -422,24 +420,13 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                             </div>
                           </CardHeader>
                           <CardContent className="pt-0 space-y-3">
-                            <div className="flex items-center gap-3 text-sm">
-                              <User className="w-4 h-4 text-muted-foreground" />
-                              <span className="font-medium text-muted-foreground min-w-[60px]">الاسم:</span>
+                             <div className="flex items-center gap-3 text-sm">
+                               <User className="w-4 h-4 text-muted-foreground" />
+                               <span className="font-medium text-muted-foreground min-w-[60px]">الاسم:</span>
                                <span className="font-semibold">
-                                 {(() => {
-                                   console.log('🏢 EMPLOYEE NAME DEBUG for order:', {
-                                     orderId: order.id,
-                                     orderNumber: order.order_number,
-                                     createdBy: order.created_by,
-                                     allUsersPresent: !!allUsers,
-                                     allUsersCount: allUsers?.length || 0,
-                                     employeeFound: !!allUsers?.find(u => u.id === order.created_by),
-                                     employeeName: getEmployeeName(order.created_by)
-                                   });
-                                   return getEmployeeName(order.created_by);
-                                 })()}
+                                 {getEmployeeName(order.created_by)}
                                </span>
-                            </div>
+                             </div>
                             <div className="flex items-center gap-3 text-sm">
                               <Hash className="w-4 h-4 text-muted-foreground" />
                               <span className="font-medium text-muted-foreground min-w-[60px]">المعرف:</span>
