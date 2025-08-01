@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,12 +9,14 @@ import {
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfMonth, endOfMonth, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 /**
  * نافذة تفاصيل الأرباح المستلمة للموظف
  * نفس تصميم نافذة المدير بالضبط مع الكروت الملونة والتدرجات الجميلة
+ * مع إضافة فلتر الفترة الزمنية
  */
 const EmployeeReceivedProfitsDialog = ({
   isOpen,
@@ -25,19 +27,40 @@ const EmployeeReceivedProfitsDialog = ({
   employeeCode,
   allUsers = []
 }) => {
+  // فلتر الفترة الزمنية - افتراضي شهر واحد
+  const [dateRange, setDateRange] = useState({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
 
   const getPayerName = (createdBy) => {
     const payer = allUsers.find(u => u.id === createdBy);
     return payer ? payer.full_name : 'غير محدد';
   };
 
-  // حساب الإحصائيات
-  const stats = {
-    totalReceived: totalAmount,
-    invoicesCount: invoices.length,
-    averageAmount: invoices.length > 0 ? totalAmount / invoices.length : 0,
-    lastPaymentDate: invoices.length > 0 ? invoices.sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date))[0]?.settlement_date : null
-  };
+  // فلترة الفواتير حسب الفترة الزمنية المحددة
+  const filteredInvoices = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return invoices;
+    
+    return invoices.filter(invoice => {
+      const invoiceDate = parseISO(invoice.settlement_date);
+      return isValid(invoiceDate) && 
+             invoiceDate >= dateRange.from && 
+             invoiceDate <= dateRange.to;
+    });
+  }, [invoices, dateRange]);
+
+  // حساب الإحصائيات المفلترة
+  const stats = useMemo(() => {
+    const totalFiltered = filteredInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    return {
+      totalReceived: totalFiltered,
+      invoicesCount: filteredInvoices.length,
+      averageAmount: filteredInvoices.length > 0 ? totalFiltered / filteredInvoices.length : 0,
+      lastPaymentDate: filteredInvoices.length > 0 ? 
+        filteredInvoices.sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date))[0]?.settlement_date : null
+    };
+  }, [filteredInvoices]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -55,19 +78,23 @@ const EmployeeReceivedProfitsDialog = ({
                   <p className="text-lg text-slate-600 dark:text-slate-400">تفاصيل الأرباح المدفوعة</p>
                 </div>
               </div>
-            </div>
-
-            {/* معلومات الموظف والمبلغ الإجمالي - نفس تصميم المدير */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-              {/* معلومات الموظف */}
-              <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-background border-border">
-                <CardContent className="relative p-5">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 group-hover:scale-110 transition-all duration-300">
-                      <User className="w-6 h-6 text-primary" />
+            {/* فلتر الفترة الزمنية */}
+            <div className="mb-6">
+              <Card className="border-border bg-background/50 backdrop-blur-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      <span className="font-semibold text-foreground">فترة العرض:</span>
                     </div>
-                    <h3 className="font-bold text-lg text-foreground">معلومات الموظف</h3>
+                    <DateRangePicker 
+                      date={dateRange} 
+                      onDateChange={setDateRange}
+                    />
                   </div>
+                </CardContent>
+              </Card>
+            </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-300 relative overflow-hidden">
@@ -109,7 +136,7 @@ const EmployeeReceivedProfitsDialog = ({
                     <h3 className="text-base md:text-lg font-bold drop-shadow-lg">إجمالي المستلم</h3>
                   </div>
                   <p className="text-2xl md:text-4xl font-black mb-2 md:mb-3 drop-shadow-2xl">
-                    {totalAmount?.toLocaleString()}
+                    {stats.totalReceived?.toLocaleString()}
                   </p>
                   <p className="text-sm md:text-base font-bold opacity-90 mb-3 md:mb-4 drop-shadow-lg">دينار عراقي</p>
                   <div className="bg-white/10 rounded-xl p-2 md:p-3 backdrop-blur-sm border border-white/20">
@@ -199,27 +226,27 @@ const EmployeeReceivedProfitsDialog = ({
                       <FileText className="w-6 h-6 md:w-10 md:h-10" />
                     </div>
                     <h3 className="font-black text-xl md:text-3xl">
-                      {invoices.length === 0 
+                      {filteredInvoices.length === 0 
                         ? 'فواتير الأرباح المستلمة' 
-                        : `تفاصيل الفواتير المستلمة (${invoices.length})`
+                        : `تفاصيل الفواتير المستلمة (${filteredInvoices.length})`
                       }
                     </h3>
                   </div>
 
-                  {invoices.length === 0 ? (
+                  {filteredInvoices.length === 0 ? (
                     <div className="text-center py-12">
                       <Receipt className="w-20 h-20 text-white/30 mx-auto mb-6" />
-                      <h4 className="text-2xl font-bold mb-4 text-white/90">لم يتم دفع أي أرباح بعد</h4>
-                      <p className="text-white/70 text-lg mb-6">ستظهر فواتير الأرباح المستلمة هنا عند دفعها من قبل المدير</p>
+                      <h4 className="text-2xl font-bold mb-4 text-white/90">لا توجد فواتير في هذه الفترة</h4>
+                      <p className="text-white/70 text-lg mb-6">جرب تغيير الفترة الزمنية لرؤية الفواتير</p>
                       <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20 max-w-md mx-auto">
-                        <p className="text-white/80 text-sm">💡 نصيحة: اطلب من المدير تسوية أرباحك المعلقة</p>
+                        <p className="text-white/80 text-sm">💡 نصيحة: استخدم فلتر الفترة أعلاه لاختيار فترة مختلفة</p>
                       </div>
                     </div>
                   ) : (
                     <>
                       {/* عرض الهاتف - بدون جدول */}
                       <div className="md:hidden space-y-3">
-                        {invoices
+                        {filteredInvoices
                           .sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date))
                           .map((invoice, index) => (
                           <div key={invoice.id} className="bg-white/10 rounded-xl p-3 backdrop-blur-sm space-y-2">
@@ -279,7 +306,7 @@ const EmployeeReceivedProfitsDialog = ({
                           
                           {/* الفواتير */}
                           <div className="divide-y divide-slate-700/50">
-                            {invoices
+                            {filteredInvoices
                               .sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date))
                               .map((invoice, index) => (
                               <div key={invoice.id} className="px-4 md:px-8 py-3 md:py-4 hover:bg-white/5 transition-all duration-200">

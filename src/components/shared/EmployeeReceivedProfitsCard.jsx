@@ -18,7 +18,7 @@ const EmployeeReceivedProfitsCard = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
 
-  // جلب فواتير التسوية مباشرة من قاعدة البيانات
+  // جلب فواتير التسوية مباشرة من قاعدة البيانات مع فحص كلا المعرفين
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
       if (!user?.id) {
@@ -28,11 +28,50 @@ const EmployeeReceivedProfitsCard = ({
 
       try {
         console.log('🔍 EmployeeReceivedProfitsCard: جلب فواتير للموظف:', {
-          userId: user.id,
+          currentUserId: user.id,
           userName: user.full_name,
           employeeCode: user.employee_code
         });
         
+        // فحص إذا كان هذا المستخدم أحمد باستخدام الاسم بدلاً من المعرف
+        let targetUserId = user.id;
+        
+        if (user.full_name?.includes('أحمد') || user.full_name?.includes('احمد')) {
+          console.log('🎯 المستخدم الحالي هو أحمد، سأبحث عن الفواتير باستخدام المعرف القديم أيضاً');
+          
+          // جلب الفواتير للمستخدم الحالي + المعرف القديم لأحمد
+          const { data: invoices, error } = await supabase
+            .from('settlement_invoices')
+            .select('*')
+            .or(`employee_id.eq.${user.id},employee_id.eq.fba59dfc-451c-4906-8882-ae4601ff34d4`)
+            .eq('status', 'completed')
+            .order('settlement_date', { ascending: false });
+
+          if (error) {
+            console.error('❌ خطأ في جلب فواتير التسوية:', error);
+            return;
+          }
+
+          console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة بنجاح لأحمد:', {
+            invoicesCount: invoices?.length || 0,
+            invoices: invoices || [],
+            invoiceDetails: invoices?.map(inv => ({
+              id: inv.id,
+              invoice_number: inv.invoice_number,
+              total_amount: inv.total_amount,
+              settlement_date: inv.settlement_date,
+              employee_name: inv.employee_name,
+              employee_code: inv.employee_code,
+              employee_id: inv.employee_id,
+              status: inv.status
+            })) || []
+          });
+
+          setRealTimeInvoices(invoices || []);
+          return;
+        }
+        
+        // للمستخدمين الآخرين، استخدم المعرف العادي
         const { data: invoices, error } = await supabase
           .from('settlement_invoices')
           .select('*')
@@ -45,18 +84,9 @@ const EmployeeReceivedProfitsCard = ({
           return;
         }
 
-        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة بنجاح:', {
+        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة للمستخدم العادي:', {
           invoicesCount: invoices?.length || 0,
-          invoices: invoices || [],
-          invoiceDetails: invoices?.map(inv => ({
-            id: inv.id,
-            invoice_number: inv.invoice_number,
-            total_amount: inv.total_amount,
-            settlement_date: inv.settlement_date,
-            employee_name: inv.employee_name,
-            employee_code: inv.employee_code,
-            status: inv.status
-          })) || []
+          invoices: invoices || []
         });
 
         setRealTimeInvoices(invoices || []);
