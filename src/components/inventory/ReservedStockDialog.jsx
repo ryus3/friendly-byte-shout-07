@@ -20,21 +20,21 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
-  const [realReservedOrders, setRealReservedOrders] = useState([]);
+  const [reservedOrders, setReservedOrders] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // جلب البيانات الحقيقية للمخزون المحجوز والموظفين
+  // جلب البيانات عند فتح النافذة
   useEffect(() => {
-    const fetchReservedStockData = async () => {
+    const fetchData = async () => {
       if (!open) return;
-
+      
+      setLoading(true);
       try {
         const { supabase } = await import('@/lib/customSupabaseClient');
 
-        // جلب الطلبات المعلقة مع المنتجات المحجوزة
-        console.log('🚀 Starting fetch for user:', user?.id);
-        
-        const { data: orders, error: ordersError } = await supabase
+        // جلب الطلبات المعلقة مع تفاصيل المنتجات
+        const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select(`
             id,
@@ -67,48 +67,21 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
           .eq('status', 'pending')
           .order('created_at', { ascending: false });
 
-        console.log('📊 Orders fetch result:', {
-          error: ordersError,
-          ordersCount: orders?.length || 0,
-          orders: orders?.map(o => ({
-            id: o.id,
-            order_number: o.order_number,
-            created_by: o.created_by,
-            status: o.status
-          }))
-        });
+        if (ordersError) throw ordersError;
 
-        if (ordersError) {
-          console.error('❌ Orders Error:', ordersError);
-          throw ordersError;
-        }
-
-        // جلب جميع الموظفين النشطين
-        const { data: allEmployees, error: employeesError } = await supabase
+        // جلب بيانات الموظفين
+        const { data: employeesData, error: employeesError } = await supabase
           .from('profiles')
           .select('user_id, full_name, username, employee_code')
           .eq('is_active', true)
           .order('full_name');
 
-        console.log('👥 Employees fetch result:', {
-          error: employeesError,
-          employeesCount: allEmployees?.length || 0,
-          employees: allEmployees?.map(e => ({
-            user_id: e.user_id,
-            full_name: e.full_name,
-            username: e.username
-          }))
-        });
+        if (employeesError) throw employeesError;
 
-        if (employeesError) {
-          console.error('❌ Employees Error:', employeesError);
-          throw employeesError;
-        }
-
-        // تحويل البيانات للشكل المطلوب
-        const processedOrders = orders?.map(order => ({
+        // معالجة البيانات
+        const processedOrders = (ordersData || []).map(order => ({
           ...order,
-          items: order.order_items?.map(item => ({
+          items: (order.order_items || []).map(item => ({
             id: item.id,
             name: item.products?.name || 'منتج غير محدد',
             quantity: item.quantity,
@@ -117,79 +90,46 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
             color: item.product_variants?.colors?.name || null,
             size: item.product_variants?.sizes?.name || null,
             image: item.products?.images?.[0] || null
-          })) || []
-        })) || [];
+          }))
+        }));
 
-        console.log('✅ Final processed data:', {
-          processedOrdersCount: processedOrders?.length || 0,
-          employeesCount: allEmployees?.length || 0,
-          currentUser: user?.id
-        });
-
-        setRealReservedOrders(processedOrders);
-        setEmployees(allEmployees || []);
+        setReservedOrders(processedOrders);
+        setEmployees(employeesData || []);
 
       } catch (error) {
-        console.error('❌ خطأ في جلب بيانات المخزون المحجوز:', error);
+        console.error('خطأ في جلب البيانات:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchReservedStockData();
+    fetchData();
   }, [open]);
 
-  // الموظفون المتورطون في الطلبات المحجوزة
+  // الموظفون المشاركون في الطلبات
   const employeesInvolved = useMemo(() => {
-    if (!realReservedOrders || !employees) return [];
+    if (!reservedOrders.length || !employees.length) return [];
     
-    const employeeIds = [...new Set(realReservedOrders.map(o => o.created_by))];
-    console.log('🎯 Employee filtering:', {
-      totalOrders: realReservedOrders.length,
-      uniqueEmployeeIds: employeeIds,
-      totalEmployees: employees.length,
-      currentUser: user?.id
-    });
-    
-    const involved = employees.filter(emp => employeeIds.includes(emp.user_id));
-    console.log('📋 Employees involved:', involved.map(e => ({ id: e.user_id, name: e.full_name })));
-    
-    return involved;
-  }, [realReservedOrders, employees, user?.id]);
+    const employeeIds = [...new Set(reservedOrders.map(order => order.created_by))];
+    return employees.filter(emp => employeeIds.includes(emp.user_id));
+  }, [reservedOrders, employees]);
 
-  // فلترة الطلبات حسب الموظف المختار
-  const filteredDisplayOrders = useMemo(() => {
-    if (!realReservedOrders?.length) return [];
-    
-    console.log('🔍 Filtering orders:', {
-      totalOrders: realReservedOrders.length,
-      isAdmin,
-      selectedEmployee,
-      currentUserId: user?.id
-    });
-    
-    let filtered = [];
+  // فلترة الطلبات
+  const filteredOrders = useMemo(() => {
+    if (!reservedOrders.length) return [];
     
     if (isAdmin) {
+      // المدير يرى كل الطلبات أو طلبات موظف محدد
       if (selectedEmployee === 'all') {
-        filtered = realReservedOrders;
+        return reservedOrders;
       } else {
-        filtered = realReservedOrders.filter(o => o.created_by === selectedEmployee);
+        return reservedOrders.filter(order => order.created_by === selectedEmployee);
       }
     } else {
-      // للموظف العادي - يرى طلباته فقط
-      filtered = realReservedOrders.filter(o => {
-        const match = o.created_by === user?.id;
-        console.log(`👤 Order ${o.order_number}: created_by=${o.created_by}, user=${user?.id}, match=${match}`);
-        return match;
-      });
+      // الموظف يرى طلباته فقط
+      return reservedOrders.filter(order => order.created_by === user?.id);
     }
-    
-    console.log('✅ Final filtered orders:', {
-      count: filtered.length,
-      orders: filtered.map(o => ({ id: o.id, number: o.order_number, created_by: o.created_by }))
-    });
-    
-    return filtered;
-  }, [realReservedOrders, selectedEmployee, isAdmin, user?.id]);
+  }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'لا يوجد تاريخ';
@@ -198,22 +138,35 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     return formatDistanceToNow(date, { addSuffix: true, locale: ar });
   };
 
-  const totalReservedItems = filteredDisplayOrders.reduce((total, order) => {
+  const totalReservedItems = filteredOrders.reduce((total, order) => {
     return total + (order.items?.length || 0);
   }, 0);
 
-  const totalReservedQuantity = filteredDisplayOrders.reduce((total, order) => {
+  const totalReservedQuantity = filteredOrders.reduce((total, order) => {
     return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
   }, 0);
 
-  const totalReservedValue = filteredDisplayOrders.reduce((total, order) => {
+  const totalReservedValue = filteredOrders.reduce((total, order) => {
     return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
   }, 0);
 
   const getEmployeeName = (employeeId) => {
-    const employee = employees?.find(u => u.user_id === employeeId);
+    const employee = employees?.find(emp => emp.user_id === employeeId);
     return employee?.full_name || employee?.username || 'موظف غير معروف';
   };
+
+  if (loading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md h-96 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg font-medium">جاري تحميل البيانات...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -238,7 +191,6 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
             {/* كروت الإحصائيات */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* طلب محجوز */}
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20"></div>
@@ -249,14 +201,13 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-bold">{filteredDisplayOrders.length}</h3>
+                    <h3 className="text-2xl font-bold">{filteredOrders.length}</h3>
                     <p className="text-white/90 font-medium text-sm">طلب محجوز</p>
                     <p className="text-white/70 text-xs">قيد التجهيز</p>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* منتج مختلف */}
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-transparent to-pink-500/20"></div>
@@ -274,7 +225,6 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                 </CardContent>
               </Card>
 
-              {/* إجمالي القطع */}
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-indigo-500/20"></div>
@@ -292,7 +242,6 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                 </CardContent>
               </Card>
 
-              {/* القيمة الإجمالية */}
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-green-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-green-500/20"></div>
@@ -330,11 +279,11 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                         <SelectItem value="all" className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
                           <div className="flex items-center gap-3">
                             <div className="w-3 h-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"></div>
-                            <span className="font-medium text-sm md:text-base">جميع الموظفين ({realReservedOrders?.length || 0} طلب)</span>
+                            <span className="font-medium text-sm md:text-base">جميع الموظفين ({reservedOrders?.length || 0} طلب)</span>
                           </div>
                         </SelectItem>
                         {employeesInvolved.map(emp => {
-                          const empOrdersCount = realReservedOrders?.filter(o => o.created_by === emp.user_id).length || 0;
+                          const empOrdersCount = reservedOrders?.filter(o => o.created_by === emp.user_id).length || 0;
                           return (
                             <SelectItem key={emp.user_id} value={emp.user_id} className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
                               <div className="flex items-center gap-2 md:gap-3">
@@ -355,8 +304,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
             {/* قائمة الطلبات */}
             <div className="space-y-6">
-              {filteredDisplayOrders && filteredDisplayOrders.length > 0 ? (
-                filteredDisplayOrders.map((order, index) => (
+              {filteredOrders && filteredOrders.length > 0 ? (
+                filteredOrders.map((order, index) => (
                   <Card key={order.id} className="group relative overflow-hidden border-2 border-violet-200/60 hover:border-violet-400/80 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/20">
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-indigo-500/5"></div>
                     <CardContent className="p-8 relative">
@@ -391,7 +340,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
                       <Separator className="my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
 
-                       {/* معلومات الموظف المسؤول فقط */}
+                      {/* معلومات الموظف المسؤول فقط */}
                       <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 mb-6">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-4">
