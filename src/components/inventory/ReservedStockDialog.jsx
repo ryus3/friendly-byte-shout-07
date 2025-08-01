@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -15,144 +15,41 @@ import { ar } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import usePermissions from '@/hooks/usePermissions';
+import { useInventory } from '@/contexts/InventoryContext';
 
 const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
-  const [reservedOrders, setReservedOrders] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const { orders, employees } = useInventory();
 
-  // جلب البيانات عند فتح النافذة
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!open) return;
-      
-      console.log('🔍 DEBUG: User ID:', user?.id);
-      console.log('🔍 DEBUG: Is Admin:', isAdmin);
-      
-      setLoading(true);
-      try {
-        const { supabase } = await import('@/lib/customSupabaseClient');
+  // الطلبات المعلقة فقط (المحجوزة)
+  const reservedOrders = useMemo(() => {
+    return orders?.filter(order => order.status === 'pending') || [];
+  }, [orders]);
 
-        // جلب الطلبات المعلقة مع تفاصيل المنتجات
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select(`
-            id,
-            order_number,
-            created_by,
-            customer_name,
-            customer_phone,
-            status,
-            total_amount,
-            created_at,
-            order_items (
-              id,
-              product_id,
-              variant_id,
-              quantity,
-              unit_price,
-              total_price,
-              products (
-                id,
-                name,
-                images
-              ),
-              product_variants (
-                id,
-                colors (name),
-                sizes (name)
-              )
-            )
-          `)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false });
-
-        if (ordersError) throw ordersError;
-
-        // جلب بيانات الموظفين
-        const { data: employeesData, error: employeesError } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, username, employee_code')
-          .eq('is_active', true)
-          .order('full_name');
-
-        if (employeesError) throw employeesError;
-
-        // معالجة البيانات
-        const processedOrders = (ordersData || []).map(order => ({
-          ...order,
-          items: (order.order_items || []).map(item => ({
-            id: item.id,
-            name: item.products?.name || 'منتج غير محدد',
-            quantity: item.quantity,
-            price: item.unit_price,
-            total: item.total_price,
-            color: item.product_variants?.colors?.name || null,
-            size: item.product_variants?.sizes?.name || null,
-            image: item.products?.images?.[0] || null
-          }))
-        }));
-
-        console.log('🔍 DEBUG: Processed Orders:', processedOrders);
-        console.log('🔍 DEBUG: Employees Data:', employeesData);
-        
-        setReservedOrders(processedOrders);
-        setEmployees(employeesData || []);
-
-      } catch (error) {
-        console.error('خطأ في جلب البيانات:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [open]);
-
-  // الموظفون المشاركون في الطلبات
+  // الموظفون المشاركون في الطلبات المحجوزة
   const employeesInvolved = useMemo(() => {
-    if (!reservedOrders.length || !employees.length) return [];
+    if (!reservedOrders.length || !employees?.length) return [];
     
     const employeeIds = [...new Set(reservedOrders.map(order => order.created_by))];
     return employees.filter(emp => employeeIds.includes(emp.user_id));
   }, [reservedOrders, employees]);
 
-  // فلترة الطلبات
+  // فلترة الطلبات حسب الصلاحيات
   const filteredOrders = useMemo(() => {
-    console.log('🔍 DEBUG: Filtering Orders...');
-    console.log('🔍 DEBUG: Reserved Orders Count:', reservedOrders.length);
-    console.log('🔍 DEBUG: User ID for filtering:', user?.id);
-    console.log('🔍 DEBUG: Is Admin:', isAdmin);
-    
-    if (!reservedOrders.length) {
-      console.log('🔍 DEBUG: No reserved orders found');
-      return [];
-    }
+    if (!reservedOrders.length) return [];
     
     if (isAdmin) {
       // المدير يرى كل الطلبات أو طلبات موظف محدد
       if (selectedEmployee === 'all') {
-        console.log('🔍 DEBUG: Admin viewing all orders');
         return reservedOrders;
       } else {
-        console.log('🔍 DEBUG: Admin filtering for employee:', selectedEmployee);
-        const filtered = reservedOrders.filter(order => order.created_by === selectedEmployee);
-        console.log('🔍 DEBUG: Filtered results:', filtered.length);
-        return filtered;
+        return reservedOrders.filter(order => order.created_by === selectedEmployee);
       }
     } else {
       // الموظف يرى طلباته فقط
-      console.log('🔍 DEBUG: Employee filtering for their orders');
-      console.log('🔍 DEBUG: Checking each order:');
-      reservedOrders.forEach(order => {
-        console.log(`  Order ${order.order_number}: created_by=${order.created_by}, matches=${order.created_by === user?.id}`);
-      });
-      const filtered = reservedOrders.filter(order => order.created_by === user?.id);
-      console.log('🔍 DEBUG: Employee filtered results:', filtered.length);
-      return filtered;
+      return reservedOrders.filter(order => order.created_by === user?.id);
     }
   }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
 
@@ -172,26 +69,13 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   }, 0);
 
   const totalReservedValue = filteredOrders.reduce((total, order) => {
-    return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
+    return total + (order.total_amount || 0);
   }, 0);
 
   const getEmployeeName = (employeeId) => {
     const employee = employees?.find(emp => emp.user_id === employeeId);
     return employee?.full_name || employee?.username || 'موظف غير معروف';
   };
-
-  if (loading) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md h-96 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-lg font-medium">جاري تحميل البيانات...</p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -365,98 +249,123 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
                       <Separator className="my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
 
-                      {/* معلومات الموظف المسؤول فقط */}
-                      <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 mb-6">
+                      {/* معلومات الموظف المسؤول - للمدير فقط */}
+                      {isAdmin && (
+                        <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 mb-6">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                                <Building2 className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-muted-foreground">الموظف المسؤول:</span>
+                                  <span className="font-bold text-foreground">{getEmployeeName(order.created_by)}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* معلومات العميل */}
+                      <Card className="border-2 border-blue-200/60 hover:border-blue-400/80 transition-all duration-300 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20 mb-6">
                         <CardContent className="p-4">
-                          <div className="flex items-center gap-4">
-                            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                              <Building2 className="w-4 h-4 text-white" />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
+                                <Users className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-muted-foreground">العميل:</span>
+                                  <span className="font-bold text-foreground">{order.customer_name}</span>
+                                </div>
+                              </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <span className="font-bold text-green-700 dark:text-green-300">الموظف المسؤول:</span>
-                              <span className="font-semibold text-lg">
-                                {getEmployeeName(order.created_by)}
-                              </span>
+                              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
+                                <DollarSign className="w-4 h-4 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-muted-foreground">المبلغ الإجمالي:</span>
+                                  <span className="font-bold text-xl text-green-600">{order.total_amount?.toLocaleString()} د.ع</span>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
 
-                      <Separator className="my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
-
-                      {/* المنتجات المحجوزة */}
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center">
-                            <Package className="w-4 h-4 text-white" />
-                          </div>
-                          <h4 className="font-bold text-xl text-orange-700 dark:text-orange-300">
-                            المنتجات المحجوزة ({order.items?.length || 0})
+                      {/* قائمة المنتجات */}
+                      {order.items && order.items.length > 0 && (
+                        <div className="space-y-4">
+                          <h4 className="text-lg font-bold text-foreground flex items-center gap-2">
+                            <Package className="w-5 h-5 text-violet-600" />
+                            المنتجات المحجوزة ({order.items.length})
                           </h4>
-                        </div>
-
-                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                          {order.items?.map((item, itemIndex) => (
-                            <Card key={itemIndex} className="border-2 border-orange-200/60 hover:border-orange-400/80 transition-all duration-300 bg-gradient-to-br from-orange-50/30 to-amber-50/30 dark:from-orange-950/20 dark:to-amber-950/20">
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-4">
-                                  {item.image && (
-                                    <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted flex-shrink-0 border-2 border-orange-200/60">
-                                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          <div className="grid gap-4">
+                            {order.items.map((item, itemIndex) => (
+                              <Card key={itemIndex} className="border border-gray-200/60 hover:border-violet-300/80 transition-all duration-300 bg-white/60 dark:bg-gray-900/60">
+                                <CardContent className="p-4">
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40 rounded-xl flex items-center justify-center">
+                                      <Package className="w-6 h-6 text-violet-600" />
                                     </div>
-                                  )}
-                                  <div className="flex-1 min-w-0 space-y-2">
-                                    <h5 className="font-bold text-sm truncate">{item.name || 'منتج غير محدد'}</h5>
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                      <span className="font-medium">الكمية: {item.quantity || 0}</span>
-                                      <span className="font-bold text-orange-600">{((item.price || 0) * (item.quantity || 0)).toLocaleString()} د.ع</span>
-                                    </div>
-                                    {(item.color || item.size) && (
-                                      <div className="flex gap-1 flex-wrap">
-                                        {item.color && (
-                                          <Badge variant="outline" className="text-xs px-2 py-0.5">{item.color}</Badge>
-                                        )}
-                                        {item.size && (
-                                          <Badge variant="outline" className="text-xs px-2 py-0.5">{item.size}</Badge>
+                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
+                                      <div>
+                                        <span className="text-sm font-medium text-muted-foreground">المنتج:</span>
+                                        <p className="font-bold text-foreground">{item.name}</p>
+                                        {(item.color || item.size) && (
+                                          <p className="text-sm text-muted-foreground">
+                                            {item.color && `اللون: ${item.color}`}
+                                            {item.color && item.size && ' • '}
+                                            {item.size && `المقاس: ${item.size}`}
+                                          </p>
                                         )}
                                       </div>
-                                    )}
+                                      <div className="text-center">
+                                        <span className="text-sm font-medium text-muted-foreground">الكمية:</span>
+                                        <p className="font-bold text-xl text-blue-600">{item.quantity}</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <span className="text-sm font-medium text-muted-foreground">السعر:</span>
+                                        <p className="font-bold text-green-600">{item.price?.toLocaleString()} د.ع</p>
+                                      </div>
+                                      <div className="text-center">
+                                        <span className="text-sm font-medium text-muted-foreground">المجموع:</span>
+                                        <p className="font-bold text-xl text-violet-600">{(item.price * item.quantity)?.toLocaleString()} د.ع</p>
+                                      </div>
+                                    </div>
                                   </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          )) || (
-                            <div className="col-span-full text-center py-8 text-muted-foreground">
-                              <Package className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                              <p className="font-medium">لا توجد منتجات محجوزة في هذا الطلب</p>
-                            </div>
-                          )}
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))
               ) : (
-                <Card className="border-2 border-dashed border-muted-foreground/30 bg-gradient-to-br from-gray-50/50 to-slate-50/50 dark:from-gray-950/50 dark:to-slate-950/50">
-                  <CardContent className="p-16 text-center">
-                    <div className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-full flex items-center justify-center">
-                      <Archive className="w-16 h-16 text-violet-500" />
+                <Card className="border-2 border-dashed border-gray-300 bg-gray-50/50 dark:bg-gray-900/50 dark:border-gray-600">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-full flex items-center justify-center">
+                      <Archive className="w-12 h-12 text-gray-400" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-4">لا توجد طلبات محجوزة</h3>
-                    <p className="text-muted-foreground mb-6 text-lg max-w-md mx-auto">
+                    <h3 className="text-xl font-bold text-gray-500 mb-2">
                       {isAdmin 
-                        ? selectedEmployee === 'all' 
-                          ? 'لا توجد حاليًا أي طلبات في حالة التجهيز تطابق الفلتر المحدد.'
-                          : 'الموظف المحدد ليس لديه طلبات محجوزة حاليًا.'
-                        : 'ليس لديك طلبات محجوزة حاليًا.'
+                        ? (selectedEmployee === 'all' ? 'لا توجد طلبات محجوزة' : 'لا توجد طلبات محجوزة لهذا الموظف')
+                        : 'لا توجد طلبات محجوزة لك'
+                      }
+                    </h3>
+                    <p className="text-gray-400">
+                      {isAdmin 
+                        ? 'سيتم عرض الطلبات هنا عند وجود طلبات قيد التجهيز'
+                        : 'ستظهر طلباتك قيد التجهيز هنا'
                       }
                     </p>
-                    <div className="text-sm text-blue-600 bg-blue-50 dark:bg-blue-950/20 rounded-xl p-4 inline-block">
-                      <Clock className="w-5 h-5 inline mr-2" />
-                      <span className="font-medium">
-                        {isAdmin ? 'يتم عرض طلبات جميع الموظفين' : 'يتم عرض الطلبات التي قمت بإنشاؤها فقط'}
-                      </span>
-                    </div>
                   </CardContent>
                 </Card>
               )}
