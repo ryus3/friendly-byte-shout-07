@@ -521,12 +521,19 @@ const EmployeeFollowUpPage = () => {
       paidDues
     });
 
+    // عدد الطلبات المسواة (في الأرشيف)
+    const safeOrders = Array.isArray(orders) ? orders : [];
+    const settledOrdersCount = safeOrders.filter(o => 
+      o && o.isArchived === true && o.status === 'completed'
+    ).length;
+
     return {
       totalOrders: filteredOrders.length,
       totalSales,
       totalManagerProfits,
       pendingDues,
-      paidDues
+      paidDues,
+      settledOrdersCount
     };
   }, [filteredOrders, calculateManagerProfit, settlementInvoices, profits, calculateProfit]);
 
@@ -799,7 +806,7 @@ const EmployeeFollowUpPage = () => {
         </Card>
 
         {/* الإحصائيات */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           <StatCard 
             title="إجمالي الطلبات" 
             value={stats.totalOrders} 
@@ -834,6 +841,15 @@ const EmployeeFollowUpPage = () => {
             colors={['teal-500', 'cyan-500']} 
             format="currency" 
             onClick={() => setIsDuesDialogOpen(true)} 
+          />
+          <StatCard 
+            title="أرشيف التسوية" 
+            value={stats.settledOrdersCount || 0}
+            icon={Archive} 
+            colors={['orange-500', 'red-500']} 
+            format="number"
+            onClick={() => handleFilterChange('archived', true)} 
+            description="الطلبات المسواة"
           />
         </div>
 

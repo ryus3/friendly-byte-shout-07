@@ -263,13 +263,13 @@ const OrdersPage = () => {
     }
   }, [profitData, hasPermission]);
 
-  // حساب الأرباح الحقيقية للموظف من جدول profits
+  // حساب الأرباح الحقيقية للموظف من جدول profits مباشرة
   const userActualProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {
       return profitData?.netProfit || 0;
     } else {
-      // للموظفين: حساب الأرباح الحقيقية من الطلبات المكتملة
-      return profitData?.personalSettledProfit || profitData?.personalTotalProfit || 0;
+      // للموظفين: حساب الأرباح الحقيقية من UnifiedProfitDisplay
+      return profitData?.personalTotalProfit || 0;
     }
   }, [profitData, hasPermission]);
   

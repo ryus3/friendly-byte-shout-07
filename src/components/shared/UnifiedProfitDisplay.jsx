@@ -111,13 +111,14 @@ const UnifiedProfitDisplay = ({
     return { from, to };
   }, [datePeriod, dateRange]);
 
-  // حساب البيانات المالية باستخدام نفس منطق AccountingPage
+  // حساب البيانات المالية - تحسين جذري للحسابات
   const unifiedFinancialData = useMemo(() => {
     if (!orders || !Array.isArray(orders)) {
       return {
         totalRevenue: 0, cogs: 0, grossProfit: 0, netProfit: 0,
         systemProfit: 0, generalExpenses: 0, managerProfitFromEmployees: 0,
-        totalEmployeeProfits: 0
+        totalEmployeeProfits: 0, personalTotalProfit: 0, personalSettledProfit: 0,
+        archivedOrdersCount: 0, personalPendingProfit: 0
       };
     }
 
@@ -140,6 +141,50 @@ const UnifiedProfitDisplay = ({
       o.receipt_received === true && 
       filterByDate(o.updated_at || o.created_at)
     );
+
+    // حساب البيانات الشخصية للموظف
+    let personalData = {
+      personalTotalProfit: 0,
+      personalSettledProfit: 0,
+      personalPendingProfit: 0,
+      archivedOrdersCount: 0
+    };
+
+    if (!canViewAll && currentUser?.id) {
+      // طلبات الموظف المكتملة
+      const userDeliveredOrders = deliveredOrders.filter(o => o.created_by === currentUser.id);
+      
+      // حساب الأرباح الشخصية من جدول profits
+      const userProfits = allProfits.filter(p => p.employee_id === currentUser.id);
+      
+      personalData.personalTotalProfit = userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+      
+      // الأرباح المستلمة (المسواة)
+      personalData.personalSettledProfit = userProfits
+        .filter(p => p.status === 'settled')
+        .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+      
+      // الأرباح المعلقة
+      personalData.personalPendingProfit = userProfits
+        .filter(p => p.status === 'pending')
+        .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+      
+      // الطلبات المؤرشفة (المسواة + الراجع للمخزن)
+      personalData.archivedOrdersCount = safeOrders.filter(o => 
+        o.created_by === currentUser.id && 
+        (o.isArchived === true || o.isarchived === true)
+      ).length;
+
+      console.log('📊 البيانات الشخصية للموظف:', {
+        userId: currentUser.id,
+        userProfitsCount: userProfits.length,
+        personalTotalProfit: personalData.personalTotalProfit,
+        personalSettledProfit: personalData.personalSettledProfit,
+        personalPendingProfit: personalData.personalPendingProfit,
+        archivedOrdersCount: personalData.archivedOrdersCount,
+        userDeliveredOrdersCount: userDeliveredOrders.length
+      });
+    }
     
     const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
     
@@ -232,7 +277,8 @@ const UnifiedProfitDisplay = ({
       netProfit,
       managerProfitFromEmployees: systemProfit,
       totalEmployeeProfits,
-      totalSettledDues
+      totalSettledDues,
+      ...personalData // إضافة البيانات الشخصية للموظف
     };
   }, [orders, accounting, allProfits, effectiveDateRange, currentUser, settlementInvoices]);
 
