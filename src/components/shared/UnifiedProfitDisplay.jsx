@@ -187,7 +187,8 @@ const UnifiedProfitDisplay = ({
         const isReturnedToStock = o.status === 'returned_in_stock';
         
         // التحقق من تاريخ النطاق المحدد
-        const isInDateRange = filterByDate(o.updated_at || o.created_at);
+        const orderDate = o.updated_at || o.created_at;
+        const isInDateRange = orderDate ? filterByDate(orderDate) : true;
         
         console.log(`🔍 فحص طلب ${o.order_number}:`, {
           orderId: o.id,
