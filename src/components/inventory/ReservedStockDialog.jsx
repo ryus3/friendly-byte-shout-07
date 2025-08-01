@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -20,73 +20,65 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
+  const [employees, setEmployees] = useState([]);
 
-  // 🔧 تشخيص شامل ومبسط
-  console.log('═══════════════════════════════════════');
-  console.log('🔍 RESERVED STOCK DIALOG - FULL DEBUG');
-  console.log('═══════════════════════════════════════');
-  console.log('📊 Basic Info:', {
+  // 🔧 جلب بيانات الموظفين من قاعدة البيانات مباشرة
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { supabase } = await import('@/lib/customSupabaseClient');
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username, employee_code, email')
+          .eq('is_active', true)
+          .order('full_name');
+        
+        if (error) throw error;
+        
+        // تحويل البيانات للشكل المطلوب
+        const formattedEmployees = data.map(emp => ({
+          id: emp.user_id,
+          full_name: emp.full_name,
+          username: emp.username,
+          employee_code: emp.employee_code,
+          email: emp.email
+        }));
+        
+        setEmployees(formattedEmployees);
+        console.log('✅ EMPLOYEES LOADED:', formattedEmployees);
+      } catch (error) {
+        console.error('❌ Error loading employees:', error);
+      }
+    };
+
+    if (open) {
+      fetchEmployees();
+    }
+  }, [open]);
+
+  // تشخيص البيانات
+  console.log('🔍 RESERVED STOCK DEBUG:', {
     isDialogOpen: open,
     currentUserId: user?.id,
     isUserAdmin: isAdmin,
     reservedOrdersCount: reservedOrders?.length || 0,
-    allUsersCount: allUsers?.length || 0
+    employeesCount: employees?.length || 0,
+    employees: employees.map(e => ({ id: e.id, name: e.full_name, code: e.employee_code }))
   });
 
-  // فحص الطلبات المحجوزة بالتفصيل
-  if (reservedOrders && reservedOrders.length > 0) {
-    console.log('📋 RESERVED ORDERS DETAILS:');
-    reservedOrders.forEach((order, index) => {
-      const employee = allUsers?.find(u => u.id === order.created_by);
-      console.log(`📦 Order ${index + 1}:`, {
-        orderId: order.id,
-        orderNumber: order.order_number,
-        createdBy: order.created_by,
-        customerName: order.customer_name,
-        status: order.status,
-        itemsCount: order.items?.length || 0,
-        employee: employee ? {
-          id: employee.id,
-          fullName: employee.full_name,
-          username: employee.username,
-          employeeCode: employee.employee_code,
-          email: employee.email
-        } : 'NOT FOUND'
-      });
-    });
-  } else {
-    console.log('❌ NO RESERVED ORDERS FOUND');
-  }
-
-  // فحص المستخدمين
-  if (allUsers && allUsers.length > 0) {
-    console.log('👥 ALL USERS DETAILS:');
-    allUsers.forEach((user, index) => {
-      console.log(`👤 User ${index + 1}:`, {
-        id: user.id,
-        fullName: user.full_name,
-        username: user.username,
-        employeeCode: user.employee_code,
-        email: user.email
-      });
-    });
-  } else {
-    console.log('❌ NO USERS DATA FOUND');
-  }
 
   // الموظفون المشاركون في الطلبات المحجوزة
   const employeesInvolved = useMemo(() => {
-    if (!reservedOrders || !allUsers) {
-      console.log('❌ Cannot calculate employees - missing data');
+    if (!reservedOrders || !employees) {
       return [];
     }
     
     const employeeIds = [...new Set(reservedOrders.map(o => o.created_by))];
-    const employees = allUsers.filter(u => employeeIds.includes(u.id));
+    const involvedEmployees = employees.filter(u => employeeIds.includes(u.id));
     
     console.log('🎯 EMPLOYEES INVOLVED:', {
       uniqueEmployeeIds: employeeIds,
-      foundEmployees: employees.map(e => ({
+      foundEmployees: involvedEmployees.map(e => ({
         id: e.id,
         name: e.full_name,
         code: e.employee_code,
@@ -94,8 +86,8 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
       }))
     });
     
-    return employees;
-  }, [reservedOrders, allUsers]);
+    return involvedEmployees;
+  }, [reservedOrders, employees]);
 
   // فلترة الطلبات حسب الموظف المختار
   const filteredDisplayOrders = useMemo(() => {
@@ -154,12 +146,12 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
 
   // دوال مساعدة مبسطة
   const getEmployeeCode = (employeeId) => {
-    const employee = allUsers?.find(u => u.id === employeeId);
+    const employee = employees?.find(u => u.id === employeeId);
     return employee?.employee_code || 'غير محدد';
   };
 
   const getEmployeeName = (employeeId) => {
-    const employee = allUsers?.find(u => u.id === employeeId);
+    const employee = employees?.find(u => u.id === employeeId);
     const name = employee?.full_name || employee?.username || 'موظف غير معروف';
     console.log(`🏷️ Getting name for employee ${employeeId}:`, { found: !!employee, name });
     return name;
