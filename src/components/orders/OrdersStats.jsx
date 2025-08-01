@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package } from 'lucide-react';
+import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package, RotateCcw, FolderArchive } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
@@ -44,8 +44,8 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'returned', title: 'راجع للمخزن', icon: CornerDownLeft, colors: ['status-returned', 'red-600'], value: getStats('returned_in_stock'), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'archived', title: 'الأرشيف', icon: Archive, colors: ['status-cancelled', 'red-800'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
+    { key: 'returned', title: 'راجع للمخزن', icon: RotateCcw, colors: ['orange-500', 'red-500'], value: getStats('returned_in_stock'), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'archived', title: 'الأرشيف', icon: FolderArchive, colors: ['indigo-500', 'purple-500'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
   ], [orders, aiOrders, globalPeriod]);
 
   return (

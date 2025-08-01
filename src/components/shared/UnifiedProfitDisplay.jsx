@@ -15,7 +15,10 @@ import {
   Wallet,
   TrendingUp,
   Archive,
-  CreditCard // إضافة أيقونة جميلة للأرباح المستلمة
+  CreditCard, // أيقونة جميلة للأرباح المستلمة
+  HandCoins, // أيقونة جميلة للأرباح المستلمة
+  FolderArchive, // أيقونة احترافية للأرشيف
+  RotateCcw // أيقونة احترافية للراجع للمخزن
 } from 'lucide-react';
 
 /**
@@ -328,8 +331,8 @@ const UnifiedProfitDisplay = ({
           key: 'my-received-profits',
           title: 'أرباحي المستلمة',
           value: profitData.personalSettledProfit || 0,
-          icon: CreditCard, // أيقونة جميلة مثل كارت إجمالي الأرباح
-          colors: ['blue-500', 'indigo-500'],
+          icon: HandCoins, // أيقونة جميلة للأرباح المستلمة
+          colors: ['emerald-500', 'green-500'],
           format: 'currency',
           onClick: onEmployeeReceivedClick
         }
@@ -365,8 +368,8 @@ const UnifiedProfitDisplay = ({
           key: 'archived-profits',
           title: 'الأرشيف',
           value: 0, // سيتم حسابها لاحقاً
-          icon: Archive,
-          colors: ['gray-500', 'slate-500'],
+          icon: FolderArchive,
+          colors: ['indigo-500', 'purple-500'],
           format: 'number',
           onClick: onArchiveClick,
           description: 'الطلبات المدفوعة'
