@@ -59,10 +59,17 @@ export const useUnifiedProfits = (userId = null) => {
       const safeOrders = Array.isArray(orders) ? orders : [];
       const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
 
-      // نطاق التاريخ: الشهر الحالي (مثل AccountingPage)
+      // نطاق التاريخ: توسيع النطاق لإظهار جميع البيانات
       const now = new Date();
-      const from = startOfMonth(now);
+      // تمديد النطاق لـ 6 أشهر للخلف لضمان إظهار البيانات الموجودة
+      const from = new Date(now.getFullYear(), now.getMonth() - 6, 1);
       const to = endOfMonth(now);
+
+      console.log('📅 نطاق التاريخ الموسع:', {
+        from: from.toISOString(),
+        to: to.toISOString(),
+        description: 'تم توسيع النطاق لضمان إظهار البيانات الموجودة'
+      });
 
       const filterByDate = (itemDateStr) => {
         if (!from || !to || !itemDateStr) return true;
@@ -74,12 +81,31 @@ export const useUnifiedProfits = (userId = null) => {
         }
       };
 
-      // نفس المنطق: الطلبات المُستلمة الفواتير فقط
-      const deliveredOrders = safeOrders.filter(o => 
-        o && (o.status === 'delivered' || o.status === 'completed') && 
-        o.receipt_received === true && 
-        filterByDate(o.updated_at || o.created_at)
-      );
+      // نفس المنطق: الطلبات المُستلمة الفواتير فقط - تعديل الشرط مع معلومات أكثر
+      const deliveredOrders = safeOrders.filter(o => {
+        const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
+        const isReceiptReceived = o.receipt_received === true;
+        const isInDateRange = filterByDate(o.updated_at || o.created_at);
+        
+        console.log('🔍 فحص الطلب مفصل:', {
+          orderId: o.id,
+          orderNumber: o.order_number,
+          status: o.status,
+          receiptReceived: o.receipt_received,
+          createdBy: o.created_by,
+          createdAt: o.created_at,
+          updatedAt: o.updated_at,
+          totalAmount: o.total_amount,
+          finalAmount: o.final_amount,
+          isDeliveredStatus,
+          isReceiptReceived,
+          isInDateRange,
+          dateRange: { from: from.toISOString(), to: to.toISOString() },
+          finalResult: isDeliveredStatus && isReceiptReceived && isInDateRange
+        });
+        
+        return isDeliveredStatus && isReceiptReceived && isInDateRange;
+      });
 
       console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length);
 

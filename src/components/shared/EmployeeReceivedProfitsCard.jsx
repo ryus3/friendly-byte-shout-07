@@ -27,7 +27,11 @@ const EmployeeReceivedProfitsCard = ({
       }
 
       try {
-        console.log('🔍 EmployeeReceivedProfitsCard: جلب فواتير للموظف:', user.id);
+        console.log('🔍 EmployeeReceivedProfitsCard: جلب فواتير للموظف:', {
+          userId: user.id,
+          userName: user.full_name,
+          employeeCode: user.employee_code
+        });
         
         const { data: invoices, error } = await supabase
           .from('settlement_invoices')
@@ -41,9 +45,18 @@ const EmployeeReceivedProfitsCard = ({
           return;
         }
 
-        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة:', {
+        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة بنجاح:', {
           invoicesCount: invoices?.length || 0,
-          invoices: invoices?.slice(0, 3) || []
+          invoices: invoices || [],
+          invoiceDetails: invoices?.map(inv => ({
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            total_amount: inv.total_amount,
+            settlement_date: inv.settlement_date,
+            employee_name: inv.employee_name,
+            employee_code: inv.employee_code,
+            status: inv.status
+          })) || []
         });
 
         setRealTimeInvoices(invoices || []);
@@ -53,7 +66,7 @@ const EmployeeReceivedProfitsCard = ({
     };
 
     fetchEmployeeInvoices();
-  }, [user?.id]);
+  }, [user?.id, user?.full_name, user?.employee_code]);
 
   // حساب إجمالي الأرباح المستلمة للموظف الحالي
   const employeeReceivedProfits = useMemo(() => {
@@ -79,16 +92,25 @@ const EmployeeReceivedProfitsCard = ({
       sum + (invoice.total_amount || 0), 0
     );
 
-    console.log('💰 EmployeeReceivedProfitsCard: حساب الأرباح المستلمة:', {
+    console.log('💰 EmployeeReceivedProfitsCard: النتيجة النهائية:', {
       employeeId: user.id,
       employeeName: user.full_name,
       employeeCode: user.employee_code,
-      realTimeInvoices: realTimeInvoices.length,
-      propsInvoices: settlementInvoices?.length || 0,
-      finalInvoicesSource: invoicesSource.length,
-      employeeInvoices: employeeInvoices.length,
+      realTimeInvoicesCount: realTimeInvoices.length,
+      propsInvoicesCount: settlementInvoices?.length || 0,
+      finalInvoicesSourceCount: invoicesSource.length,
+      employeeInvoicesCount: employeeInvoices.length,
       totalReceived,
-      invoicesSample: employeeInvoices.slice(0, 2)
+      invoicesSample: employeeInvoices.slice(0, 2),
+      allInvoicesDetailed: invoicesSource.map(inv => ({
+        id: inv.id,
+        employee_id: inv.employee_id,
+        employee_name: inv.employee_name,
+        status: inv.status,
+        total_amount: inv.total_amount,
+        invoice_number: inv.invoice_number
+      })),
+      finalStatus: employeeInvoices.length > 0 ? 'توجد فواتير' : 'لا توجد فواتير'
     });
 
     return {
