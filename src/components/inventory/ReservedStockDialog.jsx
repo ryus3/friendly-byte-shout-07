@@ -56,10 +56,11 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
       return reservedOrders.filter(o => o.created_by === selectedEmployee);
     }
     
-    // إذا كان موظف عادي، يرى جميع الطلبات المحجوزة (تغيير مؤقت للتشخيص)
-    // يجب أن يرى طلباته فقط لكن للآن سنعرض جميع الطلبات
+    // إذا كان موظف عادي، يرى طلباته فقط
     if (!isAdmin) {
-      return reservedOrders; // عرض جميع الطلبات للتشخيص
+      const userOrders = reservedOrders.filter(o => o.created_by === user?.id);
+      console.log('User orders found:', userOrders);
+      return userOrders;
     }
     
     return reservedOrders;
@@ -83,7 +84,9 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
-        <DialogHeader className="pb-4 border-b border-border/50">
+        <ScrollArea className="h-full">
+          <div className="p-6 space-y-6">
+            <DialogHeader className="pb-4 border-b border-border/50">
           <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
             <div className="p-3 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl shadow-lg">
               <Archive className="w-7 h-7 text-white" />
@@ -99,72 +102,84 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </DialogTitle>
         </DialogHeader>
         
-        {/* إحصائيات سريعة - كروت صغيرة بألوان قسم الجرد */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-          {/* كارت إجمالي الطلبات - أزرق فاتح */}
-          <Card className="group relative overflow-hidden border border-sky-300/30 hover:border-sky-400/50 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-sky-950/20 dark:to-blue-950/20"></div>
-            <CardContent className="p-3 relative">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-sky-500 to-blue-500 rounded-lg flex items-center justify-center shadow-sm">
-                  <ShoppingCart className="w-4 h-4 text-white" />
+        {/* إحصائيات سريعة - كروت صغيرة مثل أقسام الجرد */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* كارت إجمالي الطلبات - أزرق مثل قسم الملابس */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
+            <CardContent className="p-4">
+              <div className="text-center space-y-3 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-4 relative overflow-hidden">
+                <div className="flex justify-center">
+                  <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                    <ShoppingCart className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground">إجمالي الطلبات</p>
-                  <p className="text-lg font-bold text-sky-600 dark:text-sky-400">{filteredDisplayOrders.length}</p>
+                <div>
+                  <h4 className="font-bold text-lg">{filteredDisplayOrders.length}</h4>
+                  <p className="text-white/80 text-xs">إجمالي الطلبات</p>
                 </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
               </div>
             </CardContent>
           </Card>
 
-          {/* كارت المنتجات المحجوزة - برتقالي */}
-          <Card className="group relative overflow-hidden border border-orange-300/30 hover:border-orange-400/50 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20"></div>
-            <CardContent className="p-3 relative">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center shadow-sm">
-                  <Package className="w-4 h-4 text-white" />
+          {/* كارت المنتجات المحجوزة - برتقالي مثل قسم الأحذية */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
+            <CardContent className="p-4">
+              <div className="text-center space-y-3 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden">
+                <div className="flex justify-center">
+                  <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                    <Package className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground">عناصر محجوزة</p>
-                  <p className="text-lg font-bold text-orange-600 dark:text-orange-400">{totalReservedItems}</p>
+                <div>
+                  <h4 className="font-bold text-lg">{totalReservedItems}</h4>
+                  <p className="text-white/80 text-xs">منتجات مختلفة</p>
                 </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
               </div>
             </CardContent>
           </Card>
 
-          {/* كارت إجمالي الكمية - أخضر */}
-          <Card className="group relative overflow-hidden border border-emerald-300/30 hover:border-emerald-400/50 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20"></div>
-            <CardContent className="p-3 relative">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-green-500 rounded-lg flex items-center justify-center shadow-sm">
-                  <Hash className="w-4 h-4 text-white" />
+          {/* كارت إجمالي الكمية - بنفسجي مثل قسم المواد العامة */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
+            <CardContent className="p-4">
+              <div className="text-center space-y-3 bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-4 relative overflow-hidden">
+                <div className="flex justify-center">
+                  <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                    <Hash className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground">إجمالي الكمية</p>
-                  <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{totalReservedQuantity}</p>
+                <div>
+                  <h4 className="font-bold text-lg">{totalReservedQuantity}</h4>
+                  <p className="text-white/80 text-xs">قطعة محجوزة</p>
                 </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
               </div>
             </CardContent>
           </Card>
 
-          {/* كارت القيمة الإجمالية - بنفسجي */}
-          <Card className="group relative overflow-hidden border border-violet-300/30 hover:border-violet-400/50 transition-all duration-300 hover:shadow-lg">
-            <div className="absolute inset-0 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20"></div>
-            <CardContent className="p-3 relative">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-500 rounded-lg flex items-center justify-center shadow-sm">
-                  <DollarSign className="w-4 h-4 text-white" />
+          {/* كارت القيمة الإجمالية - أخضر زمردي */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
+            <CardContent className="p-4">
+              <div className="text-center space-y-3 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden">
+                <div className="flex justify-center">
+                  <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                    <DollarSign className="w-6 h-6" />
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xs font-medium text-muted-foreground">القيمة الإجمالية</p>
-                  <p className="text-lg font-bold text-violet-600 dark:text-violet-400">
+                <div>
+                  <h4 className="font-bold text-lg">
                     {filteredDisplayOrders.reduce((total, order) => {
                       return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
-                    }, 0).toLocaleString()} د.ع
-                  </p>
+                    }, 0).toLocaleString()}
+                  </h4>
+                  <p className="text-white/80 text-xs">د.ع قيمة محجوزة</p>
                 </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
               </div>
             </CardContent>
           </Card>
@@ -210,8 +225,8 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </Card>
         )}
 
-        <ScrollArea className="flex-1">
-          <div className="space-y-4 py-4">
+        {/* قائمة الطلبات */}
+        <div className="space-y-4">
             {filteredDisplayOrders && filteredDisplayOrders.length > 0 ? (
               filteredDisplayOrders.map((order, index) => (
                 <Card key={order.id} className="group relative overflow-hidden border-2 border-violet-200/50 hover:border-violet-300/70 transition-all duration-300 hover:shadow-xl hover:shadow-violet-500/10">
@@ -295,8 +310,13 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                             <User className="w-3 h-3 text-muted-foreground" />
                             <span className="font-semibold">
                               {(() => {
+                                // البحث عن الموظف من قائمة المستخدمين
                                 const employee = allUsers?.find(u => u.id === order.created_by);
-                                return employee?.full_name || order.employeeName || 'غير معروف';
+                                if (employee) {
+                                  return employee.full_name || employee.username || 'غير محدد';
+                                }
+                                // إذا لم نجد الموظف في القائمة، نبحث في بيانات الطلب
+                                return order.employeeName || order.employee_name || 'غير معروف';
                               })()}
                             </span>
                           </div>
@@ -389,6 +409,7 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                 )}
               </div>
             )}
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
