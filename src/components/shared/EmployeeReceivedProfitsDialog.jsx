@@ -28,10 +28,10 @@ const EmployeeReceivedProfitsDialog = ({
   const { user } = useAuth();
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
   
-  // فلتر الفترة الزمنية - افتراضي شهر واحد
+  // فلتر الفترة الزمنية - افتراضي 12 شهر للخلف لإظهار جميع البيانات
   const [dateRange, setDateRange] = useState({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date())
+    from: new Date(new Date().getFullYear() - 1, 0, 1), // بداية العام الماضي
+    to: new Date(new Date().getFullYear() + 1, 11, 31)  // نهاية العام القادم
   });
 
   // جلب فواتير التسوية باستخدام المعرف الصغير employee_code بدلاً من UUID - نفس منطق الكارت الخارجي
