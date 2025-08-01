@@ -34,23 +34,44 @@ const EmployeeReceivedProfitsDialog = ({
     to: endOfMonth(new Date())
   });
 
-  // جلب فواتير التسوية مباشرة من قاعدة البيانات باستخدام employee_code
+  // جلب فواتير التسوية مباشرة من قاعدة البيانات باستخدام employee_code أو user_id
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
-      if (!user?.employee_code || !isOpen) return;
+      if (!user || !isOpen) return;
 
       try {
-        const { data: invoices, error } = await supabase
+        console.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير للمستخدم:', {
+          userId: user.id,
+          employeeCode: user.employee_code,
+          fullName: user.full_name
+        });
+
+        // البحث أولاً بـ employee_code إذا كان متوفراً، ثم بـ employee_id UUID
+        let query = supabase
           .from('settlement_invoices')
           .select('*')
-          .eq('employee_code', user.employee_code)
           .eq('status', 'completed')
           .order('settlement_date', { ascending: false });
+
+        if (user.employee_code) {
+          query = query.eq('employee_code', user.employee_code);
+        } else {
+          query = query.eq('employee_id', user.id);
+        }
+
+        const { data: invoices, error } = await query;
 
         if (error) {
           console.error('❌ خطأ في جلب فواتير التسوية:', error);
           return;
         }
+
+        console.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة:', {
+          invoicesCount: invoices?.length || 0,
+          invoices: invoices || [],
+          searchBy: user.employee_code ? 'employee_code' : 'employee_id',
+          searchValue: user.employee_code || user.id
+        });
 
         setRealTimeInvoices(invoices || []);
       } catch (error) {
@@ -59,7 +80,7 @@ const EmployeeReceivedProfitsDialog = ({
     };
 
     fetchEmployeeInvoices();
-  }, [user?.employee_code, isOpen]);
+  }, [user?.id, user?.employee_code, isOpen]);
 
   const getPayerName = (createdBy) => {
     const payer = allUsers.find(u => u.id === createdBy);
@@ -92,18 +113,18 @@ const EmployeeReceivedProfitsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden p-0">
-        <ScrollArea className="h-full max-h-[85vh]">
-          <div className="p-4 md:p-8">
-            {/* Header - نفس تصميم المدير */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-4 mb-6">
-                <div className="p-3 bg-gradient-to-r from-blue-500 to-green-600 rounded-full text-white shadow-lg">
-                  <Receipt className="w-10 h-10" />
+      <DialogContent className="w-[95vw] max-w-7xl h-[95vh] overflow-hidden p-0 m-2">
+        <ScrollArea className="h-full">
+          <div className="p-2 sm:p-4 lg:p-8">
+            {/* Header - متوافق مع الهاتف */}
+            <div className="text-center mb-4 sm:mb-8">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+                <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-green-600 rounded-full text-white shadow-lg">
+                  <Receipt className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">أرباحي المستلمة</h1>
-                  <p className="text-lg text-slate-600 dark:text-slate-400">تفاصيل الأرباح المدفوعة</p>
+                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-slate-800 dark:text-slate-100">أرباحي المستلمة</h1>
+                  <p className="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-400">تفاصيل الأرباح المدفوعة</p>
                 </div>
               </div>
             </div>
