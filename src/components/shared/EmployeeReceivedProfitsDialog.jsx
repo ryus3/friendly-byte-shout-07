@@ -205,30 +205,33 @@ const EmployeeReceivedProfitsDialog = ({
               </div>
             )}
 
-            {/* قائمة الفواتير */}
-            {invoices.length === 0 ? (
-              <Card className="mb-4 md:mb-8 relative overflow-hidden shadow-2xl">
-                <CardContent className="p-8 text-center">
-                  <div className="bg-gradient-to-br from-gray-400 to-gray-600 text-white rounded-xl md:rounded-2xl p-8 relative overflow-hidden">
-                    <Receipt className="w-16 h-16 text-white/50 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold mb-2">لم يتم دفع أي أرباح بعد</h3>
-                    <p className="text-white/80">ستظهر فواتير الأرباح المستلمة هنا عند دفعها</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="mb-4 md:mb-8 relative overflow-hidden shadow-2xl">
-                <CardContent className="p-4 md:p-8">
-                  <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-xl md:rounded-2xl p-4 md:p-8 relative overflow-hidden">
-                    <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8">
-                      <div className="p-2 md:p-4 bg-white/10 rounded-xl md:rounded-2xl backdrop-blur-sm">
-                        <FileText className="w-6 h-6 md:w-10 md:h-10" />
-                      </div>
-                      <h3 className="font-black text-xl md:text-3xl">
-                        تفاصيل الفواتير المستلمة ({invoices.length})
-                      </h3>
+            {/* قائمة الفواتير - عرض جميل حتى لو فارغة */}
+            <Card className="mb-4 md:mb-8 relative overflow-hidden shadow-2xl">
+              <CardContent className="p-4 md:p-8">
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white rounded-xl md:rounded-2xl p-4 md:p-8 relative overflow-hidden">
+                  <div className="flex items-center gap-2 md:gap-4 mb-4 md:mb-8">
+                    <div className="p-2 md:p-4 bg-white/10 rounded-xl md:rounded-2xl backdrop-blur-sm">
+                      <FileText className="w-6 h-6 md:w-10 md:h-10" />
                     </div>
-                    
+                    <h3 className="font-black text-xl md:text-3xl">
+                      {invoices.length === 0 
+                        ? 'فواتير الأرباح المستلمة' 
+                        : `تفاصيل الفواتير المستلمة (${invoices.length})`
+                      }
+                    </h3>
+                  </div>
+
+                  {invoices.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Receipt className="w-20 h-20 text-white/30 mx-auto mb-6" />
+                      <h4 className="text-2xl font-bold mb-4 text-white/90">لم يتم دفع أي أرباح بعد</h4>
+                      <p className="text-white/70 text-lg mb-6">ستظهر فواتير الأرباح المستلمة هنا عند دفعها من قبل المدير</p>
+                      <div className="bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20 max-w-md mx-auto">
+                        <p className="text-white/80 text-sm">💡 نصيحة: اطلب من المدير تسوية أرباحك المعلقة</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
                     {/* عرض الهاتف - بدون جدول */}
                     <div className="md:hidden space-y-3">
                       {invoices
@@ -317,14 +320,16 @@ const EmployeeReceivedProfitsDialog = ({
                         </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>
+  );
 };
 
 export default EmployeeReceivedProfitsDialog;

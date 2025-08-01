@@ -19,6 +19,10 @@ const EmployeeReceivedProfitsCard = ({
   // حساب إجمالي الأرباح المستلمة للموظف الحالي
   const employeeReceivedProfits = useMemo(() => {
     if (!settlementInvoices || !Array.isArray(settlementInvoices) || !user?.id) {
+      console.log('🔍 EmployeeReceivedProfitsCard: بيانات مفقودة:', {
+        settlementInvoices: settlementInvoices?.length || 0,
+        userId: user?.id || 'مفقود'
+      });
       return { total: 0, invoices: [] };
     }
 
@@ -34,6 +38,7 @@ const EmployeeReceivedProfitsCard = ({
 
     console.log('💰 EmployeeReceivedProfitsCard: حساب الأرباح المستلمة:', {
       employeeId: user.id,
+      allInvoices: settlementInvoices.length,
       employeeInvoices: employeeInvoices.length,
       totalReceived,
       invoicesSample: employeeInvoices.slice(0, 2)
@@ -55,7 +60,11 @@ const EmployeeReceivedProfitsCard = ({
         format="currency" 
         onClick={() => setIsDialogOpen(true)}
         className={className}
-        subtitle={`${employeeReceivedProfits.invoices.length} فاتورة مستلمة`}
+        subtitle={
+          employeeReceivedProfits.invoices.length > 0 
+            ? `${employeeReceivedProfits.invoices.length} فاتورة مستلمة`
+            : 'لا توجد أرباح مستلمة بعد'
+        }
       />
       
       <EmployeeReceivedProfitsDialog
