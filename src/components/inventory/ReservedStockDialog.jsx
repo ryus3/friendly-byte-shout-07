@@ -60,8 +60,16 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
   console.log('🔍 RESERVED STOCK DEBUG:', {
     isDialogOpen: open,
     currentUserId: user?.id,
+    currentUserDetails: user,
     isUserAdmin: isAdmin,
     reservedOrdersCount: reservedOrders?.length || 0,
+    reservedOrdersDetails: reservedOrders?.map(o => ({
+      id: o.id,
+      order_number: o.order_number,
+      created_by: o.created_by,
+      status: o.status,
+      customer_name: o.customer_name
+    })) || [],
     employeesCount: employees?.length || 0,
     employees: employees.map(e => ({ id: e.id, name: e.full_name, code: e.employee_code }))
   });
@@ -69,14 +77,27 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
 
   // الموظفون المشاركون في الطلبات المحجوزة
   const employeesInvolved = useMemo(() => {
+    console.log('🎯 CALCULATING EMPLOYEES INVOLVED:', {
+      reservedOrders: reservedOrders?.length || 0,
+      employees: employees?.length || 0,
+      reservedOrdersCreatedBy: reservedOrders?.map(o => o.created_by) || []
+    });
+    
     if (!reservedOrders || !employees) {
+      console.log('❌ Missing reservedOrders or employees');
       return [];
     }
     
     const employeeIds = [...new Set(reservedOrders.map(o => o.created_by))];
-    const involvedEmployees = employees.filter(u => employeeIds.includes(u.id));
+    console.log('📋 UNIQUE EMPLOYEE IDS IN ORDERS:', employeeIds);
     
-    console.log('🎯 EMPLOYEES INVOLVED:', {
+    const involvedEmployees = employees.filter(u => {
+      const isInvolved = employeeIds.includes(u.id);
+      console.log(`👤 Employee ${u.full_name} (${u.id}): ${isInvolved ? 'INVOLVED' : 'NOT INVOLVED'}`);
+      return isInvolved;
+    });
+    
+    console.log('🎯 EMPLOYEES INVOLVED RESULT:', {
       uniqueEmployeeIds: employeeIds,
       foundEmployees: involvedEmployees.map(e => ({
         id: e.id,
@@ -91,6 +112,13 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
 
   // فلترة الطلبات حسب الموظف المختار
   const filteredDisplayOrders = useMemo(() => {
+    console.log('🔍 FILTERING ORDERS:', {
+      reservedOrdersCount: reservedOrders?.length || 0,
+      isAdmin: isAdmin,
+      selectedEmployee: selectedEmployee,
+      currentUserId: user?.id
+    });
+    
     if (!reservedOrders || reservedOrders.length === 0) {
       console.log('❌ No orders to filter');
       return [];
@@ -108,18 +136,24 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
       }
     } else {
       // للموظف العادي - يرى طلباته فقط
-      filtered = reservedOrders.filter(o => o.created_by === user?.id);
+      filtered = reservedOrders.filter(o => {
+        const match = o.created_by === user?.id;
+        console.log(`👤 Employee order check: Order ${o.order_number} created_by ${o.created_by} === user ${user?.id} = ${match}`);
+        return match;
+      });
       console.log('👤 Employee viewing own orders:', {
         userId: user?.id,
         foundOrders: filtered.length,
-        orderNumbers: filtered.map(o => o.order_number)
+        orderNumbers: filtered.map(o => o.order_number),
+        allOrdersCreatedBy: reservedOrders.map(o => ({ number: o.order_number, created_by: o.created_by }))
       });
     }
     
     console.log('✅ FINAL FILTERED ORDERS:', filtered.map(o => ({
       id: o.id,
       number: o.order_number,
-      createdBy: o.created_by
+      createdBy: o.created_by,
+      status: o.status
     })));
     
     return filtered;
