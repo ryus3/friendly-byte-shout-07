@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -50,6 +51,11 @@ const ProfitsSummaryPage = () => {
   const { profitData: unifiedProfitData } = useUnifiedProfits();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Scroll to top when page loads
+  useEffect(() => {
+    scrollToTopInstant();
+  }, []);
 
   const [filters, setFilters] = useState({
     employeeId: 'all',

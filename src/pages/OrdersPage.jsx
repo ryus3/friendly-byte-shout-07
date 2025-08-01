@@ -28,6 +28,7 @@ import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
+import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 
 
 const OrdersPage = () => {
@@ -419,18 +420,20 @@ const OrdersPage = () => {
                 globalPeriod={filters.period}
              />
            </div>
-            <div className="col-span-1 lg:col-span-1">
-              <StatCard 
-                title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المكتملة"}
-                value={userActualProfits || myProfits} // استخدام الأرباح الحقيقية من جدول profits
-                format="currency"
-                icon={DollarSign} 
-                colors={['green-500', 'emerald-500']}
-                onClick={() => navigate(profitsPagePath)}
-                periods={{ all: hasPermission('view_all_data') ? 'الطلبات المكتملة' : 'أرباحي' }}
-                currentPeriod="all"
-              />
-            </div>
+             {hasPermission('view_all_data') && (
+               <div className="col-span-1 lg:col-span-1">
+                 <StatCard 
+                   title="صافي ربح النظام"
+                   value={userActualProfits || myProfits}
+                   format="currency"
+                   icon={DollarSign} 
+                   colors={['green-500', 'emerald-500']}
+                   onClick={() => navigate(profitsPagePath)}
+                   periods={{ all: 'الطلبات المكتملة' }}
+                   currentPeriod="all"
+                 />
+               </div>
+             )}
         </div>
 
         <OrdersToolbar 
@@ -481,6 +484,12 @@ const OrdersPage = () => {
           setSelectedOrders={setSelectedOrders}
           onDeleteOrder={handleDeleteSelected}
           viewMode={viewMode}
+          additionalButtons={(order) => (
+            <ReceiveInvoiceButton 
+              order={order} 
+              onSuccess={() => refetchProducts()} 
+            />
+          )}
         />
 
         <OrderDetailsDialog

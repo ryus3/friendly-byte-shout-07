@@ -36,7 +36,8 @@ const OrderCard = ({
   onReceiveReturn,
   calculateProfit,
   profits,
-  showEmployeeName = false
+  showEmployeeName = false,
+  additionalButtons // أزرار إضافية
 }) => {
   const { hasPermission } = useAuth();
   
@@ -452,6 +453,13 @@ const OrderCard = ({
                     طلب شركة توصيل - حالة ثابتة
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* Additional Buttons */}
+            {additionalButtons && (
+              <div className="flex justify-center pt-2">
+                {additionalButtons}
               </div>
             )}
           </div>

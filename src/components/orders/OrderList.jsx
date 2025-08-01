@@ -22,6 +22,7 @@ const OrderList = ({
   calculateProfit,
   profits,
   showEmployeeName = false,
+  additionalButtons, // دالة ترجع أزرار إضافية للطلب
 }) => {
   if (isLoading) {
     return <div className="flex h-64 items-center justify-center"><Loader /></div>;
@@ -90,6 +91,7 @@ const OrderList = ({
               calculateProfit={calculateProfit}
               profits={profits}
               showEmployeeName={showEmployeeName}
+              additionalButtons={additionalButtons ? additionalButtons(order) : null}
             />
           </motion.div>
         ))}

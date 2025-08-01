@@ -169,22 +169,36 @@ const UnifiedProfitDisplay = ({
         .filter(p => p.status === 'pending')
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
-      // الطلبات المؤرشفة (المسواة + الراجع للمخزن) - حساب صحيح للموظف
+      // الطلبات المؤرشفة للموظف - حساب صحيح ومطابق للواقع
       const userArchivedCount = safeOrders.filter(o => {
         if (o.created_by !== currentUser.id) return false;
         
         // الطلبات المؤرشفة يدوياً
         const isManuallyArchived = o.isArchived === true || o.isarchived === true;
         
-        // الطلبات المسواة (مكتملة ومدفوعة مستحقاتها)
-        const profitRecord = allProfits.find(p => p.order_id === o.id);
-        const isSettled = (o.status === 'completed' || o.status === 'delivered') && profitRecord?.status === 'settled';
+        // الطلبات المكتملة/المسلمة مع استلام الفاتورة
+        const isDeliveredWithReceipt = (o.status === 'completed' || o.status === 'delivered') && o.receipt_received === true;
         
-        // الطلبات المكتملة ويوجد لها profit record مسواة (حتى لو خارج نطاق التاريخ)
+        // الطلبات المسواة (لها profit record بحالة settled)
+        const profitRecord = allProfits.find(p => p.order_id === o.id);
         const hasSettledProfit = profitRecord?.status === 'settled';
         
-        // عدم تطبيق فلتر التاريخ على الأرشيف - عرض كل الطلبات المؤرشفة
-        return (isManuallyArchived || isSettled || hasSettledProfit);
+        // الطلبات الراجعة للمخزن
+        const isReturnedToStock = o.status === 'returned_in_stock';
+        
+        console.log(`🔍 فحص طلب ${o.order_number}:`, {
+          orderId: o.id,
+          status: o.status,
+          isManuallyArchived,
+          isDeliveredWithReceipt,
+          receipt_received: o.receipt_received,
+          hasSettledProfit,
+          profitStatus: profitRecord?.status,
+          isReturnedToStock,
+          shouldBeArchived: isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock
+        });
+        
+        return (isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock);
       }).length;
       
       personalData.archivedOrdersCount = userArchivedCount;
