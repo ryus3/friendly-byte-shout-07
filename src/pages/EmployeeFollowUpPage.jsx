@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -48,12 +48,13 @@ const EmployeeFollowUpPage = () => {
   const ordersFromUrl = searchParams.get('orders');
   const highlightFromUrl = searchParams.get('highlight');
   
-  // الفلاتر - تطبيق URL فوراً إذا كان من التحاسب
+  // الفلاتر - تطبيق URL فوراً إذا كان من التحاسب وإضافة فلتر الفترة
   const [filters, setFilters] = useState({
     status: 'all',
     archived: false,
     employeeId: (employeeFromUrl && highlightFromUrl === 'settlement') ? employeeFromUrl : 'all',
-    profitStatus: (employeeFromUrl && highlightFromUrl === 'settlement') ? 'pending' : 'all'
+    profitStatus: (employeeFromUrl && highlightFromUrl === 'settlement') ? 'pending' : 'all',
+    timePeriod: 'all'
   });
   
   const [selectedOrders, setSelectedOrders] = useState(() => {
@@ -311,18 +312,18 @@ const EmployeeFollowUpPage = () => {
   // معرف المدير الرئيسي - تصفية طلباته
   const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
-  // الطلبات المفلترة
+  // حالة أرشيف التسوية المنفصلة
+  const [showSettlementArchive, setShowSettlementArchive] = useState(false);
+
+  // الطلبات المفلترة مع تحديث منطق الأرشيف
   const filteredOrders = useMemo(() => {
-    // استخدام employeeFromUrl إذا كان متوفراً، وإلا استخدام الفلتر العادي
     const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
     
     console.log('🔄 تفلتر الطلبات DETAILED:', { 
       ordersLength: orders?.length, 
       filters,
-      employeeFromUrl,
-      ordersFromUrl,
-      highlightFromUrl,
-      effectiveEmployeeId, // الموظف المؤثر الفعلي
+      showSettlementArchive,
+      effectiveEmployeeId,
       ordersArray: Array.isArray(orders),
       ordersDataSample: orders?.slice(0, 3)?.map(o => ({ id: o.id, created_by: o.created_by, status: o.status }))
     });
@@ -332,51 +333,43 @@ const EmployeeFollowUpPage = () => {
       return [];
     }
 
-    console.log('📊 إجمالي الطلبات المتاحة:', orders.length);
-    console.log('🎯 الموظف المطلوب:', effectiveEmployeeId);
-    console.log('📋 الطلبات المحددة من URL:', selectedOrders);
-
-    // فحص وجود الطلب المحدد في البيانات
-    if (ordersFromUrl && highlightFromUrl === 'settlement') {
-      const ordersList = ordersFromUrl.split(',');
-      const foundOrders = orders.filter(o => ordersList.includes(o.id));
-      console.log('🔍 البحث عن الطلبات المحددة:', {
-        requestedOrders: ordersList,
-        foundOrdersCount: foundOrders.length,
-        foundOrders: foundOrders.map(o => ({ id: o.id, number: o.order_number, status: o.status, created_by: o.created_by }))
-      });
-    }
+    // فلتر الفترة الزمنية
+    const filterByTimePeriod = (order) => {
+      if (filters.timePeriod === 'all') return true;
+      
+      const orderDate = new Date(order.created_at);
+      const now = new Date();
+      
+      switch (filters.timePeriod) {
+        case 'today':
+          return orderDate.toDateString() === now.toDateString();
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return orderDate >= weekAgo;
+        case 'month':
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          return orderDate >= monthAgo;
+        case '3months':
+          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          return orderDate >= threeMonthsAgo;
+        default:
+          return true;
+      }
+    };
 
     const filtered = orders.filter(order => {
-      if (!order) {
-        console.log('❌ طلب فارغ تم تجاهله');
-        return false;
-      }
+      if (!order) return false;
       
-      console.log(`🔍 فحص الطلب ${order.order_number || order.id}:`, {
-        order_id: order.id,
-        created_by: order.created_by,
-        effectiveEmployeeId,
-        status: order.status,
-        isArchived: order.isarchived || order.isArchived,
-        hasMatchingEmployee: order.created_by === effectiveEmployeeId
-      });
+      // استبعاد طلبات المدير الرئيسي
+      if (order.created_by === ADMIN_ID) return false;
       
-      // استبعاد طلبات المدير الرئيسي من الظهور في متابعة الموظفين
-      if (order.created_by === ADMIN_ID) {
-        console.log(`⚠️ استبعاد طلب المدير: ${order.order_number}`);
-        return false;
-      }
+      // فلتر الفترة الزمنية
+      if (!filterByTimePeriod(order)) return false;
       
-      // فلتر الموظف - إذا جاء من URL التحاسب، إظهار كل الطلبات أولاً
+      // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        // إذا كان من URL التحاسب، نسمح بعرض الطلبات حتى لو لم تطابق الموظف
-        if (highlightFromUrl === 'settlement') {
-          employeeMatch = true; // إظهار جميع الطلبات عند التحاسب
-        } else {
-          employeeMatch = order.created_by === effectiveEmployeeId;
-        }
+        employeeMatch = order.created_by === effectiveEmployeeId;
       }
       
       // فلتر الحالة
@@ -390,43 +383,25 @@ const EmployeeFollowUpPage = () => {
         profitStatusMatch = profitStatus === filters.profitStatus;
       }
       
-      // فلتر الأرشيف - طلبات مؤرشفة من التسوية أو يدوياً
-      const isArchived = order.isarchived === true || order.isArchived === true;
-      const isManuallyArchived = isArchived && order.status !== 'completed'; // مؤرشفة يدوياً
-      
-      // الطلبات المسواة (المكتملة والمدفوعة مستحقاتها)
+      // فلتر الأرشيف والتسوية
+      const isManuallyArchived = (order.isarchived === true || order.isArchived === true) && order.status !== 'completed';
       const profitRecord = profits?.find(p => p.order_id === order.id);
       const isSettled = order.status === 'completed' && profitRecord?.status === 'settled';
       
       let archiveMatch;
       
-      if (filters.archived) {
-        // إذا اختار عرض الأرشيف العادي، اعرض المؤرشفة يدوياً فقط
+      if (showSettlementArchive) {
+        // عرض الطلبات المسواة فقط
+        archiveMatch = isSettled;
+      } else if (filters.archived) {
+        // عرض الأرشيف اليدوي فقط
         archiveMatch = isManuallyArchived;
       } else {
-        // في الطلبات العادية، إخفاء المؤرشفة والمسواة
-        archiveMatch = !isArchived && !isSettled;
+        // الطلبات العادية - إخفاء المؤرشفة والمسواة
+        archiveMatch = !isManuallyArchived && !isSettled;
       }
       
-      const matchResult = employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
-      
-      // تفصيل كامل لكل طلب
-      if (order.created_by === effectiveEmployeeId || effectiveEmployeeId === 'all') {
-        console.log(`🔍 طلب ${order.order_number}:`, {
-          id: order.id,
-          employeeMatch,
-          statusMatch, 
-          profitStatusMatch,
-          archiveMatch,
-          isManuallyArchived,
-          status: order.status,
-          created_by: order.created_by,
-          effectiveEmployeeId: effectiveEmployeeId,
-          finalMatch: matchResult
-        });
-      }
-      
-      return matchResult;
+      return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
     }).map(order => ({
       ...order,
       created_by_name: usersMap.get(order.created_by) || 'غير معروف'
@@ -434,15 +409,16 @@ const EmployeeFollowUpPage = () => {
 
     console.log('✅ الطلبات المفلترة النهائية:', {
       count: filtered.length,
+      showSettlementArchive,
       orders: filtered.map(o => ({ id: o.id, number: o.order_number, status: o.status }))
     });
     
     return filtered;
-  }, [orders, filters, usersMap, profits]);
+  }, [orders, filters, usersMap, profits, showSettlementArchive]);
 
   // الإحصائيات
   const stats = useMemo(() => {
-    if (!filteredOrders || !Array.isArray(filteredOrders)) {
+    if (!orders || !Array.isArray(orders)) {
       return {
         totalOrders: 0,
         totalSales: 0,
@@ -452,22 +428,66 @@ const EmployeeFollowUpPage = () => {
       };
     }
 
-    // الطلبات المسلمة أو المكتملة للإحصائيات
-    const deliveredOrders = filteredOrders.filter(o => 
-      o && (o.status === 'delivered' || o.status === 'completed')
-    );
+    // فلتر الطلبات حسب الموظف والفترة للإحصائيات
+    const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
+    
+    // فلتر الفترة الزمنية
+    const filterByTimePeriod = (order) => {
+      if (filters.timePeriod === 'all') return true;
+      
+      const orderDate = new Date(order.created_at);
+      const now = new Date();
+      
+      switch (filters.timePeriod) {
+        case 'today':
+          return orderDate.toDateString() === now.toDateString();
+        case 'week':
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          return orderDate >= weekAgo;
+        case 'month':
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          return orderDate >= monthAgo;
+        case '3months':
+          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          return orderDate >= threeMonthsAgo;
+        default:
+          return true;
+      }
+    };
+
+    // تصفية الطلبات للإحصائيات (كل الطلبات المسلمة والمكتملة بغض النظر عن الأرشيف)
+    const statsOrders = orders.filter(order => {
+      if (!order) return false;
+      
+      // استبعاد طلبات المدير
+      if (order.created_by === ADMIN_ID) return false;
+      
+      // فلتر الموظف
+      let employeeMatch = true;
+      if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
+        employeeMatch = order.created_by === effectiveEmployeeId;
+      }
+      
+      // فلتر الفترة
+      if (!filterByTimePeriod(order)) return false;
+      
+      // فقط الطلبات المسلمة والمكتملة
+      const statusMatch = order.status === 'delivered' || order.status === 'completed';
+      
+      return employeeMatch && statusMatch;
+    });
     
     console.log('📊 الطلبات للإحصائيات:', {
       filteredOrdersCount: filteredOrders.length,
-      deliveredOrdersCount: deliveredOrders.length,
-      statusBreakdown: filteredOrders.reduce((acc, o) => {
+      statsOrdersCount: statsOrders.length,
+      statusBreakdown: statsOrders.reduce((acc, o) => {
         acc[o.status] = (acc[o.status] || 0) + 1;
         return acc;
       }, {})
     });
     
-    // إجمالي المبيعات بدون أجور التوصيل
-    const totalSales = deliveredOrders.reduce((sum, order) => {
+    // إجمالي المبيعات بدون أجور التوصيل (من جميع الطلبات المسلمة والمكتملة)
+    const totalSales = statsOrders.reduce((sum, order) => {
       const totalWithDelivery = order?.final_amount || order?.total_amount || 0;
       const deliveryFee = order?.delivery_fee || 0;
       const totalWithoutDelivery = Math.max(0, totalWithDelivery - deliveryFee);
@@ -475,7 +495,7 @@ const EmployeeFollowUpPage = () => {
     }, 0);
     
     // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
-    const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
+    const totalManagerProfits = statsOrders.reduce((sum, order) => {
       // البحث عن سجل الربح الحقيقي
       const profitRecord = profits?.find(p => p.order_id === order.id);
       if (profitRecord) {
@@ -486,17 +506,19 @@ const EmployeeFollowUpPage = () => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة (من المصاريف المحاسبية)
-    const paidDues = expenses && Array.isArray(expenses)
-      ? expenses.filter(expense => 
-          expense.category === 'مستحقات الموظفين' && 
-          expense.expense_type === 'system' && 
-          expense.status === 'approved'
-        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-      : 0;
+    // المستحقات المدفوعة (من المصاريف المحاسبية) - فورية بدون تحميل
+    const paidDues = useMemo(() => {
+      return expenses && Array.isArray(expenses)
+        ? expenses.filter(expense => 
+            expense.category === 'مستحقات الموظفين' && 
+            expense.expense_type === 'system' && 
+            expense.status === 'approved'
+          ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+        : 0;
+    }, [expenses]);
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
-    const pendingDues = deliveredOrders
+    const pendingDues = statsOrders
       .filter(order => order.receipt_received === true)
       .reduce((sum, order) => {
         // البحث عن سجل الربح
@@ -518,7 +540,7 @@ const EmployeeFollowUpPage = () => {
 
     console.log('📊 الإحصائيات:', {
       totalOrders: filteredOrders.length,
-      deliveredOrders: deliveredOrders.length,
+      deliveredOrders: statsOrders.length,
       totalSales,
       totalManagerProfits,
       pendingDues,
@@ -529,9 +551,19 @@ const EmployeeFollowUpPage = () => {
     const safeOrders = Array.isArray(orders) ? orders : [];
     const settledOrdersCount = safeOrders.filter(o => {
       if (!o) return false;
+      
+      // فلتر الموظف
+      let employeeMatch = true;
+      if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
+        employeeMatch = o.created_by === effectiveEmployeeId;
+      }
+      
+      // فلتر الفترة
+      if (!filterByTimePeriod(o)) return false;
+      
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return o.status === 'completed' && profitRecord?.status === 'settled';
+      return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
     }).length;
 
     return {
@@ -542,7 +574,7 @@ const EmployeeFollowUpPage = () => {
       paidDues,
       settledOrdersCount
     };
-  }, [filteredOrders, calculateManagerProfit, settlementInvoices, profits, calculateProfit]);
+  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
@@ -759,10 +791,10 @@ const EmployeeFollowUpPage = () => {
 
         {/* الفلاتر */}
         <Card>
-          <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+          <CardContent className="p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 items-center">
             <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="فلترة حسب الحالة" />
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="الحالة" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
@@ -777,8 +809,8 @@ const EmployeeFollowUpPage = () => {
             </Select>
             
             <Select value={filters.employeeId} onValueChange={(value) => handleFilterChange('employeeId', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر موظف" />
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="الموظف" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الموظفين</SelectItem>
@@ -791,8 +823,8 @@ const EmployeeFollowUpPage = () => {
             </Select>
 
             <Select value={filters.profitStatus} onValueChange={(value) => handleFilterChange('profitStatus', value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="حالة الربح" />
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="الأرباح" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الأرباح</SelectItem>
@@ -800,14 +832,27 @@ const EmployeeFollowUpPage = () => {
                 <SelectItem value="settled">مسواة</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select value={filters.timePeriod} onValueChange={(value) => handleFilterChange('timePeriod', value)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="الفترة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الفترات</SelectItem>
+                <SelectItem value="today">اليوم</SelectItem>
+                <SelectItem value="week">أسبوع</SelectItem>
+                <SelectItem value="month">شهر</SelectItem>
+                <SelectItem value="3months">3 أشهر</SelectItem>
+              </SelectContent>
+            </Select>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 col-span-2 md:col-span-1">
               <Checkbox 
                 id="archived" 
                 checked={filters.archived} 
                 onCheckedChange={(checked) => handleFilterChange('archived', checked)} 
               />
-              <Label htmlFor="archived" className="cursor-pointer">عرض الأرشيف</Label>
+              <Label htmlFor="archived" className="cursor-pointer text-sm">الأرشيف</Label>
             </div>
           </CardContent>
         </Card>
@@ -855,7 +900,7 @@ const EmployeeFollowUpPage = () => {
             icon={Archive} 
             colors={['orange-500', 'red-500']} 
             format="number"
-            onClick={() => handleFilterChange('archived', true)} 
+            onClick={() => setShowSettlementArchive(!showSettlementArchive)} 
             description="الطلبات المسواة"
           />
         </div>
