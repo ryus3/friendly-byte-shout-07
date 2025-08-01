@@ -139,13 +139,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20"></div>
                 <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-center mb-6">
                     <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
                       <ShoppingCart className="w-10 h-10" />
                     </div>
-                    <Badge className="bg-white/20 border-white/30 text-white text-xs px-3 py-1">
-                      #1
-                    </Badge>
                   </div>
                   <div className="space-y-3">
                     <h3 className="text-4xl font-black">{filteredDisplayOrders.length}</h3>
@@ -161,13 +158,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-transparent to-pink-500/20"></div>
                 <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-center mb-6">
                     <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
-                      <Shirt className="w-10 h-10" />
+                      <Package className="w-10 h-10" />
                     </div>
-                    <Badge className="bg-white/20 border-white/30 text-white text-xs px-3 py-1">
-                      #2
-                    </Badge>
                   </div>
                   <div className="space-y-3">
                     <h3 className="text-4xl font-black">{totalReservedItems}</h3>
@@ -184,13 +178,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-indigo-500/20"></div>
                 <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-center mb-6">
                     <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
                       <PackageOpen className="w-10 h-10" />
                     </div>
-                    <Badge className="bg-white/20 border-white/30 text-white text-xs px-3 py-1">
-                      #3
-                    </Badge>
                   </div>
                   <div className="space-y-3">
                     <h3 className="text-4xl font-black">{totalReservedQuantity}</h3>
@@ -206,13 +197,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-green-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-green-500/20"></div>
                 <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center justify-center mb-6">
                     <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
                       <DollarSign className="w-10 h-10" />
                     </div>
-                    <Badge className="bg-white/20 border-white/30 text-white text-xs px-3 py-1">
-                      #4
-                    </Badge>
                   </div>
                   <div className="space-y-3">
                     <h3 className="text-4xl font-black">{totalReservedValue.toLocaleString()}</h3>
