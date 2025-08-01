@@ -115,29 +115,29 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
             <div className="p-2 bg-primary/10 rounded-lg">
               <Archive className="w-6 h-6 text-primary" />
             </div>
-            الطلبات قيد التجهيز - المخزون المحجوز
+            المخزون المحجوز
           </DialogTitle>
           <DialogDescription className="text-base">
             عرض شامل للطلبات التي حجزت كميات من المخزون وتحتاج للمعالجة
           </DialogDescription>
         </DialogHeader>
         
-        {/* إحصائيات متقدمة بتصميم احترافي */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* إحصائيات متقدمة بتصميم احترافي - كروت أصغر للهاتف */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {/* طلبات الموظف أو المفلترة */}
           <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
-            <CardContent className="p-0 h-32">
-              <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+            <CardContent className="p-0 h-24 md:h-28">
+              <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-lg p-3 relative overflow-hidden h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                    <ShoppingCart className="w-5 h-5" />
+                  <div className="p-1.5 bg-white/20 rounded-full backdrop-blur-sm">
+                    <ShoppingCart className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-medium text-white/90">
+                  <p className="text-xs font-medium text-white/90 hidden md:block">
                     {isAdmin ? 'طلبات مفلترة' : 'طلباتي'}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white leading-tight">
+                  <p className="text-xl md:text-2xl font-bold text-white leading-tight">
                     {detailedStats.totalOrders}
                   </p>
                   <p className="text-xs text-white/70 mt-1">طلب</p>
@@ -146,46 +146,24 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
             </CardContent>
           </Card>
 
-          {/* قيمة الطلبات */}
-          {detailedStats.totalValue > 0 && (
-            <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
-              <CardContent className="p-0 h-32">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                      <TrendingUp className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs font-medium text-white/90">قيمة الطلبات</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-lg font-bold text-white leading-tight">
-                      {detailedStats.totalValue.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-white/70 mt-1">دينار عراقي</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* إجمالي المحجوز (من جميع الموظفين) */}
           <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
-            <CardContent className="p-0 h-32">
-              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+            <CardContent className="p-0 h-24 md:h-28">
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-lg p-3 relative overflow-hidden h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                    <Package className="w-5 h-5" />
+                  <div className="p-1.5 bg-white/20 rounded-full backdrop-blur-sm">
+                    <Package className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-medium text-white/90">إجمالي محجوز</p>
+                  <p className="text-xs font-medium text-white/90 hidden md:block">إجمالي محجوز</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white leading-tight">
+                  <p className="text-xl md:text-2xl font-bold text-white leading-tight">
                     {detailedStats.totalReservedItems}
                   </p>
                   <p className="text-xs text-white/70 mt-1">منتج</p>
                 </div>
                 {!isAdmin && (
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute top-1 left-1">
                     <Crown className="w-3 h-3 text-yellow-300" />
                   </div>
                 )}
@@ -195,25 +173,45 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
 
           {/* إجمالي الكمية المحجوزة */}
           <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
-            <CardContent className="p-0 h-32">
-              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+            <CardContent className="p-0 h-24 md:h-28">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg p-3 relative overflow-hidden h-full flex flex-col justify-between">
                 <div className="flex items-center justify-between">
-                  <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
-                    <Target className="w-5 h-5" />
+                  <div className="p-1.5 bg-white/20 rounded-full backdrop-blur-sm">
+                    <Target className="w-4 h-4" />
                   </div>
-                  <p className="text-xs font-medium text-white/90">إجمالي الكمية</p>
+                  <p className="text-xs font-medium text-white/90 hidden md:block">إجمالي الكمية</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-white leading-tight">
+                  <p className="text-xl md:text-2xl font-bold text-white leading-tight">
                     {detailedStats.totalReservedQuantity}
                   </p>
                   <p className="text-xs text-white/70 mt-1">قطعة</p>
                 </div>
                 {!isAdmin && (
-                  <div className="absolute top-2 left-2">
+                  <div className="absolute top-1 left-1">
                     <Crown className="w-3 h-3 text-yellow-300" />
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* قيمة الطلبات */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
+            <CardContent className="p-0 h-24 md:h-28">
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-3 relative overflow-hidden h-full flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="p-1.5 bg-white/20 rounded-full backdrop-blur-sm">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs font-medium text-white/90 hidden md:block">قيمة الطلبات</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg md:text-xl font-bold text-white leading-tight">
+                    {detailedStats.totalValue > 0 ? detailedStats.totalValue.toLocaleString() : '0'}
+                  </p>
+                  <p className="text-xs text-white/70 mt-1">د.ع</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -231,8 +229,8 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </div>
         )}
 
-        {/* فلتر الموظفين */}
-        {isAdmin && employeesInvolved.length > 0 && (
+        {/* فلتر الموظفين - للمدير فقط */}
+        {isAdmin && (
           <div className="flex items-center gap-3 mb-4 p-4 bg-muted/50 rounded-lg border">
             <Users className="w-5 h-5 text-muted-foreground" />
             <span className="text-sm font-medium">فلترة حسب الموظف:</span>
@@ -255,7 +253,8 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </div>
         )}
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <ScrollArea className="flex-1">
+          <div className="space-y-4 py-2">
           <div className="space-y-6 py-4">
             {filteredDisplayOrders && filteredDisplayOrders.length > 0 ? (
               filteredDisplayOrders.map((order, index) => (
