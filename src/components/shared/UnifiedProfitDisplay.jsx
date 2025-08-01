@@ -14,7 +14,8 @@ import {
   PackageCheck,
   Wallet,
   TrendingUp,
-  Archive
+  Archive,
+  CreditCard // إضافة أيقونة جميلة للأرباح المستلمة
 } from 'lucide-react';
 
 /**
@@ -313,7 +314,7 @@ const UnifiedProfitDisplay = ({
           );
       }
     } else {
-      // للموظف: البيانات الشخصية فقط
+      // للموظف: البيانات الشخصية فقط مع ترتيب جديد
       cards.push(
         {
           key: 'my-total-profit',
@@ -327,20 +328,10 @@ const UnifiedProfitDisplay = ({
           key: 'my-received-profits',
           title: 'أرباحي المستلمة',
           value: profitData.personalSettledProfit || 0,
-          icon: CheckCircle,
+          icon: CreditCard, // أيقونة جميلة مثل كارت إجمالي الأرباح
           colors: ['blue-500', 'indigo-500'],
           format: 'currency',
           onClick: onEmployeeReceivedClick
-        },
-        {
-          key: 'archived-profits',
-          title: 'الأرشيف',
-          value: 0, // سيتم حسابها لاحقاً
-          icon: Archive,
-          colors: ['gray-500', 'slate-500'],
-          format: 'number',
-          onClick: onArchiveClick,
-          description: 'الطلبات المدفوعة'
         }
       );
     }
@@ -359,15 +350,28 @@ const UnifiedProfitDisplay = ({
         onClick: () => onFilterChange('profitStatus', 'pending')
       });
     } else {
-      cards.push({
-        key: 'my-pending-profit',
-        title: 'أرباحي المعلقة',
-        value: profitData.personalPendingProfit || 0,
-        icon: Hourglass,
-        colors: ['yellow-500', 'amber-500'],
-        format: 'currency',
-        onClick: onPendingProfitsClick // إضافة إمكانية النقر للفلترة
-      });
+      // للموظف: ترتيب الكروت - المعلقة ثم الأرشيف
+      cards.push(
+        {
+          key: 'my-pending-profit',
+          title: 'أرباحي المعلقة',
+          value: profitData.personalPendingProfit || 0,
+          icon: Hourglass,
+          colors: ['yellow-500', 'amber-500'],
+          format: 'currency',
+          onClick: onPendingProfitsClick // إضافة إمكانية النقر للفلترة
+        },
+        {
+          key: 'archived-profits',
+          title: 'الأرشيف',
+          value: 0, // سيتم حسابها لاحقاً
+          icon: Archive,
+          colors: ['gray-500', 'slate-500'],
+          format: 'number',
+          onClick: onArchiveClick,
+          description: 'الطلبات المدفوعة'
+        }
+      );
     }
 
     console.log('✅ تم بناء الكروت (موحد):', cards.map(c => ({ key: c.key, value: c.value })));

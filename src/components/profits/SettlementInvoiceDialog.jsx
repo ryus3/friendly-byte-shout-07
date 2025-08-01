@@ -14,12 +14,29 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-    if (!invoice) return null;
-
-    const settledBy = allUsers.find(u => u.id === invoice.settled_by_id);
-    const settledOrdersDetails = (invoice.settled_orders || []).map(orderId => {
+    const settledBy = allUsers.find(u => u.id === invoice.settled_by_id || invoice.created_by);
+    
+    // جلب الطلبات من order_ids بدلاً من settled_orders
+    const settledOrdersDetails = (invoice.order_ids || []).map(orderId => {
         return orders.find(o => o.id === orderId);
     }).filter(Boolean);
+
+    // إذا لم توجد order_ids، جرب settled_orders كبديل
+    const fallbackOrdersDetails = !settledOrdersDetails.length && invoice.settled_orders ? 
+        (invoice.settled_orders || []).map(orderId => {
+            return orders.find(o => o.id === orderId);
+        }).filter(Boolean) : [];
+    
+    const finalOrdersDetails = settledOrdersDetails.length > 0 ? settledOrdersDetails : fallbackOrdersDetails;
+
+    console.log('🔍 SettlementInvoiceDialog Debug:', {
+        invoiceId: invoice.id,
+        orderIds: invoice.order_ids,
+        settledOrders: invoice.settled_orders,
+        totalOrders: orders?.length,
+        foundOrders: finalOrdersDetails.length,
+        orderDetails: finalOrdersDetails.map(o => ({ id: o?.id, number: o?.order_number || o?.trackingnumber }))
+    });
 
     const handleViewOrder = (order) => {
         setSelectedOrder(order);
@@ -81,7 +98,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                             </div>
                                             <div>
                                                 <p className="text-sm text-slate-600 dark:text-slate-400">عدد الطلبات</p>
-                                                <p className="font-bold text-2xl text-blue-600">{settledOrdersDetails.length}</p>
+                                                <p className="font-bold text-2xl text-blue-600">{finalOrdersDetails.length}</p>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -110,7 +127,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                             <FileText className="w-8 h-8 text-white" />
                                         </div>
                                         <h3 className="font-black text-3xl bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
-                                            الطلبات المسددة ({settledOrdersDetails.length})
+                                            الطلبات المسددة ({finalOrdersDetails.length})
                                         </h3>
                                     </div>
                                     
@@ -128,49 +145,58 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                             
                                             {/* Orders List */}
                                             <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                {settledOrdersDetails.map((order, index) => (
-                                                    <div 
-                                                        key={order.id} 
-                                                        className={`grid grid-cols-4 gap-6 py-6 px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
-                                                            index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
-                                                        }`}
-                                                    >
-                                                        {/* رقم الطلب */}
-                                                        <div className="flex items-center justify-center">
-                                                            <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform">
-                                                                #{order.trackingnumber}
-                                                            </span>
-                                                        </div>
-                                                        
-                                                        {/* العميل */}
-                                                        <div className="flex flex-col items-center justify-center">
-                                                            <div className="text-lg font-bold text-slate-700 dark:text-slate-300">
-                                                                {order.customerinfo.name}
-                                                            </div>
-                                                        </div>
-                                                        
-                                                         {/* المبلغ */}
-                                                        <div className="flex flex-col items-center justify-center">
-                                                            <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
-                                                                {(order.total_amount || order.total)?.toLocaleString() || 'غير محدد'}
-                                                            </div>
-                                                            <div className="text-sm text-green-500 font-semibold">د.ع</div>
-                                                        </div>
-                                                        
-                                                        {/* الإجراءات */}
-                                                        <div className="flex items-center justify-center">
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="sm"
-                                                                onClick={() => handleViewOrder(order)}
-                                                                className="gap-2 hover:bg-blue-50 hover:border-blue-300"
-                                                            >
-                                                                <Eye className="w-4 h-4" />
-                                                                عرض التفاصيل
-                                                            </Button>
-                                                        </div>
+                                                {finalOrdersDetails.length === 0 ? (
+                                                    <div className="text-center py-8 text-slate-500">
+                                                        <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
                                                     </div>
-                                                ))}
+                                                ) : (
+                                                    finalOrdersDetails.map((order, index) => (
+                                                        <div 
+                                                            key={order.id} 
+                                                            className={`grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-6 py-4 md:py-6 px-4 md:px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
+                                                                index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
+                                                            }`}
+                                                        >
+                                                            {/* رقم الطلب - متوافق مع الهاتف */}
+                                                            <div className="flex flex-col md:flex-row items-center justify-center gap-2">
+                                                                <span className="text-xs md:hidden text-slate-500">رقم الطلب:</span>
+                                                                <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-3 py-2 md:px-4 md:py-3 rounded-xl shadow-lg text-sm md:text-lg hover:scale-105 transition-transform">
+                                                                    #{order.order_number || order.trackingnumber || 'غير محدد'}
+                                                                </span>
+                                                            </div>
+                                                            
+                                                            {/* العميل - متوافق مع الهاتف */}
+                                                            <div className="flex flex-col items-center justify-center">
+                                                                <span className="text-xs md:hidden text-slate-500 mb-1">العميل:</span>
+                                                                <div className="text-sm md:text-lg font-bold text-slate-700 dark:text-slate-300">
+                                                                    {order.customer_name || order.customerinfo?.name || 'غير محدد'}
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* المبلغ - متوافق مع الهاتف */}
+                                                            <div className="flex flex-col items-center justify-center">
+                                                                <span className="text-xs md:hidden text-slate-500 mb-1">المبلغ:</span>
+                                                                <div className="text-xl md:text-3xl font-black text-green-600 dark:text-green-400 mb-1">
+                                                                    {(order.total_amount || order.final_amount || order.total || 0).toLocaleString()}
+                                                                </div>
+                                                                <div className="text-xs md:text-sm text-green-500 font-semibold">د.ع</div>
+                                                            </div>
+                                                            
+                                                            {/* الإجراءات - متوافق مع الهاتف */}
+                                                            <div className="flex items-center justify-center mt-2 md:mt-0">
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm"
+                                                                    onClick={() => handleViewOrder(order)}
+                                                                    className="gap-2 hover:bg-blue-50 hover:border-blue-300 text-xs md:text-sm"
+                                                                >
+                                                                    <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                                                                    عرض التفاصيل
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
                                             </div>
                                         </div>
                                     </div>
