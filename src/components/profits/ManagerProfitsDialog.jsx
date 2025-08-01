@@ -44,7 +44,17 @@ const ManagerProfitsDialog = ({
   stats: externalStats // الإحصائيات المحسوبة من الصفحة الرئيسية
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const [selectedPeriod, setSelectedPeriod] = useState('month'); // شهر كافتراضي
+  
+  // فلتر الفترة الزمنية مع حفظ الخيار
+  const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    return localStorage.getItem('managerProfitsPeriodFilter') || 'month';
+  });
+  
+  // حفظ الخيار عند التغيير
+  React.useEffect(() => {
+    localStorage.setItem('managerProfitsPeriodFilter', selectedPeriod);
+  }, [selectedPeriod]);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
   const { currentUser } = useAuth();

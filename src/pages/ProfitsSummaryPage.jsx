@@ -6,9 +6,9 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { format, startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { toast } from '@/components/ui/use-toast';
@@ -54,7 +54,52 @@ const ProfitsSummaryPage = () => {
     profitStatus: 'all',
   });
   
-  const [dateRange, setDateRange] = useState({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
+  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار
+  const [periodFilter, setPeriodFilter] = useState(() => {
+    return localStorage.getItem('profitsPeriodFilter') || 'month';
+  });
+  
+  // حفظ الخيار عند التغيير
+  useEffect(() => {
+    localStorage.setItem('profitsPeriodFilter', periodFilter);
+  }, [periodFilter]);
+  
+  // حساب نطاق التاريخ بناء على الفلتر المحدد
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    switch (periodFilter) {
+      case 'day':
+        return {
+          from: startOfDay(now),
+          to: endOfDay(now)
+        };
+      case 'week':
+        return {
+          from: startOfWeek(now, { weekStartsOn: 6 }), // السبت بداية الأسبوع
+          to: endOfWeek(now, { weekStartsOn: 6 })
+        };
+      case 'month':
+        return {
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        };
+      case 'year':
+        return {
+          from: startOfYear(now),
+          to: endOfYear(now)
+        };
+      case 'all':
+        return {
+          from: new Date('2020-01-01'), // تاريخ بداية شامل
+          to: new Date('2030-12-31')   // تاريخ نهاية شامل
+        };
+      default:
+        return {
+          from: startOfMonth(now),
+          to: endOfMonth(now)
+        };
+    }
+  }, [periodFilter]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
@@ -452,7 +497,22 @@ const ProfitsSummaryPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
           <h1 className="text-3xl font-bold gradient-text">ملخص الأرباح</h1>
-          <DateRangePicker date={dateRange} onDateChange={setDateRange} />
+          
+          {/* فلتر الفترة الزمنية - قائمة منسدلة */}
+          <div className="w-full sm:w-48">
+            <Select value={periodFilter} onValueChange={setPeriodFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الفترة الزمنية" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="day">اليوم</SelectItem>
+                <SelectItem value="week">هذا الأسبوع</SelectItem>
+                <SelectItem value="month">هذا الشهر</SelectItem>
+                <SelectItem value="year">هذه السنة</SelectItem>
+                <SelectItem value="all">كل الفترات</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}

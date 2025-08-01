@@ -29,8 +29,15 @@ const EmployeeReceivedProfitsDialog = ({
   const { user } = useAuth();
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
   
-  // فلتر الفترة الزمنية - قائمة منسدلة
-  const [periodFilter, setPeriodFilter] = useState('month'); // افتراضي: شهر
+  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار
+  const [periodFilter, setPeriodFilter] = useState(() => {
+    return localStorage.getItem('employeeReceivedProfitsPeriodFilter') || 'month';
+  });
+  
+  // حفظ الخيار عند التغيير
+  useEffect(() => {
+    localStorage.setItem('employeeReceivedProfitsPeriodFilter', periodFilter);
+  }, [periodFilter]);
   
   // حساب نطاق التاريخ بناء على الفلتر المحدد
   const dateRange = useMemo(() => {

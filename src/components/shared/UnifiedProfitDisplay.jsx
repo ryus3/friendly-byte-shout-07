@@ -306,7 +306,7 @@ const UnifiedProfitDisplay = ({
           );
       }
     } else {
-      // للموظف: البيانات الشخصية فقط
+      // للموظف: البيانات الشخصية فقط مع فلتر ثلاث نقاط
       cards.push(
         {
           key: 'my-total-profit',
@@ -314,7 +314,22 @@ const UnifiedProfitDisplay = ({
           value: profitData.totalPersonalProfit || 0,
           icon: User,
           colors: ['green-500', 'emerald-500'],
-          format: 'currency'
+          format: 'currency',
+          onPeriodChange: (period) => {
+            console.log('تغيير فترة كارت إجمالي أرباحي:', period);
+            // هنا يمكن إضافة منطق تحديث البيانات حسب الفترة المختارة
+            if (onFilterChange) {
+              onFilterChange('period', period);
+            }
+          },
+          currentPeriod: 'year', // افتراضي سنة
+          periods: {
+            day: 'اليوم',
+            week: 'أسبوع', 
+            month: 'شهر',
+            year: 'سنة',
+            all: 'كل الوقت'
+          }
         }
       );
     }
