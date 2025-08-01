@@ -132,83 +132,73 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
               </DialogTitle>
             </DialogHeader>
 
-            {/* كروت الإحصائيات - تصميم احترافي عالمي */}
-            <div className="grid grid-cols-2 gap-6">
-              {/* الصف الأول */}
-              <Card className="group cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden border-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 opacity-90"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20"></div>
-                <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
-                      <ShoppingCart className="w-10 h-10" />
+            {/* كروت الإحصائيات - مربعات صغيرة احترافية */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* طلب محجوز */}
+              <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-600 opacity-90"></div>
+                <CardContent className="relative p-4 text-white text-center">
+                  <div className="flex justify-center mb-3">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <ShoppingCart className="w-6 h-6" />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <h3 className="text-4xl font-black">{filteredDisplayOrders.length}</h3>
-                    <p className="text-white/90 font-semibold text-lg">طلب محجوز</p>
-                    <p className="text-white/70 text-sm">إجمالي الطلبات في حالة التجهيز</p>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-bold">{filteredDisplayOrders.length}</h3>
+                    <p className="text-white/90 font-medium text-sm">طلب محجوز</p>
+                    <p className="text-white/70 text-xs">قيد التجهيز</p>
                   </div>
-                  <div className="absolute top-4 right-4 w-32 h-32 bg-white/5 rounded-full -z-10"></div>
-                  <div className="absolute bottom-4 left-4 w-24 h-24 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
 
-              <Card className="group cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden border-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 opacity-90"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-transparent to-pink-500/20"></div>
-                <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
-                      <Package className="w-10 h-10" />
+              {/* منتج مختلف */}
+              <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-600 opacity-90"></div>
+                <CardContent className="relative p-4 text-white text-center">
+                  <div className="flex justify-center mb-3">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <Package className="w-6 h-6" />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <h3 className="text-4xl font-black">{totalReservedItems}</h3>
-                    <p className="text-white/90 font-semibold text-lg">منتج مختلف</p>
-                    <p className="text-white/70 text-sm">عدد المنتجات المحجوزة</p>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-bold">{totalReservedItems}</h3>
+                    <p className="text-white/90 font-medium text-sm">منتج مختلف</p>
+                    <p className="text-white/70 text-xs">محجوز</p>
                   </div>
-                  <div className="absolute top-4 right-4 w-32 h-32 bg-white/5 rounded-full -z-10"></div>
-                  <div className="absolute bottom-4 left-4 w-24 h-24 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
 
-              {/* الصف الثاني */}
-              <Card className="group cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden border-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-600 opacity-90"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-indigo-500/20"></div>
-                <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
-                      <PackageOpen className="w-10 h-10" />
+              {/* إجمالي القطع */}
+              <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-600 opacity-90"></div>
+                <CardContent className="relative p-4 text-white text-center">
+                  <div className="flex justify-center mb-3">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <PackageOpen className="w-6 h-6" />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <h3 className="text-4xl font-black">{totalReservedQuantity}</h3>
-                    <p className="text-white/90 font-semibold text-lg">قطعة</p>
-                    <p className="text-white/70 text-sm">إجمالي الكمية المحجوزة</p>
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-bold">{totalReservedQuantity}</h3>
+                    <p className="text-white/90 font-medium text-sm">قطعة</p>
+                    <p className="text-white/70 text-xs">إجمالي الكمية</p>
                   </div>
-                  <div className="absolute top-4 right-4 w-32 h-32 bg-white/5 rounded-full -z-10"></div>
-                  <div className="absolute bottom-4 left-4 w-24 h-24 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
 
-              <Card className="group cursor-pointer transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl relative overflow-hidden border-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-green-600 opacity-90"></div>
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-green-500/20"></div>
-                <CardContent className="relative p-8 text-white">
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="p-4 bg-white/15 backdrop-blur-sm rounded-2xl border border-white/20">
-                      <DollarSign className="w-10 h-10" />
+              {/* القيمة الإجمالية */}
+              <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-green-600 opacity-90"></div>
+                <CardContent className="relative p-4 text-white text-center">
+                  <div className="flex justify-center mb-3">
+                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                      <DollarSign className="w-6 h-6" />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <h3 className="text-4xl font-black">{totalReservedValue.toLocaleString()}</h3>
-                    <p className="text-white/90 font-semibold text-lg">د.ع</p>
-                    <p className="text-white/70 text-sm">القيمة الإجمالية للطلبات</p>
+                  <div className="space-y-1">
+                    <h3 className="text-xl font-bold">{(totalReservedValue / 1000).toFixed(0)}k</h3>
+                    <p className="text-white/90 font-medium text-sm">د.ع</p>
+                    <p className="text-white/70 text-xs">القيمة الإجمالية</p>
                   </div>
-                  <div className="absolute top-4 right-4 w-32 h-32 bg-white/5 rounded-full -z-10"></div>
-                  <div className="absolute bottom-4 left-4 w-24 h-24 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
             </div>
@@ -350,31 +340,31 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                             <div className="flex items-center gap-3 text-sm">
                               <User className="w-4 h-4 text-muted-foreground" />
                               <span className="font-medium text-muted-foreground min-w-[60px]">الاسم:</span>
-                              <span className="font-semibold">
-                                {(() => {
-                                  // البحث عن الموظف من قائمة المستخدمين
-                                  const employee = allUsers?.find(u => u.id === order.created_by);
-                                  if (employee) {
-                                    console.log('✅ Employee found:', {
-                                      id: employee.id,
-                                      full_name: employee.full_name,
-                                      username: employee.username,
-                                      email: employee.email,
-                                      employee_code: employee.employee_code
-                                    });
-                                    return employee.full_name || employee.username || employee.email || 'غير محدد';
-                                  }
-                                  // إذا لم نجد الموظف في القائمة، نبحث في بيانات الطلب
-                                  console.log('⚠️ Employee not found in allUsers:', {
-                                    orderId: order.id,
-                                    createdBy: order.created_by,
-                                    allUsersCount: allUsers?.length || 0,
-                                    employeeNameInOrder: order.employeeName || order.employee_name,
-                                    allUsersIds: allUsers?.map(u => u.id) || []
-                                  });
-                                  return order.employeeName || order.employee_name || 'غير معروف';
-                                })()}
-                              </span>
+                               <span className="font-semibold">
+                                 {(() => {
+                                   // البحث عن الموظف من قائمة المستخدمين
+                                   const employee = allUsers?.find(u => u.id === order.created_by);
+                                   if (employee) {
+                                     console.log('✅ Responsible Employee found:', {
+                                       orderId: order.id,
+                                       orderNumber: order.order_number,
+                                       employeeId: employee.id,
+                                       employeeName: employee.full_name,
+                                       employeeCode: employee.employee_code
+                                     });
+                                     return employee.full_name || employee.username || employee.email || 'غير محدد';
+                                   }
+                                   
+                                   console.log('❌ Responsible Employee NOT found:', {
+                                     orderId: order.id,
+                                     orderNumber: order.order_number,
+                                     createdBy: order.created_by,
+                                     allUsersCount: allUsers?.length || 0,
+                                     availableUserIds: allUsers?.slice(0, 3).map(u => ({ id: u.id, name: u.full_name })) || []
+                                   });
+                                   return 'موظف غير معروف';
+                                 })()}
+                               </span>
                             </div>
                             <div className="flex items-center gap-3 text-sm">
                               <Hash className="w-4 h-4 text-muted-foreground" />
