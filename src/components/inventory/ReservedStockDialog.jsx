@@ -342,8 +342,13 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
                               <h3 className="font-black text-2xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                                {order.trackingnumber || order.order_number || `RYUS-${(index + 1).toString().padStart(6, '0')}`}
+                                {order.order_number || `ORD-${(index + 1).toString().padStart(6, '0')}`}
                               </h3>
+                              {order.tracking_number && (
+                                <Badge variant="outline" className="text-xs">
+                                  {order.tracking_number}
+                                </Badge>
+                              )}
                               {!isAdmin && (
                                 <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 text-xs px-3 py-1">
                                   {getEmployeeCode(user?.id)}
