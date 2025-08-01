@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,11 +14,11 @@ import { Archive, Package, User, Hash, Calendar, Phone, MapPin, Users, Clock, Al
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UnifiedAuthContext } from '@/contexts/UnifiedAuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
-  const { user, isAdmin } = useContext(UnifiedAuthContext);
+  const { user, isAdmin } = useAuth();
 
   console.log('ReservedStockDialog - Data:', {
     reservedOrders: reservedOrders?.length,
