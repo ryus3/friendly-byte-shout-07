@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/lib/customSupabaseClient';
 
-const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) => {
+const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onBarcodeSearch }) => {
   const { colors, sizes, categories: allCategories } = useVariants();
   const { user } = useAuth();
   
@@ -129,7 +129,11 @@ const InventoryFilters = ({ filters, setFilters, categories, onBarcodeSearch }) 
   }, [categories, realData, user]);
   
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    if (onFilterChange) {
+      onFilterChange(key, value);
+    } else {
+      setFilters(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   const resetFilters = () => {

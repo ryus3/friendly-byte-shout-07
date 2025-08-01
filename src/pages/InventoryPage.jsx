@@ -540,11 +540,11 @@ const InventoryPage = () => {
     setIsEditDialogOpen(true);
   };
 
-  const handleFilterChange = useCallback((stockLevel) => {
-    if (stockLevel === 'reserved') {
+  const handleFilterChange = useCallback((key, value) => {
+    if (key === 'stockFilter' && value === 'reserved') {
       setIsReservedStockDialogOpen(true);
     } else {
-      setFilters(currentFilters => ({ ...currentFilters, stockFilter: stockLevel }));
+      setFilters(currentFilters => ({ ...currentFilters, [key]: value }));
     }
   }, []);
 
@@ -815,6 +815,7 @@ const InventoryPage = () => {
         <InventoryFilters
           filters={filters}
           setFilters={setFilters}
+          onFilterChange={handleFilterChange}
           categories={allCategories}
           onBarcodeSearch={() => setIsBarcodeScannerOpen(true)}
         />
