@@ -466,7 +466,7 @@ const ProfitsSummaryPage = () => {
             onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
             dateRange={dateRange}
             unifiedNetProfit={unifiedProfitData?.netProfit}
-            showManagerProfitsCard={true}
+            showManagerProfitsCard={canViewAll}
             managerProfitsCardProps={{
               orders: orders || [],
               allUsers: allUsers || [],
