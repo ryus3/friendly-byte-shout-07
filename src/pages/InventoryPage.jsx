@@ -541,9 +541,14 @@ const InventoryPage = () => {
   };
 
   const handleFilterChange = useCallback((key, value) => {
+    console.log('handleFilterChange called with:', key, value);
     if (key === 'stockFilter' && value === 'reserved') {
+      console.log('Opening reserved stock dialog...');
       setIsReservedStockDialogOpen(true);
+      // لا نغير الفلتر في هذه الحالة، فقط نفتح النافذة
+      return;
     } else {
+      console.log('Setting filter:', key, value);
       setFilters(currentFilters => ({ ...currentFilters, [key]: value }));
     }
   }, []);
@@ -851,7 +856,10 @@ const InventoryPage = () => {
       
       <ReservedStockDialog 
         open={isReservedStockDialogOpen} 
-        onOpenChange={setIsReservedStockDialogOpen}
+        onOpenChange={(open) => {
+          console.log('ReservedStockDialog onOpenChange:', open);
+          setIsReservedStockDialogOpen(open);
+        }}
         reservedOrders={isAdmin ? reservedOrders : reservedOrders?.filter(order => order.created_by === user?.id)}
         allUsers={allUsers}
       />

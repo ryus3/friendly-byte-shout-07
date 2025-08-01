@@ -129,6 +129,8 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
   }, [categories, realData, user]);
   
   const handleFilterChange = (key, value) => {
+    console.log('InventoryFilters handleFilterChange called with:', key, value);
+    console.log('onFilterChange exists:', !!onFilterChange);
     if (onFilterChange) {
       onFilterChange(key, value);
     } else {
