@@ -262,6 +262,16 @@ const OrdersPage = () => {
       return profitData?.personalTotalProfit || 0;
     }
   }, [profitData, hasPermission]);
+
+  // حساب الأرباح الحقيقية للموظف من جدول profits
+  const userActualProfits = useMemo(() => {
+    if (hasPermission('view_all_data')) {
+      return profitData?.netProfit || 0;
+    } else {
+      // للموظفين: حساب الأرباح الحقيقية من الطلبات المكتملة
+      return profitData?.personalSettledProfit || profitData?.personalTotalProfit || 0;
+    }
+  }, [profitData, hasPermission]);
   
   const handleSync = async () => {
     setSyncing(true);
@@ -412,7 +422,7 @@ const OrdersPage = () => {
             <div className="col-span-1 lg:col-span-1">
               <StatCard 
                 title={hasPermission('view_all_data') ? "صافي ربح النظام" : "أرباحي المكتملة"}
-                value={myProfits}
+                value={userActualProfits || myProfits} // استخدام الأرباح الحقيقية من جدول profits
                 format="currency"
                 icon={DollarSign} 
                 colors={['green-500', 'emerald-500']}

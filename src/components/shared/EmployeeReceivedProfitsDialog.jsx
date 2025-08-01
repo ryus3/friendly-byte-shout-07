@@ -33,7 +33,7 @@ const EmployeeReceivedProfitsDialog = ({
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   
-  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار
+  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار (للموظف)
   const [periodFilter, setPeriodFilter] = useState(() => {
     return localStorage.getItem('employeeReceivedProfitsPeriodFilter') || 'month';
   });

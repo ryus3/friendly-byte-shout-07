@@ -332,7 +332,7 @@ const UnifiedProfitDisplay = ({
           title: 'أرباحي المستلمة',
           value: profitData.personalSettledProfit || 0,
           icon: HandCoins, // أيقونة جميلة للأرباح المستلمة
-          colors: ['emerald-500', 'green-500'],
+          colors: ['blue-500', 'indigo-500'], // تغيير اللون
           format: 'currency',
           onClick: onEmployeeReceivedClick
         }
@@ -367,9 +367,9 @@ const UnifiedProfitDisplay = ({
         {
           key: 'archived-profits',
           title: 'الأرشيف',
-          value: 0, // سيتم حسابها لاحقاً
+          value: profitData.archivedOrdersCount || 0, // عرض رقم حقيقي
           icon: FolderArchive,
-          colors: ['indigo-500', 'purple-500'],
+          colors: ['orange-500', 'red-500'], // نفس لون أرشيف المدير
           format: 'number',
           onClick: onArchiveClick,
           description: 'الطلبات المدفوعة'
