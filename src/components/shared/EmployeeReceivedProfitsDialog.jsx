@@ -34,7 +34,7 @@ const EmployeeReceivedProfitsDialog = ({
     to: endOfMonth(new Date())
   });
 
-  // جلب فواتير التسوية مباشرة من قاعدة البيانات باستخدام employee_code أو user_id
+  // جلب فواتير التسوية مباشرة من قاعدة البيانات
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
       if (!user || !isOpen) return;
@@ -46,20 +46,13 @@ const EmployeeReceivedProfitsDialog = ({
           fullName: user.full_name
         });
 
-        // البحث أولاً بـ employee_code إذا كان متوفراً، ثم بـ employee_id UUID
-        let query = supabase
+        // جلب الفواتير من settlement_invoices باستخدام employee_id مباشرة
+        const { data: invoices, error } = await supabase
           .from('settlement_invoices')
           .select('*')
+          .eq('employee_id', user.id)  // استخدام UUID مباشرة
           .eq('status', 'completed')
           .order('settlement_date', { ascending: false });
-
-        if (user.employee_code) {
-          query = query.eq('employee_code', user.employee_code);
-        } else {
-          query = query.eq('employee_id', user.id);
-        }
-
-        const { data: invoices, error } = await query;
 
         if (error) {
           console.error('❌ خطأ في جلب فواتير التسوية:', error);
@@ -69,8 +62,8 @@ const EmployeeReceivedProfitsDialog = ({
         console.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة:', {
           invoicesCount: invoices?.length || 0,
           invoices: invoices || [],
-          searchBy: user.employee_code ? 'employee_code' : 'employee_id',
-          searchValue: user.employee_code || user.id
+          searchBy: 'employee_id',
+          searchValue: user.id
         });
 
         setRealTimeInvoices(invoices || []);
@@ -80,7 +73,7 @@ const EmployeeReceivedProfitsDialog = ({
     };
 
     fetchEmployeeInvoices();
-  }, [user?.id, user?.employee_code, isOpen]);
+  }, [user?.id, isOpen]);
 
   const getPayerName = (createdBy) => {
     const payer = allUsers.find(u => u.id === createdBy);
@@ -113,18 +106,18 @@ const EmployeeReceivedProfitsDialog = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-7xl h-[95vh] overflow-hidden p-0 m-2">
+      <DialogContent className="w-full max-w-[98vw] h-[95vh] overflow-hidden p-0">
         <ScrollArea className="h-full">
-          <div className="p-2 sm:p-4 lg:p-8">
+          <div className="p-3 sm:p-6">
             {/* Header - متوافق مع الهاتف */}
-            <div className="text-center mb-4 sm:mb-8">
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
-                <div className="p-2 sm:p-3 bg-gradient-to-r from-blue-500 to-green-600 rounded-full text-white shadow-lg">
-                  <Receipt className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10" />
+            <div className="text-center mb-6">
+              <div className="flex flex-col items-center justify-center gap-3 mb-6">
+                <div className="p-3 bg-gradient-to-r from-blue-500 to-green-600 rounded-full text-white shadow-lg">
+                  <Receipt className="w-8 h-8" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-slate-800 dark:text-slate-100">أرباحي المستلمة</h1>
-                  <p className="text-sm sm:text-base lg:text-lg text-slate-600 dark:text-slate-400">تفاصيل الأرباح المدفوعة</p>
+                  <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">أرباحي المستلمة</h1>
+                  <p className="text-base text-slate-600 dark:text-slate-400">تفاصيل الأرباح المدفوعة</p>
                 </div>
               </div>
             </div>
@@ -133,7 +126,7 @@ const EmployeeReceivedProfitsDialog = ({
             <div className="mb-6">
               <Card className="border-border bg-background/50 backdrop-blur-sm">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-primary" />
                       <span className="font-semibold text-foreground">فترة العرض:</span>
@@ -147,70 +140,65 @@ const EmployeeReceivedProfitsDialog = ({
               </Card>
             </div>
 
-            {/* معلومات الموظف والمبلغ الإجمالي - نفس تصميم المدير */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+            {/* معلومات الموظف والمبلغ الإجمالي */}
+            <div className="space-y-4 mb-6">
               {/* معلومات الموظف */}
-              <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-background border-border">
-                <CardContent className="relative p-5">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 group-hover:scale-110 transition-all duration-300">
-                      <User className="w-6 h-6 text-primary" />
+              <Card className="relative overflow-hidden bg-background border-border">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-primary/10 rounded-xl border border-primary/20">
+                      <User className="w-5 h-5 text-primary" />
                     </div>
                     <h3 className="font-bold text-lg text-foreground">معلومات الموظف</h3>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-300 relative overflow-hidden">
-                        <div className="absolute -bottom-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full"></div>
-                        <p className="text-xs opacity-90 font-medium mb-1">اسم الموظف</p>
-                        <p className="font-bold text-sm md:text-base">{user?.full_name || 'غير محدد'}</p>
-                      </div>
-                      <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-emerald-600 hover:to-green-700 transition-all duration-300 relative overflow-hidden">
-                        <div className="absolute -bottom-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full"></div>
-                        <p className="text-xs opacity-90 font-medium mb-1">معرف الموظف</p>
-                        <p className="font-mono font-bold text-xs md:text-sm">{user?.employee_code || 'غير محدد'}</p>
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-3 relative overflow-hidden">
+                      <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-white/10 rounded-full"></div>
+                      <p className="text-xs opacity-90 font-medium mb-1">اسم الموظف</p>
+                      <p className="font-bold text-sm">{user?.full_name || 'غير محدد'}</p>
                     </div>
-                    <div className="space-y-2">
-                      <div className="bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-purple-600 hover:to-violet-700 transition-all duration-300 relative overflow-hidden">
-                        <div className="absolute -bottom-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full"></div>
-                        <p className="text-xs opacity-90 font-medium mb-1">عدد الفواتير</p>
-                        <p className="font-mono font-bold text-xs md:text-sm">{stats.invoicesCount}</p>
-                      </div>
-                      <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-orange-600 hover:to-amber-700 transition-all duration-300 relative overflow-hidden">
-                        <div className="absolute -bottom-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full"></div>
-                        <p className="text-xs opacity-90 font-medium mb-1">متوسط الفاتورة</p>
-                        <p className="font-bold text-xs md:text-sm">{stats.averageAmount.toLocaleString()}</p>
-                      </div>
+                    <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg p-3 relative overflow-hidden">
+                      <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-white/10 rounded-full"></div>
+                      <p className="text-xs opacity-90 font-medium mb-1">معرف الموظف</p>
+                      <p className="font-mono font-bold text-sm">{user?.employee_code || 'غير محدد'}</p>
+                    </div>
+                    <div className="bg-gradient-to-r from-purple-500 to-violet-600 text-white rounded-lg p-3 relative overflow-hidden">
+                      <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-white/10 rounded-full"></div>
+                      <p className="text-xs opacity-90 font-medium mb-1">عدد الفواتير</p>
+                      <p className="font-mono font-bold text-sm">{stats.invoicesCount}</p>
+                    </div>
+                    <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white rounded-lg p-3 relative overflow-hidden">
+                      <div className="absolute -bottom-2 -right-2 w-6 h-6 bg-white/10 rounded-full"></div>
+                      <p className="text-xs opacity-90 font-medium mb-1">متوسط الفاتورة</p>
+                      <p className="font-bold text-sm">{stats.averageAmount.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* المبلغ الإجمالي المستلم - نفس تصميم المدير */}
-              <Card className="relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-2xl group cursor-pointer">
+              {/* المبلغ الإجمالي المستلم */}
+              <Card className="relative overflow-hidden">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-green-600 to-teal-700 opacity-90"></div>
                 <div className="absolute inset-0 bg-black/10"></div>
-                <CardContent className="relative p-3 md:p-5 text-white text-center">
-                  <div className="flex items-center justify-center gap-2 md:gap-3 mb-3 md:mb-4">
-                    <div className="p-2 md:p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30 group-hover:scale-110 transition-all duration-300">
-                      <DollarSign className="w-6 h-6 md:w-8 md:h-8 drop-shadow-lg" />
+                <CardContent className="relative p-4 text-white text-center">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm border border-white/30">
+                      <DollarSign className="w-8 h-8 drop-shadow-lg" />
                     </div>
-                    <h3 className="text-base md:text-lg font-bold drop-shadow-lg">إجمالي المستلم</h3>
+                    <h3 className="text-lg font-bold drop-shadow-lg">إجمالي المستلم</h3>
                   </div>
-                  <p className="text-2xl md:text-4xl font-black mb-2 md:mb-3 drop-shadow-2xl">
+                  <p className="text-3xl font-black mb-3 drop-shadow-2xl">
                     {stats.totalReceived?.toLocaleString()}
                   </p>
-                  <p className="text-sm md:text-base font-bold opacity-90 mb-3 md:mb-4 drop-shadow-lg">دينار عراقي</p>
-                  <div className="bg-white/10 rounded-xl p-2 md:p-3 backdrop-blur-sm border border-white/20">
-                    <div className="flex items-center justify-center gap-2 text-xs md:text-sm font-bold">
-                      <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                  <p className="text-base font-bold opacity-90 mb-4 drop-shadow-lg">دينار عراقي</p>
+                  <div className="bg-white/10 rounded-xl p-3 backdrop-blur-sm border border-white/20">
+                    <div className="flex items-center justify-center gap-2 text-sm font-bold">
+                      <CheckCircle className="w-5 h-5" />
                       <span>تم الاستلام بنجاح</span>
                     </div>
                   </div>
-                  {/* تأثيرات بصرية محسنة */}
-                  <div className="absolute -bottom-4 -right-4 w-12 h-12 md:w-16 md:h-16 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-3 -left-3 w-8 h-8 md:w-12 md:h-12 bg-white/5 rounded-full"></div>
+                  <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-3 -left-3 w-8 h-8 bg-white/5 rounded-full"></div>
                 </CardContent>
               </Card>
             </div>
