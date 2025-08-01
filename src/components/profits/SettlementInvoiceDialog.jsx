@@ -14,6 +14,11 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
+    // Add null check for invoice
+    if (!invoice) {
+        return null;
+    }
+
     const settledBy = allUsers.find(u => u.id === invoice.settled_by_id || invoice.created_by);
     
     // جلب الطلبات من order_ids بدلاً من settled_orders
