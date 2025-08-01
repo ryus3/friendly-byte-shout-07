@@ -7,163 +7,130 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Archive, Package, User, Calendar, Phone, MapPin, Users, Clock, ShoppingCart, Building2, DollarSign, FileText, Shirt, PackageOpen, Hash } from 'lucide-react';
+import { Archive, Package, Calendar, Users, Clock, ShoppingCart, Building2, DollarSign, FileText, PackageOpen } from 'lucide-react';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import usePermissions from '@/hooks/usePermissions';
 
-const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) => {
+const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
+  const [realReservedOrders, setRealReservedOrders] = useState([]);
   const [employees, setEmployees] = useState([]);
 
-  // 🔧 جلب بيانات الموظفين من قاعدة البيانات مباشرة
+  // جلب البيانات الحقيقية للمخزون المحجوز والموظفين
   useEffect(() => {
-    const fetchEmployees = async () => {
+    const fetchReservedStockData = async () => {
+      if (!open) return;
+
       try {
         const { supabase } = await import('@/lib/customSupabaseClient');
-        const { data, error } = await supabase
+
+        // جلب الطلبات المعلقة مع المنتجات المحجوزة
+        const { data: orders, error: ordersError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            order_number,
+            created_by,
+            customer_name,
+            customer_phone,
+            status,
+            total_amount,
+            created_at,
+            order_items (
+              id,
+              product_id,
+              variant_id,
+              quantity,
+              unit_price,
+              total_price,
+              products (
+                id,
+                name,
+                images
+              ),
+              product_variants (
+                id,
+                colors (name),
+                sizes (name)
+              )
+            ),
+            profiles!orders_created_by_fkey (
+              user_id,
+              full_name,
+              username,
+              employee_code
+            )
+          `)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+
+        if (ordersError) throw ordersError;
+
+        // جلب جميع الموظفين النشطين
+        const { data: allEmployees, error: employeesError } = await supabase
           .from('profiles')
-          .select('user_id, full_name, username, employee_code, email')
+          .select('user_id, full_name, username, employee_code')
           .eq('is_active', true)
           .order('full_name');
-        
-        if (error) throw error;
-        
+
+        if (employeesError) throw employeesError;
+
         // تحويل البيانات للشكل المطلوب
-        const formattedEmployees = data.map(emp => ({
-          id: emp.user_id,
-          full_name: emp.full_name,
-          username: emp.username,
-          employee_code: emp.employee_code,
-          email: emp.email
-        }));
-        
-        setEmployees(formattedEmployees);
-        console.log('✅ EMPLOYEES LOADED:', formattedEmployees);
+        const processedOrders = orders?.map(order => ({
+          ...order,
+          items: order.order_items?.map(item => ({
+            id: item.id,
+            name: item.products?.name || 'منتج غير محدد',
+            quantity: item.quantity,
+            price: item.unit_price,
+            total: item.total_price,
+            color: item.product_variants?.colors?.name || null,
+            size: item.product_variants?.sizes?.name || null,
+            image: item.products?.images?.[0] || null
+          })) || []
+        })) || [];
+
+        setRealReservedOrders(processedOrders);
+        setEmployees(allEmployees || []);
+
       } catch (error) {
-        console.error('❌ Error loading employees:', error);
+        console.error('خطأ في جلب بيانات المخزون المحجوز:', error);
       }
     };
 
-    if (open) {
-      fetchEmployees();
-    }
+    fetchReservedStockData();
   }, [open]);
 
-  // 🔍 تشخيص شامل للبيانات
-  console.log('🔍 RESERVED STOCK COMPREHENSIVE DEBUG:', {
-    isDialogOpen: open,
-    currentUserId: user?.id,
-    currentUserDetails: {
-      id: user?.id,
-      full_name: user?.full_name,
-      username: user?.username,
-      employee_code: user?.employee_code,
-      roles: user?.roles
-    },
-    isUserAdmin: isAdmin,
-    reservedOrdersCount: reservedOrders?.length || 0,
-    reservedOrdersRaw: reservedOrders,
-    allOrdersStatuses: reservedOrders?.map(o => ({ 
-      id: o.id, 
-      number: o.order_number, 
-      status: o.status, 
-      created_by: o.created_by 
-    })) || [],
-    employeesCount: employees?.length || 0,
-    employeesRaw: employees
-  });
-
-
-  // الموظفون المشاركون في الطلبات المحجوزة
+  // الموظفون المتورطون في الطلبات المحجوزة
   const employeesInvolved = useMemo(() => {
-    console.log('🎯 CALCULATING EMPLOYEES INVOLVED:', {
-      reservedOrders: reservedOrders?.length || 0,
-      employees: employees?.length || 0,
-      reservedOrdersCreatedBy: reservedOrders?.map(o => o.created_by) || []
-    });
+    if (!realReservedOrders || !employees) return [];
     
-    if (!reservedOrders || !employees) {
-      console.log('❌ Missing reservedOrders or employees');
-      return [];
-    }
-    
-    const employeeIds = [...new Set(reservedOrders.map(o => o.created_by))];
-    console.log('📋 UNIQUE EMPLOYEE IDS IN ORDERS:', employeeIds);
-    
-    const involvedEmployees = employees.filter(u => {
-      const isInvolved = employeeIds.includes(u.id);
-      console.log(`👤 Employee ${u.full_name} (${u.id}): ${isInvolved ? 'INVOLVED' : 'NOT INVOLVED'}`);
-      return isInvolved;
-    });
-    
-    console.log('🎯 EMPLOYEES INVOLVED RESULT:', {
-      uniqueEmployeeIds: employeeIds,
-      foundEmployees: involvedEmployees.map(e => ({
-        id: e.id,
-        name: e.full_name,
-        code: e.employee_code,
-        ordersCount: reservedOrders.filter(o => o.created_by === e.id).length
-      }))
-    });
-    
-    return involvedEmployees;
-  }, [reservedOrders, employees]);
+    const employeeIds = [...new Set(realReservedOrders.map(o => o.created_by))];
+    return employees.filter(emp => employeeIds.includes(emp.user_id));
+  }, [realReservedOrders, employees]);
 
   // فلترة الطلبات حسب الموظف المختار
   const filteredDisplayOrders = useMemo(() => {
-    console.log('🔍 FILTERING ORDERS:', {
-      reservedOrdersCount: reservedOrders?.length || 0,
-      isAdmin: isAdmin,
-      selectedEmployee: selectedEmployee,
-      currentUserId: user?.id
-    });
-    
-    if (!reservedOrders || reservedOrders.length === 0) {
-      console.log('❌ No orders to filter');
-      return [];
-    }
-    
-    let filtered = [];
+    if (!realReservedOrders?.length) return [];
     
     if (isAdmin) {
       if (selectedEmployee === 'all') {
-        filtered = reservedOrders;
-        console.log('👑 Admin viewing ALL orders:', filtered.length);
+        return realReservedOrders;
       } else {
-        filtered = reservedOrders.filter(o => o.created_by === selectedEmployee);
-        console.log('👑 Admin viewing orders for employee:', selectedEmployee, 'Count:', filtered.length);
+        return realReservedOrders.filter(o => o.created_by === selectedEmployee);
       }
     } else {
       // للموظف العادي - يرى طلباته فقط
-      filtered = reservedOrders.filter(o => {
-        const match = o.created_by === user?.id;
-        console.log(`👤 Employee order check: Order ${o.order_number} created_by ${o.created_by} === user ${user?.id} = ${match}`);
-        return match;
-      });
-      console.log('👤 Employee viewing own orders:', {
-        userId: user?.id,
-        foundOrders: filtered.length,
-        orderNumbers: filtered.map(o => o.order_number),
-        allOrdersCreatedBy: reservedOrders.map(o => ({ number: o.order_number, created_by: o.created_by }))
-      });
+      return realReservedOrders.filter(o => o.created_by === user?.id);
     }
-    
-    console.log('✅ FINAL FILTERED ORDERS:', filtered.map(o => ({
-      id: o.id,
-      number: o.order_number,
-      createdBy: o.created_by,
-      status: o.status
-    })));
-    
-    return filtered;
-  }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
+  }, [realReservedOrders, selectedEmployee, isAdmin, user?.id]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'لا يوجد تاريخ';
@@ -184,17 +151,9 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
   }, 0);
 
-  // دوال مساعدة مبسطة
-  const getEmployeeCode = (employeeId) => {
-    const employee = employees?.find(u => u.id === employeeId);
-    return employee?.employee_code || 'غير محدد';
-  };
-
   const getEmployeeName = (employeeId) => {
-    const employee = employees?.find(u => u.id === employeeId);
-    const name = employee?.full_name || employee?.username || 'موظف غير معروف';
-    console.log(`🏷️ Getting name for employee ${employeeId}:`, { found: !!employee, name });
-    return name;
+    const employee = employees?.find(u => u.user_id === employeeId);
+    return employee?.full_name || employee?.username || 'موظف غير معروف';
   };
 
   return (
@@ -218,7 +177,7 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
               </DialogTitle>
             </DialogHeader>
 
-            {/* كروت الإحصائيات - مربعات صغيرة مع تدرجات جميلة ودوائر خفيفة */}
+            {/* كروت الإحصائيات */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {/* طلب محجوز */}
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
@@ -235,9 +194,6 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                     <p className="text-white/90 font-medium text-sm">طلب محجوز</p>
                     <p className="text-white/70 text-xs">قيد التجهيز</p>
                   </div>
-                  {/* دوائر خفيفة للزينة */}
-                  <div className="absolute top-2 right-2 w-16 h-16 bg-white/10 rounded-full -z-10"></div>
-                  <div className="absolute bottom-2 left-2 w-12 h-12 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
 
@@ -256,9 +212,6 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                     <p className="text-white/90 font-medium text-sm">منتج مختلف</p>
                     <p className="text-white/70 text-xs">محجوز</p>
                   </div>
-                  {/* دوائر خفيفة للزينة */}
-                  <div className="absolute top-2 right-2 w-16 h-16 bg-white/10 rounded-full -z-10"></div>
-                  <div className="absolute bottom-2 left-2 w-12 h-12 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
 
@@ -277,13 +230,10 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                     <p className="text-white/90 font-medium text-sm">قطعة</p>
                     <p className="text-white/70 text-xs">إجمالي الكمية</p>
                   </div>
-                  {/* دوائر خفيفة للزينة */}
-                  <div className="absolute top-2 right-2 w-16 h-16 bg-white/10 rounded-full -z-10"></div>
-                  <div className="absolute bottom-2 left-2 w-12 h-12 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
 
-              {/* القيمة الإجمالية - تظهر الرقم الكامل */}
+              {/* القيمة الإجمالية */}
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-green-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-green-500/20"></div>
@@ -298,23 +248,12 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                     <p className="text-white/90 font-medium text-sm">د.ع</p>
                     <p className="text-white/70 text-xs">القيمة الإجمالية</p>
                   </div>
-                  {/* دوائر خفيفة للزينة */}
-                  <div className="absolute top-2 right-2 w-16 h-16 bg-white/10 rounded-full -z-10"></div>
-                  <div className="absolute bottom-2 left-2 w-12 h-12 bg-white/5 rounded-full -z-10"></div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* فلتر الموظفين - للمدير فقط - يظهر على كل الشاشات */}
-            {(() => {
-              console.log('🎯 FILTER DROPDOWN CHECK:', {
-                isAdmin: isAdmin,
-                employeesInvolvedLength: employeesInvolved.length,
-                shouldShowFilter: isAdmin && employeesInvolved.length > 0,
-                employeesInvolved: employeesInvolved.map(e => ({ id: e.id, name: e.full_name }))
-              });
-              return isAdmin && employeesInvolved.length > 0;
-            })() && (
+            {/* فلتر الموظفين - للمدير فقط */}
+            {isAdmin && employeesInvolved.length > 0 && (
               <Card className="border-2 border-violet-200/60 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
                 <CardContent className="p-4 md:p-6">
                   <div className="flex flex-col gap-4">
@@ -332,13 +271,13 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                         <SelectItem value="all" className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
                           <div className="flex items-center gap-3">
                             <div className="w-3 h-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"></div>
-                            <span className="font-medium text-sm md:text-base">جميع الموظفين ({reservedOrders?.length || 0} طلب)</span>
+                            <span className="font-medium text-sm md:text-base">جميع الموظفين ({realReservedOrders?.length || 0} طلب)</span>
                           </div>
                         </SelectItem>
                         {employeesInvolved.map(emp => {
-                          const empOrdersCount = reservedOrders?.filter(o => o.created_by === emp.id).length || 0;
+                          const empOrdersCount = realReservedOrders?.filter(o => o.created_by === emp.user_id).length || 0;
                           return (
-                            <SelectItem key={emp.id} value={emp.id} className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
+                            <SelectItem key={emp.user_id} value={emp.user_id} className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
                               <div className="flex items-center gap-2 md:gap-3">
                                 <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex-shrink-0"></div>
                                 <span className="font-medium text-sm md:text-base">
@@ -377,11 +316,6 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="w-4 h-4" />
                               <span className="font-medium">{formatDate(order.created_at)}</span>
-                              {!isAdmin && (
-                                <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 text-xs px-3 py-1 ml-2">
-                                  {getEmployeeCode(user?.id)}
-                                </Badge>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -435,11 +369,11 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                                 <div className="flex items-center gap-4">
                                   {item.image && (
                                     <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted flex-shrink-0 border-2 border-orange-200/60">
-                                      <img src={item.image} alt={item.name || item.productName} className="w-full h-full object-cover" />
+                                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                     </div>
                                   )}
                                   <div className="flex-1 min-w-0 space-y-2">
-                                    <h5 className="font-bold text-sm truncate">{item.name || item.productName || 'منتج غير محدد'}</h5>
+                                    <h5 className="font-bold text-sm truncate">{item.name || 'منتج غير محدد'}</h5>
                                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                                       <span className="font-medium">الكمية: {item.quantity || 0}</span>
                                       <span className="font-bold text-orange-600">{((item.price || 0) * (item.quantity || 0)).toLocaleString()} د.ع</span>
