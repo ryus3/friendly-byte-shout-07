@@ -14,6 +14,7 @@ import { Loader2, AlertTriangle, PackagePlus, Trash2 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const CreateOrderPage = () => {
   const { createOrder } = useInventory();
@@ -34,6 +35,11 @@ const CreateOrderPage = () => {
 
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
   const total = subtotal - discount;
+
+  // Scroll to top when page loads
+  useEffect(() => {
+    scrollToTopInstant();
+  }, []);
 
   useEffect(() => {
     if(isWaseetLoggedIn && activePartner === 'alwaseet') {
