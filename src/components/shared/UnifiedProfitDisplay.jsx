@@ -169,11 +169,21 @@ const UnifiedProfitDisplay = ({
         .filter(p => p.status === 'pending')
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
-      // الطلبات المؤرشفة (المسواة + الراجع للمخزن)
-      personalData.archivedOrdersCount = safeOrders.filter(o => 
-        o.created_by === currentUser.id && 
-        (o.isArchived === true || o.isarchived === true)
-      ).length;
+      // الطلبات المؤرشفة (المسواة + الراجع للمخزن) - حساب صحيح للموظف
+      const userArchivedCount = safeOrders.filter(o => {
+        if (o.created_by !== currentUser.id) return false;
+        
+        // الطلبات المؤرشفة يدوياً
+        const isManuallyArchived = o.isArchived === true || o.isarchived === true;
+        
+        // الطلبات المسواة (مكتملة ومدفوعة مستحقاتها)
+        const profitRecord = allProfits.find(p => p.order_id === o.id);
+        const isSettled = o.status === 'completed' && profitRecord?.status === 'settled';
+        
+        return isManuallyArchived || isSettled;
+      }).length;
+      
+      personalData.archivedOrdersCount = userArchivedCount;
 
       console.log('📊 البيانات الشخصية للموظف:', {
         userId: currentUser.id,

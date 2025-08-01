@@ -290,10 +290,10 @@ const EmployeeFollowUpPage = () => {
     };
   }, [refetchProducts]);
 
-  // قائمة الموظفين النشطين
+  // قائمة الموظفين النشطين (استبعاد المدير العام)
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u && u.status === 'active');
+    return allUsers.filter(u => u && u.status === 'active' && u.user_id !== ADMIN_ID);
   }, [allUsers]);
 
   // خريطة الموظفين للأسماء
@@ -545,10 +545,13 @@ const EmployeeFollowUpPage = () => {
       paidDues
     });
 
-    // عدد الطلبات المسواة (في الأرشيف) - يجب أن تظهر الطلبات المسدودة مستحقاتها
+    // عدد الطلبات المسواة (في الأرشيف) - يجب أن تظهر الطلبات المسدودة مستحقاتها ولا تحسب المدير
     const safeOrders = Array.isArray(orders) ? orders : [];
     const settledOrdersCount = safeOrders.filter(o => {
       if (!o) return false;
+      
+      // استبعاد طلبات المدير من الحساب
+      if (o.created_by === ADMIN_ID) return false;
       
       // فلتر الموظف
       let employeeMatch = true;
@@ -843,15 +846,6 @@ const EmployeeFollowUpPage = () => {
                 <SelectItem value="3months">3 أشهر</SelectItem>
               </SelectContent>
             </Select>
-            
-            <div className="flex items-center space-x-2 col-span-2 md:col-span-1">
-              <Checkbox 
-                id="archived" 
-                checked={filters.archived} 
-                onCheckedChange={(checked) => handleFilterChange('archived', checked)} 
-              />
-              <Label htmlFor="archived" className="cursor-pointer text-sm">الأرشيف</Label>
-            </div>
           </CardContent>
         </Card>
 
