@@ -28,7 +28,6 @@ import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
-import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 
 
 const OrdersPage = () => {
@@ -51,7 +50,6 @@ const OrdersPage = () => {
     deleteAlert: false,
     archiveAlert: false,
     returnReceipt: false,
-    receiptDialog: false,
   });
   const [syncing, setSyncing] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -385,27 +383,6 @@ const OrdersPage = () => {
     setDialogs(d => ({ ...d, returnReceipt: true }));
   }, []);
 
-  // الطلبات المؤهلة لاستلام الفاتورة - محلية ومكتملة وغير مستلمة الفاتورة
-  const eligibleReceiptOrders = useMemo(() => {
-    return userOrders.filter(order => 
-      order.delivery_partner === 'محلي' && 
-      (order.status === 'delivered' || order.status === 'completed') && 
-      !order.receipt_received
-    );
-  }, [userOrders]);
-
-  const handleReceiveReceipts = useCallback(() => {
-    if (eligibleReceiptOrders.length === 0) {
-      toast({
-        title: "لا توجد طلبات مؤهلة",
-        description: "لا توجد طلبات محلية مكتملة بحاجة لاستلام الفاتورة",
-        variant: "default"
-      });
-      return;
-    }
-    setDialogs(d => ({ ...d, receiptDialog: true }));
-  }, [eligibleReceiptOrders.length]);
-
   const profitsPagePath = '/profits-summary';
 
   return (
@@ -425,16 +402,6 @@ const OrdersPage = () => {
                 <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             </div>
             <div className="flex items-center gap-2 self-end sm:self-center">
-              {eligibleReceiptOrders.length > 0 && (
-                <Button 
-                  variant="default" 
-                  onClick={handleReceiveReceipts}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="h-4 w-4 ml-2" />
-                  استلام فاتورة ({eligibleReceiptOrders.length})
-                </Button>
-              )}
               <Button variant="outline" onClick={handleSync} disabled={syncing}>
                   {syncing ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <RefreshCw className="h-4 w-4 ml-2" />}
                   مزامنة
@@ -591,21 +558,6 @@ const OrdersPage = () => {
             toast({
               title: "تم استلام الراجع",
               description: "تم إرجاع المنتجات إلى المخزون بنجاح",
-              variant: "success"
-            });
-          }}
-        />
-
-        <ReceiptReceiptDialog
-          open={dialogs.receiptDialog}
-          onClose={() => setDialogs(d => ({ ...d, receiptDialog: false }))}
-          orders={eligibleReceiptOrders}
-          user={user}
-          onSuccess={async () => {
-            await refetchProducts();
-            toast({
-              title: "تم استلام الفواتير",
-              description: "تم استلام الفواتير وحساب الأرباح بنجاح",
               variant: "success"
             });
           }}

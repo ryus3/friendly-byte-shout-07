@@ -8,7 +8,6 @@ import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -109,11 +108,6 @@ const ProfitsSummaryPage = () => {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
-
-  // Scroll to top when page loads
-  useEffect(() => {
-    scrollToTopInstant();
-  }, []);
 
   // تحديد الصلاحيات بناءً على الدور والصلاحيات
   const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');

@@ -8,7 +8,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -123,11 +122,6 @@ const Dashboard = () => {
     const [topProvincesOpen, setTopProvincesOpen] = useState(false);
     const [topProductsOpen, setTopProductsOpen] = useState(false);
     const [topCustomersOpen, setTopCustomersOpen] = useState(false);
-
-    // Scroll to top when page loads
-    useEffect(() => {
-        scrollToTopInstant();
-    }, []);
 
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
