@@ -56,22 +56,28 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     }
   }, [open]);
 
-  // تشخيص البيانات
-  console.log('🔍 RESERVED STOCK DEBUG:', {
+  // 🔍 تشخيص شامل للبيانات
+  console.log('🔍 RESERVED STOCK COMPREHENSIVE DEBUG:', {
     isDialogOpen: open,
     currentUserId: user?.id,
-    currentUserDetails: user,
+    currentUserDetails: {
+      id: user?.id,
+      full_name: user?.full_name,
+      username: user?.username,
+      employee_code: user?.employee_code,
+      roles: user?.roles
+    },
     isUserAdmin: isAdmin,
     reservedOrdersCount: reservedOrders?.length || 0,
-    reservedOrdersDetails: reservedOrders?.map(o => ({
-      id: o.id,
-      order_number: o.order_number,
-      created_by: o.created_by,
-      status: o.status,
-      customer_name: o.customer_name
+    reservedOrdersRaw: reservedOrders,
+    allOrdersStatuses: reservedOrders?.map(o => ({ 
+      id: o.id, 
+      number: o.order_number, 
+      status: o.status, 
+      created_by: o.created_by 
     })) || [],
     employeesCount: employees?.length || 0,
-    employees: employees.map(e => ({ id: e.id, name: e.full_name, code: e.employee_code }))
+    employeesRaw: employees
   });
 
 

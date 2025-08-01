@@ -869,11 +869,25 @@ const InventoryPage = () => {
       <ReservedStockDialog 
         open={isReservedStockDialogOpen} 
         onOpenChange={(open) => {
-          console.log('🔍 ReservedStockDialog onOpenChange:', { 
+          console.log('🔍 INVENTORY PAGE - ReservedStockDialog Debug:', { 
             opening: open, 
             reservedOrdersCount: reservedOrders?.length,
+            reservedOrdersSample: reservedOrders?.slice(0, 3).map(o => ({
+              id: o.id,
+              order_number: o.order_number,
+              status: o.status,
+              created_by: o.created_by,
+              customer_name: o.customer_name,
+              itemsCount: o.items?.length
+            })),
             allUsersCount: allUsers?.length,
             currentUserId: user?.id,
+            currentUserInfo: {
+              id: user?.id,
+              full_name: user?.full_name,
+              username: user?.username,
+              employee_code: user?.employee_code
+            },
             isAdmin 
           });
           setIsReservedStockDialogOpen(open);
