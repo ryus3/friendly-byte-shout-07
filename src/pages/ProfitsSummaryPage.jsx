@@ -142,7 +142,54 @@ const ProfitsSummaryPage = () => {
     }
   }, [location.search, settlementInvoices, navigate, location.pathname]);
 
-  const employees = useMemo(() => {
+    // حساب إجمالي الأرباح الشخصية بناءً على الفترة المحددة
+    const personalProfitsData = useMemo(() => {
+      if (!orders || !user?.id) return { total: 0, pending: 0, settled: 0 };
+      
+      const userOrders = orders.filter(order => 
+        order.created_by === user.id &&
+        (order.status === 'delivered' || order.status === 'completed') &&
+        order.receipt_received === true
+      );
+      
+      // فلترة حسب الفترة الزمنية المحددة
+      const filteredOrders = userOrders.filter(order => {
+        if (!dateRange.from || !dateRange.to) return true;
+        const orderDate = parseISO(order.updated_at || order.created_at);
+        return isValid(orderDate) && orderDate >= dateRange.from && orderDate <= dateRange.to;
+      });
+      
+      const totalProfit = filteredOrders.reduce((sum, order) => {
+        const profit = calculateProfit ? calculateProfit(order) : 0;
+        return sum + profit;
+      }, 0);
+      
+      // حساب الأرباح المعلقة والمدفوعة
+      const userProfits = profits.filter(p => p.employee_id === user.id);
+      const pendingProfit = userProfits
+        .filter(p => p.status === 'pending')
+        .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        
+      const settledProfit = userProfits
+        .filter(p => p.status === 'settled')
+        .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+      
+      console.log('🔧 حساب الأرباح الشخصية:', {
+        userId: user.id,
+        userOrdersCount: userOrders.length,
+        filteredOrdersCount: filteredOrders.length,
+        totalProfit,
+        pendingProfit,
+        settledProfit,
+        dateRange
+      });
+      
+      return {
+        total: totalProfit,
+        pending: pendingProfit,
+        settled: settledProfit
+      };
+    }, [orders, user?.id, calculateProfit, profits, dateRange]);
     return allUsers?.filter(u => u.role === 'employee' || u.role === 'deputy') || [];
   }, [allUsers]);
 
@@ -299,9 +346,8 @@ const ProfitsSummaryPage = () => {
         const grossProfit = unifiedProfitData?.grossProfit || 0;
         const netProfit = unifiedProfitData?.netProfit || 0;
 
-        // حساب أرباح المدير الشخصية من طلباته الخاصة
-        const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
-        const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
+        // استخدام الأرباح الشخصية المحسوبة من personalProfitsData
+        const totalPersonalProfit = personalProfitsData.total;
       
         // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)
         const personalPendingProfit = personalProfits
@@ -399,6 +445,13 @@ const ProfitsSummaryPage = () => {
 
   const handleFilterChange = useCallback((key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    
+    // إذا كان الفلتر خاص بالفترة الزمنية، نحديث فلتر الفترة
+    if (key === 'period') {
+      setPeriodFilter(value);
+      console.log('تحديث فلتر الفترة من كارت إجمالي أرباحي:', value);
+    }
+    
     if (key === 'profitStatus' && value !== 'pending') {
         setSelectedOrders([]);
     }

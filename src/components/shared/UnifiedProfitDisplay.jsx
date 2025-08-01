@@ -317,12 +317,12 @@ const UnifiedProfitDisplay = ({
           format: 'currency',
           onPeriodChange: (period) => {
             console.log('تغيير فترة كارت إجمالي أرباحي:', period);
-            // هنا يمكن إضافة منطق تحديث البيانات حسب الفترة المختارة
+            // تمرير التحديث للصفحة الرئيسية
             if (onFilterChange) {
               onFilterChange('period', period);
             }
           },
-          currentPeriod: 'year', // افتراضي سنة
+          currentPeriod: localStorage.getItem('profitsPeriodFilter') || 'year', // قراءة من localStorage
           periods: {
             day: 'اليوم',
             week: 'أسبوع', 
