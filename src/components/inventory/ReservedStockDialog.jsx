@@ -120,136 +120,106 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
               </DialogTitle>
             </DialogHeader>
 
-            {/* كروت الإحصائيات - مثل تصميم أقسام الجرد */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* كارت إجمالي الطلبات - أزرق مثل الملابس */}
+            {/* كروت الإحصائيات - مستطيلة بصفين */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* الصف الأول */}
+              {/* كارت إجمالي الطلبات - أزرق */}
               <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="text-center space-y-3 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-2 right-2">
+                <CardContent className="p-6">
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-lg p-6 relative overflow-hidden">
+                    <div className="absolute top-3 right-3">
                       <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
                         1
                       </Badge>
                     </div>
-                    <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <ShoppingCart className="w-6 h-6" />
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <ShoppingCart className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-3xl">{filteredDisplayOrders.length}</h4>
+                        <p className="text-white/90 text-sm">طلب محجوز</p>
+                        <p className="text-white/70 text-xs mt-1">إجمالي الطلبات في حالة التجهيز</p>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-2xl">{filteredDisplayOrders.length}</h4>
-                      <p className="text-white/80 text-xs">طلب محجوز</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                      <div className="text-right">
-                        <p className="text-xs text-white/70">إجمالي الطلبات</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-3 h-3" />
-                        <span className="text-xs">نشط</span>
-                      </div>
-                    </div>
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-3 -left-3 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* كارت المنتجات المحجوزة - برتقالي مثل الأحذية */}
+              {/* كارت المنتجات المحجوزة - برتقالي */}
               <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="text-center space-y-3 bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-2 right-2">
+                <CardContent className="p-6">
+                  <div className="bg-gradient-to-br from-orange-500 to-red-600 text-white rounded-lg p-6 relative overflow-hidden">
+                    <div className="absolute top-3 right-3">
                       <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
                         2
                       </Badge>
                     </div>
-                    <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <Shirt className="w-6 h-6" />
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <Shirt className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-3xl">{totalReservedItems}</h4>
+                        <p className="text-white/90 text-sm">منتج مختلف</p>
+                        <p className="text-white/70 text-xs mt-1">عدد المنتجات المحجوزة</p>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-2xl">{totalReservedItems}</h4>
-                      <p className="text-white/80 text-xs">منتج مختلف</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                      <div className="text-right">
-                        <p className="text-xs text-white/70">منتجات محجوزة</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-3 h-3" />
-                        <span className="text-xs">متاح</span>
-                      </div>
-                    </div>
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-3 -left-3 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* كارت إجمالي الكمية - بنفسجي مثل المواد العامة */}
+              {/* الصف الثاني */}
+              {/* كارت إجمالي الكمية - بنفسجي */}
               <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="text-center space-y-3 bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-2 right-2">
+                <CardContent className="p-6">
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-lg p-6 relative overflow-hidden">
+                    <div className="absolute top-3 right-3">
                       <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
                         3
                       </Badge>
                     </div>
-                    <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <PackageOpen className="w-6 h-6" />
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <PackageOpen className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-3xl">{totalReservedQuantity}</h4>
+                        <p className="text-white/90 text-sm">قطعة</p>
+                        <p className="text-white/70 text-xs mt-1">إجمالي الكمية المحجوزة</p>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-2xl">{totalReservedQuantity}</h4>
-                      <p className="text-white/80 text-xs">قطعة</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                      <div className="text-right">
-                        <p className="text-xs text-white/70">إجمالي الكمية</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-3 h-3" />
-                        <span className="text-xs">محجوز</span>
-                      </div>
-                    </div>
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-3 -left-3 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* كارت القيمة الإجمالية - أخضر زمردي */}
               <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="text-center space-y-3 bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden">
-                    <div className="absolute top-2 right-2">
+                <CardContent className="p-6">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-6 relative overflow-hidden">
+                    <div className="absolute top-3 right-3">
                       <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
                         4
                       </Badge>
                     </div>
-                    <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <DollarSign className="w-6 h-6" />
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                        <DollarSign className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-3xl">{totalReservedValue.toLocaleString()}</h4>
+                        <p className="text-white/90 text-sm">د.ع</p>
+                        <p className="text-white/70 text-xs mt-1">القيمة الإجمالية للطلبات</p>
                       </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-2xl">{totalReservedValue.toLocaleString()}</h4>
-                      <p className="text-white/80 text-xs">د.ع</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                      <div className="text-right">
-                        <p className="text-xs text-white/70">القيمة الإجمالية</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <DollarSign className="w-3 h-3" />
-                        <span className="text-xs">قيمة</span>
-                      </div>
-                    </div>
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
+                    <div className="absolute -top-3 -left-3 w-16 h-16 bg-white/5 rounded-full"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -383,11 +353,22 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                                   // البحث عن الموظف من قائمة المستخدمين
                                   const employee = allUsers?.find(u => u.id === order.created_by);
                                   if (employee) {
-                                    console.log('✅ Employee found:', employee);
+                                    console.log('✅ Employee found:', {
+                                      id: employee.id,
+                                      full_name: employee.full_name,
+                                      username: employee.username,
+                                      email: employee.email
+                                    });
                                     return employee.full_name || employee.username || employee.email || 'غير محدد';
                                   }
                                   // إذا لم نجد الموظف في القائمة، نبحث في بيانات الطلب
-                                  console.log('⚠️ Employee not found in allUsers, using order data');
+                                  console.log('⚠️ Employee not found in allUsers:', {
+                                    orderId: order.id,
+                                    createdBy: order.created_by,
+                                    allUsersCount: allUsers?.length || 0,
+                                    employeeNameInOrder: order.employeeName || order.employee_name,
+                                    allUsersIds: allUsers?.map(u => u.id) || []
+                                  });
                                   return order.employeeName || order.employee_name || 'غير معروف';
                                 })()}
                               </span>
