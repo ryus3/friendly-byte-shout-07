@@ -290,6 +290,9 @@ const EmployeeFollowUpPage = () => {
     };
   }, [refetchProducts]);
 
+  // معرف المدير الرئيسي - تصفية طلباته
+  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+
   // قائمة الموظفين النشطين (استبعاد المدير العام)
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
@@ -308,9 +311,6 @@ const EmployeeFollowUpPage = () => {
     }
     return map;
   }, [allUsers]);
-
-  // معرف المدير الرئيسي - تصفية طلباته
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
   // حالة أرشيف التسوية المنفصلة
   const [showSettlementArchive, setShowSettlementArchive] = useState(false);
