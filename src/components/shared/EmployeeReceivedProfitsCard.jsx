@@ -131,10 +131,6 @@ const EmployeeReceivedProfitsCard = ({
       <EmployeeReceivedProfitsDialog
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
-        invoices={employeeReceivedProfits.invoices}
-        totalAmount={employeeReceivedProfits.total}
-        employeeName={user?.full_name}
-        employeeCode={user?.employee_code}
         allUsers={allUsers}
       />
     </>

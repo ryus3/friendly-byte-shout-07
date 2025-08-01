@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { supabase } from '@/lib/customSupabaseClient';
 import {
   Dialog,
   DialogContent,
@@ -21,17 +23,43 @@ import { DateRangePicker } from '@/components/ui/date-range-picker';
 const EmployeeReceivedProfitsDialog = ({
   isOpen,
   onClose,
-  invoices = [],
-  totalAmount = 0,
-  employeeName,
-  employeeCode,
   allUsers = []
 }) => {
+  const { user } = useAuth();
+  const [realTimeInvoices, setRealTimeInvoices] = useState([]);
+  
   // فلتر الفترة الزمنية - افتراضي شهر واحد
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
+
+  // جلب فواتير التسوية مباشرة من قاعدة البيانات باستخدام employee_code
+  useEffect(() => {
+    const fetchEmployeeInvoices = async () => {
+      if (!user?.employee_code || !isOpen) return;
+
+      try {
+        const { data: invoices, error } = await supabase
+          .from('settlement_invoices')
+          .select('*')
+          .eq('employee_code', user.employee_code)
+          .eq('status', 'completed')
+          .order('settlement_date', { ascending: false });
+
+        if (error) {
+          console.error('❌ خطأ في جلب فواتير التسوية:', error);
+          return;
+        }
+
+        setRealTimeInvoices(invoices || []);
+      } catch (error) {
+        console.error('❌ خطأ في جلب فواتير التسوية:', error);
+      }
+    };
+
+    fetchEmployeeInvoices();
+  }, [user?.employee_code, isOpen]);
 
   const getPayerName = (createdBy) => {
     const payer = allUsers.find(u => u.id === createdBy);
@@ -40,15 +68,15 @@ const EmployeeReceivedProfitsDialog = ({
 
   // فلترة الفواتير حسب الفترة الزمنية المحددة
   const filteredInvoices = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return invoices;
+    if (!dateRange.from || !dateRange.to) return realTimeInvoices;
     
-    return invoices.filter(invoice => {
+    return realTimeInvoices.filter(invoice => {
       const invoiceDate = parseISO(invoice.settlement_date);
       return isValid(invoiceDate) && 
              invoiceDate >= dateRange.from && 
              invoiceDate <= dateRange.to;
     });
-  }, [invoices, dateRange]);
+  }, [realTimeInvoices, dateRange]);
 
   // حساب الإحصائيات المفلترة
   const stats = useMemo(() => {
@@ -114,12 +142,12 @@ const EmployeeReceivedProfitsDialog = ({
                       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-300 relative overflow-hidden">
                         <div className="absolute -bottom-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full"></div>
                         <p className="text-xs opacity-90 font-medium mb-1">اسم الموظف</p>
-                        <p className="font-bold text-sm md:text-base">{employeeName || 'غير محدد'}</p>
+                        <p className="font-bold text-sm md:text-base">{user?.full_name || 'غير محدد'}</p>
                       </div>
                       <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-emerald-600 hover:to-green-700 transition-all duration-300 relative overflow-hidden">
                         <div className="absolute -bottom-2 -right-2 w-6 h-6 md:w-8 md:h-8 bg-white/10 rounded-full"></div>
                         <p className="text-xs opacity-90 font-medium mb-1">معرف الموظف</p>
-                        <p className="font-mono font-bold text-xs md:text-sm">{employeeCode || 'غير محدد'}</p>
+                        <p className="font-mono font-bold text-xs md:text-sm">{user?.employee_code || 'غير محدد'}</p>
                       </div>
                     </div>
                     <div className="space-y-2">
