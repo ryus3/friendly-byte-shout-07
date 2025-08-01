@@ -542,10 +542,24 @@ const InventoryPage = () => {
 
   const handleFilterChange = useCallback((key, value) => {
     console.log('handleFilterChange called with:', key, value);
+    
+    // التعامل مع الاستدعاءات من InventoryStats (معامل واحد)
+    if (typeof key === 'string' && value === undefined) {
+      if (key === 'reserved') {
+        console.log('Opening reserved stock dialog from stats...');
+        setIsReservedStockDialogOpen(true);
+        return;
+      } else {
+        console.log('Setting stockFilter from stats:', key);
+        setFilters(currentFilters => ({ ...currentFilters, stockFilter: key }));
+        return;
+      }
+    }
+    
+    // التعامل مع الاستدعاءات العادية (معاملين)
     if (key === 'stockFilter' && value === 'reserved') {
-      console.log('Opening reserved stock dialog...');
+      console.log('Opening reserved stock dialog from filters...');
       setIsReservedStockDialogOpen(true);
-      // لا نغير الفلتر في هذه الحالة، فقط نفتح النافذة
       return;
     } else {
       console.log('Setting filter:', key, value);
@@ -703,9 +717,7 @@ const InventoryPage = () => {
           inventoryItems={inventoryItems} 
           lowStockCount={inventoryStats.lowStockCount}
           reservedStockCount={inventoryStats.reservedStockCount}
-          onFilterChange={(filterType) => {
-            setFilters(prev => ({ ...prev, stockFilter: filterType }));
-          }}
+          onFilterChange={handleFilterChange}
         />
 
         {/* كروت الأقسام - تحميل فوري */}
