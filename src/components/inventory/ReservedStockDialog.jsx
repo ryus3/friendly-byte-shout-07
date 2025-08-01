@@ -104,12 +104,11 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     return total + (order.items?.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 0)), 0) || 0);
   }, 0);
 
-  // معرف الموظف الصغير المرتب
+  // استخدام معرف الموظف الحقيقي من قاعدة البيانات
   const getEmployeeCode = (employeeId) => {
     const employee = allUsers?.find(u => u.id === employeeId);
-    return employee?.employee_code || 
-           employee?.username?.slice(0, 3).toUpperCase() || 
-           `EMP${employeeId?.slice(-3).toUpperCase()}`;
+    // استخدام المعرف الحقيقي من قاعدة البيانات أولاً
+    return employee?.employee_code || 'غير محدد';
   };
 
   return (
