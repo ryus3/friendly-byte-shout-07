@@ -22,18 +22,38 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
   const { isAdmin } = usePermissions();
 
   // تسجيل مفصل للتشخيص
-  console.log('🔍 ReservedStockDialog - Debug Info:', {
+  console.log('🔍 ReservedStockDialog - COMPLETE Debug Info:', {
     reservedOrdersCount: reservedOrders?.length || 0,
     allUsersCount: allUsers?.length || 0,
     currentUserId: user?.id,
-    isAdmin,
-    reservedOrdersDetails: reservedOrders?.map(o => ({
-      id: o.id,
-      created_by: o.created_by,
-      customer_name: o.customer_name,
-      status: o.status,
-      items_count: o.items?.length || 0,
-      employee_name: allUsers?.find(u => u.id === o.created_by)?.full_name || 'غير معروف'
+    isAdmin: isAdmin,
+    userPermissions: { isAdmin },
+    
+    // تفاصيل كل الطلبات المحجوزة
+    reservedOrdersDetails: reservedOrders?.map(o => {
+      const employee = allUsers?.find(u => u.id === o.created_by);
+      return {
+        orderId: o.id,
+        orderNumber: o.order_number,
+        createdBy: o.created_by,
+        customerName: o.customer_name,
+        status: o.status,
+        itemsCount: o.items?.length || 0,
+        employeeFound: !!employee,
+        employeeName: employee?.full_name,
+        employeeCode: employee?.employee_code,
+        employeeUsername: employee?.username,
+        employeeEmail: employee?.email
+      };
+    }) || [],
+    
+    // تفاصيل كل المستخدمين
+    allUsersDetails: allUsers?.map(u => ({
+      id: u.id,
+      fullName: u.full_name,
+      username: u.username,
+      employeeCode: u.employee_code,
+      email: u.email
     })) || []
   });
 
@@ -231,7 +251,15 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
             </div>
 
             {/* فلتر الموظفين - للمدير فقط - يظهر على كل الشاشات */}
-            {isAdmin && employeesInvolved.length > 0 && (
+            {(() => {
+              console.log('🎯 FILTER DROPDOWN CHECK:', {
+                isAdmin: isAdmin,
+                employeesInvolvedLength: employeesInvolved.length,
+                shouldShowFilter: isAdmin && employeesInvolved.length > 0,
+                employeesInvolved: employeesInvolved.map(e => ({ id: e.id, name: e.full_name }))
+              });
+              return isAdmin && employeesInvolved.length > 0;
+            })() && (
               <Card className="border-2 border-violet-200/60 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
                 <CardContent className="p-4 md:p-6">
                   <div className="flex flex-col gap-4">
@@ -370,7 +398,18 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
                               <User className="w-4 h-4 text-muted-foreground" />
                               <span className="font-medium text-muted-foreground min-w-[60px]">الاسم:</span>
                                <span className="font-semibold">
-                                 {getEmployeeName(order.created_by)}
+                                 {(() => {
+                                   console.log('🏢 EMPLOYEE NAME DEBUG for order:', {
+                                     orderId: order.id,
+                                     orderNumber: order.order_number,
+                                     createdBy: order.created_by,
+                                     allUsersPresent: !!allUsers,
+                                     allUsersCount: allUsers?.length || 0,
+                                     employeeFound: !!allUsers?.find(u => u.id === order.created_by),
+                                     employeeName: getEmployeeName(order.created_by)
+                                   });
+                                   return getEmployeeName(order.created_by);
+                                 })()}
                                </span>
                             </div>
                             <div className="flex items-center gap-3 text-sm">
