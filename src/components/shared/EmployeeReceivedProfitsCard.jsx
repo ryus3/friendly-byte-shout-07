@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { supabase } from '@/lib/customSupabaseClient';
 import StatCard from '@/components/dashboard/StatCard';
 import { Receipt } from 'lucide-react';
 import EmployeeReceivedProfitsDialog from './EmployeeReceivedProfitsDialog';
@@ -15,19 +16,61 @@ const EmployeeReceivedProfitsCard = ({
 }) => {
   const { user } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [realTimeInvoices, setRealTimeInvoices] = useState([]);
+
+  // جلب فواتير التسوية مباشرة من قاعدة البيانات
+  useEffect(() => {
+    const fetchEmployeeInvoices = async () => {
+      if (!user?.id) {
+        console.log('🔍 EmployeeReceivedProfitsCard: لا يوجد معرف مستخدم');
+        return;
+      }
+
+      try {
+        console.log('🔍 EmployeeReceivedProfitsCard: جلب فواتير للموظف:', user.id);
+        
+        const { data: invoices, error } = await supabase
+          .from('settlement_invoices')
+          .select('*')
+          .eq('employee_id', user.id)
+          .eq('status', 'completed')
+          .order('settlement_date', { ascending: false });
+
+        if (error) {
+          console.error('❌ خطأ في جلب فواتير التسوية:', error);
+          return;
+        }
+
+        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة:', {
+          invoicesCount: invoices?.length || 0,
+          invoices: invoices?.slice(0, 3) || []
+        });
+
+        setRealTimeInvoices(invoices || []);
+      } catch (error) {
+        console.error('❌ خطأ في جلب فواتير التسوية:', error);
+      }
+    };
+
+    fetchEmployeeInvoices();
+  }, [user?.id]);
 
   // حساب إجمالي الأرباح المستلمة للموظف الحالي
   const employeeReceivedProfits = useMemo(() => {
-    if (!settlementInvoices || !Array.isArray(settlementInvoices) || !user?.id) {
+    // استخدام البيانات المجلبة مباشرة من قاعدة البيانات أولاً، وإلا البيانات المُمررة
+    const invoicesSource = realTimeInvoices.length > 0 ? realTimeInvoices : settlementInvoices;
+    
+    if (!user?.id) {
       console.log('🔍 EmployeeReceivedProfitsCard: بيانات مفقودة:', {
-        settlementInvoices: settlementInvoices?.length || 0,
-        userId: user?.id || 'مفقود'
+        userId: user?.id || 'مفقود',
+        realTimeInvoices: realTimeInvoices.length,
+        propsInvoices: settlementInvoices?.length || 0
       });
       return { total: 0, invoices: [] };
     }
 
     // فلترة الفواتير الخاصة بالموظف الحالي
-    const employeeInvoices = settlementInvoices.filter(invoice => 
+    const employeeInvoices = invoicesSource.filter(invoice => 
       invoice.employee_id === user.id && invoice.status === 'completed'
     );
 
@@ -38,7 +81,11 @@ const EmployeeReceivedProfitsCard = ({
 
     console.log('💰 EmployeeReceivedProfitsCard: حساب الأرباح المستلمة:', {
       employeeId: user.id,
-      allInvoices: settlementInvoices.length,
+      employeeName: user.full_name,
+      employeeCode: user.employee_code,
+      realTimeInvoices: realTimeInvoices.length,
+      propsInvoices: settlementInvoices?.length || 0,
+      finalInvoicesSource: invoicesSource.length,
       employeeInvoices: employeeInvoices.length,
       totalReceived,
       invoicesSample: employeeInvoices.slice(0, 2)
@@ -48,7 +95,7 @@ const EmployeeReceivedProfitsCard = ({
       total: totalReceived,
       invoices: employeeInvoices
     };
-  }, [settlementInvoices, user?.id]);
+  }, [realTimeInvoices, settlementInvoices, user?.id, user?.full_name, user?.employee_code]);
 
   return (
     <>
