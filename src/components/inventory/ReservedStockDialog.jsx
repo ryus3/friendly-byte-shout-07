@@ -8,9 +8,9 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Archive, Package, User, Hash, Calendar, Phone, MapPin, Users, Clock, AlertCircle, ShoppingCart, Building2 } from 'lucide-react';
+import { Archive, Package, User, Hash, Calendar, Phone, MapPin, Users, Clock, AlertCircle, ShoppingCart, Building2, TrendingUp, Target, Crown } from 'lucide-react';
 import { formatDistanceToNow, isValid, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -33,16 +33,28 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     return allUsers.filter(u => employeeIds.includes(u.id));
   }, [reservedOrders, allUsers]);
 
+  // فلترة الطلبات حسب صلاحيات المستخدم والموظف المختار
   const filteredDisplayOrders = useMemo(() => {
     if (!reservedOrders) return [];
     
-    console.log('Filtering orders - selectedEmployee:', selectedEmployee);
+    console.log('Filtering orders - selectedEmployee:', selectedEmployee, 'isAdmin:', isAdmin, 'currentUser:', user?.id);
     
-    if (selectedEmployee === 'all') {
-      return reservedOrders;
+    let filtered = reservedOrders;
+    
+    // للموظفين: عرض طلباتهم فقط
+    if (!isAdmin && user?.id) {
+      filtered = reservedOrders.filter(o => o.created_by === user.id);
+      console.log('Employee filter applied:', filtered.length, 'orders for user:', user.id);
     }
-    return reservedOrders.filter(o => o.created_by === selectedEmployee);
-  }, [reservedOrders, selectedEmployee]);
+    
+    // للمدير: إمكانية فلترة حسب الموظف المختار
+    if (isAdmin && selectedEmployee !== 'all') {
+      filtered = filtered.filter(o => o.created_by === selectedEmployee);
+      console.log('Admin employee filter applied:', filtered.length, 'orders for employee:', selectedEmployee);
+    }
+    
+    return filtered;
+  }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'لا يوجد تاريخ';
@@ -51,13 +63,49 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
     return formatDistanceToNow(date, { addSuffix: true, locale: ar });
   };
 
-  const totalReservedItems = filteredDisplayOrders.reduce((total, order) => {
-    return total + (order.items?.length || 0);
-  }, 0);
+  // حساب الإحصائيات المحسنة
+  const detailedStats = useMemo(() => {
+    if (!filteredDisplayOrders.length) {
+      return {
+        totalOrders: 0,
+        totalItems: 0,
+        totalQuantity: 0,
+        totalValue: 0,
+        totalReservedItems: 0,
+        totalReservedQuantity: 0
+      };
+    }
 
-  const totalReservedQuantity = filteredDisplayOrders.reduce((total, order) => {
-    return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
-  }, 0);
+    const totalItems = filteredDisplayOrders.reduce((total, order) => {
+      return total + (order.items?.length || 0);
+    }, 0);
+
+    const totalQuantity = filteredDisplayOrders.reduce((total, order) => {
+      return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
+    }, 0);
+
+    const totalValue = filteredDisplayOrders.reduce((total, order) => {
+      return total + (order.final_amount || order.total_amount || 0);
+    }, 0);
+
+    // إجمالي الكميات المحجوزة (من جميع الطلبات وليس فقط المفلترة)
+    const allReservedItems = reservedOrders ? reservedOrders.reduce((total, order) => {
+      return total + (order.items?.length || 0);
+    }, 0) : 0;
+
+    const allReservedQuantity = reservedOrders ? reservedOrders.reduce((total, order) => {
+      return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
+    }, 0) : 0;
+
+    return {
+      totalOrders: filteredDisplayOrders.length,
+      totalItems,
+      totalQuantity,
+      totalValue,
+      totalReservedItems: allReservedItems, // إجمالي من جميع الموظفين
+      totalReservedQuantity: allReservedQuantity // إجمالي من جميع الموظفين
+    };
+  }, [filteredDisplayOrders, reservedOrders]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -74,50 +122,114 @@ const ReservedStockDialog = ({ open, onOpenChange, reservedOrders, allUsers }) =
           </DialogDescription>
         </DialogHeader>
         
-        {/* إحصائيات سريعة */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500 rounded-lg">
-                  <ShoppingCart className="w-5 h-5 text-white" />
+        {/* إحصائيات متقدمة بتصميم احترافي */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* طلبات الموظف أو المفلترة */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
+            <CardContent className="p-0 h-32">
+              <div className="bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                    <ShoppingCart className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-medium text-white/90">
+                    {isAdmin ? 'طلبات مفلترة' : 'طلباتي'}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">إجمالي الطلبات</p>
-                  <p className="text-2xl font-bold text-blue-600">{filteredDisplayOrders.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500 rounded-lg">
-                  <Package className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">المنتجات المحجوزة</p>
-                  <p className="text-2xl font-bold text-orange-600">{totalReservedItems}</p>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white leading-tight">
+                    {detailedStats.totalOrders}
+                  </p>
+                  <p className="text-xs text-white/70 mt-1">طلب</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          
-          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-500 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-white" />
+
+          {/* قيمة الطلبات */}
+          {detailedStats.totalValue > 0 && (
+            <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
+              <CardContent className="p-0 h-32">
+                <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-medium text-white/90">قيمة الطلبات</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-bold text-white leading-tight">
+                      {detailedStats.totalValue.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-white/70 mt-1">دينار عراقي</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">إجمالي الكمية</p>
-                  <p className="text-2xl font-bold text-green-600">{totalReservedQuantity}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* إجمالي المحجوز (من جميع الموظفين) */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
+            <CardContent className="p-0 h-32">
+              <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-medium text-white/90">إجمالي محجوز</p>
                 </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white leading-tight">
+                    {detailedStats.totalReservedItems}
+                  </p>
+                  <p className="text-xs text-white/70 mt-1">منتج</p>
+                </div>
+                {!isAdmin && (
+                  <div className="absolute top-2 left-2">
+                    <Crown className="w-3 h-3 text-yellow-300" />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* إجمالي الكمية المحجوزة */}
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-border/30">
+            <CardContent className="p-0 h-32">
+              <div className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                    <Target className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-medium text-white/90">إجمالي الكمية</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-white leading-tight">
+                    {detailedStats.totalReservedQuantity}
+                  </p>
+                  <p className="text-xs text-white/70 mt-1">قطعة</p>
+                </div>
+                {!isAdmin && (
+                  <div className="absolute top-2 left-2">
+                    <Crown className="w-3 h-3 text-yellow-300" />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* تنبيه للموظفين حول الأرقام الإجمالية */}
+        {!isAdmin && detailedStats.totalReservedItems > detailedStats.totalItems && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 text-blue-700">
+              <Crown className="w-4 h-4" />
+              <p className="text-sm font-medium">
+                الأرقام الإجمالية تشمل المحجوز من جميع الموظفين ({detailedStats.totalReservedItems} منتج، {detailedStats.totalReservedQuantity} قطعة)
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* فلتر الموظفين */}
         {isAdmin && employeesInvolved.length > 0 && (
