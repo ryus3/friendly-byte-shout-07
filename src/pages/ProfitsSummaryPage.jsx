@@ -36,6 +36,8 @@ import ExpensesDialog from '@/components/accounting/ExpensesDialog';
 import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDialog';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
+import EmployeeReceivedProfitsDialog from '@/components/shared/EmployeeReceivedProfitsDialog';
+import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
@@ -54,9 +56,9 @@ const ProfitsSummaryPage = () => {
     profitStatus: 'all',
   });
   
-  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار
+  // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار - افتراضي كل الفترات
   const [periodFilter, setPeriodFilter] = useState(() => {
-    return localStorage.getItem('profitsPeriodFilter') || 'month';
+    return localStorage.getItem('profitsPeriodFilter') || 'all';
   });
   
   // حفظ الخيار عند التغيير
@@ -102,7 +104,7 @@ const ProfitsSummaryPage = () => {
   }, [periodFilter]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
-  const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false });
+  const [dialogs, setDialogs] = useState({ details: false, invoice: false, expenses: false, settledDues: false, employeeReceived: false });
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
@@ -364,10 +366,10 @@ const ProfitsSummaryPage = () => {
     
     let filtered = profitData.detailedProfits;
     
-    // إذا لم يكن المستخدم مدير، يرى أرباحه فقط
-    if (!canViewAll) {
-        filtered = filtered.filter(p => p.created_by === user?.user_id || p.created_by === user?.id);
-    } else if (filters.employeeId !== 'all') {
+        // إذا لم يكن المستخدم مدير، يرى أرباحه فقط
+        if (!canViewAll) {
+            filtered = filtered.filter(p => p.created_by === user?.user_id || p.created_by === user?.id);
+        } else if (filters.employeeId !== 'all') {
       if (filters.employeeId === 'employees') {
         filtered = filtered.filter(p => {
             const pUser = allUsers?.find(u => u.id === p.created_by);
@@ -488,6 +490,21 @@ const ProfitsSummaryPage = () => {
     await markInvoiceReceived(orderId);
   };
 
+  // معالجات الكروت الجديدة للموظف
+  const handleEmployeeReceivedClick = () => {
+    setDialogs(d => ({ ...d, employeeReceived: true }));
+  };
+
+  const handlePendingProfitsClick = () => {
+    // فلترة الأرباح المعلقة مباشرة
+    setFilters(prev => ({ ...prev, profitStatus: 'pending' }));
+  };
+
+  const handleArchiveClick = () => {
+    // فلترة الطلبات المؤرشفة أو المدفوعة
+    setFilters(prev => ({ ...prev, profitStatus: 'settled' }));
+  };
+
   return (
     <>
       <Helmet>
@@ -496,13 +513,12 @@ const ProfitsSummaryPage = () => {
       </Helmet>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-          <h1 className="text-3xl font-bold gradient-text">ملخص الأرباح</h1>
-          
-          {/* فلتر الفترة الزمنية - قائمة منسدلة */}
-          <div className="w-full sm:w-48">
+          <div className="flex items-center gap-4">
+            <h1 className="text-3xl font-bold gradient-text">ملخص الأرباح</h1>
+            {/* فلتر الفترة الزمنية - يطبق على كل الصفحة */}
             <Select value={periodFilter} onValueChange={setPeriodFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="اختر الفترة الزمنية" />
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="اختر الفترة" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="day">اليوم</SelectItem>
@@ -518,26 +534,19 @@ const ProfitsSummaryPage = () => {
         {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}
         <div className="space-y-6">
           {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير وكارت الموظف */}
-          <ProfitStats
+          {/* استخدام UnifiedProfitDisplay مباشرة مع الكروت الجديدة */}
+          <UnifiedProfitDisplay
             profitData={profitData}
+            displayMode="dashboard"
             canViewAll={canViewAll}
             onFilterChange={handleFilterChange}
             onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
             onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
+            onEmployeeReceivedClick={handleEmployeeReceivedClick}
+            onPendingProfitsClick={handlePendingProfitsClick}
+            onArchiveClick={handleArchiveClick}
             dateRange={dateRange}
-            unifiedNetProfit={unifiedProfitData?.netProfit}
-            showManagerProfitsCard={canViewAll}
-            managerProfitsCardProps={{
-              orders: orders || [],
-              allUsers: allUsers || [],
-              calculateProfit: calculateProfit,
-              profits: profits || []
-            }}
-            showEmployeeReceivedCard={!canViewAll}
-            employeeReceivedCardProps={{
-              settlementInvoices: settlementInvoices || [],
-              allUsers: allUsers || []
-            }}
+            className="mb-6"
           />
         </div>
 
@@ -656,6 +665,15 @@ const ProfitsSummaryPage = () => {
             allUsers={allUsers}
           />
         </>
+      )}
+      
+      {/* نافذة الأرباح المستلمة للموظف */}
+      {!canViewAll && (
+        <EmployeeReceivedProfitsDialog
+          isOpen={dialogs.employeeReceived}
+          onClose={() => setDialogs(d => ({ ...d, employeeReceived: false }))}
+          allUsers={allUsers}
+        />
       )}
     </>
   );

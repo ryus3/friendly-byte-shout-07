@@ -11,10 +11,12 @@ import {
 } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote } from 'lucide-react';
+import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote, Eye } from 'lucide-react';
 import { format, parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Button } from '@/components/ui/button';
+import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
 
 /**
  * نافذة تفاصيل الأرباح المستلمة للموظف
@@ -28,6 +30,8 @@ const EmployeeReceivedProfitsDialog = ({
 }) => {
   const { user } = useAuth();
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
   
   // فلتر الفترة الزمنية - قائمة منسدلة مع حفظ الخيار
   const [periodFilter, setPeriodFilter] = useState(() => {
@@ -160,6 +164,12 @@ const EmployeeReceivedProfitsDialog = ({
         filteredInvoices.sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date))[0]?.settlement_date : null
     };
   }, [filteredInvoices]);
+
+  // معالج معاينة الفاتورة
+  const handleViewInvoice = (invoice) => {
+    setSelectedInvoice(invoice);
+    setShowInvoiceDialog(true);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -388,6 +398,17 @@ const EmployeeReceivedProfitsDialog = ({
                                 <span>{invoice.description}</span>
                               </div>
                             )}
+                            <div className="flex justify-center pt-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleViewInvoice(invoice)}
+                                className="text-xs gap-1"
+                              >
+                                <Eye className="w-3 h-3" />
+                                معاينة
+                              </Button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -396,29 +417,33 @@ const EmployeeReceivedProfitsDialog = ({
                       <div className="hidden md:block bg-white/10 rounded-2xl p-1 backdrop-blur-sm">
                         <div className="bg-slate-900/80 rounded-xl overflow-hidden">
                           {/* Header */}
-                          <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-4 md:px-8 py-4 md:py-6">
-                            <div className="grid grid-cols-5 gap-3 md:gap-6 text-center font-bold text-sm md:text-lg">
-                              <div className="text-blue-300 flex items-center justify-center gap-1 md:gap-2">
-                                <FileText className="w-3 h-3 md:w-4 md:h-4" />
-                                رقم الفاتورة
-                              </div>
-                              <div className="text-green-300 flex items-center justify-center gap-1 md:gap-2">
-                                <DollarSign className="w-3 h-3 md:w-4 md:h-4" />
-                                المبلغ
-                              </div>
-                              <div className="text-purple-300 flex items-center justify-center gap-1 md:gap-2">
-                                <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                                تاريخ الدفع
-                              </div>
-                              <div className="text-orange-300 flex items-center justify-center gap-1 md:gap-2">
-                                <User className="w-3 h-3 md:w-4 md:h-4" />
-                                دفع بواسطة
-                              </div>
-                              <div className="text-cyan-300 flex items-center justify-center gap-1 md:gap-2">
-                                الوصف
-                              </div>
-                            </div>
-                          </div>
+                           <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-4 md:px-8 py-4 md:py-6">
+                             <div className="grid grid-cols-6 gap-3 md:gap-6 text-center font-bold text-sm md:text-lg">
+                               <div className="text-blue-300 flex items-center justify-center gap-1 md:gap-2">
+                                 <FileText className="w-3 h-3 md:w-4 md:h-4" />
+                                 رقم الفاتورة
+                               </div>
+                               <div className="text-green-300 flex items-center justify-center gap-1 md:gap-2">
+                                 <DollarSign className="w-3 h-3 md:w-4 md:h-4" />
+                                 المبلغ
+                               </div>
+                               <div className="text-purple-300 flex items-center justify-center gap-1 md:gap-2">
+                                 <Calendar className="w-3 h-3 md:w-4 md:h-4" />
+                                 تاريخ الدفع
+                               </div>
+                               <div className="text-orange-300 flex items-center justify-center gap-1 md:gap-2">
+                                 <User className="w-3 h-3 md:w-4 md:h-4" />
+                                 دفع بواسطة
+                               </div>
+                               <div className="text-cyan-300 flex items-center justify-center gap-1 md:gap-2">
+                                 الوصف
+                               </div>
+                               <div className="text-white flex items-center justify-center gap-1 md:gap-2">
+                                 <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                                 الإجراءات
+                               </div>
+                             </div>
+                           </div>
                           
                           {/* الفواتير */}
                           <div className="divide-y divide-slate-700/50">
@@ -426,7 +451,7 @@ const EmployeeReceivedProfitsDialog = ({
                               .sort((a, b) => new Date(b.settlement_date) - new Date(a.settlement_date))
                               .map((invoice, index) => (
                               <div key={invoice.id} className="px-4 md:px-8 py-3 md:py-4 hover:bg-white/5 transition-all duration-200">
-                                <div className="grid grid-cols-5 gap-3 md:gap-6 text-center text-xs md:text-sm">
+                                <div className="grid grid-cols-6 gap-3 md:gap-6 text-center text-xs md:text-sm">
                                   <div className="text-blue-300 font-mono font-bold">
                                     {invoice.invoice_number}
                                   </div>
@@ -442,6 +467,16 @@ const EmployeeReceivedProfitsDialog = ({
                                   <div className="text-cyan-300 truncate" title={invoice.description}>
                                     {invoice.description || 'لا يوجد وصف'}
                                   </div>
+                                  <div className="flex items-center justify-center">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleViewInvoice(invoice)}
+                                      className="p-2"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </Button>
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -456,6 +491,16 @@ const EmployeeReceivedProfitsDialog = ({
           </div>
         </ScrollArea>
       </DialogContent>
+      
+      {/* نافذة معاينة الفاتورة */}
+      {selectedInvoice && (
+        <SettlementInvoiceDialog
+          invoice={selectedInvoice}
+          open={showInvoiceDialog}
+          onOpenChange={setShowInvoiceDialog}
+          allUsers={allUsers}
+        />
+      )}
     </Dialog>
   );
 };

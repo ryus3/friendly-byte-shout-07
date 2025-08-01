@@ -13,7 +13,8 @@ import {
   TrendingDown, 
   PackageCheck,
   Wallet,
-  TrendingUp
+  TrendingUp,
+  Archive
 } from 'lucide-react';
 
 /**
@@ -35,8 +36,12 @@ const UnifiedProfitDisplay = ({
   onExpensesClick = () => {},
   onSettledDuesClick = () => {},
   onManagerProfitsClick = () => {}, // إضافة handler لنافذة أرباح المدير
+  onEmployeeReceivedClick = () => {}, // إضافة handler للأرباح المستلمة للموظف
+  onPendingProfitsClick = () => {}, // إضافة handler للأرباح المعلقة
+  onArchiveClick = () => {}, // إضافة handler للأرشيف
   className = '',
-  datePeriod = 'month' // إضافة فترة التاريخ
+  datePeriod = 'month', // إضافة فترة التاريخ
+  dateRange = null // تمرير نطاق التاريخ مباشرة
 }) => {
   const { orders, accounting } = useInventory();
   const { user: currentUser } = useAuth();
@@ -70,8 +75,10 @@ const UnifiedProfitDisplay = ({
     fetchData();
   }, []);
 
-  // حساب النطاق الزمني بناءً على datePeriod
-  const dateRange = useMemo(() => {
+  // حساب النطاق الزمني بناءً على datePeriod أو استخدام النطاق الممرر مباشرة
+  const effectiveDateRange = useMemo(() => {
+    if (dateRange) return dateRange; // استخدام النطاق الممرر مباشرة
+    
     const now = new Date();
     let from, to;
     
@@ -98,7 +105,7 @@ const UnifiedProfitDisplay = ({
     }
     
     return { from, to };
-  }, [datePeriod]);
+  }, [datePeriod, dateRange]);
 
   // حساب البيانات المالية باستخدام نفس منطق AccountingPage
   const unifiedFinancialData = useMemo(() => {
@@ -114,10 +121,10 @@ const UnifiedProfitDisplay = ({
     const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
     
     const filterByDate = (itemDateStr) => {
-      if (!dateRange.from || !dateRange.to || !itemDateStr) return true;
+      if (!effectiveDateRange.from || !effectiveDateRange.to || !itemDateStr) return true;
       try {
         const itemDate = parseISO(itemDateStr);
-        return isValid(itemDate) && itemDate >= dateRange.from && itemDate <= dateRange.to;
+        return isValid(itemDate) && itemDate >= effectiveDateRange.from && itemDate <= effectiveDateRange.to;
       } catch (e) {
         return false;
       }
@@ -223,7 +230,7 @@ const UnifiedProfitDisplay = ({
       totalEmployeeProfits,
       totalSettledDues
     };
-  }, [orders, accounting, allProfits, dateRange, currentUser, settlementInvoices]);
+  }, [orders, accounting, allProfits, effectiveDateRange, currentUser, settlementInvoices]);
 
   // تحديد التصميم بناءً على المكان
   const getLayoutClasses = () => {
@@ -306,7 +313,7 @@ const UnifiedProfitDisplay = ({
           );
       }
     } else {
-      // للموظف: البيانات الشخصية فقط مع فلتر ثلاث نقاط
+      // للموظف: البيانات الشخصية فقط
       cards.push(
         {
           key: 'my-total-profit',
@@ -314,22 +321,26 @@ const UnifiedProfitDisplay = ({
           value: profitData.totalPersonalProfit || 0,
           icon: User,
           colors: ['green-500', 'emerald-500'],
+          format: 'currency'
+        },
+        {
+          key: 'my-received-profits',
+          title: 'أرباحي المستلمة',
+          value: profitData.personalSettledProfit || 0,
+          icon: CheckCircle,
+          colors: ['blue-500', 'indigo-500'],
           format: 'currency',
-          onPeriodChange: (period) => {
-            console.log('تغيير فترة كارت إجمالي أرباحي:', period);
-            // هنا يمكن إضافة منطق تحديث البيانات حسب الفترة المختارة
-            if (onFilterChange) {
-              onFilterChange('period', period);
-            }
-          },
-          currentPeriod: 'year', // افتراضي سنة
-          periods: {
-            day: 'اليوم',
-            week: 'أسبوع', 
-            month: 'شهر',
-            year: 'سنة',
-            all: 'كل الوقت'
-          }
+          onClick: onEmployeeReceivedClick
+        },
+        {
+          key: 'archived-profits',
+          title: 'الأرشيف',
+          value: 0, // سيتم حسابها لاحقاً
+          icon: Archive,
+          colors: ['gray-500', 'slate-500'],
+          format: 'number',
+          onClick: onArchiveClick,
+          description: 'الطلبات المدفوعة'
         }
       );
     }
@@ -354,7 +365,8 @@ const UnifiedProfitDisplay = ({
         value: profitData.personalPendingProfit || 0,
         icon: Hourglass,
         colors: ['yellow-500', 'amber-500'],
-        format: 'currency'
+        format: 'currency',
+        onClick: onPendingProfitsClick // إضافة إمكانية النقر للفلترة
       });
     }
 
