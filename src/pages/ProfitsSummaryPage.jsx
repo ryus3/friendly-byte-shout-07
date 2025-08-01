@@ -348,13 +348,9 @@ const ProfitsSummaryPage = () => {
         const totalPersonalProfit = personalProfitsData.total;
       
         // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)
-        const personalPendingProfit = personalProfits
-            .filter(p => (p.profitStatus || 'pending') === 'pending')
-            .reduce((sum, p) => sum + p.profit, 0);
+        const personalPendingProfit = personalProfitsData.pending;
 
-        const personalSettledProfit = personalProfits
-            .filter(p => p.profitStatus === 'settled')
-            .reduce((sum, p) => sum + p.profit, 0);
+        const personalSettledProfit = personalProfitsData.settled;
 
         const totalSettledDues = settlementInvoices?.filter(inv => {
             const invDate = parseISO(inv.settlement_date);
