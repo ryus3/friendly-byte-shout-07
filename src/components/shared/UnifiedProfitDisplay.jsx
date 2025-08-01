@@ -186,6 +186,9 @@ const UnifiedProfitDisplay = ({
         // الطلبات الراجعة للمخزن
         const isReturnedToStock = o.status === 'returned_in_stock';
         
+        // التحقق من تاريخ النطاق المحدد
+        const isInDateRange = filterByDate(o.updated_at || o.created_at);
+        
         console.log(`🔍 فحص طلب ${o.order_number}:`, {
           orderId: o.id,
           status: o.status,
@@ -195,10 +198,11 @@ const UnifiedProfitDisplay = ({
           hasSettledProfit,
           profitStatus: profitRecord?.status,
           isReturnedToStock,
-          shouldBeArchived: isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock
+          isInDateRange,
+          shouldBeArchived: (isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock) && isInDateRange
         });
         
-        return (isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock);
+        return (isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock) && isInDateRange;
       }).length;
       
       personalData.archivedOrdersCount = userArchivedCount;
