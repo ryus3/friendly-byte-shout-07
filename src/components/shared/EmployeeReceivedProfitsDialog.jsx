@@ -34,69 +34,56 @@ const EmployeeReceivedProfitsDialog = ({
     to: endOfMonth(new Date())
   });
 
-  // جلب فواتير التسوية مباشرة من قاعدة البيانات
+  // جلب فواتير التسوية باستخدام المعرف الصغير employee_code بدلاً من UUID - نفس منطق الكارت الخارجي
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
-      if (!user || !isOpen) return;
+      if (!user?.employee_code) {
+        console.log('🔍 EmployeeReceivedProfitsDialog: لا يوجد معرف موظف صغير');
+        return;
+      }
 
       try {
-        console.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير للمستخدم:', {
-          userId: user.id,
+        console.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير بالمعرف الصغير:', {
           employeeCode: user.employee_code,
-          fullName: user.full_name
+          userName: user.full_name
         });
-
-        // البحث أولاً بـ employee_code، ثم بـ user_id (الجلسة الحالية)
-        let invoices = [];
         
-        // البحث الأول: بـ employee_code
-        if (user.employee_code) {
-          const { data: invoicesByCode, error: codeError } = await supabase
-            .from('settlement_invoices')
-            .select('*')
-            .eq('employee_code', user.employee_code)
-            .eq('status', 'completed')
-            .order('settlement_date', { ascending: false });
+        // البحث بالمعرف الصغير employee_code بدلاً من UUID - نفس منطق الكارت الخارجي
+        const { data: invoices, error } = await supabase
+          .from('settlement_invoices')
+          .select('*')
+          .eq('employee_code', user.employee_code)  // استخدام المعرف الصغير EMP002
+          .eq('status', 'completed')
+          .order('settlement_date', { ascending: false });
 
-          if (codeError) {
-            console.error('❌ خطأ في البحث بـ employee_code:', codeError);
-          } else {
-            invoices = invoicesByCode || [];
-            console.log('✅ فواتير بـ employee_code:', invoices.length);
-          }
+        if (error) {
+          console.error('❌ خطأ في جلب فواتير التسوية:', error);
+          return;
         }
 
-        // البحث الثاني: بـ user_id إذا لم نجد نتائج
-        if (invoices.length === 0) {
-          const { data: invoicesById, error: idError } = await supabase
-            .from('settlement_invoices')
-            .select('*')
-            .eq('employee_id', user.id)
-            .eq('status', 'completed')
-            .order('settlement_date', { ascending: false });
-
-          if (idError) {
-            console.error('❌ خطأ في البحث بـ employee_id:', idError);
-          } else {
-            invoices = invoicesById || [];
-            console.log('✅ فواتير بـ employee_id:', invoices.length);
-          }
-        }
-
-        console.log('✅ EmployeeReceivedProfitsDialog: إجمالي الفواتير:', {
-          invoicesCount: invoices.length,
-          invoices: invoices,
-          searchMethods: ['employee_code', 'employee_id']
+        console.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة بنجاح بالمعرف الصغير:', {
+          employeeCode: user.employee_code,
+          invoicesCount: invoices?.length || 0,
+          invoices: invoices || [],
+          invoiceDetails: invoices?.map(inv => ({
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            total_amount: inv.total_amount,
+            settlement_date: inv.settlement_date,
+            employee_name: inv.employee_name,
+            employee_code: inv.employee_code,
+            status: inv.status
+          })) || []
         });
 
-        setRealTimeInvoices(invoices);
+        setRealTimeInvoices(invoices || []);
       } catch (error) {
         console.error('❌ خطأ في جلب فواتير التسوية:', error);
       }
     };
 
     fetchEmployeeInvoices();
-  }, [user?.id, user?.employee_code, isOpen]);
+  }, [user?.employee_code, user?.full_name]);
 
   const getPayerName = (createdBy) => {
     const payer = allUsers.find(u => u.id === createdBy);
