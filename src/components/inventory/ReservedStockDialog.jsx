@@ -29,6 +29,9 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     const fetchData = async () => {
       if (!open) return;
       
+      console.log('🔍 DEBUG: User ID:', user?.id);
+      console.log('🔍 DEBUG: Is Admin:', isAdmin);
+      
       setLoading(true);
       try {
         const { supabase } = await import('@/lib/customSupabaseClient');
@@ -93,6 +96,9 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
           }))
         }));
 
+        console.log('🔍 DEBUG: Processed Orders:', processedOrders);
+        console.log('🔍 DEBUG: Employees Data:', employeesData);
+        
         setReservedOrders(processedOrders);
         setEmployees(employeesData || []);
 
@@ -116,18 +122,37 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
   // فلترة الطلبات
   const filteredOrders = useMemo(() => {
-    if (!reservedOrders.length) return [];
+    console.log('🔍 DEBUG: Filtering Orders...');
+    console.log('🔍 DEBUG: Reserved Orders Count:', reservedOrders.length);
+    console.log('🔍 DEBUG: User ID for filtering:', user?.id);
+    console.log('🔍 DEBUG: Is Admin:', isAdmin);
+    
+    if (!reservedOrders.length) {
+      console.log('🔍 DEBUG: No reserved orders found');
+      return [];
+    }
     
     if (isAdmin) {
       // المدير يرى كل الطلبات أو طلبات موظف محدد
       if (selectedEmployee === 'all') {
+        console.log('🔍 DEBUG: Admin viewing all orders');
         return reservedOrders;
       } else {
-        return reservedOrders.filter(order => order.created_by === selectedEmployee);
+        console.log('🔍 DEBUG: Admin filtering for employee:', selectedEmployee);
+        const filtered = reservedOrders.filter(order => order.created_by === selectedEmployee);
+        console.log('🔍 DEBUG: Filtered results:', filtered.length);
+        return filtered;
       }
     } else {
       // الموظف يرى طلباته فقط
-      return reservedOrders.filter(order => order.created_by === user?.id);
+      console.log('🔍 DEBUG: Employee filtering for their orders');
+      console.log('🔍 DEBUG: Checking each order:');
+      reservedOrders.forEach(order => {
+        console.log(`  Order ${order.order_number}: created_by=${order.created_by}, matches=${order.created_by === user?.id}`);
+      });
+      const filtered = reservedOrders.filter(order => order.created_by === user?.id);
+      console.log('🔍 DEBUG: Employee filtered results:', filtered.length);
+      return filtered;
     }
   }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
 
