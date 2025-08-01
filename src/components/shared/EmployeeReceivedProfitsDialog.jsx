@@ -78,6 +78,8 @@ const EmployeeReceivedProfitsDialog = ({
                   <p className="text-lg text-slate-600 dark:text-slate-400">تفاصيل الأرباح المدفوعة</p>
                 </div>
               </div>
+            </div>
+
             {/* فلتر الفترة الزمنية */}
             <div className="mb-6">
               <Card className="border-border bg-background/50 backdrop-blur-sm">
@@ -95,6 +97,18 @@ const EmployeeReceivedProfitsDialog = ({
                 </CardContent>
               </Card>
             </div>
+
+            {/* معلومات الموظف والمبلغ الإجمالي - نفس تصميم المدير */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+              {/* معلومات الموظف */}
+              <Card className="lg:col-span-2 relative overflow-hidden group cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl bg-background border-border">
+                <CardContent className="relative p-5">
+                  <div className="flex items-center gap-3 mb-5">
+                    <div className="p-2.5 bg-primary/10 rounded-xl border border-primary/20 group-hover:scale-110 transition-all duration-300">
+                      <User className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="font-bold text-lg text-foreground">معلومات الموظف</h3>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-2 md:p-3 backdrop-blur-sm hover:from-blue-600 hover:to-blue-700 transition-all duration-300 relative overflow-hidden">

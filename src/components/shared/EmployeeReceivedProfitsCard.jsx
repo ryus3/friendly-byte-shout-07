@@ -18,64 +18,25 @@ const EmployeeReceivedProfitsCard = ({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [realTimeInvoices, setRealTimeInvoices] = useState([]);
 
-  // جلب فواتير التسوية مباشرة من قاعدة البيانات مع فحص كلا المعرفين
+  // جلب فواتير التسوية باستخدام المعرف الصغير employee_code بدلاً من UUID
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
-      if (!user?.id) {
-        console.log('🔍 EmployeeReceivedProfitsCard: لا يوجد معرف مستخدم');
+      if (!user?.employee_code) {
+        console.log('🔍 EmployeeReceivedProfitsCard: لا يوجد معرف موظف صغير');
         return;
       }
 
       try {
-        console.log('🔍 EmployeeReceivedProfitsCard: جلب فواتير للموظف:', {
-          currentUserId: user.id,
-          userName: user.full_name,
-          employeeCode: user.employee_code
+        console.log('🔍 EmployeeReceivedProfitsCard: جلب فواتير بالمعرف الصغير:', {
+          employeeCode: user.employee_code,
+          userName: user.full_name
         });
         
-        // فحص إذا كان هذا المستخدم أحمد باستخدام الاسم بدلاً من المعرف
-        let targetUserId = user.id;
-        
-        if (user.full_name?.includes('أحمد') || user.full_name?.includes('احمد')) {
-          console.log('🎯 المستخدم الحالي هو أحمد، سأبحث عن الفواتير باستخدام المعرف القديم أيضاً');
-          
-          // جلب الفواتير للمستخدم الحالي + المعرف القديم لأحمد
-          const { data: invoices, error } = await supabase
-            .from('settlement_invoices')
-            .select('*')
-            .or(`employee_id.eq.${user.id},employee_id.eq.fba59dfc-451c-4906-8882-ae4601ff34d4`)
-            .eq('status', 'completed')
-            .order('settlement_date', { ascending: false });
-
-          if (error) {
-            console.error('❌ خطأ في جلب فواتير التسوية:', error);
-            return;
-          }
-
-          console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة بنجاح لأحمد:', {
-            invoicesCount: invoices?.length || 0,
-            invoices: invoices || [],
-            invoiceDetails: invoices?.map(inv => ({
-              id: inv.id,
-              invoice_number: inv.invoice_number,
-              total_amount: inv.total_amount,
-              settlement_date: inv.settlement_date,
-              employee_name: inv.employee_name,
-              employee_code: inv.employee_code,
-              employee_id: inv.employee_id,
-              status: inv.status
-            })) || []
-          });
-
-          setRealTimeInvoices(invoices || []);
-          return;
-        }
-        
-        // للمستخدمين الآخرين، استخدم المعرف العادي
+        // البحث بالمعرف الصغير employee_code بدلاً من UUID
         const { data: invoices, error } = await supabase
           .from('settlement_invoices')
           .select('*')
-          .eq('employee_id', user.id)
+          .eq('employee_code', user.employee_code)  // استخدام المعرف الصغير EMP002
           .eq('status', 'completed')
           .order('settlement_date', { ascending: false });
 
@@ -84,9 +45,19 @@ const EmployeeReceivedProfitsCard = ({
           return;
         }
 
-        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة للمستخدم العادي:', {
+        console.log('✅ EmployeeReceivedProfitsCard: فواتير محملة بنجاح بالمعرف الصغير:', {
+          employeeCode: user.employee_code,
           invoicesCount: invoices?.length || 0,
-          invoices: invoices || []
+          invoices: invoices || [],
+          invoiceDetails: invoices?.map(inv => ({
+            id: inv.id,
+            invoice_number: inv.invoice_number,
+            total_amount: inv.total_amount,
+            settlement_date: inv.settlement_date,
+            employee_name: inv.employee_name,
+            employee_code: inv.employee_code,
+            status: inv.status
+          })) || []
         });
 
         setRealTimeInvoices(invoices || []);
@@ -96,25 +67,25 @@ const EmployeeReceivedProfitsCard = ({
     };
 
     fetchEmployeeInvoices();
-  }, [user?.id, user?.full_name, user?.employee_code]);
+  }, [user?.employee_code, user?.full_name]);
 
   // حساب إجمالي الأرباح المستلمة للموظف الحالي
   const employeeReceivedProfits = useMemo(() => {
     // استخدام البيانات المجلبة مباشرة من قاعدة البيانات أولاً، وإلا البيانات المُمررة
     const invoicesSource = realTimeInvoices.length > 0 ? realTimeInvoices : settlementInvoices;
     
-    if (!user?.id) {
+    if (!user?.employee_code) {
       console.log('🔍 EmployeeReceivedProfitsCard: بيانات مفقودة:', {
-        userId: user?.id || 'مفقود',
+        employeeCode: user?.employee_code || 'مفقود',
         realTimeInvoices: realTimeInvoices.length,
         propsInvoices: settlementInvoices?.length || 0
       });
       return { total: 0, invoices: [] };
     }
 
-    // فلترة الفواتير الخاصة بالموظف الحالي
+    // فلترة الفواتير الخاصة بالموظف الحالي باستخدام employee_code
     const employeeInvoices = invoicesSource.filter(invoice => 
-      invoice.employee_id === user.id && invoice.status === 'completed'
+      invoice.employee_code === user.employee_code && invoice.status === 'completed'
     );
 
     // حساب إجمالي المبلغ المستلم
@@ -122,24 +93,15 @@ const EmployeeReceivedProfitsCard = ({
       sum + (invoice.total_amount || 0), 0
     );
 
-    console.log('💰 EmployeeReceivedProfitsCard: النتيجة النهائية:', {
-      employeeId: user.id,
-      employeeName: user.full_name,
+    console.log('💰 EmployeeReceivedProfitsCard: النتيجة النهائية بالمعرف الصغير:', {
       employeeCode: user.employee_code,
+      employeeName: user.full_name,
       realTimeInvoicesCount: realTimeInvoices.length,
       propsInvoicesCount: settlementInvoices?.length || 0,
       finalInvoicesSourceCount: invoicesSource.length,
       employeeInvoicesCount: employeeInvoices.length,
       totalReceived,
       invoicesSample: employeeInvoices.slice(0, 2),
-      allInvoicesDetailed: invoicesSource.map(inv => ({
-        id: inv.id,
-        employee_id: inv.employee_id,
-        employee_name: inv.employee_name,
-        status: inv.status,
-        total_amount: inv.total_amount,
-        invoice_number: inv.invoice_number
-      })),
       finalStatus: employeeInvoices.length > 0 ? 'توجد فواتير' : 'لا توجد فواتير'
     });
 
@@ -147,7 +109,7 @@ const EmployeeReceivedProfitsCard = ({
       total: totalReceived,
       invoices: employeeInvoices
     };
-  }, [realTimeInvoices, settlementInvoices, user?.id, user?.full_name, user?.employee_code]);
+  }, [realTimeInvoices, settlementInvoices, user?.employee_code, user?.full_name]);
 
   return (
     <>
