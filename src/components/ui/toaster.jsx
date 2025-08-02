@@ -81,18 +81,18 @@ export function Toaster() {
 			{toasts.map(({ id, title, description, action, variant, ...props }) => {
 				const Icon = iconMap[variant] || iconMap.default;
 				return (
-					<Toast key={id} variant={variant} {...props}>
-						<div className="flex items-start gap-3">
-              <div className="mt-0.5">{Icon}</div>
-  						<div className="grid gap-1">
-  							{title && <ToastTitle>{title}</ToastTitle>}
+					<Toast key={id} variant={variant} {...props} className="pl-4 pr-12 py-4">
+						<div className="flex items-start gap-3 w-full">
+              <div className="mt-0.5 flex-shrink-0">{Icon}</div>
+  						<div className="grid gap-1 flex-1 min-w-0">
+  							{title && <ToastTitle className="text-sm font-semibold text-foreground">{title}</ToastTitle>}
   							{description && (
-  								<ToastDescription>{description}</ToastDescription>
+  								<ToastDescription className="text-sm text-muted-foreground leading-snug">{description}</ToastDescription>
   							)}
   						</div>
             </div>
 						{action}
-						<ToastClose />
+						<ToastClose className="absolute left-2 top-2" />
 					</Toast>
 				);
 			})}
