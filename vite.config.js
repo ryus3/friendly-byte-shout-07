@@ -75,7 +75,7 @@ console.error = function(...args) {
 const configWindowFetchMonkeyPatch = `
 const originalFetch = window.fetch;
 window.fetch = function(...args) {
-    const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
+    const url = args[0] instanceof Request ? args[0].url : args[0];
     if (url.startsWith('ws:') || url.startsWith('wss:')) return originalFetch.apply(this, args);
 
     return originalFetch.apply(this, args)
@@ -160,10 +160,7 @@ export default defineConfig(async ({ mode }) => {
         },
         resolve: {
             extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
-            alias: { 
-                '@': path.resolve(__dirname, './src'),
-                'node:path': 'path'
-            },
+            alias: { '@': path.resolve(__dirname, './src') },
         },
         build: {
             target: 'es2015',
@@ -185,19 +182,9 @@ export default defineConfig(async ({ mode }) => {
                 }
             },
         },
-        define: {
-          global: 'globalThis',
-          'process.env': 'import.meta.env',
-          __dirname: JSON.stringify(process.cwd())
-        },
         optimizeDeps: {
-          include: ['react', 'react-dom', 'react/jsx-runtime'],
-          exclude: ['@supabase/supabase-js'],
-          esbuildOptions: {
-            define: {
-              global: 'globalThis'
-            }
-          }
+            include: ['react', 'react-dom', 'react/jsx-runtime'],
+            exclude: ['@supabase/supabase-js']
         },
     };
 });

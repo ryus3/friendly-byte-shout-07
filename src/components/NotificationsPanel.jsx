@@ -112,161 +112,105 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // إشعارات المخزون - ألوان برتقالية وحمراء واضحة
+  // استخدام نظام الألوان من index.css مع تحسينات للتناسق
   low_stock: { 
-    bg: 'bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40', 
-    border: 'border-l-4 border-orange-500 shadow-md shadow-orange-200 dark:shadow-orange-900/30',
-    text: 'text-orange-900 dark:text-orange-100 font-medium', 
-    icon: 'text-orange-600 dark:text-orange-400',
-    dot: 'bg-orange-500 shadow-lg shadow-orange-300 dark:shadow-orange-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-orange-200 to-amber-200 dark:from-orange-800/60 dark:to-amber-800/60'
+    bg: 'bg-amber-50/80 dark:bg-amber-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-amber-500 dark:border-amber-400',
+    text: 'text-foreground', 
+    icon: 'text-amber-600 dark:text-amber-400',
+    dot: 'bg-amber-500'
   },
   stock_warning: { 
-    bg: 'bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/40 dark:to-orange-900/40', 
-    border: 'border-l-4 border-red-500 shadow-md shadow-red-200 dark:shadow-red-900/30',
-    text: 'text-red-900 dark:text-red-100 font-medium', 
-    icon: 'text-red-600 dark:text-red-400',
-    dot: 'bg-red-500 shadow-lg shadow-red-300 dark:shadow-red-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-red-200 to-orange-200 dark:from-red-800/60 dark:to-orange-800/60'
+    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-orange-500 dark:border-orange-400',
+    text: 'text-foreground', 
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500'
   },
-  
-  // إشعارات الطلبات - ألوان زرقاء وخضراء واضحة
+  out_of_stock: { 
+    bg: 'bg-red-50/80 dark:bg-red-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-red-500 dark:border-red-400',
+    text: 'text-foreground', 
+    icon: 'text-red-600 dark:text-red-400',
+    dot: 'bg-red-500'
+  },
   order_completed: { 
-    bg: 'bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40', 
-    border: 'border-l-4 border-green-500 shadow-md shadow-green-200 dark:shadow-green-900/30',
-    text: 'text-green-900 dark:text-green-100 font-medium', 
+    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-green-500 dark:border-green-400',
+    text: 'text-foreground', 
     icon: 'text-green-600 dark:text-green-400',
-    dot: 'bg-green-500 shadow-lg shadow-green-300 dark:shadow-green-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 dark:from-green-800/60 dark:to-emerald-800/60'
+    dot: 'bg-green-500'
   },
   order_shipped: { 
-    bg: 'bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40', 
-    border: 'border-l-4 border-blue-500 shadow-md shadow-blue-200 dark:shadow-blue-900/30',
-    text: 'text-blue-900 dark:text-blue-100 font-medium', 
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-blue-500 dark:border-blue-400',
+    text: 'text-foreground', 
     icon: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500 shadow-lg shadow-blue-300 dark:shadow-blue-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-blue-200 to-indigo-200 dark:from-blue-800/60 dark:to-indigo-800/60'
-  },
-  order_status_update: { 
-    bg: 'bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40', 
-    border: 'border-l-4 border-indigo-500 shadow-md shadow-indigo-200 dark:shadow-indigo-900/30',
-    text: 'text-indigo-900 dark:text-indigo-100 font-medium', 
-    icon: 'text-indigo-600 dark:text-indigo-400',
-    dot: 'bg-indigo-500 shadow-lg shadow-indigo-300 dark:shadow-indigo-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-indigo-200 to-purple-200 dark:from-indigo-800/60 dark:to-purple-800/60'
+    dot: 'bg-blue-500'
   },
   new_order: { 
-    bg: 'bg-gradient-to-r from-cyan-100 to-blue-100 dark:from-cyan-900/40 dark:to-blue-900/40', 
-    border: 'border-l-4 border-cyan-500 shadow-md shadow-cyan-200 dark:shadow-cyan-900/30',
-    text: 'text-cyan-900 dark:text-cyan-100 font-medium', 
-    icon: 'text-cyan-600 dark:text-cyan-400',
-    dot: 'bg-cyan-500 shadow-lg shadow-cyan-300 dark:shadow-cyan-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-cyan-200 to-blue-200 dark:from-cyan-800/60 dark:to-blue-800/60'
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-primary dark:border-primary',
+    text: 'text-foreground', 
+    icon: 'text-primary',
+    dot: 'bg-primary'
   },
   new_order_employee: { 
-    bg: 'bg-gradient-to-r from-teal-100 to-cyan-100 dark:from-teal-900/40 dark:to-cyan-900/40', 
-    border: 'border-l-4 border-teal-500 shadow-md shadow-teal-200 dark:shadow-teal-900/30',
-    text: 'text-teal-900 dark:text-teal-100 font-medium', 
-    icon: 'text-teal-600 dark:text-teal-400',
-    dot: 'bg-teal-500 shadow-lg shadow-teal-300 dark:shadow-teal-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-teal-200 to-cyan-200 dark:from-teal-800/60 dark:to-cyan-800/60'
-  },
-  
-  // إشعارات المستخدمين والتسجيل - ألوان بنفسجية
-  new_registration: { 
-    bg: 'bg-gradient-to-r from-purple-100 to-violet-100 dark:from-purple-900/40 dark:to-violet-900/40', 
-    border: 'border-l-4 border-purple-500 shadow-md shadow-purple-200 dark:shadow-purple-900/30',
-    text: 'text-purple-900 dark:text-purple-100 font-medium', 
+    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-purple-500 dark:border-purple-400',
+    text: 'text-foreground', 
     icon: 'text-purple-600 dark:text-purple-400',
-    dot: 'bg-purple-500 shadow-lg shadow-purple-300 dark:shadow-purple-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-purple-200 to-violet-200 dark:from-purple-800/60 dark:to-violet-800/60'
+    dot: 'bg-purple-500'
   },
-  
-  // إشعارات الأرباح والتحاسب - ألوان ذهبية وخضراء
+  ai_order: { 
+    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-primary dark:border-primary',
+    text: 'text-foreground', 
+    icon: 'text-primary',
+    dot: 'bg-primary'
+  },
+  new_registration: { 
+    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-purple-500 dark:border-purple-400',
+    text: 'text-foreground', 
+    icon: 'text-purple-600 dark:text-purple-400',
+    dot: 'bg-purple-500'
+  },
   profit_settlement: { 
-    bg: 'bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/40', 
-    border: 'border-l-4 border-yellow-500 shadow-md shadow-yellow-200 dark:shadow-yellow-900/30',
-    text: 'text-yellow-900 dark:text-yellow-100 font-medium', 
+    bg: 'bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
+    text: 'text-foreground', 
     icon: 'text-yellow-600 dark:text-yellow-400',
-    dot: 'bg-yellow-500 shadow-lg shadow-yellow-300 dark:shadow-yellow-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-yellow-200 to-amber-200 dark:from-yellow-800/60 dark:to-amber-800/60'
+    dot: 'bg-yellow-500'
   },
   profit_settlement_request: { 
-    bg: 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40', 
-    border: 'border-l-4 border-emerald-500 shadow-md shadow-emerald-200 dark:shadow-emerald-900/30',
-    text: 'text-emerald-900 dark:text-emerald-100 font-medium', 
+    bg: 'bg-emerald-50/80 dark:bg-emerald-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
+    text: 'text-foreground', 
     icon: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-500 shadow-lg shadow-emerald-300 dark:shadow-emerald-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-emerald-200 to-green-200 dark:from-emerald-800/60 dark:to-green-800/60'
+    dot: 'bg-emerald-500'
   },
   employee_settlement_completed: { 
-    bg: 'bg-gradient-to-r from-lime-100 to-green-100 dark:from-lime-900/40 dark:to-green-900/40', 
-    border: 'border-l-4 border-lime-500 shadow-md shadow-lime-200 dark:shadow-lime-900/30',
-    text: 'text-lime-900 dark:text-lime-100 font-medium', 
-    icon: 'text-lime-600 dark:text-lime-400',
-    dot: 'bg-lime-500 shadow-lg shadow-lime-300 dark:shadow-lime-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-lime-200 to-green-200 dark:from-lime-800/60 dark:to-green-800/60'
+    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-green-500 dark:border-green-400',
+    text: 'text-foreground', 
+    icon: 'text-green-600 dark:text-green-400',
+    dot: 'bg-green-500'
   },
-  settlement_request: { 
-    bg: 'bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/40', 
-    border: 'border-l-4 border-emerald-500 shadow-md shadow-emerald-200 dark:shadow-emerald-900/30',
-    text: 'text-emerald-900 dark:text-emerald-100 font-medium', 
-    icon: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-500 shadow-lg shadow-emerald-300 dark:shadow-emerald-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-emerald-200 to-teal-200 dark:from-emerald-800/60 dark:to-teal-800/60'
-  },
-  
-  // إشعارات الذكاء الاصطناعي - ألوان زرقاء متدرجة
-  ai_order: { 
-    bg: 'bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-900/40 dark:to-blue-900/40', 
-    border: 'border-l-4 border-sky-500 shadow-md shadow-sky-200 dark:shadow-sky-900/30',
-    text: 'text-sky-900 dark:text-sky-100 font-medium', 
-    icon: 'text-sky-600 dark:text-sky-400',
-    dot: 'bg-sky-500 shadow-lg shadow-sky-300 dark:shadow-sky-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-sky-200 to-blue-200 dark:from-sky-800/60 dark:to-blue-800/60'
-  },
-  
-  // إشعارات النظام العامة - ألوان رمادية أنيقة
   system: { 
-    bg: 'bg-gradient-to-r from-slate-100 to-gray-100 dark:from-slate-900/40 dark:to-gray-900/40', 
-    border: 'border-l-4 border-slate-500 shadow-md shadow-slate-200 dark:shadow-slate-900/30',
-    text: 'text-slate-900 dark:text-slate-100 font-medium', 
+    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-slate-500 dark:border-slate-400',
+    text: 'text-foreground', 
     icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500 shadow-lg shadow-slate-300 dark:shadow-slate-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-slate-200 to-gray-200 dark:from-slate-800/60 dark:to-gray-800/60'
-  },
-  inventory_update: { 
-    bg: 'bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40', 
-    border: 'border-l-4 border-violet-500 shadow-md shadow-violet-200 dark:shadow-violet-900/30',
-    text: 'text-violet-900 dark:text-violet-100 font-medium', 
-    icon: 'text-violet-600 dark:text-violet-400',
-    dot: 'bg-violet-500 shadow-lg shadow-violet-300 dark:shadow-violet-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-violet-200 to-purple-200 dark:from-violet-800/60 dark:to-purple-800/60'
-  },
-  inventory_cleanup: { 
-    bg: 'bg-gradient-to-r from-indigo-100 to-blue-100 dark:from-indigo-900/40 dark:to-blue-900/40', 
-    border: 'border-l-4 border-indigo-500 shadow-md shadow-indigo-200 dark:shadow-indigo-900/30',
-    text: 'text-indigo-900 dark:text-indigo-100 font-medium', 
-    icon: 'text-indigo-600 dark:text-indigo-400',
-    dot: 'bg-indigo-500 shadow-lg shadow-indigo-300 dark:shadow-indigo-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-indigo-200 to-blue-200 dark:from-indigo-800/60 dark:to-blue-800/60'
-  },
-  order_deleted: { 
-    bg: 'bg-gradient-to-r from-rose-100 to-red-100 dark:from-rose-900/40 dark:to-red-900/40', 
-    border: 'border-l-4 border-rose-500 shadow-md shadow-rose-200 dark:shadow-rose-900/30',
-    text: 'text-rose-900 dark:text-rose-100 font-medium', 
-    icon: 'text-rose-600 dark:text-rose-400',
-    dot: 'bg-rose-500 shadow-lg shadow-rose-300 dark:shadow-rose-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-rose-200 to-red-200 dark:from-rose-800/60 dark:to-red-800/60'
+    dot: 'bg-slate-500'
   },
   default: { 
-    bg: 'bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-900/40 dark:to-slate-900/40', 
-    border: 'border-l-4 border-gray-500 shadow-md shadow-gray-200 dark:shadow-gray-900/30',
-    text: 'text-gray-900 dark:text-gray-100 font-medium', 
-    icon: 'text-gray-600 dark:text-gray-400',
-    dot: 'bg-gray-500 shadow-lg shadow-gray-300 dark:shadow-gray-700',
-    pulse: 'animate-pulse bg-gradient-to-r from-gray-200 to-slate-200 dark:from-gray-800/60 dark:to-slate-800/60'
-  }
+    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
+    border: 'border-r-4 border-slate-500 dark:border-slate-400',
+    text: 'text-foreground', 
+    icon: 'text-slate-600 dark:text-slate-400',
+    dot: 'bg-slate-500'
+  },
 };
 
 const NotificationsPanel = () => {
@@ -306,36 +250,24 @@ const NotificationsPanel = () => {
         navigate('/inventory?filter=low_stock');
       }
     } else if (notification.type === 'order_status_update' || notification.type === 'new_order' || notification.type === 'new_order_employee') {
-      // استخراج معرف الطلب من البيانات أو الرسالة للتنقل المباشر
-      const data = notification.data || {};
-      const orderId = data.order_id;
-      const orderNumber = data.order_number;
-      
-      // إشعارات تحديث الحالة تذهب لمتابعة الطلبات
-      if (notification.type === 'order_status_update') {
-        if (orderId) {
-          navigate(`/employee-follow-up?highlight=${orderId}`);
-        } else if (orderNumber) {
-          navigate(`/employee-follow-up?search=${encodeURIComponent(orderNumber)}`);
-        } else {
-          navigate('/employee-follow-up');
-        }
+      // لطلبات الموظفين - توجيه لصفحة متابعة الموظفين
+      if (notification.type === 'new_order_employee') {
+        const data = notification.data || {};
+        const orderId = data.order_id;
+        const employeeName = data.employee_name;
+        
+        console.log('🔔 إشعار طلب موظف:', { orderId, employeeName, data });
+        navigate(`/employee-follow-up?highlight=${orderId}`);
       } else {
-        // الطلبات الجديدة تذهب لصفحة الطلبات
-        if (orderId) {
-          navigate(`/orders?highlight=${orderId}`);
-        } else if (orderNumber) {
+        // استخراج رقم الطلب من الرسالة
+        const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+        const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+        
+        if (orderNumber) {
+          // التنقل للطلبات مع البحث عن الطلب المحدد
           navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
         } else {
-          // استخراج رقم الطلب من الرسالة كبديل
-          const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
-          const extractedOrderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
-          
-          if (extractedOrderNumber) {
-            navigate(`/orders?search=${encodeURIComponent(extractedOrderNumber)}`);
-          } else {
-            navigate('/orders?status=pending');
-          }
+          navigate('/orders?status=pending');
         }
       }
     } else if (notification.type === 'order_completed') {
@@ -434,28 +366,6 @@ const NotificationsPanel = () => {
     }
   };
 
-  const getNotificationTypeLabel = (type) => {
-    const typeLabels = {
-      low_stock: 'مخزون منخفض',
-      stock_warning: 'تحذير مخزون',
-      order_completed: 'طلب مكتمل',
-      order_shipped: 'طلب مشحون',
-      new_order: 'طلب جديد',
-      new_order_employee: 'طلب موظف',
-      new_registration: 'تسجيل جديد',
-      profit_settlement: 'تسوية أرباح',
-      profit_settlement_request: 'طلب تسوية',
-      employee_settlement_completed: 'تسوية مكتملة',
-      ai_order: 'طلب ذكي',
-      system: 'نظام',
-      inventory_update: 'تحديث مخزون',
-      inventory_cleanup: 'تنظيف مخزون',
-      order_deleted: 'طلب محذوف',
-      default: 'عام'
-    };
-    return typeLabels[type] || 'عام';
-  };
-
   // دمج الإشعارات من النظامين
   const allNotifications = [
     ...notifications.filter(n => n.type !== 'welcome'),
@@ -468,11 +378,7 @@ const NotificationsPanel = () => {
     <>
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="relative hover:bg-primary/10 transition-all duration-300 hover:scale-110 rounded-xl"
-        >
+        <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           {unreadFilteredCount > 0 && (
             <motion.div
@@ -480,63 +386,51 @@ const NotificationsPanel = () => {
               animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 500, damping: 20 }}
             >
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-1 -right-1 h-6 w-6 justify-center rounded-full p-0 font-bold text-xs animate-bounce shadow-lg border-2 border-white"
-              >
-                {unreadFilteredCount > 99 ? "99+" : unreadFilteredCount}
+              <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 justify-center rounded-full p-0">
+                {unreadFilteredCount}
               </Badge>
             </motion.div>
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-96 md:w-[420px] rounded-2xl p-0 overflow-hidden shadow-2xl border-2 bg-background/95 backdrop-blur-xl" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center px-6 py-4 bg-gradient-to-r from-primary/10 via-secondary/10 to-primary/10 border-b-2 border-border/20">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/20 rounded-xl">
-              <Bell className="w-5 h-5 text-primary" />
-            </div>
-            <span className="font-bold text-xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              الإشعارات
-            </span>
-          </div>
+      <DropdownMenuContent className="w-80 md:w-96 glass-effect rounded-xl p-0 overflow-hidden" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center px-4 py-3 bg-card/50 border-b border-border/50">
+          <span className="font-bold text-base gradient-text">الإشعارات</span>
           <div className="flex items-center gap-2">
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 px-3 bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300 rounded-xl font-medium shadow-sm transition-all duration-200 hover:scale-105" 
+              className="h-8 w-8 p-0 hover:bg-muted/50 transition-colors" 
               onClick={() => navigate('/notifications')} 
               title="عرض كل الإشعارات"
             >
-              <Eye className="w-4 h-4 mr-1" />
-              عرض الكل
+              <Eye className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 px-3 bg-green-100 text-green-700 hover:bg-green-200 border border-green-300 rounded-xl font-medium shadow-sm transition-all duration-200 hover:scale-105" 
+              className="h-8 w-8 p-0 hover:bg-green-100 dark:hover:bg-green-900/20 hover:text-green-600 transition-colors" 
               onClick={handleMarkAllAsRead} 
               title="تحديد الكل كمقروء" 
               disabled={unreadFilteredCount === 0}
             >
-              <Check className="w-4 h-4 mr-1" />
-              تحديد الكل
+              <Check className="w-4 h-4" />
             </Button>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-9 px-3 bg-red-100 text-red-700 hover:bg-red-200 border border-red-300 rounded-xl font-medium shadow-sm transition-all duration-200 hover:scale-105" 
+              className="h-8 w-8 p-0 text-destructive hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-600 transition-colors" 
               onClick={handleClearAll} 
               title="حذف الكل" 
               disabled={allNotifications.length === 0}
             >
-              <Trash2 className="w-4 h-4 mr-1" />
-              مسح الكل
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
         </DropdownMenuLabel>
-        <ScrollArea className="h-96 px-3 py-2">
-          <div className="space-y-3 py-2">
+        <DropdownMenuSeparator className="mx-0 bg-border/50" />
+        <ScrollArea className="h-80 px-2">
+          <div className="space-y-2 py-2">
             <AnimatePresence>
               {allNotifications.length > 0 ? (
                 allNotifications.slice(0, 8).map(notification => {
@@ -548,80 +442,51 @@ const NotificationsPanel = () => {
                     <motion.div
                       key={notification.id}
                       layout
-                      initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, x: -20, scale: 0.9, transition: { duration: 0.2 } }}
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                       className="relative group"
                     >
                       <div 
                         className={cn(
-                          "flex items-start gap-4 p-4 cursor-pointer transition-all duration-300 rounded-2xl relative overflow-hidden", 
+                          "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
                           colors.bg,
                           colors.border,
-                          !(notification.is_read || notification.read) && "ring-2 ring-primary/20 shadow-xl",
-                          "hover:shadow-2xl hover:scale-[1.02] transform-gpu"
+                          (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
+                          "hover:scale-[1.01] hover:shadow-lg hover:bg-gradient-to-l hover:from-white/50 hover:to-transparent dark:hover:from-white/10"
                         )}
                         onClick={(e) => handleNotificationClick(e, notification)}
                       >
-                        {/* تأثير الخلفية المتحركة للإشعارات غير المقروءة */}
-                        {!(notification.is_read || notification.read) && (
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse"></div>
-                        )}
-                        
-                        <div className={cn(
-                          "p-3 rounded-xl shrink-0 shadow-lg transform transition-transform group-hover:scale-110 relative z-10", 
-                          colors.icon,
-                          "bg-white/90 backdrop-blur-sm border border-white/20"
-                        )}>
+                        <div className={cn("mt-1 flex-shrink-0", colors.icon)}>
                           <IconComponent />
                         </div>
-                        
-                        <div className="flex-1 min-w-0 relative z-10">
-                          <div className="flex items-start justify-between gap-3 mb-2">
-                            <h3 className={cn("font-bold text-base leading-tight", colors.text)}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
                               {notification.title}
                             </h3>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {!(notification.is_read || notification.read) && (
-                                <div className={cn("w-3 h-3 rounded-full animate-pulse shadow-lg", colors.dot)}></div>
-                              )}
+                            {!(notification.is_read || notification.read) && (
+                              <div className={cn("w-2 h-2 rounded-full animate-pulse", colors.dot)}></div>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground/80 line-clamp-2 mb-1.5">
+                            {notification.message}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
+                              <Clock className="w-2.5 h-2.5" />
+                              {formatRelativeTime(notification.created_at)}
+                            </p>
+                            {!(notification.is_read || notification.read) && (
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
-                                className="h-7 w-7 p-0 opacity-60 hover:opacity-100 transition-opacity bg-white/20 hover:bg-white/40 rounded-xl backdrop-blur-sm"
+                                className="h-6 px-2 py-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-background/80 hover:bg-background"
                                 title="وضع كمقروء"
                                 onClick={(e) => handleMarkAsRead(e, notification.id)}
                               >
                                 <Eye className="w-3 h-3" />
                               </Button>
-                            </div>
-                          </div>
-                          
-                          <p className={cn("text-sm leading-relaxed mb-3", colors.text, "opacity-90")}>
-                            {notification.message}
-                          </p>
-                          
-                          <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                            <div className="flex items-center gap-2">
-                              <Clock className="w-3 h-3 opacity-60" />
-                              <p className={cn("text-sm font-medium", colors.text, "opacity-75")}>
-                                {formatRelativeTime(notification.created_at)}
-                              </p>
-                            </div>
-                            {notification.type && (
-                              <Badge 
-                                variant="secondary" 
-                                className={cn(
-                                  "text-xs px-3 py-1 h-6 rounded-full font-bold shadow-md border", 
-                                  colors.bg, 
-                                  colors.text,
-                                  "bg-white/30 border-white/40 backdrop-blur-sm"
-                                )}
-                              >
-                                {getNotificationTypeLabel(notification.type)}
-                              </Badge>
                             )}
                           </div>
                         </div>
@@ -630,12 +495,10 @@ const NotificationsPanel = () => {
                   )
                 })
               ) : (
-                <div className="text-center py-16 px-4">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center shadow-lg">
-                    <Bell className="w-10 h-10 text-gray-400" />
-                  </div>
-                  <p className="text-xl font-bold text-muted-foreground mb-2">لا توجد إشعارات</p>
-                  <p className="text-sm text-muted-foreground/60">ستظهر الإشعارات الجديدة هنا</p>
+                <div className="text-center text-muted-foreground py-12 px-4">
+                  <Bell className="w-12 h-12 mx-auto mb-3 opacity-50"/>
+                  <p className="text-lg font-medium">لا توجد إشعارات جديدة</p>
+                  <p className="text-sm mt-1">ستظهر الإشعارات الجديدة هنا</p>
                 </div>
               )}
             </AnimatePresence>

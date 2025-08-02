@@ -1,2 +1,8 @@
 #!/bin/bash
-exec npx vite --host :: --port 8080
+# التحقق من وجود vite في node_modules/.bin
+if [ -f "./node_modules/.bin/vite" ]; then
+    exec ./node_modules/.bin/vite "$@"
+else
+    # استخدام npx كبديل
+    exec npx vite "$@"
+fi

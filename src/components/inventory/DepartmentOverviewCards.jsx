@@ -55,40 +55,21 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
         orderedDepts.push({ ...dept, order: 4 + index });
       });
 
-      // جلب عدد المنتجات لكل قسم بطريقة مصححة
-      const { data: productsData, error: productError } = await supabase
-        .from('products')
-        .select(`
-          id, 
-          is_active,
-          product_departments!inner(department_id)
-        `)
-        .eq('is_active', true);
-
-      console.log('جلب بيانات المنتجات للأقسام:', productsData);
-      if (productError) {
-        console.error('خطأ في جلب المنتجات:', productError);
-      }
+      // جلب عدد المنتجات لكل قسم
+      const { data: productsData } = await supabase
+        .from('product_departments')
+        .select('department_id, products(id)')
+        .eq('products.is_active', true);
 
       // حساب عدد المنتجات لكل قسم
       const productCounts = {};
-      if (productsData && Array.isArray(productsData)) {
-        productsData.forEach(product => {
-          if (product.product_departments && Array.isArray(product.product_departments)) {
-            product.product_departments.forEach(pd => {
-              if (pd.department_id) {
-                if (productCounts[pd.department_id]) {
-                  productCounts[pd.department_id]++;
-                } else {
-                  productCounts[pd.department_id] = 1;
-                }
-              }
-            });
-          }
-        });
-      }
-
-      console.log('Product counts by department:', productCounts);
+      productsData?.forEach(pd => {
+        if (productCounts[pd.department_id]) {
+          productCounts[pd.department_id]++;
+        } else {
+          productCounts[pd.department_id] = 1;
+        }
+      });
 
       // إضافة العدد للأقسام
       const deptsWithCounts = orderedDepts.map(dept => ({
@@ -152,61 +133,55 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
   return (
     <div className="space-y-4">
       {/* كروت الأقسام */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
           
           return (
             <Card 
               key={dept.id}
-              className="cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl relative overflow-hidden h-full"
+              className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
               onClick={() => onDepartmentFilter && onDepartmentFilter(dept)}
             >
-              <CardContent className="p-0 h-full">
-                <div className={`h-full min-h-[180px] text-center flex flex-col justify-between bg-gradient-to-br ${getGradientForIndex(index)} text-white rounded-lg p-4 relative overflow-hidden`}>
+              <CardContent className="p-6">
+                <div className={`text-center space-y-4 bg-gradient-to-br ${getGradientForIndex(index)} text-white rounded-lg p-6 relative overflow-hidden`}>
                   {/* رقم القسم */}
-                  <div className="absolute top-2 right-2 z-10">
-                    <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs font-medium">
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
                       {dept.order}
                     </Badge>
                   </div>
                   
-                  {/* الجزء العلوي */}
-                  <div className="space-y-3">
-                    {/* الأيقونة */}
-                    <div className="flex justify-center">
-                      <div className="p-3 bg-white/15 rounded-full backdrop-blur-sm shadow-lg">
-                        <IconComponent className="w-7 h-7" />
-                      </div>
-                    </div>
-                    
-                    {/* اسم القسم */}
-                    <div>
-                      <h4 className="font-bold text-base leading-tight">{dept.name}</h4>
-                      {dept.description && (
-                        <p className="text-xs opacity-85 mt-1 line-clamp-2">{dept.description}</p>
-                      )}
+                  {/* الأيقونة */}
+                  <div className="flex justify-center">
+                    <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                      <IconComponent className="w-8 h-8" />
                     </div>
                   </div>
                   
-                  {/* الجزء السفلي - عدد المنتجات */}
-                  <div className="mt-4 pt-3 border-t border-white/25">
-                    <div className="flex items-center justify-between">
-                      <div className="text-right">
-                        <p className="text-2xl font-bold">{dept.productCount}</p>
-                        <p className="text-white/75 text-xs">منتج</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-4 h-4" />
-                        <span className="text-xs">متاح</span>
-                      </div>
+                  {/* اسم القسم */}
+                  <div>
+                    <h4 className="font-bold text-lg">{dept.name}</h4>
+                    {dept.description && (
+                      <p className="text-xs opacity-90 mt-1">{dept.description}</p>
+                    )}
+                  </div>
+                  
+                  {/* عدد المنتجات */}
+                  <div className="flex items-center justify-between pt-2 border-t border-white/20">
+                    <div className="text-right">
+                      <p className="text-xl font-bold">{dept.productCount}</p>
+                      <p className="text-white/80 text-xs">منتج</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-white/70">
+                      <Package className="w-4 h-4" />
+                      <span className="text-xs">متاح</span>
                     </div>
                   </div>
                   
-                  {/* تأثيرات الخلفية */}
-                  <div className="absolute -bottom-6 -right-6 w-20 h-20 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-4 -left-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-white/3 rounded-full"></div>
+                  {/* تأثير الخلفية */}
+                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
                 </div>
               </CardContent>
             </Card>

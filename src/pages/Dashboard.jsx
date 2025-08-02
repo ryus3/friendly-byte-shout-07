@@ -410,7 +410,7 @@ const Dashboard = () => {
 
         return {
             totalOrdersCount: filteredTotalOrders.length,
-            netProfit: financialSummary.netProfit || 0,
+            netProfit: 0,
             pendingProfit,
             deliveredSales,
             pendingSales,

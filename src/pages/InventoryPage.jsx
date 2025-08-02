@@ -143,26 +143,6 @@ const InventoryPage = () => {
   const { sizes = [] } = useVariants() || {};
   const [departments, setDepartments] = useState([]);
   
-  // تحميل الأقسام مباشرة عند تحميل الصفحة
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('departments')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
-        
-        if (error) throw error;
-        setDepartments(data || []);
-      } catch (error) {
-        console.error('خطأ في تحميل الأقسام:', error);
-      }
-    };
-
-    fetchDepartments();
-  }, []);
-  
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -247,6 +227,71 @@ const InventoryPage = () => {
     }
   }, [searchParams, products]);
 
+  // جلب بيانات الأقسام
+  useEffect(() => {
+    fetchDepartmentsData();
+  }, []);
+
+  const fetchDepartmentsData = async () => {
+    try {
+      const { supabase } = await import('@/lib/customSupabaseClient');
+      
+      // جلب الأقسام الرئيسية
+      const { data: deptData, error: deptError } = await supabase
+        .from('departments')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (deptError) throw deptError;
+
+      // ترتيب الأقسام حسب الأولوية المطلوبة
+      const orderedDepts = [];
+      const clothingDept = deptData?.find(d => d.name.includes('ملابس') || d.name.toLowerCase().includes('clothes'));
+      const shoesDept = deptData?.find(d => d.name.includes('أحذية') || d.name.toLowerCase().includes('shoes'));
+      const generalDept = deptData?.find(d => d.name.includes('مواد عامة') || d.name.includes('عامة') || d.name.toLowerCase().includes('general'));
+
+      // إضافة الأقسام بالترتيب المطلوب
+      if (clothingDept) orderedDepts.push({ ...clothingDept, order: 1 });
+      if (shoesDept) orderedDepts.push({ ...shoesDept, order: 2 });
+      if (generalDept) orderedDepts.push({ ...generalDept, order: 3 });
+
+      // إضافة باقي الأقسام
+      const otherDepts = deptData?.filter(d => 
+        d !== clothingDept && d !== shoesDept && d !== generalDept
+      ) || [];
+      
+      otherDepts.forEach((dept, index) => {
+        orderedDepts.push({ ...dept, order: 4 + index });
+      });
+
+      // جلب عدد المنتجات لكل قسم
+      const { data: productsData } = await supabase
+        .from('product_departments')
+        .select('department_id, products(id)')
+        .eq('products.is_active', true);
+
+      // حساب عدد المنتجات لكل قسم
+      const productCounts = {};
+      productsData?.forEach(pd => {
+        if (productCounts[pd.department_id]) {
+          productCounts[pd.department_id]++;
+        } else {
+          productCounts[pd.department_id] = 1;
+        }
+      });
+
+      // إضافة العدد للأقسام
+      const deptsWithCounts = orderedDepts.map(dept => ({
+        ...dept,
+        productCount: productCounts[dept.id] || 0
+      }));
+
+      setDepartments(deptsWithCounts);
+    } catch (error) {
+      console.error('خطأ في جلب بيانات الأقسام:', error);
+    }
+  };
 
   // أيقونات للأقسام المختلفة
   const getIconForDepartment = (name, index) => {

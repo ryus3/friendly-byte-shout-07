@@ -49,11 +49,9 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   }, [open, employees.length]);
 
 
-  // الطلبات المحجوزة (قيد التجهيز، تم الشحن، قيد التوصيل، راجع)
+  // الطلبات المعلقة فقط (المحجوزة)
   const reservedOrders = useMemo(() => {
-    return orders?.filter(order => 
-      ['pending', 'shipped', 'out_for_delivery', 'returned'].includes(order.status)
-    ) || [];
+    return orders?.filter(order => order.status === 'pending') || [];
   }, [orders]);
 
   // الموظفون المشاركون في الطلبات المحجوزة
@@ -123,7 +121,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                     المخزون المحجوز
                   </span>
                   <span className="text-sm md:text-lg font-normal text-muted-foreground">
-                    الطلبات المحجوزة (قيد التجهيز، شحن، توصيل، راجع)
+                    الطلبات في حالة التجهيز والمعالجة
                   </span>
                 </div>
               </DialogTitle>
@@ -268,18 +266,9 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 md:gap-3">
-                          <Badge className={`border-0 shadow-lg px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm ${
-                            order.status === 'pending' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' :
-                            order.status === 'shipped' ? 'bg-gradient-to-r from-blue-400 to-cyan-500 text-white' :
-                            order.status === 'out_for_delivery' ? 'bg-gradient-to-r from-purple-400 to-violet-500 text-white' :
-                            order.status === 'returned' ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
-                            'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
-                          }`}>
+                          <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 shadow-lg px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm">
                             <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                            {order.status === 'pending' ? 'قيد التجهيز' :
-                             order.status === 'shipped' ? 'تم الشحن' :
-                             order.status === 'out_for_delivery' ? 'قيد التوصيل' :
-                             order.status === 'returned' ? 'راجع' : order.status}
+                            قيد التجهيز
                           </Badge>
                           <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
                             #{index + 1}

@@ -1,2 +1,4 @@
-@echo off
-npx vite --host :: --port 8080 %*
+#!/bin/bash
+export NODE_PATH="./node_modules"
+export PATH="./node_modules/.bin:$PATH"
+exec ./node_modules/.bin/vite "$@"

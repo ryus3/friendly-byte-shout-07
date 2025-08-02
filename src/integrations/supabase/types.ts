@@ -1097,7 +1097,6 @@ export type Database = {
           product_id: string
           quantity: number
           reserved_quantity: number
-          sold_quantity: number | null
           updated_at: string
           variant_id: string | null
         }
@@ -1110,7 +1109,6 @@ export type Database = {
           product_id: string
           quantity?: number
           reserved_quantity?: number
-          sold_quantity?: number | null
           updated_at?: string
           variant_id?: string | null
         }
@@ -1123,7 +1121,6 @@ export type Database = {
           product_id?: string
           quantity?: number
           reserved_quantity?: number
-          sold_quantity?: number | null
           updated_at?: string
           variant_id?: string | null
         }
@@ -3072,10 +3069,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
-      calculate_sold_quantity: {
-        Args: { p_product_id: string; p_variant_id: string }
-        Returns: number
-      }
       check_city_benefits: {
         Args: { p_city_name: string; p_order_amount: number }
         Returns: Json
@@ -3270,19 +3263,11 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      release_reserved_stock: {
-        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
-        Returns: Json
-      }
       release_stock_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
       }
       release_stock_item: {
-        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
-        Returns: Json
-      }
-      reserve_stock_for_order: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: Json
       }
