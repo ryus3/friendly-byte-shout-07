@@ -6,6 +6,53 @@
 		<meta name="generator" content="Hostinger Horizons" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		<title>Hostinger Horizons</title>
+		<script>
+			// Polyfill for Headers API if not available
+			if (typeof Headers === 'undefined') {
+				window.Headers = class Headers {
+					constructor(init) {
+						this.map = new Map();
+						if (init) {
+							if (init instanceof Headers) {
+								init.forEach((value, key) => {
+									this.map.set(key.toLowerCase(), value);
+								});
+							} else if (Array.isArray(init)) {
+								init.forEach(([key, value]) => {
+									this.map.set(key.toLowerCase(), value);
+								});
+							} else if (typeof init === 'object') {
+								Object.entries(init).forEach(([key, value]) => {
+									this.map.set(key.toLowerCase(), value);
+								});
+							}
+						}
+					}
+					append(name, value) {
+						const existing = this.map.get(name.toLowerCase());
+						this.map.set(name.toLowerCase(), existing ? `${existing}, ${value}` : value);
+					}
+					delete(name) { this.map.delete(name.toLowerCase()); }
+					get(name) { return this.map.get(name.toLowerCase()) || null; }
+					has(name) { return this.map.has(name.toLowerCase()); }
+					set(name, value) { this.map.set(name.toLowerCase(), value); }
+					forEach(callback, thisArg) {
+						this.map.forEach((value, key) => {
+							callback.call(thisArg, value, key, this);
+						});
+					}
+					keys() { return this.map.keys(); }
+					values() { return this.map.values(); }
+					entries() { return this.map.entries(); }
+					[Symbol.iterator]() { return this.map.entries(); }
+				};
+			}
+			
+			// Ensure global is defined
+			if (typeof global === 'undefined') {
+				window.global = window;
+			}
+		</script>
 	</head>
 	<body>
 		<div id="root"></div>
