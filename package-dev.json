@@ -6,6 +6,12 @@
   "scripts": {
     "dev": "node dev.js",
     "start": "node dev.js",
-    "build": "npx vite build"
+    "build": "./node_modules/.bin/vite build",
+    "preview": "./node_modules/.bin/vite preview"
+  },
+  "dependencies": {
+    "vite": "^7.0.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
