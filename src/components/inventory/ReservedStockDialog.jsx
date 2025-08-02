@@ -346,16 +346,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                           )}
                                         </div>
                                         
-                                        {/* العدد والسعر والمجموع - تصميم مضغوط أنيق */}
-                                        <div className="flex items-center gap-1.5 md:gap-2 text-xs">
-                                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-0.5 text-xs">
-                                            ع: {item.quantity}
+                                        {/* العدد والسعر والمجموع - نص كامل وواضح */}
+                                        <div className="flex items-center gap-2 text-xs">
+                                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-1 text-xs">
+                                            العدد: {item.quantity}
                                           </Badge>
-                                          <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 px-2 py-0.5 text-xs">
-                                            {item.price?.toLocaleString()} د.ع
+                                          <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 px-2 py-1 text-xs">
+                                            السعر: {item.price?.toLocaleString()} د.ع
                                           </Badge>
-                                          <Badge variant="secondary" className="bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 px-2 py-0.5 text-xs font-semibold">
-                                            مج: {(item.price * item.quantity)?.toLocaleString()}
+                                          <Badge variant="secondary" className="bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 px-2 py-1 text-xs font-semibold">
+                                            المجموع: {(item.price * item.quantity)?.toLocaleString()} د.ع
                                           </Badge>
                                         </div>
                                       </div>
