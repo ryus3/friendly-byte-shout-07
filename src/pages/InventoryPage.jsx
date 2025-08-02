@@ -106,14 +106,13 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
             <AccordionContent className="px-4 pb-4">
               <div className="space-y-3">
                 {/* العناوين الثابتة */}
-                <div className="grid grid-cols-12 items-center gap-1 md:gap-3 p-2 md:p-3 text-xs md:text-sm font-bold text-muted-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg">
+                <div className="grid grid-cols-11 items-center gap-1 md:gap-3 p-2 md:p-3 text-xs md:text-sm font-bold text-muted-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg">
                   <div className="col-span-4 md:col-span-3 text-right">المتغير</div>
                   <div className="col-span-1 md:col-span-2 text-center">المخزون</div>
                   <div className="col-span-1 md:col-span-2 text-center">محجوز</div>
                   <div className="col-span-2 md:col-span-2 text-center">متاح</div>
-                  <div className="col-span-1 md:col-span-2 text-center">مباع</div>
+                  <div className="col-span-1 md:col-span-1 text-center">مباع</div>
                   <div className="col-span-2 md:col-span-1 text-center">الحالة</div>
-                  <div className="col-span-1 md:col-span-1 text-center">إجراء</div>
                 </div>
                 {(product.variants || []).map(variant => (
                   <InventoryItem

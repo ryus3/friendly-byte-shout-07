@@ -182,6 +182,7 @@ export const useUnifiedProfits = (userId = null) => {
       };
 
       console.log('💰 Unified Profits Result:', resultData);
+      console.log('💰 Net Profit Value:', netProfit);
       setProfitData(resultData);
 
     } catch (error) {

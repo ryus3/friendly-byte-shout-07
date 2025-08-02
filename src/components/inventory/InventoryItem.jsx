@@ -28,7 +28,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   return (
     <div
       className={cn(
-        "grid grid-cols-12 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
+        "grid grid-cols-11 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
@@ -65,7 +65,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
       </div>
       
       {/* مباع */}
-      <div className="col-span-1 md:col-span-2 text-center">
+      <div className="col-span-1 md:col-span-1 text-center">
         <p className="font-mono font-semibold text-sm md:text-base text-blue-600">{sold}</p>
       </div>
       
@@ -76,9 +76,9 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
         </Badge>
       </div>
       
-      {/* زر التعديل */}
-      <div className="col-span-1 md:col-span-1 text-center">
-        {onEditStock && (
+      {/* زر التعديل مخفي إذا لم تُمرر الوظيفة */}
+      {onEditStock && (
+        <div className="col-span-1 text-center">
           <Button
             variant="outline"
             size="sm"
@@ -87,8 +87,8 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
           >
             <Edit className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 });

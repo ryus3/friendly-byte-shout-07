@@ -94,7 +94,17 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    const { profitData: unifiedProfitData } = useUnifiedProfits();
+    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits();
+    
+    // إضافة لوج لتتبع البيانات
+    useEffect(() => {
+        console.log('🔍 Dashboard - Unified Profit Data:', {
+            data: unifiedProfitData,
+            loading: unifiedProfitLoading,
+            error: unifiedProfitError,
+            netProfit: unifiedProfitData?.netProfit
+        });
+    }, [unifiedProfitData, unifiedProfitLoading, unifiedProfitError]);
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -493,7 +503,7 @@ const Dashboard = () => {
             key: 'totalOrders', title: 'اجمالي الطلبات', value: dashboardData.totalOrdersCount, icon: ShoppingCart, colors: ['blue-500', 'sky-500'], format: 'number', currentPeriod: periods.totalOrders, onPeriodChange: (p) => handlePeriodChange('totalOrders', p), onClick: handleTotalOrdersClick
         },
         canViewAllData && {
-            key: 'netProfit', title: 'صافي أرباح المبيعات', value: unifiedProfitData?.netProfit || 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
+            key: 'netProfit', title: 'صافي أرباح المبيعات', value: unifiedProfitData?.netProfit ?? financialSummary?.netProfit ?? 0, icon: DollarSign, colors: ['green-500', 'emerald-500'], format: 'currency', currentPeriod: periods.netProfit, onPeriodChange: (p) => handlePeriodChange('netProfit', p), onClick: () => setIsProfitLossOpen(true)
         },
         {
             key: 'pendingProfit', 
