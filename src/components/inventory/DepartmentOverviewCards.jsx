@@ -55,27 +55,35 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
         orderedDepts.push({ ...dept, order: 4 + index });
       });
 
-      // جلب عدد المنتجات لكل قسم
-      const { data: productsData } = await supabase
-        .from('product_departments')
+      // جلب عدد المنتجات لكل قسم بطريقة مصححة
+      const { data: productsData, error: productError } = await supabase
+        .from('products')
         .select(`
-          department_id,
-          products!inner(id, is_active)
+          id, 
+          is_active,
+          product_departments!inner(department_id)
         `)
-        .eq('products.is_active', true);
+        .eq('is_active', true);
 
-      console.log('Products data for departments:', productsData);
+      console.log('جلب بيانات المنتجات للأقسام:', productsData);
+      if (productError) {
+        console.error('خطأ في جلب المنتجات:', productError);
+      }
 
       // حساب عدد المنتجات لكل قسم
       const productCounts = {};
       if (productsData && Array.isArray(productsData)) {
-        productsData.forEach(pd => {
-          if (pd.department_id && pd.products) {
-            if (productCounts[pd.department_id]) {
-              productCounts[pd.department_id]++;
-            } else {
-              productCounts[pd.department_id] = 1;
-            }
+        productsData.forEach(product => {
+          if (product.product_departments && Array.isArray(product.product_departments)) {
+            product.product_departments.forEach(pd => {
+              if (pd.department_id) {
+                if (productCounts[pd.department_id]) {
+                  productCounts[pd.department_id]++;
+                } else {
+                  productCounts[pd.department_id] = 1;
+                }
+              }
+            });
           }
         });
       }
