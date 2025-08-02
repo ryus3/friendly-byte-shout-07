@@ -508,7 +508,6 @@ export const InventoryProvider = ({ children }) => {
 
     return () => {
       supabase.removeChannel(inventoryChannel);
-      supabase.removeChannel(ordersChannel);  
       supabase.removeChannel(orderItemsChannel);
     };
   }, [user, refreshInventoryData, refreshOrders]);
