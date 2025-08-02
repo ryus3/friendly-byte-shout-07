@@ -432,6 +432,7 @@ export const InventoryProvider = ({ children }) => {
                 ...variant,
                 quantity: variantInventory.quantity || 0,
                 reserved: variantInventory.reserved_quantity || 0,
+                sold_quantity: variantInventory.sold_quantity || 0,
                 min_stock: variantInventory.min_stock || 5,
                 location: variantInventory.location || null,
                 inventoryId: variantInventory.id
@@ -619,6 +620,7 @@ export const InventoryProvider = ({ children }) => {
             size: variant.sizes?.name || 'Unknown',
             quantity: variantInventory?.quantity || 0, // الكمية الحقيقية من inventory
             reserved: variantInventory?.reserved_quantity || 0,
+            sold_quantity: variantInventory?.sold_quantity || 0,
             min_stock: variantInventory?.min_stock || 5,
             location: variantInventory?.location || null,
             inventoryId: variantInventory?.id || null,

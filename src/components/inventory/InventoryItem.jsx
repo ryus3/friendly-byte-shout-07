@@ -27,11 +27,11 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   return (
     <div
       className={cn(
-        "grid grid-cols-15 items-center gap-4 p-3 rounded-lg border transition-colors",
+        "grid grid-cols-12 items-center gap-2 md:gap-4 p-3 rounded-lg border transition-colors",
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
-      <div className="col-span-4 md:col-span-3 flex items-center gap-3">
+      <div className="col-span-3 flex items-center gap-3">
         {variant.image || product.images?.[0] ? (
           <img src={variant.image || product.images?.[0]} alt={product.name} className="w-10 h-10 rounded-md object-cover" />
         ) : (
@@ -46,27 +46,26 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
           <p className="text-xs text-muted-foreground">{variant.color}</p>
         </div>
       </div>
-      <div className="col-span-2 md:col-span-2 text-center">
+      <div className="col-span-2 text-center">
         <p className="font-mono font-semibold text-base">{stock}</p>
         <p className="text-xs text-muted-foreground">المخزون</p>
       </div>
-      <div className="col-span-2 md:col-span-2 text-center">
+      <div className="col-span-1 text-center">
         <p className="font-mono font-semibold text-base text-yellow-500">{reserved}</p>
         <p className="text-xs text-muted-foreground">محجوز</p>
       </div>
-      <div className="col-span-2 md:col-span-2 text-center">
+      <div className="col-span-1 text-center">
         <p className="font-mono font-semibold text-base text-green-500">{available}</p>
         <p className="text-xs text-muted-foreground">متاح</p>
       </div>
-      {/* عمود المباع - يظهر للمديرين فقط */}
-      <div className="col-span-2 md:col-span-2 text-center">
+      <div className="col-span-1 text-center">
         <p className="font-mono font-semibold text-base text-blue-500">{variant.sold_quantity || 0}</p>
         <p className="text-xs text-muted-foreground">مباع</p>
       </div>
-      <div className="col-span-2 md:col-span-2 text-center">
+      <div className="col-span-3 text-center">
         <Badge className={cn("w-full max-w-20 justify-center text-xs px-2 py-1", status.color)}>{status.text}</Badge>
       </div>
-      <div className="col-span-1 md:col-span-1 text-left">
+      <div className="col-span-1 text-left">
         {onEditStock && (
           <Button variant="ghost" size="icon" onClick={onEditStock}>
             <Edit className="w-4 h-4" />

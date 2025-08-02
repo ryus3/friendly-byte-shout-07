@@ -643,7 +643,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
               *,
               colors(id, name, hex_code),
               sizes(id, name, display_order),
-              inventory(quantity, min_stock, reserved_quantity)
+              inventory(quantity, min_stock, reserved_quantity, sold_quantity)
             ),
             categories:product_categories(
               category:categories(id, name)

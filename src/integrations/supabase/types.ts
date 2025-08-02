@@ -1097,6 +1097,7 @@ export type Database = {
           product_id: string
           quantity: number
           reserved_quantity: number
+          sold_quantity: number | null
           updated_at: string
           variant_id: string | null
         }
@@ -1109,6 +1110,7 @@ export type Database = {
           product_id: string
           quantity?: number
           reserved_quantity?: number
+          sold_quantity?: number | null
           updated_at?: string
           variant_id?: string | null
         }
@@ -1121,6 +1123,7 @@ export type Database = {
           product_id?: string
           quantity?: number
           reserved_quantity?: number
+          sold_quantity?: number | null
           updated_at?: string
           variant_id?: string | null
         }
@@ -3067,6 +3070,10 @@ export type Database = {
       }
       calculate_missing_profits: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      calculate_sold_quantity: {
+        Args: { p_product_id: string; p_variant_id: string }
         Returns: number
       }
       check_city_benefits: {
