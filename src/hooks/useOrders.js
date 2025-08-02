@@ -62,22 +62,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         created_by: user?.user_id || user?.id,
       };
 
-      // حجز المخزون
-      for (const item of cartItems) {
-        const { error: stockError } = await supabase.rpc('update_reserved_stock', {
-          p_product_id: item.productId,
-          p_quantity_change: item.quantity,
-          p_sku: item.variantId
-        });
-        
-        if (stockError) {
-          console.error('Error reserving stock:', stockError);
-          // في حالة فشل حجز المخزون، نرجع خطأ
-          return { success: false, error: `فشل في حجز المخزون للمنتج ${item.productName || 'غير محدد'}` };
-        }
-      }
-
-      // إنشاء الطلب
+      // إنشاء الطلب أولاً
       const { data: createdOrder, error: orderError } = await supabase
         .from('orders')
         .insert(newOrder)
@@ -85,14 +70,6 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         .single();
 
       if (orderError) {
-        // إلغاء حجز المخزون في حالة فشل إنشاء الطلب
-        for (const item of cartItems) {
-          await supabase.rpc('update_reserved_stock', {
-            p_product_id: item.productId,
-            p_quantity_change: -item.quantity,
-            p_sku: item.variantId
-          });
-        }
         console.error('Error creating order:', orderError);
         return { success: false, error: orderError.message };
       }
@@ -113,15 +90,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
 
       if (itemsError) {
         console.error('Error creating order items:', itemsError);
-        // نحذف الطلب ونلغي حجز المخزون
+        // نحذف الطلب - سيتم إلغاء حجز المخزون تلقائياً بواسطة التريجر
         await supabase.from('orders').delete().eq('id', createdOrder.id);
-        for (const item of cartItems) {
-          await supabase.rpc('update_reserved_stock', {
-            p_product_id: item.productId,
-            p_quantity_change: -item.quantity,
-            p_sku: item.variantId
-          });
-        }
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
       }
 
