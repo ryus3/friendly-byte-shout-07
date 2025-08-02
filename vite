@@ -1,17 +1,20 @@
 #!/usr/bin/env node
 
-// Enhanced vite wrapper with better error handling
-const { execSync } = require('child_process');
-const fs = require('fs');
+const { spawn } = require('child_process');
 
-try {
-  // Try to execute vite using npx (most reliable)
-  console.log('🚀 Starting development server...');
-  execSync('npx vite --host :: --port 8080', { 
-    stdio: 'inherit',
-    env: { ...process.env }
-  });
-} catch (error) {
-  console.error('❌ Failed to start vite:', error.message);
+// Simple and direct approach - use npx
+console.log('🚀 Starting with npx vite...');
+
+const child = spawn('npx', ['vite', '--host', '::', '--port', '8080'], {
+  stdio: 'inherit',
+  env: process.env
+});
+
+child.on('error', (err) => {
+  console.error('❌ Error:', err.message);
   process.exit(1);
-}
+});
+
+child.on('exit', (code) => {
+  process.exit(code);
+});
