@@ -1,0 +1,11 @@
+{
+  "name": "inventory-management-system-dev",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node dev.js",
+    "start": "node dev.js",
+    "build": "npx vite build"
+  }
+}

@@ -131,8 +131,14 @@ export default defineConfig(async ({ mode }) => {
     let inlineEditPlugin, editModeDevPlugin;
 
     if (isDev) {
-        inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
-        editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
+        try {
+            inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
+            editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
+        } catch (error) {
+            console.warn('Visual editor plugins not found, continuing without them');
+            inlineEditPlugin = () => ({});
+            editModeDevPlugin = () => ({});
+        }
     }
 
     return {
@@ -148,6 +154,9 @@ export default defineConfig(async ({ mode }) => {
             port: 8080,
             headers: { 'Cross-Origin-Embedder-Policy': 'credentialless' },
             allowedHosts: true,
+            fs: {
+                strict: false
+            }
         },
         resolve: {
             extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
