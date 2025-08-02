@@ -27,7 +27,7 @@ if (!globalThis.Request) {
     constructor(input, options = {}) {
       this.url = input;
       this.method = options.method || "GET";
-      this.headers = new Headers(options.headers);
+      this.headers = new globalThis.Headers(options.headers);
       this.body = options.body;
     }
   };
@@ -39,7 +39,7 @@ if (!globalThis.Response) {
       this.body = body;
       this.status = options.status || 200;
       this.statusText = options.statusText || "OK";
-      this.headers = new Headers(options.headers);
+      this.headers = new globalThis.Headers(options.headers);
     }
     json() { return Promise.resolve(JSON.parse(this.body)); }
     text() { return Promise.resolve(this.body); }
