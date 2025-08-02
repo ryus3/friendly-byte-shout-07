@@ -112,106 +112,161 @@ const iconMap = {
 };
 
 const typeColorMap = {
-  // استخدام نظام الألوان من index.css مع تحسينات للتناسق
+  // إشعارات المخزون - ألوان برتقالية وحمراء واضحة
   low_stock: { 
-    bg: 'bg-amber-50/80 dark:bg-amber-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-amber-500 dark:border-amber-400',
-    text: 'text-foreground', 
-    icon: 'text-amber-600 dark:text-amber-400',
-    dot: 'bg-amber-500'
+    bg: 'bg-gradient-to-r from-orange-100 to-amber-100 dark:from-orange-900/40 dark:to-amber-900/40', 
+    border: 'border-l-4 border-orange-500 shadow-md shadow-orange-200 dark:shadow-orange-900/30',
+    text: 'text-orange-900 dark:text-orange-100 font-medium', 
+    icon: 'text-orange-600 dark:text-orange-400',
+    dot: 'bg-orange-500 shadow-lg shadow-orange-300 dark:shadow-orange-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-orange-200 to-amber-200 dark:from-orange-800/60 dark:to-amber-800/60'
   },
   stock_warning: { 
-    bg: 'bg-orange-50/80 dark:bg-orange-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-orange-500 dark:border-orange-400',
-    text: 'text-foreground', 
-    icon: 'text-orange-600 dark:text-orange-400',
-    dot: 'bg-orange-500'
-  },
-  out_of_stock: { 
-    bg: 'bg-red-50/80 dark:bg-red-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-red-500 dark:border-red-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/40 dark:to-orange-900/40', 
+    border: 'border-l-4 border-red-500 shadow-md shadow-red-200 dark:shadow-red-900/30',
+    text: 'text-red-900 dark:text-red-100 font-medium', 
     icon: 'text-red-600 dark:text-red-400',
-    dot: 'bg-red-500'
+    dot: 'bg-red-500 shadow-lg shadow-red-300 dark:shadow-red-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-red-200 to-orange-200 dark:from-red-800/60 dark:to-orange-800/60'
   },
+  
+  // إشعارات الطلبات - ألوان زرقاء وخضراء واضحة
   order_completed: { 
-    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-green-500 dark:border-green-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40', 
+    border: 'border-l-4 border-green-500 shadow-md shadow-green-200 dark:shadow-green-900/30',
+    text: 'text-green-900 dark:text-green-100 font-medium', 
     icon: 'text-green-600 dark:text-green-400',
-    dot: 'bg-green-500'
+    dot: 'bg-green-500 shadow-lg shadow-green-300 dark:shadow-green-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-green-200 to-emerald-200 dark:from-green-800/60 dark:to-emerald-800/60'
   },
   order_shipped: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-blue-500 dark:border-blue-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40', 
+    border: 'border-l-4 border-blue-500 shadow-md shadow-blue-200 dark:shadow-blue-900/30',
+    text: 'text-blue-900 dark:text-blue-100 font-medium', 
     icon: 'text-blue-600 dark:text-blue-400',
-    dot: 'bg-blue-500'
+    dot: 'bg-blue-500 shadow-lg shadow-blue-300 dark:shadow-blue-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-blue-200 to-indigo-200 dark:from-blue-800/60 dark:to-indigo-800/60'
+  },
+  order_status_update: { 
+    bg: 'bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/40 dark:to-purple-900/40', 
+    border: 'border-l-4 border-indigo-500 shadow-md shadow-indigo-200 dark:shadow-indigo-900/30',
+    text: 'text-indigo-900 dark:text-indigo-100 font-medium', 
+    icon: 'text-indigo-600 dark:text-indigo-400',
+    dot: 'bg-indigo-500 shadow-lg shadow-indigo-300 dark:shadow-indigo-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-indigo-200 to-purple-200 dark:from-indigo-800/60 dark:to-purple-800/60'
   },
   new_order: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-primary dark:border-primary',
-    text: 'text-foreground', 
-    icon: 'text-primary',
-    dot: 'bg-primary'
+    bg: 'bg-gradient-to-r from-cyan-100 to-blue-100 dark:from-cyan-900/40 dark:to-blue-900/40', 
+    border: 'border-l-4 border-cyan-500 shadow-md shadow-cyan-200 dark:shadow-cyan-900/30',
+    text: 'text-cyan-900 dark:text-cyan-100 font-medium', 
+    icon: 'text-cyan-600 dark:text-cyan-400',
+    dot: 'bg-cyan-500 shadow-lg shadow-cyan-300 dark:shadow-cyan-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-cyan-200 to-blue-200 dark:from-cyan-800/60 dark:to-blue-800/60'
   },
   new_order_employee: { 
-    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-purple-500 dark:border-purple-400',
-    text: 'text-foreground', 
-    icon: 'text-purple-600 dark:text-purple-400',
-    dot: 'bg-purple-500'
+    bg: 'bg-gradient-to-r from-teal-100 to-cyan-100 dark:from-teal-900/40 dark:to-cyan-900/40', 
+    border: 'border-l-4 border-teal-500 shadow-md shadow-teal-200 dark:shadow-teal-900/30',
+    text: 'text-teal-900 dark:text-teal-100 font-medium', 
+    icon: 'text-teal-600 dark:text-teal-400',
+    dot: 'bg-teal-500 shadow-lg shadow-teal-300 dark:shadow-teal-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-teal-200 to-cyan-200 dark:from-teal-800/60 dark:to-cyan-800/60'
   },
-  ai_order: { 
-    bg: 'bg-blue-50/80 dark:bg-blue-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-primary dark:border-primary',
-    text: 'text-foreground', 
-    icon: 'text-primary',
-    dot: 'bg-primary'
-  },
+  
+  // إشعارات المستخدمين والتسجيل - ألوان بنفسجية
   new_registration: { 
-    bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-purple-500 dark:border-purple-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-purple-100 to-violet-100 dark:from-purple-900/40 dark:to-violet-900/40', 
+    border: 'border-l-4 border-purple-500 shadow-md shadow-purple-200 dark:shadow-purple-900/30',
+    text: 'text-purple-900 dark:text-purple-100 font-medium', 
     icon: 'text-purple-600 dark:text-purple-400',
-    dot: 'bg-purple-500'
+    dot: 'bg-purple-500 shadow-lg shadow-purple-300 dark:shadow-purple-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-purple-200 to-violet-200 dark:from-purple-800/60 dark:to-violet-800/60'
   },
+  
+  // إشعارات الأرباح والتحاسب - ألوان ذهبية وخضراء
   profit_settlement: { 
-    bg: 'bg-yellow-50/80 dark:bg-yellow-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-yellow-500 dark:border-yellow-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-yellow-100 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/40', 
+    border: 'border-l-4 border-yellow-500 shadow-md shadow-yellow-200 dark:shadow-yellow-900/30',
+    text: 'text-yellow-900 dark:text-yellow-100 font-medium', 
     icon: 'text-yellow-600 dark:text-yellow-400',
-    dot: 'bg-yellow-500'
+    dot: 'bg-yellow-500 shadow-lg shadow-yellow-300 dark:shadow-yellow-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-yellow-200 to-amber-200 dark:from-yellow-800/60 dark:to-amber-800/60'
   },
   profit_settlement_request: { 
-    bg: 'bg-emerald-50/80 dark:bg-emerald-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40', 
+    border: 'border-l-4 border-emerald-500 shadow-md shadow-emerald-200 dark:shadow-emerald-900/30',
+    text: 'text-emerald-900 dark:text-emerald-100 font-medium', 
     icon: 'text-emerald-600 dark:text-emerald-400',
-    dot: 'bg-emerald-500'
+    dot: 'bg-emerald-500 shadow-lg shadow-emerald-300 dark:shadow-emerald-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-emerald-200 to-green-200 dark:from-emerald-800/60 dark:to-green-800/60'
   },
   employee_settlement_completed: { 
-    bg: 'bg-green-50/80 dark:bg-green-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-green-500 dark:border-green-400',
-    text: 'text-foreground', 
-    icon: 'text-green-600 dark:text-green-400',
-    dot: 'bg-green-500'
+    bg: 'bg-gradient-to-r from-lime-100 to-green-100 dark:from-lime-900/40 dark:to-green-900/40', 
+    border: 'border-l-4 border-lime-500 shadow-md shadow-lime-200 dark:shadow-lime-900/30',
+    text: 'text-lime-900 dark:text-lime-100 font-medium', 
+    icon: 'text-lime-600 dark:text-lime-400',
+    dot: 'bg-lime-500 shadow-lg shadow-lime-300 dark:shadow-lime-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-lime-200 to-green-200 dark:from-lime-800/60 dark:to-green-800/60'
   },
+  settlement_request: { 
+    bg: 'bg-gradient-to-r from-emerald-100 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/40', 
+    border: 'border-l-4 border-emerald-500 shadow-md shadow-emerald-200 dark:shadow-emerald-900/30',
+    text: 'text-emerald-900 dark:text-emerald-100 font-medium', 
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    dot: 'bg-emerald-500 shadow-lg shadow-emerald-300 dark:shadow-emerald-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-emerald-200 to-teal-200 dark:from-emerald-800/60 dark:to-teal-800/60'
+  },
+  
+  // إشعارات الذكاء الاصطناعي - ألوان زرقاء متدرجة
+  ai_order: { 
+    bg: 'bg-gradient-to-r from-sky-100 to-blue-100 dark:from-sky-900/40 dark:to-blue-900/40', 
+    border: 'border-l-4 border-sky-500 shadow-md shadow-sky-200 dark:shadow-sky-900/30',
+    text: 'text-sky-900 dark:text-sky-100 font-medium', 
+    icon: 'text-sky-600 dark:text-sky-400',
+    dot: 'bg-sky-500 shadow-lg shadow-sky-300 dark:shadow-sky-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-sky-200 to-blue-200 dark:from-sky-800/60 dark:to-blue-800/60'
+  },
+  
+  // إشعارات النظام العامة - ألوان رمادية أنيقة
   system: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-slate-500 dark:border-slate-400',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-slate-100 to-gray-100 dark:from-slate-900/40 dark:to-gray-900/40', 
+    border: 'border-l-4 border-slate-500 shadow-md shadow-slate-200 dark:shadow-slate-900/30',
+    text: 'text-slate-900 dark:text-slate-100 font-medium', 
     icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500'
+    dot: 'bg-slate-500 shadow-lg shadow-slate-300 dark:shadow-slate-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-slate-200 to-gray-200 dark:from-slate-800/60 dark:to-gray-800/60'
+  },
+  inventory_update: { 
+    bg: 'bg-gradient-to-r from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40', 
+    border: 'border-l-4 border-violet-500 shadow-md shadow-violet-200 dark:shadow-violet-900/30',
+    text: 'text-violet-900 dark:text-violet-100 font-medium', 
+    icon: 'text-violet-600 dark:text-violet-400',
+    dot: 'bg-violet-500 shadow-lg shadow-violet-300 dark:shadow-violet-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-violet-200 to-purple-200 dark:from-violet-800/60 dark:to-purple-800/60'
+  },
+  inventory_cleanup: { 
+    bg: 'bg-gradient-to-r from-indigo-100 to-blue-100 dark:from-indigo-900/40 dark:to-blue-900/40', 
+    border: 'border-l-4 border-indigo-500 shadow-md shadow-indigo-200 dark:shadow-indigo-900/30',
+    text: 'text-indigo-900 dark:text-indigo-100 font-medium', 
+    icon: 'text-indigo-600 dark:text-indigo-400',
+    dot: 'bg-indigo-500 shadow-lg shadow-indigo-300 dark:shadow-indigo-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-indigo-200 to-blue-200 dark:from-indigo-800/60 dark:to-blue-800/60'
+  },
+  order_deleted: { 
+    bg: 'bg-gradient-to-r from-rose-100 to-red-100 dark:from-rose-900/40 dark:to-red-900/40', 
+    border: 'border-l-4 border-rose-500 shadow-md shadow-rose-200 dark:shadow-rose-900/30',
+    text: 'text-rose-900 dark:text-rose-100 font-medium', 
+    icon: 'text-rose-600 dark:text-rose-400',
+    dot: 'bg-rose-500 shadow-lg shadow-rose-300 dark:shadow-rose-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-rose-200 to-red-200 dark:from-rose-800/60 dark:to-red-800/60'
   },
   default: { 
-    bg: 'bg-slate-50/80 dark:bg-slate-900/10 backdrop-blur-sm', 
-    border: 'border-r-4 border-slate-500 dark:border-slate-400',
-    text: 'text-foreground', 
-    icon: 'text-slate-600 dark:text-slate-400',
-    dot: 'bg-slate-500'
+    bg: 'bg-gradient-to-r from-gray-100 to-slate-100 dark:from-gray-900/40 dark:to-slate-900/40', 
+    border: 'border-l-4 border-gray-500 shadow-md shadow-gray-200 dark:shadow-gray-900/30',
+    text: 'text-gray-900 dark:text-gray-100 font-medium', 
+    icon: 'text-gray-600 dark:text-gray-400',
+    dot: 'bg-gray-500 shadow-lg shadow-gray-300 dark:shadow-gray-700',
+    pulse: 'animate-pulse bg-gradient-to-r from-gray-200 to-slate-200 dark:from-gray-800/60 dark:to-slate-800/60'
   },
-};
 
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
@@ -255,21 +310,31 @@ const NotificationsPanel = () => {
       const orderId = data.order_id;
       const orderNumber = data.order_number;
       
-      if (orderId) {
-        // التنقل للطلبات مع تمرير معرف الطلب للتركيز عليه
-        navigate(`/orders?highlight=${orderId}`);
-      } else if (orderNumber) {
-        // التنقل بالبحث عن رقم الطلب
-        navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
-      } else {
-        // استخراج رقم الطلب من الرسالة كبديل
-        const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
-        const extractedOrderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
-        
-        if (extractedOrderNumber) {
-          navigate(`/orders?search=${encodeURIComponent(extractedOrderNumber)}`);
+      // إشعارات تحديث الحالة تذهب لمتابعة الطلبات
+      if (notification.type === 'order_status_update') {
+        if (orderId) {
+          navigate(`/employee-follow-up?highlight=${orderId}`);
+        } else if (orderNumber) {
+          navigate(`/employee-follow-up?search=${encodeURIComponent(orderNumber)}`);
         } else {
-          navigate('/orders?status=pending');
+          navigate('/employee-follow-up');
+        }
+      } else {
+        // الطلبات الجديدة تذهب لصفحة الطلبات
+        if (orderId) {
+          navigate(`/orders?highlight=${orderId}`);
+        } else if (orderNumber) {
+          navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
+        } else {
+          // استخراج رقم الطلب من الرسالة كبديل
+          const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+          const extractedOrderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+          
+          if (extractedOrderNumber) {
+            navigate(`/orders?search=${encodeURIComponent(extractedOrderNumber)}`);
+          } else {
+            navigate('/orders?status=pending');
+          }
         }
       }
     } else if (notification.type === 'order_completed') {
@@ -452,7 +517,7 @@ const NotificationsPanel = () => {
                       <div 
                         className={cn(
                           "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
-                          colors.bg,
+                          (notification.is_read || notification.read) ? colors.bg : colors.pulse || colors.bg,
                           colors.border,
                           (notification.is_read || notification.read) ? "opacity-70" : "shadow-sm hover:shadow-md",
                           "hover:scale-[1.01] hover:shadow-lg hover:bg-gradient-to-l hover:from-white/50 hover:to-transparent dark:hover:from-white/10"
