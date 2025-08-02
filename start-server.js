@@ -1,25 +1,16 @@
 #!/usr/bin/env node
 
-// حل مباشر لتشغيل الخادم
-import { createServer } from 'vite'
+// مباشر حل نهائي لمشكلة vite
+import { execSync } from 'child_process'
 
-async function startServer() {
-  try {
-    const server = await createServer({
-      server: {
-        host: '::',
-        port: 8080,
-        cors: true
-      }
-    })
-    
-    await server.listen()
-    server.printUrls()
-    console.log('✅ تم تشغيل الخادم بنجاح!')
-  } catch (error) {
-    console.error('❌ خطأ:', error)
-    process.exit(1)
-  }
+try {
+  console.log('🚀 بدء تشغيل الخادم...')
+  // تشغيل vite مع npx لضمان العثور على المسار الصحيح
+  execSync('npx vite --host :: --port 8080', {
+    stdio: 'inherit',
+    cwd: process.cwd()
+  })
+} catch (error) {
+  console.error('❌ خطأ:', error.message)
+  process.exit(1)
 }
-
-startServer()

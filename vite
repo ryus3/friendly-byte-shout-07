@@ -1,17 +1,3 @@
-#!/usr/bin/env node
-
-// حل نهائي - تشغيل vite مباشرة
-import { spawn } from 'child_process'
-import { fileURLToPath } from 'url'
-import path from 'path'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const vitePath = path.join(__dirname, 'node_modules', '.bin', 'vite')
-
-const args = process.argv.slice(2)
-const child = spawn(vitePath, args, {
-  stdio: 'inherit',
-  shell: true
-})
-
-child.on('exit', (code) => process.exit(code))
+#!/bin/bash
+# Direct vite execution with explicit path
+./node_modules/.bin/vite "$@"
