@@ -556,9 +556,8 @@ const ProfitsSummaryPage = () => {
           {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير وكارت الموظف */}
           {/* استخدام UnifiedProfitDisplay مباشرة مع الكروت الجديدة */}
           <UnifiedProfitDisplay
-            profitData={null}
-            unifiedNetProfit={unifiedProfitData?.netProfit}
-            displayMode="summary"
+            profitData={profitData}
+            displayMode="dashboard"
             canViewAll={canViewAll}
             onFilterChange={handleFilterChange}
             onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
