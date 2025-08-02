@@ -47,20 +47,28 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
         </div>
       </div>
       <div className="col-span-2 text-center">
-        <p className="font-mono font-semibold text-base">{stock}</p>
-        <p className="text-xs text-muted-foreground">المخزون</p>
+        <div className="flex flex-col items-center space-y-1">
+          <p className="font-mono font-semibold text-sm md:text-base">{stock}</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">المخزون</p>
+        </div>
       </div>
       <div className="col-span-1 text-center">
-        <p className="font-mono font-semibold text-base text-yellow-500">{reserved}</p>
-        <p className="text-xs text-muted-foreground">محجوز</p>
+        <div className="flex flex-col items-center space-y-1">
+          <p className="font-mono font-semibold text-sm md:text-base text-yellow-500">{reserved}</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">محجوز</p>
+        </div>
       </div>
       <div className="col-span-1 text-center">
-        <p className="font-mono font-semibold text-base text-green-500">{available}</p>
-        <p className="text-xs text-muted-foreground">متاح</p>
+        <div className="flex flex-col items-center space-y-1">
+          <p className="font-mono font-semibold text-sm md:text-base text-green-500">{available}</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">متاح</p>
+        </div>
       </div>
       <div className="col-span-1 text-center">
-        <p className="font-mono font-semibold text-base text-blue-500">{variant.sold_quantity || 0}</p>
-        <p className="text-xs text-muted-foreground">مباع</p>
+        <div className="flex flex-col items-center space-y-1">
+          <p className="font-mono font-semibold text-sm md:text-base text-blue-500">{variant.sold_quantity || 0}</p>
+          <p className="text-[10px] md:text-xs text-muted-foreground">مباع</p>
+        </div>
       </div>
       <div className="col-span-3 text-center">
         <Badge className={cn("w-full max-w-20 justify-center text-xs px-2 py-1", status.color)}>{status.text}</Badge>

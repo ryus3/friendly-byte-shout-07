@@ -183,11 +183,7 @@ export default defineConfig(async ({ mode }) => {
             },
         },
         define: {
-            global: 'globalThis',
-            'globalThis.Headers': 'globalThis.Headers || class Headers { constructor(init) { this.map = new Map(); if (init) { if (typeof init === "object") { for (const [key, value] of Object.entries(init)) { this.map.set(key.toLowerCase(), value); } } } } get(name) { return this.map.get(name.toLowerCase()) || null; } set(name, value) { this.map.set(name.toLowerCase(), value); } has(name) { return this.map.has(name.toLowerCase()); } delete(name) { return this.map.delete(name.toLowerCase()); } forEach(callback) { this.map.forEach((value, key) => callback(value, key, this)); } entries() { return this.map.entries(); } keys() { return this.map.keys(); } values() { return this.map.values(); } }',
-            'globalThis.Request': 'globalThis.Request || class Request { constructor(input, options = {}) { this.url = input; this.method = options.method || "GET"; this.headers = new Headers(options.headers); this.body = options.body; } }',
-            'globalThis.Response': 'globalThis.Response || class Response { constructor(body, options = {}) { this.body = body; this.status = options.status || 200; this.statusText = options.statusText || "OK"; this.headers = new Headers(options.headers); } json() { return Promise.resolve(JSON.parse(this.body)); } text() { return Promise.resolve(this.body); } }',
-            'globalThis.fetch': 'globalThis.fetch || function fetch() { return Promise.reject(new Error("Fetch not available")); }'
+            global: 'globalThis'
         },
         optimizeDeps: {
             include: ['react', 'react-dom', 'react/jsx-runtime'],
