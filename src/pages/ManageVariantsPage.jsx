@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CategoriesManager from '@/components/manage-variants/CategoriesManager';
-import ColorsManagerNew from '@/components/manage-variants/ColorsManagerNew';
-import SizesManagerNew from '@/components/manage-variants/SizesManagerNew';
+import ColorsManager from '@/components/manage-variants/ColorsManager';
+import SizesManager from '@/components/manage-variants/SizesManager';
 import DepartmentsManager from '@/components/manage-variants/DepartmentsManager';
 import ProductTypesManager from '@/components/manage-variants/ProductTypesManager';
 import SeasonsOccasionsManager from '@/components/manage-variants/SeasonsOccasionsManager';
@@ -18,6 +18,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
+import { VariantsProvider } from '@/contexts/VariantsContext';
 
 const ManageVariantsPage = () => {
   const navigate = useNavigate();
@@ -150,7 +151,7 @@ const ManageVariantsPage = () => {
       icon: Palette,
       description: 'إدارة وتنظيم ألوان المنتجات',
       color: 'from-pink-500 to-rose-600',
-      component: ColorsManagerNew
+      component: ColorsManager
     },
     {
       value: 'sizes',
@@ -158,12 +159,12 @@ const ManageVariantsPage = () => {
       icon: Ruler,
       description: 'إدارة القياسات والأحجام المختلفة',
       color: 'from-blue-500 to-indigo-600',
-      component: SizesManagerNew
+      component: SizesManager
     }
   ];
 
   return (
-    <>
+    <VariantsProvider>
       <Helmet>
         <title>إدارة المتغيرات - نظام RYUS</title>
         <meta name="description" content="نظام متطور لإدارة التصنيفات، الألوان، والقياسات للمنتجات" />
@@ -325,7 +326,7 @@ const ManageVariantsPage = () => {
           </div>
         </div>
       </div>
-    </>
+    </VariantsProvider>
   );
 };
 
