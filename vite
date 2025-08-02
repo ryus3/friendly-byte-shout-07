@@ -1,4 +1,2 @@
-#!/usr/bin/env node
-process.chdir(__dirname);
-process.env.PATH = process.env.PATH + ':./node_modules/.bin';
-require('child_process').execSync('npx vite --host :: --port 8080', { stdio: 'inherit' });
+#!/bin/bash
+exec npx vite --host :: --port 8080
