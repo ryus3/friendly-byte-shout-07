@@ -8,6 +8,8 @@ import '@/print.css';
 import 'react-day-picker/dist/style.css';
 import { disableReactDevTools } from '@fvilers/disable-react-devtools';
 import { setupRealtime } from '@/utils/realtime-setup.js';
+// Import PDF polyfill before anything else that might use it
+import '@/lib/pdf-polyfill.js';
 
 if (import.meta.env.PROD) {
   disableReactDevTools();

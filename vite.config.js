@@ -183,12 +183,13 @@ export default defineConfig(async ({ mode }) => {
             },
         },
         optimizeDeps: {
-            include: ['react', 'react-dom', 'react/jsx-runtime'],
-            exclude: ['@supabase/supabase-js']
+            include: ['react', 'react-dom', 'react/jsx-runtime', 'node-fetch'],
+            exclude: ['@supabase/supabase-js', '@react-pdf/renderer']
         },
         define: {
             global: 'globalThis',
             'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+            'globalThis.Headers': 'globalThis.Headers || globalThis.window?.Headers',
         }
     };
 });
