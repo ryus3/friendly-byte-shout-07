@@ -300,13 +300,26 @@ const ProfitsSummaryPage = () => {
 
         const totalExpenses = generalExpenses + employeeSettledDues;
 
-        // استخدام البيانات الموحدة لصافي الربح والإيرادات
-        const totalRevenue = unifiedProfitData?.totalRevenue || 0;
-        const deliveryFees = unifiedProfitData?.deliveryFees || 0;
-        const salesWithoutDelivery = unifiedProfitData?.salesWithoutDelivery || 0;
-        const cogs = unifiedProfitData?.cogs || 0;
-        const grossProfit = unifiedProfitData?.grossProfit || 0;
-        const netProfit = unifiedProfitData?.netProfit || 0;
+        // حساب الإيرادات والتكاليف للفترة المحددة (بدلاً من استخدام البيانات الموحدة التي تشمل كل الفترات)
+        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
+        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
+        const salesWithoutDelivery = totalRevenue - deliveryFees;
+        
+        // حساب تكلفة البضاعة المباعة للفترة المحددة
+        const cogs = deliveredOrders.reduce((sum, o) => {
+            if (!o.order_items || !Array.isArray(o.order_items)) return sum;
+            const orderCogs = o.order_items.reduce((itemSum, item) => {
+                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
+                const quantity = item.quantity || 0;
+                return itemSum + (costPrice * quantity);
+            }, 0);
+            return sum + orderCogs;
+        }, 0);
+        
+        const grossProfit = salesWithoutDelivery - cogs;
+        
+        // صافي الربح = الربح الخام - المصاريف العامة
+        const netProfit = grossProfit - generalExpenses;
 
         // حساب أرباح المدير الشخصية من طلباته الخاصة
         const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
@@ -347,14 +360,14 @@ const ProfitsSummaryPage = () => {
             personalPendingProfit,
             personalSettledProfit,
             totalSettledDues,
-            // استخدام البيانات الموحدة بدلاً من الحساب المحلي
-            netProfit: unifiedProfitData?.netProfit || 0,
-            totalRevenue: unifiedProfitData?.totalRevenue || 0,
-            deliveryFees: unifiedProfitData?.deliveryFees || 0,
-            salesWithoutDelivery: unifiedProfitData?.salesWithoutDelivery || 0,
-            cogs: unifiedProfitData?.cogs || 0,
-            grossProfit: unifiedProfitData?.grossProfit || 0,
-            generalExpenses: unifiedProfitData?.generalExpenses || 0,
+            // استخدام الحساب المحلي للفترة المحددة بدلاً من البيانات الموحدة
+            netProfit,
+            totalRevenue,
+            deliveryFees,
+            salesWithoutDelivery,
+            cogs,
+            grossProfit,
+            generalExpenses,
             employeeSettledDues,
             generalExpensesFiltered: expensesInPeriod.filter(e => {
                 if (e.expense_type === 'system') return false;
