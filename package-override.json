@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "node start-server.js",
+    "dev": "npx vite --host :: --port 8080 --cors",
     "build": "npx vite build",
     "preview": "npx vite preview"
   }
