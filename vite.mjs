@@ -1,19 +1,14 @@
 #!/usr/bin/env node
 
 import { execSync } from 'child_process';
-import { existsSync } from 'fs';
 
 try {
-  const args = process.argv.slice(2).join(' ');
-  
-  if (existsSync('./node_modules/.bin/vite')) {
-    execSync(`./node_modules/.bin/vite ${args}`, { stdio: 'inherit' });
-  } else if (existsSync('./node_modules/vite/bin/vite.js')) {
-    execSync(`node ./node_modules/vite/bin/vite.js ${args}`, { stdio: 'inherit' });
-  } else {
-    execSync(`npx vite ${args}`, { stdio: 'inherit' });
-  }
+  console.log('🚀 بدء تشغيل الخادم من vite.mjs...');
+  execSync('npx vite --host :: --port 8080', {
+    stdio: 'inherit',
+    cwd: process.cwd()
+  });
 } catch (error) {
-  console.error('Error running vite:', error.message);
+  console.error('❌ خطأ:', error.message);
   process.exit(1);
 }
