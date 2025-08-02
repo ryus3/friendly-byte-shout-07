@@ -44,85 +44,40 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-xs md:text-sm truncate">{product.name}</h3>
-          <p className="text-xs text-muted-foreground truncate">{variant.size}</p>
+          <p className="font-semibold text-xs md:text-sm truncate">{variant.size}</p>
           <p className="text-xs text-muted-foreground truncate">{variant.color}</p>
         </div>
       </div>
       
-      {/* العناوين للهاتف فقط */}
-      <div className="col-span-12 md:hidden grid grid-cols-5 gap-1 mt-2 mb-1 px-1">
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground font-semibold">المخزون</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground font-semibold">محجوز</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground font-semibold">متاح</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground font-semibold">مباع</p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground font-semibold">الحالة</p>
-        </div>
+      {/* المخزون */}
+      <div className="col-span-1 md:col-span-2 text-center">
+        <p className="font-mono font-semibold text-sm md:text-base">{stock}</p>
       </div>
       
-      {/* الأرقام للهاتف */}
-      <div className="col-span-12 md:hidden grid grid-cols-5 gap-1 px-1">
-        <div className="text-center">
-          <p className="font-mono font-semibold text-sm">{stock}</p>
-        </div>
-        <div className="text-center">
-          <p className="font-mono font-semibold text-sm text-yellow-600">{reserved}</p>
-        </div>
-        <div className="text-center">
-          <p className="font-mono font-semibold text-sm text-green-600">{available}</p>
-        </div>
-        <div className="text-center">
-          <p className="font-mono font-semibold text-sm text-blue-600">{sold}</p>
-        </div>
-        <div className="text-center">
-          <Badge className={cn("text-xs px-1 py-0.5", status.color)}>
-            {status.text}
-          </Badge>
-        </div>
+      {/* محجوز */}
+      <div className="col-span-1 md:col-span-2 text-center">
+        <p className="font-mono font-semibold text-sm md:text-base text-yellow-600">{reserved}</p>
       </div>
       
-      {/* للحاسوب - المخزون */}
-      <div className="hidden md:block col-span-2 text-center">
-        <p className="font-mono font-semibold text-base">{stock}</p>
-        <p className="text-xs text-muted-foreground">المخزون</p>
+      {/* متاح */}
+      <div className="col-span-2 md:col-span-2 text-center">
+        <p className="font-mono font-semibold text-sm md:text-base text-green-600">{available}</p>
       </div>
       
-      {/* للحاسوب - محجوز */}
-      <div className="hidden md:block col-span-2 text-center">
-        <p className="font-mono font-semibold text-base text-yellow-600">{reserved}</p>
-        <p className="text-xs text-muted-foreground">محجوز</p>
+      {/* مباع */}
+      <div className="col-span-1 md:col-span-2 text-center">
+        <p className="font-mono font-semibold text-sm md:text-base text-blue-600">{sold}</p>
       </div>
       
-      {/* للحاسوب - متاح */}
-      <div className="hidden md:block col-span-2 text-center">
-        <p className="font-mono font-semibold text-base text-green-600">{available}</p>
-        <p className="text-xs text-muted-foreground">متاح</p>
-      </div>
-      
-      {/* للحاسوب - مباع */}
-      <div className="hidden md:block col-span-2 text-center">
-        <p className="font-mono font-semibold text-base text-blue-600">{sold}</p>
-        <p className="text-xs text-muted-foreground">مباع</p>
-      </div>
-      
-      {/* للحاسوب - حالة المخزون */}
-      <div className="hidden md:block col-span-1 text-center">
-        <Badge className={cn("w-full max-w-20 justify-center text-xs px-2 py-1", status.color)}>
+      {/* حالة المخزون */}
+      <div className="col-span-2 md:col-span-1 text-center">
+        <Badge className={cn("text-xs px-1 md:px-2 py-1", status.color)}>
           {status.text}
         </Badge>
       </div>
       
       {/* زر التعديل */}
-      <div className="col-span-12 md:col-span-1 text-center mt-2 md:mt-0">
+      <div className="col-span-1 md:col-span-1 text-center">
         {onEditStock && (
           <Button
             variant="outline"
@@ -130,8 +85,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
             onClick={() => onEditStock(variant)}
             className="w-full md:w-auto"
           >
-            <Edit className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">تعديل</span>
+            <Edit className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
         )}
       </div>

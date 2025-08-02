@@ -59,57 +59,32 @@ export const useUnifiedProfits = (userId = null) => {
       const safeOrders = Array.isArray(orders) ? orders : [];
       const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
 
-      // نطاق التاريخ: توسيع النطاق لإظهار جميع البيانات
-      const now = new Date();
-      // تمديد النطاق لـ 6 أشهر للخلف لضمان إظهار البيانات الموجودة
-      const from = new Date(now.getFullYear(), now.getMonth() - 6, 1);
-      const to = endOfMonth(now);
+      // إزالة فلتر التاريخ ليظهر جميع البيانات الموجودة
+      console.log('📅 عرض جميع البيانات بدون فلتر تاريخ لإصلاح مشكلة صافي الأرباح');
 
-      console.log('📅 نطاق التاريخ الموسع:', {
-        from: from.toISOString(),
-        to: to.toISOString(),
-        description: 'تم توسيع النطاق لضمان إظهار البيانات الموجودة'
-      });
+      const filterByDate = () => true; // دائماً true لإظهار جميع البيانات
 
-      const filterByDate = (itemDateStr) => {
-        if (!from || !to || !itemDateStr) return true;
-        try {
-          const itemDate = parseISO(itemDateStr);
-          return isValid(itemDate) && itemDate >= from && itemDate <= to;
-        } catch (e) {
-          return false;
-        }
-      };
-
-      // نفس المنطق: الطلبات المُستلمة الفواتير فقط - تعديل الشرط مع معلومات أكثر
+      // الطلبات المُستلمة الفواتير فقط
       const deliveredOrders = safeOrders.filter(o => {
         const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
         const isReceiptReceived = o.receipt_received === true;
-        const isInDateRange = filterByDate(o.updated_at || o.created_at);
         
-        console.log('🔍 فحص الطلب مفصل:', {
+        console.log('🔍 فحص الطلب:', {
           orderId: o.id,
           orderNumber: o.order_number,
           status: o.status,
           receiptReceived: o.receipt_received,
-          createdBy: o.created_by,
-          createdAt: o.created_at,
-          updatedAt: o.updated_at,
           totalAmount: o.total_amount,
           finalAmount: o.final_amount,
-          isDeliveredStatus,
-          isReceiptReceived,
-          isInDateRange,
-          dateRange: { from: from.toISOString(), to: to.toISOString() },
-          finalResult: isDeliveredStatus && isReceiptReceived && isInDateRange
+          isValid: isDeliveredStatus && isReceiptReceived
         });
         
-        return isDeliveredStatus && isReceiptReceived && isInDateRange;
+        return isDeliveredStatus && isReceiptReceived;
       });
 
       console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length);
 
-      const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
+      const expensesInRange = safeExpenses; // جميع المصاريف بدون فلتر
 
       // حساب إجمالي الإيرادات
       const totalRevenue = deliveredOrders.reduce((sum, o) => {
