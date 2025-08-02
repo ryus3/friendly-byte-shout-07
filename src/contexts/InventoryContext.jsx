@@ -135,19 +135,35 @@ export const InventoryProvider = ({ children }) => {
         return { success: false, error: 'فشل في إنشاء عناصر الطلب' };
       }
 
-      // حجز المخزون للطلبات قيد التجهيز
+      // حجز المخزون للطلبات قيد التجهيز - استخدام الدالة الجديدة
       try {
         for (const item of cartItems) {
-          await supabase.rpc('update_reserved_stock', {
+          const { data: reserveResult, error: reserveError } = await supabase.rpc('reserve_stock_for_order', {
             p_product_id: item.productId,
-            p_quantity_change: item.quantity,
-            p_sku: item.variantId ? item.variantId.toString() : (item.sku || null)
+            p_variant_id: item.variantId,
+            p_quantity: item.quantity
           });
+          
+          if (reserveError) {
+            console.error('خطأ في حجز المخزون:', reserveError);
+            toast({
+              title: "تحذير", 
+              description: `مشكلة في حجز مخزون ${item.productName}`,
+              variant: "destructive"
+            });
+          } else if (!reserveResult?.success) {
+            console.error('فشل حجز المخزون:', reserveResult?.error);
+            toast({
+              title: "تحذير مخزون", 
+              description: `${item.productName}: ${reserveResult?.error}`,
+              variant: "destructive"
+            });
+          } else {
+            console.log('✅ تم حجز المخزون بنجاح:', reserveResult);
+          }
         }
-        // لا نلغي الطلب لكن نسجل التحذير
       } catch (stockError) {
         console.error('خطأ في حجز المخزون:', stockError);
-        // لا نلغي الطلب لكن نسجل التحذير
         toast({
           title: "تحذير", 
           description: "تم إنشاء الطلب لكن قد تكون هناك مشكلة في حجز المخزون",

@@ -1,2 +1,2 @@
 #!/bin/bash
-exec npx vite --host :: --port 8080
+npx vite --host :: --port 8080
