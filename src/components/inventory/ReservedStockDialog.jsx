@@ -51,7 +51,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
         return reservedOrders.filter(order => order.created_by === selectedEmployee);
       }
     } else {
-      // الموظف يرى طلباته فقط - user.id هو نفسه user_id من Auth
+      // الموظف يرى طلباته فقط - استخدام user.id الموحد
       return reservedOrders.filter(order => order.created_by === user?.id);
     }
   }, [reservedOrders, selectedEmployee, isAdmin, user]);
