@@ -154,6 +154,9 @@ export default defineConfig(async ({ mode }) => {
             alias: { '@': path.resolve(__dirname, './src') },
         },
         build: {
+            target: 'es2015',
+            minify: 'terser',
+            chunkSizeWarningLimit: 1000,
             rollupOptions: {
                 external: [
                     '@babel/parser',
@@ -161,7 +164,18 @@ export default defineConfig(async ({ mode }) => {
                     '@babel/generator',
                     '@babel/types',
                 ],
+                output: {
+                    manualChunks: {
+                        vendor: ['react', 'react-dom'],
+                        ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
+                        utils: ['date-fns', 'lucide-react', 'clsx']
+                    }
+                }
             },
+        },
+        optimizeDeps: {
+            include: ['react', 'react-dom', 'react/jsx-runtime'],
+            exclude: ['@supabase/supabase-js']
         },
     };
 });

@@ -27,7 +27,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const { isAdmin } = usePermissions();
   const { orders } = useInventory();
 
-  // تحميل بيانات الموظفين
+  // تحميل بيانات الموظفين فوراً عند فتح النافذة
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -43,10 +43,10 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
       }
     };
 
-    if (open) {
+    if (open && employees.length === 0) {
       fetchEmployees();
     }
-  }, [open]);
+  }, [open, employees.length]);
 
 
   // الطلبات المعلقة فقط (المحجوزة)
@@ -346,16 +346,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                           )}
                                         </div>
                                         
-                                        {/* الكمية والسعر - عرض مضغوط */}
+                                        {/* الكمية والسعر - عرض مضغوط ومفصل */}
                                         <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm">
                                           <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
-                                            ك: {item.quantity}
+                                            العدد: {item.quantity}
                                           </Badge>
                                           <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
-                                            {item.price?.toLocaleString()} د.ع
+                                            سعر المنتج: {item.price?.toLocaleString()} د.ع
                                           </Badge>
                                           <Badge variant="secondary" className="bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700 font-bold">
-                                            {(item.price * item.quantity)?.toLocaleString()} د.ع
+                                            المجموع: {(item.price * item.quantity)?.toLocaleString()} د.ع
                                           </Badge>
                                         </div>
                                       </div>
