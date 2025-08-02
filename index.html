@@ -7,51 +7,224 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		<title>Hostinger Horizons</title>
 		<script>
-			// Polyfill for Headers API if not available
-			if (typeof Headers === 'undefined') {
-				window.Headers = class Headers {
-					constructor(init) {
-						this.map = new Map();
-						if (init) {
-							if (init instanceof Headers) {
-								init.forEach((value, key) => {
-									this.map.set(key.toLowerCase(), value);
-								});
-							} else if (Array.isArray(init)) {
-								init.forEach(([key, value]) => {
-									this.map.set(key.toLowerCase(), value);
-								});
-							} else if (typeof init === 'object') {
-								Object.entries(init).forEach(([key, value]) => {
-									this.map.set(key.toLowerCase(), value);
-								});
-							}
+			// Complete fetch API polyfill for better compatibility
+			(function() {
+				'use strict';
+				
+				// Set up global object
+				if (typeof global === 'undefined') {
+					window.global = globalThis;
+				}
+				
+				// Only polyfill if not already available
+				if (typeof globalThis.Headers === 'undefined') {
+					// Headers implementation
+					function Headers(init) {
+						this.map = {};
+						if (init instanceof Headers) {
+							init.forEach(function(value, name) {
+								this.append(name, value);
+							}, this);
+						} else if (Array.isArray(init)) {
+							init.forEach(function(header) {
+								this.append(header[0], header[1]);
+							}, this);
+						} else if (init) {
+							Object.getOwnPropertyNames(init).forEach(function(name) {
+								this.append(name, init[name]);
+							}, this);
 						}
 					}
-					append(name, value) {
-						const existing = this.map.get(name.toLowerCase());
-						this.map.set(name.toLowerCase(), existing ? `${existing}, ${value}` : value);
-					}
-					delete(name) { this.map.delete(name.toLowerCase()); }
-					get(name) { return this.map.get(name.toLowerCase()) || null; }
-					has(name) { return this.map.has(name.toLowerCase()); }
-					set(name, value) { this.map.set(name.toLowerCase(), value); }
-					forEach(callback, thisArg) {
-						this.map.forEach((value, key) => {
-							callback.call(thisArg, value, key, this);
+
+					Headers.prototype.append = function(name, value) {
+						name = normalizeName(name);
+						value = normalizeValue(value);
+						var oldValue = this.map[name];
+						this.map[name] = oldValue ? oldValue + ', ' + value : value;
+					};
+
+					Headers.prototype['delete'] = function(name) {
+						delete this.map[normalizeName(name)];
+					};
+
+					Headers.prototype.get = function(name) {
+						name = normalizeName(name);
+						return this.has(name) ? this.map[name] : null;
+					};
+
+					Headers.prototype.has = function(name) {
+						return this.map.hasOwnProperty(normalizeName(name));
+					};
+
+					Headers.prototype.set = function(name, value) {
+						this.map[normalizeName(name)] = normalizeValue(value);
+					};
+
+					Headers.prototype.forEach = function(callback, thisArg) {
+						for (var name in this.map) {
+							if (this.map.hasOwnProperty(name)) {
+								callback.call(thisArg, this.map[name], name, this);
+							}
+						}
+					};
+
+					Headers.prototype.keys = function() {
+						var items = [];
+						this.forEach(function(value, name) {
+							items.push(name);
 						});
+						return items;
+					};
+
+					Headers.prototype.values = function() {
+						var items = [];
+						this.forEach(function(value) {
+							items.push(value);
+						});
+						return items;
+					};
+
+					Headers.prototype.entries = function() {
+						var items = [];
+						this.forEach(function(value, name) {
+							items.push([name, value]);
+						});
+						return items;
+					};
+
+					function normalizeName(name) {
+						if (typeof name !== 'string') {
+							name = String(name);
+						}
+						if (/[^a-z0-9\-#$%&'*+.^_`|~]/i.test(name)) {
+							throw new TypeError('Invalid character in header field name');
+						}
+						return name.toLowerCase();
 					}
-					keys() { return this.map.keys(); }
-					values() { return this.map.values(); }
-					entries() { return this.map.entries(); }
-					[Symbol.iterator]() { return this.map.entries(); }
-				};
-			}
-			
-			// Ensure global is defined
-			if (typeof global === 'undefined') {
-				window.global = window;
-			}
+
+					function normalizeValue(value) {
+						if (typeof value !== 'string') {
+							value = String(value);
+						}
+						return value;
+					}
+
+					// Set Headers on global object
+					globalThis.Headers = Headers;
+					window.Headers = Headers;
+				}
+				
+				// Request polyfill
+				if (typeof globalThis.Request === 'undefined') {
+					function Request(input, options) {
+						options = options || {};
+						var body = options.body;
+
+						if (input instanceof Request) {
+							if (input.bodyUsed) {
+								throw new TypeError('Already read');
+							}
+							this.url = input.url;
+							this.credentials = input.credentials;
+							if (!options.headers) {
+								this.headers = new Headers(input.headers);
+							}
+							this.method = input.method;
+							this.mode = input.mode;
+							this.signal = input.signal;
+							if (!body && input._bodyInit != null) {
+								body = input._bodyInit;
+								input.bodyUsed = true;
+							}
+						} else {
+							this.url = String(input);
+						}
+
+						this.credentials = options.credentials || this.credentials || 'same-origin';
+						if (options.headers || !this.headers) {
+							this.headers = new Headers(options.headers);
+						}
+						this.method = normalizeMethod(options.method || this.method || 'GET');
+						this.mode = options.mode || this.mode || null;
+						this.signal = options.signal || this.signal;
+						this.referrer = null;
+
+						if ((this.method === 'GET' || this.method === 'HEAD') && body) {
+							throw new TypeError('Body not allowed for GET or HEAD requests');
+						}
+						this._initBody(body);
+					}
+
+					function normalizeMethod(method) {
+						var upcased = method.toUpperCase();
+						return ['DELETE', 'GET', 'HEAD', 'OPTIONS', 'POST', 'PUT'].indexOf(upcased) > -1 ? upcased : method;
+					}
+
+					Request.prototype._initBody = function(body) {
+						this._bodyInit = body;
+						if (!body) {
+							this._bodyText = '';
+						} else if (typeof body === 'string') {
+							this._bodyText = body;
+						} else {
+							this._bodyText = body.toString();
+						}
+					};
+
+					globalThis.Request = Request;
+					window.Request = Request;
+				}
+
+				// Response polyfill
+				if (typeof globalThis.Response === 'undefined') {
+					function Response(bodyInit, options) {
+						if (!options) {
+							options = {};
+						}
+
+						this.type = 'default';
+						this.status = options.status === undefined ? 200 : options.status;
+						this.ok = this.status >= 200 && this.status < 300;
+						this.statusText = 'statusText' in options ? options.statusText : 'OK';
+						this.headers = new Headers(options.headers);
+						this.url = options.url || '';
+						this._initBody(bodyInit);
+					}
+
+					Response.prototype._initBody = function(body) {
+						this._bodyInit = body;
+						if (!body) {
+							this._bodyText = '';
+						} else if (typeof body === 'string') {
+							this._bodyText = body;
+						} else {
+							this._bodyText = body.toString();
+						}
+					};
+
+					Response.prototype.text = function() {
+						return Promise.resolve(this._bodyText);
+					};
+
+					Response.prototype.json = function() {
+						return this.text().then(JSON.parse);
+					};
+
+					Response.prototype.clone = function() {
+						return new Response(this._bodyInit, {
+							status: this.status,
+							statusText: this.statusText,
+							headers: new Headers(this.headers),
+							url: this.url
+						});
+					};
+
+					globalThis.Response = Response;
+					window.Response = Response;
+				}
+
+				console.log('Fetch API polyfills loaded successfully');
+			})();
 		</script>
 	</head>
 	<body>
