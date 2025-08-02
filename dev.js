@@ -1,32 +1,36 @@
 #!/usr/bin/env node
 
-// حل نهائي لمشكلة vite not found
-import { spawn } from 'child_process'
-import { fileURLToPath } from 'url'
+import { execSync } from 'child_process'
 import path from 'path'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const projectRoot = process.cwd()
 
-console.log('🚀 بدء تشغيل خادم التطوير...')
-
-// استخدام npx لتشغيل vite
-const child = spawn('npx', ['vite', '--host', '::', '--port', '8080'], {
-  stdio: 'inherit',
-  cwd: __dirname,
-  env: {
+try {
+  console.log('🚀 Starting development server...')
+  
+  // Add node_modules/.bin to PATH and run vite
+  const vitePath = path.join(projectRoot, 'node_modules', '.bin', 'vite')
+  const env = {
     ...process.env,
-    NODE_ENV: 'development'
+    PATH: `${path.join(projectRoot, 'node_modules', '.bin')}:${process.env.PATH}`
   }
-})
-
-child.on('error', (error) => {
-  console.error('❌ خطأ في التشغيل:', error.message)
-  process.exit(1)
-})
-
-child.on('exit', (code) => {
-  if (code !== 0) {
-    console.error(`❌ توقف الخادم بالكود: ${code}`)
+  
+  execSync(`"${vitePath}" --host :: --port 8080`, {
+    stdio: 'inherit',
+    env,
+    cwd: projectRoot
+  })
+  
+} catch (error) {
+  console.log('💡 Trying alternative method...')
+  try {
+    // Fallback to npx
+    execSync('npx vite --host :: --port 8080', {
+      stdio: 'inherit',
+      cwd: projectRoot
+    })
+  } catch (fallbackError) {
+    console.error('❌ All methods failed:', fallbackError.message)
+    process.exit(1)
   }
-  process.exit(code)
-})
+}
