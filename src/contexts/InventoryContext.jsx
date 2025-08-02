@@ -432,6 +432,7 @@ export const InventoryProvider = ({ children }) => {
                 ...variant,
                 quantity: variantInventory.quantity || 0,
                 reserved: variantInventory.reserved_quantity || 0,
+                sold_quantity: variantInventory.sold_quantity || 0,
                 min_stock: variantInventory.min_stock || 5,
                 location: variantInventory.location || null,
                 inventoryId: variantInventory.id
@@ -447,40 +448,44 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [setProducts]);
 
-  // إضافة realtime subscriptions للمخزون والطلبات
+  // إضافة realtime subscriptions للمخزون فقط (بدون طلبات)
   useEffect(() => {
     if (!user) return;
 
-    // Realtime للمخزون
+    // Realtime للمخزون فقط
     const inventoryChannel = supabase
-      .channel('inventory-changes')
+      .channel('inventory-context-changes')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'inventory'
         },
         (payload) => {
-          console.log('🔄 تحديث مخزون فوري:', payload);
-          refreshInventoryData();
-        }
-      )
-      .subscribe();
-
-    // Realtime للطلبات
-    const ordersChannel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('🔄 تحديث طلبات فوري:', payload);
-          refreshOrders();
+          console.log('🔄 تحديث المخزون في InventoryContext:', payload);
+          // تحديث فوري للمخزون بدلاً من إعادة تحميل كامل
+          const newData = payload.new;
+          if (newData) {
+            setProducts(prevProducts => 
+              prevProducts.map(product => ({
+                ...product,
+                variants: product.variants?.map(variant => {
+                  if (variant.id === newData.variant_id) {
+                    return {
+                      ...variant,
+                      quantity: newData.quantity || 0,
+                      reserved: newData.reserved_quantity || 0,
+                      min_stock: newData.min_stock || 5,
+                      location: newData.location || null,
+                      inventoryId: newData.id
+                    };
+                  }
+                  return variant;
+                })
+              }))
+            );
+          }
         }
       )
       .subscribe();
@@ -504,7 +509,6 @@ export const InventoryProvider = ({ children }) => {
 
     return () => {
       supabase.removeChannel(inventoryChannel);
-      supabase.removeChannel(ordersChannel);  
       supabase.removeChannel(orderItemsChannel);
     };
   }, [user, refreshInventoryData, refreshOrders]);
@@ -616,6 +620,7 @@ export const InventoryProvider = ({ children }) => {
             size: variant.sizes?.name || 'Unknown',
             quantity: variantInventory?.quantity || 0, // الكمية الحقيقية من inventory
             reserved: variantInventory?.reserved_quantity || 0,
+            sold_quantity: variantInventory?.sold_quantity || 0,
             min_stock: variantInventory?.min_stock || 5,
             location: variantInventory?.location || null,
             inventoryId: variantInventory?.id || null,
