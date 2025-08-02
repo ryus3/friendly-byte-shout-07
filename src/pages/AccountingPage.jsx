@@ -292,30 +292,23 @@ const AccountingPage = () => {
             }
         };
         
-        // الطلبات المُستلمة الفواتير فقط
+        // استخدام نفس منطق لوحة التحكم: الطلبات المُستلمة الفواتير فقط
         const deliveredOrders = safeOrders.filter(o => 
             o && (o.status === 'delivered' || o.status === 'completed') && 
             o.receipt_received === true && 
             filterByDate(o.updated_at || o.created_at)
         );
-        
-        console.log('🔥 === تشخيص شامل للمركز المالي ===');
-        console.log('📊 إجمالي الطلبات:', safeOrders.length);
         console.log('✅ الطلبات المُوصلة والمُستلمة الفواتير:', deliveredOrders.length);
-        console.log('📋 أمثلة الطلبات المُستلمة:', deliveredOrders.slice(0, 3));
-        console.log('📅 الفترة المحددة:', { from, to });
-        console.log('🏢 المستخدم الحالي:', currentUser?.id);
+        console.log('✅ أمثلة الطلبات المُستلمة:', deliveredOrders.slice(0, 2));
         
         const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
-        console.log('💸 المصاريف في النطاق:', expensesInRange.length);
         
         // حساب إجمالي الإيرادات من الطلبات المُوصلة
         const totalRevenue = deliveredOrders.reduce((sum, o) => {
             const amount = o.final_amount || o.total_amount || 0;
-            console.log(`💰 طلب ${o.order_number}: ${amount} د.ع`);
+            console.log(`💰 طلب ${o.order_number}: ${amount}`);
             return sum + amount;
         }, 0);
-        console.log('💵 إجمالي الإيرادات:', totalRevenue);
         
         const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
         const salesWithoutDelivery = totalRevenue - deliveryFees;
