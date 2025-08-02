@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-// import { useUnifiedProfits } from '@/hooks/useUnifiedProfits'; // مُعلق مؤقتاً
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -94,9 +94,7 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    // تعليق hook المؤقت حتى نحل مشكلة السياق
-    // const { profitData: unifiedProfitData } = useUnifiedProfits();
-    const unifiedProfitData = null; // قيمة مؤقتة
+    const { profitData: unifiedProfitData } = useUnifiedProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -410,7 +408,7 @@ const Dashboard = () => {
 
         return {
             totalOrdersCount: filteredTotalOrders.length,
-            netProfit: 0,
+            netProfit: unifiedProfitData?.netProfit || 0,
             pendingProfit,
             deliveredSales,
             pendingSales,

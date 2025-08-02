@@ -115,22 +115,6 @@ const CategoryFilterCards = ({ onFilterChange, currentFilters = {} }) => {
     onFilterChange(null);
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-20 bg-muted rounded"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 mb-8">
       {/* عنوان القسم */}
