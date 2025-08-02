@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import usePermissions from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 
-console.log('🔍 DEBUG: ReservedStockDialog loaded');
+
 
 const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
@@ -25,23 +25,10 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const { isAdmin } = usePermissions();
   const { orders, employees } = useInventory();
 
-  console.log('🔍 DEBUG: Component rendered with:', {
-    userId: user?.id,
-    isAdmin,
-    ordersCount: orders?.length,
-    employeesCount: employees?.length,
-    ordersSample: orders?.slice(0, 2)?.map(o => ({ id: o.id, created_by: o.created_by, status: o.status }))
-  });
 
   // الطلبات المعلقة فقط (المحجوزة)
   const reservedOrders = useMemo(() => {
-    const pendingOrders = orders?.filter(order => order.status === 'pending') || [];
-    console.log('🔍 DEBUG: Reserved orders:', {
-      totalOrders: orders?.length,
-      pendingOrders: pendingOrders.length,
-      pendingSample: pendingOrders.map(o => ({ id: o.id, created_by: o.created_by, order_number: o.order_number }))
-    });
-    return pendingOrders;
+    return orders?.filter(order => order.status === 'pending') || [];
   }, [orders]);
 
   // الموظفون المشاركون في الطلبات المحجوزة
@@ -54,36 +41,20 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
   // فلترة الطلبات حسب الصلاحيات
   const filteredOrders = useMemo(() => {
-    console.log('🔍 DEBUG: Filtering orders with:', {
-      userIdFromAuth: user?.id,
-      isAdmin,
-      selectedEmployee,
-      reservedOrdersCount: reservedOrders.length
-    });
-    
-    if (!reservedOrders.length) {
-      console.log('🔍 DEBUG: No reserved orders to filter');
-      return [];
-    }
+    if (!reservedOrders.length) return [];
     
     if (isAdmin) {
       // المدير يرى كل الطلبات أو طلبات موظف محدد
       if (selectedEmployee === 'all') {
-        console.log('🔍 DEBUG: Admin viewing all orders:', reservedOrders.length);
         return reservedOrders;
       } else {
-        const filtered = reservedOrders.filter(order => order.created_by === selectedEmployee);
-        console.log('🔍 DEBUG: Admin filtering for employee:', { selectedEmployee, filtered: filtered.length });
-        return filtered;
+        return reservedOrders.filter(order => order.created_by === selectedEmployee);
       }
     } else {
-      // الموظف يرى طلباته فقط - استخدام user.id أو user.user_id
-      const userId = user?.id || user?.user_id;
-      const filtered = reservedOrders.filter(order => order.created_by === userId);
-      console.log('🔍 DEBUG: Employee filtered results:', { userId, filtered: filtered.length });
-      return filtered;
+      // الموظف يرى طلباته فقط - user.id هو نفسه user_id من Auth
+      return reservedOrders.filter(order => order.created_by === user?.id);
     }
-  }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);
+  }, [reservedOrders, selectedEmployee, isAdmin, user]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'لا يوجد تاريخ';
