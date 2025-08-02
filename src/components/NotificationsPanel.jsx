@@ -266,7 +266,8 @@ const typeColorMap = {
     icon: 'text-gray-600 dark:text-gray-400',
     dot: 'bg-gray-500 shadow-lg shadow-gray-300 dark:shadow-gray-700',
     pulse: 'animate-pulse bg-gradient-to-r from-gray-200 to-slate-200 dark:from-gray-800/60 dark:to-slate-800/60'
-  },
+  }
+};
 
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
