@@ -49,9 +49,9 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   }, [open, employees.length]);
 
 
-  // الطلبات المعلقة فقط (المحجوزة)
+  // الطلبات المحجوزة (pending, shipped, delivery)
   const reservedOrders = useMemo(() => {
-    return orders?.filter(order => order.status === 'pending') || [];
+    return orders?.filter(order => ['pending', 'shipped', 'delivery'].includes(order.status)) || [];
   }, [orders]);
 
   // الموظفون المشاركون في الطلبات المحجوزة
