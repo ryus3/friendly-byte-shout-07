@@ -1,2 +1,2 @@
 #!/bin/bash
-exec ./node_modules/.bin/vite --host :: --port 8080
+exec npx vite --host :: --port 8080
