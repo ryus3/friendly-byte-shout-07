@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,14 +16,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import usePermissions from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
+import { supabase } from '@/lib/customSupabaseClient';
 
 
 
 const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
+  const [employees, setEmployees] = useState([]);
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
-  const { orders, employees } = useInventory();
+  const { orders } = useInventory();
+
+  // تحميل بيانات الموظفين
+  useEffect(() => {
+    const fetchEmployees = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, username, email, employee_code')
+          .eq('is_active', true);
+        
+        if (error) throw error;
+        setEmployees(data || []);
+      } catch (error) {
+        console.error('خطأ في تحميل بيانات الموظفين:', error);
+      }
+    };
+
+    if (open) {
+      fetchEmployees();
+    }
+  }, [open]);
 
 
   // الطلبات المعلقة فقط (المحجوزة)
@@ -77,7 +100,10 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
   const getEmployeeName = (employeeId) => {
     const employee = employees?.find(emp => emp.user_id === employeeId);
-    return employee?.full_name || employee?.username || 'موظف غير معروف';
+    if (employee) {
+      return employee.full_name || employee.username || 'موظف غير معروف';
+    }
+    return 'موظف غير معروف';
   };
 
   return (
@@ -173,7 +199,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
             </div>
 
             {/* فلتر الموظفين - للمدير فقط */}
-            {isAdmin && employeesInvolved.length > 0 && (
+            {isAdmin && (
               <Card className="border-2 border-violet-200/60 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
                 <CardContent className="p-3 md:p-6">
                   <div className="flex flex-col gap-3 md:gap-4">
@@ -288,44 +314,50 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                         </CardContent>
                       </Card>
 
-                      {/* قائمة المنتجات */}
+                      {/* قائمة المنتجات - تصميم أنيق وصغير */}
                       {order.items && order.items.length > 0 && (
-                        <div className="space-y-4">
-                          <h4 className="text-lg font-bold text-foreground flex items-center gap-2">
-                            <Package className="w-5 h-5 text-violet-600" />
+                        <div className="space-y-3 md:space-y-4">
+                          <h4 className="text-sm md:text-lg font-bold text-foreground flex items-center gap-2">
+                            <Package className="w-4 h-4 md:w-5 md:h-5 text-violet-600" />
                             المنتجات المحجوزة ({order.items.length})
                           </h4>
-                          <div className="grid gap-4">
+                          <div className="grid gap-2 md:gap-3">
                             {order.items.map((item, itemIndex) => (
-                              <Card key={itemIndex} className="border border-gray-200/60 hover:border-violet-300/80 transition-all duration-300 bg-white/60 dark:bg-gray-900/60">
-                                <CardContent className="p-4">
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-violet-100 to-purple-100 dark:from-violet-900/40 dark:to-purple-900/40 rounded-xl flex items-center justify-center">
-                                      <Package className="w-6 h-6 text-violet-600" />
+                              <Card key={itemIndex} className="border border-violet-200/40 hover:border-violet-400/60 transition-all duration-300 bg-gradient-to-r from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20 hover:shadow-lg hover:shadow-violet-500/10">
+                                <CardContent className="p-2 md:p-3">
+                                  <div className="flex items-center gap-2 md:gap-3">
+                                    {/* أيقونة المنتج */}
+                                    <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-violet-400 to-purple-500 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                                      <Package className="w-4 h-4 md:w-5 md:h-5 text-white" />
                                     </div>
-                                    <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-                                      <div>
-                                        <span className="text-sm font-medium text-muted-foreground">المنتج:</span>
-                                        <p className="font-bold text-foreground">{item.name}</p>
-                                        {(item.color || item.size) && (
-                                          <p className="text-sm text-muted-foreground">
-                                            {item.color && `اللون: ${item.color}`}
-                                            {item.color && item.size && ' • '}
-                                            {item.size && `المقاس: ${item.size}`}
-                                          </p>
-                                        )}
-                                      </div>
-                                      <div className="text-center">
-                                        <span className="text-sm font-medium text-muted-foreground">الكمية:</span>
-                                        <p className="font-bold text-xl text-blue-600">{item.quantity}</p>
-                                      </div>
-                                      <div className="text-center">
-                                        <span className="text-sm font-medium text-muted-foreground">السعر:</span>
-                                        <p className="font-bold text-green-600">{item.price?.toLocaleString()} د.ع</p>
-                                      </div>
-                                      <div className="text-center">
-                                        <span className="text-sm font-medium text-muted-foreground">المجموع:</span>
-                                        <p className="font-bold text-xl text-violet-600">{(item.price * item.quantity)?.toLocaleString()} د.ع</p>
+                                    
+                                    {/* تفاصيل المنتج - تخطيط مبسط ومرن */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-4">
+                                        {/* اسم المنتج */}
+                                        <div className="flex-1 min-w-0">
+                                          <p className="font-bold text-sm md:text-base text-foreground truncate">{item.name}</p>
+                                          {(item.color || item.size) && (
+                                            <p className="text-xs md:text-sm text-muted-foreground">
+                                              {item.color && `${item.color}`}
+                                              {item.color && item.size && ' • '}
+                                              {item.size && item.size}
+                                            </p>
+                                          )}
+                                        </div>
+                                        
+                                        {/* الكمية والسعر - عرض مضغوط */}
+                                        <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm">
+                                          <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
+                                            ك: {item.quantity}
+                                          </Badge>
+                                          <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700">
+                                            {item.price?.toLocaleString()} د.ع
+                                          </Badge>
+                                          <Badge variant="secondary" className="bg-violet-100 text-violet-700 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700 font-bold">
+                                            {(item.price * item.quantity)?.toLocaleString()} د.ع
+                                          </Badge>
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
