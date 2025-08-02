@@ -97,41 +97,28 @@ export const NotificationsRealtimeProvider = ({ children }) => {
     // تحديث أولي
     refreshNotifications();
     
-    // إعداد قناة real-time للإشعارات مع تجنب التكرار
+    // إعداد قناة real-time للإشعارات
     const notificationsChannel = supabase
-      .channel('notifications-realtime-context')
+      .channel('notifications-changes')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications' },
         (payload) => {
-          console.log('New notification detected:', payload);
-          
           const newNotification = {
             ...payload.new,
             read: false,
             type: payload.new.type || 'info'
           };
           
-          // تجنب الإشعارات المكررة
-          setNotifications(prev => {
-            const exists = prev.some(n => n.id === newNotification.id);
-            if (exists) {
-              console.log('تم تجاهل إشعار مكرر:', newNotification.id);
-              return prev;
-            }
-            return [newNotification, ...prev.slice(0, 49)];
-          });
-          
+          setNotifications(prev => [newNotification, ...prev.slice(0, 49)]);
           setUnreadCount(prev => prev + 1);
           
-          // إظهار toast للإشعار الجديد فقط
-          if (newNotification.type !== 'inventory_cleanup') {
-            toast({
-              title: "🔔 إشعار جديد",
-              description: newNotification.message || newNotification.title || 'لديك إشعار جديد',
-              className: "z-[9999] text-right bg-blue-500 text-white border-blue-600",
-              duration: 4000
-            });
-          }
+          // إظهار toast للإشعار الجديد
+          toast({
+            title: "🔔 إشعار جديد",
+            description: newNotification.message || newNotification.title || 'لديك إشعار جديد',
+            className: "z-[9999] text-right bg-blue-500 text-white border-blue-600",
+            duration: 4000
+          });
         }
       )
       .on('postgres_changes',

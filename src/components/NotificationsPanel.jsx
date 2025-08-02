@@ -250,24 +250,22 @@ const NotificationsPanel = () => {
         navigate('/inventory?filter=low_stock');
       }
     } else if (notification.type === 'order_status_update' || notification.type === 'new_order' || notification.type === 'new_order_employee') {
-      // استخراج معرف الطلب من البيانات أو الرسالة للتنقل المباشر
-      const data = notification.data || {};
-      const orderId = data.order_id;
-      const orderNumber = data.order_number;
-      
-      if (orderId) {
-        // التنقل للطلبات مع تمرير معرف الطلب للتركيز عليه
-        navigate(`/orders?highlight=${orderId}`);
-      } else if (orderNumber) {
-        // التنقل بالبحث عن رقم الطلب
-        navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
-      } else {
-        // استخراج رقم الطلب من الرسالة كبديل
-        const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
-        const extractedOrderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+      // لطلبات الموظفين - توجيه لصفحة متابعة الموظفين
+      if (notification.type === 'new_order_employee') {
+        const data = notification.data || {};
+        const orderId = data.order_id;
+        const employeeName = data.employee_name;
         
-        if (extractedOrderNumber) {
-          navigate(`/orders?search=${encodeURIComponent(extractedOrderNumber)}`);
+        console.log('🔔 إشعار طلب موظف:', { orderId, employeeName, data });
+        navigate(`/employee-follow-up?highlight=${orderId}`);
+      } else {
+        // استخراج رقم الطلب من الرسالة
+        const orderMatch = notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
+        const orderNumber = orderMatch ? (orderMatch[1] || orderMatch[2] || orderMatch[3]) : '';
+        
+        if (orderNumber) {
+          // التنقل للطلبات مع البحث عن الطلب المحدد
+          navigate(`/orders?search=${encodeURIComponent(orderNumber)}`);
         } else {
           navigate('/orders?status=pending');
         }
