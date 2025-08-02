@@ -139,7 +139,7 @@ import App from './App.jsx';
 import './index.css';
 import './print.css';
 
-import Providers from './contexts/Providers.jsx';
+import { AppProviders } from './contexts/Providers.jsx';
 
 // تمكين React DevTools في بيئة التطوير فقط
 if (typeof window !== 'undefined' && import.meta.env.DEV) {
@@ -154,9 +154,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <HelmetProvider>
       <BrowserRouter>
-        <Providers>
+        <AppProviders>
           <App />
-        </Providers>
+        </AppProviders>
       </BrowserRouter>
     </HelmetProvider>
   </React.StrictMode>
