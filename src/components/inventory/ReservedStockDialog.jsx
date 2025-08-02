@@ -82,19 +82,19 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[95vh] flex flex-col">
+      <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-2 md:p-4">
         <ScrollArea className="h-full">
-          <div className="p-8 space-y-8">
-            <DialogHeader className="pb-6 border-b border-gradient-to-r from-violet-200 to-purple-200">
-              <DialogTitle className="flex items-center gap-4 text-3xl font-bold">
-                <div className="p-4 bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 rounded-2xl shadow-2xl">
-                  <Archive className="w-8 h-8 text-white" />
+          <div className="p-2 md:p-6 space-y-4 md:space-y-6">
+            <DialogHeader className="pb-3 md:pb-6 border-b border-gradient-to-r from-violet-200 to-purple-200">
+              <DialogTitle className="flex items-center gap-3 text-xl md:text-3xl font-bold">
+                <div className="p-2 md:p-4 bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 rounded-xl md:rounded-2xl shadow-lg">
+                  <Archive className="w-5 h-5 md:w-8 md:h-8 text-white" />
                 </div>
                 <div className="flex flex-col">
                   <span className="bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 bg-clip-text text-transparent">
                     المخزون المحجوز
                   </span>
-                  <span className="text-lg font-normal text-muted-foreground">
+                  <span className="text-sm md:text-lg font-normal text-muted-foreground">
                     الطلبات في حالة التجهيز والمعالجة
                   </span>
                 </div>
@@ -102,20 +102,20 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
             </DialogHeader>
 
             {/* كروت الإحصائيات */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-cyan-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 via-transparent to-cyan-500/20"></div>
-                <CardContent className="relative p-4 text-white text-center">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
-                      <ShoppingCart className="w-6 h-6" />
+                <CardContent className="relative p-2 md:p-4 text-white text-center">
+                  <div className="flex justify-center mb-1 md:mb-3">
+                    <div className="p-1.5 md:p-3 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl border border-white/30">
+                      <ShoppingCart className="w-4 h-4 md:w-6 md:h-6" />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-bold">{filteredOrders.length}</h3>
-                    <p className="text-white/90 font-medium text-sm">طلب محجوز</p>
-                    <p className="text-white/70 text-xs">قيد التجهيز</p>
+                  <div className="space-y-0.5 md:space-y-1">
+                    <h3 className="text-lg md:text-2xl font-bold">{filteredOrders.length}</h3>
+                    <p className="text-white/90 font-medium text-xs md:text-sm">طلب محجوز</p>
+                    <p className="text-white/70 text-xs hidden md:block">قيد التجهيز</p>
                   </div>
                 </CardContent>
               </Card>
@@ -123,16 +123,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-red-500 to-pink-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 via-transparent to-pink-500/20"></div>
-                <CardContent className="relative p-4 text-white text-center">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
-                      <Package className="w-6 h-6" />
+                <CardContent className="relative p-2 md:p-4 text-white text-center">
+                  <div className="flex justify-center mb-1 md:mb-3">
+                    <div className="p-1.5 md:p-3 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl border border-white/30">
+                      <Package className="w-4 h-4 md:w-6 md:h-6" />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-bold">{totalReservedItems}</h3>
-                    <p className="text-white/90 font-medium text-sm">منتج مختلف</p>
-                    <p className="text-white/70 text-xs">محجوز</p>
+                  <div className="space-y-0.5 md:space-y-1">
+                    <h3 className="text-lg md:text-2xl font-bold">{totalReservedItems}</h3>
+                    <p className="text-white/90 font-medium text-xs md:text-sm">منتج مختلف</p>
+                    <p className="text-white/70 text-xs hidden md:block">محجوز</p>
                   </div>
                 </CardContent>
               </Card>
@@ -140,16 +140,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500 via-violet-600 to-indigo-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 via-transparent to-indigo-500/20"></div>
-                <CardContent className="relative p-4 text-white text-center">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
-                      <PackageOpen className="w-6 h-6" />
+                <CardContent className="relative p-2 md:p-4 text-white text-center">
+                  <div className="flex justify-center mb-1 md:mb-3">
+                    <div className="p-1.5 md:p-3 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl border border-white/30">
+                      <PackageOpen className="w-4 h-4 md:w-6 md:h-6" />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-bold">{totalReservedQuantity}</h3>
-                    <p className="text-white/90 font-medium text-sm">قطعة</p>
-                    <p className="text-white/70 text-xs">إجمالي الكمية</p>
+                  <div className="space-y-0.5 md:space-y-1">
+                    <h3 className="text-lg md:text-2xl font-bold">{totalReservedQuantity}</h3>
+                    <p className="text-white/90 font-medium text-xs md:text-sm">قطعة</p>
+                    <p className="text-white/70 text-xs hidden md:block">إجمالي الكمية</p>
                   </div>
                 </CardContent>
               </Card>
@@ -157,16 +157,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
               <Card className="group cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden border-0">
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-green-600 opacity-90"></div>
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 via-transparent to-green-500/20"></div>
-                <CardContent className="relative p-4 text-white text-center">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl border border-white/30">
-                      <DollarSign className="w-6 h-6" />
+                <CardContent className="relative p-2 md:p-4 text-white text-center">
+                  <div className="flex justify-center mb-1 md:mb-3">
+                    <div className="p-1.5 md:p-3 bg-white/20 backdrop-blur-sm rounded-lg md:rounded-xl border border-white/30">
+                      <DollarSign className="w-4 h-4 md:w-6 md:h-6" />
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg font-bold">{totalReservedValue.toLocaleString()}</h3>
-                    <p className="text-white/90 font-medium text-sm">د.ع</p>
-                    <p className="text-white/70 text-xs">القيمة الإجمالية</p>
+                  <div className="space-y-0.5 md:space-y-1">
+                    <h3 className="text-sm md:text-lg font-bold">{totalReservedValue.toLocaleString()}</h3>
+                    <p className="text-white/90 font-medium text-xs md:text-sm">د.ع</p>
+                    <p className="text-white/70 text-xs hidden md:block">القيمة الإجمالية</p>
                   </div>
                 </CardContent>
               </Card>
@@ -175,32 +175,32 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
             {/* فلتر الموظفين - للمدير فقط */}
             {isAdmin && employeesInvolved.length > 0 && (
               <Card className="border-2 border-violet-200/60 bg-gradient-to-r from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20">
-                <CardContent className="p-4 md:p-6">
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                        <Users className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                <CardContent className="p-3 md:p-6">
+                  <div className="flex flex-col gap-3 md:gap-4">
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className="w-6 h-6 md:w-10 md:h-10 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center shadow-lg">
+                        <Users className="w-3 h-3 md:w-5 md:h-5 text-white" />
                       </div>
-                      <span className="text-base md:text-lg font-bold text-foreground">فلترة حسب الموظف:</span>
+                      <span className="text-sm md:text-lg font-bold text-foreground">فلترة حسب الموظف:</span>
                     </div>
                     <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                      <SelectTrigger className="w-full h-10 md:h-12 bg-background border-2 border-violet-200 hover:border-violet-400 transition-all duration-300 rounded-xl text-sm md:text-base font-medium">
+                      <SelectTrigger className="w-full h-8 md:h-12 bg-background border-2 border-violet-200 hover:border-violet-400 transition-all duration-300 rounded-lg md:rounded-xl text-xs md:text-base font-medium">
                         <SelectValue placeholder="اختر الموظف لعرض طلباته المحجوزة" />
                       </SelectTrigger>
-                      <SelectContent className="bg-background border-2 border-violet-200 shadow-2xl z-[9999] rounded-xl max-h-[300px] overflow-y-auto">
-                        <SelectItem value="all" className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
-                          <div className="flex items-center gap-3">
-                            <div className="w-3 h-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"></div>
-                            <span className="font-medium text-sm md:text-base">جميع الموظفين ({reservedOrders?.length || 0} طلب)</span>
+                      <SelectContent className="bg-background border-2 border-violet-200 shadow-2xl z-[9999] rounded-lg md:rounded-xl max-h-[300px] overflow-y-auto">
+                        <SelectItem value="all" className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-2 md:p-4 rounded-lg m-1">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="w-2 h-2 md:w-3 md:h-3 bg-gradient-to-r from-violet-500 to-purple-500 rounded-full"></div>
+                            <span className="font-medium text-xs md:text-base">جميع الموظفين ({reservedOrders?.length || 0} طلب)</span>
                           </div>
                         </SelectItem>
                         {employeesInvolved.map(emp => {
                           const empOrdersCount = reservedOrders?.filter(o => o.created_by === emp.user_id).length || 0;
                           return (
-                            <SelectItem key={emp.user_id} value={emp.user_id} className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-3 md:p-4 rounded-lg m-1">
+                            <SelectItem key={emp.user_id} value={emp.user_id} className="hover:bg-violet-50 dark:hover:bg-violet-950/30 p-2 md:p-4 rounded-lg m-1">
                               <div className="flex items-center gap-2 md:gap-3">
-                                <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex-shrink-0"></div>
-                                <span className="font-medium text-sm md:text-base">
+                                <div className="w-2 h-2 md:w-3 md:h-3 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex-shrink-0"></div>
+                                <span className="font-medium text-xs md:text-base">
                                   {emp.full_name || emp.username} ({empOrdersCount} طلب)
                                 </span>
                               </div>
@@ -215,55 +215,55 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
             )}
 
             {/* قائمة الطلبات */}
-            <div className="space-y-6">
+            <div className="space-y-3 md:space-y-6">
               {filteredOrders && filteredOrders.length > 0 ? (
                 filteredOrders.map((order, index) => (
                   <Card key={order.id} className="group relative overflow-hidden border-2 border-violet-200/60 hover:border-violet-400/80 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/20">
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-indigo-500/5"></div>
-                    <CardContent className="p-8 relative">
+                    <CardContent className="p-3 md:p-8 relative">
                       {/* رأس الطلب */}
-                      <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-6">
-                        <div className="flex items-center gap-4 mb-4 xl:mb-0">
-                          <div className="p-4 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl shadow-xl">
-                            <FileText className="w-6 h-6 text-white" />
+                      <div className="flex flex-col md:flex-row md:items-center justify-between mb-3 md:mb-6">
+                        <div className="flex items-center gap-2 md:gap-4 mb-2 md:mb-4 xl:mb-0">
+                          <div className="p-2 md:p-4 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl md:rounded-2xl shadow-xl">
+                            <FileText className="w-4 h-4 md:w-6 md:h-6 text-white" />
                           </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                              <h3 className="font-black text-2xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                          <div className="space-y-1 md:space-y-2">
+                            <div className="flex items-center gap-2 md:gap-3">
+                              <h3 className="font-black text-base md:text-2xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
                                 {order.order_number}
                               </h3>
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Calendar className="w-4 h-4" />
+                            <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground">
+                              <Calendar className="w-3 h-3 md:w-4 md:h-4" />
                               <span className="font-medium">{formatDate(order.created_at)}</span>
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 shadow-lg px-4 py-2 text-sm">
-                            <Clock className="w-4 h-4 mr-2" />
+                        <div className="flex items-center gap-2 md:gap-3">
+                          <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 shadow-lg px-2 md:px-4 py-1 md:py-2 text-xs md:text-sm">
+                            <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                             قيد التجهيز
                           </Badge>
-                          <Badge variant="outline" className="text-sm px-3 py-1">
+                          <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
                             #{index + 1}
                           </Badge>
                         </div>
                       </div>
 
-                      <Separator className="my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
+                      <Separator className="my-3 md:my-6 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
 
                       {/* معلومات الموظف المسؤول - للمدير فقط */}
                       {isAdmin && (
-                        <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 mb-6">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-4">
-                              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                                <Building2 className="w-4 h-4 text-white" />
+                        <Card className="border-2 border-green-200/60 hover:border-green-400/80 transition-all duration-300 bg-gradient-to-br from-green-50/50 to-emerald-50/50 dark:from-green-950/20 dark:to-emerald-950/20 mb-3 md:mb-6">
+                          <CardContent className="p-2 md:p-4">
+                            <div className="flex items-center gap-2 md:gap-4">
+                              <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg md:rounded-xl flex items-center justify-center">
+                                <Building2 className="w-3 h-3 md:w-4 md:h-4 text-white" />
                               </div>
                               <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-muted-foreground">الموظف المسؤول:</span>
-                                  <span className="font-bold text-foreground">{getEmployeeName(order.created_by)}</span>
+                                <div className="flex items-center gap-1 md:gap-2">
+                                  <span className="text-xs md:text-sm font-medium text-muted-foreground">الموظف المسؤول:</span>
+                                  <span className="font-bold text-foreground text-xs md:text-base">{getEmployeeName(order.created_by)}</span>
                                 </div>
                               </div>
                             </div>
@@ -271,30 +271,17 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                         </Card>
                       )}
 
-                      {/* معلومات العميل */}
-                      <Card className="border-2 border-blue-200/60 hover:border-blue-400/80 transition-all duration-300 bg-gradient-to-br from-blue-50/50 to-cyan-50/50 dark:from-blue-950/20 dark:to-cyan-950/20 mb-6">
-                        <CardContent className="p-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
-                                <Users className="w-4 h-4 text-white" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-muted-foreground">العميل:</span>
-                                  <span className="font-bold text-foreground">{order.customer_name}</span>
-                                </div>
-                              </div>
+                      {/* إجمالي المبلغ فقط - بدون معلومات العميل */}
+                      <Card className="border-2 border-violet-200/60 hover:border-violet-400/80 transition-all duration-300 bg-gradient-to-br from-violet-50/50 to-purple-50/50 dark:from-violet-950/20 dark:to-purple-950/20 mb-3 md:mb-6">
+                        <CardContent className="p-2 md:p-4">
+                          <div className="flex items-center gap-2 md:gap-3">
+                            <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center">
+                              <DollarSign className="w-3 h-3 md:w-4 md:h-4 text-white" />
                             </div>
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center">
-                                <DollarSign className="w-4 h-4 text-white" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-muted-foreground">المبلغ الإجمالي:</span>
-                                  <span className="font-bold text-xl text-green-600">{order.total_amount?.toLocaleString()} د.ع</span>
-                                </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-1 md:gap-2">
+                                <span className="text-xs md:text-sm font-medium text-muted-foreground">المبلغ الإجمالي:</span>
+                                <span className="font-bold text-sm md:text-xl text-green-600">{order.total_amount?.toLocaleString()} د.ع</span>
                               </div>
                             </div>
                           </div>
