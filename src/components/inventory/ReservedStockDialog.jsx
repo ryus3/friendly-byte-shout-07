@@ -77,13 +77,10 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
         return filtered;
       }
     } else {
-      // الموظف يرى طلباته فقط
-      console.log('🔍 DEBUG: Employee filtering - comparing user.id with order.created_by');
-      reservedOrders.forEach(order => {
-        console.log(`🔍 DEBUG: Order ${order.order_number}: created_by=${order.created_by}, user.id=${user?.id}, match=${order.created_by === user?.id}`);
-      });
-      const filtered = reservedOrders.filter(order => order.created_by === user?.id);
-      console.log('🔍 DEBUG: Employee filtered results:', filtered.length);
+      // الموظف يرى طلباته فقط - استخدام user.id أو user.user_id
+      const userId = user?.id || user?.user_id;
+      const filtered = reservedOrders.filter(order => order.created_by === userId);
+      console.log('🔍 DEBUG: Employee filtered results:', { userId, filtered: filtered.length });
       return filtered;
     }
   }, [reservedOrders, selectedEmployee, isAdmin, user?.id]);

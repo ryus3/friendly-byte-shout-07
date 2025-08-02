@@ -41,7 +41,7 @@ export const NotificationsProvider = ({ children }) => {
         // فلترة الإشعارات حسب المستخدم
         const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
         if (!isAdmin) {
-            query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order))`);
+            query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,cash_correction,balance_correction,main_cash_correction))`);
         }
         
         const { data, error } = await query;
@@ -88,7 +88,7 @@ export const NotificationsProvider = ({ children }) => {
                 if (isAdmin) {
                     shouldShow = true;
                 } else {
-                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order'];
+                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'cash_correction', 'balance_correction', 'main_cash_correction'];
                     if (!adminOnlyGlobalTypes.includes(newNotification.type)) {
                         shouldShow = true;
                     }
