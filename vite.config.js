@@ -75,7 +75,7 @@ console.error = function(...args) {
 const configWindowFetchMonkeyPatch = `
 const originalFetch = window.fetch;
 window.fetch = function(...args) {
-    const url = args[0] instanceof Request ? args[0].url : args[0];
+    const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? args[0].url : '');
     if (url.startsWith('ws:') || url.startsWith('wss:')) return originalFetch.apply(this, args);
 
     return originalFetch.apply(this, args)
