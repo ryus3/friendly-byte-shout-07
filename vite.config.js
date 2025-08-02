@@ -188,6 +188,10 @@ export default defineConfig(async ({ mode }) => {
         },
         define: {
             global: 'globalThis',
+            Headers: 'globalThis.Headers',
+            Request: 'globalThis.Request', 
+            Response: 'globalThis.Response',
+            fetch: 'globalThis.fetch',
         }
     };
 });
