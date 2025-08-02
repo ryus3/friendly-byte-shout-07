@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // Refactored Components
-import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import SettlementRequest from '@/components/profits/SettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
