@@ -160,7 +160,10 @@ export default defineConfig(async ({ mode }) => {
         },
         resolve: {
             extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
-            alias: { '@': path.resolve(__dirname, './src') },
+            alias: { 
+                '@': path.resolve(__dirname, './src'),
+                'node:path': 'path'
+            },
         },
         build: {
             target: 'es2015',
@@ -183,11 +186,18 @@ export default defineConfig(async ({ mode }) => {
             },
         },
         define: {
-            global: 'globalThis'
+          global: 'globalThis',
+          'process.env': 'import.meta.env',
+          __dirname: JSON.stringify(process.cwd())
         },
         optimizeDeps: {
-            include: ['react', 'react-dom', 'react/jsx-runtime'],
-            exclude: ['@supabase/supabase-js']
+          include: ['react', 'react-dom', 'react/jsx-runtime'],
+          exclude: ['@supabase/supabase-js'],
+          esbuildOptions: {
+            define: {
+              global: 'globalThis'
+            }
+          }
         },
     };
 });
