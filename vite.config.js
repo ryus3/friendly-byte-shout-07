@@ -186,5 +186,9 @@ export default defineConfig(async ({ mode }) => {
             include: ['react', 'react-dom', 'react/jsx-runtime'],
             exclude: ['@supabase/supabase-js']
         },
+        define: {
+            global: 'globalThis',
+            'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+        }
     };
 });
