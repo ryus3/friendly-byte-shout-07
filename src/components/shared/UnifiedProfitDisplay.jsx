@@ -247,10 +247,18 @@ const UnifiedProfitDisplay = ({
     const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== currentUser?.id);
     
     const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
-      const orderProfit = (order.items || []).reduce((itemSum, item) => {
+      // استخدام نفس بنية البيانات المستخدمة في AccountingPage
+      if (!order.order_items || !Array.isArray(order.order_items)) {
+        console.warn(`⚠️ طلب المدير ${order.order_number} لا يحتوي على عناصر`);
+        return sum;
+      }
+      
+      const orderProfit = order.order_items.reduce((itemSum, item) => {
         const sellPrice = item.unit_price || item.price || 0;
         const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-        return itemSum + ((sellPrice - costPrice) * item.quantity);
+        const quantity = item.quantity || 0;
+        const itemProfit = (sellPrice - costPrice) * quantity;
+        return itemSum + itemProfit;
       }, 0);
       return sum + orderProfit;
     }, 0);
