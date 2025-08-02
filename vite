@@ -1,13 +1,17 @@
-#!/bin/bash
-# Simple and reliable vite startup script
+#!/usr/bin/env node
 
-# Add node_modules/.bin to PATH
-export PATH="./node_modules/.bin:$PATH"
+// Enhanced vite wrapper with better error handling
+const { execSync } = require('child_process');
+const fs = require('fs');
 
-# Try running vite directly
-if command -v vite >/dev/null 2>&1; then
-    exec vite "$@"
-else
-    # Fallback to npx
-    exec npx vite "$@"
-fi
+try {
+  // Try to execute vite using npx (most reliable)
+  console.log('🚀 Starting development server...');
+  execSync('npx vite --host :: --port 8080', { 
+    stdio: 'inherit',
+    env: { ...process.env }
+  });
+} catch (error) {
+  console.error('❌ Failed to start vite:', error.message);
+  process.exit(1);
+}

@@ -85,6 +85,7 @@
     --notification-warning: 45 93% 47%;  /* أصفر للتحذير */
     --notification-error: 0 84% 60%;     /* أحمر للخطأ */
     --notification-stock: 24 95% 53%;    /* برتقالي للمخزون */
+    --notification-purple: 270 95% 60%;  /* بنفسجي شفاف للشحن */
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
