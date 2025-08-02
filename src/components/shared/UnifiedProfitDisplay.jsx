@@ -34,7 +34,8 @@ const getSystemProfitFromOrder = (orderId, allProfits) => {
 
 const UnifiedProfitDisplay = ({
   profitData,
-  displayMode = 'dashboard', // 'dashboard' | 'financial-center'
+  unifiedNetProfit = null, // تمرير صافي الربح الموحد مباشرة
+  displayMode = 'dashboard', // 'dashboard' | 'financial-center' | 'summary'
   canViewAll = true,
   onFilterChange = () => {},
   onExpensesClick = () => {},
@@ -272,8 +273,8 @@ const UnifiedProfitDisplay = ({
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
     
-    // صافي الربح = ربح النظام - المصاريف العامة
-    const netProfit = systemProfit - generalExpenses;
+    // صافي الربح = ربح النظام - المصاريف العامة (أو استخدام القيمة الموحدة المُمررة)
+    const netProfit = unifiedNetProfit !== null ? unifiedNetProfit : (systemProfit - generalExpenses);
     
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits
