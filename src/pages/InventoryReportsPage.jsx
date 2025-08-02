@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Printer } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
-// import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
-// import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
+import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
+import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
 import { motion } from 'framer-motion';
 
 const InventoryReportsPage = () => {
@@ -157,10 +157,9 @@ const InventoryReportsPage = () => {
           className="border rounded-lg overflow-hidden"
         >
           <div style={{ height: '800px' }}>
-            {/* Temporarily disabled PDF viewer */}
-            <div className="flex items-center justify-center h-full text-muted-foreground">
-              PDF preview temporarily disabled
-            </div>
+            <PDFViewer width="100%" height="100%">
+              <InventoryReportPDF products={products} settings={settings} />
+            </PDFViewer>
           </div>
         </motion.div>
       )}

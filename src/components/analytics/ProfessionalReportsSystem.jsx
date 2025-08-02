@@ -48,8 +48,8 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays, isWithinInterval } from 'date-fns';
 import { ar } from 'date-fns/locale';
-// import { PDFDownloadLink } from '@react-pdf/renderer';
-// import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, BarChart, Bar, PieChart as RechartsPieChart, Legend } from 'recharts';
 import { cn } from '@/lib/utils';
 

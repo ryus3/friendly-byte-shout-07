@@ -184,14 +184,11 @@ export default defineConfig(async ({ mode }) => {
         },
         optimizeDeps: {
             include: ['react', 'react-dom', 'react/jsx-runtime'],
-            exclude: []
+            exclude: ['@supabase/supabase-js']
         },
         define: {
             global: 'globalThis',
             'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
-            'process.env': '{}',
-            'process.platform': '"browser"',
-            'process.version': '"v18.0.0"'
         }
     };
 });
