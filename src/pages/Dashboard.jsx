@@ -29,7 +29,7 @@ import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import { format, parseISO, isValid, subDays, startOfWeek, startOfMonth, startOfYear, endOfMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -83,15 +83,6 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 
 const Dashboard = () => {
     const { user, pendingRegistrations } = useAuth();
-    
-    const [periods, setPeriods] = useState({
-        totalOrders: 'all',
-        netProfit: 'all',
-        pendingProfit: 'all',
-        deliveredSales: 'all',
-        pendingSales: 'all',
-    });
-
     // استخدام hook واحد فقط للصلاحيات لتجنب التعارض
     const { 
         loading,
@@ -103,44 +94,27 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    // const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
+    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
-    // حساب الأرباح مباشرة بدلاً من useUnifiedProfits لتجنب التبعية الدائرية
-    const unifiedProfitData = useMemo(() => {
-        if (!orders || !accounting) return null;
-        
-        const deliveredOrders = orders.filter(o => 
-            o && (o.status === 'delivered' || o.status === 'completed') && o.receipt_received === true
-        );
-        
-        const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || o.total_amount || 0), 0);
-        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-        const salesWithoutDelivery = totalRevenue - deliveryFees;
-        
-        const cogs = deliveredOrders.reduce((sum, o) => {
-            if (!o.order_items || !Array.isArray(o.order_items)) return sum;
-            const orderCogs = o.order_items.reduce((itemSum, item) => {
-                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                const quantity = item.quantity || 0;
-                return itemSum + (costPrice * quantity);
-            }, 0);
-            return sum + orderCogs;
-        }, 0);
-        
-        const grossProfit = salesWithoutDelivery - cogs;
-        const generalExpenses = accounting?.expenses?.filter(e => 
-            e.status === 'approved' && e.expense_type !== 'system' && e.category !== 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-        
-        const netProfit = grossProfit - generalExpenses;
-        
-        return { netProfit, grossProfit, totalRevenue, deliveryFees, salesWithoutDelivery, cogs, generalExpenses };
-    }, [orders, accounting]);
-    
-    const unifiedProfitLoading = false;
-    const unifiedProfitError = null;
+    // إضافة لوج لتتبع البيانات
+    useEffect(() => {
+        console.log('🔍 Dashboard - Unified Profit Data:', {
+            data: unifiedProfitData,
+            loading: unifiedProfitLoading,
+            error: unifiedProfitError,
+            netProfit: unifiedProfitData?.netProfit
+        });
+    }, [unifiedProfitData, unifiedProfitLoading, unifiedProfitError]);
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
+
+    const [periods, setPeriods] = useState({
+        totalOrders: 'month',
+        netProfit: 'month',
+        pendingProfit: 'month',
+        deliveredSales: 'month',
+        pendingSales: 'month',
+    });
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
