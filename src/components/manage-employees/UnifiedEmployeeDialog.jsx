@@ -150,11 +150,11 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">✅ نشط</SelectItem>
-                        <SelectItem value="pending">⏳ قيد المراجعة</SelectItem>
-                        <SelectItem value="suspended">❌ معلق</SelectItem>
-                      </SelectContent>
+                       <SelectContent className="bg-background border border-border shadow-lg z-[9999] min-w-[200px]">
+                         <SelectItem value="active">✅ نشط</SelectItem>
+                         <SelectItem value="pending">⏳ قيد المراجعة</SelectItem>
+                         <SelectItem value="suspended">❌ معلق</SelectItem>
+                       </SelectContent>
                     </Select>
                   </div>
 
@@ -164,13 +164,13 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        {defaultPages.map(page => (
-                          <SelectItem key={page.value} value={page.value}>
-                            {page.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+                       <SelectContent className="bg-background border border-border shadow-lg z-[9999] min-w-[200px]">
+                         {defaultPages.map(page => (
+                           <SelectItem key={page.value} value={page.value}>
+                             {page.label}
+                           </SelectItem>
+                         ))}
+                       </SelectContent>
                     </Select>
                   </div>
 
@@ -180,11 +180,11 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                       <SelectContent className="bg-background border border-border shadow-lg z-[9999]">
-                         <SelectItem value="both">كلاهما (محلي + شركة توصيل)</SelectItem>
-                         <SelectItem value="local_only">طلبات محلية فقط</SelectItem>
-                         <SelectItem value="partner_only">شركة توصيل فقط</SelectItem>
-                       </SelectContent>
+                        <SelectContent className="bg-background border border-border shadow-lg z-[9999] min-w-[250px]">
+                          <SelectItem value="both">كلاهما (محلي + شركة توصيل)</SelectItem>
+                          <SelectItem value="local_only">طلبات محلية فقط</SelectItem>
+                          <SelectItem value="partner_only">شركة توصيل فقط</SelectItem>
+                        </SelectContent>
                     </Select>
                   </div>
 
@@ -194,10 +194,10 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                       <SelectContent className="bg-background border border-border shadow-lg z-[9999]">
-                         <SelectItem value="true">✅ مفعل - يمكنه الوصول لشركة التوصيل</SelectItem>
-                         <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لشركة التوصيل</SelectItem>
-                       </SelectContent>
+                        <SelectContent className="bg-background border border-border shadow-lg z-[9999] min-w-[300px]">
+                          <SelectItem value="true">✅ مفعل - يمكنه الوصول لشركة التوصيل</SelectItem>
+                          <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لشركة التوصيل</SelectItem>
+                        </SelectContent>
                     </Select>
                   </div>
 
@@ -207,10 +207,10 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                       <SelectContent className="bg-background border border-border shadow-lg z-[9999]">
-                         <SelectItem value="true">✅ مفعل - يمكنه إدارة عملاءه ونظام الولاء</SelectItem>
-                         <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لإدارة العملاء</SelectItem>
-                       </SelectContent>
+                        <SelectContent className="bg-background border border-border shadow-lg z-[9999] min-w-[350px]">
+                          <SelectItem value="true">✅ مفعل - يمكنه إدارة عملاءه ونظام الولاء</SelectItem>
+                          <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لإدارة العملاء</SelectItem>
+                        </SelectContent>
                     </Select>
                   </div>
                 </div>

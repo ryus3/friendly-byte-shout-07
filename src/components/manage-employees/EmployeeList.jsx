@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Power, Edit, PowerOff, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { useAuth, usePermissions } from '@/contexts/UnifiedAuthContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { RoleIconMap } from '@/components/ui/custom-icons';
 
 const EmployeeCard = ({ user, onEdit, index }) => {
-  const { hasPermission } = usePermissions();
+  const { hasPermission } = useUnifiedPermissionsSystem();
   const isActive = user.status === 'active';
 
   // استخدام الأدوار الجديدة من user_roles
