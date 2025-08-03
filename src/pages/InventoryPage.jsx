@@ -19,7 +19,7 @@ import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 
-import DepartmentOverviewCards from '@/components/inventory/DepartmentOverviewCards';
+import UnifiedInventoryStats from '@/components/inventory/UnifiedInventoryStats';
 import ArchivedProductsCard from '@/components/inventory/ArchivedProductsCard';
 import Loader from '@/components/ui/loader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -143,7 +143,6 @@ const InventoryPage = () => {
   const { allUsers, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
   const { sizes = [] } = useVariants() || {};
-  const [departments, setDepartments] = useState([]);
   
   const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -229,97 +228,9 @@ const InventoryPage = () => {
     }
   }, [searchParams, products]);
 
-  // جلب بيانات الأقسام
-  useEffect(() => {
-    fetchDepartmentsData();
-  }, []);
+  // تم نقل جلب بيانات الأقسام إلى useInventoryStats Hook
 
-  const fetchDepartmentsData = async () => {
-    try {
-      const { supabase } = await import('@/lib/customSupabaseClient');
-      
-      // جلب الأقسام الرئيسية
-      const { data: deptData, error: deptError } = await supabase
-        .from('departments')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (deptError) throw deptError;
-
-      // ترتيب الأقسام حسب الأولوية المطلوبة
-      const orderedDepts = [];
-      const clothingDept = deptData?.find(d => d.name.includes('ملابس') || d.name.toLowerCase().includes('clothes'));
-      const shoesDept = deptData?.find(d => d.name.includes('أحذية') || d.name.toLowerCase().includes('shoes'));
-      const generalDept = deptData?.find(d => d.name.includes('مواد عامة') || d.name.includes('عامة') || d.name.toLowerCase().includes('general'));
-
-      // إضافة الأقسام بالترتيب المطلوب
-      if (clothingDept) orderedDepts.push({ ...clothingDept, order: 1 });
-      if (shoesDept) orderedDepts.push({ ...shoesDept, order: 2 });
-      if (generalDept) orderedDepts.push({ ...generalDept, order: 3 });
-
-      // إضافة باقي الأقسام
-      const otherDepts = deptData?.filter(d => 
-        d !== clothingDept && d !== shoesDept && d !== generalDept
-      ) || [];
-      
-      otherDepts.forEach((dept, index) => {
-        orderedDepts.push({ ...dept, order: 4 + index });
-      });
-
-      // جلب عدد المنتجات لكل قسم
-      const { data: productsData } = await supabase
-        .from('product_departments')
-        .select('department_id, products(id)')
-        .eq('products.is_active', true);
-
-      // حساب عدد المنتجات لكل قسم
-      const productCounts = {};
-      productsData?.forEach(pd => {
-        if (productCounts[pd.department_id]) {
-          productCounts[pd.department_id]++;
-        } else {
-          productCounts[pd.department_id] = 1;
-        }
-      });
-
-      // إضافة العدد للأقسام
-      const deptsWithCounts = orderedDepts.map(dept => ({
-        ...dept,
-        productCount: productCounts[dept.id] || 0
-      }));
-
-      setDepartments(deptsWithCounts);
-    } catch (error) {
-      console.error('خطأ في جلب بيانات الأقسام:', error);
-    }
-  };
-
-  // أيقونات للأقسام المختلفة
-  const getIconForDepartment = (name, index) => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('ملابس') || lowerName.includes('clothes')) return Shirt;
-    if (lowerName.includes('حقائب') || lowerName.includes('bag')) return ShoppingBag;
-    if (lowerName.includes('أحذية') || lowerName.includes('shoes')) return PackageOpen;
-    if (lowerName.includes('إكسسوار') || lowerName.includes('accessories')) return Crown;
-    if (lowerName.includes('مواد عامة') || lowerName.includes('عامة')) return Package;
-    return Package;
-  };
-
-  // ألوان متدرجة للكروت مع تنويع أكبر
-  const getGradientForIndex = (index) => {
-    const gradients = [
-      'from-blue-500 to-blue-700',        // ملابس - أزرق
-      'from-orange-500 to-red-600',       // أحذية - برتقالي لأحمر  
-      'from-purple-500 to-pink-600',      // مواد عامة - بنفسجي لوردي
-      'from-emerald-500 to-teal-600',     // قسم رابع - أخضر لتيل
-      'from-yellow-500 to-orange-600',    // قسم خامس - أصفر لبرتقالي
-      'from-indigo-500 to-purple-600',    // قسم سادس - نيلي لبنفسجي
-      'from-cyan-500 to-blue-600'         // قسم سابع - سماوي
-    ];
-    
-    return gradients[index % gradients.length];
-  };
+  // تم نقل دوال الأيقونات والتدرجات إلى DepartmentOverviewCards
 
   const allCategories = useMemo(() => {
     if (!Array.isArray(products)) return [];
@@ -512,30 +423,7 @@ const InventoryPage = () => {
     return items;
   }, [inventoryItems, filters, categoryFilter]);
 
-  const inventoryStats = useMemo(() => {
-      if (!Array.isArray(inventoryItems)) return {
-        lowStockCount: 0,
-        mediumStockCount: 0,
-        highStockCount: 0,
-        reservedStockCount: 0,
-        totalVariants: 0,
-      };
-      
-      const variants = inventoryItems.flatMap(item => Array.isArray(item?.variants) ? item.variants : []);
-      return {
-          lowStockCount: variants.filter(v => v?.stockLevel === 'low').length,
-          mediumStockCount: variants.filter(v => v?.stockLevel === 'medium').length,
-          highStockCount: variants.filter(v => v?.stockLevel === 'high').length,
-          reservedStockCount: inventoryItems.reduce((sum, item) => {
-            const itemReserved = (item?.variants || []).reduce((varSum, variant) => {
-              const variantReserved = variant?.reserved_quantity || variant?.reserved || 0;
-              return varSum + variantReserved;
-            }, 0);
-            return sum + itemReserved;
-          }, 0),
-          totalVariants: variants.length,
-      };
-  }, [inventoryItems]);
+  // تم نقل حسابات الإحصائيات إلى useInventoryStats Hook
 
   const handleEditStock = (product, variant) => {
     setEditingItem({ product, variant });
@@ -714,85 +602,21 @@ const InventoryPage = () => {
           </div>
         </div>
 
-        {/* إحصائيات سريعة */}
-        <InventoryStats 
+        {/* النظام الموحد للإحصائيات وكروت الأقسام */}
+        <UnifiedInventoryStats 
           onFilterChange={handleFilterChange}
+          onDepartmentFilter={(dept) => {
+            setFilters(prev => ({ 
+              ...prev, 
+              department: dept.id,
+              searchTerm: '',
+              stockFilter: 'all'
+            }));
+          }}
         />
-
-        {/* كروت الأقسام - تحميل فوري */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {/* كروت الأقسام أولاً - محملة مسبقاً */}
-          {departments.length > 0 ? departments.map((dept, index) => {
-            const IconComponent = getIconForDepartment(dept.name, index);
-            const gradientClass = getGradientForIndex(index);
-            
-            return (
-              <Card 
-                key={dept.id}
-                className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
-                onClick={() => {
-                  setFilters(prev => ({ 
-                    ...prev, 
-                    department: dept.id,
-                    searchTerm: '',
-                    stockFilter: 'all'
-                  }));
-                }}
-              >
-                <CardContent className="p-4">
-                  <div className={`text-center space-y-3 bg-gradient-to-br ${gradientClass} text-white rounded-lg p-4 relative overflow-hidden`}>
-                    <div className="absolute top-2 right-2">
-                      <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
-                        {dept.order}
-                      </Badge>
-                    </div>
-                    
-                    <div className="flex justify-center">
-                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
-                        <IconComponent className="w-6 h-6" />
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="font-bold text-sm">{dept.name}</h4>
-                      {dept.description && (
-                        <p className="text-xs opacity-90 mt-1">{dept.description}</p>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                      <div className="text-right">
-                        <p className="text-lg font-bold">{dept.productCount}</p>
-                        <p className="text-white/80 text-xs">منتج</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-3 h-3" />
-                        <span className="text-xs">متاح</span>
-                      </div>
-                    </div>
-                    
-                    <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-8 h-8 bg-white/5 rounded-full"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          }) : (
-            // مؤشر تحميل للأقسام
-            Array.from({ length: 4 }).map((_, index) => (
-              <Card key={index} className="animate-pulse">
-                <CardContent className="p-4">
-                  <div className="bg-muted rounded-lg p-4 space-y-3">
-                    <div className="h-8 bg-muted-foreground/20 rounded-full w-8 mx-auto"></div>
-                    <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mx-auto"></div>
-                    <div className="h-6 bg-muted-foreground/20 rounded w-1/2 mx-auto"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-          
-          {/* كارت الأرشيف على اليسار */}
+        
+        {/* كارت الأرشيف منفصل */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
                 onClick={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}>
             <CardContent className="p-4">
