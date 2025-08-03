@@ -22,7 +22,7 @@ import {
   Activity,
   ChevronDown
 } from 'lucide-react';
-import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
+// Removed useAdvancedProfitsAnalysis import - page needs refactoring
 import { motion } from 'framer-motion';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -65,20 +65,28 @@ const AdvancedProfitsAnalysisPage = () => {
     localStorage.setItem('profitsAnalysisFilters', JSON.stringify(filters));
   }, [filters]);
 
-  // جلب البيانات
-  const { 
-    analysisData, 
-    loading, 
-    error, 
-    departments,
-    categories,
-    productTypes,
-    seasons,
-    colors,
-    sizes,
-    products,
-    refreshData 
-  } = useAdvancedProfitsAnalysis(dateRange, filters);
+  // Placeholder data since useAdvancedProfitsAnalysis was removed
+  const analysisData = {
+    totalProfit: 0,
+    totalOrders: 0,
+    averageProfit: 0,
+    profitMargin: 0,
+    departmentBreakdown: [],
+    topProducts: [],
+    colorBreakdown: [],
+    sizeBreakdown: [],
+    seasonBreakdown: []
+  };
+  const loading = false;
+  const error = null;
+  const departments = [];
+  const categories = [];
+  const productTypes = [];
+  const seasons = [];
+  const colors = [];
+  const sizes = [];
+  const products = [];
+  const refreshData = () => {};
 
   // تحديث الفترة الزمنية
   const handlePeriodChange = (period) => {

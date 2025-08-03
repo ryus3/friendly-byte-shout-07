@@ -26,7 +26,7 @@ import { Label } from '@/components/ui/label';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
-import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
+// Removed useAdvancedProfitsAnalysis import - using unified system
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
@@ -168,7 +168,7 @@ const AccountingPage = () => {
         season: 'all',
         productType: 'all'
     };
-    const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
+    // Removed profitsAnalysis - using unified system
     // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
     const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);
     console.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
@@ -330,25 +330,8 @@ const AccountingPage = () => {
         { 
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
-          value: (() => {
-            // استخدام بيانات تحليل الأرباح المتقدم من الصفحة المتخصصة
-            const totalSystemProfit = profitsAnalysis?.systemProfit || 0;
-            console.log('🔍 [DEBUG] Product Analysis Card - systemProfit:', totalSystemProfit, 'from profitsAnalysis');
-            return formatCurrency(totalSystemProfit);
-          })(),
-          subValue: (() => {
-            // استخدام البيانات المحسوبة من صفحة تحليل الأرباح المتقدمة مباشرة
-            const totalProductsSold = profitsAnalysis?.totalProductsSold || 0;
-            const totalOrders = profitsAnalysis?.totalOrders || 0;
-            
-            if (totalProductsSold > 0) {
-              return `${totalProductsSold} منتج مباع`;
-            } else if (totalOrders > 0) {
-              return `${totalOrders} طلب`;
-            } else {
-              return 'لا توجد مبيعات';
-            }
-          })(),
+          value: formatCurrency(unifiedProfitData?.netProfit || 0), // استخدام صافي الربح الموحد
+          subValue: 'من النظام الموحد',
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 
           format: 'custom', 

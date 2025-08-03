@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatCard from '@/components/dashboard/StatCard';
-import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
+// Removed useAdvancedProfitsAnalysis import - using simplified calculation
 import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
