@@ -442,8 +442,9 @@ const AccountingPage = () => {
                     </Card>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2">
+                {/* قسم ملخص الأداء المالي وتقرير الأرباح والخسائر - بنفس الارتفاع */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[520px]">
+                    <div className="lg:col-span-2 h-full">
                         <FinancialPerformanceCard 
                             unifiedProfitData={unifiedProfitData}
                             selectedTimePeriod={selectedTimePeriod}
@@ -453,23 +454,47 @@ const AccountingPage = () => {
                             }}
                         />
                     </div>
-                    <div className="lg:col-span-1">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>تقرير الأرباح والخسائر</CardTitle>
-                                <CardDescription>ملخص مالي للفترة المحددة</CardDescription>
+                    <div className="lg:col-span-1 h-full">
+                        <Card className="h-full flex flex-col bg-background border border-border shadow-lg">
+                            <CardHeader className="pb-3 flex-shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                            <TrendingUp className="w-5 h-5 text-primary" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg font-bold">تقرير الأرباح والخسائر</CardTitle>
+                                            <CardDescription className="text-sm">ملخص مالي للفترة المحددة</CardDescription>
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setDialogs(d => ({...d, profitLoss: true}))}
+                                        className="flex items-center gap-2 text-xs"
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                        تفاصيل
+                                    </Button>
+                                </div>
                             </CardHeader>
-                            <CardContent>
-                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={unifiedProfitData?.totalRevenue || 0} colorClass="text-green-500" />
-                                <StatRow label="رسوم التوصيل" value={unifiedProfitData?.deliveryFees || 0} colorClass="text-blue-400" />
-                                <StatRow label="المبيعات (بدون التوصيل)" value={unifiedProfitData?.salesWithoutDelivery || 0} colorClass="text-green-600" />
+                            <CardContent className="space-y-3 flex-1 overflow-y-auto">
+                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={unifiedProfitData?.totalRevenue || 0} colorClass="text-emerald-500" />
+                                <StatRow label="رسوم التوصيل" value={unifiedProfitData?.deliveryFees || 0} colorClass="text-blue-500" />
+                                <StatRow label="المبيعات (بدون التوصيل)" value={(unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.deliveryFees || 0)} colorClass="text-emerald-600" />
                                 <StatRow label="تكلفة البضاعة المباعة" value={unifiedProfitData?.cogs || 0} colorClass="text-orange-500" isNegative/>
-                                <StatRow label="مجمل الربح" value={unifiedProfitData?.grossProfit || 0} colorClass="text-blue-500 font-bold" />
+                                <StatRow label="مجمل الربح" value={(unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.cogs || 0)} colorClass="text-blue-500" />
                                 <StatRow label="المصاريف العامة" value={unifiedProfitData?.generalExpenses || 0} colorClass="text-red-500" isNegative/>
                                 <StatRow label="المستحقات المدفوعة" value={unifiedProfitData?.employeeSettledDues || 0} colorClass="text-purple-500" isNegative/>
-                                <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
-                                    <p className="font-bold text-lg">صافي الربح</p>
-                                    <p className="font-bold text-lg text-primary">{(unifiedProfitData?.netProfit || 0).toLocaleString()} د.ع</p>
+                                
+                                {/* إجمالي صافي الربح - خط فاصل مميز */}
+                                <div className="border-t border-border pt-3 mt-3 bg-secondary/20 rounded-lg p-3">
+                                    <div className="flex justify-between items-center">
+                                        <p className="font-semibold text-base text-foreground">صافي الربح</p>
+                                        <p className="text-xl font-bold text-primary">
+                                            {(unifiedProfitData?.netProfit || 0).toLocaleString()} د.ع
+                                        </p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
