@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   TrendingUp, 
   DollarSign, 
@@ -9,16 +8,17 @@ import {
   Users,
   Receipt,
   Calendar,
-  BarChart3
+  BarChart3,
+  ChevronDown
 } from 'lucide-react';
-import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell } from 'recharts';
+import { BarChart, Bar, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
 
 const FinancialPerformanceCard = ({ 
   unifiedProfitData, 
   selectedTimePeriod, 
   onTimePeriodChange 
 }) => {
-  const [hoveredMetric, setHoveredMetric] = useState(null);
+  const [hoveredBar, setHoveredBar] = useState(null);
 
   const periodLabels = {
     all: 'كل الفترات',
@@ -34,8 +34,7 @@ const FinancialPerformanceCard = ({
       title: 'المبيعات',
       value: (unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.deliveryFees || 0),
       icon: Receipt,
-      color: '#10b981',
-      bgGradient: 'from-emerald-500/20 to-emerald-600/10',
+      color: '#00d4aa',
       description: 'إجمالي مبيعات الفترة بدون رسوم التوصيل'
     },
     {
@@ -43,8 +42,7 @@ const FinancialPerformanceCard = ({
       title: 'تكلفة البضاعة',
       value: unifiedProfitData?.cogs || 0,
       icon: ShoppingCart,
-      color: '#f59e0b',
-      bgGradient: 'from-amber-500/20 to-amber-600/10',
+      color: '#ff6b35',
       description: 'تكلفة البضائع المباعة خلال الفترة'
     },
     {
@@ -52,8 +50,7 @@ const FinancialPerformanceCard = ({
       title: 'المصاريف العامة',
       value: unifiedProfitData?.generalExpenses || 0,
       icon: TrendingUp,
-      color: '#ef4444',
-      bgGradient: 'from-red-500/20 to-red-600/10',
+      color: '#e74c3c',
       description: 'المصاريف التشغيلية والإدارية'
     },
     {
@@ -61,8 +58,7 @@ const FinancialPerformanceCard = ({
       title: 'المستحقات المدفوعة',
       value: unifiedProfitData?.employeeSettledDues || 0,
       icon: Users,
-      color: '#8b5cf6',
-      bgGradient: 'from-violet-500/20 to-violet-600/10',
+      color: '#9b59b6',
       description: 'مستحقات الموظفين المدفوعة'
     },
     {
@@ -70,8 +66,7 @@ const FinancialPerformanceCard = ({
       title: 'صافي الربح',
       value: unifiedProfitData?.netProfit || 0,
       icon: Calculator,
-      color: '#06b6d4',
-      bgGradient: 'from-cyan-500/20 to-cyan-600/10',
+      color: '#3498db',
       description: 'الربح النهائي بعد خصم جميع التكاليف'
     }
   ];
@@ -87,26 +82,30 @@ const FinancialPerformanceCard = ({
     }
   ];
 
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const metric = financialMetrics.find(m => m.id === payload[0].dataKey);
-      return (
-        <div className="bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl p-4 max-w-64">
-          <div className="flex items-center gap-2 mb-2">
-            <div 
-              className="w-3 h-3 rounded-full"
-              style={{ backgroundColor: metric?.color }}
-            />
-            <p className="font-semibold text-sm">{metric?.title}</p>
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length > 0) {
+      const dataKey = payload[0].dataKey;
+      const metric = financialMetrics.find(m => m.id === dataKey);
+      
+      if (metric) {
+        return (
+          <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-xl p-3 min-w-48">
+            <div className="flex items-center gap-2 mb-2">
+              <div 
+                className="w-3 h-3 rounded-full"
+                style={{ backgroundColor: metric.color }}
+              />
+              <p className="font-semibold text-sm">{metric.title}</p>
+            </div>
+            <p className="text-xl font-bold mb-1" style={{ color: metric.color }}>
+              {payload[0].value.toLocaleString()} د.ع
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {metric.description}
+            </p>
           </div>
-          <p className="text-2xl font-bold mb-2" style={{ color: metric?.color }}>
-            {payload[0].value.toLocaleString()} د.ع
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {metric?.description}
-          </p>
-        </div>
-      );
+        );
+      }
     }
     return null;
   };
@@ -121,28 +120,20 @@ const FinancialPerformanceCard = ({
   };
 
   return (
-    <Card className="relative overflow-hidden bg-gradient-to-br from-background via-background to-muted/20 border-2 border-border/50 shadow-2xl hover:shadow-3xl transition-all duration-500 group">
-      {/* خلفية متحركة */}
-      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-      
-      <CardHeader className="relative z-10 pb-4">
+    <Card className="bg-gradient-to-br from-slate-900/50 to-slate-800/30 border border-slate-700/50 shadow-xl">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center shadow-inner">
-                <BarChart3 className="w-6 h-6 text-primary" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-emerald-400 to-emerald-500 rounded-full animate-pulse" />
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                ملخص الأداء المالي
-              </h3>
-              <p className="text-sm text-muted-foreground">نظرة بيانية شاملة على الوضع المالي</p>
+              <h3 className="text-lg font-bold text-white">ملخص الأداء المالي</h3>
+              <p className="text-sm text-slate-400">نظرة بيانية شاملة على الوضع المالي</p>
             </div>
           </div>
           
-          {/* فلتر الفترة المحسن */}
+          {/* فلتر محسن */}
           <div className="relative">
             <select 
               value={selectedTimePeriod} 
@@ -151,149 +142,112 @@ const FinancialPerformanceCard = ({
                 onTimePeriodChange(period);
                 localStorage.setItem('financialTimePeriod', period);
               }}
-              className="appearance-none bg-gradient-to-r from-background to-muted/50 border-2 border-border/30 rounded-xl px-4 py-2 pr-10 text-sm font-medium shadow-inner hover:shadow-lg transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary/50 cursor-pointer"
+              className="appearance-none bg-slate-800/60 border border-slate-600/50 rounded-lg px-4 py-2 pr-10 text-sm text-slate-200 focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all duration-200"
             >
               {Object.entries(periodLabels).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
+                <option key={key} value={key} className="bg-slate-800">{label}</option>
               ))}
             </select>
-            <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="relative z-10 space-y-6">
-        {/* المقاييس المالية */}
-        <div className="grid grid-cols-5 gap-3">
+      <CardContent className="space-y-4">
+        {/* الكروت المصغرة */}
+        <div className="grid grid-cols-5 gap-2">
           {financialMetrics.map((metric) => {
             const Icon = metric.icon;
-            const isHovered = hoveredMetric === metric.id;
             
             return (
               <div
                 key={metric.id}
-                className={`relative p-4 rounded-xl bg-gradient-to-br ${metric.bgGradient} border border-border/30 cursor-pointer transition-all duration-300 transform hover:scale-105 hover:shadow-xl group/metric`}
-                onMouseEnter={() => setHoveredMetric(metric.id)}
-                onMouseLeave={() => setHoveredMetric(null)}
+                className="relative p-3 rounded-lg transition-all duration-200 hover:scale-105 cursor-pointer group"
+                style={{ 
+                  backgroundColor: `${metric.color}15`,
+                  border: `1px solid ${metric.color}30`
+                }}
+                onMouseEnter={() => setHoveredBar(metric.id)}
+                onMouseLeave={() => setHoveredBar(null)}
               >
-                {/* تأثير الإضاءة */}
-                <div 
-                  className="absolute inset-0 rounded-xl opacity-0 group-hover/metric:opacity-20 transition-opacity duration-300"
-                  style={{ 
-                    background: `radial-gradient(circle at center, ${metric.color}40, transparent)` 
-                  }}
-                />
-                
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-3">
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm"
-                      style={{ backgroundColor: `${metric.color}20` }}
-                    >
-                      <Icon 
-                        className="w-4 h-4" 
-                        style={{ color: metric.color }}
-                      />
-                    </div>
-                    {isHovered && (
-                      <Badge 
-                        variant="secondary" 
-                        className="text-xs animate-fade-in"
-                        style={{ 
-                          backgroundColor: `${metric.color}15`,
-                          color: metric.color,
-                          borderColor: `${metric.color}30`
-                        }}
-                      >
-                        نشط
-                      </Badge>
-                    )}
+                <div className="text-center space-y-2">
+                  <div 
+                    className="w-8 h-8 rounded-full mx-auto flex items-center justify-center"
+                    style={{ backgroundColor: `${metric.color}25` }}
+                  >
+                    <Icon 
+                      className="w-4 h-4" 
+                      style={{ color: metric.color }}
+                    />
                   </div>
-                  
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {metric.title}
-                    </p>
+                  <div>
+                    <p className="text-xs text-slate-300 mb-1">{metric.title}</p>
                     <p 
-                      className="text-lg font-bold tracking-tight"
+                      className="text-sm font-bold"
                       style={{ color: metric.color }}
                     >
                       {formatCurrency(metric.value)}
                     </p>
                   </div>
-
-                  {/* وصف عند التمرير */}
-                  {isHovered && (
-                    <div className="absolute -top-16 left-1/2 transform -translate-x-1/2 bg-background/95 backdrop-blur-md border border-border/50 rounded-lg p-2 shadow-xl z-50 min-w-48 animate-fade-in">
-                      <p className="text-xs text-center text-muted-foreground">
-                        {metric.description}
-                      </p>
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-border/50" />
-                    </div>
-                  )}
                 </div>
+
+                {/* مؤشر فوق العمود */}
+                <div 
+                  className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full"
+                  style={{ backgroundColor: metric.color }}
+                />
               </div>
             );
           })}
         </div>
 
-        {/* المخطط البياني المحسن */}
-        <div className="relative h-64 bg-gradient-to-br from-muted/10 to-muted/5 rounded-xl border border-border/30 p-4 overflow-hidden">
-          {/* خلفية ديناميكية */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-50" />
-          
+        {/* المخطط البياني المبسط */}
+        <div className="h-48 bg-slate-900/30 rounded-lg p-3">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 20, right: 20, left: 20, bottom: 20 }}>
-              <defs>
-                {financialMetrics.map((metric) => (
-                  <linearGradient key={`gradient-${metric.id}`} id={`gradient-${metric.id}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={metric.color} stopOpacity={0.9}/>
-                    <stop offset="95%" stopColor={metric.color} stopOpacity={0.3}/>
-                  </linearGradient>
-                ))}
-              </defs>
-              
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.3} />
-              <XAxis 
-                dataKey="name" 
-                stroke="hsl(var(--muted-foreground))" 
-                fontSize={12} 
-                tickLine={false} 
-                axisLine={false} 
-              />
-              <YAxis 
-                stroke="hsl(var(--muted-foreground))" 
-                fontSize={12} 
-                tickLine={false} 
-                axisLine={false} 
-                tickFormatter={(value) => formatCurrency(value)} 
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'hsl(var(--primary)/0.05)' }} />
+            <BarChart 
+              data={chartData} 
+              margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
+              onMouseMove={(data) => {
+                if (data && data.activePayload && data.activePayload[0]) {
+                  setHoveredBar(data.activePayload[0].dataKey);
+                }
+              }}
+              onMouseLeave={() => setHoveredBar(null)}
+            >
+              <XAxis hide />
+              <YAxis hide />
+              <Tooltip content={<CustomTooltip />} />
               
               {financialMetrics.map((metric) => (
                 <Bar 
                   key={metric.id}
                   dataKey={metric.id} 
-                  fill={`url(#gradient-${metric.id})`} 
                   radius={[4, 4, 0, 0]}
-                  className="hover:opacity-80 transition-opacity duration-200"
-                />
+                  className="transition-opacity duration-200"
+                  onMouseEnter={() => setHoveredBar(metric.id)}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${metric.id}-${index}`} 
+                      fill={hoveredBar === metric.id ? metric.color : `${metric.color}80`}
+                      stroke={metric.color}
+                      strokeWidth={hoveredBar === metric.id ? 2 : 0}
+                    />
+                  ))}
+                </Bar>
               ))}
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        {/* مؤشرات الأداء */}
-        <div className="flex items-center justify-center gap-4 pt-2">
-          <div className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-emerald-500/10 to-emerald-600/5 rounded-full border border-emerald-500/20">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-xs font-medium text-emerald-600">نمو إيجابي</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-blue-500/10 to-blue-600/5 rounded-full border border-blue-500/20">
-            <DollarSign className="w-3 h-3 text-blue-600" />
-            <span className="text-xs font-medium text-blue-600">أداء مالي قوي</span>
-          </div>
+        {/* مؤشر أسفل */}
+        <div className="text-center">
+          <p className="text-xs text-slate-400">
+            إجمالي مبيعات الفترة بدون رسوم التوصيل
+          </p>
+          <p className="text-lg font-bold text-emerald-400">
+            {((unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.deliveryFees || 0)).toLocaleString()} د.ع
+          </p>
         </div>
       </CardContent>
     </Card>
