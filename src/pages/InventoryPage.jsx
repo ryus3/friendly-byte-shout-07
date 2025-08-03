@@ -602,7 +602,7 @@ const InventoryPage = () => {
           </div>
         </div>
 
-        {/* النظام الموحد للإحصائيات وكروت الأقسام مع الأرشيف */}
+        {/* النظام الموحد للإحصائيات وكروت الأقسام */}
         <UnifiedInventoryStats 
           onFilterChange={handleFilterChange}
           onDepartmentFilter={(dept) => {
@@ -613,12 +613,49 @@ const InventoryPage = () => {
               stockFilter: 'all'
             }));
           }}
-          archivedCount={inventoryItems.filter(item => 
-            item.variants && item.variants.length > 0 && 
-            item.variants.every(v => (v.quantity || 0) === 0)
-          ).length}
-          onArchiveClick={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
         />
+        
+        {/* كارت الأرشيف منفصل */}
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
+                onClick={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}>
+            <CardContent className="p-4">
+              <div className="text-center space-y-3 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+                {/* الأيقونة */}
+                <div className="flex justify-center">
+                  <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                    <Archive className="w-8 h-8" />
+                  </div>
+                </div>
+                
+                {/* اسم الأرشيف */}
+                <div>
+                  <h4 className="font-bold text-lg">أرشيف المنتجات</h4>
+                  <p className="text-xs opacity-90 mt-1">المنتجات النافذة والمؤرشفة</p>
+                </div>
+                
+                {/* عدد المنتجات المؤرشفة */}
+                <div className="flex items-center justify-between pt-2 border-t border-white/20">
+                  <div className="text-right">
+                    <p className="text-xl font-bold">{inventoryItems.filter(item => 
+                      item.variants && item.variants.length > 0 && 
+                      item.variants.every(v => (v.quantity || 0) === 0)
+                    ).length}</p>
+                    <p className="text-white/80 text-xs">مؤرشف</p>
+                  </div>
+                  <div className="flex items-center gap-1 text-white/70">
+                    <Archive className="w-4 h-4" />
+                    <span className="text-xs">عرض</span>
+                  </div>
+                </div>
+                
+                {/* تأثير الخلفية */}
+                <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <InventoryFilters
           filters={filters}
