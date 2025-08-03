@@ -1,2 +1,2 @@
 #!/bin/bash
-exec npx vite "$@"
+exec node "$(dirname "$0")/node_modules/vite/bin/vite.js" "$@"

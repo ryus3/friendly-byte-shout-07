@@ -1,4 +1,3 @@
-#!/bin/bash
-export NODE_PATH="./node_modules"
-export PATH="./node_modules/.bin:$PATH"
-exec ./node_modules/.bin/vite "$@"
+@echo off
+cd /d "%~dp0"
+node node_modules\vite\bin\vite.js %*
