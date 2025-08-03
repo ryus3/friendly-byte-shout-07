@@ -165,12 +165,13 @@ const ProfitsSummaryPage = () => {
         const { from, to } = dateRange;
         console.log('🔍 حساب بيانات الأرباح:', { from, to, ordersCount: orders?.length, usersCount: allUsers?.length, profitsCount: profits?.length });
         
-        if (!orders || !allUsers || !from || !to || !profits) {
+        if (!orders || !allUsers || !from || !to || !profits || unifiedLoading) {
             console.log('❌ بيانات ناقصة للحساب:', { 
                 hasOrders: !!orders, 
                 hasUsers: !!allUsers, 
                 hasDateRange: !!from && !!to, 
-                hasProfits: !!profits 
+                hasProfits: !!profits,
+                unifiedLoading
             });
             return {
                 managerProfitFromEmployees: 0,
@@ -369,7 +370,7 @@ const ProfitsSummaryPage = () => {
                 return true;
             })
         };
-    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData]);
+    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
