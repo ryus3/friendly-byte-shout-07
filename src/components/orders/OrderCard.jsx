@@ -197,20 +197,40 @@ const OrderCard = ({
     }, 0);
   }, [calculateProfit, order, profits]);
 
-  // تحديد حالة الدفع
+  // تحديد حالة الدفع الحقيقية من بيانات قاعدة البيانات
   const paymentStatus = useMemo(() => {
     const profitRecord = profits?.find(p => p.order_id === order.id);
     
-    // فقط الطلبات المكتملة والمؤرشفة تظهر كمدفوعة
-    if (order.status === 'completed' && order.receipt_received && order.isarchived) {
+    // التحقق من الحالة الحقيقية للطلب والدفع من قاعدة البيانات
+    // 1. إذا كان الطلب مكتمل وتم استلام الفاتورة وتم تسوية الربح = مدفوع
+    if (order.status === 'completed' && 
+        order.receipt_received === true && 
+        profitRecord?.status === 'settled' && 
+        profitRecord?.settled_at !== null) {
       return { status: 'paid', label: 'مدفوع', color: 'bg-emerald-500' };
-    } else if (order.status === 'completed' && order.receipt_received && !order.isarchived) {
-      return { status: 'pending', label: 'معلق', color: 'bg-orange-500' };
-    } else {
-      // للطلبات غير المكتملة لا تظهر حالة دفع
+    }
+    // 2. إذا كان الطلب مكتمل وتم استلام الفاتورة ولكن لم يتم تسوية الربح = قابل للتحاسب
+    else if (order.status === 'completed' && 
+             order.receipt_received === true && 
+             (!profitRecord || profitRecord.status !== 'settled')) {
+      return { status: 'pending_settlement', label: 'قابل للتحاسب', color: 'bg-blue-500' };
+    }
+    // 3. لا تظهر حالة دفع للطلبات غير المكتملة أو التي لم يتم استلام فاتورتها
+    else {
       return null;
     }
   }, [order, profits]);
+
+  // مراقبة تغيير البيانات وإعادة التحديث التلقائي
+  React.useEffect(() => {
+    // تحديث تلقائي كل 30 ثانية في حالة وجود تغييرات
+    const interval = setInterval(() => {
+      // تحفيز إعادة حساب paymentStatus
+      setSelectedOrder(null);
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [order.id]);
 
   return (
     <motion.div 

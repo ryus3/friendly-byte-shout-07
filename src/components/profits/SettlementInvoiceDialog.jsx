@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { FileText, Eye, Receipt, Calendar, User, DollarSign, CheckCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -13,34 +13,71 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const { orders } = useInventory();
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [realOrdersData, setRealOrdersData] = useState([]);
+    const [loadingOrders, setLoadingOrders] = useState(false);
 
     // Add null check for invoice
     if (!invoice) {
         return null;
     }
 
+    // جلب البيانات الحقيقية للطلبات من قاعدة البيانات
+    const fetchRealOrdersData = async () => {
+        if (!invoice.order_ids || invoice.order_ids.length === 0) {
+            console.log('لا توجد order_ids في الفاتورة');
+            return;
+        }
+
+        setLoadingOrders(true);
+        try {
+            const { supabase } = await import('@/lib/customSupabaseClient');
+            
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .in('id', invoice.order_ids);
+
+            if (error) {
+                console.error('خطأ في جلب بيانات الطلبات:', error);
+                return;
+            }
+
+            console.log('🔥 البيانات الحقيقية للطلبات:', data);
+            setRealOrdersData(data || []);
+        } catch (error) {
+            console.error('خطأ غير متوقع:', error);
+        } finally {
+            setLoadingOrders(false);
+        }
+    };
+
+    // جلب البيانات عند فتح النافذة
+    React.useEffect(() => {
+        if (open && invoice.order_ids && invoice.order_ids.length > 0) {
+            fetchRealOrdersData();
+        }
+    }, [open, invoice.order_ids]);
+
     const settledBy = allUsers.find(u => u.id === invoice.settled_by_id || invoice.created_by);
     
-    // جلب الطلبات من order_ids بدلاً من settled_orders
-    const settledOrdersDetails = (invoice.order_ids || []).map(orderId => {
-        return orders.find(o => o.id === orderId);
-    }).filter(Boolean);
-
-    // إذا لم توجد order_ids، جرب settled_orders كبديل
-    const fallbackOrdersDetails = !settledOrdersDetails.length && invoice.settled_orders ? 
-        (invoice.settled_orders || []).map(orderId => {
+    // استخدام البيانات الحقيقية من قاعدة البيانات أولاً، ثم الاحتياط من context
+    const finalOrdersDetails = realOrdersData.length > 0 ? realOrdersData : 
+        (invoice.order_ids || []).map(orderId => {
             return orders.find(o => o.id === orderId);
-        }).filter(Boolean) : [];
-    
-    const finalOrdersDetails = settledOrdersDetails.length > 0 ? settledOrdersDetails : fallbackOrdersDetails;
+        }).filter(Boolean);
 
-    console.log('🔍 SettlementInvoiceDialog Debug:', {
+    console.log('🔍 SettlementInvoiceDialog Final Debug:', {
         invoiceId: invoice.id,
         orderIds: invoice.order_ids,
-        settledOrders: invoice.settled_orders,
-        totalOrders: orders?.length,
-        foundOrders: finalOrdersDetails.length,
-        orderDetails: finalOrdersDetails.map(o => ({ id: o?.id, number: o?.order_number || o?.trackingnumber }))
+        realOrdersCount: realOrdersData.length,
+        contextOrdersCount: orders?.length,
+        finalOrdersCount: finalOrdersDetails.length,
+        orderDetails: finalOrdersDetails.map(o => ({ 
+            id: o?.id, 
+            number: o?.order_number || o?.trackingnumber,
+            real_created_at: o?.created_at,
+            customer: o?.customer_name
+        }))
     });
 
     const handleViewOrder = (order) => {
@@ -166,12 +203,16 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                 </div>
                                             </div>
                                             
-                                            {/* Orders List */}
-                                            <div className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                {finalOrdersDetails.length === 0 ? (
-                                                    <div className="text-center py-8 text-slate-500">
-                                                        <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
-                                                    </div>
+                                             {/* Orders List */}
+                                             <div className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                 {loadingOrders ? (
+                                                     <div className="text-center py-8 text-slate-500">
+                                                         <p className="text-lg">جاري تحميل بيانات الطلبات الحقيقية...</p>
+                                                     </div>
+                                                 ) : finalOrdersDetails.length === 0 ? (
+                                                     <div className="text-center py-8 text-slate-500">
+                                                         <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
+                                                     </div>
                                                 ) : (
                                                     finalOrdersDetails.map((order, index) => (
                                                         <div 

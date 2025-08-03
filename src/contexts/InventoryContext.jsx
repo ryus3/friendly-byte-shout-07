@@ -1370,14 +1370,14 @@ export const InventoryProvider = ({ children }) => {
           }
         }
 
-        // تحديث الطلب لحالة "مدفوع" والأرشفة بعد التسوية
+        // تحديث الطلب لحالة "مدفوع" بدون أرشفة - الأرشفة تكون حسب اختيار المستخدم
         const { error: orderError } = await supabase
           .from('orders')
           .update({ 
             status: 'completed',
             receipt_received: true, // هذا يجعل الطلب "مدفوع"
             payment_status: 'paid', // حالة دفع صريحة
-            isArchived: true,
+            // إزالة isArchived: true لتجنب الإخفاء التلقائي
             updated_at: new Date().toISOString()
           })
           .eq('id', orderId);
@@ -1474,8 +1474,13 @@ export const InventoryProvider = ({ children }) => {
         console.error('Error creating employee settlement notification:', employeeNotificationError);
       }
 
-      // 4. تحديث البيانات المحلية
+      // 4. تحديث البيانات المحلية فوراً
       await refreshOrders();
+      
+      // تحديث إضافي متأخر لضمان التزامن الكامل
+      setTimeout(async () => {
+        await refreshOrders();
+      }, 2000);
 
       toast({ 
         title: "تمت التسوية بنجاح", 
