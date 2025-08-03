@@ -159,7 +159,7 @@ const AccountingPage = () => {
         productType: 'all'
     };
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
-    // إزالة useUnifiedProfits لتجنب التضارب - سنستخدم الحسابات المحلية
+    const { profitData: unifiedProfitData } = useUnifiedProfits();
     
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
@@ -338,21 +338,11 @@ const AccountingPage = () => {
         const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== currentUser?.id);
         
         const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
-          // استخدام نفس بنية البيانات المستخدمة في حساب التكلفة
-          if (!order.order_items || !Array.isArray(order.order_items)) {
-            console.warn(`⚠️ طلب المدير ${order.order_number} لا يحتوي على عناصر`);
-            return sum;
-          }
-          
-          const orderProfit = order.order_items.reduce((itemSum, item) => {
+          const orderProfit = (order.items || []).reduce((itemSum, item) => {
             const sellPrice = item.unit_price || item.price || 0;
             const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-            const quantity = item.quantity || 0;
-            const itemProfit = (sellPrice - costPrice) * quantity;
-            console.log(`🔍 ربح عنصر مدير: بيع=${sellPrice}, تكلفة=${costPrice}, كمية=${quantity}, ربح=${itemProfit}`);
-            return itemSum + itemProfit;
+            return itemSum + ((sellPrice - costPrice) * item.quantity);
           }, 0);
-          console.log(`💰 ربح طلب المدير ${order.order_number}: ${orderProfit}`);
           return sum + orderProfit;
         }, 0);
         
@@ -363,13 +353,6 @@ const AccountingPage = () => {
         
         // ربح النظام الصحيح
         const systemProfit = managerTotalProfit + employeeSystemProfit;
-        
-        console.log('🔥 === تشخيص ربح النظام ===');
-        console.log('💰 ربح المدير:', managerTotalProfit);
-        console.log('🏢 ربح النظام من الموظفين:', employeeSystemProfit);
-        console.log('🎯 إجمالي ربح النظام:', systemProfit);
-        console.log('📊 عدد طلبات المدير:', managerOrdersInRange.length);
-        console.log('👥 عدد طلبات الموظفين:', employeeOrdersInRange.length);
         
         // المصاريف العامة - استبعاد جميع المصاريف النظامية ومستحقات الموظفين
         const generalExpenses = expensesInRange.filter(e => {
@@ -392,12 +375,6 @@ const AccountingPage = () => {
         
         // صافي الربح = ربح النظام - المصاريف العامة
         const netProfit = systemProfit - generalExpenses;
-        
-        console.log('🏁 === النتيجة النهائية ===');
-        console.log('🎯 ربح النظام:', systemProfit);
-        console.log('💸 المصاريف العامة:', generalExpenses);
-        console.log('💰 صافي الربح النهائي:', netProfit);
-        console.log('===============================');
     
         
         // حساب قيمة المخزون
