@@ -28,7 +28,7 @@ const useInventoryStats = () => {
       
       console.log('🔍 [InventoryStats] بدء جلب إحصائيات المخزون...');
 
-      const { data, error: statsError } = await supabase.rpc('get_inventory_stats');
+      const { data, error: statsError } = await supabase.rpc('get_unified_inventory_stats');
       
       console.log('📊 [InventoryStats] استجابة قاعدة البيانات:', { data, error: statsError });
       
