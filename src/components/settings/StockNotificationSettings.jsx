@@ -16,11 +16,11 @@ import {
   CheckCircle, BellOff, Settings, RefreshCw 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const StockNotificationSettings = ({ open, onOpenChange }) => {
   const { isAdmin } = useAuth();
-  const { canManageSettings } = usePermissionBasedData();
+  const { canManageFinances } = usePermissions();
   
   const [settings, setSettings] = useLocalStorage('inventorySettings', {
     enableLowStockNotifications: true,
@@ -36,7 +36,7 @@ const StockNotificationSettings = ({ open, onOpenChange }) => {
   });
   
   // منع الوصول للموظفين - بعد استدعاء جميع الhooks
-  if (!isAdmin && !canManageSettings) {
+  if (!isAdmin && !canManageFinances) {
     return null;
   }
 

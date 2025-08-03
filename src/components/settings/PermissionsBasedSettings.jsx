@@ -3,10 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Settings, Shield, Eye, EyeOff } from 'lucide-react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const PermissionsBasedSettings = ({ children }) => {
-  const { user, canManageSettings, canViewAllData, isAdmin, isEmployee } = usePermissionBasedData();
+  const { user, canViewAllData, isAdmin, isSalesEmployee } = usePermissions();
 
   // تصفية العناصر حسب الصلاحيات
   const filterSettingsItems = (items) => {
@@ -54,7 +54,7 @@ const PermissionsBasedSettings = ({ children }) => {
             لا تملك الصلاحيات اللازمة لعرض أو تعديل الإعدادات
           </p>
           <Badge variant="outline" className="mt-2">
-            {isEmployee ? 'موظف' : user?.role}
+            {isSalesEmployee ? 'موظف' : user?.role}
           </Badge>
         </CardContent>
       </Card>
@@ -79,7 +79,7 @@ const PermissionsBasedSettings = ({ children }) => {
             </div>
             <div className="text-right">
               <Badge variant={isAdmin ? "default" : "secondary"}>
-                {isAdmin ? 'مدير' : isEmployee ? 'موظف' : user?.role}
+                {isAdmin ? 'مدير' : isSalesEmployee ? 'موظف' : user?.role}
               </Badge>
               {canViewAllData && (
                 <div className="flex items-center gap-1 mt-1 text-xs text-blue-600">

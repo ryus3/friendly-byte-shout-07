@@ -1,4 +1,4 @@
-import { useUnifiedPermissionsSystem } from './useUnifiedPermissionsSystem';
+import { useUnifiedPermissionsSystem } from './useUnifiedPermissionsSystem.jsx';
 
 /**
  * Hook موحد نهائي للصلاحيات - واجهة بسيطة للنظام الموحد

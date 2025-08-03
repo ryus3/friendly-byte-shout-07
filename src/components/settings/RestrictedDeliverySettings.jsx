@@ -2,14 +2,14 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Lock, Shield } from 'lucide-react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 import DeliverySettingsDialog from './DeliverySettingsDialog';
 
 const RestrictedDeliverySettings = () => {
-  const { canManageSettings, isAdmin, user } = usePermissionBasedData();
+  const { canAccessDeliveryPartners, isAdmin, user } = usePermissions();
   const [isOpen, setIsOpen] = React.useState(false);
 
-  if (!canManageSettings && !isAdmin) {
+  if (!canAccessDeliveryPartners && !isAdmin) {
     return (
       <Card className="bg-red-50 border-red-200">
         <CardHeader>

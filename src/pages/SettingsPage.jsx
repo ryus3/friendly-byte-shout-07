@@ -7,7 +7,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -125,14 +124,14 @@ const SettingsPage = () => {
   // استخدام نظام الصلاحيات المحكم - يجب استدعاؤه قبل أي early returns
   const {
     isAdmin,
-    isEmployee,
+    isSalesEmployee,
     canManageEmployees,
     canManageSettings,
     canAccessDeliveryPartners,
     canManageAccounting,
     canManagePurchases,
     canViewAllData
-  } = usePermissionBasedData();
+  } = usePermissions();
   
   const [isStoreLoading, setIsStoreLoading] = useState(false);
   const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);

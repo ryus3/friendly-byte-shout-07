@@ -13,11 +13,11 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const TelegramManagementDialog = ({ open, onOpenChange }) => {
   const { user } = useAuth();
-  const { canViewAllData } = usePermissionBasedData();
+  const { canViewAllData } = usePermissions();
   const [employeeCodes, setEmployeeCodes] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [isLoading, setIsLoading] = useState(false);

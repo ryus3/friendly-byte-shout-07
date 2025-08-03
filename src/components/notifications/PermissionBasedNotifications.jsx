@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bell, BellOff, User, Users } from 'lucide-react';
@@ -8,9 +8,9 @@ const PermissionBasedNotifications = ({ notifications, children }) => {
   const { 
     getNotificationsForUser, 
     isAdmin,
-    isEmployee,
+    isSalesEmployee,
     user 
-  } = usePermissionBasedData();
+  } = usePermissions();
 
   // فلترة الإشعارات حسب المستخدم
   const filteredNotifications = useMemo(() => {
@@ -42,7 +42,7 @@ const PermissionBasedNotifications = ({ notifications, children }) => {
             لم تصلك أي إشعارات بعد
           </p>
           <Badge variant="outline" className="mt-2">
-            {isEmployee ? 'موظف' : user?.role}
+            {isSalesEmployee ? 'موظف' : user?.role}
           </Badge>
         </CardContent>
       </Card>

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast.js';
 import { supabase } from '@/lib/customSupabaseClient.js';
+import { UnifiedPermissionsProvider } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 
 const UnifiedAuthContext = createContext(null);
 
@@ -690,10 +691,4 @@ export const UnifiedAuthProvider = ({ children }) => {
       </UnifiedPermissionsProvider>
     </UnifiedAuthContext.Provider>
   );
-};
-
-// Hook لاستخدام النظام الموحد للصلاحيات
-export const usePermissions = () => {
-  const { user, hasPermission, hasRole, isAdmin, userRoles, userPermissions } = useAuth();
-  return { user, hasPermission, hasRole, isAdmin, userRoles, userPermissions };
 };

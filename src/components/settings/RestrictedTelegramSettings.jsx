@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MessageCircle, Shield, User, Plus, Trash2, Copy } from 'lucide-react';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import { useState, useEffect } from 'react';
 
 const RestrictedTelegramSettings = () => {
-  const { canViewAllData, isAdmin, isEmployee, user } = usePermissionBasedData();
+  const { canViewAllData, isAdmin, isSalesEmployee, user } = usePermissions();
   const { user: authUser } = useAuth();
   const [employeeCodes, setEmployeeCodes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
