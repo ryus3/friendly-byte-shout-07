@@ -260,12 +260,13 @@ const FinancialPerformanceCard = ({
             })}
           </div>
 
-          {/* المخطط البياني - بدون خلفية بيضاء عند تمرير الماوس */}
+          {/* المخطط البياني - محاذاة الأعمدة مع الكروت */}
           <div className="h-40 bg-muted/30 rounded-lg p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
                 margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                barCategoryGap="20%"
               >
                 <XAxis hide />
                 <YAxis hide />
@@ -274,6 +275,7 @@ const FinancialPerformanceCard = ({
                 <Bar 
                   dataKey="value"
                   radius={[4, 4, 0, 0]}
+                  maxBarSize={60}
                   onMouseEnter={(data, index) => {
                     setHoveredBar(chartData[index]?.id);
                   }}
