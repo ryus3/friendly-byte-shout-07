@@ -252,7 +252,8 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
           if (!shouldInclude) continue;
 
-          filteredItemsCount++;
+          // إضافة الكمية الفعلية المباعة بدلاً من عد العناصر
+          filteredItemsCount += (item.quantity || 0);
 
           // حساب الأرباح بناءً على القواعد المحددة
           const profitSplit = calculateProfitSplit(item, order.created_by);
