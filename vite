@@ -1,21 +1,17 @@
 #!/usr/bin/env node
 
-// استيراد vite مباشرة
+const { execSync } = require('child_process');
+
 try {
-  // محاولة 1: require مباشر
-  require('./node_modules/vite/bin/vite.js');
-} catch (error1) {
-  try {
-    // محاولة 2: dynamic import
-    import('./node_modules/vite/bin/vite.js');
-  } catch (error2) {
-    try {
-      // محاولة 3: execSync
-      const { execSync } = require('child_process');
-      execSync('npx vite', { stdio: 'inherit' });
-    } catch (error3) {
-      console.error('❌ فشل في تشغيل vite:', error3.message);
-      process.exit(1);
-    }
-  }
+  // Use npx to run vite with proper arguments
+  const args = process.argv.slice(2);
+  const command = args.length > 0 ? `npx vite ${args.join(' ')}` : 'npx vite --host :: --port 8080';
+  
+  execSync(command, { 
+    stdio: 'inherit',
+    cwd: __dirname
+  });
+} catch (error) {
+  console.error('❌ Failed to run vite:', error.message);
+  process.exit(1);
 }
