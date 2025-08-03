@@ -80,13 +80,39 @@ const FinancialPerformanceCard = ({
     }
   ];
 
-  // إنشاء بيانات منفصلة لكل عمود - بنفس ترتيب الكروت (من اليسار لليمين)
-  const chartData = financialMetrics.map(metric => ({
-    name: metric.title,
-    value: metric.value,
-    id: metric.id,
-    color: metric.color
-  }));
+  // إنشاء بيانات منفصلة لكل عمود - بنفس ترتيب الكروت المرئي (من اليسار لليمين)
+  const chartData = [
+    {
+      name: financialMetrics[0].title, // المبيعات
+      value: financialMetrics[0].value,
+      id: financialMetrics[0].id,
+      color: financialMetrics[0].color
+    },
+    {
+      name: financialMetrics[1].title, // تكلفة البضاعة
+      value: financialMetrics[1].value,
+      id: financialMetrics[1].id,
+      color: financialMetrics[1].color
+    },
+    {
+      name: financialMetrics[2].title, // المصاريف العامة
+      value: financialMetrics[2].value,
+      id: financialMetrics[2].id,
+      color: financialMetrics[2].color
+    },
+    {
+      name: financialMetrics[3].title, // مستحقات مدفوعة
+      value: financialMetrics[3].value,
+      id: financialMetrics[3].id,
+      color: financialMetrics[3].color
+    },
+    {
+      name: financialMetrics[4].title, // صافي الربح
+      value: financialMetrics[4].value,
+      id: financialMetrics[4].id,
+      color: financialMetrics[4].color
+    }
+  ];
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length > 0) {
