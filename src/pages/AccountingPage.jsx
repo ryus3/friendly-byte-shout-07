@@ -41,7 +41,7 @@ const formatCurrency = (amount) => {
 };
 
 // دالة للحصول على ربح الموظف من جدول الأرباح الفعلي
-const getEmployeeProfitFromOrder = (orderId, employeeId) => {
+const getEmployeeProfitFromOrder = (orderId, employeeId, allProfits) => {
   // يجب جلب هذه البيانات من جدول profits
   const orderProfits = allProfits?.find(p => p.order_id === orderId && p.employee_id === employeeId);
   return orderProfits?.employee_profit || 0;

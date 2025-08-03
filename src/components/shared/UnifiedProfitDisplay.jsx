@@ -156,7 +156,7 @@ const UnifiedProfitDisplay = ({
       const userDeliveredOrders = deliveredOrders.filter(o => o.created_by === currentUser.id);
       
       // حساب الأرباح الشخصية من جدول profits
-      const userProfits = allProfits.filter(p => p.employee_id === currentUser.id);
+      const userProfits = (allProfits || []).filter(p => p.employee_id === currentUser.id);
       
       personalData.personalTotalProfit = userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
@@ -181,7 +181,7 @@ const UnifiedProfitDisplay = ({
         const isDeliveredWithReceipt = (o.status === 'completed' || o.status === 'delivered') && o.receipt_received === true;
         
         // الطلبات المسواة (لها profit record بحالة settled)
-        const profitRecord = allProfits.find(p => p.order_id === o.id);
+        const profitRecord = (allProfits || []).find(p => p.order_id === o.id);
         const hasSettledProfit = profitRecord?.status === 'settled';
         
         // الطلبات الراجعة للمخزن
@@ -258,7 +258,7 @@ const UnifiedProfitDisplay = ({
     
     // حساب ربح النظام من طلبات الموظفين
     const employeeSystemProfit = employeeOrdersInRange.reduce((sum, order) => {
-      return sum + getSystemProfitFromOrder(order.id, allProfits);
+      return sum + getSystemProfitFromOrder(order.id, allProfits || []);
     }, 0);
     
     const systemProfit = managerTotalProfit + employeeSystemProfit;
