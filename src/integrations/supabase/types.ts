@@ -3222,11 +3222,13 @@ export type Database = {
         }[]
       }
       get_inventory_stats: {
-        Args: {
-          p_department_ids?: string[]
-          p_category_ids?: string[]
-          p_user_id?: string
-        }
+        Args:
+          | Record<PropertyKey, never>
+          | {
+              p_department_ids?: string[]
+              p_category_ids?: string[]
+              p_user_id?: string
+            }
         Returns: {
           total_products: number
           total_variants: number

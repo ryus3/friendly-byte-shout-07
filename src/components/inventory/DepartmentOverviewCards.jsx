@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/customSupabaseClient';
+import useInventoryStats from '@/hooks/useInventoryStats';
 import { 
   Package, 
   Shirt, 
@@ -13,82 +13,8 @@ import {
 } from 'lucide-react';
 
 const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [totalProducts, setTotalProducts] = useState(0);
-
-  // جلب البيانات من قاعدة البيانات
-  useEffect(() => {
-    fetchDepartmentsData();
-  }, []);
-
-  const fetchDepartmentsData = async () => {
-    try {
-      setLoading(true);
-
-      // جلب الأقسام الرئيسية
-      const { data: deptData, error: deptError } = await supabase
-        .from('departments')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (deptError) throw deptError;
-
-      // ترتيب الأقسام حسب الأولوية المطلوبة
-      const orderedDepts = [];
-      const clothingDept = deptData?.find(d => d.name.includes('ملابس') || d.name.toLowerCase().includes('clothes'));
-      const shoesDept = deptData?.find(d => d.name.includes('أحذية') || d.name.toLowerCase().includes('shoes'));
-      const generalDept = deptData?.find(d => d.name.includes('مواد عامة') || d.name.includes('عامة') || d.name.toLowerCase().includes('general'));
-
-      // إضافة الأقسام بالترتيب المطلوب
-      if (clothingDept) orderedDepts.push({ ...clothingDept, order: 1 });
-      if (shoesDept) orderedDepts.push({ ...shoesDept, order: 2 });
-      if (generalDept) orderedDepts.push({ ...generalDept, order: 3 });
-
-      // إضافة باقي الأقسام
-      const otherDepts = deptData?.filter(d => 
-        d !== clothingDept && d !== shoesDept && d !== generalDept
-      ) || [];
-      
-      otherDepts.forEach((dept, index) => {
-        orderedDepts.push({ ...dept, order: 4 + index });
-      });
-
-      // جلب عدد المنتجات لكل قسم
-      const { data: productsData } = await supabase
-        .from('product_departments')
-        .select('department_id, products(id)')
-        .eq('products.is_active', true);
-
-      // حساب عدد المنتجات لكل قسم
-      const productCounts = {};
-      productsData?.forEach(pd => {
-        if (productCounts[pd.department_id]) {
-          productCounts[pd.department_id]++;
-        } else {
-          productCounts[pd.department_id] = 1;
-        }
-      });
-
-      // إضافة العدد للأقسام
-      const deptsWithCounts = orderedDepts.map(dept => ({
-        ...dept,
-        productCount: productCounts[dept.id] || 0
-      }));
-
-      setDepartments(deptsWithCounts);
-
-      // حساب إجمالي المنتجات
-      const total = Object.values(productCounts).reduce((sum, count) => sum + count, 0);
-      setTotalProducts(total);
-
-    } catch (error) {
-      console.error('خطأ في جلب بيانات الأقسام:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { stats, loading } = useInventoryStats();
+  const departments = stats.departments || [];
 
   // أيقونات للأقسام المختلفة
   const getIconForDepartment = (name, index) => {
@@ -148,7 +74,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
                   {/* رقم القسم */}
                   <div className="absolute top-2 right-2">
                     <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
-                      {dept.order}
+                      {dept.display_order || (index + 1)}
                     </Badge>
                   </div>
                   
@@ -170,7 +96,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
                   {/* عدد المنتجات */}
                   <div className="flex items-center justify-between pt-2 border-t border-white/20">
                     <div className="text-right">
-                      <p className="text-xl font-bold">{dept.productCount}</p>
+                      <p className="text-xl font-bold">{dept.product_count || 0}</p>
                       <p className="text-white/80 text-xs">منتج</p>
                     </div>
                     <div className="flex items-center gap-1 text-white/70">

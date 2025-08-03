@@ -1,7 +1,7 @@
 import React from 'react';
 import { Package, TrendingUp, TrendingDown, AlertTriangle, Archive, PackageX } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import ArchivedProductsCard from './ArchivedProductsCard';
+import useInventoryStats from '@/hooks/useInventoryStats';
 
 const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
   <div
@@ -35,35 +35,34 @@ const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
   </div>
 );
 
-const InventoryStats = ({ inventoryItems, lowStockCount, reservedStockCount, onFilterChange, onViewArchive, onRestoreProduct }) => {
-  if (!inventoryItems) {
-    return null; // or a loader/skeleton component
-  }
-  const totalProducts = inventoryItems.length; // عدد المنتجات الفعلي
-  const allVariants = inventoryItems.flatMap(i => i.variants || []);
-  const highStockCount = allVariants.filter(v => v.stockLevel === 'high').length;
-  const mediumStockCount = allVariants.filter(v => v.stockLevel === 'medium').length;
-  const outOfStockCount = allVariants.filter(v => (v.quantity || 0) === 0).length;
-  
-  // حساب المنتجات المؤرشفة (المنتجات التي جميع مقاساتها نافذة)
-  const archivedProductsCount = inventoryItems.filter(item => 
-    item.variants && item.variants.length > 0 && 
-    item.variants.every(v => (v.quantity || 0) === 0)
-  ).length;
+const InventoryStats = ({ onFilterChange, onViewArchive, onRestoreProduct }) => {
+  const { stats, loading } = useInventoryStats();
 
-  const stats = [
-    { title: 'إجمالي المنتجات', value: totalProducts, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
-    { title: 'مخزون محجوز', value: reservedStockCount || 0, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
-    { title: 'مخزون جيد', value: highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
-    { title: 'مخزون متوسط', value: mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-orange-400 to-yellow-500', delay: 0.3, onClick: () => onFilterChange('medium') },
-    { title: 'مخزون منخفض', value: lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-orange-500', delay: 0.4, onClick: () => onFilterChange('low') },
-    { title: 'مخزون نافذ', value: outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-gray-600 to-gray-800', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="animate-pulse bg-card rounded-xl p-4 sm:p-6 border">
+            <div className="h-16 bg-muted rounded"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const statsCards = [
+    { title: 'إجمالي المنتجات', value: stats.totalProducts, icon: Package, colorClass: 'bg-gradient-to-tr from-blue-500 to-cyan-400', delay: 0, onClick: () => onFilterChange('all') },
+    { title: 'مخزون محجوز', value: stats.reservedStockCount, icon: Archive, colorClass: 'bg-gradient-to-tr from-purple-500 to-violet-400', delay: 0.1, onClick: () => onFilterChange('reserved') },
+    { title: 'مخزون جيد', value: stats.highStockCount, icon: TrendingUp, colorClass: 'bg-gradient-to-tr from-green-500 to-emerald-400', delay: 0.2, onClick: () => onFilterChange('high') },
+    { title: 'مخزون متوسط', value: stats.mediumStockCount, icon: TrendingDown, colorClass: 'bg-gradient-to-tr from-orange-400 to-yellow-500', delay: 0.3, onClick: () => onFilterChange('medium') },
+    { title: 'مخزون منخفض', value: stats.lowStockCount, icon: AlertTriangle, colorClass: 'bg-gradient-to-tr from-red-500 to-orange-500', delay: 0.4, onClick: () => onFilterChange('low') },
+    { title: 'مخزون نافذ', value: stats.outOfStockCount, icon: PackageX, colorClass: 'bg-gradient-to-tr from-gray-600 to-gray-800', delay: 0.5, onClick: () => onFilterChange('out-of-stock') },
   ];
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {stats.map(stat => (
+        {statsCards.map(stat => (
           <StatCard key={stat.title} {...stat} />
         ))}
       </div>
