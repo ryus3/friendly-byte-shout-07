@@ -4,7 +4,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { supabase } from '@/lib/customSupabaseClient';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   User, 
   Hourglass, 
@@ -371,7 +371,7 @@ const UnifiedProfitDisplay = ({
             {
               key: 'net-profit',
               title: 'صافي الربح',
-              value: unifiedProfitData?.netProfit || 0,
+              value: (unifiedProfitData?.netProfit || profitData?.netProfit || unifiedFinancialData.netProfit || 0),
               icon: User,
               colors: ['green-500', 'emerald-500'],
               format: 'currency'
