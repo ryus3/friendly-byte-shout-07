@@ -96,8 +96,8 @@ export const useUnifiedProfitCalculator = ({
       })
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
-    // صافي الربح = ربح المبيعات (بدون طرح المصاريف العامة)
-    const netProfit = grossProfit;
+    // صافي الربح = الربح الخام - المستحقات المدفوعة - المصاريف العامة
+    const netProfit = grossProfit - employeeSettledDues - generalExpenses;
 
     return {
       totalRevenue,

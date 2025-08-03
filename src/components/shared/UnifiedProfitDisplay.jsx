@@ -273,8 +273,8 @@ const UnifiedProfitDisplay = ({
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
     
-    // صافي الربح = ربح النظام - المصاريف العامة
-    const netProfit = systemProfit - generalExpenses;
+    // صافي الربح = الربح الخام - المستحقات المدفوعة - المصاريف العامة
+    const netProfit = grossProfit - totalSettledDues - generalExpenses;
     
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits

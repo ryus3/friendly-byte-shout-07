@@ -112,8 +112,8 @@ const AdvancedAccountingSystem = () => {
     // إجمالي النفقات
     const totalExpenses = operatingExpenses + employeeExpenses + purchaseExpenses;
 
-    // صافي الربح (نفس حساب لوحة التحكم تماماً)
-    const netProfit = grossProfit - operatingExpenses - employeeExpenses;
+    // صافي الربح = الربح الخام - المستحقات المدفوعة - المصاريف العامة
+    const netProfit = grossProfit - employeeExpenses - operatingExpenses;
     const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
     
     // حساب أرباح المستخدم الحالي من طلباته المستلمة فقط
