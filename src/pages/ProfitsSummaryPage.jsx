@@ -544,6 +544,7 @@ const ProfitsSummaryPage = () => {
           {/* استخدام UnifiedProfitDisplay مباشرة مع الكروت الجديدة */}
           <UnifiedProfitDisplay
             profitData={profitData}
+            unifiedProfitData={unifiedProfitData}
             displayMode="dashboard"
             canViewAll={canViewAll}
             onFilterChange={handleFilterChange}

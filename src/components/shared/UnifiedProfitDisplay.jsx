@@ -34,6 +34,7 @@ const getSystemProfitFromOrder = (orderId, allProfits) => {
 
 const UnifiedProfitDisplay = ({
   profitData,
+  unifiedProfitData,
   displayMode = 'dashboard', // 'dashboard' | 'financial-center'
   canViewAll = true,
   onFilterChange = () => {},
@@ -370,7 +371,7 @@ const UnifiedProfitDisplay = ({
             {
               key: 'net-profit',
               title: 'صافي الربح',
-              value: unifiedFinancialData.netProfit,
+              value: unifiedProfitData?.netProfit || unifiedFinancialData.netProfit,
               icon: User,
               colors: ['green-500', 'emerald-500'],
               format: 'currency'
