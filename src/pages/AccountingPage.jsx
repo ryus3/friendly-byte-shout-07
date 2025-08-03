@@ -443,24 +443,36 @@ const AccountingPage = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                        <EnhancedFinancialSummary 
-                            financialData={{
-                                totalRevenue: unifiedProfitData?.totalRevenue || 0,
-                                totalCogs: unifiedProfitData?.cogs || 0,
-                                grossProfit: unifiedProfitData?.grossProfit || 0,
-                                totalExpenses: unifiedProfitData?.generalExpenses || 0,
-                                employeeProfits: unifiedProfitData?.employeeSettledDues || 0,
-                                netProfit: unifiedProfitData?.netProfit || 0,
-                                capitalValue: totalCapital || 0,
-                                finalBalance: realCashBalance || 0
-                            }}
-                            title="ملخص الأداء المالي"
-                            timePeriod={selectedTimePeriod}
-                            onTimePeriodChange={(period) => {
-                                setSelectedTimePeriod(period);
-                                localStorage.setItem('financialTimePeriod', period);
-                            }}
-                        />
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <BarChart/> ملخص الأداء المالي
+                                        </CardTitle>
+                                        <CardDescription>نظرة بيانية على الإيرادات، المصاريف، والأرباح الصافية</CardDescription>
+                                    </div>
+                                    <select 
+                                        value={selectedTimePeriod} 
+                                        onChange={(e) => {
+                                            const period = e.target.value;
+                                            setSelectedTimePeriod(period);
+                                            localStorage.setItem('financialTimePeriod', period);
+                                        }}
+                                        className="text-sm border rounded px-2 py-1"
+                                    >
+                                        <option value="all">كل الفترات</option>
+                                        <option value="today">اليوم</option>
+                                        <option value="week">هذا الأسبوع</option>
+                                        <option value="month">هذا الشهر</option>
+                                        <option value="year">هذا العام</option>
+                                    </select>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="h-72">
+                                <MiniChart data={unifiedProfitData?.chartData || []} type="bar" colors={['#3b82f6', '#ef4444']} />
+                            </CardContent>
+                        </Card>
                     </div>
                     <div className="lg:col-span-1">
                         <Card>
