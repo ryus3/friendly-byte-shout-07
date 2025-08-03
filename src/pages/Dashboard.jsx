@@ -9,7 +9,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -96,7 +95,6 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    const { analytics: ordersAnalytics, loading: analyticsLoading } = useOrdersAnalytics();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -432,10 +430,10 @@ const Dashboard = () => {
             pendingProfitOrders: filteredDeliveredOrders,
             deliveredSalesOrders,
             pendingSalesOrders,
-            // استخدام البيانات من Hook الجديد
-            topCustomers: ordersAnalytics?.topCustomers || [],
-            topProvinces: ordersAnalytics?.topProvinces || [],
-            topProducts: ordersAnalytics?.topProducts || [],
+            // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
+            topCustomers: canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
+            topProvinces: canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
+            topProducts: canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
         };
     }, [
         visibleOrders, 
@@ -445,8 +443,7 @@ const Dashboard = () => {
         periods.pendingSales, 
         user?.id, 
         user?.user_id, 
-        canViewAllData,
-        ordersAnalytics
+        canViewAllData
     ]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {

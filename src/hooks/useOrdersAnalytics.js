@@ -33,151 +33,37 @@ const useOrdersAnalytics = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 جلب إحصائيات الطلبات...');
+      // استدعاء الدالة الموحدة الجديدة
+      const { data, error: rpcError } = await supabase.rpc('get_unified_orders_analytics');
       
-      // جلب الطلبات مع تفاصيلها
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items (
-            id,
-            product_id,
-            variant_id,
-            quantity,
-            unit_price,
-            total_price,
-            products (
-              id,
-              name
-            )
-          )
-        `)
-        .not('status', 'in', '(returned,cancelled)')
-        .neq('isArchived', true);
-
-      if (ordersError) {
-        console.error('خطأ في جلب الطلبات:', ordersError);
-        setError(ordersError.message);
+      if (rpcError) {
+        console.error('خطأ في جلب إحصائيات الطلبات:', rpcError);
+        setError(rpcError.message);
         return;
       }
 
-      const orders = ordersData || [];
-      console.log('📊 تم جلب الطلبات:', orders.length);
-
-      // حساب الإحصائيات الأساسية
-      const totalOrders = orders.length;
-      const pendingOrders = orders.filter(o => o.status === 'pending').length;
-      const completedOrders = orders.filter(o => ['completed', 'delivered'].includes(o.status)).length;
-      const completedOrdersList = orders.filter(o => ['completed', 'delivered'].includes(o.status));
-      const totalRevenue = completedOrdersList.reduce((sum, o) => sum + (o.final_amount || 0), 0);
-
-      // حساب أفضل العملاء
-      const customersMap = {};
-      completedOrdersList.forEach(order => {
-        const phone = order.customer_phone;
-        const name = order.customer_name;
-        if (phone && phone !== 'غير محدد') {
-          if (!customersMap[phone]) {
-            customersMap[phone] = {
-              phone,
-              name,
-              totalOrders: 0,
-              totalAmount: 0
-            };
+      if (data && data[0]) {
+        const result = data[0];
+        
+        setAnalytics({
+          // إحصائيات عامة
+          totalOrders: parseInt(result.total_orders) || 0,
+          pendingOrders: parseInt(result.pending_orders) || 0,
+          completedOrders: parseInt(result.completed_orders) || 0,
+          totalRevenue: parseFloat(result.total_revenue) || 0,
+          
+          // البيانات التفصيلية
+          topCustomers: result.top_customers || [],
+          topProducts: result.top_products || [],
+          topProvinces: result.top_provinces || [],
+          pendingProfits: result.pending_profits || {
+            total_pending_amount: 0,
+            total_employee_profits: 0,
+            employees_count: 0,
+            orders_count: 0
           }
-          customersMap[phone].totalOrders += 1;
-          customersMap[phone].totalAmount += order.final_amount || 0;
-        }
-      });
-
-      const topCustomers = Object.values(customersMap)
-        .sort((a, b) => b.totalOrders - a.totalOrders)
-        .slice(0, 10);
-
-      // حساب أفضل المحافظات
-      const provincesMap = {};
-      completedOrdersList.forEach(order => {
-        const province = order.customer_city || order.customer_province || 'غير محدد';
-        if (!provincesMap[province]) {
-          provincesMap[province] = {
-            name: province,
-            totalOrders: 0,
-            totalAmount: 0
-          };
-        }
-        provincesMap[province].totalOrders += 1;
-        provincesMap[province].totalAmount += order.final_amount || 0;
-      });
-
-      const topProvinces = Object.values(provincesMap)
-        .sort((a, b) => b.totalOrders - a.totalOrders)
-        .slice(0, 10);
-
-      // حساب أفضل المنتجات
-      const productsMap = {};
-      completedOrdersList.forEach(order => {
-        if (order.order_items) {
-          order.order_items.forEach(item => {
-            const productName = item.products?.name || `منتج ${item.product_id}`;
-            if (!productsMap[productName]) {
-              productsMap[productName] = {
-                name: productName,
-                totalQuantity: 0,
-                totalAmount: 0
-              };
-            }
-            productsMap[productName].totalQuantity += item.quantity || 0;
-            productsMap[productName].totalAmount += item.total_price || 0;
-          });
-        }
-      });
-
-      const topProducts = Object.values(productsMap)
-        .sort((a, b) => b.totalQuantity - a.totalQuantity)
-        .slice(0, 10);
-
-      // جلب بيانات الأرباح المعلقة
-      const { data: profitsData, error: profitsError } = await supabase
-        .from('profits')
-        .select('*')
-        .eq('status', 'pending');
-
-      let pendingProfits = {
-        total_pending_amount: 0,
-        total_employee_profits: 0,
-        employees_count: 0,
-        orders_count: 0
-      };
-
-      if (!profitsError && profitsData) {
-        const uniqueEmployees = new Set(profitsData.map(p => p.employee_id));
-        pendingProfits = {
-          total_pending_amount: profitsData.reduce((sum, p) => sum + (p.profit_amount || 0), 0),
-          total_employee_profits: profitsData.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
-          employees_count: uniqueEmployees.size,
-          orders_count: profitsData.length
-        };
+        });
       }
-
-      console.log('✅ تم حساب الإحصائيات:', {
-        totalOrders,
-        topCustomers: topCustomers.length,
-        topProducts: topProducts.length,
-        topProvinces: topProvinces.length
-      });
-
-      setAnalytics({
-        totalOrders,
-        pendingOrders,
-        completedOrders,
-        totalRevenue,
-        topCustomers,
-        topProducts,
-        topProvinces,
-        pendingProfits
-      });
-      
     } catch (err) {
       console.error('خطأ غير متوقع في جلب إحصائيات الطلبات:', err);
       setError(err.message);
