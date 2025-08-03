@@ -93,7 +93,16 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                     <ScrollArea className="flex-1 w-full">
                         <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                             <div className="h-48 sm:h-60 flex-shrink-0">
-                                <MiniChart data={summary?.chartData || []} type="bar" />
+                                <MiniChart 
+                                    data={[
+                                        { 
+                                            name: 'البيانات المالية',
+                                            sales: (summary?.totalRevenue || 0) - (summary?.deliveryFees || 0),
+                                            expenses: (summary?.cogs || 0) + (summary?.generalExpenses || 0) + (summary?.employeeSettledDues || 0)
+                                        }
+                                    ]} 
+                                    type="bar" 
+                                />
                             </div>
                             <div className="space-y-1 sm:space-y-2">
                                 <Accordion type="multiple" value={openAccordion} onValueChange={setOpenAccordion} className="w-full">

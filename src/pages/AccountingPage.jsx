@@ -472,14 +472,14 @@ const AccountingPage = () => {
                             <CardContent className="h-72">
                                 <MiniChart 
                                     data={[
-                                        { name: 'الإيرادات', value: unifiedProfitData?.totalRevenue || 0 },
-                                        { name: 'التكاليف', value: unifiedProfitData?.cogs || 0 },
-                                        { name: 'المصاريف', value: unifiedProfitData?.generalExpenses || 0 },
-                                        { name: 'المستحقات', value: unifiedProfitData?.employeeSettledDues || 0 },
-                                        { name: 'صافي الربح', value: unifiedProfitData?.netProfit || 0 }
+                                        { 
+                                            name: 'البيانات المالية',
+                                            sales: unifiedProfitData?.totalRevenue || 0,
+                                            expenses: (unifiedProfitData?.cogs || 0) + (unifiedProfitData?.generalExpenses || 0) + (unifiedProfitData?.employeeSettledDues || 0)
+                                        }
                                     ]} 
                                     type="bar" 
-                                    colors={['#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#3b82f6']} 
+                                    colors={['#10b981', '#ef4444']} 
                                 />
                             </CardContent>
                         </Card>
