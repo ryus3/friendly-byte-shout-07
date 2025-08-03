@@ -418,7 +418,11 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const [showPreview, setShowPreview] = useState(false);
   const [dateRange, setDateRange] = useState(null);
   const [settledProfits, setSettledProfits] = useState([]);
-  const [timePeriod, setTimePeriod] = useState('month'); // فلتر الفترة الزمنية - افتراضي شهر
+  // استرجاع إعداد الفترة من localStorage أو استخدام الافتراضي "all"
+  const [timePeriod, setTimePeriod] = useState(() => {
+    const saved = localStorage.getItem('settledDues_timePeriod');
+    return saved || 'all'; // "all" كافتراضي جديد
+  });
 
   // جلب فواتير التسوية الحقيقية
   const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
@@ -510,8 +514,9 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           case 'year':
             startDate = new Date(now.getFullYear(), 0, 1);
             break;
+          case 'all':
           default:
-            startDate = null;
+            startDate = null; // لا فلترة زمنية
         }
 
         if (startDate) {
@@ -635,7 +640,7 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     }
 
     // تصفية حسب الفترة الزمنية
-    if (timePeriod && timePeriod !== 'month') {
+    if (timePeriod && timePeriod !== 'all') {
       const now = new Date();
       let startDate = null;
 
@@ -780,14 +785,19 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
               </div>
 
               <div className="flex-1">
-                <Select value={timePeriod} onValueChange={setTimePeriod}>
+                <Select value={timePeriod} onValueChange={(value) => {
+                  setTimePeriod(value);
+                  // حفظ الإعداد في localStorage
+                  localStorage.setItem('settledDues_timePeriod', value);
+                }}>
                   <SelectTrigger className="h-9">
                     <SelectValue placeholder="الفترة الزمنية" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all">كل الفترات (افتراضي)</SelectItem>
                     <SelectItem value="day">اليوم</SelectItem>
                     <SelectItem value="week">الأسبوع</SelectItem>
-                    <SelectItem value="month">الشهر (افتراضي)</SelectItem>
+                    <SelectItem value="month">الشهر</SelectItem>
                     <SelectItem value="year">السنة</SelectItem>
                   </SelectContent>
                 </Select>
