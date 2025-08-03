@@ -32,9 +32,9 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
     return productStats;
   };
 
-  const totalQuantity = productStats.reduce((sum, product) => sum + (product.totalQuantity || 0), 0);
-  const totalRevenue = productStats.reduce((sum, product) => sum + (product.totalAmount || 0), 0);
-  const totalOrders = productStats.reduce((sum, product) => sum + (product.orderCount || 0), 0);
+  const totalQuantity = productStats.reduce((sum, product) => sum + (product.total_sold || 0), 0);
+  const totalRevenue = productStats.reduce((sum, product) => sum + (product.total_revenue || 0), 0);
+  const totalOrders = productStats.reduce((sum, product) => sum + (product.orders_count || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -131,7 +131,7 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
                               {index + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm text-foreground truncate">{product.name}</h4>
+                              <h4 className="font-semibold text-sm text-foreground truncate">{product.productName}</h4>
                               <p className="text-xs text-muted-foreground">{product.totalQuantity} قطعة مباعة</p>
                             </div>
                           </div>
@@ -140,7 +140,7 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">الإيرادات</p>
                               <p className="font-bold text-sm text-green-600 dark:text-green-400">
-                                {product.totalAmount.toLocaleString()}
+                                {product.totalRevenue.toLocaleString()}
                               </p>
                             </div>
                             <div className="text-center">

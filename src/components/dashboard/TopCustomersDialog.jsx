@@ -29,12 +29,12 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
         phone: customer.phone || 'غير محدد',
         normalizedPhone: normalizePhoneNumber(customer.phone),
         name: customer.name || 'زبون غير محدد',
-        orderCount: customer.totalOrders || 0,
-        totalRevenue: parseFloat(customer.totalAmount) || 0,
-        avgOrderValue: customer.totalOrders > 0 ? (parseFloat(customer.totalAmount) / customer.totalOrders) : 0,
+        orderCount: customer.total_orders || 0,
+        totalRevenue: parseFloat(customer.total_spent) || 0,
+        avgOrderValue: customer.total_orders > 0 ? (parseFloat(customer.total_spent) / customer.total_orders) : 0,
         orders: [{
           id: 'unified',
-          amount: parseFloat(customer.totalAmount) || 0,
+          amount: parseFloat(customer.total_spent) || 0,
           date: new Date()
         }],
         city: customer.city,
