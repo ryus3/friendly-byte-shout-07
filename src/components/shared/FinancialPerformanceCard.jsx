@@ -266,7 +266,7 @@ const FinancialPerformanceCard = ({
               <BarChart 
                 data={chartData} 
                 margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                barCategoryGap="20%"
+                barCategoryGap="5%"
               >
                 <XAxis hide />
                 <YAxis hide />
@@ -275,7 +275,7 @@ const FinancialPerformanceCard = ({
                 <Bar 
                   dataKey="value"
                   radius={[4, 4, 0, 0]}
-                  maxBarSize={60}
+                  maxBarSize={120}
                   onMouseEnter={(data, index) => {
                     setHoveredBar(chartData[index]?.id);
                   }}

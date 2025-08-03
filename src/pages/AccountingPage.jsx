@@ -337,9 +337,9 @@ const AccountingPage = () => {
             return formatCurrency(totalSystemProfit);
           })(),
           subValue: (() => {
-            // حساب عدد المنتجات المباعة أو الطلبات من التحليل المتقدم
-            const totalOrders = profitsAnalysis?.totalOrders || 0;
+            // استخدام البيانات المحسوبة من صفحة تحليل الأرباح المتقدمة مباشرة
             const totalProductsSold = profitsAnalysis?.totalProductsSold || 0;
+            const totalOrders = profitsAnalysis?.totalOrders || 0;
             
             if (totalProductsSold > 0) {
               return `${totalProductsSold} منتج مباع`;
