@@ -29,7 +29,7 @@ import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
+import { format, parseISO, isValid, subDays, startOfWeek, startOfMonth, startOfYear, endOfMonth } from 'date-fns';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -83,6 +83,15 @@ const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLab
 
 const Dashboard = () => {
     const { user, pendingRegistrations } = useAuth();
+    
+    const [periods, setPeriods] = useState({
+        totalOrders: 'all',
+        netProfit: 'all',
+        pendingProfit: 'all',
+        deliveredSales: 'all',
+        pendingSales: 'all',
+    });
+
     // استخدام hook واحد فقط للصلاحيات لتجنب التعارض
     const { 
         loading,
@@ -107,14 +116,6 @@ const Dashboard = () => {
     }, [unifiedProfitData, unifiedProfitLoading, unifiedProfitError]);
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());
-
-    const [periods, setPeriods] = useState({
-        totalOrders: 'all',
-        netProfit: 'all',
-        pendingProfit: 'all',
-        deliveredSales: 'all',
-        pendingSales: 'all',
-    });
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
