@@ -175,7 +175,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="orderMode" className="text-sm font-medium">صلاحية التوصيل والطلبات</Label>
+                    <Label htmlFor="orderMode" className="text-sm font-medium">نمط إنشاء الطلبات</Label>
                     <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
                       <SelectTrigger className="h-10">
                         <SelectValue />
@@ -194,7 +194,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border border-border z-50">
                         <SelectItem value="true">✅ مفعل - يمكنه الوصول لشركة التوصيل</SelectItem>
                         <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لشركة التوصيل</SelectItem>
                       </SelectContent>
@@ -207,7 +207,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background border border-border z-50">
                         <SelectItem value="true">✅ مفعل - يمكنه إدارة عملاءه ونظام الولاء</SelectItem>
                         <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لإدارة العملاء</SelectItem>
                       </SelectContent>
