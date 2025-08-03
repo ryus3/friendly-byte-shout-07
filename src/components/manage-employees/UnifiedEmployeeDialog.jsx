@@ -17,7 +17,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const [status, setStatus] = useState(employee?.status || 'pending');
   const [defaultPage, setDefaultPage] = useState(employee?.default_page || '/');
   const [orderCreationMode, setOrderCreationMode] = useState(employee?.order_creation_mode || 'both');
-  const [deliveryPartnerAccess, setDeliveryPartnerAccess] = useState(employee?.delivery_partner_access || false);
+  const [customerManagementAccess, setCustomerManagementAccess] = useState(employee?.customer_management_access || false);
   const [activeTab, setActiveTab] = useState('basic');
   const [saving, setSaving] = useState(false);
 
@@ -43,7 +43,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
           status,
           default_page: defaultPage,
           order_creation_mode: orderCreationMode,
-          delivery_partner_access: deliveryPartnerAccess,
+          customer_management_access: customerManagementAccess,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', employee.user_id);
@@ -143,7 +143,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="orderMode" className="text-sm font-medium">نمط إنشاء الطلبات</Label>
+                    <Label htmlFor="orderMode" className="text-sm font-medium">صلاحية التوصيل والطلبات</Label>
                     <Select value={orderCreationMode} onValueChange={setOrderCreationMode}>
                       <SelectTrigger className="h-10">
                         <SelectValue />
@@ -157,14 +157,14 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                   </div>
 
                   <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="deliveryAccess" className="text-sm font-medium">صلاحية الوصول لشركات التوصيل</Label>
-                    <Select value={deliveryPartnerAccess.toString()} onValueChange={(value) => setDeliveryPartnerAccess(value === 'true')}>
+                    <Label htmlFor="customerAccess" className="text-sm font-medium">صلاحية إدارة العملاء والولاء</Label>
+                    <Select value={customerManagementAccess.toString()} onValueChange={(value) => setCustomerManagementAccess(value === 'true')}>
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="true">✅ مفعل - يمكنه الوصول لشركات التوصيل</SelectItem>
-                        <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول</SelectItem>
+                        <SelectItem value="true">✅ مفعل - يمكنه إدارة عملاءه ونظام الولاء</SelectItem>
+                        <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لإدارة العملاء</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
