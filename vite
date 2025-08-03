@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+const { spawn } = require('child_process');
+const path = require('path');
+
+try {
+  const args = process.argv.slice(2);
+  const vitePath = path.join(__dirname, 'node_modules', '.bin', 'vite');
+  
+  const child = spawn('node', [vitePath, ...args], {
+    stdio: 'inherit',
+    cwd: __dirname
+  });
+
+  child.on('close', (code) => {
+    process.exit(code);
+  });
+
+  child.on('error', (err) => {
+    console.error('Failed to start vite:', err);
+    process.exit(1);
+  });
+} catch (error) {
+  console.error('Error:', error);
+  process.exit(1);
+}
