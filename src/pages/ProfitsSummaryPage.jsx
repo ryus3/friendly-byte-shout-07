@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 // استخدام النظام الموحد بالكامل
-import UnifiedProfitStats from '@/components/profits/UnifiedProfitStats';
+import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import UnifiedSettlementRequest from '@/components/profits/UnifiedSettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
@@ -48,9 +48,6 @@ const ProfitsSummaryPage = () => {
   const { hasPermission } = usePermissions();
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
   
-  // استخدام النظام الموحد للأرباح
-  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(periodFilter);
-  
   console.log('✅ تم تحميل جميع السياقات بنجاح');
   const location = useLocation();
   const navigate = useNavigate();
@@ -69,6 +66,9 @@ const ProfitsSummaryPage = () => {
   const [periodFilter, setPeriodFilter] = useState(() => {
     return localStorage.getItem('profitsPeriodFilter') || 'all';
   });
+  
+  // استخدام النظام الموحد للأرباح
+  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(periodFilter);
   
   // حفظ الخيار عند التغيير
   useEffect(() => {
@@ -595,16 +595,18 @@ const ProfitsSummaryPage = () => {
           </div>
         </div>
 
-        {/* استخدام النظام الموحد للإحصائيات */}
-        <div className="space-y-6">
-          <UnifiedProfitStats
-            onFilterChange={handleFilterChange}
-            onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
-            onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
-            onManagerProfitsClick={() => setDialogs(d => ({ ...d, managerProfits: true }))}
-            dateRange={periodFilter}
-          />
-        </div>
+        {/* إحصائيات الأرباح */}
+        <ProfitStats
+          profitData={profitData}
+          canViewAll={canViewAll}
+          onFilterChange={handleFilterChange}
+          onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
+          onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
+          onManagerProfitsClick={() => setDialogs(d => ({ ...d, managerProfits: true }))}
+          user={user}
+          dateRange={dateRange}
+          unifiedNetProfit={unifiedProfitData?.netProfit}
+        />
 
         <Card>
           <CardHeader>
