@@ -80,6 +80,7 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
           dateFrom = startOfYear(now);
           dateTo = now;
           break;
+        case 'all':
         default:
           dateFrom = null;
           dateTo = null;

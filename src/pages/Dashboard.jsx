@@ -109,11 +109,11 @@ const Dashboard = () => {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     const [periods, setPeriods] = useState({
-        totalOrders: 'month',
-        netProfit: 'month',
-        pendingProfit: 'month',
-        deliveredSales: 'month',
-        pendingSales: 'month',
+        totalOrders: 'all',
+        netProfit: 'all',
+        pendingProfit: 'all',
+        deliveredSales: 'all',
+        pendingSales: 'all',
     });
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });

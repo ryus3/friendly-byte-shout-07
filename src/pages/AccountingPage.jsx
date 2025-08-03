@@ -142,7 +142,7 @@ const AccountingPage = () => {
     const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
     const navigate = useNavigate();
     
-    const [datePeriod, setDatePeriod] = useState('month');
+    const [datePeriod, setDatePeriod] = useState('all');
     
     // جلب بيانات تحليل الأرباح لآخر 30 يوم
     const profitsDateRange = {
