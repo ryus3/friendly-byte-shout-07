@@ -637,18 +637,16 @@ const InventoryPage = () => {
                 
                 {/* اسم الأرشيف */}
                 <div>
-                  <h4 className="font-bold text-lg">أرشيف المنتجات</h4>
-                  {/* حذف النص الثانوي لتوفير المساحة */}
+                  <h4 className="font-bold text-base">أرشيف المنتجات</h4>
                 </div>
                 
                 {/* عدد المنتجات المؤرشفة */}
                 <div className="flex items-center justify-between pt-2 border-t border-white/20">
                   <div className="text-right">
-                    <p className="text-xl font-bold">{inventoryItems.filter(item => 
+                    <span className="text-xl font-bold">{inventoryItems.filter(item => 
                       item.variants && item.variants.length > 0 && 
                       item.variants.every(v => (v.quantity || 0) === 0)
-                    ).length}</p>
-                    <p className="text-white/80 text-xs">مؤرشف</p>
+                    ).length} <span className="text-white/80 text-sm">مؤرشف</span></span>
                   </div>
                   <div className="flex items-center gap-1 text-white/70">
                     <Archive className="w-4 h-4" />
