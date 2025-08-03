@@ -8,6 +8,7 @@ import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
+import { FinancialProvider } from '@/contexts/FinancialContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
 import NotificationsRealtimeProvider from '@/contexts/NotificationsRealtimeContext.jsx';
 import { OrdersRealtimeProvider } from '@/contexts/OrdersRealtimeContext.jsx';
@@ -21,17 +22,19 @@ export const AppProviders = ({ children }) => {
              <NotificationsProvider>
                <NotificationsSystemProvider>
                  <OrdersRealtimeProvider>
-                   <VariantsProvider>
-                     <InventoryProvider>
-                       <ProfitsProvider>
-                         <AlWaseetProvider>
-                             <AiChatProvider>
-                             {children}
-                           </AiChatProvider>
-                       </AlWaseetProvider>
-                     </ProfitsProvider>
-                   </InventoryProvider>
-                 </VariantsProvider>
+                    <VariantsProvider>
+                      <InventoryProvider>
+                        <ProfitsProvider>
+                          <FinancialProvider>
+                            <AlWaseetProvider>
+                                <AiChatProvider>
+                                {children}
+                              </AiChatProvider>
+                          </AlWaseetProvider>
+                        </FinancialProvider>
+                      </ProfitsProvider>
+                    </InventoryProvider>
+                  </VariantsProvider>
                </OrdersRealtimeProvider>
               </NotificationsSystemProvider>
             </NotificationsProvider>

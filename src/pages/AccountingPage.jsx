@@ -8,6 +8,7 @@ import { useCashSources } from '@/hooks/useCashSources';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
 import { format, parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -32,6 +33,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSummary';
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
+import UnifiedFinancialDisplay from '@/components/financial/UnifiedFinancialDisplay';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -474,6 +476,24 @@ const AccountingPage = () => {
                             </CardContent>
                         </Card>
                     </div>
+                </div>
+                
+                {/* قسم اختبار النظام المالي الجديد */}
+                <div className="mt-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                🔬 النظام المالي الجديد (للاختبار)
+                                <Badge variant="outline">تجريبي</Badge>
+                            </CardTitle>
+                            <CardDescription>
+                                مقارنة البيانات المحسوبة بالنظام المالي الموحد الجديد مع النظام الحالي
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <UnifiedFinancialDisplay page="accounting" />
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
             <ExpensesDialog
