@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useInventoryStats } from '@/hooks/useInventoryStats';
 import { 
   Package, 
   Shirt, 
@@ -15,7 +16,15 @@ import {
 const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [totalProducts, setTotalProducts] = useState(0);
+  
+  // استخدام النظام الموحد للإحصائيات
+  const {
+    totalProducts,
+    refreshStats
+  } = useInventoryStats({
+    autoRefresh: true,
+    refreshInterval: 60000 // تحديث كل دقيقة
+  });
 
   // جلب البيانات من قاعدة البيانات
   useEffect(() => {
@@ -79,9 +88,8 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
 
       setDepartments(deptsWithCounts);
 
-      // حساب إجمالي المنتجات
-      const total = Object.values(productCounts).reduce((sum, count) => sum + count, 0);
-      setTotalProducts(total);
+      // تحديث الإحصائيات الموحدة
+      refreshStats();
 
     } catch (error) {
       console.error('خطأ في جلب بيانات الأقسام:', error);
