@@ -19,7 +19,8 @@ import {
   Ruler,
   Package,
   CalendarDays,
-  Activity
+  Activity,
+  ChevronDown
 } from 'lucide-react';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { motion } from 'framer-motion';
@@ -57,6 +58,7 @@ const AdvancedProfitsAnalysisPage = () => {
   });
 
   const [viewMode, setViewMode] = useState('overview'); // overview, detailed, charts
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // حفظ الفلاتر تلقائياً عند التغيير
   useEffect(() => {
@@ -211,241 +213,199 @@ const AdvancedProfitsAnalysisPage = () => {
         </div>
       </div>
 
-      {/* فلاتر متقدمة ومدمجة بتصميم احترافي */}
-      <Card className="overflow-hidden border-primary/10 bg-gradient-to-br from-background via-primary/2 to-secondary/5 shadow-xl">
-        <CardHeader className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b border-primary/10">
-          <CardTitle className="flex items-center gap-3 text-xl">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Filter className="w-5 h-5 text-primary" />
+      {/* فلاتر عالمية واحترافية */}
+      <Card className="shadow-lg border-primary/10">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            {/* فلتر الفترة الزمنية */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium text-foreground">الفترة:</span>
               </div>
-              <span className="gradient-text">فلاتر التحليل المتقدمة</span>
+              <Select value={filters.period} onValueChange={handlePeriodChange}>
+                <SelectTrigger className="w-40 h-9 border-primary/20 bg-background/80 hover:bg-background focus:ring-2 focus:ring-primary/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">كل الفترات</SelectItem>
+                  <SelectItem value="today">اليوم</SelectItem>
+                  <SelectItem value="week">أسبوع</SelectItem>
+                  <SelectItem value="month">شهر</SelectItem>
+                  <SelectItem value="year">سنة</SelectItem>
+                  <SelectItem value="last30">آخر 30 يوم</SelectItem>
+                  <SelectItem value="last90">آخر 90 يوم</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardTitle>
-        </CardHeader>
-        
-        <CardContent className="p-6">
-          {/* فلتر الفترة الزمنية */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CalendarDays className="w-5 h-5 text-primary" />
-              <h4 className="text-lg font-semibold text-foreground">الفترة الزمنية</h4>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">اختيار الفترة</label>
-                <Select value={filters.period} onValueChange={handlePeriodChange}>
-                  <SelectTrigger className="h-11 border-primary/20 bg-background/60 backdrop-blur-sm hover:bg-background/80 focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all duration-200">
-                    <SelectValue placeholder="اختر الفترة" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm border-primary/20">
-                    <SelectItem value="all">🗓️ كل الفترات</SelectItem>
-                    <SelectItem value="today">📅 اليوم</SelectItem>
-                    <SelectItem value="week">📆 أسبوع</SelectItem>
-                    <SelectItem value="month">🗓️ شهر</SelectItem>
-                    <SelectItem value="year">📊 سنة</SelectItem>
-                    <SelectItem value="last30">⏰ آخر 30 يوم</SelectItem>
-                    <SelectItem value="last90">📈 آخر 90 يوم</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {filters.period !== 'all' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">نطاق مخصص</label>
-                  <DateRangePicker
-                    date={dateRange}
-                    onDateChange={setDateRange}
-                    className="h-11"
-                  />
+
+            {/* زر الفلاتر المتقدمة */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="flex items-center gap-2 border-primary/20 hover:bg-primary/5"
+            >
+              <Filter className="w-4 h-4" />
+              فلاتر متقدمة
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showAdvancedFilters && "rotate-180")} />
+            </Button>
+          </div>
+
+          {/* الفلاتر المتقدمة القابلة للطي */}
+          {showAdvancedFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 pt-4 border-t border-border/50"
+            >
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                {/* القسم */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">القسم</label>
+                  <Select 
+                    value={filters.department} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="القسم" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الأقسام</SelectItem>
+                      {departments?.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
-          </div>
 
-          <Separator className="my-6 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                {/* التصنيف */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">التصنيف</label>
+                  <Select 
+                    value={filters.category} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="التصنيف" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل التصنيفات</SelectItem>
+                      {categories?.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* فلاتر المنتجات */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <Package className="w-5 h-5 text-secondary" />
-              <h4 className="text-lg font-semibold text-foreground">فلاتر المنتجات</h4>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* القسم */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Layers className="w-3 h-3" />
-                  القسم
-                </label>
-                <Select 
-                  value={filters.department} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}
-                >
-                  <SelectTrigger className="h-10 border-secondary/20 bg-background/60 hover:bg-background/80 focus:ring-2 focus:ring-secondary/30 transition-all duration-200">
-                    <SelectValue placeholder="القسم" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm">
-                    <SelectItem value="all">كل الأقسام</SelectItem>
-                    {departments?.map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* نوع المنتج */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">النوع</label>
+                  <Select 
+                    value={filters.productType} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, productType: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="النوع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الأنواع</SelectItem>
+                      {productTypes?.map((type) => (
+                        <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* الموسم */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">الموسم</label>
+                  <Select 
+                    value={filters.season} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, season: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="الموسم" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل المواسم</SelectItem>
+                      {seasons?.map((season) => (
+                        <SelectItem key={season.id} value={season.id}>{season.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* اللون */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">اللون</label>
+                  <Select 
+                    value={filters.color} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="اللون" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الألوان</SelectItem>
+                      {colors?.map((color) => (
+                        <SelectItem key={color.id} value={color.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full border" 
+                              style={{ backgroundColor: color.hex_code }}
+                            />
+                            {color.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* القياس */}
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">القياس</label>
+                  <Select 
+                    value={filters.size} 
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, size: value }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="القياس" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل القياسات</SelectItem>
+                      {sizes?.map((size) => (
+                        <SelectItem key={size.id} value={size.id}>{size.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              {/* التصنيف */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Target className="w-3 h-3" />
-                  التصنيف
-                </label>
-                <Select 
-                  value={filters.category} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+              {/* زر إعادة التعيين */}
+              <div className="flex justify-center mt-4">
+                <Button 
+                  onClick={() => setFilters({
+                    period: 'all',
+                    department: 'all',
+                    category: 'all',
+                    productType: 'all',
+                    season: 'all',
+                    color: 'all',
+                    size: 'all',
+                    product: 'all'
+                  })}
+                  variant="outline"
+                  size="sm"
+                  className="px-6"
                 >
-                  <SelectTrigger className="h-10 border-secondary/20 bg-background/60 hover:bg-background/80 focus:ring-2 focus:ring-secondary/30 transition-all duration-200">
-                    <SelectValue placeholder="التصنيف" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm">
-                    <SelectItem value="all">كل التصنيفات</SelectItem>
-                    {categories?.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  إعادة تعيين
+                </Button>
               </div>
-
-              {/* نوع المنتج */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Package className="w-3 h-3" />
-                  النوع
-                </label>
-                <Select 
-                  value={filters.productType} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, productType: value }))}
-                >
-                  <SelectTrigger className="h-10 border-secondary/20 bg-background/60 hover:bg-background/80 focus:ring-2 focus:ring-secondary/30 transition-all duration-200">
-                    <SelectValue placeholder="النوع" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm">
-                    <SelectItem value="all">كل الأنواع</SelectItem>
-                    {productTypes?.map((type) => (
-                      <SelectItem key={type.id} value={type.id}>
-                        {type.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* الموسم */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <CalendarDays className="w-3 h-3" />
-                  الموسم
-                </label>
-                <Select 
-                  value={filters.season} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, season: value }))}
-                >
-                  <SelectTrigger className="h-10 border-secondary/20 bg-background/60 hover:bg-background/80 focus:ring-2 focus:ring-secondary/30 transition-all duration-200">
-                    <SelectValue placeholder="الموسم" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm">
-                    <SelectItem value="all">كل المواسم</SelectItem>
-                    {seasons?.map((season) => (
-                      <SelectItem key={season.id} value={season.id}>
-                        {season.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* اللون */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Palette className="w-3 h-3" />
-                  اللون
-                </label>
-                <Select 
-                  value={filters.color} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, color: value }))}
-                >
-                  <SelectTrigger className="h-10 border-secondary/20 bg-background/60 hover:bg-background/80 focus:ring-2 focus:ring-secondary/30 transition-all duration-200">
-                    <SelectValue placeholder="اللون" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm">
-                    <SelectItem value="all">كل الألوان</SelectItem>
-                    {colors?.map((color) => (
-                      <SelectItem key={color.id} value={color.id}>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full border border-border" 
-                            style={{ backgroundColor: color.hex_code }}
-                          />
-                          {color.name}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* القياس */}
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Ruler className="w-3 h-3" />
-                  القياس
-                </label>
-                <Select 
-                  value={filters.size} 
-                  onValueChange={(value) => setFilters(prev => ({ ...prev, size: value }))}
-                >
-                  <SelectTrigger className="h-10 border-secondary/20 bg-background/60 hover:bg-background/80 focus:ring-2 focus:ring-secondary/30 transition-all duration-200">
-                    <SelectValue placeholder="القياس" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background/95 backdrop-blur-sm">
-                    <SelectItem value="all">كل القياسات</SelectItem>
-                    {sizes?.map((size) => (
-                      <SelectItem key={size.id} value={size.id}>
-                        {size.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* زر إعادة التعيين */}
-            <div className="flex justify-center mt-6">
-              <Button 
-                onClick={() => setFilters({
-                  period: 'all',
-                  department: 'all',
-                  category: 'all',
-                  productType: 'all',
-                  season: 'all',
-                  color: 'all',
-                  size: 'all',
-                  product: 'all'
-                })}
-                variant="outline"
-                className="px-8 py-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 hover:from-primary/20 hover:to-secondary/20 transition-all duration-300"
-              >
-                <Filter className="w-4 h-4 ml-2" />
-                إعادة تعيين الفلاتر
-              </Button>
-            </div>
-          </div>
+            </motion.div>
+          )}
         </CardContent>
       </Card>
 

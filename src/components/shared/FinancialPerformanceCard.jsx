@@ -60,7 +60,7 @@ const FinancialPerformanceCard = ({
     },
     {
       id: 'dues',
-      title: 'المستحقات المدفوعة',
+      title: 'مستحقات مدفوعة',
       value: unifiedProfitData?.employeeSettledDues || 0,
       icon: Users,
       color: '#9b59b6',
@@ -137,7 +137,7 @@ const FinancialPerformanceCard = ({
             </div>
           </div>
           
-          {/* فلتر فترات أنيق ومتوافق مع التصميم */}
+          {/* فلتر فترات متناسق مع ألوان الكرت */}
           <div className="relative">
             <select 
               value={selectedTimePeriod} 
@@ -146,13 +146,13 @@ const FinancialPerformanceCard = ({
                 onTimePeriodChange(period);
                 localStorage.setItem('financialTimePeriod', period);
               }}
-              className="appearance-none bg-gradient-to-r from-primary/5 via-background to-secondary/5 border border-primary/20 rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary hover:border-primary/40 transition-all duration-300 cursor-pointer shadow-sm backdrop-blur-sm"
+              className="appearance-none bg-gradient-to-r from-emerald-50 via-background to-blue-50 dark:from-emerald-950/20 dark:via-background dark:to-blue-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700 focus:border-emerald-400 dark:focus:border-emerald-600 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 cursor-pointer shadow-sm backdrop-blur-sm"
             >
               {Object.entries(periodLabels).map(([key, label]) => (
                 <option key={key} value={key} className="bg-background text-foreground py-2">{label}</option>
               ))}
             </select>
-            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary pointer-events-none transition-transform duration-200" />
+            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-600 dark:text-emerald-400 pointer-events-none transition-transform duration-200" />
           </div>
         </div>
       </CardHeader>
@@ -234,7 +234,7 @@ const FinancialPerformanceCard = ({
             })}
           </div>
 
-          {/* المخطط البياني */}
+          {/* المخطط البياني - بدون خلفية بيضاء عند تمرير الماوس */}
           <div className="h-40 bg-muted/30 rounded-lg p-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
@@ -243,7 +243,7 @@ const FinancialPerformanceCard = ({
               >
                 <XAxis hide />
                 <YAxis hide />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} cursor={false} />
                 
                 <Bar 
                   dataKey="value"
