@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Box, Package, Tag, Calendar, BarChart3, Warehouse, Search, Filter, X } from 'lucide-react';
+import { Box, Package, Tag, Calendar, BarChart3, Warehouse, Search, Filter, X, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import useInventoryStats from '@/hooks/useInventoryStats';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -82,9 +83,11 @@ const ItemCard = ({ item, showProductDetails = false }) => (
 );
 
 const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
-  const [loading, setLoading] = useState(false);
+  // استخدام النظام الموحد للحصول على البيانات فوراً
+  const { stats: inventoryStats, loading: unifiedLoading, refreshStats } = useInventoryStats();
   const [activeTab, setActiveTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [filters, setFilters] = useState({
     department: '',
     category: '',
@@ -116,8 +119,44 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     itemsCount: 0
   });
 
+  // تحديث البيانات من النظام الموحد عند فتح النافذة
+  useEffect(() => {
+    if (open && inventoryStats.departments && inventoryStats.departments.length > 0) {
+      // استخدام البيانات من النظام الموحد مباشرة
+      const departmentsData = inventoryStats.departments.map(dept => ({
+        id: dept.department_id,
+        name: dept.department_name,
+        quantity: dept.products_count,
+        value: dept.total_value,
+        available: dept.available_quantity,
+        reserved: dept.reserved_quantity,
+        available_value: dept.available_value,
+        reserved_value: dept.reserved_value,
+        cost_value: dept.cost_value,
+        expected_profit: dept.expected_profit,
+        items: dept.products_count
+      }));
+
+      setInventoryData(prev => ({
+        ...prev,
+        departments: departmentsData
+      }));
+
+      // حساب الملخص من البيانات الموحدة
+      setFilteredSummary({
+        totalValue: inventoryStats.totalInventoryValue,
+        totalAvailable: departmentsData.reduce((sum, item) => sum + (item.available_value || 0), 0),
+        totalReserved: departmentsData.reduce((sum, item) => sum + (item.reserved_value || 0), 0),
+        totalQuantity: inventoryStats.totalVariants,
+        totalCost: departmentsData.reduce((sum, item) => sum + (item.cost_value || 0), 0),
+        totalExpectedProfit: departmentsData.reduce((sum, item) => sum + (item.expected_profit || 0), 0),
+        itemsCount: departmentsData.length
+      });
+    }
+  }, [open, inventoryStats]);
+
   const fetchInventoryDetails = async () => {
-    setLoading(true);
+    setDetailsLoading(true);
     try {
       // بناء subqueries للفلترة
       let productIds = null;
@@ -513,12 +552,13 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setDetailsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (open) {
+    if (open && (filters.department || filters.category || filters.productType || filters.season)) {
+      // فقط اجلب تفاصيل إضافية عند استخدام فلاتر معقدة
       fetchInventoryDetails();
     }
   }, [open, filters]); // إعادة التحميل عند تغيير الفلاتر
@@ -820,14 +860,25 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
               <TabsList className="grid w-full grid-cols-6 text-xs flex-shrink-0">
                 <TabsTrigger value="summary" className="text-xs">الملخص</TabsTrigger>
                 <TabsTrigger value="departments" className="text-xs">الأقسام</TabsTrigger>
-              <TabsTrigger value="categories" className="text-xs">التصنيفات</TabsTrigger>
-              <TabsTrigger value="types" className="text-xs">الأنواع</TabsTrigger>
-              <TabsTrigger value="seasons" className="text-xs">المواسم</TabsTrigger>
-              <TabsTrigger value="products" className="text-xs">المنتجات</TabsTrigger>
-            </TabsList>
+                <TabsTrigger value="categories" className="text-xs">التصنيفات</TabsTrigger>
+                <TabsTrigger value="types" className="text-xs">الأنواع</TabsTrigger>
+                <TabsTrigger value="seasons" className="text-xs">المواسم</TabsTrigger>
+                <TabsTrigger value="products" className="text-xs">المنتجات</TabsTrigger>
+              </TabsList>
 
-            <ScrollArea className="flex-1 mt-3">
-              <TabsContent value="summary" className="mt-0 space-y-3">
+              {/* Loading State */}
+              {(unifiedLoading || detailsLoading) && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <RefreshCw className="w-6 h-6 animate-spin text-primary mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">جاري تحديث البيانات...</p>
+                  </div>
+                </div>
+              )}
+
+              {!unifiedLoading && !detailsLoading && (
+                <ScrollArea className="flex-1 mt-3">
+                  <TabsContent value="summary" className="mt-0 space-y-3">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
                   <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
                     <CardContent className="p-3">
@@ -909,8 +960,9 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
                     <ItemCard key={product.id} item={product} showProductDetails />
                   ))}
                 </div>
-              </TabsContent>
-            </ScrollArea>
+                  </TabsContent>
+                </ScrollArea>
+              )}
             </Tabs>
           </div>
         </div>
