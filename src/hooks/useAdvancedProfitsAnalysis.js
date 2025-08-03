@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useSalesStats } from '@/hooks/useSalesStats';
 
 /**
  * هوك تحليل الأرباح المتقدم - يستخدم قواعد الأرباح المحددة لكل موظف ومنتج
@@ -8,6 +9,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [analysisData, setAnalysisData] = useState(null);
+  
+  // استخدام النظام المركزي للمبيعات
+  const { summaryStats } = useSalesStats();
   
   // بيانات الخيارات للفلاتر
   const [departments, setDepartments] = useState([]);

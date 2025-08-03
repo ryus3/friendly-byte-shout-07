@@ -1097,6 +1097,7 @@ export type Database = {
           product_id: string
           quantity: number
           reserved_quantity: number
+          sold_quantity: number | null
           updated_at: string
           variant_id: string | null
         }
@@ -1109,6 +1110,7 @@ export type Database = {
           product_id: string
           quantity?: number
           reserved_quantity?: number
+          sold_quantity?: number | null
           updated_at?: string
           variant_id?: string | null
         }
@@ -1121,6 +1123,7 @@ export type Database = {
           product_id?: string
           quantity?: number
           reserved_quantity?: number
+          sold_quantity?: number | null
           updated_at?: string
           variant_id?: string | null
         }
@@ -1145,6 +1148,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "products_sold_stats"
+            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -1474,6 +1484,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "products_sold_stats"
+            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2190,6 +2207,13 @@ export type Database = {
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_purchase_cost_variant"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "products_sold_stats"
+            referencedColumns: ["variant_id"]
+          },
         ]
       }
       purchase_items: {
@@ -2244,6 +2268,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_items_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "products_sold_stats"
+            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2367,6 +2398,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qr_codes_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "products_sold_stats"
+            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2937,7 +2975,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      products_sold_stats: {
+        Row: {
+          last_sold_date: string | null
+          orders_count: number | null
+          product_id: string | null
+          sold_quantity: number | null
+          total_cost: number | null
+          total_revenue: number | null
+          variant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_summary_stats: {
+        Row: {
+          total_cogs: number | null
+          total_delivery_fees: number | null
+          total_orders: number | null
+          total_products_sold: number | null
+          total_revenue: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_purchase_cost_record: {
@@ -3067,6 +3134,10 @@ export type Database = {
       }
       calculate_missing_profits: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      calculate_sold_quantity: {
+        Args: { p_product_id: string; p_variant_id: string }
         Returns: number
       }
       check_city_benefits: {
@@ -3263,11 +3334,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      release_reserved_stock: {
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
+        Returns: Json
+      }
       release_stock_for_order: {
         Args: { p_order_id: string }
         Returns: undefined
       }
       release_stock_item: {
+        Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
+        Returns: Json
+      }
+      reserve_stock_for_order: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
         Returns: Json
       }
