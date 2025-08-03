@@ -323,7 +323,7 @@ const AccountingPage = () => {
             onClick: () => setDialogs(d => ({ ...d, capitalDetails: true }))
         },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
-        { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
+        { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['purple-500', 'violet-600'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
     ];
     
     const profitCards = [
