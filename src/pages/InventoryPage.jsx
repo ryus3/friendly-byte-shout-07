@@ -621,6 +621,13 @@ const InventoryPage = () => {
                 onClick={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}>
             <CardContent className="p-4">
               <div className="text-center space-y-3 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
+                {/* رقم الأرشيف */}
+                <div className="absolute top-2 right-2">
+                  <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+                    A
+                  </Badge>
+                </div>
+                
                 {/* الأيقونة */}
                 <div className="flex justify-center">
                   <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
