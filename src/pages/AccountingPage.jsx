@@ -338,7 +338,7 @@ const AccountingPage = () => {
           })(),
           subValue: (() => {
             // استخدام البيانات المحسوبة من صفحة تحليل الأرباح المتقدمة مباشرة
-            const totalProductsSold = profitsAnalysis?.totalProductsSold || 0;
+            const totalProductsSold = profitsAnalysis?.filteredItemsCount || profitsAnalysis?.totalProductsSold || 0;
             const totalOrders = profitsAnalysis?.totalOrders || 0;
             
             if (totalProductsSold > 0) {
@@ -454,7 +454,7 @@ const AccountingPage = () => {
                         />
                     </div>
                     <div className="lg:col-span-1">
-                        <Card>
+                        <Card className="h-fit">
                             <CardHeader>
                                 <CardTitle>تقرير الأرباح والخسائر</CardTitle>
                                 <CardDescription>ملخص مالي للفترة المحددة</CardDescription>

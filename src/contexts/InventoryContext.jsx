@@ -755,14 +755,43 @@ export const InventoryProvider = ({ children }) => {
         };
       });
 
-      setProducts(processedProducts);
+      // حساب الكمية المباعة لكل متغير من الطلبات المستلمة الفواتير
+      const soldQuantities = {};
+      const deliveredOrders = processedOrders.filter(order => 
+        order.receipt_received === true && 
+        (order.status === 'delivered' || order.status === 'completed')
+      );
+      
+      deliveredOrders.forEach(order => {
+        order.order_items?.forEach(item => {
+          if (item.variant_id) {
+            const key = item.variant_id;
+            soldQuantities[key] = (soldQuantities[key] || 0) + (item.quantity || 0);
+          }
+        });
+      });
+
+      // إضافة الكمية المباعة للمتغيرات
+      const productsWithSoldQuantities = processedProducts.map(product => {
+        if (product.variants) {
+          const updatedVariants = product.variants.map(variant => ({
+            ...variant,
+            sold_quantity: soldQuantities[variant.id] || 0
+          }));
+          return { ...product, variants: updatedVariants };
+        }
+        return product;
+      });
+
+      setProducts(productsWithSoldQuantities);
       setOrders(processedOrders || []);
       setAiOrders(aiOrdersRes.data || []);
 
       console.log('✅ تم تحميل البيانات بنجاح:', {
-        products: processedProducts.length,
+        products: productsWithSoldQuantities.length,
         orders: processedOrders.length,
-        aiOrders: aiOrdersRes.data?.length || 0
+        aiOrders: aiOrdersRes.data?.length || 0,
+        soldQuantities: Object.keys(soldQuantities).length
       });
 
       // تحميل قواعد الأرباح
