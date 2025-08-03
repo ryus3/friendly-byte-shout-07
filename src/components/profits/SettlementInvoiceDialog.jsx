@@ -44,6 +44,8 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
             }
 
             console.log('🔥 البيانات الحقيقية للفاتورة:', data);
+            console.log('📅 تاريخ التسوية الحقيقي:', data?.settlement_date);
+            console.log('📅 تاريخ الإنشاء الحقيقي:', data?.created_at);
             setRealInvoiceData(data);
         } catch (error) {
             console.error('خطأ غير متوقع في جلب الفاتورة:', error);
