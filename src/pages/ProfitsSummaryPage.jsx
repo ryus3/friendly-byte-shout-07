@@ -42,13 +42,19 @@ import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
+  console.log('🔄 تحميل صفحة ملخص الأرباح...');
+  
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
   
+  console.log('✅ تم تحميل جميع السياقات بنجاح');
+  
   // استخدام النظام الموحد للحصول على صافي الربح الموحد
-  const { profitData: unifiedProfitData } = useUnifiedProfits();
+  console.log('🔄 استدعاء useUnifiedProfits...');
+  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits('all');
+  console.log('📊 بيانات الأرباح الموحدة:', unifiedProfitData);
   const location = useLocation();
   const navigate = useNavigate();
 
