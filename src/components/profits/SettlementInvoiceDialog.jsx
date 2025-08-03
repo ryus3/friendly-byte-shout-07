@@ -15,11 +15,40 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
     const [realOrdersData, setRealOrdersData] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
+    const [realInvoiceData, setRealInvoiceData] = useState(null);
 
     // Add null check for invoice
     if (!invoice) {
         return null;
     }
+
+    // جلب بيانات فاتورة التسوية الحقيقية
+    const fetchRealInvoiceData = async () => {
+        if (!invoice.id) {
+            console.log('لا يوجد معرف للفاتورة');
+            return;
+        }
+
+        try {
+            const { supabase } = await import('@/lib/customSupabaseClient');
+            
+            const { data, error } = await supabase
+                .from('settlement_invoices')
+                .select('*')
+                .eq('id', invoice.id)
+                .single();
+
+            if (error) {
+                console.error('خطأ في جلب بيانات الفاتورة:', error);
+                return;
+            }
+
+            console.log('🔥 البيانات الحقيقية للفاتورة:', data);
+            setRealInvoiceData(data);
+        } catch (error) {
+            console.error('خطأ غير متوقع في جلب الفاتورة:', error);
+        }
+    };
 
     // جلب البيانات الحقيقية للطلبات من قاعدة البيانات
     const fetchRealOrdersData = async () => {
@@ -53,10 +82,13 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
 
     // جلب البيانات عند فتح النافذة
     React.useEffect(() => {
-        if (open && invoice.order_ids && invoice.order_ids.length > 0) {
-            fetchRealOrdersData();
+        if (open) {
+            fetchRealInvoiceData();
+            if (invoice.order_ids && invoice.order_ids.length > 0) {
+                fetchRealOrdersData();
+            }
         }
-    }, [open, invoice.order_ids]);
+    }, [open, invoice.id, invoice.order_ids]);
 
     const settledBy = allUsers.find(u => u.id === invoice.settled_by_id || invoice.created_by);
     
@@ -110,16 +142,17 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                             <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
                                              <p className="text-sm sm:text-base md:text-xl font-bold text-slate-800 dark:text-slate-100">
                                                  {(() => {
-                                                   // استخدام التاريخ الصحيح من الفاتورة مباشرة
+                                                   // استخدام البيانات الحقيقية للفاتورة أولاً
+                                                   const realData = realInvoiceData || invoice;
                                                    let dateToShow;
                                                    
-                                                   // أولوية التاريخ: settlement_date ثم created_at
-                                                   if (invoice.settlement_date) {
-                                                     dateToShow = new Date(invoice.settlement_date);
-                                                   } else if (invoice.created_at) {
-                                                     dateToShow = new Date(invoice.created_at);
+                                                   // أولوية التاريخ: settlement_date ثم created_at من البيانات الحقيقية
+                                                   if (realData.settlement_date) {
+                                                     dateToShow = new Date(realData.settlement_date);
+                                                   } else if (realData.created_at) {
+                                                     dateToShow = new Date(realData.created_at);
                                                    } else {
-                                                     dateToShow = new Date(); // آخر حل في حالة عدم وجود تاريخ
+                                                     dateToShow = new Date();
                                                    }
                                                    
                                                    // التأكد من صحة التاريخ
@@ -130,7 +163,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                    try {
                                                      return format(dateToShow, 'dd MMMM yyyy - HH:mm', { locale: ar });
                                                    } catch (error) {
-                                                     console.error('خطأ في تنسيق التاريخ:', error);
+                                                     console.error('خطأ في تنسيق التاريخ:', error, 'البيانات الحقيقية:', realData);
                                                      return format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar });
                                                    }
                                                  })()}
