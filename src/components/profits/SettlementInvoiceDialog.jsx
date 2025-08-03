@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { FileText, Eye, Receipt, Calendar, User, DollarSign, CheckCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { ar } from 'date-fns/locale';
 import { useInventory } from '@/contexts/InventoryContext';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
@@ -10,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
+    const IRAQ_TIMEZONE = 'Asia/Baghdad'; // المنطقة الزمنية العراقية
     const { orders } = useInventory();
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -163,10 +165,10 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                    }
                                                    
                                                    try {
-                                                     return format(dateToShow, 'dd MMMM yyyy - HH:mm', { locale: ar });
-                                                   } catch (error) {
-                                                     console.error('خطأ في تنسيق التاريخ:', error, 'البيانات الحقيقية:', realData);
-                                                     return format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar });
+                                                      return formatInTimeZone(dateToShow, IRAQ_TIMEZONE, 'dd MMMM yyyy - HH:mm', { locale: ar });
+                                                    } catch (error) {
+                                                      console.error('خطأ في تنسيق التاريخ:', error, 'البيانات الحقيقية:', realData);
+                                                      return formatInTimeZone(new Date(), IRAQ_TIMEZONE, 'dd MMMM yyyy - HH:mm', { locale: ar });
                                                    }
                                                  })()}
                                              </p>
@@ -266,8 +268,8 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                      {(() => {
                                                                          if (order.created_at) {
                                                                              try {
-                                                                                 return format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar });
-                                                                             } catch (error) {
+                                                                                  return formatInTimeZone(new Date(order.created_at), IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar });
+                                                                              } catch (error) {
                                                                                  return 'تاريخ غير صحيح';
                                                                              }
                                                                          }

@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award } from 'lucide-react';
@@ -364,18 +365,18 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                                   <div className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-xl p-3 shadow-lg">
                                     <div className="text-lg font-bold mb-1">
                                       {invoice.settlement_date ? 
-                                        format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar }) :
+                                        formatInTimeZone(new Date(invoice.settlement_date), IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar }) :
                                         (orderProfit?.settled_at ? 
-                                          format(parseISO(orderProfit.settled_at), 'dd/MM/yyyy', { locale: ar }) :
+                                          formatInTimeZone(new Date(orderProfit.settled_at), IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar }) :
                                           'غير محدد'
                                         )
                                       }
                                     </div>
                                     <div className="text-xs opacity-90 font-semibold">
                                       {invoice.settlement_date ? 
-                                        format(parseISO(invoice.settlement_date), 'HH:mm', { locale: ar }) :
+                                        formatInTimeZone(new Date(invoice.settlement_date), IRAQ_TIMEZONE, 'HH:mm', { locale: ar }) :
                                         (orderProfit?.settled_at ? 
-                                          format(parseISO(orderProfit.settled_at), 'HH:mm', { locale: ar }) :
+                                          formatInTimeZone(new Date(orderProfit.settled_at), IRAQ_TIMEZONE, 'HH:mm', { locale: ar }) :
                                           '00:00'
                                         )
                                       }
@@ -413,6 +414,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
 // المكون الرئيسي للمستحقات المدفوعة
 const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [], timePeriod: externalTimePeriod = null }) => {
+  const IRAQ_TIMEZONE = 'Asia/Baghdad'; // المنطقة الزمنية العراقية
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
