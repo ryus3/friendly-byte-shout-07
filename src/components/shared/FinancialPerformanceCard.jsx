@@ -137,7 +137,7 @@ const FinancialPerformanceCard = ({
             </div>
           </div>
           
-          {/* فلتر فترات متناسق مع ألوان الكرت */}
+          {/* فلتر فترات متناسق مع ثيم الكرت */}
           <div className="relative">
             <select 
               value={selectedTimePeriod} 
@@ -146,21 +146,21 @@ const FinancialPerformanceCard = ({
                 onTimePeriodChange(period);
                 localStorage.setItem('financialTimePeriod', period);
               }}
-              className="appearance-none bg-gradient-to-r from-emerald-50 via-background to-blue-50 dark:from-emerald-950/20 dark:via-background dark:to-blue-950/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-emerald-300 dark:focus:ring-emerald-700 focus:border-emerald-400 dark:focus:border-emerald-600 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all duration-300 cursor-pointer shadow-sm backdrop-blur-sm"
+              className="appearance-none bg-background/90 border border-border/50 rounded-lg px-4 py-2 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary/50 hover:border-border transition-all duration-200 cursor-pointer shadow-sm"
             >
               {Object.entries(periodLabels).map(([key, label]) => (
-                <option key={key} value={key} className="bg-background text-foreground py-2">{label}</option>
+                <option key={key} value={key} className="bg-background text-foreground">{label}</option>
               ))}
             </select>
-            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-emerald-600 dark:text-emerald-400 pointer-events-none transition-transform duration-200" />
+            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* الكروت الجميلة فوق الأعمدة مباشرة */}
+        {/* الكروت الجميلة فوق الأعمدة مباشرة - مرتبة من اليمين لليسار */}
         <div className="relative">
-          <div className="grid grid-cols-5 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3 mb-4">
             {financialMetrics.map((metric) => {
               const Icon = metric.icon;
               
@@ -179,24 +179,24 @@ const FinancialPerformanceCard = ({
                 >
                   {/* الكرت الملون بتدرج */}
                   <div 
-                    className="rounded-2xl p-4 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
+                    className="rounded-xl sm:rounded-2xl p-3 sm:p-4 text-white shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
                     style={{
                       background: `linear-gradient(135deg, ${metric.gradientFrom} 0%, ${metric.gradientTo} 100%)`
                     }}
                   >
                     {/* الأيقونة */}
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="flex justify-between items-start mb-2 sm:mb-3">
                       <div className="text-right flex-1">
-                        <h4 className="text-sm font-semibold text-white/90 mb-1">{metric.title}</h4>
+                        <h4 className="text-xs sm:text-sm font-semibold text-white/90 mb-1">{metric.title}</h4>
                       </div>
-                      <div className="bg-white/20 rounded-lg p-2">
-                        <Icon className="w-5 h-5 text-white" />
+                      <div className="bg-white/20 rounded-lg p-1.5 sm:p-2">
+                        <Icon className="w-3 h-3 sm:w-5 sm:h-5 text-white" />
                       </div>
                     </div>
                     
                     {/* القيمة الرئيسية */}
                     <div className="text-center">
-                      <p className="text-lg font-bold text-white mb-1">
+                      <p className="text-sm sm:text-lg font-bold text-white mb-1">
                         {formatCurrency(metric.value)}
                       </p>
                       <p className="text-xs text-white/70">د.ع</p>
@@ -213,14 +213,14 @@ const FinancialPerformanceCard = ({
 
                   {/* مؤشر اتصال بالعمود */}
                   <div 
-                    className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-3 h-3 rounded-full border-2 border-background"
+                    className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-2 h-2 sm:w-3 sm:h-3 rounded-full border-2 border-background"
                     style={{ backgroundColor: metric.color }}
                   />
 
                   {/* Tooltip للكرت */}
                   {hoveredCard === metric.id && (
-                    <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 bg-background/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-xl z-50 min-w-48 animate-in fade-in-0 zoom-in-95 duration-200">
-                      <p className="text-sm text-center text-foreground font-medium mb-1">
+                    <div className="absolute -top-16 sm:-top-20 left-1/2 transform -translate-x-1/2 bg-background/95 backdrop-blur-sm border border-border rounded-lg p-2 sm:p-3 shadow-xl z-50 min-w-32 sm:min-w-48 animate-in fade-in-0 zoom-in-95 duration-200">
+                      <p className="text-xs sm:text-sm text-center text-foreground font-medium mb-1">
                         {metric.title}
                       </p>
                       <p className="text-xs text-center text-muted-foreground">
