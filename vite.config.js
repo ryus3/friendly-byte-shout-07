@@ -163,7 +163,7 @@ export default defineConfig(async ({ mode }) => {
             alias: { '@': path.resolve(__dirname, './src') },
         },
         build: {
-            target: 'es2015',
+            target: 'esnext',
             minify: 'terser',
             chunkSizeWarningLimit: 1000,
             rollupOptions: {
@@ -184,7 +184,13 @@ export default defineConfig(async ({ mode }) => {
         },
         optimizeDeps: {
             include: ['react', 'react-dom', 'react/jsx-runtime'],
-            exclude: ['@supabase/supabase-js']
+            exclude: ['@supabase/supabase-js'],
+            esbuildOptions: {
+                target: 'esnext'
+            }
+        },
+        define: {
+            global: 'globalThis',
         },
     };
 });
