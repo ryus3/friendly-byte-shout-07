@@ -1370,11 +1370,13 @@ export const InventoryProvider = ({ children }) => {
           }
         }
 
-        // أرشفة الطلب تلقائياً بعد التسوية
+        // تحديث الطلب لحالة "مدفوع" والأرشفة بعد التسوية
         const { error: orderError } = await supabase
           .from('orders')
           .update({ 
             status: 'completed',
+            receipt_received: true, // هذا يجعل الطلب "مدفوع"
+            payment_status: 'paid', // حالة دفع صريحة
             isArchived: true,
             updated_at: new Date().toISOString()
           })

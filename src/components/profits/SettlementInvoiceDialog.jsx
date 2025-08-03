@@ -51,7 +51,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
+                <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden mt-4 sm:mt-8">
                     <ScrollArea className="h-full max-h-[85vh]">
                         <div className="p-8">
                             {/* Header */}
@@ -72,14 +72,18 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                         <div className="text-right">
                                             <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
                                              <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
-                                                {invoice.settlement_date ? 
-                                                  format(parseISO(invoice.settlement_date), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                                  (invoice.created_at ? 
-                                                    format(parseISO(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                                    format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar })
-                                                  )
-                                                }
-                                            </p>
+                                                 {(() => {
+                                                   const dateToFormat = invoice.settlement_date || invoice.created_at;
+                                                   try {
+                                                     return dateToFormat ? 
+                                                       format(new Date(dateToFormat), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
+                                                       format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar });
+                                                   } catch (error) {
+                                                     console.error('Date formatting error:', error);
+                                                     return format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar });
+                                                   }
+                                                 })()}
+                                             </p>
                                         </div>
                                     </div>
                                 </div>
