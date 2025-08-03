@@ -571,33 +571,30 @@ const AccountingPage = () => {
     const profitCards = [
         { 
           key: 'productProfit', 
-          title: "تحليل أرباح المنتجات", 
+          title: "تكلفة البضاعة المباعة", 
           value: (() => {
-            // استخدام بيانات تحليل الأرباح المتقدم من الصفحة المتخصصة
-            const totalSystemProfit = profitsAnalysis?.systemProfit || 0;
-            console.log('🔍 [DEBUG] Product Analysis Card - systemProfit:', totalSystemProfit, 'from profitsAnalysis');
-            return formatCurrency(totalSystemProfit);
+            // استخدام البيانات الموحدة بدلاً من تحليل الأرباح المتقدم
+            const totalCogs = unifiedProfitData?.cogs || 0;
+            console.log('🔍 [DEBUG] COGS من البيانات الموحدة:', totalCogs);
+            return formatCurrency(totalCogs);
           })(),
           subValue: (() => {
-            // حساب عدد المنتجات المباعة أو الطلبات من التحليل المتقدم
-            const totalOrders = profitsAnalysis?.totalOrders || 0;
-            const totalProductsSold = profitsAnalysis?.totalProductsSold || 0;
+            // حساب عدد الطلبات المُوصلة
+            const deliveredOrdersCount = unifiedProfitData?.deliveredOrders?.length || 0;
             
-            if (totalProductsSold > 0) {
-              return `${totalProductsSold} منتج مباع`;
-            } else if (totalOrders > 0) {
-              return `${totalOrders} طلب`;
+            if (deliveredOrdersCount > 0) {
+              return `${deliveredOrdersCount} طلب مُوصل`;
             } else {
-              return 'لا توجد مبيعات';
+              return 'لا توجد طلبات مُوصلة';
             }
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 
           format: 'custom', 
-          onClick: () => navigate('/advanced-profits-analysis') 
+          onClick: () => setDialogs(d => ({...d, expenses: true}))
         },
         // تم استبدال هذا الكارت بـ ManagerProfitsCard الموحد
-        { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
+        { key: 'generalExpenses', title: "المصاريف العامة", value: unifiedProfitData?.generalExpenses || 0, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
 
     return (
