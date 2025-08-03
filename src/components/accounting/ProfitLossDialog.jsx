@@ -49,7 +49,6 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
     };
 
     const periodLabels = {
-        all: 'كل الفترات',
         today: 'اليوم',
         week: 'أسبوع',
         month: 'شهر',
