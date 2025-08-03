@@ -22,7 +22,7 @@ import {
   Activity,
   ChevronDown
 } from 'lucide-react';
-// Hook للأرباح المتقدمة محذوف - نستخدم النظام الموحد
+import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { motion } from 'framer-motion';
 import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subDays } from 'date-fns';
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -65,18 +65,20 @@ const AdvancedProfitsAnalysisPage = () => {
     localStorage.setItem('profitsAnalysisFilters', JSON.stringify(filters));
   }, [filters]);
 
-  // تم استبدال useAdvancedProfitsAnalysis بالنظام الموحد
-  const analysisData = {};
-  const loading = false;
-  const error = null;
-  const departments = [];
-  const categories = [];
-  const productTypes = [];
-  const seasons = [];
-  const colors = [];
-  const sizes = [];
-  const products = [];
-  const refreshData = () => {};
+  // جلب البيانات
+  const { 
+    analysisData, 
+    loading, 
+    error, 
+    departments,
+    categories,
+    productTypes,
+    seasons,
+    colors,
+    sizes,
+    products,
+    refreshData 
+  } = useAdvancedProfitsAnalysis(dateRange, filters);
 
   // تحديث الفترة الزمنية
   const handlePeriodChange = (period) => {
