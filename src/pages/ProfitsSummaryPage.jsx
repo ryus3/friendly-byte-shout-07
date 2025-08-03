@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
@@ -66,6 +67,8 @@ const ProfitsSummaryPage = () => {
     return localStorage.getItem('profitsPeriodFilter') || 'all';
   });
   
+  // استخدام النظام الموحد للأرباح
+  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(periodFilter);
   
   // حفظ الخيار عند التغيير
   useEffect(() => {
@@ -166,7 +169,8 @@ const ProfitsSummaryPage = () => {
                 hasUsers: !!allUsers, 
                 hasDateRange: !!from && !!to, 
                 hasProfits: !!profits,
-                hasUser: !!user
+                hasUser: !!user,
+                unifiedLoading
             });
             return {
                 managerProfitFromEmployees: 0,
@@ -183,6 +187,11 @@ const ProfitsSummaryPage = () => {
                 generalExpenses: 0,
                 employeeSettledDues: 0
             };
+        }
+
+        // إذا كان النظام الموحد يحمل، استخدم البيانات المتوفرة
+        if (unifiedLoading && unifiedProfitData) {
+            console.log('⏳ النظام الموحد يحمل، استخدام البيانات المتوفرة');
         }
 
         try {
@@ -320,21 +329,13 @@ const ProfitsSummaryPage = () => {
                 e.related_data?.category === 'مستحقات الموظفين'
             ).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-            // حساب إجمالي الإيرادات والتكاليف مباشرة من الطلبات
-            const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-            const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-            const salesWithoutDelivery = totalRevenue - deliveryFees;
-            
-            // حساب تكلفة البضاعة المباعة
-            const cogs = deliveredOrders.reduce((sum, order) => {
-                return sum + (order.order_items || []).reduce((itemSum, item) => {
-                    const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                    return itemSum + (costPrice * (item.quantity || 0));
-                }, 0);
-            }, 0);
-            
-            const grossProfit = salesWithoutDelivery - cogs;
-            const netProfit = grossProfit - generalExpenses - employeeSettledDues;
+            // استخدام البيانات الموحدة إذا كانت متوفرة
+            const totalRevenue = unifiedProfitData?.totalRevenue || 0;
+            const deliveryFees = unifiedProfitData?.deliveryFees || 0;
+            const salesWithoutDelivery = unifiedProfitData?.salesWithoutDelivery || 0;
+            const cogs = unifiedProfitData?.cogs || 0;
+            const grossProfit = unifiedProfitData?.grossProfit || 0;
+            const netProfit = unifiedProfitData?.netProfit || 0;
 
             // حساب أرباح المدير الشخصية من طلباته الخاصة
             const personalProfits = detailedProfits.filter(p => {
@@ -419,7 +420,7 @@ const ProfitsSummaryPage = () => {
                 employeeSettledDues: 0
             };
         }
-    }, [orders, allUsers, calculateProfit, dateRange, accounting?.expenses, user?.user_id, user?.id, canViewAll, settlementInvoices, calculateManagerProfit, profits]);
+    }, [orders, allUsers, calculateProfit, dateRange, accounting?.expenses, user?.user_id, user?.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
@@ -604,7 +605,7 @@ const ProfitsSummaryPage = () => {
           onManagerProfitsClick={() => setDialogs(d => ({ ...d, managerProfits: true }))}
           user={user}
           dateRange={dateRange}
-          unifiedNetProfit={profitData?.netProfit}
+          unifiedNetProfit={unifiedProfitData?.netProfit}
         />
 
         <Card>
