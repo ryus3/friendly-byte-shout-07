@@ -52,9 +52,10 @@ const SidebarContent = ({ onClose, isMobile }) => {
       // التحقق من وجود أي دور مسموح في أدوار المستخدم
       const hasRole = item.roles.some(role => user.roles.includes(role));
       
-      // فحص الصلاحيات الخاصة
+      // فحص الصلاحيات الخاصة - التحقق من صلاحية إدارة العملاء
       if (item.requiresCustomerAccess) {
-        return hasRole && user?.customer_management_access === true;
+        const hasCustomerPermission = hasPermission('manage_all_customers') || user?.customer_management_access === true;
+        return hasRole && hasCustomerPermission;
       }
       
       return hasRole;

@@ -14,10 +14,11 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
   const topCustomers = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    // فلترة الطلبات الموصلة واستبعاد المرجعة والملغية
+    // فلترة الطلبات المكتملة والموصلة واستبعاد المرجعة والملغية
     const deliveredOrders = orders.filter(order => {
-      const isDelivered = order.delivery_status === 'delivered' || 
+      const isCompleted = order.status === 'completed' || 
                          order.status === 'delivered' || 
+                         order.delivery_status === 'delivered' || 
                          order.order_status === 'delivered';
       
       const isReturnedOrCancelled = order.status === 'returned' || 
@@ -25,9 +26,10 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.delivery_status === 'returned' ||
                                    order.delivery_status === 'cancelled' ||
                                    order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled';
+                                   order.order_status === 'cancelled' ||
+                                   order.isArchived === true;
       
-      return isDelivered && !isReturnedOrCancelled;
+      return isCompleted && !isReturnedOrCancelled;
     });
     
     const customerStats = deliveredOrders.reduce((acc, order) => {
@@ -55,10 +57,11 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
   const topProvinces = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    // فلترة الطلبات الموصلة واستبعاد المرجعة والملغية
+    // فلترة الطلبات المكتملة والموصلة واستبعاد المرجعة والملغية
     const deliveredOrders = orders.filter(order => {
-      const isDelivered = order.delivery_status === 'delivered' || 
+      const isCompleted = order.status === 'completed' || 
                          order.status === 'delivered' || 
+                         order.delivery_status === 'delivered' || 
                          order.order_status === 'delivered';
       
       const isReturnedOrCancelled = order.status === 'returned' || 
@@ -66,9 +69,10 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.delivery_status === 'returned' ||
                                    order.delivery_status === 'cancelled' ||
                                    order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled';
+                                   order.order_status === 'cancelled' ||
+                                   order.isArchived === true;
       
-      return isDelivered && !isReturnedOrCancelled;
+      return isCompleted && !isReturnedOrCancelled;
     });
     
     const cityStats = deliveredOrders.reduce((acc, order) => {
@@ -94,10 +98,11 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
   const topProducts = React.useMemo(() => {
     if (!orders?.length) return [];
     
-    // فلترة الطلبات الموصلة واستبعاد المرجعة والملغية
+    // فلترة الطلبات المكتملة والموصلة واستبعاد المرجعة والملغية
     const deliveredOrders = orders.filter(order => {
-      const isDelivered = order.delivery_status === 'delivered' || 
+      const isCompleted = order.status === 'completed' || 
                          order.status === 'delivered' || 
+                         order.delivery_status === 'delivered' || 
                          order.order_status === 'delivered';
       
       const isReturnedOrCancelled = order.status === 'returned' || 
@@ -105,9 +110,10 @@ const TopPerformanceCards = ({ orders = [], products = [], isPersonal = false })
                                    order.delivery_status === 'returned' ||
                                    order.delivery_status === 'cancelled' ||
                                    order.order_status === 'returned' ||
-                                   order.order_status === 'cancelled';
+                                   order.order_status === 'cancelled' ||
+                                   order.isArchived === true;
       
-      return isDelivered && !isReturnedOrCancelled;
+      return isCompleted && !isReturnedOrCancelled;
     });
     
     const productStats = {};
