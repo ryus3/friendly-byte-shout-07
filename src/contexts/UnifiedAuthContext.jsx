@@ -685,7 +685,9 @@ export const UnifiedAuthProvider = ({ children }) => {
 
   return (
     <UnifiedAuthContext.Provider value={value}>
-      {children}
+      <UnifiedPermissionsProvider user={user}>
+        {children}
+      </UnifiedPermissionsProvider>
     </UnifiedAuthContext.Provider>
   );
 };
