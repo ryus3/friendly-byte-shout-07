@@ -25,14 +25,23 @@ const useInventoryStats = () => {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log('🔍 [InventoryStats] بدء جلب إحصائيات المخزون...');
 
       const { data, error: statsError } = await supabase.rpc('get_inventory_stats');
       
-      if (statsError) throw statsError;
+      console.log('📊 [InventoryStats] استجابة قاعدة البيانات:', { data, error: statsError });
+      
+      if (statsError) {
+        console.error('❌ [InventoryStats] خطأ في استدعاء get_inventory_stats:', statsError);
+        throw statsError;
+      }
 
       if (data && data.length > 0) {
         const statsData = data[0];
-        setStats({
+        console.log('✅ [InventoryStats] البيانات المستلمة:', statsData);
+        
+        const newStats = {
           totalProducts: parseInt(statsData.total_products) || 0,
           totalVariants: parseInt(statsData.total_variants) || 0,
           highStockCount: parseInt(statsData.high_stock_count) || 0,
@@ -43,10 +52,15 @@ const useInventoryStats = () => {
           archivedProductsCount: parseInt(statsData.archived_products_count) || 0,
           totalInventoryValue: parseFloat(statsData.total_inventory_value) || 0,
           departments: statsData.departments_data || []
-        });
+        };
+        
+        console.log('🎯 [InventoryStats] الإحصائيات المحسوبة:', newStats);
+        setStats(newStats);
+      } else {
+        console.warn('⚠️ [InventoryStats] لا توجد بيانات في الاستجابة');
       }
     } catch (err) {
-      console.error('خطأ في جلب إحصائيات المخزون:', err);
+      console.error('❌ [InventoryStats] خطأ في جلب إحصائيات المخزون:', err);
       setError(err.message);
     } finally {
       setLoading(false);
