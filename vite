@@ -1,2 +1,2 @@
-#!/bin/bash
-npx vite "$@"
+#!/usr/bin/env bash
+exec npx vite "$@"
