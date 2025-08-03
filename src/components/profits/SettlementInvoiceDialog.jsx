@@ -88,8 +88,8 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden mx-2 my-2 sm:mx-4 sm:my-4 md:mx-8 md:my-8">
-                    <ScrollArea className="h-full max-h-[80vh] sm:max-h-[85vh]">
+                <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[95vh] overflow-hidden mx-1 my-1 sm:mx-4 sm:my-4 md:mx-8 md:my-8">
+                    <ScrollArea className="h-full max-h-[90vh] sm:max-h-[85vh]">
                         <div className="p-4 sm:p-6 md:p-8">
                             {/* Header */}
                             <div className="text-center mb-4 sm:mb-6 md:mb-8">
@@ -221,13 +221,25 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                 index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
                                                             }`}
                                                         >
-                                                            {/* رقم الطلب - متوافق مع الهاتف */}
-                                                            <div className="flex flex-col md:flex-row items-center justify-center gap-2">
-                                                                <span className="text-xs md:hidden text-slate-500">رقم الطلب:</span>
-                                                                <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-3 py-2 md:px-4 md:py-3 rounded-xl shadow-lg text-sm md:text-lg hover:scale-105 transition-transform">
-                                                                    #{order.order_number || order.trackingnumber || 'غير محدد'}
-                                                                </span>
-                                                            </div>
+                                                             {/* رقم الطلب والتاريخ - متوافق مع الهاتف */}
+                                                             <div className="flex flex-col items-center justify-center gap-2">
+                                                                 <span className="text-xs md:hidden text-slate-500">رقم الطلب:</span>
+                                                                 <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-3 py-2 md:px-4 md:py-3 rounded-xl shadow-lg text-sm md:text-lg hover:scale-105 transition-transform">
+                                                                     #{order.order_number || order.trackingnumber || 'غير محدد'}
+                                                                 </span>
+                                                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                                     {(() => {
+                                                                         if (order.created_at) {
+                                                                             try {
+                                                                                 return format(new Date(order.created_at), 'dd/MM/yyyy', { locale: ar });
+                                                                             } catch (error) {
+                                                                                 return 'تاريخ غير صحيح';
+                                                                             }
+                                                                         }
+                                                                         return 'غير محدد';
+                                                                     })()}
+                                                                 </div>
+                                                             </div>
                                                             
                                                             {/* العميل - متوافق مع الهاتف */}
                                                             <div className="flex flex-col items-center justify-center">
