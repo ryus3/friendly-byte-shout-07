@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 // تعيين التوقيت المحلي العراقي
 const IRAQ_TIMEZONE = 'Asia/Baghdad';
 import { ar } from 'date-fns/locale';
