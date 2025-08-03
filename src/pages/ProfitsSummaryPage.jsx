@@ -370,7 +370,7 @@ const ProfitsSummaryPage = () => {
                 return true;
             })
         };
-    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user?.user_id, user?.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
+    }, [orders, allUsers, calculateProfit, dateRange, accounting?.expenses, user?.user_id, user?.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
