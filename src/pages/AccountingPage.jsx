@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -142,6 +143,13 @@ const AccountingPage = () => {
     const { getTotalSourcesBalance, getMainCashBalance, getTotalAllSourcesBalance, cashSources } = useCashSources();
     const navigate = useNavigate();
     
+    // فلترة حسب الفترة المحددة - افتراضي "كل الفترات" 
+    const [selectedTimePeriod, setSelectedTimePeriod] = useLocalStorage('accounting-time-period', 'all');
+    const [dateRange, setDateRange] = useLocalStorage('accounting-date-range', {
+        from: null,
+        to: null
+    });
+    
     const [datePeriod, setDatePeriod] = useState('month');
     
     // جلب بيانات تحليل الأرباح لآخر 30 يوم
@@ -159,24 +167,30 @@ const AccountingPage = () => {
         productType: 'all'
     };
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
-    const { profitData: unifiedProfitData } = useUnifiedProfits(datePeriod);
+    // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
+    const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);
+    console.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
+    
+    // التأكد من استخدام النتائج الموحدة لتجنب التكرار
+    const finalNetProfit = unifiedProfitData?.netProfit || 0;
     
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
     const [realCashBalance, setRealCashBalance] = useState(0);
     const [initialCapital, setInitialCapital] = useState(0);
 
-    const dateRange = useMemo(() => {
+    const calculatedDateRange = useMemo(() => {
         const now = new Date();
-        switch (datePeriod) {
+        switch (selectedTimePeriod) {
             case 'today': return { from: subDays(now, 1), to: now };
             case 'week': return { from: startOfWeek(now, { weekStartsOn: 1 }), to: now };
             case 'year': return { from: startOfYear(now), to: now };
-            case 'month':
+            case 'month': return { from: startOfMonth(now), to: endOfMonth(now) };
+            case 'all': return { from: null, to: null }; // كل الفترات
             default:
                 return { from: startOfMonth(now), to: endOfMonth(now) };
         }
-    }, [datePeriod]);
+    }, [selectedTimePeriod]);
 
     // دالة لإعادة تحميل جميع البيانات المالية
     const refreshAllFinancialData = async () => {
@@ -255,7 +269,7 @@ const AccountingPage = () => {
     }, [getMainCashBalance, getTotalSourcesBalance, initialCapital]); // إضافة getMainCashBalance كـ dependency
 
     const financialSummary = useMemo(() => {
-        const { from, to } = dateRange;
+        const { from, to } = calculatedDateRange;
         
         // تحقق من وجود البيانات الأساسية
         if (!orders || !Array.isArray(orders)) {
@@ -283,6 +297,8 @@ const AccountingPage = () => {
         console.log('📊 الطلبات مع البيانات:', safeOrders.slice(0, 2));
         
         const filterByDate = (itemDateStr) => {
+            // إذا كانت الفترة "كل الفترات"، لا نطبق فلترة تاريخ
+            if (selectedTimePeriod === 'all') return true;
             if (!from || !to || !itemDateStr) return true;
             try {
                 const itemDate = parseISO(itemDateStr);
@@ -534,7 +550,7 @@ const AccountingPage = () => {
           if (e.related_data?.category === 'شراء بضاعة') return false;
           return true;
         }) };
-    }, [dateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, allProfits]);
+    }, [calculatedDateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, allProfits, selectedTimePeriod]);
 
     const totalCapital = initialCapital + financialSummary.inventoryValue;
     
@@ -593,9 +609,20 @@ const AccountingPage = () => {
             <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <h1 className="text-3xl font-bold gradient-text">المركز المالي</h1>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
+                        <select 
+                            className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                            value={selectedTimePeriod}
+                            onChange={(e) => setSelectedTimePeriod(e.target.value)}
+                        >
+                            <option value="all">كل الفترات</option>
+                            <option value="today">اليوم</option>
+                            <option value="week">هذا الأسبوع</option>
+                            <option value="month">هذا الشهر</option>
+                            <option value="year">هذا العام</option>
+                        </select>
                         <PDFDownloadLink
-                            document={<FinancialReportPDF summary={financialSummary} dateRange={dateRange} />}
+                            document={<FinancialReportPDF summary={financialSummary} dateRange={calculatedDateRange} />}
                             fileName={`financial-report-${new Date().toISOString().slice(0, 10)}.pdf`}
                         >
                             {({ loading: pdfLoading }) => (
@@ -630,7 +657,7 @@ const AccountingPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard 
                         title="صافي أرباح المبيعات" 
-                        value={unifiedProfitData?.netProfit || financialSummary.netProfit} 
+                        value={finalNetProfit} 
                         icon={PieChart} 
                         colors={['blue-500', 'sky-500']} 
                         format="currency" 
