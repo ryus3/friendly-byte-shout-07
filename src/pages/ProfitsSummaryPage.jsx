@@ -4,7 +4,6 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
@@ -26,8 +25,8 @@ import {
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
 
-// Refactored Components
-import ProfitStats from '@/components/profits/ProfitStats';
+// استخدام النظام الموحد بالكامل
+import UnifiedProfitStats from '@/components/profits/UnifiedProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import UnifiedSettlementRequest from '@/components/profits/UnifiedSettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
@@ -38,7 +37,6 @@ import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDial
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeReceivedProfitsDialog from '@/components/shared/EmployeeReceivedProfitsDialog';
-import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
@@ -50,11 +48,6 @@ const ProfitsSummaryPage = () => {
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
   
   console.log('✅ تم تحميل جميع السياقات بنجاح');
-  
-  // استخدام النظام الموحد للحصول على صافي الربح الموحد
-  console.log('🔄 استدعاء useUnifiedProfits...');
-  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits('all');
-  console.log('📊 بيانات الأرباح الموحدة:', unifiedProfitData);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -598,23 +591,14 @@ const ProfitsSummaryPage = () => {
           </div>
         </div>
 
-        {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}
+        {/* استخدام النظام الموحد للإحصائيات */}
         <div className="space-y-6">
-          {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير وكارت الموظف */}
-          {/* استخدام UnifiedProfitDisplay مباشرة مع الكروت الجديدة */}
-          <UnifiedProfitDisplay
-            profitData={profitData}
-            unifiedProfitData={unifiedProfitData}
-            displayMode="dashboard"
-            canViewAll={canViewAll}
+          <UnifiedProfitStats
             onFilterChange={handleFilterChange}
             onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
             onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
-            onEmployeeReceivedClick={handleEmployeeReceivedClick}
-            onPendingProfitsClick={handlePendingProfitsClick}
-            onArchiveClick={handleArchiveClick}
-            dateRange={dateRange}
-            className="mb-6"
+            onManagerProfitsClick={() => setDialogs(d => ({ ...d, managerProfits: true }))}
+            dateRange={periodFilter}
           />
         </div>
 
