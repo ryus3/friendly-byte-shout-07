@@ -1,8 +1,9 @@
 #!/bin/bash
-# التحقق من وجود vite في node_modules/.bin
-if [ -f "./node_modules/.bin/vite" ]; then
+# تشغيل vite مباشرة من node_modules
+if [ -f "./node_modules/vite/bin/vite.js" ]; then
+    exec node ./node_modules/vite/bin/vite.js "$@"
+elif [ -f "./node_modules/.bin/vite" ]; then
     exec ./node_modules/.bin/vite "$@"
 else
-    # استخدام npx كبديل
     exec npx vite "$@"
 fi
