@@ -284,5 +284,3 @@ const FinancialPerformanceCard = ({
 };
 
 export default FinancialPerformanceCard;
-
-export default FinancialPerformanceCard;
