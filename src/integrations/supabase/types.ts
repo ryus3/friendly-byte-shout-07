@@ -3221,6 +3221,31 @@ export type Database = {
           seasons_occasions: Json
         }[]
       }
+      get_inventory_stats: {
+        Args: {
+          p_department_ids?: string[]
+          p_category_ids?: string[]
+          p_user_id?: string
+        }
+        Returns: {
+          total_products: number
+          total_variants: number
+          total_quantity: number
+          total_cost_value: number
+          total_sale_value: number
+          total_expected_profit: number
+          reserved_quantity: number
+          high_stock_count: number
+          medium_stock_count: number
+          low_stock_count: number
+          out_of_stock_count: number
+          archived_products_count: number
+          products_with_variants: Json
+          stock_levels_breakdown: Json
+          department_breakdown: Json
+          category_breakdown: Json
+        }[]
+      }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
