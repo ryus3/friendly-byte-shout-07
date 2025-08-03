@@ -13,48 +13,24 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   // استخدام النظام المركزي للمبيعات
   const { summaryStats } = useSalesStats();
   
-  // بيانات الخيارات للفلاتر
-  const [departments, setDepartments] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [productTypes, setProductTypes] = useState([]);
-  const [seasons, setSeasons] = useState([]);
-  const [colors, setColors] = useState([]);
-  const [sizes, setSizes] = useState([]);
+  // استخدام النظام التوحيدي للمرشحات
   const [products, setProducts] = useState([]);
   
   // قواعد الأرباح للموظفين
   const [employeeProfitRules, setEmployeeProfitRules] = useState([]);
 
-  // جلب بيانات الخيارات
-  const fetchFilterOptions = async () => {
+  // جلب قائمة المنتجات فقط (باقي البيانات من النظام الموحد)
+  const fetchProducts = async () => {
     try {
-      const [
-        departmentsRes,
-        categoriesRes,
-        productTypesRes,
-        seasonsRes,
-        colorsRes,
-        sizesRes,
-        productsRes
-      ] = await Promise.all([
-        supabase.from('departments').select('*').eq('is_active', true),
-        supabase.from('categories').select('*'),
-        supabase.from('product_types').select('*'),
-        supabase.from('seasons_occasions').select('*'),
-        supabase.from('colors').select('*'),
-        supabase.from('sizes').select('*'),
-        supabase.from('products').select('id, name').eq('is_active', true)
-      ]);
-
-      setDepartments(departmentsRes.data || []);
-      setCategories(categoriesRes.data || []);
-      setProductTypes(productTypesRes.data || []);
-      setSeasons(seasonsRes.data || []);
-      setColors(colorsRes.data || []);
-      setSizes(sizesRes.data || []);
-      setProducts(productsRes.data || []);
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      setProducts(data || []);
     } catch (err) {
-      console.error('Error fetching filter options:', err);
+      console.error('Error fetching products:', err);
     }
   };
 
@@ -455,9 +431,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     }
   }, [dateRange, filters, employeeProfitRules]);
 
-  // جلب خيارات الفلاتر وقواعد الأرباح عند التحميل
+  // جلب المنتجات وقواعد الأرباح عند التحميل
   useEffect(() => {
-    fetchFilterOptions();
+    fetchProducts();
     fetchEmployeeProfitRules();
   }, []);
 
@@ -469,12 +445,6 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     analysisData,
     loading,
     error,
-    departments,
-    categories,
-    productTypes,
-    seasons,
-    colors,
-    sizes,
     products,
     refreshData
   };

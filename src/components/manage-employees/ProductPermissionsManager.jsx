@@ -13,6 +13,7 @@ import {
   TabsTrigger,
 } from '@/components/ui/tabs';
 import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { useFiltersData } from '@/hooks/useFiltersData';
 
 const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(true);
@@ -35,6 +36,32 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
     seasons_occasions: []
   });
 
+  // استخدام النظام التوحيدي للمرشحات
+  const {
+    categories: filterCategories,
+    departments: filterDepartments,
+    productTypes: filterProductTypes,
+    seasonsOccasions: filterSeasonsOccasions,
+    colors: filterColors,
+    sizes: filterSizes,
+    loading: filtersLoading,
+    refreshFiltersData
+  } = useFiltersData();
+
+  // تحديث الخيارات المتاحة عند تحميل البيانات من النظام الموحد
+  useEffect(() => {
+    if (!filtersLoading) {
+      setAvailableOptions({
+        categories: filterCategories || [],
+        colors: filterColors || [],
+        sizes: filterSizes || [],
+        departments: filterDepartments || [],
+        product_types: filterProductTypes || [],
+        seasons_occasions: filterSeasonsOccasions || []
+      });
+    }
+  }, [filtersLoading, filterCategories, filterDepartments, filterProductTypes, filterSeasonsOccasions, filterColors, filterSizes]);
+
   // جلب البيانات عند تحميل المكون
   useEffect(() => {
     if (!selectedUser?.user_id) return;
@@ -43,34 +70,17 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       try {
         setLoading(true);
 
-        // جلب جميع الخيارات المتاحة
-        // استخدام النظام التوحيدي للمرشحات
-        const { data: filtersData, error: filtersError } = await supabase.rpc('get_filters_data');
-        
-        if (filtersError) throw filtersError;
-        
-        const filters = filtersData?.[0] || {};
-        
-        const [userPermissionsResponse] = await Promise.all([
-          supabase
-            .from('user_product_permissions')
-            .select('*')
-            .eq('user_id', selectedUser.user_id)
-        ]);
+        // جلب الصلاحيات الحالية فقط
+        const { data: userPermissionsData, error: userPermissionsError } = await supabase
+          .from('user_product_permissions')
+          .select('*')
+          .eq('user_id', selectedUser.user_id);
 
-        // تحديث الخيارات المتاحة من النظام التوحيدي
-        setAvailableOptions({
-          categories: filters.categories || [],
-          colors: filters.colors || [],
-          sizes: filters.sizes || [],
-          departments: filters.departments || [],
-          product_types: filters.product_types || [],
-          seasons_occasions: filters.seasons_occasions || []
-        });
+        if (userPermissionsError) throw userPermissionsError;
 
         // تحديث الصلاحيات الحالية
         const currentPermissions = { ...permissions };
-        (userPermissionsResponse.data || []).forEach(perm => {
+        (userPermissionsData || []).forEach(perm => {
           currentPermissions[perm.permission_type] = {
             has_full_access: perm.has_full_access,
             allowed_items: perm.allowed_items || []
@@ -90,8 +100,11 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       }
     };
 
-    fetchData();
-  }, [selectedUser?.user_id]);
+    // تشغيل جلب البيانات فقط إذا كانت الفلاتر جاهزة
+    if (!filtersLoading) {
+      fetchData();
+    }
+  }, [selectedUser?.user_id, filtersLoading]);
 
   // تحديث صلاحية معينة
   const updatePermission = (type, field, value) => {
