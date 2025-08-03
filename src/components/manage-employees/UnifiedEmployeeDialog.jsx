@@ -18,6 +18,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const [defaultPage, setDefaultPage] = useState(employee?.default_page || '/');
   const [orderCreationMode, setOrderCreationMode] = useState(employee?.order_creation_mode || 'both');
   const [customerManagementAccess, setCustomerManagementAccess] = useState(employee?.customer_management_access || false);
+  const [deliveryPartnerAccess, setDeliveryPartnerAccess] = useState(employee?.delivery_partner_access || true);
   const [activeTab, setActiveTab] = useState('basic');
   const [saving, setSaving] = useState(false);
 
@@ -44,6 +45,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
           default_page: defaultPage,
           order_creation_mode: orderCreationMode,
           customer_management_access: customerManagementAccess,
+          delivery_partner_access: deliveryPartnerAccess,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', employee.user_id);
@@ -156,7 +158,20 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                     </Select>
                   </div>
 
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="deliveryAccess" className="text-sm font-medium">صلاحية شركة التوصيل</Label>
+                    <Select value={deliveryPartnerAccess.toString()} onValueChange={(value) => setDeliveryPartnerAccess(value === 'true')}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">✅ مفعل - يمكنه الوصول لشركة التوصيل</SelectItem>
+                        <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول لشركة التوصيل</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="customerAccess" className="text-sm font-medium">صلاحية إدارة العملاء والولاء</Label>
                     <Select value={customerManagementAccess.toString()} onValueChange={(value) => setCustomerManagementAccess(value === 'true')}>
                       <SelectTrigger className="h-10">
