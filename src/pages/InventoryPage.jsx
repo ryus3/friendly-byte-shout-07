@@ -29,7 +29,7 @@ import InventoryItem from '@/components/inventory/InventoryItem';
 import { generateInventoryReportPDF } from '@/utils/pdfGenerator';
 import { supabase } from '@/lib/customSupabaseClient';
 
-const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
+const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile, orders }) => {
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -119,6 +119,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                     key={variant.id}
                     variant={variant}
                     product={product}
+                    orders={orders}
                     onEditStock={canEdit ? () => onEditStock(product, variant) : null}
                   />
                 ))}
@@ -848,6 +849,7 @@ const InventoryPage = () => {
           onSelectionChange={handleSelectionChange}
           selectedItems={selectedItemsForExport}
           isMobile={isMobile}
+          orders={orders}
         />
       </div>
 

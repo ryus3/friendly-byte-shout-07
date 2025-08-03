@@ -5,7 +5,7 @@ import { Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
+const InventoryItem = React.memo(({ variant, product, onEditStock, orders = [] }) => {
   if (!variant) {
     return null; // Or a placeholder/error component
   }
@@ -13,7 +13,25 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   const stock = variant.quantity || 0;
   const reserved = variant.reserved_quantity || variant.reserved || 0;
   const available = stock - reserved;
-  const sold = variant.sold_quantity || 0;
+  
+  // حساب الكمية المباعة من الطلبات المكتملة
+  const calculateSoldQuantity = () => {
+    if (!orders || orders.length === 0) return 0;
+    
+    return orders
+      .filter(order => order.status === 'completed' || order.status === 'delivered')
+      .reduce((total, order) => {
+        if (!order.order_items) return total;
+        
+        const orderSold = order.order_items
+          .filter(item => item.variant_id === variant.id)
+          .reduce((sum, item) => sum + (item.quantity || 0), 0);
+        
+        return total + orderSold;
+      }, 0);
+  };
+  
+  const sold = calculateSoldQuantity();
 
   const getStockStatus = () => {
     if (stock === 0) return { text: 'نافذ', color: 'bg-gray-500/20 text-gray-400' };

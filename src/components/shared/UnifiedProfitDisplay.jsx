@@ -371,7 +371,7 @@ const UnifiedProfitDisplay = ({
             {
               key: 'net-profit',
               title: 'صافي الربح',
-              value: unifiedProfitData?.netProfit || unifiedFinancialData.netProfit,
+              value: unifiedProfitData?.netProfit || 0,
               icon: User,
               colors: ['green-500', 'emerald-500'],
               format: 'currency'
