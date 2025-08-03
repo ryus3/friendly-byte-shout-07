@@ -59,7 +59,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
   return (
     <div className="space-y-4">
       {/* كروت الأقسام */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
           
