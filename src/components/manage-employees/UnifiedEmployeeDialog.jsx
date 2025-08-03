@@ -17,6 +17,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const [status, setStatus] = useState(employee?.status || 'pending');
   const [defaultPage, setDefaultPage] = useState(employee?.default_page || '/');
   const [orderCreationMode, setOrderCreationMode] = useState(employee?.order_creation_mode || 'both');
+  const [deliveryPartnerAccess, setDeliveryPartnerAccess] = useState(employee?.delivery_partner_access || false);
   const [activeTab, setActiveTab] = useState('basic');
   const [saving, setSaving] = useState(false);
 
@@ -25,6 +26,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
     { value: '/quick-order', label: 'طلب سريع' },
     { value: '/products', label: 'عرض المنتجات' },
     { value: '/manage-products', label: 'إدارة المنتجات' },
+    { value: '/customers-management', label: 'إدارة العملاء' },
     { value: '/inventory', label: 'الجرد' },
     { value: '/my-orders', label: 'طلباتي' },
     { value: '/purchases', label: 'المشتريات' },
@@ -41,6 +43,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
           status,
           default_page: defaultPage,
           order_creation_mode: orderCreationMode,
+          delivery_partner_access: deliveryPartnerAccess,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', employee.user_id);
@@ -146,9 +149,22 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="both">كلاهما (عادي + سريع)</SelectItem>
-                        <SelectItem value="normal">طلبات عادية فقط</SelectItem>
-                        <SelectItem value="quick">طلبات سريعة فقط</SelectItem>
+                        <SelectItem value="both">كلاهما (محلي + شركة توصيل)</SelectItem>
+                        <SelectItem value="local_only">طلبات محلية فقط</SelectItem>
+                        <SelectItem value="partner_only">شركة توصيل فقط</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="deliveryAccess" className="text-sm font-medium">صلاحية الوصول لشركات التوصيل</Label>
+                    <Select value={deliveryPartnerAccess.toString()} onValueChange={(value) => setDeliveryPartnerAccess(value === 'true')}>
+                      <SelectTrigger className="h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="true">✅ مفعل - يمكنه الوصول لشركات التوصيل</SelectItem>
+                        <SelectItem value="false">❌ غير مفعل - لا يمكنه الوصول</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
