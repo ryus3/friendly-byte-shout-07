@@ -368,10 +368,11 @@ const AccountingPage = () => {
           return true;
         }).reduce((sum, e) => sum + (e.amount || 0), 0);
         
-        // مستحقات الموظفين المسددة
-        const employeeSettledDues = expensesInRange.filter(e => 
-          e.related_data?.category === 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + (e.amount || 0), 0);
+        // مستحقات الموظفين المسددة (من جدول المصاريف) - تصحيح المنطق
+        const employeeSettledDues = expensesInRange.filter(e => {
+          // فقط المصاريف النظامية لمستحقات الموظفين
+          return e.expense_type === 'system' && e.category === 'مستحقات الموظفين';
+        }).reduce((sum, e) => sum + (e.amount || 0), 0);
         
         // صافي الربح = ربح النظام - المصاريف العامة
         const netProfit = systemProfit - generalExpenses;
@@ -463,11 +464,27 @@ const AccountingPage = () => {
         
         const totalSystemProfit = myProfit + systemProfitFromEmployees;
     
-        // حساب مستحقات الموظفين المعلقة (من جدول profits)
+        // حساب مستحقات الموظفين المعلقة (من جدول profits) - تصحيح المنطق
         const employeePendingDues = allProfits
           .filter(p => {
-            const order = deliveredOrders.find(o => o.id === p.order_id);
-            return order && p.status === 'pending' && p.employee_id !== currentUser?.id;
+            // فقط الأرباح المعلقة
+            if (p.status !== 'pending') return false;
+            
+            // فقط للموظفين (ليس للمدير)
+            if (p.employee_id === currentUser?.id) return false;
+            
+            // التحقق من أن الطلب ضمن النطاق الزمني المحدد
+            const order = orders?.find(o => o.id === p.order_id);
+            if (!order) return false;
+            
+            // التحقق من أن الطلب مسلم ومستلم الفاتورة
+            const isDeliveredWithReceipt = (order.status === 'delivered' || order.status === 'completed') 
+              && order.receipt_received === true;
+            
+            // التحقق من النطاق الزمني
+            const dateCheck = filterByDate(order.updated_at || order.created_at);
+            
+            return isDeliveredWithReceipt && dateCheck;
           })
           .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
     
@@ -613,7 +630,7 @@ const AccountingPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard 
                         title="صافي أرباح المبيعات" 
-                        value={financialSummary.netProfit} 
+                        value={unifiedProfitData?.netProfit || financialSummary.netProfit} 
                         icon={PieChart} 
                         colors={['blue-500', 'sky-500']} 
                         format="currency" 
@@ -695,8 +712,9 @@ const AccountingPage = () => {
             <PendingDuesDialog
                 open={dialogs.pendingDues}
                 onOpenChange={(open) => setDialogs(d => ({...d, pendingDues: open}))}
-                orders={financialSummary.employeePendingDuesDetails}
+                orders={orders}
                 allUsers={allUsers}
+                allProfits={allProfits}
             />
             <ProfitLossDialog
                 open={dialogs.profitLoss}

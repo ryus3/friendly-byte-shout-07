@@ -11,68 +11,61 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 
-const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
+const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = [] }) => {
     const navigate = useNavigate();
     const [selectedEmployee, setSelectedEmployee] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState([]);
 
-    // فلترة الطلبات للأرباح المعلقة فقط (للموظفين فقط، وليس للمدير)
-    const pendingDuesOrders = useMemo(() => {
-        if (!orders || !Array.isArray(orders)) return [];
+    // استخدام بيانات جدول profits بدلاً من الحساب اليدوي
+    const pendingProfitsData = useMemo(() => {
+        if (!allProfits || !orders) return [];
         
-        return orders.filter(order => {
-            // التحقق من الشروط:
-            // 1. تم تسليم الطلب أو اكتماله
-            // 2. تم استلام الفاتورة
-            // 3. ليس الطلب من إنشاء المدير (معرف المدير: 91484496-b887-44f7-9e5d-be9db5567604)
-            // 4. له موظف محدد أنشأه
-            // 5. يجب أن يكون للطلب مستحقات موظف (employee_profit > 0)
-            const isDelivered = order.status === 'delivered' || order.status === 'completed';
-            const hasReceiptReceived = order.receipt_received === true;
-            const isNotManagerOrder = order.created_by && order.created_by !== '91484496-b887-44f7-9e5d-be9db5567604';
+        return allProfits.filter(profit => {
+            // فقط الأرباح المعلقة
+            if (profit.status !== 'pending') return false;
             
-            // حساب ربح الموظف للطلب
-            const employeeProfit = (order.items || []).reduce((sum, item) => {
-                const profit = (item.price - (item.costPrice || 0)) * item.quantity * 0.1; // 10% للموظف افتراضياً
-                return sum + profit;
-            }, 0);
+            // التحقق من وجود الطلب
+            const order = orders.find(o => o.id === profit.order_id);
+            if (!order) return false;
             
-            return isDelivered && hasReceiptReceived && isNotManagerOrder && employeeProfit > 0;
+            // فقط الطلبات المسلمة ومستلمة الفاتورة
+            const isDeliveredWithReceipt = (order.status === 'delivered' || order.status === 'completed') 
+              && order.receipt_received === true;
+            
+            return isDeliveredWithReceipt;
+        }).map(profit => {
+            const order = orders.find(o => o.id === profit.order_id);
+            return {
+                ...profit,
+                order: order
+            };
         });
-    }, [orders]);
+    }, [allProfits, orders]);
 
     const employeesWithPendingDues = useMemo(() => {
-        const employeeIds = new Set(pendingDuesOrders.map(o => o.created_by));
+        const employeeIds = new Set(pendingProfitsData.map(p => p.employee_id));
         return allUsers.filter(u => employeeIds.has(u.id));
-    }, [pendingDuesOrders, allUsers]);
+    }, [pendingProfitsData, allUsers]);
 
-    const filteredOrders = useMemo(() => {
-        const ordersWithProfit = pendingDuesOrders.map(o => ({
-            ...o,
-            employee_profit: (o.items || []).reduce((sum, item) => {
-                const profit = (item.price - (item.costPrice || 0)) * item.quantity;
-                return sum + profit;
-            }, 0)
-        }));
-
+    const filteredData = useMemo(() => {
         if (selectedEmployee === 'all') {
-            return ordersWithProfit;
+            return pendingProfitsData;
         }
-        return ordersWithProfit.filter(o => o.created_by === selectedEmployee);
-    }, [pendingDuesOrders, selectedEmployee]);
+        return pendingProfitsData.filter(p => p.employee_id === selectedEmployee);
+    }, [pendingProfitsData, selectedEmployee]);
 
     const totalPendingAmount = useMemo(() => {
-        return filteredOrders.reduce((sum, order) => sum + (order.employee_profit || 0), 0);
-    }, [filteredOrders]);
+        return filteredData.reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
+    }, [filteredData]);
 
     const handleNavigate = (path) => {
         navigate(path);
         onOpenChange(false);
     };
 
-    const handleSelectOrder = (orderId) => {
+    const handleSelectOrder = (profitId) => {
         setSelectedOrders(prev =>
-            prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+            prev.includes(profitId) ? prev.filter(id => id !== profitId) : [...prev, profitId]
         );
     };
 
@@ -132,21 +125,22 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers }) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {filteredOrders.length > 0 ? filteredOrders.map(order => {
-                                    const employee = allUsers.find(u => u.id === order.created_by);
+                                {filteredData.length > 0 ? filteredData.map(profit => {
+                                    const employee = allUsers.find(u => u.id === profit.employee_id);
+                                    const order = profit.order;
                                     return (
-                                        <TableRow key={order.id}>
+                                        <TableRow key={profit.id}>
                                             <TableCell>
                                                 <Checkbox
-                                                    checked={selectedOrders.includes(order.id)}
-                                                    onCheckedChange={() => handleSelectOrder(order.id)}
-                                                    disabled={selectedEmployee === 'all' || order.created_by !== selectedEmployee}
+                                                    checked={selectedOrders.includes(profit.id)}
+                                                    onCheckedChange={() => handleSelectOrder(profit.id)}
+                                                    disabled={selectedEmployee === 'all' || profit.employee_id !== selectedEmployee}
                                                 />
                                             </TableCell>
                                             <TableCell>{employee?.full_name || 'غير معروف'}</TableCell>
-                                            <TableCell className="font-mono">{order.trackingnumber}</TableCell>
-                                            <TableCell>{format(parseISO(order.updated_at), 'd MMM yyyy', { locale: ar })}</TableCell>
-                                            <TableCell className="text-right font-semibold text-amber-500">{(order.employee_profit || 0).toLocaleString()} د.ع</TableCell>
+                                            <TableCell className="font-mono">{order?.order_number || 'غير معروف'}</TableCell>
+                                            <TableCell>{order ? format(parseISO(order.updated_at), 'd MMM yyyy', { locale: ar }) : '-'}</TableCell>
+                                            <TableCell className="text-right font-semibold text-amber-500">{(profit.employee_profit || 0).toLocaleString()} د.ع</TableCell>
                                         </TableRow>
                                     );
                                 }) : (
