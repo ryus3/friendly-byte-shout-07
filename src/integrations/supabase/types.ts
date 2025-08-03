@@ -3286,6 +3286,10 @@ export type Database = {
           pending_profits: Json
         }[]
       }
+      get_unified_profits_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       get_user_allowed_filters: {
         Args: { p_user_id: string }
         Returns: {
