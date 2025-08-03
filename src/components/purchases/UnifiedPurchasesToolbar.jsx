@@ -1,28 +1,15 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { usePurchases } from '@/hooks/useImprovedPurchases';
+import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import PurchasesToolbar from './PurchasesToolbar';
 
 /**
  * مكون موحد لشريط أدوات المشتريات
  * يستخدم النظام الموحد للصلاحيات وجلب البيانات
  */
-const UnifiedPurchasesToolbar = ({
-  viewMode,
-  onViewModeChange,
-  searchTerm,
-  onSearchChange,
-  sortBy,
-  onSortChange,
-  dateFilter,
-  onDateFilterChange,
-  statusFilter,
-  onStatusFilterChange,
-  supplierFilter,
-  onSupplierFilterChange
-}) => {
+const UnifiedPurchasesToolbar = (props) => {
   const { canViewAllPurchases, filterDataByUser } = usePermissions();
-  const { purchases } = usePurchases();
+  const { purchases } = useImprovedPurchases();
 
   // تصفية المشتريات حسب صلاحيات المستخدم للحصول على قائمة الموردين
   const filteredPurchases = canViewAllPurchases 
@@ -41,18 +28,7 @@ const UnifiedPurchasesToolbar = ({
 
   return (
     <PurchasesToolbar
-      viewMode={viewMode}
-      onViewModeChange={onViewModeChange}
-      searchTerm={searchTerm}
-      onSearchChange={onSearchChange}
-      sortBy={sortBy}
-      onSortChange={onSortChange}
-      dateFilter={dateFilter}
-      onDateFilterChange={onDateFilterChange}
-      statusFilter={statusFilter}
-      onStatusFilterChange={onStatusFilterChange}
-      supplierFilter={supplierFilter}
-      onSupplierFilterChange={onSupplierFilterChange}
+      {...props}
       suppliers={suppliers}
     />
   );

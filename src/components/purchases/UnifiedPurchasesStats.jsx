@@ -1,6 +1,6 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { usePurchases } from '@/hooks/useImprovedPurchases';
+import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import PurchasesStats from './PurchasesStats';
 
 /**
@@ -9,7 +9,7 @@ import PurchasesStats from './PurchasesStats';
  */
 const UnifiedPurchasesStats = ({ onFilterChange, onCardClick }) => {
   const { canViewAllPurchases, filterDataByUser } = usePermissions();
-  const { purchases, loading } = usePurchases();
+  const { purchases, loading } = useImprovedPurchases();
 
   // تصفية المشتريات حسب صلاحيات المستخدم
   const filteredPurchases = canViewAllPurchases 
