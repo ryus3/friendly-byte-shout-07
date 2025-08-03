@@ -692,7 +692,7 @@ const AccountingPage = () => {
                                 <CardDescription>نظرة بيانية على الإيرادات، المصاريف، والأرباح الصافية</CardDescription>
                             </CardHeader>
                             <CardContent className="h-72">
-                                <MiniChart data={financialSummary.chartData} type="bar" colors={['#3b82f6', '#ef4444']} />
+                                <MiniChart data={unifiedProfitData?.chartData || []} type="bar" colors={['#3b82f6', '#ef4444']} />
                             </CardContent>
                         </Card>
                     </div>
@@ -703,15 +703,15 @@ const AccountingPage = () => {
                                 <CardDescription>ملخص مالي للفترة المحددة</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={financialSummary.totalRevenue || 0} colorClass="text-green-500" />
-                                <StatRow label="رسوم التوصيل" value={financialSummary.deliveryFees || 0} colorClass="text-blue-400" />
-                                <StatRow label="المبيعات (بدون التوصيل)" value={financialSummary.salesWithoutDelivery || 0} colorClass="text-green-600" />
-                                <StatRow label="تكلفة البضاعة المباعة" value={financialSummary.cogs || 0} colorClass="text-orange-500" isNegative/>
-                                <StatRow label="مجمل الربح" value={financialSummary.systemProfit || financialSummary.grossProfit || 0} colorClass="text-blue-500 font-bold" />
-                                <StatRow label="المصاريف العامة" value={financialSummary.generalExpenses || 0} colorClass="text-red-500" isNegative/>
+                                <StatRow label="إجمالي المبيعات (مع التوصيل)" value={unifiedProfitData?.totalRevenue || 0} colorClass="text-green-500" />
+                                <StatRow label="رسوم التوصيل" value={unifiedProfitData?.deliveryFees || 0} colorClass="text-blue-400" />
+                                <StatRow label="المبيعات (بدون التوصيل)" value={unifiedProfitData?.salesWithoutDelivery || 0} colorClass="text-green-600" />
+                                <StatRow label="تكلفة البضاعة المباعة" value={unifiedProfitData?.cogs || 0} colorClass="text-orange-500" isNegative/>
+                                <StatRow label="مجمل الربح" value={unifiedProfitData?.grossProfit || 0} colorClass="text-blue-500 font-bold" />
+                                <StatRow label="المصاريف العامة" value={unifiedProfitData?.generalExpenses || 0} colorClass="text-red-500" isNegative/>
                                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
                                     <p className="font-bold text-lg">صافي الربح</p>
-                                    <p className="font-bold text-lg text-primary">{(financialSummary.netProfit || 0).toLocaleString()} د.ع</p>
+                                    <p className="font-bold text-lg text-primary">{(unifiedProfitData?.netProfit || 0).toLocaleString()} د.ع</p>
                                 </div>
                             </CardContent>
                         </Card>
