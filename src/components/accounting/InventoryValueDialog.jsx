@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Box, Package, Tag, Calendar, BarChart3, Warehouse, Search, Filter, X } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import useInventoryStats from '@/hooks/useInventoryStats';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -82,6 +83,9 @@ const ItemCard = ({ item, showProductDetails = false }) => (
 );
 
 const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
+  // استخدام Hook الموحد للحصول على البيانات الأساسية فوراً
+  const { stats: inventoryStats, loading: statsLoading } = useInventoryStats();
+  
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,7 +111,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
   });
 
   const [filteredSummary, setFilteredSummary] = useState({
-    totalValue: 0,
+    totalValue: totalInventoryValue,
     totalAvailable: 0,
     totalReserved: 0,
     totalQuantity: 0,
@@ -517,11 +521,33 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     }
   };
 
+  // استخدام البيانات الموحدة فوراً عند فتح النافذة
   useEffect(() => {
-    if (open) {
+    if (open && inventoryStats) {
+      // عرض البيانات الأساسية فوراً من الدالة الموحدة
+      setFilteredSummary({
+        totalValue: inventoryStats.totalInventoryValue || totalInventoryValue,
+        totalAvailable: 0,
+        totalReserved: inventoryStats.reservedStockCount * 10000, // تقدير أولي
+        totalQuantity: inventoryStats.totalVariants,
+        totalCost: 0,
+        totalExpectedProfit: 0,
+        itemsCount: inventoryStats.totalProducts
+      });
+      
+      // ثم جلب التفاصيل الإضافية فقط إذا لزم الأمر
+      if (activeTab !== 'summary') {
+        fetchInventoryDetails();
+      }
+    }
+  }, [open, inventoryStats, activeTab]);
+
+  // جلب التفاصيل عند تغيير الفلاتر أو التبويبات
+  useEffect(() => {
+    if (open && (Object.values(filters).some(f => f !== '') || activeTab !== 'summary')) {
       fetchInventoryDetails();
     }
-  }, [open, filters]); // إعادة التحميل عند تغيير الفلاتر
+  }, [filters, activeTab]);
 
   // تعريف hasActiveFilters هنا قبل استخدامه
   const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
