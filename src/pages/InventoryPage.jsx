@@ -638,7 +638,7 @@ const InventoryPage = () => {
                 {/* اسم الأرشيف */}
                 <div>
                   <h4 className="font-bold text-lg">أرشيف المنتجات</h4>
-                  <p className="text-xs opacity-90 mt-1">المنتجات النافذة والمؤرشفة</p>
+                  {/* حذف النص الثانوي لتوفير المساحة */}
                 </div>
                 
                 {/* عدد المنتجات المؤرشفة */}
