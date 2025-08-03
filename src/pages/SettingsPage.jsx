@@ -32,7 +32,7 @@ import PermissionBasedStockSettings from '@/components/settings/PermissionBasedS
 import ProfileSecurityDialog from '@/components/settings/ProfileSecurityDialog';
 import AppearanceDialog from '@/components/settings/AppearanceDialog';
 
-import EmployeeProfitsManager from '@/components/manage-employees/EmployeeProfitsManager';
+import UnifiedEmployeeProfitsManager from '@/components/manage-employees/UnifiedEmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import { Badge } from '@/components/ui/badge';
 
@@ -484,7 +484,7 @@ const SettingsPage = () => {
         onOpenChange={setIsTelegramOpen}
       />
 
-      <EmployeeProfitsManager 
+      <UnifiedEmployeeProfitsManager 
         open={isProfitsManagerOpen} 
         onOpenChange={setIsProfitsManagerOpen} 
       />

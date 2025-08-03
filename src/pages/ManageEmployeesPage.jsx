@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, UserPlus, ArrowRight, Shield } from 'lucide-react';
-import EmployeeList from '@/components/manage-employees/EmployeeList';
+import UnifiedEmployeeList from '@/components/manage-employees/UnifiedEmployeeList';
 import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import { toast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -120,7 +120,7 @@ const ManageEmployeesPage = () => {
           </Select>
         </div>
 
-        <EmployeeList 
+        <UnifiedEmployeeList 
           users={filteredUsers} 
           onEdit={handleEdit}
         />

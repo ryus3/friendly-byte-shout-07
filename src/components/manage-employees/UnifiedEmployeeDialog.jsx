@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Shield, Package, User, Settings, Eye } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import UnifiedRoleManager from './UnifiedRoleManager';
-import ProductPermissionsManager from './ProductPermissionsManager';
+import UnifiedProductPermissionsManager from './UnifiedProductPermissionsManager';
 import { supabase } from '@/lib/customSupabaseClient';
 
 const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
@@ -234,7 +234,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
             </TabsContent>
 
             <TabsContent value="products" className="h-full mt-0">
-              <ProductPermissionsManager 
+              <UnifiedProductPermissionsManager 
                 user={employee} 
                 onUpdate={handleUpdate}
                 onClose={() => {}}
