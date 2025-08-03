@@ -714,12 +714,11 @@ const InventoryPage = () => {
           </div>
         </div>
 
-        {/* إحصائيات سريعة */}
+        {/* إحصائيات موحدة من النظام الجديد */}
         <InventoryStats 
-          inventoryItems={inventoryItems} 
-          lowStockCount={inventoryStats.lowStockCount}
-          reservedStockCount={inventoryStats.reservedStockCount}
           onFilterChange={handleFilterChange}
+          departmentIds={filters.department ? [filters.department] : null}
+          categoryIds={filters.category ? [filters.category] : null}
         />
 
         {/* كروت الأقسام - تحميل فوري */}

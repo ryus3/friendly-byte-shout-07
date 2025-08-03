@@ -3240,10 +3240,6 @@ export type Database = {
           low_stock_count: number
           out_of_stock_count: number
           archived_products_count: number
-          products_with_variants: Json
-          stock_levels_breakdown: Json
-          department_breakdown: Json
-          category_breakdown: Json
         }[]
       }
       get_products_sold_stats: {
