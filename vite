@@ -1,7 +1,9 @@
 #!/bin/bash
-if command -v npx &> /dev/null; then
+if [ -f "./node_modules/vite/bin/vite.js" ]; then
+    exec node "./node_modules/vite/bin/vite.js" "$@"
+elif command -v npx &> /dev/null; then
     exec npx vite "$@"
 else
-    echo "Error: npx not found"
+    echo "Error: vite not found"
     exit 1
 fi

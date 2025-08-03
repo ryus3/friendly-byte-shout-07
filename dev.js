@@ -4,9 +4,21 @@ import { execSync } from 'child_process'
 import path from 'path'
 
 const projectRoot = process.cwd()
+const args = process.argv.slice(2)
+const command = args[0] || 'dev'
 
 try {
-  console.log('🚀 Starting development server...')
+  let viteCommand = ''
+  
+  if (command === 'build') {
+    viteCommand = 'build'
+  } else if (command === 'preview') {
+    viteCommand = 'preview'
+  } else {
+    viteCommand = '--host :: --port 8080'
+  }
+  
+  console.log(`🚀 Running vite ${command}...`)
   
   // Add node_modules/.bin to PATH and run vite
   const vitePath = path.join(projectRoot, 'node_modules', '.bin', 'vite')
@@ -15,7 +27,7 @@ try {
     PATH: `${path.join(projectRoot, 'node_modules', '.bin')}:${process.env.PATH}`
   }
   
-  execSync(`"${vitePath}" --host :: --port 8080`, {
+  execSync(`"${vitePath}" ${viteCommand}`, {
     stdio: 'inherit',
     env,
     cwd: projectRoot
@@ -25,7 +37,16 @@ try {
   console.log('💡 Trying alternative method...')
   try {
     // Fallback to npx
-    execSync('npx vite --host :: --port 8080', {
+    let npxCommand = `npx vite`
+    if (command === 'build') {
+      npxCommand += ' build'
+    } else if (command === 'preview') {
+      npxCommand += ' preview'
+    } else {
+      npxCommand += ' --host :: --port 8080'
+    }
+    
+    execSync(npxCommand, {
       stdio: 'inherit',
       cwd: projectRoot
     })
