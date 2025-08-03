@@ -19,7 +19,7 @@ const UnifiedProfitStats = ({
   employeeReceivedCardProps = {}
 }) => {
   const { canViewAllProfits, user } = usePermissions();
-  const { profitData, unifiedNetProfit, loading } = useUnifiedProfits(dateRange);
+  const { profitData, loading } = useUnifiedProfits(dateRange || 'all');
 
   if (loading) {
     return (
@@ -41,7 +41,7 @@ const UnifiedProfitStats = ({
       onManagerProfitsClick={onManagerProfitsClick}
       user={user}
       dateRange={dateRange}
-      unifiedNetProfit={unifiedNetProfit}
+      unifiedNetProfit={profitData?.netProfit}
       showManagerProfitsCard={showManagerProfitsCard}
       managerProfitsCardProps={managerProfitsCardProps}
       showEmployeeReceivedCard={showEmployeeReceivedCard}
