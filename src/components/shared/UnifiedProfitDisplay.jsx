@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatCard from '@/components/dashboard/StatCard';
-// Removed useAdvancedProfitsAnalysis import - using simplified calculation
+import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 import { 
   User, 
   Hourglass, 
@@ -156,7 +156,7 @@ const UnifiedProfitDisplay = ({
       const userDeliveredOrders = deliveredOrders.filter(o => o.created_by === currentUser.id);
       
       // حساب الأرباح الشخصية من جدول profits
-      const userProfits = (allProfits || []).filter(p => p.employee_id === currentUser.id);
+      const userProfits = allProfits.filter(p => p.employee_id === currentUser.id);
       
       personalData.personalTotalProfit = userProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
@@ -181,7 +181,7 @@ const UnifiedProfitDisplay = ({
         const isDeliveredWithReceipt = (o.status === 'completed' || o.status === 'delivered') && o.receipt_received === true;
         
         // الطلبات المسواة (لها profit record بحالة settled)
-        const profitRecord = (allProfits || []).find(p => p.order_id === o.id);
+        const profitRecord = allProfits.find(p => p.order_id === o.id);
         const hasSettledProfit = profitRecord?.status === 'settled';
         
         // الطلبات الراجعة للمخزن
@@ -258,7 +258,7 @@ const UnifiedProfitDisplay = ({
     
     // حساب ربح النظام من طلبات الموظفين
     const employeeSystemProfit = employeeOrdersInRange.reduce((sum, order) => {
-      return sum + getSystemProfitFromOrder(order.id, allProfits || []);
+      return sum + getSystemProfitFromOrder(order.id, allProfits);
     }, 0);
     
     const systemProfit = managerTotalProfit + employeeSystemProfit;
@@ -273,8 +273,8 @@ const UnifiedProfitDisplay = ({
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
     
-    // صافي الربح = الربح الخام - المستحقات المدفوعة - المصاريف العامة
-    const netProfit = grossProfit - totalSettledDues - generalExpenses;
+    // صافي الربح = ربح النظام - المصاريف العامة
+    const netProfit = systemProfit - generalExpenses;
     
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits
@@ -371,7 +371,7 @@ const UnifiedProfitDisplay = ({
             {
               key: 'net-profit',
               title: 'صافي الربح',
-              value: (unifiedProfitData?.netProfit || profitData?.netProfit || unifiedFinancialData.netProfit || 0),
+              value: unifiedProfitData?.netProfit || 0,
               icon: User,
               colors: ['green-500', 'emerald-500'],
               format: 'currency'

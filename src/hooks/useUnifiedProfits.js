@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
@@ -178,8 +178,8 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         e.related_data?.category === 'مستحقات الموظفين'
       ).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // صافي الربح = الربح الخام - المستحقات المدفوعة - المصاريف العامة
-      const netProfit = grossProfit - employeeSettledDues - generalExpenses;
+      // صافي الربح
+      const netProfit = systemProfit - generalExpenses;
 
       // مبيعات المدير والموظفين
       const managerSales = managerOrdersInRange.reduce((sum, o) => {

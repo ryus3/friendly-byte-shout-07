@@ -341,8 +341,8 @@ const Dashboard = () => {
         
         const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
         
-        // صافي الربح = الربح الخام - المستحقات المدفوعة - المصاريف العامة
-        const netProfit = grossProfit - employeeSettledDues - generalExpenses;
+        // صافي الربح = ربح المبيعات فقط (بدون طرح المصاريف العامة)
+        const netProfit = grossProfit;
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {

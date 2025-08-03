@@ -26,7 +26,7 @@ import {
   AlertDialogTitle 
 } from '@/components/ui/alert-dialog';
 
-// استخدام النظام الموحد بالكامل
+// Refactored Components
 import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
 import UnifiedSettlementRequest from '@/components/profits/UnifiedSettlementRequest';
@@ -38,17 +38,17 @@ import UnifiedSettledDuesDialog from '@/components/shared/UnifiedSettledDuesDial
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeReceivedProfitsDialog from '@/components/shared/EmployeeReceivedProfitsDialog';
+import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import { Button } from '@/components/ui/button';
 
 const ProfitsSummaryPage = () => {
-  console.log('🔄 تحميل صفحة ملخص الأرباح...');
-  
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
   
-  console.log('✅ تم تحميل جميع السياقات بنجاح');
+  // استخدام النظام الموحد للحصول على صافي الربح الموحد
+  const { profitData: unifiedProfitData } = useUnifiedProfits();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -66,9 +66,6 @@ const ProfitsSummaryPage = () => {
   const [periodFilter, setPeriodFilter] = useState(() => {
     return localStorage.getItem('profitsPeriodFilter') || 'all';
   });
-  
-  // استخدام النظام الموحد للأرباح
-  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(periodFilter);
   
   // حفظ الخيار عند التغيير
   useEffect(() => {
@@ -162,15 +159,12 @@ const ProfitsSummaryPage = () => {
         const { from, to } = dateRange;
         console.log('🔍 حساب بيانات الأرباح:', { from, to, ordersCount: orders?.length, usersCount: allUsers?.length, profitsCount: profits?.length });
         
-        // التحقق من توفر جميع البيانات المطلوبة
-        if (!orders || !allUsers || !from || !to || !profits || !user) {
+        if (!orders || !allUsers || !from || !to || !profits) {
             console.log('❌ بيانات ناقصة للحساب:', { 
                 hasOrders: !!orders, 
                 hasUsers: !!allUsers, 
                 hasDateRange: !!from && !!to, 
-                hasProfits: !!profits,
-                hasUser: !!user,
-                unifiedLoading
+                hasProfits: !!profits 
             });
             return {
                 managerProfitFromEmployees: 0,
@@ -189,238 +183,187 @@ const ProfitsSummaryPage = () => {
             };
         }
 
-        // إذا كان النظام الموحد يحمل، استخدم البيانات المتوفرة
-        if (unifiedLoading && unifiedProfitData) {
-            console.log('⏳ النظام الموحد يحمل، استخدام البيانات المتوفرة');
-        }
+        // فلترة الطلبات الموصلة التي تم استلام فواتيرها في النطاق الزمني المحدد
+        const deliveredOrders = orders?.filter(o => {
+            const orderDate = o.created_at ? parseISO(o.created_at) : null;
+            return (o.status === 'delivered' || o.status === 'completed') && o.receipt_received === true && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+        }) || [];
 
-        try {
-            // فلترة الطلبات الموصلة التي تم استلام فواتيرها في النطاق الزمني المحدد
-            const deliveredOrders = orders?.filter(o => {
-                try {
-                    const orderDate = o.created_at ? parseISO(o.created_at) : null;
-                    return (o.status === 'delivered' || o.status === 'completed') && 
-                           o.receipt_received === true && 
-                           orderDate && isValid(orderDate) && 
-                           orderDate >= from && orderDate <= to;
-                } catch (e) {
-                    console.warn('خطأ في فلترة الطلب:', e);
-                    return false;
-                }
-            }) || [];
+        // الطلبات الموصلة بدون فواتير مستلمة (معلقة)
+        const pendingDeliveredOrders = orders?.filter(o => {
+            const orderDate = o.created_at ? parseISO(o.created_at) : null;
+            return (o.status === 'delivered' || o.status === 'completed') && !o.receipt_received && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+        }) || [];
 
-            // الطلبات الموصلة بدون فواتير مستلمة (معلقة)
-            const pendingDeliveredOrders = orders?.filter(o => {
-                try {
-                    const orderDate = o.created_at ? parseISO(o.created_at) : null;
-                    return (o.status === 'delivered' || o.status === 'completed') && 
-                           !o.receipt_received && 
-                           orderDate && isValid(orderDate) && 
-                           orderDate >= from && orderDate <= to;
-                } catch (e) {
-                    console.warn('خطأ في فلترة الطلب المعلق:', e);
-                    return false;
-                }
-            }) || [];
+        // ربط الطلبات بسجلات الأرباح من قاعدة البيانات
+        const detailedProfits = [];
 
-            // ربط الطلبات بسجلات الأرباح من قاعدة البيانات
-            const detailedProfits = [];
+        // معالجة الطلبات المستلمة
+        deliveredOrders.forEach(order => {
+            const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
+            if (!orderCreator) return;
 
-            // معالجة الطلبات المستلمة
-            deliveredOrders.forEach(order => {
-                try {
-                    const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
-                    if (!orderCreator) return;
-
-                    // البحث عن سجل الأرباح في قاعدة البيانات
-                    const profitRecord = profits.find(p => p.order_id === order.id);
-                    
-                    let employeeProfitShare, profitStatus;
-                    if (profitRecord) {
-                        employeeProfitShare = profitRecord.employee_profit || 0;
-                        profitStatus = profitRecord.settled_at ? 'settled' : 'pending';
-                    } else {
-                        employeeProfitShare = (order.items || []).reduce((sum, item) => {
-                            try {
-                                return sum + calculateProfit(item, order.created_by);
-                            } catch (e) {
-                                console.warn('خطأ في حساب الربح:', e);
-                                return sum;
-                            }
-                        }, 0);
-                        profitStatus = 'pending';
-                    }
-                    
-                    const managerProfitShare = calculateManagerProfit ? calculateManagerProfit(order) : 0;
-                    
-                    detailedProfits.push({
-                        ...order,
-                        profit: employeeProfitShare,
-                        managerProfitShare,
-                        employeeName: orderCreator.full_name,
-                        profitStatus,
-                        profitRecord,
-                    });
-                } catch (e) {
-                    console.warn('خطأ في معالجة الطلب المستلم:', e);
-                }
-            });
-
-            // معالجة الطلبات المعلقة (موصلة بدون فواتير)
-            pendingDeliveredOrders.forEach(order => {
-                try {
-                    const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
-                    if (!orderCreator) return;
-
-                    const employeeProfitShare = (order.items || []).reduce((sum, item) => {
-                        try {
-                            return sum + calculateProfit(item, order.created_by);
-                        } catch (e) {
-                            console.warn('خطأ في حساب الربح للطلب المعلق:', e);
-                            return sum;
-                        }
-                    }, 0);
-                    const managerProfitShare = calculateManagerProfit ? calculateManagerProfit(order) : 0;
-                    
-                    detailedProfits.push({
-                        ...order,
-                        profit: employeeProfitShare,
-                        managerProfitShare,
-                        employeeName: orderCreator.full_name,
-                        profitStatus: 'pending',
-                        profitRecord: null,
-                    });
-                } catch (e) {
-                    console.warn('خطأ في معالجة الطلب المعلق:', e);
-                }
-            });
-
-            // حساب الأرباح من الموظفين للمدير
-            const managerProfitFromEmployees = detailedProfits.filter(p => {
-                try {
-                    const pUser = allUsers.find(u => u.id === p.created_by);
-                    return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
-                } catch (e) {
-                    console.warn('خطأ في فلترة أرباح الموظفين:', e);
-                    return false;
-                }
-            }).reduce((sum, p) => sum + (p.managerProfitShare || 0), 0);
+            // البحث عن سجل الأرباح في قاعدة البيانات
+            const profitRecord = profits.find(p => p.order_id === order.id);
             
-            // حساب النفقات العامة بأمان
-            const expensesInPeriod = canViewAll ? (accounting?.expenses || []).filter(e => {
-                try {
-                    const expenseDate = e.transaction_date ? parseISO(e.transaction_date) : null;
-                    return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to;
-                } catch (e) {
-                    console.warn('خطأ في فلترة المصاريف:', e);
-                    return false;
-                }
-            }) : [];
+            let employeeProfitShare, profitStatus;
+            if (profitRecord) {
+                employeeProfitShare = profitRecord.employee_profit || 0;
+                // إذا كان settled_at موجود = مستلم، وإلا = معلق
+                profitStatus = profitRecord.settled_at ? 'settled' : 'pending';
+            } else {
+                employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+                profitStatus = 'pending'; // معلق إذا لم يكن هناك سجل في الأرباح
+            }
+            
+            const managerProfitShare = calculateManagerProfit(order);
+            
+            detailedProfits.push({
+                ...order,
+                profit: employeeProfitShare,
+                managerProfitShare,
+                employeeName: orderCreator.full_name,
+                profitStatus,
+                profitRecord,
+            });
+        });
 
-            const generalExpenses = expensesInPeriod.filter(e => {
-                // استبعاد جميع المصاريف النظامية
+        // معالجة الطلبات المعلقة (موصلة بدون فواتير)
+        pendingDeliveredOrders.forEach(order => {
+            const orderCreator = allUsers.find(u => u.user_id === order.created_by || u.id === order.created_by);
+            if (!orderCreator) return;
+
+            const employeeProfitShare = (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0);
+            const managerProfitShare = calculateManagerProfit(order);
+            
+            detailedProfits.push({
+                ...order,
+                profit: employeeProfitShare,
+                managerProfitShare,
+                employeeName: orderCreator.full_name,
+                profitStatus: 'pending', // معلقة لأن الفاتورة غير مستلمة
+                profitRecord: null,
+            });
+        });
+
+        // حساب الأرباح من الموظفين للمدير
+        const managerProfitFromEmployees = detailedProfits.filter(p => {
+            const pUser = allUsers.find(u => u.id === p.created_by);
+            return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
+        }).reduce((sum, p) => sum + p.managerProfitShare, 0);
+        
+        // حساب النفقات العامة
+        const expensesInPeriod = canViewAll ? (accounting.expenses || []).filter(e => {
+            const expenseDate = e.transaction_date ? parseISO(e.transaction_date) : null;
+            return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to;
+        }) : [];
+
+        console.log('🔍 [DEBUG] فحص المصاريف في ملخص الأرباح:', {
+            totalExpenses: expensesInPeriod.length,
+            expensesInPeriod: expensesInPeriod.map(e => ({
+                id: e.id,
+                category: e.category,
+                expense_type: e.expense_type,
+                amount: e.amount,
+                description: e.description
+            }))
+        });
+
+        const generalExpenses = expensesInPeriod.filter(e => {
+            // استبعاد جميع المصاريف النظامية
+            if (e.expense_type === 'system') {
+                console.log('🚫 [DEBUG] استبعاد مصروف نظامي:', e.category, e.amount);
+                return false;
+            }
+            
+            // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
+            if (e.category === 'مستحقات الموظفين') {
+                console.log('🚫 [DEBUG] استبعاد مستحقات موظفين:', e.amount);
+                return false;
+            }
+            
+            // استبعاد مصاريف الشراء المرتبطة بالمشتريات
+            if (e.related_data?.category === 'شراء بضاعة') {
+                console.log('🚫 [DEBUG] استبعاد مصاريف شراء:', e.amount);
+                return false;
+            }
+            
+            console.log('✅ [DEBUG] مصروف عام صحيح:', e.category, e.amount);
+            return true;
+        }).reduce((sum, e) => sum + e.amount, 0);
+
+        console.log('📊 [DEBUG] النتائج في ملخص الأرباح:', { generalExpenses });
+
+        const employeeSettledDues = expensesInPeriod.filter(e => 
+            e.related_data?.category === 'مستحقات الموظفين'
+        ).reduce((sum, e) => sum + e.amount, 0);
+
+        const totalExpenses = generalExpenses + employeeSettledDues;
+
+        // استخدام البيانات الموحدة لصافي الربح والإيرادات
+        const totalRevenue = unifiedProfitData?.totalRevenue || 0;
+        const deliveryFees = unifiedProfitData?.deliveryFees || 0;
+        const salesWithoutDelivery = unifiedProfitData?.salesWithoutDelivery || 0;
+        const cogs = unifiedProfitData?.cogs || 0;
+        const grossProfit = unifiedProfitData?.grossProfit || 0;
+        const netProfit = unifiedProfitData?.netProfit || 0;
+
+        // حساب أرباح المدير الشخصية من طلباته الخاصة
+        const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
+        const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
+      
+        // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)
+        const personalPendingProfit = personalProfits
+            .filter(p => (p.profitStatus || 'pending') === 'pending')
+            .reduce((sum, p) => sum + p.profit, 0);
+
+        const personalSettledProfit = personalProfits
+            .filter(p => p.profitStatus === 'settled')
+            .reduce((sum, p) => sum + p.profit, 0);
+
+        const totalSettledDues = settlementInvoices?.filter(inv => {
+            const invDate = parseISO(inv.settlement_date);
+            return isValid(invDate) && invDate >= from && invDate <= to;
+        }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
+        
+        console.log('📊 نتائج الحساب:', {
+            deliveredOrdersCount: deliveredOrders.length,
+            pendingOrdersCount: pendingDeliveredOrders.length,
+            detailedProfitsCount: detailedProfits.length,
+            managerProfitFromEmployees,
+            totalRevenue,
+            netProfit,
+            totalPersonalProfit,
+            personalPendingProfit,
+            personalSettledProfit,
+            detailedProfitsSample: detailedProfits.slice(0, 2)
+        });
+        
+        return { 
+            managerProfitFromEmployees, 
+            detailedProfits, 
+            totalExpenses,
+            totalPersonalProfit,
+            personalPendingProfit,
+            personalSettledProfit,
+            totalSettledDues,
+            // استخدام البيانات الموحدة بدلاً من الحساب المحلي
+            netProfit: unifiedProfitData?.netProfit || 0,
+            totalRevenue: unifiedProfitData?.totalRevenue || 0,
+            deliveryFees: unifiedProfitData?.deliveryFees || 0,
+            salesWithoutDelivery: unifiedProfitData?.salesWithoutDelivery || 0,
+            cogs: unifiedProfitData?.cogs || 0,
+            grossProfit: unifiedProfitData?.grossProfit || 0,
+            generalExpenses: unifiedProfitData?.generalExpenses || 0,
+            employeeSettledDues,
+            generalExpensesFiltered: expensesInPeriod.filter(e => {
                 if (e.expense_type === 'system') return false;
                 if (e.category === 'مستحقات الموظفين') return false;
                 if (e.related_data?.category === 'شراء بضاعة') return false;
                 return true;
-            }).reduce((sum, e) => sum + (e.amount || 0), 0);
-
-            const employeeSettledDues = expensesInPeriod.filter(e => 
-                e.related_data?.category === 'مستحقات الموظفين'
-            ).reduce((sum, e) => sum + (e.amount || 0), 0);
-
-            // استخدام البيانات الموحدة إذا كانت متوفرة
-            const totalRevenue = unifiedProfitData?.totalRevenue || 0;
-            const deliveryFees = unifiedProfitData?.deliveryFees || 0;
-            const salesWithoutDelivery = unifiedProfitData?.salesWithoutDelivery || 0;
-            const cogs = unifiedProfitData?.cogs || 0;
-            const grossProfit = unifiedProfitData?.grossProfit || 0;
-            const netProfit = unifiedProfitData?.netProfit || 0;
-
-            // حساب أرباح المدير الشخصية من طلباته الخاصة
-            const personalProfits = detailedProfits.filter(p => {
-                try {
-                    return p.created_by === user?.user_id || p.created_by === user?.id;
-                } catch (e) {
-                    console.warn('خطأ في فلترة الأرباح الشخصية:', e);
-                    return false;
-                }
-            });
-            
-            const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + (p.profit || 0), 0);
-            
-            const personalPendingProfit = personalProfits
-                .filter(p => (p.profitStatus || 'pending') === 'pending')
-                .reduce((sum, p) => sum + (p.profit || 0), 0);
-
-            const personalSettledProfit = personalProfits
-                .filter(p => p.profitStatus === 'settled')
-                .reduce((sum, p) => sum + (p.profit || 0), 0);
-
-            const totalSettledDues = settlementInvoices?.filter(inv => {
-                try {
-                    const invDate = parseISO(inv.settlement_date);
-                    return isValid(invDate) && invDate >= from && invDate <= to;
-                } catch (e) {
-                    console.warn('خطأ في فلترة فواتير التسوية:', e);
-                    return false;
-                }
-            }).reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0;
-            
-            console.log('📊 نتائج الحساب:', {
-                deliveredOrdersCount: deliveredOrders.length,
-                pendingOrdersCount: pendingDeliveredOrders.length,
-                detailedProfitsCount: detailedProfits.length,
-                managerProfitFromEmployees,
-                totalRevenue,
-                netProfit,
-                totalPersonalProfit,
-                personalPendingProfit,
-                personalSettledProfit
-            });
-            
-            return { 
-                managerProfitFromEmployees, 
-                detailedProfits, 
-                totalExpenses: generalExpenses + employeeSettledDues,
-                totalPersonalProfit,
-                personalPendingProfit,
-                personalSettledProfit,
-                totalSettledDues,
-                netProfit,
-                totalRevenue,
-                deliveryFees,
-                salesWithoutDelivery,
-                cogs,
-                grossProfit,
-                generalExpenses,
-                employeeSettledDues,
-                generalExpensesFiltered: expensesInPeriod.filter(e => {
-                    if (e.expense_type === 'system') return false;
-                    if (e.category === 'مستحقات الموظفين') return false;
-                    if (e.related_data?.category === 'شراء بضاعة') return false;
-                    return true;
-                })
-            };
-        } catch (error) {
-            console.error('خطأ في حساب بيانات الأرباح:', error);
-            return {
-                managerProfitFromEmployees: 0,
-                detailedProfits: [],
-                totalExpenses: 0,
-                totalPersonalProfit: 0,
-                personalPendingProfit: 0,
-                personalSettledProfit: 0,
-                totalSettledDues: 0,
-                netProfit: 0,
-                totalRevenue: 0,
-                deliveryFees: 0,
-                cogs: 0,
-                generalExpenses: 0,
-                employeeSettledDues: 0
-            };
-        }
-    }, [orders, allUsers, calculateProfit, dateRange, accounting?.expenses, user?.user_id, user?.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
+            })
+        };
+    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
@@ -595,18 +538,25 @@ const ProfitsSummaryPage = () => {
           </div>
         </div>
 
-        {/* إحصائيات الأرباح */}
-        <ProfitStats
-          profitData={profitData}
-          canViewAll={canViewAll}
-          onFilterChange={handleFilterChange}
-          onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
-          onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
-          onManagerProfitsClick={() => setDialogs(d => ({ ...d, managerProfits: true }))}
-          user={user}
-          dateRange={dateRange}
-          unifiedNetProfit={unifiedProfitData?.netProfit}
-        />
+        {/* عرض الإحصائيات مع دمج كارت أرباح المدير */}
+        <div className="space-y-6">
+          {/* الكروت الأساسية من ProfitStats مع كارت أرباح المدير وكارت الموظف */}
+          {/* استخدام UnifiedProfitDisplay مباشرة مع الكروت الجديدة */}
+          <UnifiedProfitDisplay
+            profitData={profitData}
+            unifiedProfitData={unifiedProfitData}
+            displayMode="dashboard"
+            canViewAll={canViewAll}
+            onFilterChange={handleFilterChange}
+            onExpensesClick={() => setDialogs(d => ({ ...d, expenses: true }))}
+            onSettledDuesClick={() => setDialogs(d => ({ ...d, settledDues: true }))}
+            onEmployeeReceivedClick={handleEmployeeReceivedClick}
+            onPendingProfitsClick={handlePendingProfitsClick}
+            onArchiveClick={handleArchiveClick}
+            dateRange={dateRange}
+            className="mb-6"
+          />
+        </div>
 
         <Card>
           <CardHeader>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
+import ProfitStats from './ProfitStats';
 
 /**
  * مكون موحد لإحصائيات الأرباح
@@ -19,7 +19,7 @@ const UnifiedProfitStats = ({
   employeeReceivedCardProps = {}
 }) => {
   const { canViewAllProfits, user } = usePermissions();
-  const { profitData, loading } = useUnifiedProfits(dateRange || 'all');
+  const { profitData, unifiedNetProfit, loading } = useUnifiedProfits(dateRange);
 
   if (loading) {
     return (
@@ -32,16 +32,20 @@ const UnifiedProfitStats = ({
   }
 
   return (
-    <UnifiedProfitDisplay
+    <ProfitStats
       profitData={profitData}
-      unifiedProfitData={profitData}
-      displayMode="dashboard"
       canViewAll={canViewAllProfits}
       onFilterChange={onFilterChange}
       onExpensesClick={onExpensesClick}
       onSettledDuesClick={onSettledDuesClick}
       onManagerProfitsClick={onManagerProfitsClick}
+      user={user}
       dateRange={dateRange}
+      unifiedNetProfit={unifiedNetProfit}
+      showManagerProfitsCard={showManagerProfitsCard}
+      managerProfitsCardProps={managerProfitsCardProps}
+      showEmployeeReceivedCard={showEmployeeReceivedCard}
+      employeeReceivedCardProps={employeeReceivedCardProps}
     />
   );
 };
