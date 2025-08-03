@@ -12,8 +12,12 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp, Award, Banknote, Eye } from 'lucide-react';
-import { format, parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
+import { parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { formatInTimeZone } from 'date-fns-tz';
+
+// تعيين التوقيت المحلي العراقي
+const IRAQ_TIMEZONE = 'Asia/Baghdad';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { Button } from '@/components/ui/button';
 import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
@@ -335,7 +339,7 @@ const EmployeeReceivedProfitsDialog = ({
                     </div>
                     <p className="text-[10px] md:text-xs opacity-90 mb-1">آخر دفعة</p>
                     <p className="text-[10px] md:text-xs font-black">
-                      {stats.lastPaymentDate ? format(parseISO(stats.lastPaymentDate), 'dd/MM', { locale: ar }) : 'لا يوجد'}
+                      {stats.lastPaymentDate ? formatInTimeZone(parseISO(stats.lastPaymentDate), IRAQ_TIMEZONE, 'dd/MM', { locale: ar }) : 'لا يوجد'}
                     </p>
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 md:w-6 md:h-6 bg-white/5 rounded-full"></div>
                   </div>
@@ -379,7 +383,7 @@ const EmployeeReceivedProfitsDialog = ({
                             <div className="flex justify-between items-center">
                               <span className="text-blue-300 font-bold text-sm">#{invoice.invoice_number}</span>
                               <span className="text-cyan-300 text-xs">
-                                {format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar })}
+                                {formatInTimeZone(parseISO(invoice.settlement_date), IRAQ_TIMEZONE, 'dd/MM/yyyy - HH:mm', { locale: ar })}
                               </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -458,9 +462,9 @@ const EmployeeReceivedProfitsDialog = ({
                                   <div className="text-green-300 font-bold">
                                     {invoice.total_amount?.toLocaleString() || '0'}
                                   </div>
-                                  <div className="text-purple-300">
-                                    {format(parseISO(invoice.settlement_date), 'dd/MM/yyyy', { locale: ar })}
-                                  </div>
+                                   <div className="text-purple-300">
+                                     {formatInTimeZone(parseISO(invoice.settlement_date), IRAQ_TIMEZONE, 'dd/MM/yyyy - HH:mm', { locale: ar })}
+                                   </div>
                                   <div className="text-orange-300">
                                     {getPayerName(invoice.created_by)}
                                   </div>
