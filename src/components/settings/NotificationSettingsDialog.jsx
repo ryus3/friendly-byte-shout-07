@@ -7,21 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { Settings, Bell, Package, AlertTriangle, Users, TrendingUp, Volume2, VolumeX } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import usePermissionBasedData from '@/hooks/usePermissionBasedData';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const NotificationSettingsDialog = ({ open, onOpenChange }) => {
-  // Add safety check for auth context
-  let canViewAllData = false;
-  let hasPermission = () => false;
-  
-  try {
-    const permissionData = usePermissionBasedData();
-    canViewAllData = permissionData.canViewAllData;
-    hasPermission = permissionData.hasPermission;
-  } catch (error) {
-    console.warn('NotificationSettingsDialog: Permission context not available');
-  }
+  // استخدام النظام الموحد للصلاحيات
+  const { canViewAllData, hasPermission } = usePermissions();
   const [settings, setSettings] = useState({
     // الإشعارات العامة
     generalNotifications: true,

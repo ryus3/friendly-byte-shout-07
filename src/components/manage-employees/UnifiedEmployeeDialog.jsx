@@ -14,13 +14,33 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const { refetchAdminData } = useAuth();
-  const [status, setStatus] = useState(employee?.status || 'pending');
-  const [defaultPage, setDefaultPage] = useState(employee?.default_page || '/');
-  const [orderCreationMode, setOrderCreationMode] = useState(employee?.order_creation_mode || 'both');
-  const [customerManagementAccess, setCustomerManagementAccess] = useState(employee?.customer_management_access || false);
-  const [deliveryPartnerAccess, setDeliveryPartnerAccess] = useState(employee?.delivery_partner_access || true);
+  
+  // إعداد القيم الأولية مع التحديث عند تغيير employee
+  const [status, setStatus] = useState('pending');
+  const [defaultPage, setDefaultPage] = useState('/');
+  const [orderCreationMode, setOrderCreationMode] = useState('both');
+  const [customerManagementAccess, setCustomerManagementAccess] = useState(false);
+  const [deliveryPartnerAccess, setDeliveryPartnerAccess] = useState(true);
   const [activeTab, setActiveTab] = useState('basic');
   const [saving, setSaving] = useState(false);
+
+  // تحديث القيم عند تغيير employee
+  React.useEffect(() => {
+    if (employee) {
+      setStatus(employee.status || 'pending');
+      setDefaultPage(employee.default_page || '/');
+      setOrderCreationMode(employee.order_creation_mode || 'both');
+      setCustomerManagementAccess(employee.customer_management_access || false);
+      setDeliveryPartnerAccess(employee.delivery_partner_access !== false);
+      
+      console.log('UnifiedEmployeeDialog - Updated with employee data:', {
+        employee,
+        status: employee.status,
+        customerManagementAccess: employee.customer_management_access,
+        deliveryPartnerAccess: employee.delivery_partner_access
+      });
+    }
+  }, [employee]);
 
   const defaultPages = [
     { value: '/', label: 'لوحة التحكم' },
@@ -74,7 +94,17 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
     await refetchAdminData();
   };
 
-  if (!employee) return null;
+  if (!employee) {
+    console.log('UnifiedEmployeeDialog - No employee data provided');
+    return null;
+  }
+
+  console.log('UnifiedEmployeeDialog - Current state values:', {
+    status,
+    customerManagementAccess,
+    deliveryPartnerAccess,
+    orderCreationMode
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
