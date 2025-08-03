@@ -14,9 +14,14 @@ import {
 } from 'lucide-react';
 
 /**
- * مكون محسن لعرض الملخص المالي بالمبادئ المحاسبية الصحيحة
+ * مكون محسن لعرض الملخص المالي مع فلترة الفترة
  */
-const EnhancedFinancialSummary = ({ financialData, title = "الملخص المالي المحسن" }) => {
+const EnhancedFinancialSummary = ({ 
+  financialData, 
+  title = "الملخص المالي المحسن",
+  timePeriod = 'all',
+  onTimePeriodChange
+}) => {
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-IQ', { 
       style: 'currency', 
@@ -96,10 +101,25 @@ const EnhancedFinancialSummary = ({ financialData, title = "الملخص الم�
   return (
     <Card className="w-full">
       <CardHeader>
-        <CardTitle className="text-right flex items-center gap-2">
-          <Calculator className="h-5 w-5" />
-          {title}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-right flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            {title}
+          </CardTitle>
+          {onTimePeriodChange && (
+            <select 
+              value={timePeriod} 
+              onChange={(e) => onTimePeriodChange(e.target.value)}
+              className="text-sm border rounded px-2 py-1"
+            >
+              <option value="all">كل الفترات</option>
+              <option value="today">اليوم</option>
+              <option value="week">هذا الأسبوع</option>
+              <option value="month">هذا الشهر</option>
+              <option value="year">هذا العام</option>
+            </select>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground text-right">
           حسابات مالية دقيقة ومطابقة للمعايير المحاسبية
         </p>
