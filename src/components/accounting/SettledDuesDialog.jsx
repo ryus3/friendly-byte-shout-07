@@ -7,7 +7,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+// تعيين التوقيت المحلي العراقي
+const IRAQ_TIMEZONE = 'Asia/Baghdad';
 import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award } from 'lucide-react';
@@ -414,7 +415,6 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 
 // المكون الرئيسي للمستحقات المدفوعة
 const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [], timePeriod: externalTimePeriod = null }) => {
-  const IRAQ_TIMEZONE = 'Asia/Baghdad'; // المنطقة الزمنية العراقية
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
