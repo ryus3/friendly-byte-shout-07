@@ -1,17 +1,2 @@
-#!/usr/bin/env node
-
-const { execSync } = require('child_process');
-
-try {
-  // Use npx to run vite with proper arguments
-  const args = process.argv.slice(2);
-  const command = args.length > 0 ? `npx vite ${args.join(' ')}` : 'npx vite --host :: --port 8080';
-  
-  execSync(command, { 
-    stdio: 'inherit',
-    cwd: __dirname
-  });
-} catch (error) {
-  console.error('❌ Failed to run vite:', error.message);
-  process.exit(1);
-}
+#!/bin/bash
+exec npx vite "$@"

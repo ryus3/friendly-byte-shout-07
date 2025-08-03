@@ -65,34 +65,44 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
       const filterByDate = (dateString) => {
         if (timePeriod === 'all') return true;
         
-        const date = parseISO(dateString);
-        if (!isValid(date)) return false;
+        // التأكد من وجود التاريخ قبل المعالجة
+        if (!dateString) return false;
         
-        const now = new Date();
-        
-        switch (timePeriod) {
-          case 'today':
-            return date.toDateString() === now.toDateString();
-          case 'week':
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            return date >= weekAgo;
-          case 'month':
-            const monthStart = startOfMonth(now);
-            const monthEnd = endOfMonth(now);
-            return date >= monthStart && date <= monthEnd;
-          case 'year':
-            const yearStart = new Date(now.getFullYear(), 0, 1);
-            return date >= yearStart;
-          default:
-            return true;
+        try {
+          const date = parseISO(dateString);
+          if (!isValid(date)) return false;
+          
+          const now = new Date();
+          
+          switch (timePeriod) {
+            case 'today':
+              return date.toDateString() === now.toDateString();
+            case 'week':
+              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              return date >= weekAgo;
+            case 'month':
+              const monthStart = startOfMonth(now);
+              const monthEnd = endOfMonth(now);
+              return date >= monthStart && date <= monthEnd;
+            case 'year':
+              const yearStart = new Date(now.getFullYear(), 0, 1);
+              return date >= yearStart;
+            default:
+              return true;
+          }
+        } catch (error) {
+          console.warn('تحذير: خطأ في تحليل التاريخ:', dateString, error);
+          return false;
         }
       };
 
       // الطلبات المُستلمة الفواتير فقط مع تطبيق فلتر التاريخ
       const deliveredOrders = safeOrders.filter(o => {
-        const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
+        if (!o) return false;
+        const isDeliveredStatus = o.status === 'delivered' || o.status === 'completed';
         const isReceiptReceived = o.receipt_received === true;
-        const isInDateRange = filterByDate(o.updated_at || o.created_at);
+        const dateToCheck = o.updated_at || o.created_at;
+        const isInDateRange = dateToCheck ? filterByDate(dateToCheck) : false;
         
         console.log('🔍 فحص الطلب:', {
           orderId: o.id,
