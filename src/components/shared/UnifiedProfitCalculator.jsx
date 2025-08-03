@@ -96,8 +96,8 @@ export const useUnifiedProfitCalculator = ({
       })
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
-    // صافي الربح = ربح المبيعات - مستحقات مدفوعة فقط (مثل لوحة التحكم تماماً)
-    const netProfit = grossProfit - employeeSettledDues;
+    // صافي الربح = ربح المبيعات فقط (نفس منطق لوحة التحكم تماماً) - بدون طرح مصاريف
+    const netProfit = grossProfit;
 
     return {
       totalRevenue,

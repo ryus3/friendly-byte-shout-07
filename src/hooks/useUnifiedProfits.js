@@ -178,8 +178,8 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
         e.related_data?.category === 'مستحقات الموظفين'
       ).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // صافي الربح = ربح المبيعات - مستحقات مدفوعة فقط (مثل لوحة التحكم)
-      const netProfit = systemProfit - employeeSettledDues;
+      // صافي الربح = ربح المبيعات فقط (نفس منطق لوحة التحكم تماماً) - بدون طرح مصاريف
+      const netProfit = grossProfit;
 
       // مبيعات المدير والموظفين
       const managerSales = managerOrdersInRange.reduce((sum, o) => {

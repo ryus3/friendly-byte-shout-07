@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatCard from '@/components/dashboard/StatCard';
-import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
+// Hook للأرباح المتقدمة محذوف - نستخدم النظام الموحد الآن
 import { startOfMonth, endOfMonth, parseISO, isValid } from 'date-fns';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -273,8 +273,8 @@ const UnifiedProfitDisplay = ({
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
     
-    // صافي الربح = ربح النظام - المصاريف العامة
-    const netProfit = systemProfit - generalExpenses;
+    // صافي الربح = ربح المبيعات فقط (نفس منطق لوحة التحكم تماماً) - بدون طرح مصاريف
+    const netProfit = grossProfit;
     
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits
