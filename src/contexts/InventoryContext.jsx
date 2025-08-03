@@ -420,7 +420,6 @@ export const InventoryProvider = ({ children }) => {
       console.error('خطأ في تحديث الطلبات:', error);
     }
   }, []);
-  }, []);
 
   const refreshInventoryData = useCallback(async () => {
     try {
