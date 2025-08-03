@@ -59,18 +59,18 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
   return (
     <div className="space-y-4">
       {/* كروت الأقسام */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
           
           return (
             <Card 
               key={dept.id}
-              className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
+              className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
               onClick={() => onDepartmentFilter && onDepartmentFilter(dept)}
             >
-              <CardContent className="p-6">
-                <div className={`text-center space-y-4 bg-gradient-to-br ${getGradientForIndex(index)} text-white rounded-lg p-6 relative overflow-hidden`}>
+              <CardContent className="p-4">
+                <div className={`text-center space-y-3 bg-gradient-to-br ${getGradientForIndex(index)} text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between`}>
                   {/* رقم القسم */}
                   <div className="absolute top-2 right-2">
                     <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
