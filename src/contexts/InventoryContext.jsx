@@ -589,10 +589,7 @@ export const InventoryProvider = ({ children }) => {
         supabase.from('settings').select('*'),
         supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('employee_profit_rules').select('*'),
-        supabase.from('categories').select('*').order('name'),
-        supabase.from('departments').select('*').order('name'),
-        supabase.from('colors').select('*').order('name'),
-        supabase.from('sizes').select('*').order('display_order')
+        // إزالة استعلامات المرشحات - ستأتي من النظام التوحيدي
       ]);
 
       if (productsRes.error) throw productsRes.error;

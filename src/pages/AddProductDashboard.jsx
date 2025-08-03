@@ -28,9 +28,12 @@ const AddProductPage = () => {
     'Building2': require('lucide-react').Building2
   };
 
+  // تحديث الإحصائيات عند تحديث البيانات التوحيدية
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (!filtersLoading) {
+      fetchData();
+    }
+  }, [categories, colors, sizes, filtersLoading]);
 
   const fetchData = async () => {
     try {
