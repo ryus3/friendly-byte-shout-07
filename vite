@@ -1,2 +1,12 @@
-#!/bin/bash
-exec npx vite "$@"
+#!/usr/bin/env node
+
+const { spawn } = require('child_process');
+
+const vite = spawn('npx', ['vite', ...process.argv.slice(2)], {
+  stdio: 'inherit',
+  shell: true
+});
+
+vite.on('close', (code) => {
+  process.exit(code);
+});

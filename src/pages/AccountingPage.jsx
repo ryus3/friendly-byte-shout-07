@@ -268,36 +268,27 @@ const AccountingPage = () => {
         fetchRealBalance();
     }, [getMainCashBalance, getTotalSourcesBalance, initialCapital]); // إضافة getMainCashBalance كـ dependency
 
-    const financialSummary = useMemo(() => {
+    // حساب قيمة المخزون والمصاريف المفلترة فقط - باقي البيانات من unifiedProfitData
+    const inventoryValue = useMemo(() => {
+        if (!products || !Array.isArray(products)) return 0;
+        
+        return products.reduce((sum, p) => {
+            if (!p.variants || !Array.isArray(p.variants)) return sum;
+            return sum + p.variants.reduce((variantSum, v) => {
+                const quantity = v.quantity || 0;
+                const price = v.price || p.base_price || 0;
+                return variantSum + (quantity * price);
+            }, 0);
+        }, 0);
+    }, [products]);
+
+    // استخراج المصاريف العامة المفلترة لنافذة المصاريف
+    const generalExpensesFiltered = useMemo(() => {
+        if (!accounting?.expenses || !Array.isArray(accounting.expenses)) return [];
+        
         const { from, to } = calculatedDateRange;
         
-        // تحقق من وجود البيانات الأساسية
-        if (!orders || !Array.isArray(orders)) {
-            console.warn('⚠️ لا توجد بيانات طلبات، orders:', orders);
-            return {
-                totalRevenue: 0, cogs: 0, grossProfit: 0, netProfit: 0,
-                inventoryValue: 0, myProfit: 0, managerProfitFromEmployees: 0, 
-                employeePendingDues: 0, employeeSettledDues: 0, chartData: [], 
-                filteredExpenses: [], deliveredOrders: [], employeePendingDuesDetails: []
-            };
-        }
-        
-        const safeOrders = Array.isArray(orders) ? orders : [];
-        const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
-        
-        console.log('🔥 === تشخيص البيانات المالية ===');
-        console.log('📊 إجمالي الطلبات:', safeOrders.length);
-        console.log('📊 حالة البيانات:', { 
-            orders: !!orders, 
-            ordersLength: orders?.length,
-            accounting: !!accounting,
-            expensesLength: accounting?.expenses?.length,
-            capital: accounting?.capital
-        });
-        console.log('📊 الطلبات مع البيانات:', safeOrders.slice(0, 2));
-        
         const filterByDate = (itemDateStr) => {
-            // إذا كانت الفترة "كل الفترات"، لا نطبق فلترة تاريخ
             if (selectedTimePeriod === 'all') return true;
             if (!from || !to || !itemDateStr) return true;
             try {
@@ -308,251 +299,16 @@ const AccountingPage = () => {
             }
         };
         
-        // استخدام نفس منطق لوحة التحكم: الطلبات المُستلمة الفواتير فقط
-        const deliveredOrders = safeOrders.filter(o => 
-            o && (o.status === 'delivered' || o.status === 'completed') && 
-            o.receipt_received === true && 
-            filterByDate(o.updated_at || o.created_at)
-        );
-        console.log('✅ الطلبات المُوصلة والمُستلمة الفواتير:', deliveredOrders.length);
-        console.log('✅ أمثلة الطلبات المُستلمة:', deliveredOrders.slice(0, 2));
-        
-        const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
-        
-        // حساب إجمالي الإيرادات من الطلبات المُوصلة
-        const totalRevenue = deliveredOrders.reduce((sum, o) => {
-            const amount = o.final_amount || o.total_amount || 0;
-            console.log(`💰 طلب ${o.order_number}: ${amount}`);
-            return sum + amount;
-        }, 0);
-        
-        const deliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
-        const salesWithoutDelivery = totalRevenue - deliveryFees;
-        
-        // حساب تكلفة البضاعة المباعة
-        const cogs = deliveredOrders.reduce((sum, o) => {
-            if (!o.order_items || !Array.isArray(o.order_items)) {
-                console.warn(`⚠️ طلب ${o.order_number} لا يحتوي على عناصر`);
-                return sum;
-            }
-            
-            const orderCogs = o.order_items.reduce((itemSum, item) => {
-                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                const quantity = item.quantity || 0;
-                console.log(`📦 عنصر: تكلفة=${costPrice}, كمية=${quantity}, إجمالي=${costPrice * quantity}`);
-                return itemSum + (costPrice * quantity);
-            }, 0);
-            console.log(`📊 تكلفة الطلب ${o.order_number}: ${orderCogs}`);
-            return sum + orderCogs;
-        }, 0);
-        
-        const grossProfit = salesWithoutDelivery - cogs;
-        
-        // حساب ربح النظام الصحيح (نفس منطق قاعدة البيانات)
-        // ربح النظام = ربح المدير كاملاً + ربح النظام من طلبات الموظفين
-        const managerOrdersInRange = deliveredOrders.filter(o => !o.created_by || o.created_by === currentUser?.id);
-        const employeeOrdersInRange = deliveredOrders.filter(o => o.created_by && o.created_by !== currentUser?.id);
-        
-        const managerTotalProfit = managerOrdersInRange.reduce((sum, order) => {
-          const orderProfit = (order.items || []).reduce((itemSum, item) => {
-            const sellPrice = item.unit_price || item.price || 0;
-            const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-            return itemSum + ((sellPrice - costPrice) * item.quantity);
-          }, 0);
-          return sum + orderProfit;
-        }, 0);
-        
-        // حساب ربح النظام من طلبات الموظفين (باستخدام البيانات الفعلية من جدول profits)
-        const employeeSystemProfit = employeeOrdersInRange.reduce((sum, order) => {
-          return sum + getSystemProfitFromOrder(order.id, allProfits);
-        }, 0);
-        
-        // ربح النظام الصحيح
-        const systemProfit = managerTotalProfit + employeeSystemProfit;
-        
-        // المصاريف العامة - استبعاد جميع المصاريف النظامية ومستحقات الموظفين
-        const generalExpenses = expensesInRange.filter(e => {
-          // استبعاد جميع المصاريف النظامية
-          if (e.expense_type === 'system') return false;
-          
-          // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
-          if (e.category === 'مستحقات الموظفين') return false;
-          
-          // استبعاد مصاريف الشراء المرتبطة بالمشتريات
-          if (e.related_data?.category === 'شراء بضاعة') return false;
-          
-          return true;
-        }).reduce((sum, e) => sum + (e.amount || 0), 0);
-        
-        // مستحقات الموظفين المسددة (من جدول المصاريف) - تصحيح المنطق
-        const employeeSettledDues = expensesInRange.filter(e => {
-          // فقط المصاريف النظامية لمستحقات الموظفين
-          return e.expense_type === 'system' && e.category === 'مستحقات الموظفين';
-        }).reduce((sum, e) => sum + (e.amount || 0), 0);
-        
-        // صافي الربح = ربح النظام - المصاريف العامة
-        const netProfit = systemProfit - generalExpenses;
-    
-        
-        // حساب قيمة المخزون
-        const inventoryValue = Array.isArray(products) ? products.reduce((sum, p) => {
-            if (!p.variants || !Array.isArray(p.variants)) return sum;
-            return sum + p.variants.reduce((variantSum, v) => {
-                const quantity = v.quantity || 0;
-                const price = v.price || p.base_price || 0;
-                return variantSum + (quantity * price);
-            }, 0);
-        }, 0) : 0;
-        
-        console.log('🏪 قيمة المخزون:', inventoryValue);
-        
-        // حساب مبيعات وأرباح المدير (المُستلمة الفواتير فقط)
-        const managerOrdersDelivered = deliveredOrders.filter(o => o.created_by === currentUser?.id);
-        console.log('👨‍💼 طلبات المدير المُستلمة:', managerOrdersDelivered.length);
-        
-        const managerSales = managerOrdersDelivered.reduce((sum, o) => {
-            const orderTotal = o.final_amount || o.total_amount || 0;
-            const deliveryFee = o.delivery_fee || 0;
-            const salesAmount = orderTotal - deliveryFee;
-            return sum + salesAmount;
-        }, 0);
-        
-        // حساب أرباح المدير بشكل مبسط (سعر البيع - التكلفة)
-        const myProfit = managerOrdersDelivered.reduce((sum, o) => {
-            if (!o.order_items || !Array.isArray(o.order_items)) return sum;
-            
-            const orderProfit = o.order_items.reduce((itemSum, item) => {
-                const sellPrice = item.unit_price || 0;
-                const costPrice = item.product_variants?.cost_price || item.products?.cost_price || 0;
-                const quantity = item.quantity || 0;
-                const itemProfit = (sellPrice - costPrice) * quantity;
-                return itemSum + Math.max(itemProfit, 0);
-            }, 0);
-            return sum + orderProfit;
-        }, 0);
+        return accounting.expenses.filter(expense => {
+            if (!filterByDate(expense.transaction_date)) return false;
+            if (expense.expense_type === 'system') return false;
+            if (expense.category === 'مستحقات الموظفين') return false;
+            if (expense.related_data?.category === 'شراء بضاعة') return false;
+            return true;
+        });
+    }, [accounting?.expenses, calculatedDateRange, selectedTimePeriod]);
 
-        // حساب مبيعات وأرباح الموظفين (المُستلمة الفواتير فقط) باستخدام القواعد الصحيحة
-        const employeeOrdersDelivered = deliveredOrders.filter(o => {
-            const orderUser = allUsers?.find(u => u.id === o.created_by);
-            return orderUser && (orderUser.role === 'employee' || orderUser.role === 'deputy') && o.created_by !== currentUser?.id;
-        });
-        
-        const employeeSales = employeeOrdersDelivered.reduce((sum, o) => {
-            const orderTotal = o.final_amount || o.total_amount || 0;
-            const deliveryFee = o.delivery_fee || 0;
-            return sum + (orderTotal - deliveryFee);
-        }, 0);
-        
-        // حساب أرباح المدير من الموظفين - نفس منطق ManagerProfitsCard بالضبط
-        const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير الرئيسي الثابت
-        
-        // الطلبات المسلمة أو المكتملة للإحصائيات (نفس منطق ManagerProfitsCard)
-        const deliveredOrdersForManagerProfits = deliveredOrders.filter(order => {
-          if (!order) return false;
-          // استبعاد طلبات المدير الرئيسي
-          if (order.created_by === ADMIN_ID) return false;
-          // فقط الطلبات المسلمة أو المكتملة
-          return order.status === 'delivered' || order.status === 'completed';
-        });
-
-        console.log('🔍 AccountingPage: حساب أرباح المدير من الموظفين:', {
-          totalOrders: deliveredOrders.length,
-          deliveredOrdersForManagerProfits: deliveredOrdersForManagerProfits.length,
-          excludedAdminId: ADMIN_ID
-        });
-
-        // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
-        const systemProfitFromEmployees = deliveredOrdersForManagerProfits.reduce((sum, order) => {
-          // البحث عن سجل الربح الحقيقي
-          const profitRecord = allProfits?.find(p => p.order_id === order.id);
-          if (profitRecord) {
-            // ربح النظام = إجمالي الربح - ربح الموظف
-            const systemProfit = (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0);
-            return sum + systemProfit;
-          }
-          return sum;
-        }, 0);
-
-        console.log('✅ AccountingPage: النتيجة النهائية:', {
-          managerProfitFromEmployees: systemProfitFromEmployees,
-          deliveredOrdersCount: deliveredOrdersForManagerProfits.length
-        });
-        
-        const totalSystemProfit = myProfit + systemProfitFromEmployees;
-    
-        // حساب مستحقات الموظفين المعلقة (من جدول profits) - تصحيح المنطق
-        const employeePendingDues = allProfits
-          .filter(p => {
-            // فقط الأرباح المعلقة
-            if (p.status !== 'pending') return false;
-            
-            // فقط للموظفين (ليس للمدير)
-            if (p.employee_id === currentUser?.id) return false;
-            
-            // التحقق من أن الطلب ضمن النطاق الزمني المحدد
-            const order = orders?.find(o => o.id === p.order_id);
-            if (!order) return false;
-            
-            // التحقق من أن الطلب مسلم ومستلم الفاتورة
-            const isDeliveredWithReceipt = (order.status === 'delivered' || order.status === 'completed') 
-              && order.receipt_received === true;
-            
-            // التحقق من النطاق الزمني
-            const dateCheck = filterByDate(order.updated_at || order.created_at);
-            
-            return isDeliveredWithReceipt && dateCheck;
-          })
-          .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
-    
-        // حساب رصيد القاصة الحقيقي = رأس المال + صافي الأرباح
-        const cashOnHand = realCashBalance || ((accounting?.capital || 0) + netProfit);
-    
-        const salesByDay = {};
-        deliveredOrders.forEach(o => {
-            const dateStr = o.updated_at || o.created_at;
-            if (dateStr) {
-                try {
-                    const day = format(parseISO(dateStr), 'dd');
-                    if (!salesByDay[day]) salesByDay[day] = 0;
-                    // استخدام final_amount للمبيعات اليومية
-                    salesByDay[day] += o.final_amount || o.total_amount || 0;
-                } catch (error) {
-                    console.warn('⚠️ خطأ في تحليل تاريخ الطلب:', dateStr, error);
-                }
-            }
-        });
-        
-        const expensesByDay = {};
-        expensesInRange.forEach(e => {
-            if (e.transaction_date) {
-                try {
-                    const day = format(parseISO(e.transaction_date), 'dd');
-                    if (!expensesByDay[day]) expensesByDay[day] = 0;
-                    expensesByDay[day] += e.amount;
-                } catch (error) {
-                    console.warn('⚠️ خطأ في تحليل تاريخ المصروف:', e.transaction_date, error);
-                }
-            }
-        });
-    
-        const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
-        
-        const chartData = allDays.map(day => ({
-            name: day,
-            sales: salesByDay[day] || 0,
-            expenses: expensesByDay[day] || 0,
-            net: (salesByDay[day] || 0) - (expensesByDay[day] || 0)
-        }));
-    
-        return { totalRevenue, deliveryFees, salesWithoutDelivery, cogs, grossProfit, systemProfit, netProfit, totalSystemProfit, inventoryValue, myProfit, systemProfitFromEmployees, managerSales, employeeSales, employeePendingDues, employeeSettledDues, cashOnHand, chartData, filteredExpenses: expensesInRange, generalExpenses, deliveredOrders, employeePendingDuesDetails: [], generalExpensesFiltered: expensesInRange.filter(e => {
-          if (e.expense_type === 'system') return false;
-          if (e.category === 'مستحقات الموظفين') return false;
-          if (e.related_data?.category === 'شراء بضاعة') return false;
-          return true;
-        }) };
-    }, [calculatedDateRange, orders, purchases, accounting, products, currentUser?.id, allUsers, allProfits, selectedTimePeriod]);
-
-    const totalCapital = initialCapital + financialSummary.inventoryValue;
+    const totalCapital = initialCapital + inventoryValue;
     
     const topRowCards = [
         { 
@@ -565,7 +321,7 @@ const AccountingPage = () => {
             onClick: () => setDialogs(d => ({ ...d, capitalDetails: true }))
         },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
-        { key: 'inventory', title: "قيمة المخزون", value: financialSummary.inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
+        { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
     ];
     
     const profitCards = [
@@ -597,7 +353,7 @@ const AccountingPage = () => {
           onClick: () => navigate('/advanced-profits-analysis') 
         },
         // تم استبدال هذا الكارت بـ ManagerProfitsCard الموحد
-        { key: 'generalExpenses', title: "المصاريف العامة", value: financialSummary.generalExpenses, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
+        { key: 'generalExpenses', title: "المصاريف العامة", value: unifiedProfitData?.generalExpenses || 0, icon: TrendingDown, colors:['red-500', 'orange-500'], format:'currency', onClick: () => setDialogs(d => ({...d, expenses: true}))},
     ];
 
     return (
@@ -622,7 +378,7 @@ const AccountingPage = () => {
                             <option value="year">هذا العام</option>
                         </select>
                         <PDFDownloadLink
-                            document={<FinancialReportPDF summary={financialSummary} dateRange={calculatedDateRange} />}
+                            document={<FinancialReportPDF summary={unifiedProfitData} dateRange={calculatedDateRange} />}
                             fileName={`financial-report-${new Date().toISOString().slice(0, 10)}.pdf`}
                         >
                             {({ loading: pdfLoading }) => (
@@ -721,7 +477,7 @@ const AccountingPage = () => {
             <ExpensesDialog
                 open={dialogs.expenses}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, expenses: open }))}
-                expenses={financialSummary.generalExpensesFiltered || []}
+                expenses={generalExpensesFiltered || []}
                 addExpense={addExpense}
                 deleteExpense={deleteExpense}
             />
@@ -755,7 +511,7 @@ const AccountingPage = () => {
                 open={dialogs.capitalDetails}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, capitalDetails: open }))}
                 initialCapital={initialCapital}
-                inventoryValue={financialSummary.inventoryValue}
+                inventoryValue={inventoryValue}
                 cashBalance={realCashBalance}
                 onCapitalUpdate={async (newCapital) => {
                     // تحديث فوري محلي
@@ -767,7 +523,7 @@ const AccountingPage = () => {
             <InventoryValueDialog
                 open={dialogs.inventoryDetails}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, inventoryDetails: open }))}
-                totalInventoryValue={financialSummary.inventoryValue}
+                totalInventoryValue={inventoryValue}
             />
         </>
     );
