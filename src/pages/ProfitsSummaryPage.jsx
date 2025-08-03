@@ -165,7 +165,7 @@ const ProfitsSummaryPage = () => {
         const { from, to } = dateRange;
         console.log('🔍 حساب بيانات الأرباح:', { from, to, ordersCount: orders?.length, usersCount: allUsers?.length, profitsCount: profits?.length });
         
-        if (!orders || !allUsers || !from || !to || !profits || unifiedLoading) {
+        if (!orders || !allUsers || !from || !to || !profits || !user || unifiedLoading) {
             console.log('❌ بيانات ناقصة للحساب:', { 
                 hasOrders: !!orders, 
                 hasUsers: !!allUsers, 
@@ -316,7 +316,7 @@ const ProfitsSummaryPage = () => {
         const netProfit = unifiedProfitData?.netProfit || 0;
 
         // حساب أرباح المدير الشخصية من طلباته الخاصة
-        const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
+        const personalProfits = detailedProfits.filter(p => p.created_by === user?.user_id || p.created_by === user?.id);
         const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
       
         // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)
@@ -370,7 +370,7 @@ const ProfitsSummaryPage = () => {
                 return true;
             })
         };
-    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user.user_id, user.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
+    }, [orders, allUsers, calculateProfit, dateRange, accounting.expenses, user?.user_id, user?.id, canViewAll, settlementInvoices, calculateManagerProfit, profits, unifiedProfitData, unifiedLoading]);
 
   const filteredDetailedProfits = useMemo(() => {
     // Add null safety check
