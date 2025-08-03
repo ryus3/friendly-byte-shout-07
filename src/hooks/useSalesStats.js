@@ -22,20 +22,20 @@ export const useSalesStats = (options = {}) => {
     try {
       setSalesData(prev => ({ ...prev, loading: true, error: null }));
 
-      // جلب إحصائيات المنتجات المباعة من الـ view
+      // جلب إحصائيات المنتجات المباعة من الـ function
       const { data: productsSoldData, error: productsError } = await supabase
-        .from('products_sold_stats')
-        .select('*');
+        .rpc('get_products_sold_stats');
 
       if (productsError) throw productsError;
 
-      // جلب الإحصائيات العامة من الـ view
+      // جلب الإحصائيات العامة من الـ function
       const { data: summaryData, error: summaryError } = await supabase
-        .from('sales_summary_stats')
-        .select('*')
-        .single();
+        .rpc('get_sales_summary_stats');
 
       if (summaryError) throw summaryError;
+
+      // أخذ أول عنصر من النتيجة (function ترجع array)
+      const summaryStats = summaryData?.[0] || {};
 
       // تحويل بيانات المنتجات إلى Map للوصول السريع
       const productsSoldMap = new Map();
@@ -52,11 +52,11 @@ export const useSalesStats = (options = {}) => {
       setSalesData({
         productsSold: productsSoldMap,
         summaryStats: {
-          totalOrders: summaryData.total_orders || 0,
-          totalProductsSold: summaryData.total_products_sold || 0,
-          totalRevenue: summaryData.total_revenue || 0,
-          totalCogs: summaryData.total_cogs || 0,
-          totalDeliveryFees: summaryData.total_delivery_fees || 0
+          totalOrders: summaryStats.total_orders || 0,
+          totalProductsSold: summaryStats.total_products_sold || 0,
+          totalRevenue: summaryStats.total_revenue || 0,
+          totalCogs: summaryStats.total_cogs || 0,
+          totalDeliveryFees: summaryStats.total_delivery_fees || 0
         },
         loading: false,
         error: null
@@ -64,7 +64,7 @@ export const useSalesStats = (options = {}) => {
 
       console.log('📊 تم جلب إحصائيات المبيعات بنجاح:', {
         productsCount: productsSoldMap.size,
-        totalProductsSold: summaryData.total_products_sold
+        totalProductsSold: summaryStats.total_products_sold
       });
 
     } catch (error) {

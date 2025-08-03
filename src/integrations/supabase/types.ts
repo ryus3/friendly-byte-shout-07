@@ -1149,13 +1149,6 @@ export type Database = {
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "inventory_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "products_sold_stats"
-            referencedColumns: ["variant_id"]
-          },
         ]
       }
       loyalty_points_history: {
@@ -1484,13 +1477,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "order_items_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "products_sold_stats"
-            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2207,13 +2193,6 @@ export type Database = {
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_purchase_cost_variant"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "products_sold_stats"
-            referencedColumns: ["variant_id"]
-          },
         ]
       }
       purchase_items: {
@@ -2268,13 +2247,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_items_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "products_sold_stats"
-            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2398,13 +2370,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "product_variants"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "qr_codes_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "products_sold_stats"
-            referencedColumns: ["variant_id"]
           },
         ]
       }
@@ -2975,36 +2940,7 @@ export type Database = {
       }
     }
     Views: {
-      products_sold_stats: {
-        Row: {
-          last_sold_date: string | null
-          orders_count: number | null
-          product_id: string | null
-          sold_quantity: number | null
-          total_cost: number | null
-          total_revenue: number | null
-          variant_id: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_variants_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sales_summary_stats: {
-        Row: {
-          total_cogs: number | null
-          total_delivery_fees: number | null
-          total_orders: number | null
-          total_products_sold: number | null
-          total_revenue: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       add_purchase_cost_record: {
@@ -3272,6 +3208,28 @@ export type Database = {
           employee_code: string
           full_name: string
           role: string
+        }[]
+      }
+      get_products_sold_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          variant_id: string
+          product_id: string
+          sold_quantity: number
+          orders_count: number
+          total_revenue: number
+          total_cost: number
+          last_sold_date: string
+        }[]
+      }
+      get_sales_summary_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_orders: number
+          total_products_sold: number
+          total_revenue: number
+          total_cogs: number
+          total_delivery_fees: number
         }[]
       }
       get_user_by_username: {

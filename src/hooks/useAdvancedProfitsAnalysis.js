@@ -429,7 +429,8 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         totalOrders,
         totalRevenue,
         totalCost,
-        totalProductsSold: filteredItemsCount,
+        // استخدام البيانات المركزية للمنتجات المباعة
+        totalProductsSold: summaryStats?.totalProductsSold || filteredItemsCount,
         filteredItemsCount,
         averageProfit: totalOrders > 0 ? totalSystemProfit / totalOrders : 0,
         profitMargin: totalRevenue > 0 ? (totalSystemProfit / totalRevenue) * 100 : 0,
