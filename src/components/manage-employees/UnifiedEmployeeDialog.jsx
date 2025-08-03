@@ -180,11 +180,11 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                       <SelectTrigger className="h-10">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="both">كلاهما (محلي + شركة توصيل)</SelectItem>
-                        <SelectItem value="local_only">طلبات محلية فقط</SelectItem>
-                        <SelectItem value="partner_only">شركة توصيل فقط</SelectItem>
-                      </SelectContent>
+                       <SelectContent className="bg-background border border-border z-50">
+                         <SelectItem value="both">كلاهما (محلي + شركة توصيل)</SelectItem>
+                         <SelectItem value="local_only">طلبات محلية فقط</SelectItem>
+                         <SelectItem value="partner_only">شركة توصيل فقط</SelectItem>
+                       </SelectContent>
                     </Select>
                   </div>
 

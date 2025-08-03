@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "./npm-install-vite.sh || npx vite --host :: --port 8080",
-    "build": "npx vite build", 
-    "preview": "npx vite preview"
+    "dev": "node_modules/.bin/vite --host :: --port 8080",
+    "build": "node_modules/.bin/vite build", 
+    "preview": "node_modules/.bin/vite preview"
   }
 }

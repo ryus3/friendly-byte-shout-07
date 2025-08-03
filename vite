@@ -1,13 +1,12 @@
 #!/bin/bash
 
-# Install vite if missing
-if ! command -v npx &> /dev/null; then
-    npm install -g npx
+# Use direct path to avoid npx issues
+if [ -f "node_modules/.bin/vite" ]; then
+    exec "./node_modules/.bin/vite" "$@"
+elif [ -f "node_modules/vite/bin/vite.js" ]; then
+    exec node "./node_modules/vite/bin/vite.js" "$@"
+else
+    echo "Installing vite..."
+    npm install vite@latest
+    exec "./node_modules/.bin/vite" "$@"
 fi
-
-if [ ! -f "node_modules/.bin/vite" ]; then
-    npm install vite
-fi
-
-# Run vite directly
-exec npx vite "$@"
