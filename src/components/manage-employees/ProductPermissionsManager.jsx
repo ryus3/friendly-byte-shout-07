@@ -44,35 +44,28 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
         setLoading(true);
 
         // جلب جميع الخيارات المتاحة
-        const [
-          categoriesResponse,
-          colorsResponse,
-          sizesResponse,
-          departmentsResponse,
-          productTypesResponse,
-          seasonsOccasionsResponse,
-          userPermissionsResponse
-        ] = await Promise.all([
-          supabase.from('categories').select('id, name').order('name'),
-          supabase.from('colors').select('id, name').order('name'),
-          supabase.from('sizes').select('id, name').order('display_order'),
-          supabase.from('departments').select('id, name').order('name'),
-          supabase.from('product_types').select('id, name').order('name'),
-          supabase.from('seasons_occasions').select('id, name').order('name'),
+        // استخدام النظام التوحيدي للمرشحات
+        const { data: filtersData, error: filtersError } = await supabase.rpc('get_filters_data');
+        
+        if (filtersError) throw filtersError;
+        
+        const filters = filtersData?.[0] || {};
+        
+        const [userPermissionsResponse] = await Promise.all([
           supabase
             .from('user_product_permissions')
             .select('*')
             .eq('user_id', selectedUser.user_id)
         ]);
 
-        // تحديث الخيارات المتاحة
+        // تحديث الخيارات المتاحة من النظام التوحيدي
         setAvailableOptions({
-          categories: categoriesResponse.data || [],
-          colors: colorsResponse.data || [],
-          sizes: sizesResponse.data || [],
-          departments: departmentsResponse.data || [],
-          product_types: productTypesResponse.data || [],
-          seasons_occasions: seasonsOccasionsResponse.data || []
+          categories: filters.categories || [],
+          colors: filters.colors || [],
+          sizes: filters.sizes || [],
+          departments: filters.departments || [],
+          product_types: filters.product_types || [],
+          seasons_occasions: filters.seasons_occasions || []
         });
 
         // تحديث الصلاحيات الحالية

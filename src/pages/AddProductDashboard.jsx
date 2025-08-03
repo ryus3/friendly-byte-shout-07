@@ -39,20 +39,20 @@ const AddProductPage = () => {
     try {
       setLoading(true);
       
-      // جلب الأقسام والإحصائيات
-      const [deptResult, catResult, colorResult, sizeResult, prodResult] = await Promise.all([
-        supabase.from('departments').select('*').eq('is_active', true).order('display_order'),
-        supabase.from('categories').select('*', { count: 'exact' }),
-        supabase.from('colors').select('*', { count: 'exact' }),
-        supabase.from('sizes').select('*', { count: 'exact' }),
+      // استخدام النظام التوحيدي للمرشحات والإحصائيات
+      const [filtersResult, prodResult] = await Promise.all([
+        supabase.rpc('get_filters_data'),
         supabase.from('products').select('*', { count: 'exact' })
       ]);
+      
+      const filters = filtersResult.data?.[0] || {};
 
-      setDepartments(deptResult.data || []);
+      setDepartments(filters.departments?.filter(d => d.is_active) || []);
       setStats({
-        categories: catResult.count || 0,
-        colors: colorResult.count || 0,
-        sizes: sizeResult.count || 0,
+        departments: filters.departments?.length || 0,
+        categories: filters.categories?.length || 0,
+        colors: filters.colors?.length || 0,
+        sizes: filters.sizes?.length || 0,
         products: prodResult.count || 0
       });
 

@@ -36,43 +36,41 @@ const ManageVariantsPage = () => {
   // جلب الإحصائيات الحقيقية
   const fetchStats = async () => {
     try {
-      const [deptResult, catResult, colorResult, sizeResult, productTypesResult, seasonsResult] = await Promise.all([
-        supabase.from('departments').select('*', { count: 'exact' }),
-        supabase.from('categories').select('*', { count: 'exact' }),
-        supabase.from('colors').select('*', { count: 'exact' }),
-        supabase.from('sizes').select('*', { count: 'exact' }),
-        supabase.from('product_types').select('*', { count: 'exact' }),
-        supabase.from('seasons_occasions').select('*', { count: 'exact' })
-      ]);
+      // استخدام النظام التوحيدي للمرشحات
+      const { data: filtersData, error } = await supabase.rpc('get_filters_data');
+      
+      if (error) throw error;
+      
+      const filters = filtersData?.[0] || {};
 
       setStats({
         departments: { 
-          count: deptResult.count || 0, 
-          status: (deptResult.count || 0) > 0 ? 'نشطة' : 'فارغة' 
+          count: filters.departments?.length || 0, 
+          status: (filters.departments?.length || 0) > 0 ? 'نشطة' : 'فارغة' 
         },
         categories: { 
-          count: catResult.count || 0, 
-          status: (catResult.count || 0) > 0 ? 'نشطة' : 'فارغة' 
+          count: filters.categories?.length || 0, 
+          status: (filters.categories?.length || 0) > 0 ? 'نشطة' : 'فارغة' 
         },
         colors: { 
-          count: colorResult.count || 0, 
-          status: (colorResult.count || 0) > 0 ? 'متاحة' : 'فارغة' 
+          count: filters.colors?.length || 0, 
+          status: (filters.colors?.length || 0) > 0 ? 'متاحة' : 'فارغة' 
         },
         sizes: { 
-          count: sizeResult.count || 0, 
-          status: (sizeResult.count || 0) > 0 ? 'منظمة' : 'فارغة' 
+          count: filters.sizes?.length || 0, 
+          status: (filters.sizes?.length || 0) > 0 ? 'منظمة' : 'فارغة' 
         },
         productTypes: { 
-          count: productTypesResult.count || 0, 
-          status: (productTypesResult.count || 0) > 0 ? 'متاحة' : 'فارغة' 
+          count: filters.product_types?.length || 0, 
+          status: (filters.product_types?.length || 0) > 0 ? 'متاحة' : 'فارغة' 
         },
         seasonsOccasions: { 
-          count: seasonsResult.count || 0, 
-          status: (seasonsResult.count || 0) > 0 ? 'متاحة' : 'فارغة' 
+          count: filters.seasons_occasions?.length || 0, 
+          status: (filters.seasons_occasions?.length || 0) > 0 ? 'متاحة' : 'فارغة' 
         }
       });
 
-      setDepartments(deptResult.data || []);
+      setDepartments(filters.departments || []);
     } catch (error) {
       console.error('خطأ في جلب الإحصائيات:', error);
     }
