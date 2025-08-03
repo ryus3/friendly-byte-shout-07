@@ -83,6 +83,15 @@ export const useFiltersData = (options = {}) => {
         error: null
       });
 
+      console.log('🔍 useFiltersData - تم جلب البيانات بنجاح:', {
+        departments: parsedData.departments?.length || 0,
+        categories: parsedData.categories?.length || 0,
+        colors: parsedData.colors?.length || 0,
+        sizes: parsedData.sizes?.length || 0,
+        hasFullAccess: permissionsData.hasFullAccess,
+        categoriesData: parsedData.categories
+      });
+
     } catch (error) {
       console.error('❌ خطأ في جلب بيانات المرشحات:', error);
       setFiltersData(prev => ({

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useFiltersData } from '@/hooks/useFiltersData';
 
-const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onBarcodeSearch }) => {
+const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch }) => {
   const { user } = useAuth();
   
   // استخدام النظام التوحيدي للمرشحات
@@ -28,9 +28,16 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
 
   // استخدام البيانات المفلترة من النظام التوحيدي
   const allowedData = useMemo(() => {
+    console.log('🔍 InventoryFilters - البيانات المتوفرة:', {
+      hasFullAccess,
+      allCategoriesCount: allCategories?.length || 0,
+      departmentsCount: departments?.length || 0,
+      allCategories: allCategories
+    });
+
     if (hasFullAccess) {
       return {
-        allowedCategories: categories?.map(c => c.name) || [],
+        allowedCategories: allCategories || [], // استخدام البيانات من النظام الموحد
         allowedColors: colors || [],
         allowedSizes: sizes || [],
         allowedProductTypes: productTypes || [],
@@ -40,14 +47,14 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
     }
 
     return {
-      allowedCategories: allowedCategories?.map(c => c.name) || [],
+      allowedCategories: allowedCategories || [], // استخدام البيانات المفلترة من النظام الموحد
       allowedColors: colors || [],
       allowedSizes: sizes || [],
       allowedProductTypes: productTypes || [],
       allowedDepartments: allowedDepartments || [],
       allowedSeasonsOccasions: seasonsOccasions || []
     };
-  }, [hasFullAccess, categories, colors, sizes, productTypes, departments, seasonsOccasions, allowedCategories, allowedDepartments]);
+  }, [hasFullAccess, allCategories, colors, sizes, productTypes, departments, seasonsOccasions, allowedCategories, allowedDepartments]);
   
   const handleFilterChange = (key, value) => {
     console.log('InventoryFilters handleFilterChange called with:', key, value);
@@ -151,7 +158,9 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
                       <SelectTrigger><SelectValue placeholder="التصنيف" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع التصنيفات</SelectItem>
-                        {allowedData.allowedCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        {allowedData.allowedCategories.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     
@@ -159,7 +168,9 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
                       <SelectTrigger><SelectValue placeholder="نوع المنتج" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الأنواع</SelectItem>
-                        {allowedData.allowedProductTypes.map(pt => <SelectItem key={pt.id} value={pt.name}>{pt.name}</SelectItem>)}
+                        {allowedData.allowedProductTypes.map(pt => (
+                          <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     
@@ -176,7 +187,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
                       <SelectContent>
                         <SelectItem value="all">جميع المواسم والمناسبات</SelectItem>
                         {allowedData.allowedSeasonsOccasions.map(so => (
-                          <SelectItem key={so.id} value={so.name}>
+                          <SelectItem key={so.id} value={so.id}>
                             {so.name} ({so.type === 'season' ? 'موسم' : 'مناسبة'})
                           </SelectItem>
                         ))}
@@ -187,8 +198,8 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
                       <SelectTrigger><SelectValue placeholder="اللون" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع الألوان</SelectItem>
-                        {allowedData.allowedColors.map(c => (
-                          <SelectItem key={c.id} value={c.name}>
+                         {allowedData.allowedColors.map(c => (
+                           <SelectItem key={c.id} value={c.id}>
                             <div className="flex items-center gap-2">
                               {c.hex_code && (
                                 <div 
@@ -206,7 +217,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onB
                       <SelectTrigger><SelectValue placeholder="القياس" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">جميع القياسات</SelectItem>
-                        {allowedData.allowedSizes.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                        {allowedData.allowedSizes.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     <div className="grid grid-cols-1 items-center gap-2">

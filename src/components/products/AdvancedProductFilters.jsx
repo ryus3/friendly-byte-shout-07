@@ -39,6 +39,14 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
 
   // الحصول على البيانات المسموحة من النظام التوحيدي
   const allowedData = useMemo(() => {
+    console.log('🎯 AdvancedProductFilters - البيانات المتوفرة:', {
+      hasFullAccess,
+      categoriesCount: categories?.length || 0,
+      departmentsCount: departments?.length || 0,
+      categories: categories,
+      filtersLoading
+    });
+
     // استخدام البيانات المفلترة من النظام التوحيدي
     if (hasFullAccess) {
       return {
@@ -59,7 +67,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
       colors,
       sizes
     };
-  }, [hasFullAccess, categories, departments, seasonsOccasions, productTypes, colors, sizes, allowedCategories, allowedDepartments]);
+  }, [hasFullAccess, categories, departments, seasonsOccasions, productTypes, colors, sizes, allowedCategories, allowedDepartments, filtersLoading]);
 
   // استخراج العلامات التجارية من المنتجات المتاحة
   const availableBrands = useMemo(() => {

@@ -835,7 +835,6 @@ const InventoryPage = () => {
           filters={filters}
           setFilters={setFilters}
           onFilterChange={handleFilterChange}
-          categories={allCategories}
           onBarcodeSearch={() => setIsBarcodeScannerOpen(true)}
         />
 
