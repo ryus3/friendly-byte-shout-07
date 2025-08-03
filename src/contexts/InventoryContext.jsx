@@ -420,19 +420,6 @@ export const InventoryProvider = ({ children }) => {
       console.error('خطأ في تحديث الطلبات:', error);
     }
   }, []);
-
-        return {
-          ...order,
-          items,
-          total: order.final_amount || order.total_amount,
-          order_items: order.order_items
-        };
-      });
-
-      setOrders(processedOrders || []);
-    } catch (error) {
-      console.error('❌ خطأ في تحديث الطلبات:', error);
-    }
   }, []);
 
   const refreshInventoryData = useCallback(async () => {

@@ -32,8 +32,8 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
     return provinceStats;
   };
 
-  const totalOrders = provinceStats.reduce((sum, province) => sum + (province.total_orders || 0), 0);
-  const totalRevenue = provinceStats.reduce((sum, province) => sum + (province.total_revenue || 0), 0);
+  const totalOrders = provinceStats.reduce((sum, province) => sum + (province.totalOrders || 0), 0);
+  const totalRevenue = provinceStats.reduce((sum, province) => sum + (province.totalAmount || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,8 +130,8 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                               {index + 1}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm text-foreground">{province.province}</h4>
-                              <p className="text-xs text-muted-foreground">{province.orderCount} طلب</p>
+                              <h4 className="font-semibold text-sm text-foreground">{province.name}</h4>
+                              <p className="text-xs text-muted-foreground">{province.totalOrders} طلب</p>
                             </div>
                           </div>
                           
@@ -139,13 +139,13 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">الإيرادات</p>
                               <p className="font-bold text-sm text-green-600 dark:text-green-400">
-                                {province.totalRevenue.toLocaleString()}
+                                {province.totalAmount.toLocaleString()}
                               </p>
                             </div>
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">المتوسط</p>
                               <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                                {Math.round(province.avgOrderValue).toLocaleString()}
+                                {Math.round(province.totalOrders > 0 ? province.totalAmount / province.totalOrders : 0).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -156,14 +156,14 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-muted-foreground">المساهمة</span>
                             <span className="text-xs font-bold text-primary">
-                              {totalOrders > 0 ? ((province.orderCount / totalOrders) * 100).toFixed(1) : 0}%
+                              {totalOrders > 0 ? ((province.totalOrders / totalOrders) * 100).toFixed(1) : 0}%
                             </span>
                           </div>
                           <div className="w-full bg-muted/50 rounded-full h-2 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-primary to-primary/80 h-2 rounded-full transition-all duration-300"
                               style={{ 
-                                width: `${totalOrders > 0 ? (province.orderCount / totalOrders) * 100 : 0}%`
+                                width: `${totalOrders > 0 ? (province.totalOrders / totalOrders) * 100 : 0}%`
                               }}
                             />
                           </div>
