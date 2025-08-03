@@ -51,35 +51,49 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     return (
         <>
             <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden mt-4 sm:mt-8">
-                    <ScrollArea className="h-full max-h-[85vh]">
-                        <div className="p-8">
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden mx-2 my-2 sm:mx-4 sm:my-4 md:mx-8 md:my-8">
+                    <ScrollArea className="h-full max-h-[80vh] sm:max-h-[85vh]">
+                        <div className="p-4 sm:p-6 md:p-8">
                             {/* Header */}
-                            <div className="text-center mb-8">
-                                <div className="flex items-center justify-center gap-4 mb-6">
-                                    <div className="p-3 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full text-white shadow-lg">
-                                        <Receipt className="w-10 h-10" />
+                            <div className="text-center mb-4 sm:mb-6 md:mb-8">
+                                <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4 sm:mb-6">
+                                    <div className="p-2 sm:p-3 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-full text-white shadow-lg">
+                                        <Receipt className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10" />
                                     </div>
                                     <div>
-                                        <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100">فاتورة تسوية</h1>
-                                        <p className="text-lg text-slate-600 dark:text-slate-400">#{invoice.invoice_number}</p>
+                                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100">فاتورة تسوية</h1>
+                                        <p className="text-sm sm:text-base md:text-lg text-slate-600 dark:text-slate-400">#{invoice.invoice_number}</p>
                                     </div>
                                 </div>
                                 
-                                <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-8 py-4 inline-block shadow-md border">
-                                    <div className="flex items-center gap-3">
-                                        <Calendar className="w-6 h-6 text-blue-600" />
+                                <div className="bg-white/80 dark:bg-slate-800/80 rounded-xl px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-4 inline-block shadow-md border">
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                        <Calendar className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-blue-600" />
                                         <div className="text-right">
                                             <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
-                                             <p className="text-xl font-bold text-slate-800 dark:text-slate-100">
+                                             <p className="text-sm sm:text-base md:text-xl font-bold text-slate-800 dark:text-slate-100">
                                                  {(() => {
-                                                   const dateToFormat = invoice.settlement_date || invoice.created_at;
+                                                   // استخدام التاريخ الصحيح من الفاتورة مباشرة
+                                                   let dateToShow;
+                                                   
+                                                   // أولوية التاريخ: settlement_date ثم created_at
+                                                   if (invoice.settlement_date) {
+                                                     dateToShow = new Date(invoice.settlement_date);
+                                                   } else if (invoice.created_at) {
+                                                     dateToShow = new Date(invoice.created_at);
+                                                   } else {
+                                                     dateToShow = new Date(); // آخر حل في حالة عدم وجود تاريخ
+                                                   }
+                                                   
+                                                   // التأكد من صحة التاريخ
+                                                   if (isNaN(dateToShow.getTime())) {
+                                                     dateToShow = new Date();
+                                                   }
+                                                   
                                                    try {
-                                                     return dateToFormat ? 
-                                                       format(new Date(dateToFormat), 'dd MMMM yyyy - HH:mm', { locale: ar }) :
-                                                       format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar });
+                                                     return format(dateToShow, 'dd MMMM yyyy - HH:mm', { locale: ar });
                                                    } catch (error) {
-                                                     console.error('Date formatting error:', error);
+                                                     console.error('خطأ في تنسيق التاريخ:', error);
                                                      return format(new Date(), 'dd MMMM yyyy - HH:mm', { locale: ar });
                                                    }
                                                  })()}
