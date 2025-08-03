@@ -116,8 +116,6 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
       </div>
     </div>
   );
-    </div>
-  );
 };
 
 export default DepartmentOverviewCards;

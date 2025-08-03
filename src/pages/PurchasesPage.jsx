@@ -8,8 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
-import PurchasesStats from '@/components/purchases/PurchasesStats';
-import PurchasesToolbar from '@/components/purchases/PurchasesToolbar';
+import UnifiedPurchasesStats from '@/components/purchases/UnifiedPurchasesStats';
+import UnifiedPurchasesToolbar from '@/components/purchases/UnifiedPurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';
 import PurchasesGrid from '@/components/purchases/PurchasesGrid';
 
@@ -155,8 +155,7 @@ const PurchasesPage = () => {
         </div>
         
         {/* الإحصائيات */}
-        <PurchasesStats 
-          purchases={purchases || []} 
+        <UnifiedPurchasesStats 
           onCardClick={handleStatCardClick}
           onFilterChange={(filters) => {
             if (filters.dateRange) {
@@ -180,7 +179,7 @@ const PurchasesPage = () => {
           }}
         />
         
-        <PurchasesToolbar 
+        <UnifiedPurchasesToolbar 
           filters={filters} 
           onFiltersChange={setFilters}
           viewMode={viewMode}
