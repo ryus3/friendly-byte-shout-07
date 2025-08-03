@@ -137,7 +137,7 @@ const FinancialPerformanceCard = ({
             </div>
           </div>
           
-          {/* فلتر محسن */}
+          {/* فلتر فترات محسن ومتوافق مع التصميم */}
           <div className="relative">
             <select 
               value={selectedTimePeriod} 
@@ -146,13 +146,13 @@ const FinancialPerformanceCard = ({
                 onTimePeriodChange(period);
                 localStorage.setItem('financialTimePeriod', period);
               }}
-              className="appearance-none bg-background border border-border rounded-lg px-4 py-2 pr-10 text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+              className="appearance-none bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg px-4 py-2 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary hover:bg-primary/10 transition-all duration-200 cursor-pointer shadow-sm"
             >
               {Object.entries(periodLabels).map(([key, label]) => (
-                <option key={key} value={key} className="bg-background">{label}</option>
+                <option key={key} value={key} className="bg-background text-foreground">{label}</option>
               ))}
             </select>
-            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
           </div>
         </div>
       </CardHeader>
@@ -258,9 +258,13 @@ const FinancialPerformanceCard = ({
                   {chartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={hoveredBar === entry.id ? entry.color : `${entry.color}80`}
+                      fill={entry.color}
                       stroke={hoveredBar === entry.id ? entry.color : 'transparent'}
-                      strokeWidth={hoveredBar === entry.id ? 2 : 0}
+                      strokeWidth={hoveredBar === entry.id ? 3 : 0}
+                      style={{
+                        filter: hoveredBar === entry.id ? 'brightness(1.1) drop-shadow(0 4px 8px rgba(0,0,0,0.2))' : 'none',
+                        opacity: hoveredBar === entry.id ? 1 : 0.85
+                      }}
                     />
                   ))}
                 </Bar>
