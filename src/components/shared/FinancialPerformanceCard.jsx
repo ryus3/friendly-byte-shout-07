@@ -80,7 +80,7 @@ const FinancialPerformanceCard = ({
     }
   ];
 
-  // إنشاء بيانات منفصلة لكل عمود
+  // إنشاء بيانات منفصلة لكل عمود - بنفس ترتيب الكروت (من اليسار لليمين)
   const chartData = financialMetrics.map(metric => ({
     name: metric.title,
     value: metric.value,
@@ -137,7 +137,7 @@ const FinancialPerformanceCard = ({
             </div>
           </div>
           
-          {/* فلتر فترات محسن ومتوافق مع التصميم */}
+          {/* فلتر فترات أنيق ومتوافق مع التصميم */}
           <div className="relative">
             <select 
               value={selectedTimePeriod} 
@@ -146,13 +146,13 @@ const FinancialPerformanceCard = ({
                 onTimePeriodChange(period);
                 localStorage.setItem('financialTimePeriod', period);
               }}
-              className="appearance-none bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg px-4 py-2 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary hover:bg-primary/10 transition-all duration-200 cursor-pointer shadow-sm"
+              className="appearance-none bg-gradient-to-r from-primary/5 via-background to-secondary/5 border border-primary/20 rounded-xl px-4 py-2.5 pr-10 text-sm text-foreground font-medium focus:ring-2 focus:ring-primary/30 focus:border-primary hover:border-primary/40 transition-all duration-300 cursor-pointer shadow-sm backdrop-blur-sm"
             >
               {Object.entries(periodLabels).map(([key, label]) => (
-                <option key={key} value={key} className="bg-background text-foreground">{label}</option>
+                <option key={key} value={key} className="bg-background text-foreground py-2">{label}</option>
               ))}
             </select>
-            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+            <ChevronDown className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-primary pointer-events-none transition-transform duration-200" />
           </div>
         </div>
       </CardHeader>
