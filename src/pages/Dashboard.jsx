@@ -23,7 +23,7 @@ import TopCustomersDialog from '@/components/dashboard/TopCustomersDialog';
 import Loader from '@/components/ui/loader';
 import { filterOrdersByPeriod, getTopCustomers, getTopProducts, getTopProvinces } from '@/lib/dashboard-helpers';
 import WelcomeHeader from '@/components/dashboard/WelcomeHeader';
-import SettlementRequestCard from '@/components/dashboard/SettlementRequestCard';
+import UnifiedSettlementRequestCard from '@/components/dashboard/UnifiedSettlementRequestCard';
 import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
@@ -605,7 +605,7 @@ const Dashboard = () => {
                 <WelcomeHeader user={user} currentTime={currentTime} />
                 {/* عرض كارت طلب المحاسبة للموظفين فقط، ليس للمديرين */}
                 {!canViewAllData && (
-                    <SettlementRequestCard 
+                    <UnifiedSettlementRequestCard 
                         pendingProfit={employeeProfitsData.personalPendingProfit} 
                         onSettle={() => navigate('/profits-summary')} 
                     />

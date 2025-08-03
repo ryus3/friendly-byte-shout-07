@@ -29,7 +29,7 @@ import {
 // Refactored Components
 import ProfitStats from '@/components/profits/ProfitStats';
 import ProfitFilters from '@/components/profits/ProfitFilters';
-import SettlementRequest from '@/components/profits/SettlementRequest';
+import UnifiedSettlementRequest from '@/components/profits/UnifiedSettlementRequest';
 import ProfitDetailsTable from '@/components/profits/ProfitDetailsTable';
 import ProfitDetailsMobile from '@/components/profits/ProfitDetailsMobile';
 import SettlementInvoiceDialog from '@/components/profits/SettlementInvoiceDialog';
@@ -573,7 +573,7 @@ const ProfitsSummaryPage = () => {
                 allUsers={allUsers}
             />
             
-            <SettlementRequest
+            <UnifiedSettlementRequest
                 canRequestSettlement={canRequestSettlement}
                 isRequesting={isRequesting}
                 selectedOrdersCount={selectedOrders.length}
