@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
@@ -94,6 +95,19 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
+    const navigate = useNavigate();
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    // تعريف periods أولاً مع إضافة خيار "كل الفترات" كافتراضي واستخدام localStorage للحفظ
+    const [periods, setPeriods] = useLocalStorage('dashboard-periods', {
+        totalOrders: 'month',
+        netProfit: 'all', // كل الفترات كافتراضي
+        pendingProfit: 'month',
+        deliveredSales: 'month',
+        pendingSales: 'month',
+    });
+
+    // الآن يمكن استخدام periods بأمان
     const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
     // إضافة لوج لتتبع البيانات
@@ -105,16 +119,6 @@ const Dashboard = () => {
             netProfit: unifiedProfitData?.netProfit
         });
     }, [unifiedProfitData, unifiedProfitLoading, unifiedProfitError]);
-    const navigate = useNavigate();
-    const [currentTime, setCurrentTime] = useState(new Date());
-
-    const [periods, setPeriods] = useState({
-        totalOrders: 'month',
-        netProfit: 'month',
-        pendingProfit: 'month',
-        deliveredSales: 'month',
-        pendingSales: 'month',
-    });
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
@@ -284,6 +288,7 @@ const Dashboard = () => {
             case 'today': from = subDays(now, 1); to = now; break;
             case 'week': from = startOfWeek(now, { weekStartsOn: 1 }); to = now; break;
             case 'year': from = startOfYear(now); to = now; break;
+            case 'all': from = null; to = null; break; // كل الفترات - لا فلترة
             default: from = startOfMonth(now); to = endOfMonth(now); break;
         }
 
