@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "bash vite-ultimate-fix.sh",
+    "dev": "node dev-server.js",
     "build": "node node_modules/vite/bin/vite.js build", 
     "preview": "node node_modules/vite/bin/vite.js preview"
   }
