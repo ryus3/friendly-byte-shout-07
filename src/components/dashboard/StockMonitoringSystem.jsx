@@ -2,23 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useInventoryStats } from '@/hooks/useInventoryStats';
 
 const StockMonitoringSystem = () => {
   const { addNotification } = useNotifications();
   const { user, hasPermission } = usePermissions();
   const notificationHistory = useRef(new Set());
   const lastCheckTime = useRef(Date.now());
-  
-  // استخدام النظام الموحد للمراقبة
-  const {
-    lowStockCount,
-    outOfStockCount,
-    refreshStats
-  } = useInventoryStats({
-    autoRefresh: true,
-    refreshInterval: 30000 // تحديث كل 30 ثانية
-  });
 
   // تنظيف التاريخ كل 24 ساعة
   useEffect(() => {
@@ -106,9 +95,6 @@ const StockMonitoringSystem = () => {
               },
               user_id: null // للمدراء فقط
             });
-            
-            // تحديث الإحصائيات فوراً
-            refreshStats();
           } else if (newData.quantity <= newData.min_stock && oldData.quantity > newData.min_stock && newData.quantity > 0) {
             // مخزون منخفض
             const severity = newData.quantity <= 2 ? 'critical' : 'warning';
@@ -129,9 +115,6 @@ const StockMonitoringSystem = () => {
               },
               user_id: null // للمدراء فقط
             });
-            
-            // تحديث الإحصائيات فوراً
-            refreshStats();
           }
         }
       )
@@ -142,7 +125,7 @@ const StockMonitoringSystem = () => {
         supabase.removeChannel(stockChannel);
       }
     };
-  }, [user?.user_id, hasPermission, addNotification, refreshStats]);
+  }, [user?.user_id, hasPermission, addNotification]);
 
   return null;
 };

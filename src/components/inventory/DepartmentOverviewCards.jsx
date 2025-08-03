@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useInventoryStats } from '@/hooks/useInventoryStats';
 import { 
   Package, 
   Shirt, 
@@ -16,16 +15,7 @@ import {
 const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [departmentStats, setDepartmentStats] = useState({});
-  
-  // استخدام النظام الموحد للإحصائيات
-  const {
-    totalProducts,
-    refreshStats
-  } = useInventoryStats({
-    autoRefresh: true,
-    refreshInterval: 60000 // تحديث كل دقيقة
-  });
+  const [totalProducts, setTotalProducts] = useState(0);
 
   // جلب البيانات من قاعدة البيانات
   useEffect(() => {
@@ -65,39 +55,33 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
         orderedDepts.push({ ...dept, order: 4 + index });
       });
 
-      // جلب إحصائيات المنتجات لكل قسم باستخدام النظام الموحد
-      const statsPromises = orderedDepts.map(async (dept) => {
-        const { data } = await supabase.rpc('get_inventory_stats', {
-          p_department_ids: [dept.id],
-          p_category_ids: null,
-          p_user_id: null
-        });
-        return {
-          departmentId: dept.id,
-          stats: data?.[0] || {}
-        };
+      // جلب عدد المنتجات لكل قسم
+      const { data: productsData } = await supabase
+        .from('product_departments')
+        .select('department_id, products(id)')
+        .eq('products.is_active', true);
+
+      // حساب عدد المنتجات لكل قسم
+      const productCounts = {};
+      productsData?.forEach(pd => {
+        if (productCounts[pd.department_id]) {
+          productCounts[pd.department_id]++;
+        } else {
+          productCounts[pd.department_id] = 1;
+        }
       });
 
-      const statsResults = await Promise.all(statsPromises);
-      const deptStatsMap = {};
-      statsResults.forEach(result => {
-        deptStatsMap[result.departmentId] = result.stats;
-      });
-
-      setDepartmentStats(deptStatsMap);
-
-      // إضافة الإحصائيات للأقسام
+      // إضافة العدد للأقسام
       const deptsWithCounts = orderedDepts.map(dept => ({
         ...dept,
-        productCount: Number(deptStatsMap[dept.id]?.total_products) || 0,
-        totalQuantity: Number(deptStatsMap[dept.id]?.total_quantity) || 0,
-        totalValue: Number(deptStatsMap[dept.id]?.total_sale_value) || 0
+        productCount: productCounts[dept.id] || 0
       }));
 
       setDepartments(deptsWithCounts);
 
-      // تحديث الإحصائيات الموحدة
-      refreshStats();
+      // حساب إجمالي المنتجات
+      const total = Object.values(productCounts).reduce((sum, count) => sum + count, 0);
+      setTotalProducts(total);
 
     } catch (error) {
       console.error('خطأ في جلب بيانات الأقسام:', error);
@@ -117,7 +101,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
     return Package;
   };
 
-  // ألوان متدرجة للكروت
+  // ألوان متدرجة للكروت مع تنويع أكبر
   const getGradientForIndex = (index) => {
     const gradients = [
       'from-blue-500 to-blue-700',        // ملابس - أزرق
@@ -148,7 +132,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
 
   return (
     <div className="space-y-4">
-      {/* كروت الأقسام مع الإحصائيات الحقيقية */}
+      {/* كروت الأقسام */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
@@ -183,7 +167,7 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
                     )}
                   </div>
                   
-                  {/* الإحصائيات الرئيسية */}
+                  {/* عدد المنتجات */}
                   <div className="flex items-center justify-between pt-2 border-t border-white/20">
                     <div className="text-right">
                       <p className="text-xl font-bold">{dept.productCount}</p>
@@ -192,18 +176,6 @@ const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
                     <div className="flex items-center gap-1 text-white/70">
                       <Package className="w-4 h-4" />
                       <span className="text-xs">متاح</span>
-                    </div>
-                  </div>
-
-                  {/* إحصائيات إضافية */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/20">
-                    <div className="bg-white/10 rounded-lg p-2">
-                      <div className="text-xs text-white/80">الكمية</div>
-                      <div className="text-sm font-bold">{dept.totalQuantity?.toLocaleString() || 0}</div>
-                    </div>
-                    <div className="bg-white/10 rounded-lg p-2">
-                      <div className="text-xs text-white/80">القيمة</div>
-                      <div className="text-sm font-bold">{Math.round(dept.totalValue || 0).toLocaleString()} د.ع</div>
                     </div>
                   </div>
                   

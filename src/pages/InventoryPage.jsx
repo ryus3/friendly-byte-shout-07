@@ -10,11 +10,10 @@ import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Button } from '@/components/ui/button';
-import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode, TrendingUp, TrendingDown, AlertTriangle, PackageX } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useInventoryStats } from '@/hooks/useInventoryStats';
+import InventoryStats from '@/components/inventory/InventoryStats';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
@@ -29,39 +28,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import InventoryItem from '@/components/inventory/InventoryItem';
 import { generateInventoryReportPDF } from '@/utils/pdfGenerator';
 import { supabase } from '@/lib/customSupabaseClient';
-
-// مكون إحصائية موحد
-const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
-  <div
-    className={cn(
-      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale",
-      "shadow-lg shadow-black/10 dark:shadow-black/30",
-      "hover:shadow-2xl hover:shadow-primary/10",
-      "dark:hover:shadow-primary/20",
-      onClick && "cursor-pointer group"
-    )}
-    onClick={onClick}
-    style={{ animationDelay: `${delay * 100}ms` }}
-  >
-     <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
-     <div 
-       className="absolute inset-px rounded-xl opacity-60"
-       style={{
-         backgroundImage: `radial-gradient(circle at 40% 30%, hsl(var(--card-foreground) / 0.03), transparent), radial-gradient(circle at 90% 80%, hsl(var(--primary) / 0.05), transparent)`
-       }}
-     ></div>
-
-    <div className="flex items-start justify-between">
-      <div className="flex-1">
-        <p className="text-muted-foreground text-sm font-medium">{title}</p>
-        <h3 className="text-2xl sm:text-3xl font-bold text-foreground mt-2">{(value || 0).toLocaleString()}</h3>
-      </div>
-      <div className={cn("w-10 h-10 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center transition-transform duration-300 group-hover:scale-110", colorClass)}>
-        <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-      </div>
-    </div>
-  </div>
-);
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile }) => {
   if (isLoading) {
@@ -172,22 +138,6 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
 
 const InventoryPage = () => {
-  // استخدام النظام الموحد للإحصائيات
-  const {
-    totalProducts,
-    totalQuantity,
-    reservedQuantity,
-    highStockCount,
-    mediumStockCount,
-    lowStockCount,
-    outOfStockCount,
-    archivedProductsCount,
-    isLoading: statsLoading,
-    refreshStats
-  } = useInventoryStats({
-    autoRefresh: true,
-    refreshInterval: 30000 // كل 30 ثانية
-  });
   const { products: allProducts, orders, loading, settings, updateVariantStock } = useInventory();
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
@@ -764,57 +714,13 @@ const InventoryPage = () => {
           </div>
         </div>
 
-          {/* إحصائيات المخزون الموحدة */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-            <StatCard 
-              title="إجمالي المنتجات" 
-              value={totalProducts} 
-              icon={Package} 
-              colorClass="bg-gradient-to-tr from-blue-500 to-cyan-400" 
-              delay={0} 
-              onClick={() => handleFilterChange('stockLevel', 'all')} 
-            />
-            <StatCard 
-              title="مخزون محجوز" 
-              value={reservedQuantity} 
-              icon={Archive} 
-              colorClass="bg-gradient-to-tr from-purple-500 to-violet-400" 
-              delay={0.1} 
-              onClick={() => setIsReservedStockDialogOpen(true)} 
-            />
-            <StatCard 
-              title="مخزون جيد" 
-              value={highStockCount} 
-              icon={TrendingUp} 
-              colorClass="bg-gradient-to-tr from-green-500 to-emerald-400" 
-              delay={0.2} 
-              onClick={() => handleFilterChange('stockLevel', 'high')} 
-            />
-            <StatCard 
-              title="مخزون متوسط" 
-              value={mediumStockCount} 
-              icon={TrendingDown} 
-              colorClass="bg-gradient-to-tr from-orange-400 to-yellow-500" 
-              delay={0.3} 
-              onClick={() => handleFilterChange('stockLevel', 'medium')} 
-            />
-            <StatCard 
-              title="مخزون منخفض" 
-              value={lowStockCount} 
-              icon={AlertTriangle} 
-              colorClass="bg-gradient-to-tr from-red-500 to-orange-500" 
-              delay={0.4} 
-              onClick={() => handleFilterChange('stockLevel', 'low')} 
-            />
-            <StatCard 
-              title="مخزون نافذ" 
-              value={outOfStockCount} 
-              icon={PackageX} 
-              colorClass="bg-gradient-to-tr from-gray-600 to-gray-800" 
-              delay={0.5} 
-              onClick={() => handleFilterChange('stockLevel', 'out-of-stock')} 
-            />
-          </div>
+        {/* إحصائيات سريعة */}
+        <InventoryStats 
+          inventoryItems={inventoryItems} 
+          lowStockCount={inventoryStats.lowStockCount}
+          reservedStockCount={inventoryStats.reservedStockCount}
+          onFilterChange={handleFilterChange}
+        />
 
         {/* كروت الأقسام - تحميل فوري */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
