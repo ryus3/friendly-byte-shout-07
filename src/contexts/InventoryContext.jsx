@@ -1561,14 +1561,114 @@ export const InventoryProvider = ({ children }) => {
 
   const deleteExpense = async (expenseId) => {
     try {
-      const { error } = await supabase
+      // 1. جلب تفاصيل المصروف قبل حذفه
+      const { data: expense, error: fetchError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', expenseId)
+        .single();
+
+      if (fetchError) throw fetchError;
+      
+      console.log('🔄 بدء حذف المصروف:', expense);
+
+      // 2. البحث عن الحركة المالية المرتبطة بهذا المصروف
+      const { data: relatedMovement, error: movementFetchError } = await supabase
+        .from('cash_movements')
+        .select('*')
+        .eq('reference_type', 'expense')
+        .eq('reference_id', expenseId)
+        .maybeSingle();
+
+      if (movementFetchError) {
+        console.error('خطأ في جلب الحركة المالية:', movementFetchError);
+      }
+
+      // 3. حذف المصروف من قاعدة البيانات
+      const { error: deleteError } = await supabase
         .from('expenses')
         .delete()
         .eq('id', expenseId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      // تحديث البيانات المحلية
+      // 4. إذا كانت هناك حركة مالية، عكس تأثيرها
+      if (relatedMovement && expense.status === 'approved' && (expense.expense_type || 'operational') !== 'system') {
+        console.log('🔄 بدء عكس الحركة المالية للمصروف المحذوف...');
+        
+        // جلب القاصة الرئيسية
+        const { data: mainCashSource, error: cashError } = await supabase
+          .from('cash_sources')
+          .select('id, current_balance')
+          .eq('name', 'القاصة الرئيسية')
+          .maybeSingle();
+
+        if (cashError) {
+          console.error('خطأ في جلب القاصة الرئيسية:', cashError);
+        } else if (mainCashSource) {
+          console.log('💰 تم العثور على القاصة الرئيسية:', mainCashSource.id);
+          
+          const oldBalance = parseFloat(mainCashSource.current_balance);
+          const newBalance = oldBalance + parseFloat(expense.amount); // إضافة المبلغ مرة أخرى
+          
+          // تحديث رصيد القاصة
+          const { error: updateError } = await supabase
+            .from('cash_sources')
+            .update({ 
+              current_balance: newBalance,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', mainCashSource.id);
+            
+          if (updateError) {
+            console.error('❌ خطأ في تحديث الرصيد:', updateError);
+          } else {
+            console.log('✅ تم عكس رصيد القاصة من', oldBalance, 'إلى', newBalance);
+            
+            // إنشاء حركة مالية معاكسة
+            const { data: reversalMovement, error: reversalError } = await supabase
+              .from('cash_movements')
+              .insert({
+                cash_source_id: mainCashSource.id,
+                amount: parseFloat(expense.amount),
+                movement_type: 'in', // دخل بدلاً من خروج
+                reference_type: 'expense_reversal',
+                reference_id: expenseId,
+                description: `إلغاء مصروف: ${expense.description}`,
+                balance_before: oldBalance,
+                balance_after: newBalance,
+                created_by: user?.user_id,
+                created_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+
+            if (reversalError) {
+              console.error('❌ خطأ في تسجيل الحركة المالية المعاكسة:', reversalError);
+            } else {
+              console.log('✅ تم تسجيل الحركة المالية المعاكسة بنجاح:', reversalMovement);
+            }
+
+            // حذف الحركة المالية الأصلية
+            const { error: deleteMovementError } = await supabase
+              .from('cash_movements')
+              .delete()
+              .eq('id', relatedMovement.id);
+
+            if (deleteMovementError) {
+              console.error('❌ خطأ في حذف الحركة المالية الأصلية:', deleteMovementError);
+            } else {
+              console.log('✅ تم حذف الحركة المالية الأصلية بنجاح');
+            }
+          }
+        } else {
+          console.error('❌ لم يتم العثور على القاصة الرئيسية');
+        }
+      } else {
+        console.log('⏭️ لا توجد حركة مالية لعكسها أو المصروف من النوع النظامي');
+      }
+
+      // 5. تحديث البيانات المحلية
       setAccounting(prev => ({
         ...prev,
         expenses: prev.expenses?.filter(exp => exp.id !== expenseId) || []
@@ -1576,9 +1676,10 @@ export const InventoryProvider = ({ children }) => {
 
       toast({ 
         title: "تم بنجاح", 
-        description: "تم حذف المصروف بنجاح", 
+        description: "تم حذف المصروف وعكس حركته المالية بنجاح", 
         variant: "default" 
       });
+      
     } catch (error) {
       console.error('❌ فشل حذف المصروف:', error);
       toast({ 
