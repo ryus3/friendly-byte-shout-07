@@ -2017,6 +2017,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           created_at: string
+          customer_management_access: boolean | null
           default_customer_name: string | null
           default_page: string | null
           delivery_partner_access: boolean | null
@@ -2037,6 +2038,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          customer_management_access?: boolean | null
           default_customer_name?: string | null
           default_page?: string | null
           delivery_partner_access?: boolean | null
@@ -2057,6 +2059,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
+          customer_management_access?: boolean | null
           default_customer_name?: string | null
           default_page?: string | null
           delivery_partner_access?: boolean | null

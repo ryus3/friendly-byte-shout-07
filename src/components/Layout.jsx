@@ -50,9 +50,16 @@ const SidebarContent = ({ onClose, isMobile }) => {
     
     return menuItems.filter(item => {
       // التحقق من وجود أي دور مسموح في أدوار المستخدم
-      return item.roles.some(role => user.roles.includes(role));
+      const hasRole = item.roles.some(role => user.roles.includes(role));
+      
+      // فحص الصلاحيات الخاصة
+      if (item.requiresCustomerAccess) {
+        return hasRole && user?.customer_management_access === true;
+      }
+      
+      return hasRole;
     });
-  }, [menuItems, user?.roles]);
+  }, [menuItems, user?.roles, user?.customer_management_access]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
