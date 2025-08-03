@@ -127,18 +127,10 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
 
                                 <StatRow label="رسوم التوصيل" value={summary?.deliveryFees || 0} colorClass="text-cyan-500" />
                                 <StatRow label="تكلفة البضاعة المباعة" value={summary?.cogs || 0} colorClass="text-orange-500" isNegative />
-                <StatRow label="مجمل الربح (قبل المصاريف)" value={summary?.grossProfit || 0} colorClass="text-blue-500 font-bold" />
-                
-                {/* إضافة أرباح المدير من الموظفين */}
-                <StatRow 
-                    label="أرباحي من الموظفين" 
-                    value={summary?.managerProfitFromEmployees || 0} 
-                    colorClass="text-emerald-500 font-semibold" 
-                    onClick={() => handleNavigation('/employee-follow-up')}
-                />
-                
-                <StatRow label="مستحقات مدفوعة" value={summary?.employeeSettledDues || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
-                <StatRow label="المصاريف العامة" value={summary?.generalExpenses || 0} colorClass="text-red-500" isNegative onClick={() => handleNavigation('/accounting')}/>
+                                <StatRow label="مجمل الربح (قبل المصاريف)" value={summary?.grossProfit || 0} colorClass="text-blue-500 font-bold" />
+                                
+                                <StatRow label="مستحقات مدفوعة" value={summary?.employeeSettledDues || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
+                                <StatRow label="المصاريف العامة" value={summary?.generalExpenses || 0} colorClass="text-red-500" isNegative onClick={() => handleNavigation('/accounting')}/>
                                 
 
                                 <div className="flex justify-between items-center py-2 sm:py-3 mt-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg px-3 sm:px-4 border border-primary/20">
