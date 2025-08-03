@@ -159,7 +159,7 @@ const AccountingPage = () => {
         productType: 'all'
     };
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
-    const { profitData: unifiedProfitData } = useUnifiedProfits('all');
+    const { profitData: unifiedProfitData } = useUnifiedProfits();
     
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);

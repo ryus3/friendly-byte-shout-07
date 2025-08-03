@@ -65,7 +65,7 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-[95vw] max-w-2xl h-[90vh] flex flex-col p-0 gap-0 z-[9998]">
+            <DialogContent className="w-[95vw] max-w-2xl h-[90vh] flex flex-col p-0 gap-0">
                 <DialogHeader className="flex-shrink-0 p-4 sm:p-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                     <DialogTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="gradient-text text-lg sm:text-xl">تقرير الأرباح والخسائر</span>
@@ -73,13 +73,9 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm" className="w-full sm:w-auto">{periodLabels[datePeriod]}</Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="z-[9999] bg-background border border-border shadow-lg min-w-[120px]">
+                            <DropdownMenuContent align="end" className="z-50">
                                 {Object.entries(periodLabels).map(([key, label]) => (
-                                    <DropdownMenuItem 
-                                        key={key} 
-                                        onSelect={() => onDatePeriodChange(key)}
-                                        className="cursor-pointer hover:bg-accent focus:bg-accent"
-                                    >
+                                    <DropdownMenuItem key={key} onSelect={() => onDatePeriodChange(key)}>
                                         {label}
                                     </DropdownMenuItem>
                                 ))}

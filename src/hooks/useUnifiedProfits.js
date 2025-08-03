@@ -8,7 +8,7 @@ import { parseISO, isValid, startOfMonth, endOfMonth } from 'date-fns';
  * هوك موحد لجلب بيانات الأرباح - يستخدم نفس منطق AccountingPage
  * يضمن عرض نفس البيانات بطريقتين مختلفتين في التصميم
  */
-export const useUnifiedProfits = (timePeriod = 'all') => {
+export const useUnifiedProfits = (userId = null) => {
   const { orders, accounting, products } = useInventory();
   const { user: currentUser, allUsers } = useAuth();
   const [profitData, setProfitData] = useState(null);
@@ -59,69 +59,32 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
       const safeOrders = Array.isArray(orders) ? orders : [];
       const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
 
-      // تطبيق فلتر الفترة الزمنية حسب المحدد
-      console.log('📅 تطبيق فلتر الفترة:', timePeriod);
+      // إزالة فلتر التاريخ ليظهر جميع البيانات الموجودة
+      console.log('📅 عرض جميع البيانات بدون فلتر تاريخ لإصلاح مشكلة صافي الأرباح');
 
-      const filterByDate = (dateString) => {
-        if (timePeriod === 'all') return true;
-        
-        // التأكد من وجود التاريخ قبل المعالجة
-        if (!dateString) return false;
-        
-        try {
-          const date = parseISO(dateString);
-          if (!isValid(date)) return false;
-          
-          const now = new Date();
-          
-          switch (timePeriod) {
-            case 'today':
-              return date.toDateString() === now.toDateString();
-            case 'week':
-              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              return date >= weekAgo;
-            case 'month':
-              const monthStart = startOfMonth(now);
-              const monthEnd = endOfMonth(now);
-              return date >= monthStart && date <= monthEnd;
-            case 'year':
-              const yearStart = new Date(now.getFullYear(), 0, 1);
-              return date >= yearStart;
-            default:
-              return true;
-          }
-        } catch (error) {
-          console.warn('تحذير: خطأ في تحليل التاريخ:', dateString, error);
-          return false;
-        }
-      };
+      const filterByDate = () => true; // دائماً true لإظهار جميع البيانات
 
-      // الطلبات المُستلمة الفواتير فقط مع تطبيق فلتر التاريخ
+      // الطلبات المُستلمة الفواتير فقط
       const deliveredOrders = safeOrders.filter(o => {
-        if (!o) return false;
-        const isDeliveredStatus = o.status === 'delivered' || o.status === 'completed';
+        const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
         const isReceiptReceived = o.receipt_received === true;
-        const dateToCheck = o.updated_at || o.created_at;
-        const isInDateRange = dateToCheck ? filterByDate(dateToCheck) : false;
         
         console.log('🔍 فحص الطلب:', {
           orderId: o.id,
           orderNumber: o.order_number,
           status: o.status,
           receiptReceived: o.receipt_received,
-          dateInRange: isInDateRange,
-          date: o.updated_at || o.created_at,
           totalAmount: o.total_amount,
           finalAmount: o.final_amount,
-          isValid: isDeliveredStatus && isReceiptReceived && isInDateRange
+          isValid: isDeliveredStatus && isReceiptReceived
         });
         
-        return isDeliveredStatus && isReceiptReceived && isInDateRange;
+        return isDeliveredStatus && isReceiptReceived;
       });
 
-      console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length, 'Period:', timePeriod);
+      console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length);
 
-      const expensesInRange = safeExpenses.filter(e => filterByDate(e.created_at));
+      const expensesInRange = safeExpenses; // جميع المصاريف بدون فلتر
 
       // حساب إجمالي الإيرادات
       const totalRevenue = deliveredOrders.reduce((sum, o) => {
@@ -234,7 +197,7 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
     if (orders && Array.isArray(orders) && orders.length > 0) {
       fetchUnifiedProfitData();
     }
-  }, [orders, accounting, currentUser?.id, timePeriod]);
+  }, [orders, accounting, currentUser?.id]);
 
   // دالة لإعادة تحميل البيانات
   const refreshData = () => {
