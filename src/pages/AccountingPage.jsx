@@ -459,7 +459,7 @@ const AccountingPage = () => {
                                             setSelectedTimePeriod(period);
                                             localStorage.setItem('financialTimePeriod', period);
                                         }}
-                                        className="text-sm border rounded px-2 py-1"
+                                        className="text-sm border rounded px-2 py-1 bg-background text-foreground border-border"
                                     >
                                         <option value="all">كل الفترات</option>
                                         <option value="today">اليوم</option>
@@ -497,6 +497,7 @@ const AccountingPage = () => {
                                 <StatRow label="تكلفة البضاعة المباعة" value={unifiedProfitData?.cogs || 0} colorClass="text-orange-500" isNegative/>
                                 <StatRow label="مجمل الربح" value={unifiedProfitData?.grossProfit || 0} colorClass="text-blue-500 font-bold" />
                                 <StatRow label="المصاريف العامة" value={unifiedProfitData?.generalExpenses || 0} colorClass="text-red-500" isNegative/>
+                                <StatRow label="المستحقات المدفوعة" value={unifiedProfitData?.employeeSettledDues || 0} colorClass="text-purple-500" isNegative/>
                                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
                                     <p className="font-bold text-lg">صافي الربح</p>
                                     <p className="font-bold text-lg text-primary">{(unifiedProfitData?.netProfit || 0).toLocaleString()} د.ع</p>
