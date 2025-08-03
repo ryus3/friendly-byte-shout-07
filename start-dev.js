@@ -13,12 +13,12 @@ try {
   const fs = require('fs');
   
   if (fs.existsSync(vitePath)) {
-    console.log('✅ Found vite, starting...');
-    execSync(`node "${vitePath}"`, { stdio: 'inherit' });
+    console.log('✅ Found vite, starting with correct options...');
+    execSync(`node "${vitePath}" --host :: --port 8080`, { stdio: 'inherit' });
   } else {
     // Method 2: npx fallback
     console.log('📦 Using npx fallback...');
-    execSync('npx vite', { stdio: 'inherit' });
+    execSync('npx vite --host :: --port 8080', { stdio: 'inherit' });
   }
 } catch (error) {
   console.error('❌ Failed to start dev server:', error.message);
@@ -26,7 +26,7 @@ try {
   // Method 3: Manual instructions
   console.log('\n🔧 Try running these commands manually:');
   console.log('npm install');
-  console.log('npx vite');
+  console.log('npx vite --host :: --port 8080');
   
   process.exit(1);
 }
