@@ -25,13 +25,25 @@ const MiniChart = ({ data, colors, type = 'area', dataKeys = ['value'] }) => {
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
           <defs>
-            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={colors?.[0] || "#3b82f6"} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={colors?.[0] || "#3b82f6"} stopOpacity={0.3}/>
+            <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#10b981" stopOpacity={0.3}/>
+            </linearGradient>
+            <linearGradient id="cogsGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.3}/>
             </linearGradient>
             <linearGradient id="expensesGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={colors?.[1] || "#ef4444"} stopOpacity={0.8}/>
-              <stop offset="95%" stopColor={colors?.[1] || "#ef4444"} stopOpacity={0.3}/>
+              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3}/>
+            </linearGradient>
+            <linearGradient id="duesGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+            </linearGradient>
+            <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.3}/>
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.5)" />
@@ -39,8 +51,11 @@ const MiniChart = ({ data, colors, type = 'area', dataKeys = ['value'] }) => {
           <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
           <Tooltip content={<CustomTooltip />} cursor={{fill: 'hsl(var(--primary)/0.1)'}}/>
           <Legend wrapperStyle={{fontSize: '12px'}} />
-          <Bar dataKey="sales" name="المبيعات" fill="url(#salesGradient)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="revenue" name="المبيعات" fill="url(#revenueGradient)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="cogs" name="تكلفة البضاعة" fill="url(#cogsGradient)" radius={[4, 4, 0, 0]} />
           <Bar dataKey="expenses" name="المصاريف" fill="url(#expensesGradient)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="dues" name="المستحقات المدفوعة" fill="url(#duesGradient)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="profit" name="صافي الربح" fill="url(#profitGradient)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     );

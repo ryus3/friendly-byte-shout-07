@@ -97,8 +97,11 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                                     data={[
                                         { 
                                             name: 'البيانات المالية',
-                                            sales: (summary?.totalRevenue || 0) - (summary?.deliveryFees || 0),
-                                            expenses: (summary?.cogs || 0) + (summary?.generalExpenses || 0) + (summary?.employeeSettledDues || 0)
+                                            revenue: (summary?.totalRevenue || 0) - (summary?.deliveryFees || 0),
+                                            cogs: summary?.cogs || 0,
+                                            expenses: summary?.generalExpenses || 0,
+                                            dues: summary?.employeeSettledDues || 0,
+                                            profit: summary?.netProfit || 0
                                         }
                                     ]} 
                                     type="bar" 

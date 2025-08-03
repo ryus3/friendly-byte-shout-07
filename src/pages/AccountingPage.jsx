@@ -474,12 +474,14 @@ const AccountingPage = () => {
                                     data={[
                                         { 
                                             name: 'البيانات المالية',
-                                            sales: unifiedProfitData?.totalRevenue || 0,
-                                            expenses: (unifiedProfitData?.cogs || 0) + (unifiedProfitData?.generalExpenses || 0) + (unifiedProfitData?.employeeSettledDues || 0)
+                                            revenue: (unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.deliveryFees || 0),
+                                            cogs: unifiedProfitData?.cogs || 0,
+                                            expenses: unifiedProfitData?.generalExpenses || 0,
+                                            dues: unifiedProfitData?.employeeSettledDues || 0,
+                                            profit: unifiedProfitData?.netProfit || 0
                                         }
                                     ]} 
                                     type="bar" 
-                                    colors={['#10b981', '#ef4444']} 
                                 />
                             </CardContent>
                         </Card>
