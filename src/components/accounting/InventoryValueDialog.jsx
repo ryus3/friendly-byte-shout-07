@@ -11,7 +11,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Box, Package, Tag, Calendar, BarChart3, Warehouse, Search, Filter, X } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
-import useInventoryStats from '@/hooks/useInventoryStats';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -83,9 +82,6 @@ const ItemCard = ({ item, showProductDetails = false }) => (
 );
 
 const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
-  // استخدام النظام الموحد للحصول على إحصائيات المخزون فوراً
-  const { stats: unifiedStats, loading: statsLoading } = useInventoryStats();
-  
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('summary');
   const [searchTerm, setSearchTerm] = useState('');
@@ -521,38 +517,14 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
     }
   };
 
-  // استخدام البيانات الموحدة فوراً عند فتح النافذة
   useEffect(() => {
-    if (open && unifiedStats && !statsLoading) {
-      // استخدام البيانات الموحدة إذا كانت متوفرة
-      const quickSummary = {
-        totalValue: totalInventoryValue || unifiedStats.totalInventoryValue || 0,
-        totalAvailable: totalInventoryValue || unifiedStats.totalInventoryValue || 0, // تقدير
-        totalReserved: 0, // سيتم حسابه بالتفصيل لاحقاً
-        totalQuantity: unifiedStats.totalVariants || 0,
-        totalCost: Math.round((totalInventoryValue || unifiedStats.totalInventoryValue || 0) * 0.7), // تقدير 70%
-        totalExpectedProfit: Math.round((totalInventoryValue || unifiedStats.totalInventoryValue || 0) * 0.3), // تقدير 30% ربح
-        itemsCount: unifiedStats.totalProducts || 0
-      };
-      
-      setFilteredSummary(quickSummary);
-      
-      // تحميل التفاصيل الكاملة في الخلفية إذا لزم الأمر
-      if (activeTab !== 'summary') {
-        fetchInventoryDetails();
-      }
+    if (open) {
+      fetchInventoryDetails();
     }
-  }, [open, unifiedStats, statsLoading, totalInventoryValue, activeTab]);
+  }, [open, filters]); // إعادة التحميل عند تغيير الفلاتر
 
   // تعريف hasActiveFilters هنا قبل استخدامه
   const hasActiveFilters = searchTerm || Object.values(filters).some(f => f !== '');
-
-  // إعادة التحميل عند تغيير الفلاتر أو التبديل للتبويبات التفصيلية
-  useEffect(() => {
-    if (open && (Object.values(filters).some(f => f !== '') || activeTab !== 'summary')) {
-      fetchInventoryDetails();
-    }
-  }, [filters, activeTab, open]);
 
   // تطبيق الفلاتر وحساب النتائج المفلترة
   useEffect(() => {
@@ -646,15 +618,13 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
   };
 
 
-  // استخدام البيانات المحسوبة مسبقاً إذا لم تكن هناك فلاتر
+  // حساب القيم المفلترة للملخص
   const displayedSummary = hasActiveFilters ? filteredSummary : {
-    totalValue: totalInventoryValue || unifiedStats?.totalInventoryValue || filteredSummary.totalValue,
-    totalAvailable: filteredSummary.totalAvailable,
-    totalReserved: filteredSummary.totalReserved,
-    totalQuantity: unifiedStats?.totalVariants || filteredSummary.totalQuantity,
-    totalCost: filteredSummary.totalCost,
-    totalExpectedProfit: filteredSummary.totalExpectedProfit,
-    itemsCount: unifiedStats?.totalProducts || filteredSummary.itemsCount
+    totalValue: totalInventoryValue,
+    totalAvailable: inventoryData.products.reduce((sum, item) => sum + (item.available_value || 0), 0),
+    totalReserved: inventoryData.products.reduce((sum, item) => sum + (item.reserved_value || 0), 0),
+    totalCost: inventoryData.products.reduce((sum, item) => sum + (item.cost_value || 0), 0),
+    totalExpectedProfit: inventoryData.products.reduce((sum, item) => sum + (item.expected_profit || 0), 0)
   };
 
   return (
