@@ -443,8 +443,8 @@ const AccountingPage = () => {
                 </div>
 
                 {/* قسم ملخص الأداء المالي وتقرير الأرباح والخسائر - بنفس الارتفاع */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[520px]">
-                    <div className="lg:col-span-2 h-full">
+                <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+                    <div className="xl:col-span-3">
                         <FinancialPerformanceCard 
                             unifiedProfitData={unifiedProfitData}
                             selectedTimePeriod={selectedTimePeriod}
@@ -454,7 +454,7 @@ const AccountingPage = () => {
                             }}
                         />
                     </div>
-                    <div className="lg:col-span-1 h-full">
+                    <div className="xl:col-span-2">
                         <Card className="h-full flex flex-col bg-background border border-border shadow-lg">
                             <CardHeader className="pb-3 flex-shrink-0">
                                 <div className="flex items-center justify-between">
@@ -478,7 +478,7 @@ const AccountingPage = () => {
                                     </Button>
                                 </div>
                             </CardHeader>
-                            <CardContent className="space-y-3 flex-1 overflow-y-auto">
+                            <CardContent className="space-y-2 flex-1 overflow-y-auto">
                                 <StatRow label="إجمالي المبيعات (مع التوصيل)" value={unifiedProfitData?.totalRevenue || 0} colorClass="text-emerald-500" />
                                 <StatRow label="رسوم التوصيل" value={unifiedProfitData?.deliveryFees || 0} colorClass="text-blue-500" />
                                 <StatRow label="المبيعات (بدون التوصيل)" value={(unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.deliveryFees || 0)} colorClass="text-emerald-600" />
@@ -488,10 +488,10 @@ const AccountingPage = () => {
                                 <StatRow label="المستحقات المدفوعة" value={unifiedProfitData?.employeeSettledDues || 0} colorClass="text-purple-500" isNegative/>
                                 
                                 {/* إجمالي صافي الربح - خط فاصل مميز */}
-                                <div className="border-t border-border pt-3 mt-3 bg-secondary/20 rounded-lg p-3">
+                                <div className="border-t border-border pt-2 mt-2 bg-secondary/20 rounded-lg p-3">
                                     <div className="flex justify-between items-center">
                                         <p className="font-semibold text-base text-foreground">صافي الربح</p>
-                                        <p className="text-xl font-bold text-primary">
+                                        <p className="text-lg font-bold text-primary">
                                             {(unifiedProfitData?.netProfit || 0).toLocaleString()} د.ع
                                         </p>
                                     </div>

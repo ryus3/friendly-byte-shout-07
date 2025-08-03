@@ -260,13 +260,13 @@ const FinancialPerformanceCard = ({
             })}
           </div>
 
-          {/* المخطط البياني - محاذاة الأعمدة مع الكروت بنفس العرض */}
+          {/* المخطط البياني - محاذاة الأعمدة مع الكروت بنفس العرض والمسافات */}
           <div className="h-40 bg-muted/30 rounded-lg p-0 overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart 
                 data={chartData} 
-                margin={{ top: 8, right: 0, left: 0, bottom: 8 }}
-                barCategoryGap="0%"
+                margin={{ top: 8, right: 12, left: 12, bottom: 8 }}
+                barCategoryGap="12%"
               >
                 <XAxis hide />
                 <YAxis hide />
