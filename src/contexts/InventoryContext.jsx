@@ -401,6 +401,28 @@ export const InventoryProvider = ({ children }) => {
 
         return {
           ...order,
+          items: items,
+          order_items: items, // إضافة للتوافق مع TopPerformanceCards
+          // البيانات الأساسية للطلب
+          customerinfo: {
+            name: order.customer_name,
+            phone: order.customer_phone,
+            address: order.customer_address,
+            city: order.customer_city,
+            province: order.customer_province
+          }
+        };
+      });
+
+      setOrders(processedOrders);
+      console.log('🔄 تم تحديث الطلبات:', processedOrders.length);
+    } catch (error) {
+      console.error('خطأ في تحديث الطلبات:', error);
+    }
+  }, []);
+
+        return {
+          ...order,
           items,
           total: order.final_amount || order.total_amount,
           order_items: order.order_items
@@ -589,7 +611,10 @@ export const InventoryProvider = ({ children }) => {
         supabase.from('settings').select('*'),
         supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
         supabase.from('employee_profit_rules').select('*'),
-        // إزالة استعلامات المرشحات - ستأتي من النظام التوحيدي
+        supabase.from('categories').select('*').order('name'),
+        supabase.from('departments').select('*').order('name'),
+        supabase.from('colors').select('*').order('name'),
+        supabase.from('sizes').select('*').order('display_order')
       ]);
 
       if (productsRes.error) throw productsRes.error;
@@ -747,8 +772,16 @@ export const InventoryProvider = ({ children }) => {
         return {
           ...order,
           items,
-          total: order.final_amount || order.total_amount, // لضمان التوافق مع الكود القديم
-          order_items: order.order_items // الاحتفاظ بالبيانات الأصلية
+          order_items: items, // للتوافق مع TopPerformanceCards
+          total: order.final_amount || order.total_amount,
+          // إضافة البيانات المطلوبة لـ TopPerformanceCards
+          customerinfo: {
+            name: order.customer_name,
+            phone: order.customer_phone,
+            address: order.customer_address,
+            city: order.customer_city,
+            province: order.customer_province
+          }
         };
       });
 
