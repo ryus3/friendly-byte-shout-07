@@ -94,18 +94,6 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    
-    const navigate = useNavigate();
-    const [currentTime, setCurrentTime] = useState(new Date());
-
-    const [periods, setPeriods] = useState({
-        totalOrders: 'month',
-        netProfit: 'month',
-        pendingProfit: 'month',
-        deliveredSales: 'month',
-        pendingSales: 'month',
-    });
-
     const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
     // إضافة لوج لتتبع البيانات
@@ -117,6 +105,16 @@ const Dashboard = () => {
             netProfit: unifiedProfitData?.netProfit
         });
     }, [unifiedProfitData, unifiedProfitLoading, unifiedProfitError]);
+    const navigate = useNavigate();
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    const [periods, setPeriods] = useState({
+        totalOrders: 'month',
+        netProfit: 'month',
+        pendingProfit: 'month',
+        deliveredSales: 'month',
+        pendingSales: 'month',
+    });
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
