@@ -1,2 +1,2 @@
 @echo off
-call .\node_modules\.bin\vite.cmd %*
+node "%~dp0node_modules\vite\bin\vite.js" %*

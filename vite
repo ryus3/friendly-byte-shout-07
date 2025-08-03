@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 
-// تشغيل vite مباشرة من node_modules
-const { spawn } = require('child_process');
 const path = require('path');
-const fs = require('fs');
+const { spawn } = require('child_process');
 
-const nodeModulesVite = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
+// مسار vite في node_modules
+const vitePath = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
 
-if (fs.existsSync(nodeModulesVite)) {
-  const child = spawn('node', [nodeModulesVite, ...process.argv.slice(2)], {
-    stdio: 'inherit',
-    cwd: process.cwd()
-  });
-  
-  child.on('exit', (code) => {
+// تشغيل vite مع تمرير جميع المعاملات
+const child = spawn(process.execPath, [vitePath, ...process.argv.slice(2)], {
+  stdio: 'inherit',
+  env: process.env
+});
+
+// إنهاء العملية مع نفس رمز الخروج
+child.on('exit', (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+  } else {
     process.exit(code);
-  });
-} else {
-  console.error('❌ لم يتم العثور على vite في:', nodeModulesVite);
-  process.exit(1);
-}
+  }
+});
