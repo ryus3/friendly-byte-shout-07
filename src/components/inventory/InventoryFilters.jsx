@@ -3,130 +3,51 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, QrCode, SlidersHorizontal, X } from 'lucide-react';
-import { useVariants } from '@/contexts/VariantsContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { supabase } from '@/lib/customSupabaseClient';
+import { useFiltersData } from '@/hooks/useFiltersData';
 
 const InventoryFilters = ({ filters, setFilters, onFilterChange, categories, onBarcodeSearch }) => {
-  const { colors, sizes, categories: allCategories } = useVariants();
   const { user } = useAuth();
   
-  // حالة لتخزين البيانات الحقيقية من قاعدة البيانات
-  const [realData, setRealData] = useState({
-    productTypes: [],
-    departments: [],
-    seasonsOccasions: [],
-    categories: [],
-    colors: [],
-    sizes: []
-  });
+  // استخدام النظام التوحيدي للمرشحات
+  const {
+    departments,
+    categories: allCategories,
+    colors,
+    sizes,
+    productTypes,
+    seasonsOccasions,
+    allowedDepartments,
+    allowedCategories,
+    hasFullAccess,
+    loading: filtersLoading
+  } = useFiltersData();
 
-  
-  // جلب البيانات الحقيقية من قاعدة البيانات
-  useEffect(() => {
-    const fetchRealData = async () => {
-      try {
-        // جلب أنواع المنتجات
-        const { data: productTypes } = await supabase
-          .from('product_types')
-          .select('id, name')
-          .order('name');
-
-        // جلب الأقسام
-        const { data: departments } = await supabase
-          .from('departments')
-          .select('id, name')
-          .eq('is_active', true)
-          .order('name');
-
-        // جلب المواسم والمناسبات
-        const { data: seasonsOccasions } = await supabase
-          .from('seasons_occasions')
-          .select('id, name, type')
-          .order('name');
-
-        // جلب التصنيفات
-        const { data: categories } = await supabase
-          .from('categories')
-          .select('id, name, type')
-          .order('name');
-
-        // جلب الألوان المستخدمة فعلياً
-        const { data: usedColors } = await supabase
-          .from('colors')
-          .select('id, name, hex_code')
-          .order('name');
-
-        // جلب الأحجام المستخدمة فعلياً  
-        const { data: usedSizes } = await supabase
-          .from('sizes')
-          .select('id, name, type, display_order')
-          .order('display_order', { ascending: true });
-
-        setRealData({
-          productTypes: productTypes || [],
-          departments: departments || [],
-          seasonsOccasions: seasonsOccasions || [],
-          categories: categories || [],
-          colors: usedColors || [],
-          sizes: usedSizes || []
-        });
-
-      } catch (error) {
-        console.error('خطأ في جلب بيانات الفلاتر:', error);
-      }
-    };
-
-    fetchRealData();
-  }, []);
-
-  // الحصول على الفئات والألوان والأحجام المسموحة للمستخدم
+  // استخدام البيانات المفلترة من النظام التوحيدي
   const allowedData = useMemo(() => {
-    if (!user || user.role === 'admin' || user.role === 'deputy' || user?.permissions?.includes('*')) {
+    if (hasFullAccess) {
       return {
-        allowedCategories: categories,
-        allowedColors: realData.colors,
-        allowedSizes: realData.sizes,
-        allowedProductTypes: realData.productTypes,
-        allowedDepartments: realData.departments,
-        allowedSeasonsOccasions: realData.seasonsOccasions
+        allowedCategories: categories?.map(c => c.name) || [],
+        allowedColors: colors || [],
+        allowedSizes: sizes || [],
+        allowedProductTypes: productTypes || [],
+        allowedDepartments: departments || [],
+        allowedSeasonsOccasions: seasonsOccasions || []
       };
     }
 
-    try {
-      const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
-      const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
-      const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
-
-      return {
-        allowedCategories: categoryPermissions.includes('all') 
-          ? categories
-          : realData.categories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
-        allowedColors: colorPermissions.includes('all')
-          ? realData.colors
-          : realData.colors.filter(c => colorPermissions.includes(c.id)),
-        allowedSizes: sizePermissions.includes('all')
-          ? realData.sizes
-          : realData.sizes.filter(s => sizePermissions.includes(s.id)),
-        allowedProductTypes: realData.productTypes,
-        allowedDepartments: realData.departments,
-        allowedSeasonsOccasions: realData.seasonsOccasions
-      };
-    } catch (e) {
-      console.error('Error parsing permissions:', e);
-      return {
-        allowedCategories: [],
-        allowedColors: [],
-        allowedSizes: [],
-        allowedProductTypes: [],
-        allowedDepartments: [],
-        allowedSeasonsOccasions: []
-      };
-    }
-  }, [categories, realData, user]);
+    return {
+      allowedCategories: allowedCategories?.map(c => c.name) || [],
+      allowedColors: colors || [],
+      allowedSizes: sizes || [],
+      allowedProductTypes: productTypes || [],
+      allowedDepartments: allowedDepartments || [],
+      allowedSeasonsOccasions: seasonsOccasions || []
+    };
+  }, [hasFullAccess, categories, colors, sizes, productTypes, departments, seasonsOccasions, allowedCategories, allowedDepartments]);
   
   const handleFilterChange = (key, value) => {
     console.log('InventoryFilters handleFilterChange called with:', key, value);

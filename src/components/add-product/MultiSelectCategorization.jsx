@@ -14,6 +14,7 @@ import AddEditCategoryDialog from '@/components/manage-variants/AddEditCategoryD
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useFiltersData } from '@/hooks/useFiltersData';
 
 const MultiSelectCategorization = ({ 
   selectedCategories = [],
@@ -25,11 +26,15 @@ const MultiSelectCategorization = ({
   selectedDepartments = [],
   setSelectedDepartments
 }) => {
-  const [categories, setCategories] = useState([]);
-  const [productTypes, setProductTypes] = useState([]);
-  const [seasonsOccasions, setSeasonsOccasions] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // استخدام النظام التوحيدي للمرشحات
+  const {
+    categories,
+    departments,
+    productTypes,
+    seasonsOccasions,
+    loading,
+    refreshFiltersData
+  } = useFiltersData();
   
   // Dialog states
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -37,37 +42,7 @@ const MultiSelectCategorization = ({
   const [productTypeDialogOpen, setProductTypeDialogOpen] = useState(false);
   const [seasonOccasionDialogOpen, setSeasonOccasionDialogOpen] = useState(false);
 
-  // جلب البيانات من قاعدة البيانات
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [categoriesRes, productTypesRes, seasonsOccasionsRes, departmentsRes] = await Promise.all([
-          supabase.from('categories').select('*').order('name'),
-          supabase.from('product_types').select('*').order('name'),
-          supabase.from('seasons_occasions').select('*').order('name'),
-          supabase.from('departments').select('*').eq('is_active', true).order('display_order')
-        ]);
-
-        // Data loaded successfully
-
-        setCategories(categoriesRes.data || []);
-        setProductTypes(productTypesRes.data || []);
-        setSeasonsOccasions(seasonsOccasionsRes.data || []);
-        setDepartments(departmentsRes.data || []);
-      } catch (error) {
-        console.error('خطأ في جلب البيانات:', error);
-        toast({
-          title: 'خطأ',
-          description: 'فشل في تحميل بيانات التصنيفات',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  // البيانات تأتي من النظام التوحيدي
 
   const handleCategoryToggle = (category) => {
     setSelectedCategories(prev => {
@@ -114,40 +89,21 @@ const MultiSelectCategorization = ({
   };
 
   // Refresh data functions
-  const refreshDepartments = async () => {
-    try {
-      const { data } = await supabase.from('departments').select('*').eq('is_active', true).order('display_order');
-      setDepartments(data || []);
-    } catch (error) {
-      console.error('خطأ في تحديث الأقسام:', error);
-    }
+  // دوال التحديث تستخدم النظام التوحيدي
+  const refreshDepartments = () => {
+    refreshFiltersData();
   };
 
-  const refreshCategories = async () => {
-    try {
-      const { data } = await supabase.from('categories').select('*').order('name');
-      setCategories(data || []);
-    } catch (error) {
-      console.error('خطأ في تحديث التصنيفات:', error);
-    }
+  const refreshCategories = () => {
+    refreshFiltersData();
   };
 
-  const refreshProductTypes = async () => {
-    try {
-      const { data } = await supabase.from('product_types').select('*').order('name');
-      setProductTypes(data || []);
-    } catch (error) {
-      console.error('خطأ في تحديث أنواع المنتجات:', error);
-    }
+  const refreshProductTypes = () => {
+    refreshFiltersData();
   };
 
-  const refreshSeasonsOccasions = async () => {
-    try {
-      const { data } = await supabase.from('seasons_occasions').select('*').order('name');
-      setSeasonsOccasions(data || []);
-    } catch (error) {
-      console.error('خطأ في تحديث المواسم والمناسبات:', error);
-    }
+  const refreshSeasonsOccasions = () => {
+    refreshFiltersData();
   };
 
   // Handle new item creation

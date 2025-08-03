@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/lib/customSupabaseClient';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
+import { useFiltersData } from '@/hooks/useFiltersData';
 import { 
   Package, 
   Shirt, 
@@ -15,40 +15,19 @@ import {
 } from 'lucide-react';
 
 const CategoryFilterCards = ({ onFilterChange, currentFilters = {} }) => {
-  const [departments, setDepartments] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [productTypes, setProductTypes] = useState([]);
-  const [seasonsOccasions, setSeasonsOccasions] = useState([]);
   const [selectedFilter, setSelectedFilter] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  // جلب البيانات من قاعدة البيانات
-  useEffect(() => {
-    fetchFilterData();
-  }, []);
-
-  const fetchFilterData = async () => {
-    try {
-      setLoading(true);
-
-      const [deptResponse, catResponse, typeResponse, seasonResponse] = await Promise.all([
-        supabase.from('departments').select('*').eq('is_active', true).order('name'),
-        supabase.from('categories').select('*').eq('is_active', true).order('name'),
-        supabase.from('product_types').select('*').eq('is_active', true).order('name'),
-        supabase.from('seasons_occasions').select('*').eq('is_active', true).order('name')
-      ]);
-
-      if (deptResponse.data) setDepartments(deptResponse.data);
-      if (catResponse.data) setCategories(catResponse.data);
-      if (typeResponse.data) setProductTypes(typeResponse.data);
-      if (seasonResponse.data) setSeasonsOccasions(seasonResponse.data);
-
-    } catch (error) {
-      console.error('خطأ في جلب بيانات الفلاتر:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  
+  // استخدام النظام التوحيدي للمرشحات
+  const {
+    departments,
+    categories,
+    productTypes,
+    seasonsOccasions,
+    allowedDepartments,
+    allowedCategories,
+    hasFullAccess,
+    loading
+  } = useFiltersData();
 
   // أيقونات للأقسام المختلفة
   const getIconForDepartment = (name) => {

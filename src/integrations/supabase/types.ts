@@ -3210,6 +3210,17 @@ export type Database = {
           role: string
         }[]
       }
+      get_filters_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          departments: Json
+          categories: Json
+          colors: Json
+          sizes: Json
+          product_types: Json
+          seasons_occasions: Json
+        }[]
+      }
       get_products_sold_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -3230,6 +3241,15 @@ export type Database = {
           total_revenue: number
           total_cogs: number
           total_delivery_fees: number
+        }[]
+      }
+      get_user_allowed_filters: {
+        Args: { p_user_id: string }
+        Returns: {
+          allowed_departments: Json
+          allowed_categories: Json
+          allowed_products: Json
+          has_full_access: boolean
         }[]
       }
       get_user_by_username: {

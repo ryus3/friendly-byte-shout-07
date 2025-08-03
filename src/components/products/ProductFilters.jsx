@@ -7,15 +7,21 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useVariants } from '@/contexts/VariantsContext';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useFiltersData } from '@/hooks/useFiltersData';
 
 const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBarcodeSearch, onAdvancedFilters, viewMode, setViewMode, onProductSelect }) => {
   const { products } = useInventory();
   const { user } = useAuth();
-  const { categories: allCategories, colors: allColors, sizes: allSizes, departments: allDepartments, productTypes: allProductTypes, seasonsOccasions: allSeasonsOccasions } = useVariants();
+  
+  // استخدام النظام التوحيدي للمرشحات
+  const {
+    allowedCategoryNames,
+    allowedDepartmentNames,
+    loading: filtersLoading,
+    error: filtersError
+  } = useFiltersData();
+  
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   
   // حفظ إعدادات العرض والفلاتر
@@ -34,64 +40,16 @@ const ProductFilters = ({ filters, setFilters, categories, brands, colors, onBar
     setSavedFilters(filters);
   }, [filters, setSavedFilters]);
 
-  // استخراج المتغيرات المسموحة للمستخدم
+  // استخراج البيانات المسموحة من النظام التوحيدي
   const allowedData = useMemo(() => {
-    // للمدير - عرض كل شيء
-    if (!user || user.role === 'admin' || user.role === 'deputy' || user?.permissions?.includes('*')) {
-      return {
-        allowedCategories: [...new Set(products.map(p => p.categories?.main_category).filter(Boolean))],
-        allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
-        allowedColors: [...new Set(products.flatMap(p => p.variants?.map(v => v.color).filter(Boolean) || []))],
-        allowedSizes: [...new Set(products.flatMap(p => p.variants?.map(v => v.size).filter(Boolean) || []))],
-        allowedDepartments: allDepartments.map(d => d.name),
-        allowedProductTypes: allProductTypes.map(pt => pt.name),
-        allowedSeasonsOccasions: allSeasonsOccasions.map(so => so.name)
-      };
-    }
-
-    // للموظفين - فقط ما هو مسموح
-    try {
-      const categoryPermissions = JSON.parse(user?.category_permissions || '["all"]');
-      const colorPermissions = JSON.parse(user?.color_permissions || '["all"]');
-      const sizePermissions = JSON.parse(user?.size_permissions || '["all"]');
-      const departmentPermissions = JSON.parse(user?.department_permissions || '["all"]');
-      const productTypePermissions = JSON.parse(user?.product_type_permissions || '["all"]');
-      const seasonOccasionPermissions = JSON.parse(user?.season_occasion_permissions || '["all"]');
-
-      return {
-        allowedCategories: categoryPermissions.includes('all') 
-          ? allCategories.map(c => c.name)
-          : allCategories.filter(c => categoryPermissions.includes(c.id)).map(c => c.name),
-        allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
-        allowedColors: colorPermissions.includes('all')
-          ? allColors.map(c => c.name)
-          : allColors.filter(c => colorPermissions.includes(c.id)).map(c => c.name),
-        allowedSizes: sizePermissions.includes('all')
-          ? allSizes.map(s => s.name)
-          : allSizes.filter(s => sizePermissions.includes(s.id)).map(s => s.name),
-        allowedDepartments: departmentPermissions.includes('all')
-          ? allDepartments.map(d => d.name)
-          : allDepartments.filter(d => departmentPermissions.includes(d.id)).map(d => d.name),
-        allowedProductTypes: productTypePermissions.includes('all')
-          ? allProductTypes.map(pt => pt.name)
-          : allProductTypes.filter(pt => productTypePermissions.includes(pt.id)).map(pt => pt.name),
-        allowedSeasonsOccasions: seasonOccasionPermissions.includes('all')
-          ? allSeasonsOccasions.map(so => so.name)
-          : allSeasonsOccasions.filter(so => seasonOccasionPermissions.includes(so.id)).map(so => so.name)
-      };
-    } catch (e) {
-      console.error('Error parsing permissions:', e);
-      return {
-        allowedCategories: [],
-        allowedBrands: [],
-        allowedColors: [],
-        allowedSizes: [],
-        allowedDepartments: [],
-        allowedProductTypes: [],
-        allowedSeasonsOccasions: []
-      };
-    }
-  }, [products, user, allCategories, allColors, allSizes, allDepartments, allProductTypes, allSeasonsOccasions]);
+    return {
+      allowedCategories: allowedCategoryNames || [],
+      allowedDepartments: allowedDepartmentNames || [],
+      allowedBrands: [...new Set(products.map(p => p.brand).filter(Boolean))],
+      allowedColors: [...new Set(products.flatMap(p => p.variants?.map(v => v.color).filter(Boolean) || []))],
+      allowedSizes: [...new Set(products.flatMap(p => p.variants?.map(v => v.size).filter(Boolean) || []))]
+    };
+  }, [allowedCategoryNames, allowedDepartmentNames, products]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));

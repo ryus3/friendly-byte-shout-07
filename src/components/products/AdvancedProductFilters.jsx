@@ -7,14 +7,27 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { SlidersHorizontal, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { useVariants } from '@/contexts/VariantsContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useFiltersData } from '@/hooks/useFiltersData';
 
 const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => {
-  const { isAdmin, productPermissions } = useAuth();
-  const { categories, departments, seasonsOccasions, productTypes, colors, sizes } = useVariants();
+  const { isAdmin } = useAuth();
   const { products } = useInventory();
+  
+  // استخدام النظام التوحيدي للمرشحات
+  const {
+    categories,
+    departments,
+    seasonsOccasions,
+    productTypes,
+    colors,
+    sizes,
+    allowedCategories,
+    allowedDepartments,
+    hasFullAccess,
+    loading: filtersLoading
+  } = useFiltersData();
   
   // حفظ إعدادات الفلاتر
   const [savedFilters, setSavedFilters] = useLocalStorage('advancedProductFilters', {});
@@ -24,9 +37,10 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
     setSavedFilters(filters);
   }, [filters, setSavedFilters]);
 
-  // الحصول على البيانات المسموحة بناءً على الصلاحيات
+  // الحصول على البيانات المسموحة من النظام التوحيدي
   const allowedData = useMemo(() => {
-    if (isAdmin) {
+    // استخدام البيانات المفلترة من النظام التوحيدي
+    if (hasFullAccess) {
       return {
         categories,
         departments,
@@ -37,35 +51,15 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
       };
     }
 
-    // فلترة البيانات حسب الصلاحيات
-    const categoryPerm = productPermissions?.category;
-    const departmentPerm = productPermissions?.department;
-    const seasonPerm = productPermissions?.season_occasion;
-    const productTypePerm = productPermissions?.product_type;
-    const colorPerm = productPermissions?.color;
-    const sizePerm = productPermissions?.size;
-
     return {
-      categories: categoryPerm?.has_full_access 
-        ? categories 
-        : categories.filter(c => categoryPerm?.allowed_items?.includes(c.id)) || [],
-      departments: departmentPerm?.has_full_access 
-        ? departments 
-        : departments.filter(d => departmentPerm?.allowed_items?.includes(d.id)) || [],
-      seasonsOccasions: seasonPerm?.has_full_access 
-        ? seasonsOccasions 
-        : seasonsOccasions.filter(s => seasonPerm?.allowed_items?.includes(s.id)) || [],
-      productTypes: productTypePerm?.has_full_access 
-        ? productTypes 
-        : productTypes.filter(pt => productTypePerm?.allowed_items?.includes(pt.id)) || [],
-      colors: colorPerm?.has_full_access 
-        ? colors 
-        : colors.filter(c => colorPerm?.allowed_items?.includes(c.id)) || [],
-      sizes: sizePerm?.has_full_access 
-        ? sizes 
-        : sizes.filter(s => sizePerm?.allowed_items?.includes(s.id)) || []
+      categories: allowedCategories || [],
+      departments: allowedDepartments || [],
+      seasonsOccasions,
+      productTypes,
+      colors,
+      sizes
     };
-  }, [isAdmin, productPermissions, categories, departments, seasonsOccasions, productTypes, colors, sizes]);
+  }, [hasFullAccess, categories, departments, seasonsOccasions, productTypes, colors, sizes, allowedCategories, allowedDepartments]);
 
   // استخراج العلامات التجارية من المنتجات المتاحة
   const availableBrands = useMemo(() => {
