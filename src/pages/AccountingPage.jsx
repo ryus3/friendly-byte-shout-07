@@ -150,7 +150,7 @@ const AccountingPage = () => {
         to: null
     });
     
-    const [datePeriod, setDatePeriod] = useState('month');
+    
     
     // جلب بيانات تحليل الأرباح لآخر 30 يوم
     const profitsDateRange = {
@@ -170,9 +170,9 @@ const AccountingPage = () => {
     // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
     const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);
     console.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
+    console.log('🔍 فترة مختارة:', selectedTimePeriod);
     
-    // التأكد من استخدام النتائج الموحدة لتجنب التكرار
-    const finalNetProfit = unifiedProfitData?.netProfit || 0;
+    // استخدام البيانات الموحدة لجميع الحسابات
     
     const [dialogs, setDialogs] = useState({ expenses: false, capital: false, settledDues: false, pendingDues: false, profitLoss: false, capitalDetails: false, inventoryDetails: false });
     const [allProfits, setAllProfits] = useState([]);
@@ -651,18 +651,19 @@ const AccountingPage = () => {
                         allUsers={allUsers || []}
                         calculateProfit={calculateProfit}
                         profits={allProfits || []}
+                        timePeriod={selectedTimePeriod}
                     />
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard 
                         title="صافي أرباح المبيعات" 
-                        value={finalNetProfit} 
+                        value={unifiedProfitData?.netProfit || 0} 
                         icon={PieChart} 
                         colors={['blue-500', 'sky-500']} 
                         format="currency" 
                         onClick={() => setDialogs(d => ({...d, profitLoss: true}))}
-                        description="بعد خصم المصاريف العامة"
+                        description={`الفترة: ${selectedTimePeriod === 'all' ? 'كل الفترات' : selectedTimePeriod}`}
                     />
                      <Card className="h-full">
                         <CardHeader>
@@ -672,12 +673,12 @@ const AccountingPage = () => {
                             <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, settledDues: true}))}>
                                 <CheckCircle className="w-4 h-4 ml-2 text-green-500"/>
                                 <span>المستحقات المدفوعة:</span>
-                                <span className="font-bold mr-2">{(financialSummary.employeeSettledDues || 0).toLocaleString()} د.ع</span>
+                                <span className="font-bold mr-2">{(unifiedProfitData?.employeeSettledDues || 0).toLocaleString()} د.ع</span>
                             </Button>
                             <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, pendingDues: true}))}>
                                 <Hourglass className="w-4 h-4 ml-2 text-amber-500"/>
                                 <span>المستحقات المعلقة:</span>
-                                <span className="font-bold mr-2">{(financialSummary.employeePendingDues || 0).toLocaleString()} د.ع</span>
+                                <span className="font-bold mr-2">{(unifiedProfitData?.employeePendingDues || 0).toLocaleString()} د.ع</span>
                             </Button>
                         </CardContent>
                     </Card>
@@ -747,8 +748,8 @@ const AccountingPage = () => {
                 open={dialogs.profitLoss}
                 onOpenChange={(open) => setDialogs(d => ({ ...d, profitLoss: open }))}
                 summary={unifiedProfitData}
-                datePeriod={datePeriod}
-                onDatePeriodChange={setDatePeriod}
+                datePeriod={selectedTimePeriod}
+                onDatePeriodChange={setSelectedTimePeriod}
             />
             <CapitalDetailsDialog
                 open={dialogs.capitalDetails}
