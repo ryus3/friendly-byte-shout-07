@@ -177,9 +177,14 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           )
         `)
         .eq('receipt_received', true)
-        .in('status', ['delivered', 'completed'])
-        .gte('created_at', dateRange.from?.toISOString())
-        .lte('created_at', dateRange.to?.toISOString());
+        .in('status', ['delivered', 'completed']);
+
+      // تطبيق الفترة الزمنية فقط إذا لم تكن "كل الفترات"
+      if (filters.period !== 'all' && dateRange?.from && dateRange?.to) {
+        ordersQuery = ordersQuery
+          .gte('created_at', dateRange.from.toISOString())
+          .lte('created_at', dateRange.to.toISOString());
+      }
 
       const { data: orders, error: ordersError } = await ordersQuery;
       
@@ -436,8 +441,11 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
   // تحديث البيانات عند تغيير الفلاتر
   useEffect(() => {
-    if (dateRange?.from && dateRange?.to && employeeProfitRules.length >= 0) {
-      fetchAdvancedAnalysis();
+    // إذا كان الفلتر "كل الفترات"، نستدعي التحليل مباشرة
+    if (filters.period === 'all' || (dateRange?.from && dateRange?.to)) {
+      if (employeeProfitRules.length >= 0) {
+        fetchAdvancedAnalysis();
+      }
     }
   }, [dateRange, filters, employeeProfitRules]);
 

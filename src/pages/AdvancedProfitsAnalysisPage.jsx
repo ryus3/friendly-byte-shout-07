@@ -200,18 +200,6 @@ const AdvancedProfitsAnalysisPage = () => {
         </div>
         
         <div className="flex gap-2">
-          <PDFDownloadLink
-            document={<ProfitsAnalysisPDF analysisData={analysisData} dateRange={dateRange} filters={filters} />}
-            fileName={`تحليل-الأرباح-${new Date().toLocaleDateString('ar-EG')}.pdf`}
-          >
-            {({ loading }) => (
-              <Button variant="outline" size="sm" disabled={loading}>
-                <Download className="w-4 h-4 ml-1" />
-                {loading ? 'جاري التجهيز...' : 'تصدير PDF'}
-              </Button>
-            )}
-          </PDFDownloadLink>
-          
           <Button 
             variant={viewMode === 'overview' ? 'default' : 'outline'} 
             size="sm"
@@ -223,19 +211,19 @@ const AdvancedProfitsAnalysisPage = () => {
         </div>
       </div>
 
-      {/* فلاتر مدمجة للهاتف */}
+      {/* فلاتر محسّنة وجميلة */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* فلتر الفترة الزمنية */}
-        <Card>
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CalendarDays className="w-4 h-4" />
+            <CardTitle className="flex items-center gap-2 text-lg text-primary">
+              <CalendarDays className="w-5 h-5" />
               الفترة الزمنية
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <Select value={filters.period} onValueChange={handlePeriodChange}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full border-primary/30 bg-background/80 hover:bg-background focus:ring-2 focus:ring-primary/20">
                 <SelectValue placeholder="اختر الفترة" />
               </SelectTrigger>
               <SelectContent>
@@ -249,19 +237,21 @@ const AdvancedProfitsAnalysisPage = () => {
               </SelectContent>
             </Select>
             
-            <DateRangePicker
-              date={dateRange}
-              onDateChange={setDateRange}
-              className="w-full"
-            />
+            {filters.period !== 'all' && (
+              <DateRangePicker
+                date={dateRange}
+                onDateChange={setDateRange}
+                className="w-full"
+              />
+            )}
           </CardContent>
         </Card>
 
         {/* فلاتر المنتجات */}
-        <Card>
+        <Card className="border-primary/20 bg-gradient-to-br from-secondary/5 to-secondary/10">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="w-4 h-4" />
+            <CardTitle className="flex items-center gap-2 text-lg text-secondary">
+              <Filter className="w-5 h-5" />
               فلاتر التحليل
             </CardTitle>
           </CardHeader>
@@ -271,7 +261,7 @@ const AdvancedProfitsAnalysisPage = () => {
                 value={filters.department} 
                 onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="border-secondary/30 bg-background/80 hover:bg-background focus:ring-2 focus:ring-secondary/20">
                   <SelectValue placeholder="القسم" />
                 </SelectTrigger>
                 <SelectContent>
