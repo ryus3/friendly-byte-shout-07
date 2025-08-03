@@ -1,9 +1,14 @@
 #!/bin/bash
-if [ -f "./node_modules/vite/bin/vite.js" ]; then
+
+# Try direct path first
+if [ -f "./node_modules/.bin/vite" ]; then
+    exec "./node_modules/.bin/vite" "$@"
+elif [ -f "./node_modules/vite/bin/vite.js" ]; then
     exec node "./node_modules/vite/bin/vite.js" "$@"
 elif command -v npx &> /dev/null; then
     exec npx vite "$@"
 else
-    echo "Error: vite not found"
-    exit 1
+    echo "Error: vite not found - installing..."
+    npm install vite
+    exec npx vite "$@"
 fi
