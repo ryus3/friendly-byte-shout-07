@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
@@ -46,6 +47,9 @@ const ProfitsSummaryPage = () => {
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
+  
+  // استخدام النظام الموحد للأرباح
+  const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(periodFilter);
   
   console.log('✅ تم تحميل جميع السياقات بنجاح');
   const location = useLocation();
