@@ -1,16 +1,21 @@
 #!/usr/bin/env node
-const { execSync } = require('child_process');
-const path = require('path');
 
-const vitePath = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
-const args = process.argv.slice(2).join(' ');
-
+// استيراد vite مباشرة
 try {
-  execSync(`node "${vitePath}" ${args}`, { 
-    stdio: 'inherit',
-    cwd: __dirname
-  });
-} catch (error) {
-  console.error('خطأ في تشغيل vite:', error.message);
-  process.exit(1);
+  // محاولة 1: require مباشر
+  require('./node_modules/vite/bin/vite.js');
+} catch (error1) {
+  try {
+    // محاولة 2: dynamic import
+    import('./node_modules/vite/bin/vite.js');
+  } catch (error2) {
+    try {
+      // محاولة 3: execSync
+      const { execSync } = require('child_process');
+      execSync('npx vite', { stdio: 'inherit' });
+    } catch (error3) {
+      console.error('❌ فشل في تشغيل vite:', error3.message);
+      process.exit(1);
+    }
+  }
 }
