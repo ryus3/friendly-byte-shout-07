@@ -33,35 +33,24 @@ import ProfitsAnalysisPDF from '@/components/pdf/ProfitsAnalysisPDF';
  * تعرض تحليلاً شاملاً للأرباح مقسم حسب الأقسام والتصنيفات والمنتجات
  */
 const AdvancedProfitsAnalysisPage = () => {
-  // حالة الفلاتر - تحديث القيم الافتراضية لتشمل "كل الفترات"
+  // حالة الفلاتر
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
   
-  const [filters, setFilters] = useState(() => {
-    // تحميل آخر اختيار محفوظ أو استخدام القيم الافتراضية
-    const savedFilters = localStorage.getItem('profitsAnalysisFilters');
-    const defaultFilters = {
-      period: 'all', // تغيير الافتراضي إلى "كل الفترات"
-      department: 'all',
-      category: 'all',
-      productType: 'all',
-      season: 'all',
-      color: 'all',
-      size: 'all',
-      product: 'all'
-    };
-    
-    return savedFilters ? { ...defaultFilters, ...JSON.parse(savedFilters) } : defaultFilters;
+  const [filters, setFilters] = useState({
+    period: 'month',
+    department: 'all',
+    category: 'all',
+    productType: 'all',
+    season: 'all',
+    color: 'all',
+    size: 'all',
+    product: 'all'
   });
 
   const [viewMode, setViewMode] = useState('overview'); // overview, detailed, charts
-
-  // حفظ الفلاتر تلقائياً عند التغيير
-  useEffect(() => {
-    localStorage.setItem('profitsAnalysisFilters', JSON.stringify(filters));
-  }, [filters]);
 
   // جلب البيانات
   const { 
@@ -84,11 +73,6 @@ const AdvancedProfitsAnalysisPage = () => {
     let from, to;
 
     switch (period) {
-      case 'all':
-        // لا تحديد أي فترة زمنية محددة، دع النظام يظهر كل البيانات
-        from = null;
-        to = null;
-        break;
       case 'today':
         from = startOfDay(now);
         to = endOfDay(now);
@@ -117,9 +101,7 @@ const AdvancedProfitsAnalysisPage = () => {
         return;
     }
 
-    if (from && to) {
-      setDateRange({ from, to });
-    }
+    setDateRange({ from, to });
     setFilters(prev => ({ ...prev, period }));
   };
 
@@ -239,7 +221,6 @@ const AdvancedProfitsAnalysisPage = () => {
                 <SelectValue placeholder="اختر الفترة" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">كل الفترات</SelectItem>
                 <SelectItem value="today">اليوم</SelectItem>
                 <SelectItem value="week">أسبوع</SelectItem>
                 <SelectItem value="month">شهر</SelectItem>
@@ -378,7 +359,7 @@ const AdvancedProfitsAnalysisPage = () => {
 
             <Button 
               onClick={() => setFilters({
-                period: 'all', // تغيير الافتراضي إلى "كل الفترات"
+                period: 'month',
                 department: 'all',
                 category: 'all',
                 productType: 'all',

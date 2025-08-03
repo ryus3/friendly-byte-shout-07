@@ -31,7 +31,6 @@ import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSummary';
-import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -323,7 +322,7 @@ const AccountingPage = () => {
             onClick: () => setDialogs(d => ({ ...d, capitalDetails: true }))
         },
         { key: 'cash', title: "الرصيد النقدي الفعلي", value: realCashBalance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/cash-management') },
-        { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['purple-500', 'violet-600'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
+        { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['emerald-500', 'green-500'], format: "currency", onClick: () => setDialogs(d => ({ ...d, inventoryDetails: true })) },
     ];
     
     const profitCards = [
@@ -444,14 +443,48 @@ const AccountingPage = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div className="lg:col-span-2">
-                        <FinancialPerformanceCard 
-                            unifiedProfitData={unifiedProfitData}
-                            selectedTimePeriod={selectedTimePeriod}
-                            onTimePeriodChange={(period) => {
-                                setSelectedTimePeriod(period);
-                                localStorage.setItem('financialTimePeriod', period);
-                            }}
-                        />
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <BarChart/> ملخص الأداء المالي
+                                        </CardTitle>
+                                        <CardDescription>نظرة بيانية على الإيرادات، المصاريف، والأرباح الصافية</CardDescription>
+                                    </div>
+                                    <select 
+                                        value={selectedTimePeriod} 
+                                        onChange={(e) => {
+                                            const period = e.target.value;
+                                            setSelectedTimePeriod(period);
+                                            localStorage.setItem('financialTimePeriod', period);
+                                        }}
+                                        className="text-sm border rounded px-2 py-1 bg-background text-foreground border-border"
+                                    >
+                                        <option value="all">كل الفترات</option>
+                                        <option value="today">اليوم</option>
+                                        <option value="week">هذا الأسبوع</option>
+                                        <option value="month">هذا الشهر</option>
+                                        <option value="year">هذا العام</option>
+                                    </select>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="h-72">
+                                <MiniChart 
+                                    data={[
+                                        { 
+                                            name: 'البيانات المالية',
+                                            revenue: (unifiedProfitData?.totalRevenue || 0) - (unifiedProfitData?.deliveryFees || 0),
+                                            cogs: unifiedProfitData?.cogs || 0,
+                                            expenses: unifiedProfitData?.generalExpenses || 0,
+                                            dues: unifiedProfitData?.employeeSettledDues || 0,
+                                            profit: unifiedProfitData?.netProfit || 0
+                                        }
+                                    ]} 
+                                    type="bar" 
+                                />
+                            </CardContent>
+                        </Card>
                     </div>
                     <div className="lg:col-span-1">
                         <Card>
