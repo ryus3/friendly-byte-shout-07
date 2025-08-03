@@ -15,7 +15,8 @@ const ManagerProfitsCard = ({
   orders = [],
   allUsers = [],
   calculateProfit,
-  profits = []
+  profits = [],
+  timePeriod = 'all'
 }) => {
   const { user } = useAuth();
   const { orders: contextOrders, calculateProfit: contextCalculateProfit } = useInventory();
@@ -27,6 +28,30 @@ const ManagerProfitsCard = ({
   const finalProfits = profits.length > 0 ? profits : contextProfits || [];
   const finalCalculateProfit = calculateProfit || contextCalculateProfit;
 
+  // فلتر الفترة الزمنية
+  const filterByTimePeriod = (order) => {
+    if (timePeriod === 'all') return true;
+    
+    const orderDate = new Date(order.created_at);
+    const now = new Date();
+    
+    switch (timePeriod) {
+      case 'today':
+        return orderDate.toDateString() === now.toDateString();
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return orderDate >= weekAgo;
+      case 'month':
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        return orderDate >= monthAgo;
+      case '3months':
+        const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        return orderDate >= threeMonthsAgo;
+      default:
+        return true;
+    }
+  };
+
   // حساب أرباح المدير من الموظفين - نفس منطق متابعة الموظفين بالضبط
   const managerProfitFromEmployees = useMemo(() => {
     if (!finalOrders || !Array.isArray(finalOrders)) {
@@ -36,11 +61,13 @@ const ManagerProfitsCard = ({
     // معرف المدير الرئيسي لاستبعاد طلباته
     const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
-    // الطلبات المسلمة أو المكتملة للإحصائيات (نفس منطق متابعة الموظفين)
+    // الطلبات المسلمة أو المكتملة للإحصائيات مع تطبيق فلتر الفترة
     const deliveredOrders = finalOrders.filter(order => {
       if (!order) return false;
       // استبعاد طلبات المدير الرئيسي
       if (order.created_by === ADMIN_ID) return false;
+      // فلتر الفترة الزمنية
+      if (!filterByTimePeriod(order)) return false;
       // فقط الطلبات المسلمة أو المكتملة
       return order.status === 'delivered' || order.status === 'completed';
     });
@@ -69,7 +96,7 @@ const ManagerProfitsCard = ({
     });
 
     return totalManagerProfits;
-  }, [finalOrders, finalProfits]);
+  }, [finalOrders, finalProfits, timePeriod]);
 
   return (
     <>
@@ -92,6 +119,7 @@ const ManagerProfitsCard = ({
         profits={finalProfits}
         managerId={user?.id}
         stats={{ totalManagerProfits: managerProfitFromEmployees }}
+        timePeriod={timePeriod}
       />
     </>
   );

@@ -412,17 +412,26 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 };
 
 // المكون الرئيسي للمستحقات المدفوعة
-const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [] }) => {
+const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [], timePeriod: externalTimePeriod = null }) => {
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [dateRange, setDateRange] = useState(null);
   const [settledProfits, setSettledProfits] = useState([]);
   // استرجاع إعداد الفترة من localStorage أو استخدام الافتراضي "all"
+  // إذا تم تمرير فترة من الخارج، استخدمها، وإلا استخدم المحفوظ محلياً
   const [timePeriod, setTimePeriod] = useState(() => {
+    if (externalTimePeriod) return externalTimePeriod;
     const saved = localStorage.getItem('settledDues_timePeriod');
     return saved || 'all'; // "all" كافتراضي جديد
   });
+  
+  // تحديث الفترة إذا تغيرت من الخارج
+  React.useEffect(() => {
+    if (externalTimePeriod && externalTimePeriod !== timePeriod) {
+      setTimePeriod(externalTimePeriod);
+    }
+  }, [externalTimePeriod]);
 
   // جلب فواتير التسوية الحقيقية
   const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);

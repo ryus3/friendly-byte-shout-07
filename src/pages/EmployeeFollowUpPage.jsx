@@ -869,6 +869,7 @@ const EmployeeFollowUpPage = () => {
             allUsers={allUsers || []}
             calculateProfit={calculateProfit}
             profits={profits || []}
+            timePeriod={filters.timePeriod}
           />
           <StatCard 
             title="مستحقات معلقة" 
@@ -969,6 +970,7 @@ const EmployeeFollowUpPage = () => {
           allUsers={allUsers}
           profits={profits || []} // تمرير بيانات الأرباح
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
+          timePeriod={filters.timePeriod} // تمرير فلتر الفترة
         />
 
       </motion.div>

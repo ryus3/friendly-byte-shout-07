@@ -1,5 +1,5 @@
 // نافذة تفاصيل أرباح المدير من الموظفين - محدثة
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,19 +41,31 @@ const ManagerProfitsDialog = ({
   calculateProfit,
   profits = [],
   managerId,
-  stats: externalStats // الإحصائيات المحسوبة من الصفحة الرئيسية
+  stats: externalStats, // الإحصائيات المحسوبة من الصفحة الرئيسية
+  timePeriod: externalTimePeriod = null // فلتر الفترة من الصفحة الرئيسية
 }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   
   // فلتر الفترة الزمنية مع حفظ الخيار
+  // إذا تم تمرير فترة من الخارج، استخدمها، وإلا استخدم المحفوظ محلياً
   const [selectedPeriod, setSelectedPeriod] = useState(() => {
+    if (externalTimePeriod) return externalTimePeriod;
     return localStorage.getItem('managerProfitsPeriodFilter') || 'month';
   });
   
-  // حفظ الخيار عند التغيير
+  // تحديث الفترة إذا تغيرت من الخارج
   React.useEffect(() => {
-    localStorage.setItem('managerProfitsPeriodFilter', selectedPeriod);
-  }, [selectedPeriod]);
+    if (externalTimePeriod && externalTimePeriod !== selectedPeriod) {
+      setSelectedPeriod(externalTimePeriod);
+    }
+  }, [externalTimePeriod]);
+  
+  // حفظ الخيار عند التغيير (فقط إذا لم تكن من الخارج)
+  React.useEffect(() => {
+    if (!externalTimePeriod) {
+      localStorage.setItem('managerProfitsPeriodFilter', selectedPeriod);
+    }
+  }, [selectedPeriod, externalTimePeriod]);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
