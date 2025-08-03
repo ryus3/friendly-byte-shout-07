@@ -12,15 +12,12 @@ export const useSupabase = () => {
 };
 
 export const SupabaseProvider = ({ children }) => {
-  // Database operations
+  // Database operations - تم توحيد المرشحات في useFiltersData()
   const db = {
-    // Categories
+    // ⚠️ للمرشحات: استخدم useFiltersData() بدلاً من هذه الدوال
+    
+    // Categories - للكتابة فقط، القراءة من useFiltersData()
     categories: {
-      async getAll() {
-        const { data, error } = await supabase.from('categories').select('*').order('name');
-        if (error) throw error;
-        return data;
-      },
       async create(category) {
         const { data, error } = await supabase.from('categories').insert(category).select().single();
         if (error) throw error;
@@ -38,13 +35,8 @@ export const SupabaseProvider = ({ children }) => {
       }
     },
 
-    // Colors
+    // Colors - للكتابة فقط، القراءة من useFiltersData()
     colors: {
-      async getAll() {
-        const { data, error } = await supabase.from('colors').select('*').order('name');
-        if (error) throw error;
-        return data;
-      },
       async create(color) {
         const { data, error } = await supabase.from('colors').insert(color).select().single();
         if (error) throw error;
@@ -62,13 +54,8 @@ export const SupabaseProvider = ({ children }) => {
       }
     },
 
-    // Sizes
+    // Sizes - للكتابة فقط، القراءة من useFiltersData()
     sizes: {
-      async getAll() {
-        const { data, error } = await supabase.from('sizes').select('*').order('name');
-        if (error) throw error;
-        return data;
-      },
       async create(size) {
         const { data, error } = await supabase.from('sizes').insert(size).select().single();
         if (error) throw error;
@@ -81,6 +68,63 @@ export const SupabaseProvider = ({ children }) => {
       },
       async delete(id) {
         const { error } = await supabase.from('sizes').delete().eq('id', id);
+        if (error) throw error;
+        return true;
+      }
+    },
+
+    // Departments - للكتابة فقط، القراءة من useFiltersData()
+    departments: {
+      async create(department) {
+        const { data, error } = await supabase.from('departments').insert(department).select().single();
+        if (error) throw error;
+        return data;
+      },
+      async update(id, updates) {
+        const { data, error } = await supabase.from('departments').update(updates).eq('id', id).select().single();
+        if (error) throw error;
+        return data;
+      },
+      async delete(id) {
+        const { error } = await supabase.from('departments').delete().eq('id', id);
+        if (error) throw error;
+        return true;
+      }
+    },
+
+    // Product Types - للكتابة فقط، القراءة من useFiltersData()
+    productTypes: {
+      async create(productType) {
+        const { data, error } = await supabase.from('product_types').insert(productType).select().single();
+        if (error) throw error;
+        return data;
+      },
+      async update(id, updates) {
+        const { data, error } = await supabase.from('product_types').update(updates).eq('id', id).select().single();
+        if (error) throw error;
+        return data;
+      },
+      async delete(id) {
+        const { error } = await supabase.from('product_types').delete().eq('id', id);
+        if (error) throw error;
+        return true;
+      }
+    },
+
+    // Seasons Occasions - للكتابة فقط، القراءة من useFiltersData()
+    seasonsOccasions: {
+      async create(seasonOccasion) {
+        const { data, error } = await supabase.from('seasons_occasions').insert(seasonOccasion).select().single();
+        if (error) throw error;
+        return data;
+      },
+      async update(id, updates) {
+        const { data, error } = await supabase.from('seasons_occasions').update(updates).eq('id', id).select().single();
+        if (error) throw error;
+        return data;
+      },
+      async delete(id) {
+        const { error } = await supabase.from('seasons_occasions').delete().eq('id', id);
         if (error) throw error;
         return true;
       }
