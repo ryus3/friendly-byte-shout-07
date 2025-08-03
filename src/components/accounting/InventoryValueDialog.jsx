@@ -621,7 +621,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
 
     // فلترة حسب البحث النصي
     const searchFiltered = sourceData.filter(item => 
-      searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      searchTerm === '' || (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     // حساب المجاميع للعناصر المفلترة
@@ -642,7 +642,7 @@ const InventoryValueDialog = ({ open, onOpenChange, totalInventoryValue }) => {
   // فلترة البيانات
   const getFilteredData = (data) => {
     return data.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = !searchTerm || (item.name && item.name.toLowerCase().includes(searchTerm.toLowerCase()));
       return matchesSearch;
     });
   };
