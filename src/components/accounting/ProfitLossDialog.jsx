@@ -73,7 +73,11 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                             <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm" className="w-full sm:w-auto">{periodLabels[datePeriod]}</Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="z-50">
+                            <DropdownMenuContent 
+                                align="end" 
+                                className="z-[9999] bg-background border shadow-lg"
+                                sideOffset={4}
+                            >
                                 {Object.entries(periodLabels).map(([key, label]) => (
                                     <DropdownMenuItem key={key} onSelect={() => onDatePeriodChange(key)}>
                                         {label}

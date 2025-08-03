@@ -94,7 +94,7 @@ const Dashboard = () => {
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
     const { profits: profitsData } = useProfits();
-    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits();
+    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
     // إضافة لوج لتتبع البيانات
     useEffect(() => {
