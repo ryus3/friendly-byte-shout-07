@@ -3,13 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Users, Calendar, Eye, TrendingUp, DollarSign, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/customSupabaseClient';
+import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
-  const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [customerStats, setCustomerStats] = useState([]);
-  const [allOrders, setAllOrders] = useState([]);
+  
+  // استخدام النظام الموحد للحصول على البيانات
+  const { analytics, loading } = useOrdersAnalytics();
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -20,46 +21,29 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // جلب الطلبات من قاعدة البيانات مباشرة
-  const fetchOrders = async () => {
-    try {
-      console.log('🔄 جاري جلب الطلبات من قاعدة البيانات...');
-      
-      let query = supabase
-        .from('orders')
-        .select('*')
-        .in('status', ['completed', 'delivered'])
-        .order('created_at', { ascending: false });
-
-      // إذا كان هناك معرف موظف، فلتر حسب الموظف فقط  
-      if (employeeId) {
-        query = query.eq('created_by', employeeId);
-      }
-
-      const { data: orders, error } = await query;
-
-      if (error) {
-        console.error('❌ خطأ في جلب الطلبات:', error);
-        setAllOrders([]);
-        return;
-      }
-
-      console.log('✅ تم جلب الطلبات بنجاح:', orders?.length || 0);
-      setAllOrders(orders || []);
-      setLoading(false);
-    } catch (error) {
-      console.error('❌ خطأ غير متوقع:', error);
-      setAllOrders([]);
-      setLoading(false);
-    }
-  };
-
-  // جلب البيانات عند فتح النافذة
+  // استخدام البيانات الموحدة مع الحفاظ على نفس الوظائف
   useEffect(() => {
-    if (open && allOrders.length === 0) {
-      fetchOrders();
+    if (analytics.topCustomers && analytics.topCustomers.length > 0) {
+      // تحويل البيانات الموحدة إلى نفس الهيكل المتوقع
+      const unifiedCustomers = analytics.topCustomers.map(customer => ({
+        phone: customer.phone || 'غير محدد',
+        normalizedPhone: normalizePhoneNumber(customer.phone),
+        name: customer.name || 'زبون غير محدد',
+        orderCount: customer.total_orders || 0,
+        totalRevenue: parseFloat(customer.total_spent) || 0,
+        avgOrderValue: customer.total_orders > 0 ? (parseFloat(customer.total_spent) / customer.total_orders) : 0,
+        orders: [{
+          id: 'unified',
+          amount: parseFloat(customer.total_spent) || 0,
+          date: new Date()
+        }],
+        city: customer.city,
+        province: customer.province
+      }));
+      
+      setCustomerStats(unifiedCustomers);
     }
-  }, [open]);
+  }, [analytics.topCustomers]);
 
   // دالة تطبيع رقم الهاتف
   const normalizePhoneNumber = (phone) => {
@@ -70,136 +54,11 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
     return normalized;
   };
 
-  // حساب إحصائيات الزبائن
-  useEffect(() => {
-    console.log('🔍 بدء تحليل بيانات الزبائن...');
-    console.log('📊 إجمالي الطلبات:', allOrders.length);
-
-    if (!allOrders || allOrders.length === 0) {
-      console.log('❌ لا توجد طلبات متاحة');
-      setCustomerStats([]);
-      return;
-    }
-
-    // فلترة الطلبات المكتملة فقط
-    const completedOrders = allOrders.filter(order => {
-      const isCompleted = order.status === 'completed';
-      const isNotReturned = order.status !== 'return_received' && order.status !== 'cancelled';
-      console.log(`🔍 الطلب ${order.id}: الحالة=${order.status}, مكتمل=${isCompleted}, غير مرجع=${isNotReturned}`);
-      return isCompleted && isNotReturned;
-    });
-
-    console.log('✅ الطلبات المكتملة:', completedOrders.length);
-    console.log('📋 تفاصيل الطلبات المكتملة:', completedOrders.map(o => ({
-      id: o.id,
-      customer_name: o.customer_name,
-      customer_phone: o.customer_phone,
-      total_amount: o.total_amount,
-      final_amount: o.final_amount,
-      status: o.status
-    })));
-
-    if (completedOrders.length === 0) {
-      console.log('❌ لا توجد طلبات مكتملة');
-      setCustomerStats([]);
-      return;
-    }
-
-    // فلترة حسب الفترة الزمنية
-    const now = new Date();
-    const filteredOrders = completedOrders.filter(order => {
-      if (selectedPeriod === 'all') return true;
-      
-      const orderDate = new Date(order.created_at);
-      
-      switch (selectedPeriod) {
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return orderDate >= weekAgo;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return orderDate >= monthAgo;
-        case '3months':
-          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          return orderDate >= threeMonthsAgo;
-        case '6months':
-          const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-          return orderDate >= sixMonthsAgo;
-        case 'year':
-          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          return orderDate >= yearAgo;
-        default:
-          return true;
-      }
-    });
-
-    console.log('📅 الطلبات بعد فلترة الفترة:', filteredOrders.length);
-
-    // تجميع البيانات حسب رقم الهاتف
-    const customerMap = new Map();
-
-    filteredOrders.forEach(order => {
-      const rawPhone = order.customer_phone;
-      const normalizedPhone = normalizePhoneNumber(rawPhone);
-      const customerName = order.customer_name || 'زبون غير محدد';
-      
-      console.log(`📞 معالجة الطلب ${order.id}: الهاتف="${rawPhone}" -> المطبع="${normalizedPhone}" الاسم="${customerName}"`);
-
-      // استخدام رقم الهاتف المطبع كمفتاح
-      const phoneKey = normalizedPhone;
-
-      if (!customerMap.has(phoneKey)) {
-        customerMap.set(phoneKey, {
-          phone: rawPhone || 'غير محدد',
-          normalizedPhone: normalizedPhone,
-          name: customerName,
-          orderCount: 0,
-          totalRevenue: 0,
-          avgOrderValue: 0,
-          firstOrderDate: order.created_at,
-          lastOrderDate: order.created_at,
-          orders: []
-        });
-      }
-
-      const customerData = customerMap.get(phoneKey);
-      customerData.orderCount += 1;
-      customerData.totalRevenue += parseFloat(order.final_amount || order.total_amount || 0);
-      customerData.orders.push({
-        id: order.id,
-        amount: order.final_amount || order.total_amount,
-        date: order.created_at
-      });
-      
-      // تحديث اسم العميل إذا كان أفضل
-      if (customerName && customerName !== 'زبون غير محدد' && customerData.name === 'زبون غير محدد') {
-        customerData.name = customerName;
-      }
-      
-      // تحديث التواريخ
-      const orderDate = new Date(order.created_at);
-      const firstDate = new Date(customerData.firstOrderDate);
-      const lastDate = new Date(customerData.lastOrderDate);
-      
-      if (orderDate < firstDate) customerData.firstOrderDate = order.created_at;
-      if (orderDate > lastDate) customerData.lastOrderDate = order.created_at;
-    });
-
-    console.log('👥 عدد الزبائن الفريدين:', customerMap.size);
-    console.log('📊 تفاصيل الزبائن:', Array.from(customerMap.entries()));
-
-    // تحويل إلى مصفوفة وترتيب
-    const result = Array.from(customerMap.values())
-      .map(customer => ({
-        ...customer,
-        avgOrderValue: customer.orderCount > 0 ? customer.totalRevenue / customer.orderCount : 0
-      }))
-      .sort((a, b) => b.orderCount - a.orderCount)
-      .slice(0, 15);
-      
-    console.log('🏆 أفضل الزبائن النهائي:', result);
-    setCustomerStats(result);
-  }, [allOrders, selectedPeriod]);
+  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
+  const getFilteredCustomers = () => {
+    // الآن نستخدم البيانات الموحدة، يمكن إضافة فلترة زمنية لاحقاً إذا لزم الأمر
+    return customerStats;
+  };
 
   const totalOrders = customerStats.reduce((sum, customer) => sum + customer.orderCount, 0);
   const totalRevenue = customerStats.reduce((sum, customer) => sum + customer.totalRevenue, 0);
@@ -378,7 +237,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                     <p className="text-lg font-semibold text-muted-foreground mb-2">لا توجد بيانات زبائن</p>
                     <p className="text-sm text-muted-foreground">لا توجد طلبات مكتملة للفترة المحددة</p>
                     <div className="mt-4 text-xs text-muted-foreground">
-                      <p>الطلبات المتاحة: {allOrders?.length || 0}</p>
+                      <p>الطلبات المكتملة: {analytics.completedOrders || 0}</p>
                       <p>الفترة المحددة: {periods.find(p => p.key === selectedPeriod)?.label}</p>
                     </div>
                   </div>

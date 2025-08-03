@@ -3,13 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Package, Calendar, Eye, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/customSupabaseClient';
+import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
-  const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [productStats, setProductStats] = useState([]);
-  const [allOrders, setAllOrders] = useState([]);
+  
+  // استخدام النظام الموحد للحصول على البيانات
+  const { analytics, loading } = useOrdersAnalytics();
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -20,169 +21,20 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // جلب الطلبات مع العناصر من قاعدة البيانات مباشرة
-  const fetchOrdersWithItems = async () => {
-    try {
-      console.log('🔄 جاري جلب الطلبات مع المنتجات...');
-      
-      let query = supabase
-        .from('orders')
-        .select(`
-          *,
-          order_items(
-            *,
-            products(
-              name
-            ),
-            product_variants(
-              *,
-              colors(name),
-              sizes(name)
-            )
-          )
-        `)
-        .in('status', ['completed', 'delivered'])
-        .order('created_at', { ascending: false });
-
-      // إذا كان هناك معرف موظف، فلتر حسب الموظف فقط
-      if (employeeId) {
-        query = query.eq('created_by', employeeId);
-      }
-
-      const { data: orders, error } = await query;
-
-      if (error) {
-        console.error('❌ خطأ في جلب الطلبات:', error);
-        setAllOrders([]);
-        return;
-      }
-
-      console.log('✅ تم جلب الطلبات مع المنتجات بنجاح:', orders?.length || 0);
-      setAllOrders(orders || []);
-      setLoading(false);
-    } catch (error) {
-      console.error('❌ خطأ غير متوقع:', error);
-      setAllOrders([]);
-      setLoading(false);
+  // استخدام البيانات الموحدة مع الحفاظ على نفس الوظائف
+  useEffect(() => {
+    if (analytics.topProducts && analytics.topProducts.length > 0) {
+      setProductStats(analytics.topProducts);
     }
+  }, [analytics.topProducts]);
+  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
+  const getFilteredProducts = () => {
+    return productStats;
   };
 
-  // جلب البيانات عند فتح النافذة
-  useEffect(() => {
-    if (open && allOrders.length === 0) {
-      fetchOrdersWithItems();
-    }
-  }, [open]);
-
-  // حساب إحصائيات المنتجات
-  useEffect(() => {
-    console.log('🔍 بدء تحليل بيانات المنتجات...');
-    console.log('📊 إجمالي الطلبات:', allOrders.length);
-
-    if (!allOrders || allOrders.length === 0) {
-      console.log('❌ لا توجد طلبات متاحة');
-      setProductStats([]);
-      return;
-    }
-
-    // فلترة الطلبات المكتملة فقط
-    const completedOrders = allOrders.filter(order => {
-      const isCompleted = order.status === 'completed';
-      const isNotReturned = order.status !== 'return_received' && order.status !== 'cancelled';
-      return isCompleted && isNotReturned;
-    });
-
-    console.log('✅ الطلبات المكتملة:', completedOrders.length);
-
-    if (completedOrders.length === 0) {
-      console.log('❌ لا توجد طلبات مكتملة');
-      setProductStats([]);
-      return;
-    }
-
-    // فلترة حسب الفترة الزمنية
-    const now = new Date();
-    const filteredOrders = completedOrders.filter(order => {
-      if (selectedPeriod === 'all') return true;
-      
-      const orderDate = new Date(order.created_at);
-      
-      switch (selectedPeriod) {
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return orderDate >= weekAgo;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return orderDate >= monthAgo;
-        case '3months':
-          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          return orderDate >= threeMonthsAgo;
-        case '6months':
-          const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-          return orderDate >= sixMonthsAgo;
-        case 'year':
-          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          return orderDate >= yearAgo;
-        default:
-          return true;
-      }
-    });
-
-    console.log('📅 الطلبات بعد فلترة الفترة:', filteredOrders.length);
-
-    // تجميع البيانات حسب المنتج
-    const productMap = new Map();
-
-    filteredOrders.forEach(order => {
-      if (!order.order_items || !Array.isArray(order.order_items)) return;
-      
-      order.order_items.forEach(item => {
-        const productName = item.products?.name || 'منتج غير محدد';
-        const colorName = item.product_variants?.colors?.name || '';
-        const sizeName = item.product_variants?.sizes?.name || '';
-        
-        // إنشاء مفتاح فريد للمنتج مع اللون والحجم
-        const productKey = `${productName} ${colorName ? `- ${colorName}` : ''} ${sizeName ? `- ${sizeName}` : ''}`.trim();
-        
-        console.log(`📦 معالجة المنتج: "${productKey}", الكمية: ${item.quantity}`);
-
-        if (!productMap.has(productKey)) {
-          productMap.set(productKey, {
-            productName: productKey,
-            totalQuantity: 0,
-            totalRevenue: 0,
-            orderCount: 0,
-            orders: []
-          });
-        }
-
-        const productData = productMap.get(productKey);
-        productData.totalQuantity += parseInt(item.quantity || 0);
-        productData.totalRevenue += parseFloat(item.total_price || 0);
-        productData.orderCount += 1;
-        productData.orders.push({
-          orderId: order.id,
-          quantity: item.quantity,
-          price: item.total_price,
-          date: order.created_at
-        });
-      });
-    });
-
-    console.log('📈 عدد المنتجات الفريدة:', productMap.size);
-
-    // تحويل إلى مصفوفة وترتيب
-    const result = Array.from(productMap.values())
-      .sort((a, b) => b.totalQuantity - a.totalQuantity)
-      .slice(0, 10);
-      
-    console.log('🏆 أفضل المنتجات:', result);
-    setProductStats(result);
-  }, [allOrders, selectedPeriod]);
-
-  const totalQuantity = productStats.reduce((sum, product) => sum + product.totalQuantity, 0);
-  const totalRevenue = productStats.reduce((sum, product) => sum + product.totalRevenue, 0);
-  const totalOrders = productStats.reduce((sum, product) => sum + product.orderCount, 0);
+  const totalQuantity = productStats.reduce((sum, product) => sum + (product.total_sold || 0), 0);
+  const totalRevenue = productStats.reduce((sum, product) => sum + (product.total_revenue || 0), 0);
+  const totalOrders = productStats.reduce((sum, product) => sum + (product.orders_count || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

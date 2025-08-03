@@ -3273,6 +3273,19 @@ export type Database = {
           departments_data: Json
         }[]
       }
+      get_unified_orders_analytics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_orders: number
+          pending_orders: number
+          completed_orders: number
+          total_revenue: number
+          top_customers: Json
+          top_products: Json
+          top_provinces: Json
+          pending_profits: Json
+        }[]
+      }
       get_user_allowed_filters: {
         Args: { p_user_id: string }
         Returns: {

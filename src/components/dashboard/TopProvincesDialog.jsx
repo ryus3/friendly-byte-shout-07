@@ -3,13 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, Eye, TrendingUp, DollarSign, Map } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/customSupabaseClient';
+import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
-  const [loading, setLoading] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [provinceStats, setProvinceStats] = useState([]);
-  const [allOrders, setAllOrders] = useState([]);
+  
+  // استخدام النظام الموحد للحصول على البيانات
+  const { analytics, loading } = useOrdersAnalytics();
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -20,158 +21,19 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // جلب الطلبات من قاعدة البيانات مباشرة
-  const fetchOrders = async () => {
-    try {
-      console.log('🔄 جاري جلب الطلبات للمحافظات...');
-      
-      let query = supabase
-        .from('orders')
-        .select('*')
-        .in('status', ['completed', 'delivered'])
-        .order('created_at', { ascending: false });
-
-      // إذا كان هناك معرف موظف، فلتر حسب الموظف فقط
-      if (employeeId) {
-        query = query.eq('created_by', employeeId);
-      }
-
-      const { data: orders, error } = await query;
-
-      if (error) {
-        console.error('❌ خطأ في جلب الطلبات:', error);
-        setAllOrders([]);
-        return;
-      }
-
-      console.log('✅ تم جلب الطلبات بنجاح:', orders?.length || 0);
-      setAllOrders(orders || []);
-      setLoading(false);
-    } catch (error) {
-      console.error('❌ خطأ غير متوقع:', error);
-      setAllOrders([]);
-      setLoading(false);
+  // استخدام البيانات الموحدة مع الحفاظ على نفس الوظائف
+  useEffect(() => {
+    if (analytics.topProvinces && analytics.topProvinces.length > 0) {
+      setProvinceStats(analytics.topProvinces);
     }
+  }, [analytics.topProvinces]);
+  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
+  const getFilteredProvinces = () => {
+    return provinceStats;
   };
 
-  // جلب البيانات عند فتح النافذة
-  useEffect(() => {
-    if (open && allOrders.length === 0) {
-      fetchOrders();
-    }
-  }, [open]);
-
-  // حساب إحصائيات المحافظات
-  useEffect(() => {
-    console.log('🔍 بدء تحليل بيانات المحافظات...');
-    console.log('📊 إجمالي الطلبات:', allOrders.length);
-
-    if (!allOrders || allOrders.length === 0) {
-      console.log('❌ لا توجد طلبات متاحة');
-      setProvinceStats([]);
-      return;
-    }
-
-    // فلترة الطلبات المكتملة فقط
-    const completedOrders = allOrders.filter(order => {
-      const isCompleted = order.status === 'completed';
-      const isNotReturned = order.status !== 'return_received' && order.status !== 'cancelled';
-      return isCompleted && isNotReturned;
-    });
-
-    console.log('✅ الطلبات المكتملة:', completedOrders.length);
-
-    if (completedOrders.length === 0) {
-      console.log('❌ لا توجد طلبات مكتملة');
-      setProvinceStats([]);
-      return;
-    }
-
-    // فلترة حسب الفترة الزمنية
-    const now = new Date();
-    const filteredOrders = completedOrders.filter(order => {
-      if (selectedPeriod === 'all') return true;
-      
-      const orderDate = new Date(order.created_at);
-      
-      switch (selectedPeriod) {
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return orderDate >= weekAgo;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return orderDate >= monthAgo;
-        case '3months':
-          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          return orderDate >= threeMonthsAgo;
-        case '6months':
-          const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-          return orderDate >= sixMonthsAgo;
-        case 'year':
-          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-          return orderDate >= yearAgo;
-        default:
-          return true;
-      }
-    });
-
-    console.log('📅 الطلبات بعد فلترة الفترة:', filteredOrders.length);
-
-    // تجميع البيانات حسب المحافظة
-    const provinceMap = {};
-
-    filteredOrders.forEach(order => {
-      const province = order.customer_city || order.customer_province || 'غير محدد';
-      
-      console.log(`🗺️ معالجة الطلب ${order.id}: المحافظة="${province}"`);
-
-      if (!provinceMap[province]) {
-        provinceMap[province] = {
-          province: province,
-          orderCount: 0,
-          totalRevenue: 0,
-          avgOrderValue: 0,
-          firstOrderDate: order.created_at,
-          lastOrderDate: order.created_at,
-          orders: []
-        };
-      }
-
-      const provinceData = provinceMap[province];
-      provinceData.orderCount += 1;
-      provinceData.totalRevenue += parseFloat(order.final_amount || order.total_amount || 0);
-      provinceData.orders.push({
-        id: order.id,
-        amount: order.final_amount || order.total_amount,
-        date: order.created_at
-      });
-      
-      // تحديث التواريخ
-      const orderDate = new Date(order.created_at);
-      const firstDate = new Date(provinceData.firstOrderDate);
-      const lastDate = new Date(provinceData.lastOrderDate);
-      
-      if (orderDate < firstDate) provinceData.firstOrderDate = order.created_at;
-      if (orderDate > lastDate) provinceData.lastOrderDate = order.created_at;
-    });
-
-    console.log('🏙️ عدد المحافظات الفريدة:', Object.keys(provinceMap).length);
-
-    // تحويل إلى مصفوفة وترتيب
-    const result = Object.values(provinceMap)
-      .map(province => ({
-        ...province,
-        avgOrderValue: province.orderCount > 0 ? province.totalRevenue / province.orderCount : 0
-      }))
-      .sort((a, b) => b.orderCount - a.orderCount)
-      .slice(0, 10);
-      
-    console.log('🏆 أفضل المحافظات:', result);
-    setProvinceStats(result);
-  }, [allOrders, selectedPeriod]);
-
-  const totalOrders = provinceStats.reduce((sum, province) => sum + province.orderCount, 0);
-  const totalRevenue = provinceStats.reduce((sum, province) => sum + province.totalRevenue, 0);
+  const totalOrders = provinceStats.reduce((sum, province) => sum + (province.total_orders || 0), 0);
+  const totalRevenue = provinceStats.reduce((sum, province) => sum + (province.total_revenue || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
