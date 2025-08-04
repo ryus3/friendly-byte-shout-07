@@ -463,19 +463,19 @@ const CustomersManagementPage = () => {
       // تحليل الجنس الدقيق والقوي
       customer.customer_gender_segments?.gender_type === 'male' ? 'ذكر' : 
       customer.customer_gender_segments?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
-      customer.customer_loyalty?.total_points || 0,
-      customer.customer_loyalty?.total_orders || 0,
-      customer.customer_loyalty?.total_spent || 0,
-      customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
-      customer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0,
-      customer.customer_loyalty?.points_expiry_date ? 
-        new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar') : 'لا توجد',
+      customer.total_points || 0,
+      customer.total_orders || 0,
+      customer.total_spent || 0,
+      customer.loyalty_tiers?.name || 'لا يوجد',
+      customer.loyalty_tiers?.discount_percentage || 0,
+      customer.points_expiry_date ? 
+        new Date(customer.points_expiry_date).toLocaleDateString('ar') : 'لا توجد',
       customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '',
-      customer.customer_loyalty?.last_tier_upgrade 
-        ? new Date(customer.customer_loyalty.last_tier_upgrade).toLocaleDateString('ar') 
+      customer.last_tier_upgrade 
+        ? new Date(customer.last_tier_upgrade).toLocaleDateString('ar') 
         : 'لا يوجد',
-      customer.phone ? 'متوفر' : 'غير متوفر',
-      customer.address || ''
+      customer.phone_number || customer.phone ? 'متوفر' : 'غير متوفر',
+      customer.customer_address || ''
     ]);
 
     // إنشاء محتوى CSV
