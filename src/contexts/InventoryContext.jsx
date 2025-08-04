@@ -212,13 +212,29 @@ export const InventoryProvider = ({ children }) => {
     return { success: true };
   }, []);
   
-  // 🔥 المصاريف: فقط دالة واحدة موحدة
+  // دالة إضافة المصروف الموحدة الجديدة - بدون تكرار أو تداخل
   async function addExpense(expense) {
-    const { useUnifiedFinancialTransactions } = await import('../hooks/useUnifiedFinancialTransactions');
-    const { addExpense: unifiedAddExpense } = useUnifiedFinancialTransactions();
-    const result = await unifiedAddExpense(expense);
-    if (result.success) await fetchInitialData();
-    return result;
+    try {
+      const { useUnifiedFinancialTransactions } = await import('../hooks/useUnifiedFinancialTransactions');
+      const { addExpense: unifiedAddExpense } = useUnifiedFinancialTransactions();
+      
+      const result = await unifiedAddExpense(expense);
+      
+      if (result.success) {
+        // تحديث الحالة المحلية فقط - بدون حركة مالية إضافية
+        setAccounting(prev => ({ 
+          ...prev, 
+          expenses: [result.data, ...prev.expenses]
+        }));
+        
+        console.log('✅ [CONTEXT] تم تحديث الحالة المحلية للمصروف:', result.data.id);
+      }
+      
+      return result.data;
+    } catch (error) {
+      console.error('❌ [CONTEXT] فشل إضافة المصروف:', error);
+      throw error;
+    }
   }
 
   // استخدام البيانات من useOrders و usePurchases
@@ -1447,13 +1463,41 @@ export const InventoryProvider = ({ children }) => {
     }
   };
 
-  // 🔥 حذف المصاريف: فقط دالة واحدة موحدة  
+  // دالة حذف المصروف الموحدة الجديدة - بدون تكرار أو تداخل  
   const deleteExpense = async (expenseId) => {
-    const { useUnifiedFinancialTransactions } = await import('../hooks/useUnifiedFinancialTransactions');
-    const { deleteExpense: unifiedDeleteExpense } = useUnifiedFinancialTransactions();
-    const result = await unifiedDeleteExpense(expenseId);
-    if (result.success) await fetchInitialData();
-    return result;
+    try {
+      const { useUnifiedFinancialTransactions } = await import('../hooks/useUnifiedFinancialTransactions');
+      const { deleteExpense: unifiedDeleteExpense } = useUnifiedFinancialTransactions();
+      
+      const result = await unifiedDeleteExpense(expenseId);
+      
+      if (result.success) {
+        // تحديث البيانات المحلية فقط - بدون حركة مالية إضافية
+        setAccounting(prev => ({
+          ...prev,
+          expenses: prev.expenses?.filter(exp => exp.id !== expenseId) || []
+        }));
+        
+        console.log('✅ [CONTEXT] تم تحديث الحالة المحلية بعد حذف المصروف:', expenseId);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ [CONTEXT] فشل حذف المصروف:', error);
+      throw error;
+    }
+  };
+        description: "تم حذف المصروف وإرجاع المبلغ للقاصة", 
+        variant: "default" 
+      });
+    } catch (error) {
+      console.error('❌ فشل حذف المصروف:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "فشل حذف المصروف. يرجى المحاولة مرة أخرى.", 
+        variant: "destructive" 
+      });
+    }
   };
 
   return (
