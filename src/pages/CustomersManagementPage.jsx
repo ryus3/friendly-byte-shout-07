@@ -64,7 +64,7 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء - نظام الولاء يحتاج عرض جميع العملاء مع النقاط
+      // جلب العملاء المدمجين حسب رقم الهاتف من الجدول الموحد
       let customersQuery = supabase
         .from('customer_phone_loyalty')
         .select(`
@@ -76,10 +76,44 @@ const CustomersManagementPage = () => {
             discount_percentage
           )
         `)
-        .order('total_points', { ascending: false });
+        .order('total_orders', { ascending: false });
 
-      // نظام الولاء: عرض جميع العملاء مع نقاطهم
-      // فقط فلترة الطلبات والأرباح حسب المستخدم، وليس العملاء نفسهم
+      // فلترة العملاء - كل مستخدم يرى عملاءه فقط (حتى المدير)
+      // جلب أرقام هواتف العملاء الذين أنشأهم هذا المستخدم
+      const { data: userCustomerPhones } = await supabase
+        .from('customers')
+        .select('phone')
+        .eq('created_by', user.user_id);
+      
+      if (userCustomerPhones && userCustomerPhones.length > 0) {
+        // تطبيع أرقام الهواتف للمقارنة
+        const normalizedPhones = userCustomerPhones
+          .map(c => c.phone)
+          .filter(phone => phone && phone.trim() !== '')
+          .map(phone => {
+            // تطبيع رقم الهاتف (نفس منطق دالة normalize_phone_number)
+            let normalized = phone.replace(/[\s\-\(\)]/g, '');
+            normalized = normalized.replace(/^(\+964|00964)/, '');
+            normalized = normalized.replace(/^0/, '');
+            return normalized;
+          })
+          .filter(phone => phone && phone !== '');
+        
+        if (normalizedPhones.length > 0) {
+          customersQuery = customersQuery.in('phone_number', normalizedPhones);
+        } else {
+          // إذا لم يكن لدى المستخدم عملاء، أرجع مصفوفة فارغة
+          setCustomers([]);
+          setLoading(false);
+          return;
+        }
+      } else {
+        // إذا لم يكن لدى المستخدم عملاء، أرجع مصفوفة فارغة
+        setCustomers([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: customersData } = await customersQuery;
 
       setCustomers(customersData || []);
@@ -186,10 +220,11 @@ const CustomersManagementPage = () => {
           .eq('discount_year', new Date().getFullYear());
           
         setCityDiscounts(cityDiscountsData || []);
-      // جميع المستخدمين يمكنهم رؤية إحصائيات المدن - هذا نظام تحليلي عام
-      // لا يوجد مشاكل أمنية في عرض إحصائيات المدن العامة
-      setCityStats(finalCityStats || []);
-      setCityDiscounts(cityDiscountsData || []);
+      } else {
+        // الموظفين لا يحتاجون إحصائيات المدن
+        setCityStats([]);
+        setCityDiscounts([]);
+      }
       
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -206,9 +241,9 @@ const CustomersManagementPage = () => {
   // فلترة وترتيب العملاء حسب البحث ونوع الفلتر
   const filteredCustomers = customers
     .filter(customer => {
-      // التأكد من وجود البيانات الأساسية قبل الوصول إليها - البيانات الجديدة
-      const customerName = customer?.customer_name || '';
-      const customerPhone = customer?.phone_number || customer?.original_phone || '';
+      // التأكد من وجود البيانات الأساسية قبل الوصول إليها
+      const customerName = customer?.name || '';
+      const customerPhone = customer?.phone || '';
       const customerEmail = customer?.email || '';
       
       // فلترة البحث النصي مع حماية من القيم المفقودة
