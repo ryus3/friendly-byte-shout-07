@@ -28,7 +28,7 @@ import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import InventoryValueDialog from '@/components/accounting/InventoryValueDialog';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
-
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSummary';
@@ -171,7 +171,9 @@ const AccountingPage = () => {
         productType: 'all'
     };
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
-    // تم إزالة النظام القديم - النظام الموحد الآن نشط
+    // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
+    const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);
+    console.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
     console.log('🔍 فترة مختارة:', selectedTimePeriod);
     
     // استخدام البيانات الموحدة لجميع الحسابات
