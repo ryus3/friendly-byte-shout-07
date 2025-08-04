@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,6 +49,13 @@ const CustomersManagementPage = () => {
     try {
       setLoading(true);
       
+      // تشغيل ترحيل البيانات أولاً لضمان التحديث
+      try {
+        await supabase.rpc('migrate_existing_customers_to_phone_loyalty');
+      } catch (migrationError) {
+        console.log('Migration may have already been completed:', migrationError);
+      }
+      
       // جلب مستويات الولاء
       const { data: tiersData } = await supabase
         .from('loyalty_tiers')
@@ -57,36 +64,56 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء مع بيانات الولاء والجنس - مفلترة حسب الصلاحيات
+      // جلب العملاء المدمجين حسب رقم الهاتف من الجدول الموحد
       let customersQuery = supabase
-        .from('customers')
+        .from('customer_phone_loyalty')
         .select(`
           *,
-          customer_loyalty (
-            total_points,
-            total_spent,
-            total_orders,
-            current_tier_id,
-            last_tier_upgrade,
-            points_expiry_date,
-            loyalty_tiers (
-              name,
-              color,
-              icon,
-              discount_percentage
-            )
-          ),
-          customer_gender_segments (
-            gender_type,
-            confidence_score
+          loyalty_tiers (
+            name,
+            color,
+            icon,
+            discount_percentage
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('total_orders', { ascending: false });
 
-      // فلترة العملاء حسب الصلاحيات
+      // فلترة العملاء حسب الصلاحيات - الموظفين يرون عملاءهم فقط
       if (!canViewAllData) {
-        // الموظفين يرون عملاءهم فقط (من الطلبات التي أنشؤوها)
-        customersQuery = customersQuery.eq('created_by', user.user_id);
+        // جلب أرقام هواتف العملاء الذين أنشأهم هذا الموظف
+        const { data: employeeCustomerPhones } = await supabase
+          .from('customers')
+          .select('phone')
+          .eq('created_by', user.user_id);
+        
+        if (employeeCustomerPhones && employeeCustomerPhones.length > 0) {
+          // تطبيع أرقام الهواتف للمقارنة
+          const normalizedPhones = employeeCustomerPhones
+            .map(c => c.phone)
+            .filter(phone => phone && phone.trim() !== '')
+            .map(phone => {
+              // تطبيع رقم الهاتف (نفس منطق دالة normalize_phone_number)
+              let normalized = phone.replace(/[\s\-\(\)]/g, '');
+              normalized = normalized.replace(/^(\+964|00964)/, '');
+              normalized = normalized.replace(/^0/, '');
+              return normalized;
+            })
+            .filter(phone => phone && phone !== '');
+          
+          if (normalizedPhones.length > 0) {
+            customersQuery = customersQuery.in('phone_number', normalizedPhones);
+          } else {
+            // إذا لم يكن لدى الموظف عملاء، أرجع مصفوفة فارغة
+            setCustomers([]);
+            setLoading(false);
+            return;
+          }
+        } else {
+          // إذا لم يكن لدى الموظف عملاء، أرجع مصفوفة فارغة
+          setCustomers([]);
+          setLoading(false);
+          return;
+        }
       }
 
       const { data: customersData } = await customersQuery;
@@ -307,7 +334,7 @@ const CustomersManagementPage = () => {
   };
 
   // تطبيق خصم الولاء للعميل
-  const applyLoyaltyDiscount = async (customerId) => {
+  const applyLoyaltyDiscount = useCallback(async (customerId) => {
     try {
       const { data, error } = await supabase.rpc('check_monthly_loyalty_discount_eligibility', {
         p_customer_id: customerId

@@ -89,27 +89,21 @@ const CustomerCard = ({
     };
   };
 
-  const customerTier = customer.customer_loyalty?.loyalty_tiers;
+  const customerTier = customer.loyalty_tiers;
   const TierIcon = getTierIcon(customerTier?.icon);
-  const hasPoints = customer.customer_loyalty?.total_points > 0;
+  const hasPoints = customer.total_points > 0;
   const tierColors = getTierColors(customerTier?.name);
 
-  // حساب تاريخ انتهاء صلاحية النقاط - حل جذري
-  const pointsExpiryDate = customer.customer_loyalty?.points_expiry_date 
-    ? new Date(customer.customer_loyalty.points_expiry_date)
-    : customer.customer_loyalty?.last_tier_upgrade && customer.customer_loyalty?.loyalty_tiers?.points_expiry_months
-    ? new Date(new Date(customer.customer_loyalty.last_tier_upgrade).getTime() + 
-        (customer.customer_loyalty.loyalty_tiers.points_expiry_months * 30 * 24 * 60 * 60 * 1000))
-    : customer.customer_loyalty?.created_at && customer.customer_loyalty?.loyalty_tiers?.points_expiry_months
-    ? new Date(new Date(customer.customer_loyalty.created_at).getTime() + 
-        (customer.customer_loyalty.loyalty_tiers.points_expiry_months * 30 * 24 * 60 * 60 * 1000))
+  // حساب تاريخ انتهاء صلاحية النقاط من customer_phone_loyalty
+  const pointsExpiryDate = customer.points_expiry_date 
+    ? new Date(customer.points_expiry_date)
     : null;
   
   const isPointsExpiringSoon = pointsExpiryDate && pointsExpiryDate <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
   // إنشاء برومو كود محسّن للعميل (صغير مع RY)
-  const customerPromoCode = customer.phone 
-    ? `RY${customer.phone.slice(-4)}${customer.customer_loyalty?.loyalty_tiers?.name_en?.slice(0, 2)?.toUpperCase() || 'BR'}`
+  const customerPromoCode = customer.phone_number || customer.original_phone
+    ? `RY${(customer.phone_number || customer.original_phone).slice(-4)}${customer.loyalty_tiers?.name_en?.slice(0, 2)?.toUpperCase() || 'BR'}`
     : `RY${customer.id.slice(0, 6).toUpperCase()}`;
 
   // ألوان متنوعة وأنيقة للكروت
@@ -160,28 +154,28 @@ const CustomerCard = ({
                 className="font-bold text-lg text-foreground group-hover:text-primary transition-colors duration-300"
                 whileHover={{ scale: 1.02 }}
               >
-                {customer.name}
+                 {customer.customer_name}
               </motion.h3>
               
-              {customer.phone && (
+              {(customer.phone_number || customer.original_phone) && (
                 <motion.div 
                   className="flex items-center gap-1 text-sm text-muted-foreground mt-1"
                   whileHover={{ x: hasPoints ? -2 : 2 }}
                   transition={{ duration: 0.2 }}
                 >
                   <Phone className="h-3 w-3 text-blue-500" />
-                  {customer.phone}
+                  {customer.original_phone || customer.phone_number}
                 </motion.div>
               )}
               
-              {(customer.city || customer.province) && (
+              {(customer.customer_city || customer.customer_province) && (
                 <motion.div 
                   className="flex items-center gap-1 text-sm text-muted-foreground mt-1"
                   whileHover={{ x: hasPoints ? -2 : 2 }}
                   transition={{ duration: 0.2 }}
                 >
                   <MapPin className="h-3 w-3 text-green-500" />
-                  {[customer.city, customer.province].filter(Boolean).join(', ')}
+                  {[customer.customer_city, customer.customer_province].filter(Boolean).join(', ')}
                 </motion.div>
               )}
             </div>
@@ -211,7 +205,7 @@ const CustomerCard = ({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {customer.customer_loyalty && (
+          {hasPoints && (
             <div className="space-y-3">
               {/* مستوى العضوية */}
               {customerTier && (
@@ -237,7 +231,7 @@ const CustomerCard = ({
                 <span className="text-sm font-medium text-muted-foreground">النقاط:</span>
                 <div className="flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
                   <Star className="h-4 w-4 fill-current" />
-                  {customer.customer_loyalty.total_points?.toLocaleString('ar') || 0}
+                  {customer.total_points?.toLocaleString('ar') || 0}
                 </div>
               </motion.div>
 
@@ -270,19 +264,19 @@ const CustomerCard = ({
                 <span className="text-sm font-medium text-muted-foreground">الطلبات:</span>
                 <div className="flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">
                   <Users className="h-4 w-4" />
-                  {customer.customer_loyalty.total_orders || 0}
+                  {customer.total_orders || 0}
                 </div>
               </motion.div>
               
               {/* إجمالي المشتريات */}
-              {customer.customer_loyalty.total_spent > 0 && (
+              {customer.total_spent > 0 && (
                 <motion.div 
                   className="flex items-center justify-between"
                   whileHover={{ scale: 1.02 }}
                 >
                   <span className="text-sm font-medium text-muted-foreground">المشتريات:</span>
                   <div className="font-medium text-emerald-600 dark:text-emerald-400">
-                    {customer.customer_loyalty.total_spent?.toLocaleString('ar')} د.ع
+                    {customer.total_spent?.toLocaleString('ar')} د.ع
                   </div>
                 </motion.div>
               )}
@@ -371,7 +365,7 @@ const CustomerCard = ({
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>إرسال إشعار مخصص - {customer.name}</DialogTitle>
+                  <DialogTitle>إرسال إشعار مخصص - {customer.customer_name}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <Input
