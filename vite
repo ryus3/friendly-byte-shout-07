@@ -1,2 +1,13 @@
-#!/bin/bash
-exec npx vite "$@"
+#!/usr/bin/env node
+
+const { spawn } = require('child_process');
+const path = require('path');
+
+const vitePath = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
+const fs = require('fs');
+
+if (fs.existsSync(vitePath)) {
+  spawn('node', [vitePath, '--host', '::', '--port', '8080'], { stdio: 'inherit' });
+} else {
+  spawn('npx', ['vite', '--host', '::', '--port', '8080'], { stdio: 'inherit' });
+}

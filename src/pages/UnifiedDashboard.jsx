@@ -406,10 +406,11 @@ const UnifiedDashboard = () => {
         onOpenChange={(open) => setDialogs(d => ({ ...d, pendingRegs: open }))}
       />
       
-      <AiOrdersManager
-        open={dialogs.aiOrders}
-        onOpenChange={(open) => setDialogs(d => ({ ...d, aiOrders: open }))}
-      />
+      {dialogs.aiOrders && (
+        <AiOrdersManager
+          onClose={() => setDialogs(d => ({ ...d, aiOrders: false }))}
+        />
+      )}
     </>
   );
 };
