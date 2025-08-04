@@ -89,9 +89,9 @@ const CustomerCard = ({
     };
   };
 
-  const customerTier = customer.loyalty_tiers;
+  const customerTier = customer.customer_loyalty?.loyalty_tiers;
   const TierIcon = getTierIcon(customerTier?.icon);
-  const hasPoints = customer.total_points > 0;
+  const hasPoints = (customer.customer_loyalty?.total_points || 0) > 0;
   const tierColors = getTierColors(customerTier?.name);
 
   // حساب تاريخ انتهاء صلاحية النقاط من customer_phone_loyalty
@@ -231,7 +231,7 @@ const CustomerCard = ({
                 <span className="text-sm font-medium text-muted-foreground">النقاط:</span>
                 <div className="flex items-center gap-1 font-bold text-amber-600 dark:text-amber-400">
                   <Star className="h-4 w-4 fill-current" />
-                  {customer.total_points?.toLocaleString('ar') || 0}
+                  {customer.customer_loyalty?.total_points?.toLocaleString('ar') || 0}
                 </div>
               </motion.div>
 

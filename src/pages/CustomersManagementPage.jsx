@@ -64,57 +64,28 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء المدمجين حسب رقم الهاتف من الجدول الموحد
-      let customersQuery = supabase
-        .from('customer_phone_loyalty')
+      // جلب العملاء - كل مستخدم يرى عملاءه فقط (بغض النظر عن رقم الهاتف)
+      const { data: customersData } = await supabase
+        .from('customers')
         .select(`
           *,
-          loyalty_tiers (
-            name,
-            color,
-            icon,
-            discount_percentage
+          customer_loyalty (
+            total_points,
+            current_tier_id,
+            total_spent,
+            total_orders,
+            loyalty_tiers (
+              name,
+              color,
+              icon,
+              discount_percentage
+            )
           )
         `)
-        .order('total_orders', { ascending: false });
+        .eq('created_by', user?.id)
+        .order('created_at', { ascending: false });
 
-      // فلترة العملاء - كل مستخدم يرى عملاءه فقط (حتى المدير)
-      // جلب أرقام هواتف العملاء الذين أنشأهم هذا المستخدم
-      const { data: userCustomerPhones } = await supabase
-        .from('customers')
-        .select('phone')
-        .eq('created_by', user?.id);
-      
-      if (userCustomerPhones && userCustomerPhones.length > 0) {
-        // تطبيع أرقام الهواتف للمقارنة
-        const normalizedPhones = userCustomerPhones
-          .map(c => c.phone)
-          .filter(phone => phone && phone.trim() !== '')
-          .map(phone => {
-            // تطبيع رقم الهاتف (نفس منطق دالة normalize_phone_number)
-            let normalized = phone.replace(/[\s\-\(\)]/g, '');
-            normalized = normalized.replace(/^(\+964|00964)/, '');
-            normalized = normalized.replace(/^0/, '');
-            return normalized;
-          })
-          .filter(phone => phone && phone !== '');
-        
-        if (normalizedPhones.length > 0) {
-          customersQuery = customersQuery.in('phone_number', normalizedPhones);
-        } else {
-          // إذا لم يكن لدى المستخدم عملاء، أرجع مصفوفة فارغة
-          setCustomers([]);
-          setLoading(false);
-          return;
-        }
-      } else {
-        // إذا لم يكن لدى المستخدم عملاء، أرجع مصفوفة فارغة
-        setCustomers([]);
-        setLoading(false);
-        return;
-      }
-
-      const { data: customersData } = await customersQuery;
+      setCustomers(customersData || []);
 
       setCustomers(customersData || []);
       
@@ -236,12 +207,11 @@ const CustomersManagementPage = () => {
   // فلترة وترتيب العملاء حسب البحث ونوع الفلتر
   const filteredCustomers = customers
     .filter(customer => {
-      // التأكد من وجود البيانات الأساسية قبل الوصول إليها
       const customerName = customer?.name || '';
       const customerPhone = customer?.phone || '';
       const customerEmail = customer?.email || '';
       
-      // فلترة البحث النصي مع حماية من القيم المفقودة
+      // فلترة البحث النصي
       const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         customerPhone.includes(searchTerm) ||
         customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
@@ -251,35 +221,28 @@ const CustomersManagementPage = () => {
       if (filterType === 'with_phone') {
         matchesFilter = customerPhone && customerPhone.trim();
       } else if (filterType === 'with_points') {
-        matchesFilter = (customer.total_points || 0) > 0;
+        matchesFilter = (customer.customer_loyalty?.total_points || 0) > 0;
       } else if (filterType === 'no_points') {
-        matchesFilter = (customer.total_points || 0) === 0;
-      } else if (filterType === 'male_customers') {
-        // فلترة العملاء الرجال بناءً على تحليل جنس حقيقي وفولاذي
-        matchesFilter = customer.customer_gender_segments?.gender_type === 'male' || false;
-      } else if (filterType === 'female_customers') {
-        // فلترة العميلات النساء بناءً على تحليل جنس حقيقي وفولاذي
-        matchesFilter = customer.customer_gender_segments?.gender_type === 'female' || false;
+        matchesFilter = (customer.customer_loyalty?.total_points || 0) === 0;
       }
       
       // فلترة حسب المستوى
       let matchesTier = true;
       if (selectedTier) {
-        matchesTier = customer.current_tier_id === selectedTier;
+        matchesTier = customer.customer_loyalty?.current_tier_id === selectedTier;
       }
       
       return matchesSearch && matchesFilter && matchesTier;
     })
     .sort((a, b) => {
-      // ترتيب حسب النقاط أولاً (من الأعلى للأقل)
-      const aPoints = a.total_points || 0;
-      const bPoints = b.total_points || 0;
+      // ترتيب حسب النقاط أولاً
+      const aPoints = a.customer_loyalty?.total_points || 0;
+      const bPoints = b.customer_loyalty?.total_points || 0;
       
       if (aPoints !== bPoints) {
-        return bPoints - aPoints; // ترتيب تنازلي حسب النقاط
+        return bPoints - aPoints;
       }
       
-      // إذا كانت النقاط متساوية، ترتيب حسب تاريخ الإنشاء (الأحدث أولاً)
       return new Date(b.created_at) - new Date(a.created_at);
     });
 
