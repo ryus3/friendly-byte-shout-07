@@ -368,7 +368,7 @@ const CustomersManagementPage = () => {
         variant: 'destructive'
       });
     }
-  };
+  }, []);
 
   // اختيار مدينة عشوائية للخصم
   const selectRandomCityDiscount = async () => {
