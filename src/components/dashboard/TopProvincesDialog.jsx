@@ -32,7 +32,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
             <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
               <MapPin className="w-4 h-4 text-green-500" />
             </div>
-            المحافظات الأكثر طلباً
+            المدن الأكثر طلباً
           </DialogTitle>
         </DialogHeader>
 
@@ -88,7 +88,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
                 <div className="flex items-center justify-between relative z-10">
                   <div>
-                    <p className="text-xs font-medium text-white/90 mb-1">عدد المحافظات</p>
+                    <p className="text-xs font-medium text-white/90 mb-1">عدد المدن</p>
                     <p className="text-xl font-bold text-white">{provinceStats.length}</p>
                   </div>
                   <Map className="w-5 h-5 text-white/80" />
@@ -100,14 +100,14 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
             <div className="space-y-2">
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <Eye className="w-4 h-4" />
-                تفاصيل المحافظات ({provinceStats.length})
+                تفاصيل المدن ({provinceStats.length})
               </h3>
               
               {provinceStats.length > 0 ? (
                 <div className="grid gap-2 max-h-60 overflow-y-auto">
                   {provinceStats.map((province, index) => (
                     <motion.div
-                      key={province.province}
+                      key={province.city_name || index}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
@@ -119,7 +119,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                               {index + 1}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm text-foreground">{province.province || 'محافظة غير محددة'}</h4>
+                              <h4 className="font-semibold text-sm text-foreground">{province.city_name || 'مدينة غير محددة'}</h4>
                               <p className="text-xs text-muted-foreground">{province.total_orders || 0} طلب</p>
                             </div>
                           </div>
@@ -134,7 +134,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">المتوسط</p>
                               <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                                {Math.round(province.avg_order_value || 0).toLocaleString()}
+                                {Math.round((province.total_revenue || 0) / (province.total_orders || 1)).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -165,7 +165,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
                 <div className="bg-gradient-to-br from-card to-card/60 rounded-lg p-8 border border-border/60">
                   <div className="text-center">
                     <MapPin className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm font-semibold text-muted-foreground mb-1">لا توجد بيانات محافظات</p>
+                    <p className="text-sm font-semibold text-muted-foreground mb-1">لا توجد بيانات مدن</p>
                     <p className="text-xs text-muted-foreground">لا توجد طلبات مكتملة للفترة المحددة</p>
                   </div>
                 </div>

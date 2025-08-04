@@ -33,8 +33,8 @@ const useOrdersAnalytics = () => {
       setLoading(true);
       setError(null);
       
-      // استدعاء الدالة الموحدة الجديدة
-      const { data, error: rpcError } = await supabase.rpc('get_unified_orders_analytics');
+      // استدعاء الدالة الموحدة الجديدة مع فلترة حسب المستخدم
+      const { data, error: rpcError } = await supabase.rpc('get_unified_orders_analytics_by_user');
       
       if (rpcError) {
         console.error('خطأ في جلب إحصائيات الطلبات:', rpcError);

@@ -135,7 +135,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                                 {customer.phone || 'غير محدد'}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                المحافظة: {customer.province || 'غير محدد'}
+                                المدينة: {customer.city || 'غير محدد'}
                               </p>
                             </div>
                           </div>
@@ -189,8 +189,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
 
                         {/* تفاصيل إضافية */}
                         <div className="mt-4 text-xs text-muted-foreground">
-                          <p>آخر طلب: {customer.last_order_date ? new Date(customer.last_order_date).toLocaleDateString('ar-SA') : 'غير محدد'}</p>
-                          <p>المدينة: {customer.city || 'غير محدد'}</p>
+                          <p>آخر طلب: {customer.last_order_date ? new Date(customer.last_order_date).toLocaleDateString('en-CA') : 'غير محدد'}</p>
                         </div>
                       </div>
                     </motion.div>
