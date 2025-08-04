@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
 const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, sortByPhone = false, onViewAll }) => {
+  console.log(`🔥 TopListCard [${title}] - Received items:`, {
+    items,
+    itemsLength: items?.length || 0,
+    itemsType: typeof items,
+    firstItem: items?.[0]
+  });
+
   const handleViewAll = () => {
     if (onViewAll) {
       onViewAll();
@@ -11,14 +18,16 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, s
   };
 
   // إذا كان التصنيف حسب رقم الهاتف، نقوم بتجميع البيانات حسب رقم الهاتف
-  const processedItems = sortByPhone && items.length > 0 ? 
+  const processedItems = sortByPhone && items && items.length > 0 ? 
     items.map(item => ({
       ...item,
       // إظهار رقم الهاتف بدلاً من الاسم كـ label إذا كان متوفراً
       label: item.phone && item.phone !== 'غير محدد' ? item.phone : item.label,
       phone: item.phone || 'غير محدد'
     }))
-    : items;
+    : (items || []);
+
+  console.log(`🔥 TopListCard [${title}] - Processed items:`, processedItems);
 
   return (
     <Card className="glass-effect h-full border-border/60 flex flex-col">

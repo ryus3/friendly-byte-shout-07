@@ -164,17 +164,25 @@ export const getTopCustomers = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
-                                   order.receipt_received === true;
+    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
+    console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", استلام الفاتورة = ${order.receipt_received}, صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
+    
+    // تجربة بدون شرط receipt_received أولاً للاختبار
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
   console.log('✅ الطلبات المكتملة:', deliveredOrders.length);
+  console.log('📊 عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
+  
+  if (deliveredOrders.length === 0) {
+    console.log('⚠️ لا توجد طلبات مكتملة للزبائن!');
+    return [];
+  }
   
   const customerCounts = deliveredOrders.reduce((acc, order) => {
     // البحث عن رقم الهاتف في جميع الحقول المحتملة
@@ -229,17 +237,23 @@ export const getTopProvinces = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
-                                   order.receipt_received === true;
+    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
+    // تجربة بدون شرط receipt_received أولاً للاختبار
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
   console.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);
+  console.log('🏙️ عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
+  
+  if (deliveredOrders.length === 0) {
+    console.log('⚠️ لا توجد طلبات مكتملة للمحافظات!');
+    return [];
+  }
   
   const provinceCounts = deliveredOrders.reduce((acc, order) => {
     const city = order.customer_city || order.customer_province || 'غير محدد';
@@ -266,17 +280,23 @@ export const getTopProducts = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
-                                   order.receipt_received === true;
+    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
+    // تجربة بدون شرط receipt_received أولاً للاختبار
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
   console.log('📦 الطلبات المكتملة للمنتجات:', deliveredOrders.length);
+  console.log('📦 عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
+  
+  if (deliveredOrders.length === 0) {
+    console.log('⚠️ لا توجد طلبات مكتملة للمنتجات!');
+    return [];
+  }
   
   const productCounts = deliveredOrders.reduce((acc, order) => {
     if (!order.items || !Array.isArray(order.items)) {

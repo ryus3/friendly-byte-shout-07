@@ -296,6 +296,15 @@ const Dashboard = () => {
         const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
             order.created_by === user?.id || order.created_by === user?.user_id
         )) : [];
+        
+        console.log('🔥 Dashboard - Orders for Analysis:', {
+            totalOrders: orders?.length || 0,
+            visibleOrders: visibleOrders.length,
+            canViewAll: canViewAllData,
+            userId: user?.id,
+            userUserId: user?.user_id,
+            firstOrder: visibleOrders[0]
+        });
 
         if (!orders || !accounting || !products) return { netProfit: 0, chartData: [], deliveredOrders: [] };
         
@@ -431,9 +440,21 @@ const Dashboard = () => {
             deliveredSalesOrders,
             pendingSalesOrders,
             // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
-            topCustomers: canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
-            topProvinces: canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
-            topProducts: canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id)),
+            topCustomers: (() => {
+                const customers = canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                console.log('🔥 Dashboard - Top Customers Result:', customers);
+                return customers;
+            })(),
+            topProvinces: (() => {
+                const provinces = canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                console.log('🔥 Dashboard - Top Provinces Result:', provinces);
+                return provinces;
+            })(),
+            topProducts: (() => {
+                const products = canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                console.log('🔥 Dashboard - Top Products Result:', products);
+                return products;
+            })(),
         };
     }, [
         visibleOrders, 
