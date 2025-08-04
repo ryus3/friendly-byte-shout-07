@@ -1,13 +1,12 @@
-#!/usr/bin/env node
+#!/bin/bash
 
-const { spawn } = require('child_process');
-const path = require('path');
-
-const vitePath = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
-const fs = require('fs');
-
-if (fs.existsSync(vitePath)) {
-  spawn('node', [vitePath, '--host', '::', '--port', '8080'], { stdio: 'inherit' });
-} else {
-  spawn('npx', ['vite', '--host', '::', '--port', '8080'], { stdio: 'inherit' });
-}
+# Use direct path to avoid npx issues
+if [ -f "node_modules/.bin/vite" ]; then
+    exec "./node_modules/.bin/vite" "$@"
+elif [ -f "node_modules/vite/bin/vite.js" ]; then
+    exec node "./node_modules/vite/bin/vite.js" "$@"
+else
+    echo "Installing vite..."
+    npm install vite@latest
+    exec "./node_modules/.bin/vite" "$@"
+fi
