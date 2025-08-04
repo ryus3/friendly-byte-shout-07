@@ -64,28 +64,29 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء - كل مستخدم يرى عملاءه فقط (بغض النظر عن رقم الهاتف)
-      const { data: customersData } = await supabase
-        .from('customers')
-        .select(`
-          *,
-          customer_loyalty (
-            total_points,
-            current_tier_id,
-            total_spent,
-            total_orders,
-            loyalty_tiers (
-              name,
-              color,
-              icon,
-              discount_percentage
-            )
-          )
-        `)
-        .eq('created_by', user?.id)
-        .order('created_at', { ascending: false });
+      // جلب العملاء وبيانات الولاء - كل مستخدم يرى عملاءه فقط
+      const { data: customersData } = await supabase.rpc('get_user_customers_with_loyalty', {
+        p_user_id: user?.id
+      });
 
-      setCustomers(customersData || []);
+      // تحويل البيانات للشكل المطلوب
+      const formattedCustomers = (customersData || []).map(customer => ({
+        ...customer,
+        customer_loyalty: {
+          total_points: customer.total_points,
+          total_orders: customer.total_orders,
+          total_spent: customer.total_spent,
+          current_tier_id: customer.current_tier_id,
+          loyalty_tiers: customer.tier_name ? {
+            name: customer.tier_name,
+            color: customer.tier_color,
+            icon: customer.tier_icon,
+            discount_percentage: customer.tier_discount_percentage
+          } : null
+        }
+      }));
+
+      setCustomers(formattedCustomers);
 
       setCustomers(customersData || []);
       

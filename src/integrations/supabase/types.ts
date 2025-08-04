@@ -3387,6 +3387,37 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_city_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          city_name: string
+          total_orders: number
+          total_amount: number
+        }[]
+      }
+      get_user_customers_with_loyalty: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          name: string
+          phone: string
+          email: string
+          city: string
+          province: string
+          address: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          total_points: number
+          total_orders: number
+          total_spent: number
+          current_tier_id: string
+          tier_name: string
+          tier_color: string
+          tier_icon: string
+          tier_discount_percentage: number
+        }[]
+      }
       get_user_highest_role: {
         Args: { p_user_id: string }
         Returns: string
