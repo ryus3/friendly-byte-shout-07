@@ -94,6 +94,17 @@ const Dashboard = () => {
         filterDataByUser
     } = usePermissions();
     const { orders, aiOrders, loading: inventoryLoading, calculateProfit, calculateManagerProfit, accounting, products, settlementInvoices } = useInventory();
+    
+    // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
+    useEffect(() => {
+        console.log('🔥 Dashboard - البيانات من InventoryContext:', {
+            ordersCount: orders?.length || 0,
+            orders: orders,
+            firstOrder: orders?.[0],
+            loading: inventoryLoading
+        });
+    }, [orders, inventoryLoading]);
+    
     const { profits: profitsData } = useProfits();
     const navigate = useNavigate();
     const [currentTime, setCurrentTime] = useState(new Date());

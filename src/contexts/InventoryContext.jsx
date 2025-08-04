@@ -596,6 +596,14 @@ export const InventoryProvider = ({ children }) => {
       if (ordersRes.error) throw ordersRes.error;
       if (purchasesRes.error) throw purchasesRes.error;
 
+      // إضافة console.log قوي لفحص البيانات
+      console.log('🔥 InventoryContext - جلب الطلبات من قاعدة البيانات:', {
+        totalOrders: ordersRes.data?.length || 0,
+        ordersData: ordersRes.data,
+        firstOrder: ordersRes.data?.[0],
+        orderWithItems: ordersRes.data?.find(o => o.order_items?.length > 0)
+      });
+
       // معالجة وتحويل بيانات المنتجات
       const processedProducts = (productsRes.data || []).map(product => {
         const productInventory = product.inventory || [];
@@ -724,6 +732,12 @@ export const InventoryProvider = ({ children }) => {
       }
 
       // معالجة وتحويل بيانات الطلبات
+      console.log('🔥 InventoryContext - الطلبات الخام من قاعدة البيانات:', {
+        totalRawOrders: ordersRes.data?.length || 0,
+        firstRawOrder: ordersRes.data?.[0],
+        orderWithItems: ordersRes.data?.find(o => o.order_items?.length > 0)
+      });
+
       const processedOrders = (ordersRes.data || []).map(order => {
         // تحويل order_items إلى items بالتنسيق المطلوب
         const items = (order.order_items || []).map(item => ({
@@ -750,6 +764,17 @@ export const InventoryProvider = ({ children }) => {
           total: order.final_amount || order.total_amount, // لضمان التوافق مع الكود القديم
           order_items: order.order_items // الاحتفاظ بالبيانات الأصلية
         };
+      });
+
+      console.log('🔥 InventoryContext - الطلبات المعالجة:', {
+        totalProcessedOrders: processedOrders.length,
+        firstProcessedOrder: processedOrders[0],
+        orderWithProcessedItems: processedOrders.find(o => o.items?.length > 0),
+        statusCounts: {
+          delivered: processedOrders.filter(o => o.status === 'delivered').length,
+          completed: processedOrders.filter(o => o.status === 'completed').length,
+          receiptReceived: processedOrders.filter(o => o.receipt_received === true).length
+        }
       });
 
       setProducts(processedProducts);
