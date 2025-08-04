@@ -4,7 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
@@ -48,7 +48,7 @@ const ProfitsSummaryPage = () => {
   const { profits, createSettlementRequest, markInvoiceReceived } = useProfits();
   
   // استخدام النظام الموحد للحصول على صافي الربح الموحد
-  const { profitData: unifiedProfitData } = useUnifiedProfits();
+  // تم استبدال النظام القديم بالنظام الموحد الجديد
   const location = useLocation();
   const navigate = useNavigate();
 
