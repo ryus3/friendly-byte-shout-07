@@ -155,13 +155,13 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null, productsData
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">الإيرادات</p>
                               <p className="font-bold text-sm text-green-600 dark:text-green-400">
-                                {product.totalRevenue.toLocaleString()}
+                                {product.total_revenue.toLocaleString()}
                               </p>
                             </div>
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">المبيعات</p>
                               <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                                {product.orderCount}
+                                {product.orders_count}
                               </p>
                             </div>
                           </div>
