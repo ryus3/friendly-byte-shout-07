@@ -1,29 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Users, Calendar, Eye, TrendingUp, DollarSign, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
+const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersData = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const { analytics, loading } = useOrdersAnalytics();
+  const [customerStats, setCustomerStats] = useState([]);
   
-  console.log('🔥 TopCustomersDialog - البيانات من useOrdersAnalytics:', {
-    analytics: analytics?.topCustomers,
-    length: analytics?.topCustomers?.length || 0
+  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
+  console.log('🔥 TopCustomersDialog - البيانات الواردة:', {
+    customersData,
+    length: customersData?.length || 0
   });
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
     { key: 'month', label: 'الشهر الماضي' },
     { key: '3months', label: '3 أشهر' },
-    { key: 'year', label: 'السنة' },
+    { key: '6months', label: '6 أشهر' },
+    { key: 'year', label: 'السنة الماضية' },
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات من analytics.topCustomers مباشرة
-  const customerStats = analytics?.topCustomers || [];
+  // استخدام البيانات الممررة مباشرة
+  useEffect(() => {
+    if (customersData && customersData.length > 0) {
+      // تحويل البيانات إلى الهيكل المطلوب
+      const processedCustomers = customersData.map((customer, index) => ({
+        phone: customer.phone || 'غير محدد',
+        normalizedPhone: normalizePhoneNumber(customer.phone),
+        name: customer.label || 'زبون غير محدد',
+        orderCount: customer.count || 0,
+        totalRevenue: 0, // يمكن حسابه لاحقاً
+        avgOrderValue: 0,
+        orders: [{ id: `order-${index}`, amount: 0, date: new Date() }],
+        city: 'غير محدد',
+        province: 'غير محدد'
+      }));
+      
+      console.log('🔥 TopCustomersDialog - البيانات المعالجة:', processedCustomers);
+      setCustomerStats(processedCustomers);
+    } else {
+      setCustomerStats([]);
+    }
+  }, [customersData]);
 
   // دالة تطبيع رقم الهاتف
   const normalizePhoneNumber = (phone) => {
@@ -40,8 +62,8 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
     return customerStats;
   };
 
-  const totalOrders = customerStats.reduce((sum, customer) => sum + (customer.orders_count || customer.orderCount || 0), 0);
-  const totalRevenue = customerStats.reduce((sum, customer) => sum + (customer.total_revenue || customer.totalRevenue || 0), 0);
+  const totalOrders = customerStats.reduce((sum, customer) => sum + customer.orderCount, 0);
+  const totalRevenue = customerStats.reduce((sum, customer) => sum + customer.totalRevenue, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,16 +77,33 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="mr-3">جاري تحميل البيانات...</span>
+        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
+          <div className="flex items-center justify-center py-6">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">جاري التحليل...</p>
+            </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* إحصائيات سريعة */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-gradient-to-br from-blue-500 to-sky-400 rounded-lg p-4 text-white relative overflow-hidden">
+          <div className="space-y-4">
+            {/* فلترة الفترة الزمنية */}
+            <div className="flex flex-wrap gap-1">
+              {periods.map((period) => (
+                <Button
+                  key={period.key}
+                  variant={selectedPeriod === period.key ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedPeriod(period.key)}
+                  className="text-xs px-2 py-1 h-8"
+                >
+                  {period.label}
+                </Button>
+              ))}
+            </div>
+
+            {/* الإحصائيات العامة */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg p-4 text-white relative overflow-hidden">
                 <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/10 rounded-full"></div>
                 <div className="flex items-center justify-between relative z-10">
                   <div>
@@ -109,7 +148,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                 <div className="grid gap-2 max-h-60 overflow-y-auto">
                   {customerStats.map((customer, index) => (
                     <motion.div
-                      key={customer.customer_phone || customer.phone || index}
+                      key={customer.normalizedPhone}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
@@ -121,12 +160,13 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                               {index + 1}
                             </div>
                             <div>
-                              <p className="font-bold text-base text-foreground">
-                                {customer.customer_name || customer.label || 'زبون غير محدد'}
+                              <h4 className="font-bold text-lg text-foreground mb-1">{customer.name}</h4>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Phone className="w-4 h-4" />
+                                {customer.phone}
                               </p>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Phone className="w-3 h-3" />
-                                {normalizePhoneNumber(customer.customer_phone || customer.phone)}
+                              <p className="text-xs text-muted-foreground">
+                                الهاتف المطبع: {customer.normalizedPhone}
                               </p>
                             </div>
                           </div>
@@ -137,9 +177,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                                 <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">عدد الطلبات</p>
-                              <p className="font-bold text-lg text-blue-600 dark:text-blue-400">
-                                {customer.orders_count || customer.orderCount || 0}
-                              </p>
+                              <p className="font-bold text-lg text-blue-600 dark:text-blue-400">{customer.orderCount}</p>
                             </div>
                             <div className="text-center">
                               <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-2 mx-auto">
@@ -147,7 +185,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">إجمالي الإيرادات</p>
                               <p className="font-bold text-lg text-green-600 dark:text-green-400">
-                                {(customer.total_revenue || customer.totalRevenue || 0).toLocaleString()}
+                                {customer.totalRevenue.toLocaleString()}
                               </p>
                             </div>
                             <div className="text-center">
@@ -156,10 +194,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">متوسط الطلب</p>
                               <p className="font-bold text-lg text-purple-600 dark:text-purple-400">
-                                {customer.orders_count || customer.orderCount > 0 
-                                  ? Math.round((customer.total_revenue || customer.totalRevenue || 0) / (customer.orders_count || customer.orderCount)).toLocaleString()
-                                  : 0
-                                }
+                                {Math.round(customer.avgOrderValue).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -170,31 +205,44 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-xs font-medium text-muted-foreground">نسبة المساهمة</span>
                             <span className="text-xs font-bold text-primary">
-                              {totalOrders > 0 
-                                ? (((customer.orders_count || customer.orderCount || 0) / totalOrders) * 100).toFixed(1) 
-                                : 0
-                              }%
+                              {totalOrders > 0 ? ((customer.orderCount / totalOrders) * 100).toFixed(1) : 0}%
                             </span>
                           </div>
-                          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                          <div className="w-full bg-muted/50 rounded-full h-3 overflow-hidden">
                             <div 
-                              className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500"
+                              className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 shadow-sm"
                               style={{ 
-                                width: totalOrders > 0 
-                                  ? `${((customer.orders_count || customer.orderCount || 0) / totalOrders) * 100}%` 
-                                  : '0%' 
+                                width: `${totalOrders > 0 ? (customer.orderCount / totalOrders) * 100 : 0}%`
                               }}
                             />
                           </div>
+                        </div>
+
+                        {/* تفاصيل الطلبات */}
+                        <div className="mt-4 text-xs text-muted-foreground">
+                          <p>طلبات هذا الزبون:</p>
+                          {customer.orders.map((order, i) => (
+                            <span key={order.id} className="inline-block mr-2">
+                              {order.amount.toLocaleString()} د.ع
+                              {i < customer.orders.length - 1 && ', '}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     </motion.div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>لا توجد بيانات زبائن متاحة حالياً</p>
+                <div className="bg-gradient-to-br from-card to-card/60 rounded-xl p-12 border border-border/60 shadow-lg">
+                  <div className="text-center">
+                    <Users className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-lg font-semibold text-muted-foreground mb-2">لا توجد بيانات زبائن</p>
+                    <p className="text-sm text-muted-foreground">لا توجد طلبات مكتملة للفترة المحددة</p>
+                    <div className="mt-4 text-xs text-muted-foreground">
+                      <p>البيانات المتاحة: {customersData?.length || 0}</p>
+                      <p>الفترة المحددة: {periods.find(p => p.key === selectedPeriod)?.label}</p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

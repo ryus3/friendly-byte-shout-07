@@ -5,27 +5,49 @@ import { Package, Calendar, Eye, TrendingUp, DollarSign, ShoppingCart } from 'lu
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
+const TopProductsDialog = ({ open, onOpenChange, employeeId = null, productsData = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const { analytics, loading } = useOrdersAnalytics();
+  const [productStats, setProductStats] = useState([]);
   
-  console.log('🔥 TopProductsDialog - البيانات من useOrdersAnalytics:', {
-    analytics: analytics?.topProducts,
-    length: analytics?.topProducts?.length || 0
+  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
+  console.log('🔥 TopProductsDialog - البيانات الواردة:', {
+    productsData,
+    length: productsData?.length || 0
   });
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
     { key: 'month', label: 'الشهر الماضي' },
     { key: '3months', label: '3 أشهر' },
-    { key: 'year', label: 'السنة' },
+    { key: '6months', label: '6 أشهر' },
+    { key: 'year', label: 'السنة الماضية' },
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات من analytics.topProducts مباشرة
-  const productStats = analytics?.topProducts || [];
+  // استخدام البيانات الممررة مباشرة
+  useEffect(() => {
+    if (productsData && productsData.length > 0) {
+      // تحويل البيانات إلى الهيكل المطلوب
+      const processedProducts = productsData.map((product) => ({
+        productName: product.label || 'منتج غير محدد',
+        totalQuantity: parseInt(product.value?.replace(/\D/g, '')) || 0,
+        total_sold: parseInt(product.value?.replace(/\D/g, '')) || 0,
+        total_revenue: 0,
+        orders_count: 0
+      }));
+      
+      console.log('🔥 TopProductsDialog - البيانات المعالجة:', processedProducts);
+      setProductStats(processedProducts);
+    } else {
+      setProductStats([]);
+    }
+  }, [productsData]);
+  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
+  const getFilteredProducts = () => {
+    return productStats;
+  };
 
-  const totalQuantity = productStats.reduce((sum, product) => sum + (product.quantity || 0), 0);
+  const totalQuantity = productStats.reduce((sum, product) => sum + (product.total_sold || 0), 0);
   const totalRevenue = productStats.reduce((sum, product) => sum + (product.total_revenue || 0), 0);
   const totalOrders = productStats.reduce((sum, product) => sum + (product.orders_count || 0), 0);
 
@@ -41,10 +63,12 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="mr-3">جاري تحميل البيانات...</span>
+        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
+          <div className="flex items-center justify-center py-6">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">جاري التحليل...</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
@@ -110,7 +134,7 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
                 <div className="grid gap-2 max-h-60 overflow-y-auto">
                   {productStats.map((product, index) => (
                     <motion.div
-                      key={product.product_name || index}
+                      key={product.productName}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
@@ -122,8 +146,8 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
                               {index + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm text-foreground truncate">{product.product_name || 'منتج غير محدد'}</h4>
-                              <p className="text-xs text-muted-foreground">{product.quantity || 0} قطعة مباعة</p>
+                              <h4 className="font-semibold text-sm text-foreground truncate">{product.productName}</h4>
+                              <p className="text-xs text-muted-foreground">{product.totalQuantity} قطعة مباعة</p>
                             </div>
                           </div>
                           
@@ -131,13 +155,13 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">الإيرادات</p>
                               <p className="font-bold text-sm text-green-600 dark:text-green-400">
-                                {(product.total_revenue || 0).toLocaleString()}
+                                {product.total_revenue.toLocaleString()}
                               </p>
                             </div>
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">المبيعات</p>
                               <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                                {product.orders_count || 0}
+                                {product.orders_count}
                               </p>
                             </div>
                           </div>
@@ -148,14 +172,14 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-muted-foreground">المساهمة</span>
                             <span className="text-xs font-bold text-primary">
-                              {totalQuantity > 0 ? (((product.quantity || 0) / totalQuantity) * 100).toFixed(1) : 0}%
+                              {totalQuantity > 0 ? ((product.totalQuantity / totalQuantity) * 100).toFixed(1) : 0}%
                             </span>
                           </div>
                           <div className="w-full bg-muted/50 rounded-full h-2 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-primary to-primary/80 h-2 rounded-full transition-all duration-300"
-                               style={{ 
-                                 width: `${totalQuantity > 0 ? ((product.quantity || 0) / totalQuantity) * 100 : 0}%`
+                              style={{ 
+                                width: `${totalQuantity > 0 ? (product.totalQuantity / totalQuantity) * 100 : 0}%`
                               }}
                             />
                           </div>

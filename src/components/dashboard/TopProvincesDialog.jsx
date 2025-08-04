@@ -5,27 +5,50 @@ import { MapPin, Calendar, Eye, TrendingUp, DollarSign, Map } from 'lucide-react
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
+const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesData = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const { analytics, loading } = useOrdersAnalytics();
+  const [provinceStats, setProvinceStats] = useState([]);
   
-  console.log('🔥 TopProvincesDialog - البيانات من useOrdersAnalytics:', {
-    analytics: analytics?.topProvinces,
-    length: analytics?.topProvinces?.length || 0
+  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
+  console.log('🔥 TopProvincesDialog - البيانات الواردة:', {
+    provincesData,
+    length: provincesData?.length || 0
   });
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
     { key: 'month', label: 'الشهر الماضي' },
     { key: '3months', label: '3 أشهر' },
-    { key: 'year', label: 'السنة' },
+    { key: '6months', label: '6 أشهر' },
+    { key: 'year', label: 'السنة الماضية' },
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات من analytics.topProvinces مباشرة
-  const provinceStats = analytics?.topProvinces || [];
+  // استخدام البيانات الممررة مباشرة
+  useEffect(() => {
+    if (provincesData && provincesData.length > 0) {
+      // تحويل البيانات إلى الهيكل المطلوب
+      const processedProvinces = provincesData.map((province) => ({
+        province: province.label || 'محافظة غير محددة',
+        orderCount: parseInt(province.value?.replace(/\D/g, '')) || 0,
+        total_orders: parseInt(province.value?.replace(/\D/g, '')) || 0,
+        total_revenue: 0,
+        totalRevenue: 0,
+        avgOrderValue: 0
+      }));
+      
+      console.log('🔥 TopProvincesDialog - البيانات المعالجة:', processedProvinces);
+      setProvinceStats(processedProvinces);
+    } else {
+      setProvinceStats([]);
+    }
+  }, [provincesData]);
+  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
+  const getFilteredProvinces = () => {
+    return provinceStats;
+  };
 
-  const totalOrders = provinceStats.reduce((sum, province) => sum + (province.orders_count || 0), 0);
+  const totalOrders = provinceStats.reduce((sum, province) => sum + (province.total_orders || 0), 0);
   const totalRevenue = provinceStats.reduce((sum, province) => sum + (province.total_revenue || 0), 0);
 
   return (
@@ -40,10 +63,12 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="mr-3">جاري تحميل البيانات...</span>
+        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
+          <div className="flex items-center justify-center py-6">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+              <p className="text-sm text-muted-foreground">جاري التحليل...</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
