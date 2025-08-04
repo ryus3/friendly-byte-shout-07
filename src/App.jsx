@@ -141,9 +141,17 @@ function AppContent() {
           <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
           <Route path="/customers-management" element={<ProtectedRoute permission="view_customers">{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
 
-          {/* النظام الجديد للاختبار */}
-          <Route path="/new/dashboard" element={<ProtectedRoute><DataProvider><SimplifiedLayout><DashboardNew /></SimplifiedLayout></DataProvider></ProtectedRoute>} />
-          <Route path="/new/products" element={<ProtectedRoute permission="view_products"><DataProvider><SimplifiedLayout><ProductsPageNew /></SimplifiedLayout></DataProvider></ProtectedRoute>} />
+          {/* النظام الجديد المعزول تماماً */}
+          <Route path="/new/*" element={
+            <ProtectedRoute>
+              <DataProvider>
+                <Routes>
+                  <Route path="dashboard" element={<SimplifiedLayout><DashboardNew /></SimplifiedLayout>} />
+                  <Route path="products" element={<SimplifiedLayout><ProductsPageNew /></SimplifiedLayout>} />
+                </Routes>
+              </DataProvider>
+            </ProtectedRoute>
+          } />
 
         </Routes>
       </Suspense>
