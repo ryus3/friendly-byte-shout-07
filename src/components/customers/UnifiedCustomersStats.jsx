@@ -11,18 +11,13 @@ const UnifiedCustomersStats = ({ onStatClick }) => {
   const { canViewAllCustomers, filterDataByUser, user } = usePermissions();
   const { data: allCustomers, loading } = useSupabaseData('customers');
 
-  // تصفية العملاء حسب صلاحيات المستخدم - كل مستخدم يرى عملاءه فقط
+  // تصفية العملاء حسب صلاحيات المستخدم - كل مستخدم يرى عملاءه فقط (حتى المدير)
   const filteredCustomers = React.useMemo(() => {
     if (!allCustomers) return [];
     
-    // المديرون يرون جميع العملاء إذا كان لديهم الصلاحية
-    if (canViewAllCustomers) {
-      return allCustomers;
-    }
-    
-    // الموظفون يرون عملاءهم فقط (المنشؤون بواسطتهم)
+    // كل مستخدم (مدير أو موظف) يرى عملاءه الخاصين فقط
     return allCustomers.filter(customer => customer.created_by === user?.id);
-  }, [allCustomers, canViewAllCustomers, user?.id]);
+  }, [allCustomers, user?.id]);
 
   if (loading) {
     return (

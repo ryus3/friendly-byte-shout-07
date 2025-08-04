@@ -83,7 +83,7 @@ const CustomersManagementPage = () => {
       const { data: userCustomerPhones } = await supabase
         .from('customers')
         .select('phone')
-        .eq('created_by', user.user_id);
+        .eq('created_by', user?.id);
       
       if (userCustomerPhones && userCustomerPhones.length > 0) {
         // تطبيع أرقام الهواتف للمقارنة
@@ -118,8 +118,8 @@ const CustomersManagementPage = () => {
 
       setCustomers(customersData || []);
       
-      // إحصائيات المدن - فقط للمديرين
-      if (canViewAllData) {
+      // إحصائيات المدن - فقط للمستخدمين حسب عملائهم
+      // حساب إحصائيات المدن لعملاء هذا المستخدم فقط
         // 🔥 الحل النهائي الأكيد لمشكلة مبيعات المدن
         console.log('=== 🚀 إعادة حساب جذرية لمبيعات المدن ===');
         
@@ -131,10 +131,11 @@ const CustomersManagementPage = () => {
           
           console.log(`📅 الشهر الحالي: ${currentMonth}/${currentYear}`);
           
-          // استعلام مباشر وشامل مع فلترة دقيقة للشهر الحالي
+          // استعلام مباشر مع فلترة حسب عملاء هذا المستخدم فقط
           const { data: allOrdersData, error: ordersError } = await supabase
             .from('orders')
-            .select('id, order_number, customer_city, final_amount, total_amount, created_at, status, receipt_received')
+            .select('id, order_number, customer_city, final_amount, total_amount, created_at, status, receipt_received, created_by')
+            .eq('created_by', user?.id)  // فلترة حسب المستخدم الحالي
             .gte('created_at', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
             .lt('created_at', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
@@ -211,7 +212,6 @@ const CustomersManagementPage = () => {
           setCityStats([]);
         }
 
-        
         // جلب خصومات المدن الحالية
         const { data: cityDiscountsData } = await supabase
           .from('city_random_discounts')
@@ -220,11 +220,6 @@ const CustomersManagementPage = () => {
           .eq('discount_year', new Date().getFullYear());
           
         setCityDiscounts(cityDiscountsData || []);
-      } else {
-        // الموظفين لا يحتاجون إحصائيات المدن
-        setCityStats([]);
-        setCityDiscounts([]);
-      }
       
     } catch (error) {
       console.error('Error fetching data:', error);
