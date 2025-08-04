@@ -164,14 +164,13 @@ export const getTopCustomers = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
-                                   order.receipt_received === true;
+    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
-    console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", استلام الفاتورة = ${order.receipt_received}, صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
+    console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
     
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
@@ -237,8 +236,7 @@ export const getTopProvinces = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
-                                   order.receipt_received === true;
+    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
@@ -280,8 +278,7 @@ export const getTopProducts = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
-                                   order.receipt_received === true;
+    const isDeliveredOrCompleted = order.status === 'delivered' || order.status === 'completed';
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
@@ -299,14 +296,18 @@ export const getTopProducts = (orders) => {
   }
   
   const productCounts = deliveredOrders.reduce((acc, order) => {
-    if (!order.items || !Array.isArray(order.items)) {
+    // دعم كلاً من order.items و order.order_items
+    const items = order.order_items || order.items || [];
+    
+    if (!Array.isArray(items) || items.length === 0) {
       console.log(`📦 الطلب ${order.id}: لا يحتوي على عناصر`);
       return acc;
     }
     
-    console.log(`📦 الطلب ${order.id}: يحتوي على ${order.items.length} عنصر`);
-    order.items.forEach(item => {
-      const productName = item.product_name || item.name || 'منتج غير محدد';
+    console.log(`📦 الطلب ${order.id}: يحتوي على ${items.length} عنصر`);
+    items.forEach(item => {
+      // دعم أسماء مختلفة للمنتج
+      const productName = item.products?.name || item.product_name || item.name || 'منتج غير محدد';
       const quantity = parseInt(item.quantity) || 1;
       console.log(`📦 المنتج: ${productName}, الكمية: ${quantity}`);
       acc[productName] = (acc[productName] || 0) + quantity;
