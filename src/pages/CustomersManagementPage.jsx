@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,13 +49,6 @@ const CustomersManagementPage = () => {
     try {
       setLoading(true);
       
-      // تشغيل ترحيل البيانات أولاً لضمان التحديث
-      try {
-        await supabase.rpc('migrate_existing_customers_to_phone_loyalty');
-      } catch (migrationError) {
-        console.log('Migration may have already been completed:', migrationError);
-      }
-      
       // جلب مستويات الولاء
       const { data: tiersData } = await supabase
         .from('loyalty_tiers')
@@ -64,62 +57,44 @@ const CustomersManagementPage = () => {
       
       setLoyaltyTiers(tiersData || []);
 
-      // جلب العملاء المدمجين حسب رقم الهاتف من الجدول الموحد
+      // جلب العملاء مع بيانات الولاء والجنس - مفلترة حسب الصلاحيات
       let customersQuery = supabase
-        .from('customer_phone_loyalty')
+        .from('customers')
         .select(`
           *,
-          loyalty_tiers (
-            name,
-            color,
-            icon,
-            discount_percentage
+          customer_loyalty (
+            total_points,
+            total_spent,
+            total_orders,
+            current_tier_id,
+            last_tier_upgrade,
+            points_expiry_date,
+            loyalty_tiers (
+              name,
+              color,
+              icon,
+              discount_percentage
+            )
+          ),
+          customer_gender_segments (
+            gender_type,
+            confidence_score
           )
         `)
-        .order('total_orders', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      // فلترة العملاء - كل مستخدم يرى عملاءه فقط (حتى المدير)
-      // جلب أرقام هواتف العملاء الذين أنشأهم هذا المستخدم
-      const { data: userCustomerPhones } = await supabase
-        .from('customers')
-        .select('phone')
-        .eq('created_by', user?.id);
-      
-      if (userCustomerPhones && userCustomerPhones.length > 0) {
-        // تطبيع أرقام الهواتف للمقارنة
-        const normalizedPhones = userCustomerPhones
-          .map(c => c.phone)
-          .filter(phone => phone && phone.trim() !== '')
-          .map(phone => {
-            // تطبيع رقم الهاتف (نفس منطق دالة normalize_phone_number)
-            let normalized = phone.replace(/[\s\-\(\)]/g, '');
-            normalized = normalized.replace(/^(\+964|00964)/, '');
-            normalized = normalized.replace(/^0/, '');
-            return normalized;
-          })
-          .filter(phone => phone && phone !== '');
-        
-        if (normalizedPhones.length > 0) {
-          customersQuery = customersQuery.in('phone_number', normalizedPhones);
-        } else {
-          // إذا لم يكن لدى المستخدم عملاء، أرجع مصفوفة فارغة
-          setCustomers([]);
-          setLoading(false);
-          return;
-        }
-      } else {
-        // إذا لم يكن لدى المستخدم عملاء، أرجع مصفوفة فارغة
-        setCustomers([]);
-        setLoading(false);
-        return;
+      // فلترة العملاء حسب الصلاحيات
+      if (!canViewAllData) {
+        // الموظفين يرون عملاءهم فقط (من الطلبات التي أنشؤوها)
+        customersQuery = customersQuery.eq('created_by', user.user_id);
       }
 
       const { data: customersData } = await customersQuery;
 
       setCustomers(customersData || []);
       
-      // إحصائيات المدن - فقط للمستخدمين حسب عملائهم
-      // حساب إحصائيات المدن لعملاء هذا المستخدم فقط
+      // إحصائيات المدن - فقط للمديرين
+      if (canViewAllData) {
         // 🔥 الحل النهائي الأكيد لمشكلة مبيعات المدن
         console.log('=== 🚀 إعادة حساب جذرية لمبيعات المدن ===');
         
@@ -131,11 +106,10 @@ const CustomersManagementPage = () => {
           
           console.log(`📅 الشهر الحالي: ${currentMonth}/${currentYear}`);
           
-          // استعلام مباشر مع فلترة حسب عملاء هذا المستخدم فقط
+          // استعلام مباشر وشامل مع فلترة دقيقة للشهر الحالي
           const { data: allOrdersData, error: ordersError } = await supabase
             .from('orders')
-            .select('id, order_number, customer_city, final_amount, total_amount, created_at, status, receipt_received, created_by')
-            .eq('created_by', user?.id)  // فلترة حسب المستخدم الحالي
+            .select('id, order_number, customer_city, final_amount, total_amount, created_at, status, receipt_received')
             .gte('created_at', `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`)
             .lt('created_at', `${currentYear}-${(currentMonth + 1).toString().padStart(2, '0')}-01`);
 
@@ -212,6 +186,7 @@ const CustomersManagementPage = () => {
           setCityStats([]);
         }
 
+        
         // جلب خصومات المدن الحالية
         const { data: cityDiscountsData } = await supabase
           .from('city_random_discounts')
@@ -220,6 +195,11 @@ const CustomersManagementPage = () => {
           .eq('discount_year', new Date().getFullYear());
           
         setCityDiscounts(cityDiscountsData || []);
+      } else {
+        // الموظفين لا يحتاجون إحصائيات المدن
+        setCityStats([]);
+        setCityDiscounts([]);
+      }
       
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -236,24 +216,19 @@ const CustomersManagementPage = () => {
   // فلترة وترتيب العملاء حسب البحث ونوع الفلتر
   const filteredCustomers = customers
     .filter(customer => {
-      // التأكد من وجود البيانات الأساسية قبل الوصول إليها
-      const customerName = customer?.name || '';
-      const customerPhone = customer?.phone || '';
-      const customerEmail = customer?.email || '';
-      
-      // فلترة البحث النصي مع حماية من القيم المفقودة
-      const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customerPhone.includes(searchTerm) ||
-        customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      // فلترة البحث النصي
+      const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customer.phone?.includes(searchTerm) ||
+        customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
       
       // فلترة حسب النوع
       let matchesFilter = true;
       if (filterType === 'with_phone') {
-        matchesFilter = customerPhone && customerPhone.trim();
+        matchesFilter = customer.phone && customer.phone.trim();
       } else if (filterType === 'with_points') {
-        matchesFilter = (customer.total_points || 0) > 0;
+        matchesFilter = customer.customer_loyalty?.total_points > 0;
       } else if (filterType === 'no_points') {
-        matchesFilter = (customer.total_points || 0) === 0;
+        matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
       } else if (filterType === 'male_customers') {
         // فلترة العملاء الرجال بناءً على تحليل جنس حقيقي وفولاذي
         matchesFilter = customer.customer_gender_segments?.gender_type === 'male' || false;
@@ -265,15 +240,15 @@ const CustomersManagementPage = () => {
       // فلترة حسب المستوى
       let matchesTier = true;
       if (selectedTier) {
-        matchesTier = customer.current_tier_id === selectedTier;
+        matchesTier = customer.customer_loyalty?.current_tier_id === selectedTier;
       }
       
       return matchesSearch && matchesFilter && matchesTier;
     })
     .sort((a, b) => {
       // ترتيب حسب النقاط أولاً (من الأعلى للأقل)
-      const aPoints = a.total_points || 0;
-      const bPoints = b.total_points || 0;
+      const aPoints = a.customer_loyalty?.total_points || 0;
+      const bPoints = b.customer_loyalty?.total_points || 0;
       
       if (aPoints !== bPoints) {
         return bPoints - aPoints; // ترتيب تنازلي حسب النقاط
@@ -332,7 +307,7 @@ const CustomersManagementPage = () => {
   };
 
   // تطبيق خصم الولاء للعميل
-  const applyLoyaltyDiscount = useCallback(async (customerId) => {
+  const applyLoyaltyDiscount = async (customerId) => {
     try {
       const { data, error } = await supabase.rpc('check_monthly_loyalty_discount_eligibility', {
         p_customer_id: customerId
@@ -366,7 +341,7 @@ const CustomersManagementPage = () => {
         variant: 'destructive'
       });
     }
-  }, []);
+  };
 
   // اختيار مدينة عشوائية للخصم
   const selectRandomCityDiscount = async () => {
@@ -458,19 +433,19 @@ const CustomersManagementPage = () => {
       // تحليل الجنس الدقيق والقوي
       customer.customer_gender_segments?.gender_type === 'male' ? 'ذكر' : 
       customer.customer_gender_segments?.gender_type === 'female' ? 'أنثى' : 'غير محدد',
-      customer.total_points || 0,
-      customer.total_orders || 0,
-      customer.total_spent || 0,
-      customer.loyalty_tiers?.name || 'لا يوجد',
-      customer.loyalty_tiers?.discount_percentage || 0,
-      customer.points_expiry_date ? 
-        new Date(customer.points_expiry_date).toLocaleDateString('ar') : 'لا توجد',
+      customer.customer_loyalty?.total_points || 0,
+      customer.customer_loyalty?.total_orders || 0,
+      customer.customer_loyalty?.total_spent || 0,
+      customer.customer_loyalty?.loyalty_tiers?.name || 'لا يوجد',
+      customer.customer_loyalty?.loyalty_tiers?.discount_percentage || 0,
+      customer.customer_loyalty?.points_expiry_date ? 
+        new Date(customer.customer_loyalty.points_expiry_date).toLocaleDateString('ar') : 'لا توجد',
       customer.created_at ? new Date(customer.created_at).toLocaleDateString('ar') : '',
-      customer.last_tier_upgrade 
-        ? new Date(customer.last_tier_upgrade).toLocaleDateString('ar') 
+      customer.customer_loyalty?.last_tier_upgrade 
+        ? new Date(customer.customer_loyalty.last_tier_upgrade).toLocaleDateString('ar') 
         : 'لا يوجد',
-      customer.phone_number || customer.phone ? 'متوفر' : 'غير متوفر',
-      customer.customer_address || ''
+      customer.phone ? 'متوفر' : 'غير متوفر',
+      customer.address || ''
     ]);
 
     // إنشاء محتوى CSV

@@ -570,71 +570,6 @@ export type Database = {
           },
         ]
       }
-      customer_phone_loyalty: {
-        Row: {
-          created_at: string | null
-          current_tier_id: string | null
-          customer_city: string | null
-          customer_name: string | null
-          customer_province: string | null
-          first_order_date: string | null
-          id: string
-          last_order_date: string | null
-          last_tier_upgrade: string | null
-          original_phone: string | null
-          phone_number: string
-          points_expiry_date: string | null
-          total_orders: number | null
-          total_points: number | null
-          total_spent: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          current_tier_id?: string | null
-          customer_city?: string | null
-          customer_name?: string | null
-          customer_province?: string | null
-          first_order_date?: string | null
-          id?: string
-          last_order_date?: string | null
-          last_tier_upgrade?: string | null
-          original_phone?: string | null
-          phone_number: string
-          points_expiry_date?: string | null
-          total_orders?: number | null
-          total_points?: number | null
-          total_spent?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          current_tier_id?: string | null
-          customer_city?: string | null
-          customer_name?: string | null
-          customer_province?: string | null
-          first_order_date?: string | null
-          id?: string
-          last_order_date?: string | null
-          last_tier_upgrade?: string | null
-          original_phone?: string | null
-          phone_number?: string
-          points_expiry_date?: string | null
-          total_orders?: number | null
-          total_points?: number | null
-          total_spent?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "customer_phone_loyalty_current_tier_id_fkey"
-            columns: ["current_tier_id"]
-            isOneToOne: false
-            referencedRelation: "loyalty_tiers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customer_product_segments: {
         Row: {
           category_id: string | null
@@ -3403,14 +3338,6 @@ export type Database = {
         Args: { p_employee_code: string; p_telegram_chat_id: number }
         Returns: boolean
       }
-      migrate_existing_customers_to_phone_loyalty: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      normalize_phone_number: {
-        Args: { phone_input: string }
-        Returns: string
-      }
       pay_employee_dues_with_invoice: {
         Args: {
           p_employee_id: string
@@ -3484,27 +3411,8 @@ export type Database = {
         }
         Returns: Json
       }
-      update_city_order_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      update_customer_phone_loyalty: {
-        Args: {
-          p_phone: string
-          p_customer_name?: string
-          p_customer_city?: string
-          p_customer_province?: string
-          p_order_amount?: number
-          p_order_date?: string
-        }
-        Returns: string
-      }
       update_customer_tier: {
         Args: { p_customer_id: string }
-        Returns: undefined
-      }
-      update_customer_tier_by_phone: {
-        Args: { phone_param: string }
         Returns: undefined
       }
       update_reserved_stock: {

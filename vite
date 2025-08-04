@@ -1,55 +1,12 @@
-#!/usr/bin/env node
+#!/bin/bash
 
-// Comprehensive vite launcher with fallbacks
-const { spawn } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-
-console.log('🚀 Starting vite...');
-
-// Try different methods
-const methods = [
-  () => {
-    console.log('Method 1: npx vite');
-    return spawn('npx', ['vite', ...process.argv.slice(2)], { stdio: 'inherit' });
-  },
-  () => {
-    const viteBin = path.join(__dirname, 'node_modules', '.bin', 'vite');
-    if (fs.existsSync(viteBin)) {
-      console.log('Method 2: Direct bin');
-      return spawn(viteBin, process.argv.slice(2), { stdio: 'inherit' });
-    }
-    return null;
-  },
-  () => {
-    const viteJs = path.join(__dirname, 'node_modules', 'vite', 'bin', 'vite.js');
-    if (fs.existsSync(viteJs)) {
-      console.log('Method 3: Node vite.js');
-      return spawn('node', [viteJs, ...process.argv.slice(2)], { stdio: 'inherit' });
-    }
-    return null;
-  }
-];
-
-function tryNext(index = 0) {
-  if (index >= methods.length) {
-    console.error('❌ All methods failed');
-    process.exit(1);
-  }
-  
-  const child = methods[index]();
-  if (!child) {
-    return tryNext(index + 1);
-  }
-  
-  child.on('error', () => {
-    console.log(`Method ${index + 1} failed, trying next...`);
-    tryNext(index + 1);
-  });
-  
-  child.on('exit', (code) => {
-    process.exit(code || 0);
-  });
-}
-
-tryNext();
+# Use direct path to avoid npx issues
+if [ -f "node_modules/.bin/vite" ]; then
+    exec "./node_modules/.bin/vite" "$@"
+elif [ -f "node_modules/vite/bin/vite.js" ]; then
+    exec node "./node_modules/vite/bin/vite.js" "$@"
+else
+    echo "Installing vite..."
+    npm install vite@latest
+    exec "./node_modules/.bin/vite" "$@"
+fi

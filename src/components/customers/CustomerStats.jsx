@@ -19,7 +19,7 @@ const CustomerStats = ({ customers, onStatClick }) => {
     {
       id: 'with_phone',
       title: 'عملاء مع أرقام هواتف',
-      value: customers.filter(c => c.phone_number || c.phone).length,
+      value: customers.filter(c => c.phone).length,
       icon: Phone,
       gradient: 'from-blue-500 via-cyan-500 to-teal-500',
       shadow: 'shadow-blue-500/20',
@@ -30,7 +30,7 @@ const CustomerStats = ({ customers, onStatClick }) => {
     {
       id: 'with_points',
       title: 'عملاء مع نقاط',
-      value: customers.filter(c => (c.total_points || 0) > 0).length,
+      value: customers.filter(c => c.customer_loyalty?.total_points > 0).length,
       icon: Star,
       gradient: 'from-orange-600 via-red-500 to-pink-500',
       shadow: 'shadow-orange-500/25',
@@ -41,7 +41,7 @@ const CustomerStats = ({ customers, onStatClick }) => {
     {
       id: 'total_points',
       title: 'إجمالي النقاط',
-      value: customers.reduce((sum, c) => sum + (c.total_points || 0), 0).toLocaleString('ar'),
+      value: customers.reduce((sum, c) => sum + (c.customer_loyalty?.total_points || 0), 0).toLocaleString('ar'),
       icon: TrendingUp,
       gradient: 'from-purple-500 via-violet-500 to-pink-500',
       shadow: 'shadow-purple-500/20',
@@ -52,7 +52,7 @@ const CustomerStats = ({ customers, onStatClick }) => {
     {
       id: 'total_sales',
       title: 'إجمالي المبيعات',
-      value: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0).toLocaleString('ar') + ' د.ع',
+      value: customers.reduce((sum, c) => sum + (c.customer_loyalty?.total_spent || 0), 0).toLocaleString('ar') + ' د.ع',
       icon: ShoppingBag,
       gradient: 'from-rose-500 via-pink-500 to-purple-500',
       shadow: 'shadow-rose-500/20',
