@@ -55,38 +55,56 @@ const UnifiedAnalyticsSystem = () => {
   // جلب البيانات المالية الموحدة
   const financialData = useFinancialSystem(timePeriod);
 
-  // معالجة البيانات للرسوم البيانية
+  // معالجة البيانات للرسوم البيانية مع فلترة صحيحة
   const analyticsData = useMemo(() => {
-    if (!orders || loading) return null;
+    if (!orders || loading || financialData.loading) return null;
 
+    console.log('🔍 فلترة البيانات للفترة:', timePeriod);
+    
+    // فلترة الطلبات حسب الفترة الزمنية بدقة
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.created_at);
       const now = new Date();
       
       switch (timePeriod) {
         case TIME_PERIODS.TODAY:
-          return orderDate.toDateString() === now.toDateString();
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          return orderDate >= today && orderDate < tomorrow;
+          
         case TIME_PERIODS.WEEK:
-          const weekAgo = subDays(now, 7);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
           return orderDate >= weekAgo;
+          
         case TIME_PERIODS.MONTH:
-          return orderDate >= startOfMonth(now) && orderDate <= endOfMonth(now);
+          const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          return orderDate >= startMonth && orderDate <= endMonth;
+          
         case TIME_PERIODS.YEAR:
-          return orderDate >= startOfYear(now) && orderDate <= endOfYear(now);
+          const startYear = new Date(now.getFullYear(), 0, 1);
+          const endYear = new Date(now.getFullYear(), 11, 31);
+          return orderDate >= startYear && orderDate <= endYear;
+          
+        case TIME_PERIODS.ALL:
         default:
           return true;
       }
     });
 
-    // إحصائيات المبيعات
+    console.log(`📊 تمت فلترة ${filteredOrders.length} طلب من أصل ${orders.length} للفترة ${timePeriod}`);
+
+    // إحصائيات المبيعات الحقيقية
+    const completedOrdersData = filteredOrders.filter(o => o.status === 'completed' || o.status === 'delivered');
     const salesStats = {
       totalOrders: filteredOrders.length,
-      completedOrders: filteredOrders.filter(o => o.status === 'completed' || o.status === 'delivered').length,
+      completedOrders: completedOrdersData.length,
       pendingOrders: filteredOrders.filter(o => o.status === 'pending').length,
       cancelledOrders: filteredOrders.filter(o => o.status === 'cancelled').length,
-      totalRevenue: filteredOrders
-        .filter(o => o.status === 'completed' || o.status === 'delivered')
-        .reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
+      totalRevenue: completedOrdersData.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
       averageOrderValue: 0,
       conversionRate: 0
     };
@@ -99,7 +117,7 @@ const UnifiedAnalyticsSystem = () => {
       ? (salesStats.completedOrders / salesStats.totalOrders) * 100 
       : 0;
 
-    // إحصائيات المخزون
+    // إحصائيات المخزون (لا تتأثر بالفترة الزمنية)
     const inventoryStats = {
       totalProducts: products?.length || 0,
       totalVariants: products?.reduce((sum, p) => sum + (p.variants?.length || 0), 0) || 0,
@@ -117,11 +135,13 @@ const UnifiedAnalyticsSystem = () => {
       ) || 0
     };
 
+    console.log('📈 إحصائيات محسوبة:', { sales: salesStats, inventory: inventoryStats });
+
     return {
       sales: salesStats,
       inventory: inventoryStats
     };
-  }, [orders, products, timePeriod, loading]);
+  }, [orders, products, timePeriod, loading, financialData.loading]);
 
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-IQ', {
@@ -130,12 +150,20 @@ const UnifiedAnalyticsSystem = () => {
     }).format(amount || 0) + ' د.ع';
   };
 
+  // أزرار الفترات السريعة
   const quickDateRanges = [
     { label: 'اليوم', value: TIME_PERIODS.TODAY },
     { label: 'آخر 7 أيام', value: TIME_PERIODS.WEEK },
     { label: 'هذا الشهر', value: TIME_PERIODS.MONTH },
     { label: 'هذا العام', value: TIME_PERIODS.YEAR },
   ];
+
+  // إضافة فعالية تغيير الفترة مع console log
+  const handlePeriodChange = (newPeriod) => {
+    console.log('🔄 تغيير الفترة من', timePeriod, 'إلى', newPeriod);
+    setTimePeriod(newPeriod);
+    financialData.refreshData();
+  };
 
   if (loading || !analyticsData || financialData.loading) {
     return (
@@ -182,38 +210,7 @@ const UnifiedAnalyticsSystem = () => {
         </div>
       </motion.div>
 
-      {/* فلتر الفترة الزمنية الموحد */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }} 
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="w-5 h-5" />
-              فلتر الفترة الزمنية
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {quickDateRanges.map((range) => (
-                <Button
-                  key={range.value}
-                  variant={timePeriod === range.value ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTimePeriod(range.value)}
-                  className="transition-all duration-300"
-                >
-                  {range.label}
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* تبويبات التحليلات */}
+      {/* تبويبات التحليلات - بدون فلتر مكرر */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }}
@@ -238,6 +235,33 @@ const UnifiedAnalyticsSystem = () => {
               مخزون
             </TabsTrigger>
           </TabsList>
+
+          {/* فلتر الفترة الزمنية داخل التبويبات */}
+          <div className="mt-4 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="w-5 h-5" />
+                  فلتر الفترة الزمنية - الفترة الحالية: {quickDateRanges.find(r => r.value === timePeriod)?.label}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                  {quickDateRanges.map((range) => (
+                    <Button
+                      key={range.value}
+                      variant={timePeriod === range.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePeriodChange(range.value)}
+                      className="transition-all duration-300"
+                    >
+                      {range.label}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* لوحة القيادة */}
           <TabsContent value="dashboard" className="space-y-6">
