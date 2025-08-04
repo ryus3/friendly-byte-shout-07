@@ -164,13 +164,14 @@ export const getTopCustomers = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed');
+    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
+                                   order.receipt_received === true;
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
                                  order.status === 'returned_in_stock';
     
-    console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
+    console.log(`📊 الطلب ${order.id}: الحالة = "${order.status}", استلام الفاتورة = ${order.receipt_received}, صالح = ${isDeliveredOrCompleted && !isReturnedOrCancelled}`);
     
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
@@ -236,7 +237,8 @@ export const getTopProvinces = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed');
+    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
+                                   order.receipt_received === true;
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
@@ -278,7 +280,8 @@ export const getTopProducts = (orders) => {
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed');
+    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
+                                   order.receipt_received === true;
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
