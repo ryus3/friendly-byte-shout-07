@@ -5,15 +5,9 @@ import { Users, Calendar, Eye, TrendingUp, DollarSign, Phone } from 'lucide-reac
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersData = [] }) => {
+const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const [customerStats, setCustomerStats] = useState([]);
-  
-  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
-  console.log('🔥 TopCustomersDialog - البيانات الواردة:', {
-    customersData,
-    length: customersData?.length || 0
-  });
+  const { analytics, loading, error } = useOrdersAnalytics();
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -24,28 +18,8 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات الممررة مباشرة
-  useEffect(() => {
-    if (customersData && customersData.length > 0) {
-      // تحويل البيانات إلى الهيكل المطلوب
-      const processedCustomers = customersData.map((customer, index) => ({
-        phone: customer.phone || 'غير محدد',
-        normalizedPhone: normalizePhoneNumber(customer.phone),
-        name: customer.label || 'زبون غير محدد',
-        orderCount: customer.count || 0,
-        totalRevenue: 0, // يمكن حسابه لاحقاً
-        avgOrderValue: 0,
-        orders: [{ id: `order-${index}`, amount: 0, date: new Date() }],
-        city: 'غير محدد',
-        province: 'غير محدد'
-      }));
-      
-      console.log('🔥 TopCustomersDialog - البيانات المعالجة:', processedCustomers);
-      setCustomerStats(processedCustomers);
-    } else {
-      setCustomerStats([]);
-    }
-  }, [customersData]);
+  // استخدام البيانات من useOrdersAnalytics
+  const customerStats = analytics.topCustomers || [];
 
   // دالة تطبيع رقم الهاتف
   const normalizePhoneNumber = (phone) => {
@@ -56,14 +30,9 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
     return normalized;
   };
 
-  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
-  const getFilteredCustomers = () => {
-    // الآن نستخدم البيانات الموحدة، يمكن إضافة فلترة زمنية لاحقاً إذا لزم الأمر
-    return customerStats;
-  };
-
-  const totalOrders = customerStats.reduce((sum, customer) => sum + customer.orderCount, 0);
-  const totalRevenue = customerStats.reduce((sum, customer) => sum + customer.totalRevenue, 0);
+  // حساب الإحصائيات
+  const totalOrders = customerStats.reduce((sum, customer) => sum + (customer.order_count || 0), 0);
+  const totalRevenue = customerStats.reduce((sum, customer) => sum + (customer.total_revenue || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,7 +46,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
           </DialogTitle>
         </DialogHeader>
 
-        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
+        {loading ? (
           <div className="flex items-center justify-center py-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
@@ -148,7 +117,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                 <div className="grid gap-2 max-h-60 overflow-y-auto">
                   {customerStats.map((customer, index) => (
                     <motion.div
-                      key={customer.normalizedPhone}
+                      key={customer.phone || index}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.03 }}
@@ -160,13 +129,13 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                               {index + 1}
                             </div>
                             <div>
-                              <h4 className="font-bold text-lg text-foreground mb-1">{customer.name}</h4>
+                              <h4 className="font-bold text-lg text-foreground mb-1">{customer.name || 'زبون غير محدد'}</h4>
                               <p className="text-sm text-muted-foreground flex items-center gap-1">
                                 <Phone className="w-4 h-4" />
-                                {customer.phone}
+                                {customer.phone || 'غير محدد'}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                الهاتف المطبع: {customer.normalizedPhone}
+                                المحافظة: {customer.province || 'غير محدد'}
                               </p>
                             </div>
                           </div>
@@ -177,7 +146,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                                 <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">عدد الطلبات</p>
-                              <p className="font-bold text-lg text-blue-600 dark:text-blue-400">{customer.orderCount}</p>
+                              <p className="font-bold text-lg text-blue-600 dark:text-blue-400">{customer.order_count || 0}</p>
                             </div>
                             <div className="text-center">
                               <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-2 mx-auto">
@@ -185,7 +154,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">إجمالي الإيرادات</p>
                               <p className="font-bold text-lg text-green-600 dark:text-green-400">
-                                {customer.totalRevenue.toLocaleString()}
+                                {(customer.total_revenue || 0).toLocaleString()} د.ع
                               </p>
                             </div>
                             <div className="text-center">
@@ -194,7 +163,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">متوسط الطلب</p>
                               <p className="font-bold text-lg text-purple-600 dark:text-purple-400">
-                                {Math.round(customer.avgOrderValue).toLocaleString()}
+                                {Math.round((customer.total_revenue || 0) / (customer.order_count || 1)).toLocaleString()} د.ع
                               </p>
                             </div>
                           </div>
@@ -205,28 +174,23 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-xs font-medium text-muted-foreground">نسبة المساهمة</span>
                             <span className="text-xs font-bold text-primary">
-                              {totalOrders > 0 ? ((customer.orderCount / totalOrders) * 100).toFixed(1) : 0}%
+                              {totalOrders > 0 ? (((customer.order_count || 0) / totalOrders) * 100).toFixed(1) : 0}%
                             </span>
                           </div>
                           <div className="w-full bg-muted/50 rounded-full h-3 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 shadow-sm"
                               style={{ 
-                                width: `${totalOrders > 0 ? (customer.orderCount / totalOrders) * 100 : 0}%`
+                                width: `${totalOrders > 0 ? ((customer.order_count || 0) / totalOrders) * 100 : 0}%`
                               }}
                             />
                           </div>
                         </div>
 
-                        {/* تفاصيل الطلبات */}
+                        {/* تفاصيل إضافية */}
                         <div className="mt-4 text-xs text-muted-foreground">
-                          <p>طلبات هذا الزبون:</p>
-                          {customer.orders.map((order, i) => (
-                            <span key={order.id} className="inline-block mr-2">
-                              {order.amount.toLocaleString()} د.ع
-                              {i < customer.orders.length - 1 && ', '}
-                            </span>
-                          ))}
+                          <p>آخر طلب: {customer.last_order_date ? new Date(customer.last_order_date).toLocaleDateString('ar-SA') : 'غير محدد'}</p>
+                          <p>المدينة: {customer.city || 'غير محدد'}</p>
                         </div>
                       </div>
                     </motion.div>
@@ -239,7 +203,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersDa
                     <p className="text-lg font-semibold text-muted-foreground mb-2">لا توجد بيانات زبائن</p>
                     <p className="text-sm text-muted-foreground">لا توجد طلبات مكتملة للفترة المحددة</p>
                     <div className="mt-4 text-xs text-muted-foreground">
-                      <p>البيانات المتاحة: {customersData?.length || 0}</p>
+                      <p>البيانات المتاحة: {customerStats?.length || 0}</p>
                       <p>الفترة المحددة: {periods.find(p => p.key === selectedPeriod)?.label}</p>
                     </div>
                   </div>
