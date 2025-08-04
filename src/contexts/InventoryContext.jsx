@@ -1019,7 +1019,7 @@ export const InventoryProvider = ({ children }) => {
       supabase.removeChannel(expensesChannel);
       supabase.removeChannel(purchasesChannel);
     };
-  }, [user, fetchInitialData]);
+  }, [user]);
 
   // فحص المخزون المنخفض والإشعار - استخدام المنتجات المفلترة
   const checkLowStockNotifications = useCallback(async () => {
