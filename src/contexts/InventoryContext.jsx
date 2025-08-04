@@ -413,67 +413,18 @@ export const InventoryProvider = ({ children }) => {
     }
   }, [setProducts]);
 
-  // إضافة realtime subscriptions للمخزون والطلبات
+  // ⚡ تم إيقاف Real-time subscriptions مؤقتاً لتوفير استهلاك البيانات
+  // سيتم تفعيل Real-time محدود حسب الحاجة فقط
   useEffect(() => {
     if (!user) return;
-
-    // Realtime للمخزون
-    const inventoryChannel = supabase
-      .channel('inventory-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'inventory'
-        },
-        (payload) => {
-          console.log('🔄 تحديث مخزون فوري:', payload);
-          refreshInventoryData();
-        }
-      )
-      .subscribe();
-
-    // Realtime للطلبات
-    const ordersChannel = supabase
-      .channel('orders-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('🔄 تحديث طلبات فوري:', payload);
-          refreshOrders();
-        }
-      )
-      .subscribe();
-
-    // Realtime لعناصر الطلبات
-    const orderItemsChannel = supabase
-      .channel('order-items-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'order_items'
-        },
-        (payload) => {
-          console.log('🔄 تحديث عناصر طلبات فوري:', payload);
-          refreshOrders();
-        }
-      )
-      .subscribe();
-
+    
+    console.log('⚡ Real-time subscriptions disabled to save bandwidth');
+    // سيتم إضافة real-time ذكي ومحدود لاحقاً
+    
     return () => {
-      supabase.removeChannel(inventoryChannel);
-      supabase.removeChannel(ordersChannel);  
-      supabase.removeChannel(orderItemsChannel);
+      // cleanup if needed
     };
-  }, [user, refreshInventoryData, refreshOrders]);
+  }, [user]);
 
   const fetchInitialData = useCallback(async () => {
     console.log('🚀 بدء fetchInitialData - جلب جميع البيانات من قاعدة البيانات');
@@ -850,37 +801,17 @@ export const InventoryProvider = ({ children }) => {
     initializeData();
   }, [fetchInitialData, user]);
 
-  // Real-time subscriptions للمنتجات والطلبات
+  // ⚡ تم إيقاف Real-time subscriptions الإضافية لتوفير استهلاك البيانات
   useEffect(() => {
     if (!user) return;
-
-    // قناة تحديث المنتجات
-    const productsChannel = supabase
-      .channel('products-changes')
-      .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'products' },
-        (payload) => {
-          // إضافة المنتج الجديد فقط بدلاً من إعادة تحميل كل شيء
-          if (payload.new) {
-            setProducts(prev => [...prev, payload.new]);
-          }
-        }
-      )
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'products' },
-        (payload) => {
-          setProducts(prev => prev.map(product => 
-            product.id === payload.new.id ? { ...product, ...payload.new } : product
-          ));
-        }
-      )
-      .on('postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'products' },
-        (payload) => {
-          setProducts(prev => prev.filter(product => product.id !== payload.old.id));
-        }
-      )
-      .subscribe();
+    
+    console.log('⚡ Additional real-time subscriptions disabled for bandwidth optimization');
+    // سيتم إضافة real-time محدود وذكي حسب الحاجة
+    
+    return () => {
+      // cleanup if needed
+    };
+  }, [user]);
 
     // قناة تحديث المخزون
     const inventoryChannel = supabase
