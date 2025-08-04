@@ -243,19 +243,24 @@ const CustomersManagementPage = () => {
   // فلترة وترتيب العملاء حسب البحث ونوع الفلتر
   const filteredCustomers = customers
     .filter(customer => {
-      // فلترة البحث النصي
-      const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        customer.phone?.includes(searchTerm) ||
-        customer.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      // التأكد من وجود البيانات الأساسية قبل الوصول إليها
+      const customerName = customer?.name || '';
+      const customerPhone = customer?.phone || '';
+      const customerEmail = customer?.email || '';
+      
+      // فلترة البحث النصي مع حماية من القيم المفقودة
+      const matchesSearch = customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        customerPhone.includes(searchTerm) ||
+        customerEmail.toLowerCase().includes(searchTerm.toLowerCase());
       
       // فلترة حسب النوع
       let matchesFilter = true;
       if (filterType === 'with_phone') {
-        matchesFilter = customer.phone && customer.phone.trim();
+        matchesFilter = customerPhone && customerPhone.trim();
       } else if (filterType === 'with_points') {
-        matchesFilter = customer.customer_loyalty?.total_points > 0;
+        matchesFilter = customer.customer_loyalty?.[0]?.total_points > 0;
       } else if (filterType === 'no_points') {
-        matchesFilter = !customer.customer_loyalty || customer.customer_loyalty.total_points === 0;
+        matchesFilter = !customer.customer_loyalty?.[0] || customer.customer_loyalty[0].total_points === 0;
       } else if (filterType === 'male_customers') {
         // فلترة العملاء الرجال بناءً على تحليل جنس حقيقي وفولاذي
         matchesFilter = customer.customer_gender_segments?.gender_type === 'male' || false;
@@ -267,15 +272,15 @@ const CustomersManagementPage = () => {
       // فلترة حسب المستوى
       let matchesTier = true;
       if (selectedTier) {
-        matchesTier = customer.customer_loyalty?.current_tier_id === selectedTier;
+        matchesTier = customer.customer_loyalty?.[0]?.current_tier_id === selectedTier;
       }
       
       return matchesSearch && matchesFilter && matchesTier;
     })
     .sort((a, b) => {
       // ترتيب حسب النقاط أولاً (من الأعلى للأقل)
-      const aPoints = a.customer_loyalty?.total_points || 0;
-      const bPoints = b.customer_loyalty?.total_points || 0;
+      const aPoints = a.customer_loyalty?.[0]?.total_points || 0;
+      const bPoints = b.customer_loyalty?.[0]?.total_points || 0;
       
       if (aPoints !== bPoints) {
         return bPoints - aPoints; // ترتيب تنازلي حسب النقاط
