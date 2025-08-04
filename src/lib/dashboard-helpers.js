@@ -198,7 +198,10 @@ export const getTopCustomers = (orders) => {
                  order.customerinfo?.name || 
                  'زبون غير محدد';
     
-    console.log(`📞 الطلب ${order.id}: الهاتف الخام = "${rawPhone}", المطبع = "${phone}", الاسم = "${name}"`);
+    // حساب الإيرادات من الطلب
+    const orderRevenue = order.final_amount || order.total_amount || order.total || 0;
+    
+    console.log(`📞 الطلب ${order.id}: الهاتف الخام = "${rawPhone}", المطبع = "${phone}", الاسم = "${name}", الإيرادات = ${orderRevenue}`);
     
     if (!phone) {
       console.log('⚠️ رقم هاتف غير صالح، تجاهل الطلب');
@@ -206,9 +209,10 @@ export const getTopCustomers = (orders) => {
     }
     
     if (!acc[phone]) {
-      acc[phone] = { count: 0, name, phone };
+      acc[phone] = { count: 0, name, phone, totalRevenue: 0 };
     }
     acc[phone].count++;
+    acc[phone].totalRevenue += orderRevenue;
     return acc;
   }, {});
 
@@ -217,10 +221,12 @@ export const getTopCustomers = (orders) => {
       label: data.name, 
       value: `${data.count} طلب`,
       phone: phone,
-      count: data.count
+      orderCount: data.count,
+      totalRevenue: data.totalRevenue,
+      avgOrderValue: data.count > 0 ? data.totalRevenue / data.count : 0
     }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 3);
+    .sort((a, b) => b.orderCount - a.orderCount)
+    .slice(0, 10); // زيادة العدد لعرض المزيد في النافذة
     
   console.log('📈 أفضل 3 زبائن:', result);
   return result;
@@ -255,17 +261,29 @@ export const getTopProvinces = (orders) => {
   
   const provinceCounts = deliveredOrders.reduce((acc, order) => {
     const city = order.customer_city || order.customer_province || 'غير محدد';
-    console.log(`🏙️ الطلب ${order.id}: المدينة = "${city}"`);
-    acc[city] = (acc[city] || 0) + 1;
+    const orderRevenue = order.final_amount || order.total_amount || order.total || 0;
+    
+    console.log(`🏙️ الطلب ${order.id}: المدينة = "${city}", الإيرادات = ${orderRevenue}`);
+    
+    if (!acc[city]) {
+      acc[city] = { count: 0, totalRevenue: 0 };
+    }
+    acc[city].count++;
+    acc[city].totalRevenue += orderRevenue;
     return acc;
   }, {});
   
   console.log('🏙️ إحصائيات المحافظات:', provinceCounts);
 
   return Object.entries(provinceCounts)
-    .map(([city, count]) => ({ label: city, value: `${count} طلبات` }))
-    .sort((a, b) => parseInt(b.value) - parseInt(a.value))
-    .slice(0, 3);
+    .map(([city, data]) => ({ 
+      label: city, 
+      value: `${data.count} طلبات`,
+      orders_count: data.count,
+      total_revenue: data.totalRevenue
+    }))
+    .sort((a, b) => b.orders_count - a.orders_count)
+    .slice(0, 10); // زيادة العدد للنافذة
 };
 
 export const getTopProducts = (orders) => {
@@ -298,19 +316,29 @@ export const getTopProducts = (orders) => {
   const productCounts = deliveredOrders.reduce((acc, order) => {
     // دعم كلاً من order.items و order.order_items
     const items = order.order_items || order.items || [];
+    const orderTotal = order.final_amount || order.total_amount || order.total || 0;
     
     if (!Array.isArray(items) || items.length === 0) {
       console.log(`📦 الطلب ${order.id}: لا يحتوي على عناصر`);
       return acc;
     }
     
-    console.log(`📦 الطلب ${order.id}: يحتوي على ${items.length} عنصر`);
+    console.log(`📦 الطلب ${order.id}: يحتوي على ${items.length} عنصر، إجمالي = ${orderTotal}`);
     items.forEach(item => {
       // دعم أسماء مختلفة للمنتج
       const productName = item.products?.name || item.product_name || item.name || 'منتج غير محدد';
       const quantity = parseInt(item.quantity) || 1;
-      console.log(`📦 المنتج: ${productName}, الكمية: ${quantity}`);
-      acc[productName] = (acc[productName] || 0) + quantity;
+      const itemPrice = item.unit_price || item.price || 0;
+      const itemRevenue = itemPrice * quantity;
+      
+      console.log(`📦 المنتج: ${productName}, الكمية: ${quantity}, الإيرادات: ${itemRevenue}`);
+      
+      if (!acc[productName]) {
+        acc[productName] = { quantity: 0, revenue: 0, orders: 0 };
+      }
+      acc[productName].quantity += quantity;
+      acc[productName].revenue += itemRevenue;
+      acc[productName].orders++;
     });
     return acc;
   }, {});
@@ -318,7 +346,13 @@ export const getTopProducts = (orders) => {
   console.log('📦 إحصائيات المنتجات:', productCounts);
 
   return Object.entries(productCounts)
-    .map(([name, count]) => ({ label: name, value: `${count} قطعة` }))
-    .sort((a, b) => parseInt(b.value) - parseInt(a.value))
-    .slice(0, 3);
+    .map(([name, data]) => ({ 
+      label: name, 
+      value: `${data.quantity} قطعة`,
+      orders_count: data.orders,
+      total_revenue: data.revenue,
+      quantity: data.quantity
+    }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 10); // زيادة العدد للنافذة
 };
