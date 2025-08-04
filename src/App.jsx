@@ -17,7 +17,7 @@ import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
-const UnifiedDashboard = lazy(() => import('@/pages/UnifiedDashboard.jsx'));
+const Dashboard = lazy(() => import('@/pages/Dashboard.jsx'));
 const ProductsPage = lazy(() => import('@/pages/ProductsPage.jsx'));
 const ManageProductsPage = lazy(() => import('@/pages/ManageProductsPage.jsx'));
 const AddProductPage = lazy(() => import('@/pages/AddProductPage.jsx'));
@@ -30,8 +30,8 @@ const AppearanceSettingsPage = lazy(() => import('@/pages/AppearanceSettingsPage
 const NotificationsPage = lazy(() => import('@/pages/NotificationsPage.jsx'));
 const QuickOrderPage = lazy(() => import('@/pages/QuickOrderPage.jsx'));
 const ProfitsSummaryPage = lazy(() => import('@/pages/ProfitsSummaryPage.jsx'));
-const UnifiedProfitsPage = lazy(() => import('@/pages/UnifiedProfitsPage.jsx'));
-const UnifiedAccountingPage = lazy(() => import('@/pages/UnifiedAccountingPage.jsx'));
+const ProfitsManagementPage = lazy(() => import('@/pages/ProfitsManagementPage.jsx'));
+const AccountingPage = lazy(() => import('@/pages/AccountingPage.jsx'));
 const CashManagementPage = lazy(() => import('@/pages/CashManagementPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
@@ -108,7 +108,7 @@ function AppContent() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
-           <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(UnifiedDashboard)}</ProtectedRoute>} />
+           <Route path="/" element={<ProtectedRoute>{user?.defaultPage && user.defaultPage !== '/' ? <Navigate to={user.defaultPage} replace /> : childrenWithProps(Dashboard)}</ProtectedRoute>} />
           
           <Route path="/quick-order" element={<ProtectedRoute permission="quick_order">{childrenWithProps(QuickOrderPage)}</ProtectedRoute>} />
           <Route path="/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPage)}</ProtectedRoute>} />
@@ -126,9 +126,9 @@ function AppContent() {
           <Route path="/appearance-settings" element={<ProtectedRoute>{childrenWithProps(AppearanceSettingsPage)}</ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
           
-          <Route path="/profits-summary" element={<ProtectedRoute permission="view_own_profits">{childrenWithProps(UnifiedProfitsPage)}</ProtectedRoute>} />
+          <Route path="/profits-summary" element={<ProtectedRoute permission="view_own_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
           
-          <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(UnifiedAccountingPage)}</ProtectedRoute>} />
+          <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
           <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />

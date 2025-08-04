@@ -6,7 +6,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-
+import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle } from 'lucide-react';
@@ -36,7 +36,7 @@ const OrdersPage = () => {
   const { syncOrders: syncAlWaseetOrders } = useAlWaseet();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  // تم استبدال النظام القديم بالنظام الموحد الجديد
+  const { profitData } = useUnifiedProfits();
   const navigate = useNavigate();
   const location = useLocation();
   

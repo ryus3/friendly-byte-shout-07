@@ -1,10 +1,10 @@
 /**
- * 💼 عرض البيانات المالية الموحدة الجديد
- * يعرض البيانات من النظام المالي الموحد الجديد
+ * مكون عرض البيانات المالية الموحد الجديد
+ * للاختبار والمقارنة مع النظام القديم
  */
 
 import React from 'react';
-import { useUnifiedFinancialContext } from '@/contexts/UnifiedFinancialContext';
+import { useFinancialContext } from '@/contexts/FinancialContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -40,14 +40,7 @@ const MetricCard = ({ title, value, icon: Icon, trend, isGood, subtitle, onClick
 );
 
 export const UnifiedFinancialDisplay = ({ page = 'dashboard', compact = false }) => {
-  const { 
-    getFinancialData, 
-    formatCurrency, 
-    formatPercentage, 
-    systemStatus,
-    isUnifiedSystem,
-    systemVersion 
-  } = useUnifiedFinancialContext();
+  const { getFinancialData, formatCurrency, formatPercentage, systemStatus } = useFinancialContext();
   
   const financialData = getFinancialData(page);
   
@@ -207,12 +200,12 @@ export const UnifiedFinancialDisplay = ({ page = 'dashboard', compact = false })
         </div>
       </div>
       
-      {/* تحذير النظام الموحد */}
-      <Alert className="border-green-200 bg-green-50">
-        <CheckCircle className="h-4 w-4 text-green-600" />
-        <AlertDescription className="text-green-800">
-          ✅ <strong>النظام المالي الموحد v{systemVersion} نشط!</strong> جميع الحسابات تتم من مصدر واحد موحد. 
-          البيانات دقيقة وموحدة في جميع الصفحات. آخر تحديث: {new Date(systemStatus.lastUpdate).toLocaleTimeString('ar')}
+      {/* تحذير المقارنة */}
+      <Alert>
+        <CheckCircle className="h-4 w-4" />
+        <AlertDescription>
+          🔬 <strong>النظام المالي الجديد:</strong> هذه البيانات محسوبة بالنظام المالي الموحد الجديد. 
+          المعادلة: صافي الربح = (المبيعات - تكلفة البضائع) - المصاريف العامة - مستحقات الموظفين
         </AlertDescription>
       </Alert>
     </div>
