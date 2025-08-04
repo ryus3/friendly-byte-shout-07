@@ -269,13 +269,13 @@ export const useMasterFinancialSystem = (options = {}) => {
   // تشغيل الحسابات
   useEffect(() => {
     if (!inventoryLoading) {
-      calculateMasterFinancials;
+      calculateMasterFinancials(); // إصلاح: إضافة الأقواس لاستدعاء الدالة
     }
   }, [calculateMasterFinancials]);
 
-  // دالة تطبيع رقم الهاتف
+  // دالة تطبيع رقم الهاتف - إصلاح مشكلة split()
   const normalizePhoneNumber = (phone) => {
-    if (!phone) return 'غير محدد';
+    if (!phone || typeof phone !== 'string') return 'غير محدد';
     return String(phone).replace(/[\s\-\(\)]/g, '')
                         .replace(/^(\+964|00964)/, '')
                         .replace(/^0/, '');
