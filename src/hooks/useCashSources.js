@@ -209,17 +209,15 @@ export const useCashSources = () => {
       const realData = data?.[0] || {};
       const realBalance = Number(realData.final_balance || 0);
       
-      console.log('💰 النظام المالي الموحد:', {
-        finalBalance: unifiedBalance,
-        capital: Number(enhancedData.capital_value || 0),
-        systemProfit: Number(enhancedData.system_profit || 0),
-        totalRevenue: Number(enhancedData.total_revenue || 0),
-        totalExpenses: Number(enhancedData.total_expenses || 0)
+      console.log('💰 رصيد القاصة الرئيسية الحقيقي:', {
+        realBalance: realBalance.toLocaleString(),
+        capital: Number(realData.capital_amount || 0).toLocaleString(),
+        netProfit: Number(realData.net_profit || 0).toLocaleString()
       });
 
-      return unifiedBalance;
+      return realBalance;
     } catch (error) {
-      console.error('❌ فشل النظام المالي الموحد:', error);
+      console.error('❌ فشل النظام المالي الحقيقي:', error);
       return 0;
     }
   };

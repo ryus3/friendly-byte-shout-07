@@ -3055,18 +3055,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      calculate_enhanced_main_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          final_balance: number
-          capital_value: number
-          system_profit: number
-          total_revenue: number
-          total_expenses: number
-          employee_dues_paid: number
-          purchase_amounts: number
-        }[]
-      }
       calculate_fifo_cost: {
         Args: {
           p_product_id: string
