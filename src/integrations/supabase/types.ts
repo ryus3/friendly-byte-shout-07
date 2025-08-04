@@ -3403,6 +3403,10 @@ export type Database = {
         Args: { p_employee_code: string; p_telegram_chat_id: number }
         Returns: boolean
       }
+      migrate_existing_customers_to_phone_loyalty: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       normalize_phone_number: {
         Args: { phone_input: string }
         Returns: string
