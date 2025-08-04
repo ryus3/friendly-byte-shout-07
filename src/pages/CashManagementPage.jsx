@@ -67,15 +67,19 @@ const CashManagementPage = () => {
           setMainCashBalance(mainBalance);
           setEnhancedFinancialData({
             capitalValue: Number(real.capital_amount || 0),
-            totalRevenue: Number(real.total_revenue || 0),
-            realSales: Number(real.real_sales || 0),
-            deliveryFees: Number(real.delivery_fees || 0),
+            totalRevenue: Number(real.total_sales || 0),
+            totalSales: Number(real.total_sales || 0),
+            realSales: Number(real.total_sales || 0),
+            deliveryFees: 0, // لا توجد رسوم توصيل في النظام الجديد
             systemProfit: Number(real.net_profit || 0),
-            totalExpenses: Number(real.general_expenses || 0),
-            totalPurchases: Number(real.purchase_costs || 0),
-            employeeDues: Number(real.real_employee_dues || 0),
+            totalExpenses: Number(real.total_expenses || 0),
+            totalPurchases: Number(real.total_purchases || 0),
+            employeeDuesPaid: Number(real.employee_dues_paid || 0),
+            employeeDues: Number(real.employee_dues_paid || 0),
             netProfit: Number(real.net_profit || 0),
-            finalBalance: mainBalance
+            finalBalance: mainBalance,
+            // للتوافق مع المكونات الأخرى
+            grossProfit: Number(real.total_sales || 0)
           });
 
           const sourcesBalance = getTotalSourcesBalance();
