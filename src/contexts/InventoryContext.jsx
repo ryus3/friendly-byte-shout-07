@@ -1323,25 +1323,8 @@ export const InventoryProvider = ({ children }) => {
         .single();
 
       if (!existingExpense) {
-        await addExpense({
-          date: new Date().toISOString(), // التاريخ الحقيقي الحالي
-          category: 'مستحقات الموظفين',
-          description: `دفع مستحقات الموظف ${employeeName}`,
-          amount: amount,
-          vendor_name: employeeName,
-          receipt_number: invoiceNumber,
-          expense_type: 'system',
-          status: 'approved',
-          metadata: {
-            settlement_type: 'employee_profit',
-            employee_id: employeeId,
-            employee_name: employeeName,
-            order_ids: orderIds,
-            orders_count: orderIds.length,
-            unique_settlement_id: uniqueID
-          }
-        });
-        console.log('✅ تم إنشاء مصروف التسوية رقم:', invoiceNumber);
+        // لا حاجة لإضافة مصروف هنا لأن الدالة pay_employee_dues_with_invoice تتولى ذلك
+        console.log('✅ دالة قاعدة البيانات ستتولى إنشاء المصروف تلقائياً');
       } else {
         console.log('⚠️ مصروف التسوية موجود مسبقاً، تم تجاهل التكرار:', existingExpense.receipt_number);
         // استخدام رقم الفاتورة الموجود
