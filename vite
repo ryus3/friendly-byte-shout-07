@@ -1,9 +1,2 @@
 #!/bin/bash
-if command -v npx >/dev/null 2>&1; then
-    npx vite "$@"
-elif [ -f "./node_modules/.bin/vite" ]; then
-    "./node_modules/.bin/vite" "$@"
-else
-    echo "Error: vite not found"
-    exit 1
-fi
+exec npx --yes vite "$@"
