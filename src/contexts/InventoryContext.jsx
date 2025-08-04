@@ -1022,16 +1022,21 @@ export const InventoryProvider = ({ children }) => {
       )
       .subscribe();
 
-    // قناة تحديث المصاريف (realtime)
+    // قناة تحديث المصاريف (realtime) - بدون معالجة المصاريف العامة لتجنب التداخل
     const expensesChannel = supabase
       .channel('expenses-changes')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'expenses' },
         (payload) => {
-          setAccounting(prev => ({
-            ...prev,
-            expenses: [payload.new, ...prev.expenses]
-          }));
+          // تجاهل المصاريف العامة التي يتم إضافتها محلياً لتجنب التداخل مع الحركات المالية
+          if (payload.new.expense_type === 'system' || 
+              ['مشتريات', 'شحن ونقل', 'تكاليف التحويل', 'مستحقات الموظفين'].includes(payload.new.category)) {
+            setAccounting(prev => ({
+              ...prev,
+              expenses: [payload.new, ...prev.expenses]
+            }));
+          }
+          // المصاريف العامة يتم التعامل معها محلياً فقط
         }
       )
       .on('postgres_changes',
