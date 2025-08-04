@@ -30,9 +30,9 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
     return normalized;
   };
 
-  // حساب الإحصائيات
-  const totalOrders = customerStats.reduce((sum, customer) => sum + (customer.order_count || 0), 0);
-  const totalRevenue = customerStats.reduce((sum, customer) => sum + (customer.total_revenue || 0), 0);
+  // حساب الإحصائيات - تصحيح أسماء الحقول
+  const totalOrders = customerStats.reduce((sum, customer) => sum + (customer.total_orders || 0), 0);
+  const totalRevenue = customerStats.reduce((sum, customer) => sum + (customer.total_spent || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,7 +146,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                                 <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">عدد الطلبات</p>
-                              <p className="font-bold text-lg text-blue-600 dark:text-blue-400">{customer.order_count || 0}</p>
+                              <p className="font-bold text-lg text-blue-600 dark:text-blue-400">{customer.total_orders || 0}</p>
                             </div>
                             <div className="text-center">
                               <div className="w-14 h-14 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center mb-2 mx-auto">
@@ -154,7 +154,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">إجمالي الإيرادات</p>
                               <p className="font-bold text-lg text-green-600 dark:text-green-400">
-                                {(customer.total_revenue || 0).toLocaleString()} د.ع
+                                {(customer.total_spent || 0).toLocaleString()} د.ع
                               </p>
                             </div>
                             <div className="text-center">
@@ -163,7 +163,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                               </div>
                               <p className="text-xs text-muted-foreground mb-1">متوسط الطلب</p>
                               <p className="font-bold text-lg text-purple-600 dark:text-purple-400">
-                                {Math.round((customer.total_revenue || 0) / (customer.order_count || 1)).toLocaleString()} د.ع
+                                {Math.round((customer.total_spent || 0) / (customer.total_orders || 1)).toLocaleString()} د.ع
                               </p>
                             </div>
                           </div>
@@ -174,14 +174,14 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                           <div className="flex justify-between items-center mb-2">
                             <span className="text-xs font-medium text-muted-foreground">نسبة المساهمة</span>
                             <span className="text-xs font-bold text-primary">
-                              {totalOrders > 0 ? (((customer.order_count || 0) / totalOrders) * 100).toFixed(1) : 0}%
+                              {totalOrders > 0 ? (((customer.total_orders || 0) / totalOrders) * 100).toFixed(1) : 0}%
                             </span>
                           </div>
                           <div className="w-full bg-muted/50 rounded-full h-3 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full transition-all duration-500 shadow-sm"
                               style={{ 
-                                width: `${totalOrders > 0 ? ((customer.order_count || 0) / totalOrders) * 100 : 0}%`
+                                width: `${totalOrders > 0 ? ((customer.total_orders || 0) / totalOrders) * 100 : 0}%`
                               }}
                             />
                           </div>
