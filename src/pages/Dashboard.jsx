@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
-import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -118,18 +118,7 @@ const Dashboard = () => {
         pendingSales: 'month',
     });
 
-    // الآن يمكن استخدام periods بأمان
-    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
-    
-    // إضافة لوج لتتبع البيانات
-    useEffect(() => {
-        console.log('🔍 Dashboard - Unified Profit Data:', {
-            data: unifiedProfitData,
-            loading: unifiedProfitLoading,
-            error: unifiedProfitError,
-            netProfit: unifiedProfitData?.netProfit
-        });
-    }, [unifiedProfitData, unifiedProfitLoading, unifiedProfitError]);
+    // تم استبدال النظام القديم بالنظام الموحد الجديد
 
     const [dialog, setDialog] = useState({ open: false, type: '', orders: [], periodLabel: '' });
     const [isProfitLossOpen, setIsProfitLossOpen] = useState(false);
