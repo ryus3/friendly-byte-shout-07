@@ -3087,6 +3087,20 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      calculate_real_main_cash_balance: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          final_balance: number
+          capital_amount: number
+          real_sales: number
+          delivery_fees: number
+          total_revenue: number
+          real_employee_dues: number
+          general_expenses: number
+          purchase_costs: number
+          net_profit: number
+        }[]
+      }
       calculate_sold_quantity: {
         Args: { p_product_id: string; p_variant_id: string }
         Returns: number
