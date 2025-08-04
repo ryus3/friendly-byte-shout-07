@@ -17,11 +17,9 @@ if (import.meta.env.PROD) {
 // setupRealtime(); // معطل مؤقتاً لحل مشكلة التحديث المستمر
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <AppProviders>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </AppProviders>
-  </React.StrictMode>
+  <AppProviders>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </AppProviders>
 );
