@@ -212,7 +212,7 @@ export const InventoryProvider = ({ children }) => {
     return { success: true };
   }, []);
   
-  // استبدال addExpense القديمة بالنظام الموحد الجديد
+  // دالة إضافة المصروف الموحدة الجديدة - بدون تكرار أو تداخل
   async function addExpense(expense) {
     try {
       const { useUnifiedFinancialTransactions } = await import('../hooks/useUnifiedFinancialTransactions');
@@ -221,16 +221,18 @@ export const InventoryProvider = ({ children }) => {
       const result = await unifiedAddExpense(expense);
       
       if (result.success) {
-        // تحديث الحالة المحلية
+        // تحديث الحالة المحلية فقط - بدون حركة مالية إضافية
         setAccounting(prev => ({ 
           ...prev, 
           expenses: [result.data, ...prev.expenses]
         }));
+        
+        console.log('✅ [CONTEXT] تم تحديث الحالة المحلية للمصروف:', result.data.id);
       }
       
       return result.data;
     } catch (error) {
-      console.error('فشل إضافة المصروف:', error);
+      console.error('❌ [CONTEXT] فشل إضافة المصروف:', error);
       throw error;
     }
   }
@@ -1478,7 +1480,7 @@ export const InventoryProvider = ({ children }) => {
     }
   };
 
-  // استبدال deleteExpense القديمة بالنظام الموحد الجديد  
+  // دالة حذف المصروف الموحدة الجديدة - بدون تكرار أو تداخل  
   const deleteExpense = async (expenseId) => {
     try {
       const { useUnifiedFinancialTransactions } = await import('../hooks/useUnifiedFinancialTransactions');
@@ -1487,16 +1489,18 @@ export const InventoryProvider = ({ children }) => {
       const result = await unifiedDeleteExpense(expenseId);
       
       if (result.success) {
-        // تحديث البيانات المحلية
+        // تحديث البيانات المحلية فقط - بدون حركة مالية إضافية
         setAccounting(prev => ({
           ...prev,
           expenses: prev.expenses?.filter(exp => exp.id !== expenseId) || []
         }));
+        
+        console.log('✅ [CONTEXT] تم تحديث الحالة المحلية بعد حذف المصروف:', expenseId);
       }
       
       return result;
     } catch (error) {
-      console.error('فشل حذف المصروف:', error);
+      console.error('❌ [CONTEXT] فشل حذف المصروف:', error);
       throw error;
     }
   };
