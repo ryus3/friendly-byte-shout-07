@@ -18,52 +18,8 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات من useOrdersAnalytics مع تجميع حسب رقم الهاتف
-  const rawCustomerStats = analytics.topCustomers || [];
-  
-  // دالة تطبيع رقم الهاتف
-  const normalizePhoneNumber = (phone) => {
-    if (!phone) return 'غير محدد';
-    let normalized = String(phone).replace(/[\s\-\(\)]/g, '');
-    normalized = normalized.replace(/^(\+964|00964)/, '');
-    normalized = normalized.replace(/^0/, '');
-    return normalized;
-  };
-
-  // تجميع الزبائن حسب رقم الهاتف
-  const customerStats = React.useMemo(() => {
-    const phoneGroups = {};
-    
-    rawCustomerStats.forEach(customer => {
-      const normalizedPhone = normalizePhoneNumber(customer.phone);
-      
-      if (!phoneGroups[normalizedPhone]) {
-        phoneGroups[normalizedPhone] = {
-          name: customer.name,
-          phone: customer.phone,
-          city: customer.city,
-          province: customer.province,
-          total_orders: 0,
-          total_spent: 0,
-          last_order_date: customer.last_order_date
-        };
-      }
-      
-      // تجميع الطلبات والمبالغ
-      phoneGroups[normalizedPhone].total_orders += (customer.total_orders || 0);
-      phoneGroups[normalizedPhone].total_spent += (customer.total_spent || 0);
-      
-      // أخذ أحدث تاريخ طلب
-      if (customer.last_order_date && 
-          (!phoneGroups[normalizedPhone].last_order_date || 
-           new Date(customer.last_order_date) > new Date(phoneGroups[normalizedPhone].last_order_date))) {
-        phoneGroups[normalizedPhone].last_order_date = customer.last_order_date;
-      }
-    });
-    
-    // تحويل لمصفوفة وترتيب حسب عدد الطلبات
-    return Object.values(phoneGroups).sort((a, b) => b.total_orders - a.total_orders);
-  }, [rawCustomerStats]);
+  // استخدام البيانات من useOrdersAnalytics (مجمعة بالفعل حسب رقم الهاتف)
+  const customerStats = analytics.topCustomers || [];
 
   // حساب الإحصائيات - تصحيح أسماء الحقول
   const totalOrders = customerStats.reduce((sum, customer) => sum + (customer.total_orders || 0), 0);
