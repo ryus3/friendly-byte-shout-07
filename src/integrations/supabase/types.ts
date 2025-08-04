@@ -3289,6 +3289,19 @@ export type Database = {
           pending_profits: Json
         }[]
       }
+      get_unified_orders_analytics_by_user: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_orders: number
+          pending_orders: number
+          completed_orders: number
+          total_revenue: number
+          top_customers: Json
+          top_products: Json
+          top_provinces: Json
+          pending_profits: Json
+        }[]
+      }
       get_unified_profits_analytics: {
         Args: Record<PropertyKey, never>
         Returns: Json
