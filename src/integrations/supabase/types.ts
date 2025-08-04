@@ -3058,16 +3058,13 @@ export type Database = {
       calculate_enhanced_main_cash_balance: {
         Args: Record<PropertyKey, never>
         Returns: {
-          capital_value: number
-          total_revenue: number
-          total_cogs: number
-          gross_profit: number
-          total_expenses: number
-          total_purchases: number
-          employee_profits: number
-          system_profit: number
-          net_profit: number
           final_balance: number
+          capital_value: number
+          system_profit: number
+          total_revenue: number
+          total_expenses: number
+          employee_dues_paid: number
+          purchase_amounts: number
         }[]
       }
       calculate_fifo_cost: {
