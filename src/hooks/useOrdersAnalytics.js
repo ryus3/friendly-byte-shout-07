@@ -167,7 +167,9 @@ const useOrdersAnalytics = () => {
     let totalRevenue = 0;
 
     orders.forEach(order => {
-      totalRevenue += (order.total_amount || 0);
+      // حساب الإيرادات بدون رسوم التوصيل (تصحيح المشكلة)
+      const orderRevenue = (order.total_amount || 0) - (order.delivery_fee || 0);
+      totalRevenue += orderRevenue;
       
       if (order.customers) {
         const customer = order.customers;
@@ -186,7 +188,8 @@ const useOrdersAnalytics = () => {
         }
         
         customerGroups[normalizedPhone].total_orders += 1;
-        customerGroups[normalizedPhone].total_spent += (order.total_amount || 0);
+        // تصحيح: حساب الإنفاق بدون رسوم التوصيل
+        customerGroups[normalizedPhone].total_spent += orderRevenue;
         
         if (new Date(order.created_at) > new Date(customerGroups[normalizedPhone].last_order_date)) {
           customerGroups[normalizedPhone].last_order_date = order.created_at;
@@ -202,7 +205,8 @@ const useOrdersAnalytics = () => {
           };
         }
         cityGroups[cityName].total_orders += 1;
-        cityGroups[cityName].total_revenue += (order.total_amount || 0);
+        // تصحيح: حساب إيرادات المدن بدون رسوم التوصيل
+        cityGroups[cityName].total_revenue += orderRevenue;
       }
     });
 
