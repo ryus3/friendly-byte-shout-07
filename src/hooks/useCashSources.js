@@ -196,18 +196,18 @@ export const useCashSources = () => {
     return mainBalance + othersBalance;
   };
 
-  // الحصول على رصيد القاصة الرئيسية من الدالة الموحدة فقط
+  // الحصول على رصيد القاصة الرئيسية من الدالة الصحيحة الجديدة
   const getMainCashBalance = async () => {
     try {
-      const { data, error } = await supabase.rpc('calculate_enhanced_main_cash_balance');
+      const { data, error } = await supabase.rpc('calculate_real_main_cash_balance');
 
       if (error) {
-        console.error('❌ خطأ في جلب الرصيد الموحد:', error);
+        console.error('❌ خطأ في جلب الرصيد الحقيقي:', error);
         return 0;
       }
 
-      const enhancedData = data?.[0] || {};
-      const unifiedBalance = Number(enhancedData.final_balance || 0);
+      const realData = data?.[0] || {};
+      const realBalance = Number(realData.final_balance || 0);
       
       console.log('💰 النظام المالي الموحد:', {
         finalBalance: unifiedBalance,

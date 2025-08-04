@@ -52,49 +52,50 @@ const CashManagementPage = () => {
   const [enhancedFinancialData, setEnhancedFinancialData] = useState(null);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // نظام موحد لجلب البيانات المالية
+  // نظام حقيقي لجلب البيانات المالية الصحيحة
   useEffect(() => {
-    const fetchUnifiedFinancialData = async () => {
+    const fetchRealFinancialData = async () => {
       try {
-        // جلب البيانات المالية الموحدة فقط
-        const { data: enhancedData, error } = await supabase.rpc('calculate_enhanced_main_cash_balance');
+        // جلب البيانات المالية الحقيقية الصحيحة
+        const { data: realData, error } = await supabase.rpc('calculate_real_main_cash_balance');
 
-        if (!error && enhancedData?.[0]) {
-          const unified = enhancedData[0];
-          const mainBalance = Number(unified.final_balance || 0);
+        if (!error && realData?.[0]) {
+          const real = realData[0];
+          const mainBalance = Number(real.final_balance || 0);
           
-          // تحديث جميع الحالات من مصدر واحد موحد
+          // تحديث جميع الحالات من البيانات الحقيقية
           setMainCashBalance(mainBalance);
           setEnhancedFinancialData({
-            capitalValue: Number(unified.capital_value || 0),
-            totalRevenue: Number(unified.total_revenue || 0),
-            totalCogs: Number(unified.total_cogs || 0),
-            grossProfit: Number(unified.gross_profit || 0),
-            systemProfit: Number(unified.system_profit || 0),
-            totalExpenses: Number(unified.total_expenses || 0),
-            totalPurchases: Number(unified.total_purchases || 0),
-            employeeProfits: Number(unified.employee_profits || 0),
-            netProfit: Number(unified.net_profit || 0),
+            capitalValue: Number(real.capital_amount || 0),
+            totalRevenue: Number(real.total_revenue || 0),
+            realSales: Number(real.real_sales || 0),
+            deliveryFees: Number(real.delivery_fees || 0),
+            systemProfit: Number(real.net_profit || 0),
+            totalExpenses: Number(real.general_expenses || 0),
+            totalPurchases: Number(real.purchase_costs || 0),
+            employeeDues: Number(real.real_employee_dues || 0),
+            netProfit: Number(real.net_profit || 0),
             finalBalance: mainBalance
           });
 
           const sourcesBalance = getTotalSourcesBalance();
           setTotalSourcesBalance(sourcesBalance);
 
-          console.log('💰 النظام المالي الموحد محدث:', {
+          console.log('💰 النظام المالي الحقيقي محدث:', {
             mainBalance: mainBalance.toLocaleString(),
-            systemProfit: Number(unified.system_profit || 0).toLocaleString()
+            capital: Number(real.capital_amount || 0).toLocaleString(),
+            netProfit: Number(real.net_profit || 0).toLocaleString()
           });
         }
       } catch (error) {
-        console.error('❌ خطأ في النظام المالي الموحد:', error);
+        console.error('❌ خطأ في النظام المالي الحقيقي:', error);
       }
     };
     
-    fetchUnifiedFinancialData();
+    fetchRealFinancialData();
     
     // تحديث كل دقيقة (أقل تكراراً وأكثر كفاءة)
-    const interval = setInterval(fetchUnifiedFinancialData, 60000);
+    const interval = setInterval(fetchRealFinancialData, 60000);
     return () => clearInterval(interval);
   }, [getTotalSourcesBalance, cashSources]);
 
@@ -216,8 +217,8 @@ const CashManagementPage = () => {
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
       change: enhancedFinancialData 
-        ? `رأس المال: ${enhancedFinancialData.capitalValue.toLocaleString()} + أرباح: ${enhancedFinancialData.systemProfit.toLocaleString()}` 
-        : 'جاري تحميل البيانات...'
+        ? `رأس المال: ${enhancedFinancialData.capitalValue.toLocaleString()} + صافي ربح: ${enhancedFinancialData.netProfit.toLocaleString()}` 
+        : 'جاري تحميل البيانات الحقيقية...'
     },
     {
       title: 'الرصيد النقدي الفعلي',
@@ -225,8 +226,8 @@ const CashManagementPage = () => {
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],
-      change: enhancedFinancialData && enhancedFinancialData.systemProfit > 0 
-        ? `ربح النظام: ${enhancedFinancialData.systemProfit.toLocaleString()}`
+      change: enhancedFinancialData && enhancedFinancialData.netProfit > 0 
+        ? `صافي الربح: ${enhancedFinancialData.netProfit.toLocaleString()}`
         : 'رأس المال فقط'
     },
     {
