@@ -52,65 +52,53 @@ const CashManagementPage = () => {
   const [enhancedFinancialData, setEnhancedFinancialData] = useState(null);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // جلب أرصدة المصادر المختلفة - مع تحديث أكثر تكراراً
+  // نظام موحد لجلب البيانات المالية
   useEffect(() => {
-    const fetchBalances = async () => {
+    const fetchUnifiedFinancialData = async () => {
       try {
-        let mainBalance = 0;
-        if (getMainCashBalance) {
-          mainBalance = await getMainCashBalance();
+        // جلب البيانات المالية الموحدة فقط
+        const { data: enhancedData, error } = await supabase.rpc('calculate_enhanced_main_cash_balance');
+
+        if (!error && enhancedData?.[0]) {
+          const unified = enhancedData[0];
+          const mainBalance = Number(unified.final_balance || 0);
+          
+          // تحديث جميع الحالات من مصدر واحد موحد
           setMainCashBalance(mainBalance);
+          setEnhancedFinancialData({
+            capitalValue: Number(unified.capital_value || 0),
+            totalRevenue: Number(unified.total_revenue || 0),
+            totalCogs: Number(unified.total_cogs || 0),
+            grossProfit: Number(unified.gross_profit || 0),
+            systemProfit: Number(unified.system_profit || 0),
+            totalExpenses: Number(unified.total_expenses || 0),
+            totalPurchases: Number(unified.total_purchases || 0),
+            employeeProfits: Number(unified.employee_profits || 0),
+            netProfit: Number(unified.net_profit || 0),
+            finalBalance: mainBalance
+          });
+
+          const sourcesBalance = getTotalSourcesBalance();
+          setTotalSourcesBalance(sourcesBalance);
+
+          console.log('💰 النظام المالي الموحد محدث:', {
+            mainBalance: mainBalance.toLocaleString(),
+            systemProfit: Number(unified.system_profit || 0).toLocaleString()
+          });
         }
-        
-        const sourcesBalance = getTotalSourcesBalance();
-        setTotalSourcesBalance(sourcesBalance);
-        
-        
       } catch (error) {
-        console.error('خطأ في جلب الأرصدة:', error);
+        console.error('❌ خطأ في النظام المالي الموحد:', error);
       }
     };
     
-    fetchBalances();
+    fetchUnifiedFinancialData();
     
-    // جلب البيانات المالية الشاملة
-    fetchSystemFinancials();
-    
-    // تحديث الأرصدة كل 30 ثانية للحصول على بيانات محدثة
-    const interval = setInterval(() => {
-      fetchBalances();
-      fetchSystemFinancials();
-    }, 30000);
+    // تحديث كل دقيقة (أقل تكراراً وأكثر كفاءة)
+    const interval = setInterval(fetchUnifiedFinancialData, 60000);
     return () => clearInterval(interval);
-  }, [getMainCashBalance, getTotalSourcesBalance, cashSources, cashMovements]);
+  }, [getTotalSourcesBalance, cashSources]);
 
-  // جلب البيانات المالية الموحدة
-  const fetchSystemFinancials = async () => {
-    try {
-      const { data: enhancedData, error: enhancedError } = await supabase
-        .rpc('calculate_enhanced_main_cash_balance');
-
-      if (!enhancedError && enhancedData && enhancedData.length > 0) {
-        const enhanced = enhancedData[0];
-        setEnhancedFinancialData({
-          capitalValue: Number(enhanced.capital_value || 0),
-          totalRevenue: Number(enhanced.total_revenue || 0),
-          totalCogs: Number(enhanced.total_cogs || 0),
-          grossProfit: Number(enhanced.gross_profit || 0),
-          systemProfit: Number(enhanced.system_profit || 0),
-          totalExpenses: Number(enhanced.total_expenses || 0),
-          totalPurchases: Number(enhanced.total_purchases || 0),
-          employeeProfits: Number(enhanced.employee_profits || 0),
-          netProfit: Number(enhanced.net_profit || 0),
-          finalBalance: Number(enhanced.final_balance || 0)
-        });
-      } else {
-        console.error('خطأ في جلب البيانات المالية المحسنة:', enhancedError);
-      }
-    } catch (error) {
-      console.error('خطأ في جلب البيانات المالية:', error);
-    }
-  };
+  // تم دمج هذه الدالة في useEffect الموحد أعلاه
 
   // حذف مصدر نقد مع رسالة تأكيد أنيقة
 
@@ -379,7 +367,7 @@ const CashManagementPage = () => {
 
           {/* التحليلات */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* الملخص المالي الموحد */}
+            {/* الملخص المالي الموحد - النظام الجديد */}
             <SystemProfitSummary
               enhancedData={enhancedFinancialData}
               capitalAmount={enhancedFinancialData?.capitalValue || 0}
@@ -388,7 +376,8 @@ const CashManagementPage = () => {
               totalExpenses={enhancedFinancialData?.totalExpenses || 0}
               inventoryValue={0}
               onFilterChange={(period, dateRange) => {
-                fetchSystemFinancials();
+                // لا حاجة لإعادة جلب - النظام محدث تلقائياً
+                console.log('🔄 تغيير الفلتر:', period, dateRange);
               }}
             />
             
@@ -478,12 +467,14 @@ const CashManagementPage = () => {
               <CardContent>
                 <div className="space-y-3">
                   {cashSources.map((source) => {
-                    // استخدام الرصيد الحقيقي لكل مصدر
-                    const realBalance = source.name === 'القاصة الرئيسية' ? mainCashBalance : source.current_balance;
-                    const totalRealBalance = mainCashBalance + getTotalSourcesBalance();
-                    const percentage = totalRealBalance > 0 
-                      ? ((realBalance / totalRealBalance) * 100).toFixed(1)
-                      : 0;
+                    // حساب الأرصدة والنسب بطريقة موحدة وصحيحة
+                    const realBalance = source.name === 'القاصة الرئيسية' 
+                      ? mainCashBalance 
+                      : source.current_balance;
+                    const totalBalance = mainCashBalance + getTotalSourcesBalance();
+                    const percentage = totalBalance > 0 
+                      ? ((realBalance / totalBalance) * 100).toFixed(1)
+                      : '0.0';
                     
                     return (
                       <div key={source.id} className="flex items-center justify-between">

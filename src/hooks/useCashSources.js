@@ -28,15 +28,21 @@ export const useCashSources = () => {
     }
   };
 
-  // جلب حركات النقد
-  const fetchCashMovements = async (sourceId = null, limit = 50) => {
+  // جلب حركات النقد بطريقة موحدة وشاملة
+  const fetchCashMovements = async (sourceId = null, limit = 100) => {
     try {
       let query = supabase
         .from('cash_movements')
         .select(`
           *,
-          cash_sources (name, type)
+          cash_sources!inner (
+            id,
+            name,
+            type,
+            is_active
+          )
         `)
+        .eq('cash_sources.is_active', true)
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -46,9 +52,11 @@ export const useCashSources = () => {
 
       const { data, error } = await query;
       if (error) throw error;
+      
+      console.log('📋 حركات النقد المجلبة:', data?.length || 0);
       setCashMovements(data || []);
     } catch (error) {
-      console.error('خطأ في جلب حركات النقد:', error);
+      console.error('❌ خطأ في جلب حركات النقد:', error);
       toast({
         title: "خطأ",
         description: "فشل في جلب حركات النقد",
@@ -181,52 +189,37 @@ export const useCashSources = () => {
     }
   };
 
-  // الحصول على إجمالي الرصيد من قاعدة البيانات
-  const getTotalBalance = () => {
-    return cashSources.reduce((total, source) => total + (source.current_balance || 0), 0);
+  // الحصول على إجمالي الرصيد الحقيقي الموحد
+  const getTotalBalance = async () => {
+    const mainBalance = await getMainCashBalance();
+    const othersBalance = getTotalSourcesBalance();
+    return mainBalance + othersBalance;
   };
 
-  // الحصول على رصيد القاصة الرئيسية المحسن والصحيح
+  // الحصول على رصيد القاصة الرئيسية من الدالة الموحدة فقط
   const getMainCashBalance = async () => {
     try {
-      // استخدام النظام المحسن لحساب رصيد القاصة الرئيسية
-      const { data, error } = await supabase
-        .rpc('calculate_enhanced_main_cash_balance');
+      const { data, error } = await supabase.rpc('calculate_enhanced_main_cash_balance');
 
       if (error) {
-        console.error('خطأ في جلب الرصيد المحسن:', error);
-        // العودة للطريقة القديمة في حالة الخطأ
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from('cash_sources')
-          .select('current_balance')
-          .eq('name', 'القاصة الرئيسية')
-          .eq('is_active', true)
-          .single();
-        
-        return Number(fallbackData?.current_balance || 0);
+        console.error('❌ خطأ في جلب الرصيد الموحد:', error);
+        return 0;
       }
 
       const enhancedData = data?.[0] || {};
-      const realBalance = Number(enhancedData.final_balance || 0);
+      const unifiedBalance = Number(enhancedData.final_balance || 0);
       
-      console.log('💰 رصيد القاصة الرئيسية المحسن:', {
-        realBalance,
-        formatted: realBalance.toLocaleString(),
-        breakdown: {
-          capital: Number(enhancedData.capital_value || 0),
-          revenue: Number(enhancedData.total_revenue || 0),
-          cogs: Number(enhancedData.total_cogs || 0),
-          grossProfit: Number(enhancedData.gross_profit || 0),
-          expenses: Number(enhancedData.total_expenses || 0),
-          purchases: Number(enhancedData.total_purchases || 0),
-          employeeProfits: Number(enhancedData.employee_profits || 0),
-          netProfit: Number(enhancedData.net_profit || 0)
-        }
+      console.log('💰 النظام المالي الموحد:', {
+        finalBalance: unifiedBalance,
+        capital: Number(enhancedData.capital_value || 0),
+        systemProfit: Number(enhancedData.system_profit || 0),
+        totalRevenue: Number(enhancedData.total_revenue || 0),
+        totalExpenses: Number(enhancedData.total_expenses || 0)
       });
 
-      return realBalance;
+      return unifiedBalance;
     } catch (error) {
-      console.error('خطأ في حساب رصيد القاصة الرئيسية المحسن:', error);
+      console.error('❌ فشل النظام المالي الموحد:', error);
       return 0;
     }
   };
