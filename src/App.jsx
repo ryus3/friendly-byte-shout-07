@@ -41,6 +41,8 @@ const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPa
 // النظام الجديد المبسط
 const DashboardNew = lazy(() => import('@/pages/simplified/DashboardNew.jsx'));
 const ProductsPageNew = lazy(() => import('@/pages/simplified/ProductsPageNew.jsx'));
+const SimplifiedLayout = lazy(() => import('@/core/layouts/SimplifiedLayout.jsx'));
+const DataProvider = lazy(() => import('@/core/components/DataProvider.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -140,8 +142,8 @@ function AppContent() {
           <Route path="/customers-management" element={<ProtectedRoute permission="view_customers">{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
 
           {/* النظام الجديد للاختبار */}
-          <Route path="/new/dashboard" element={<ProtectedRoute>{childrenWithProps(DashboardNew)}</ProtectedRoute>} />
-          <Route path="/new/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPageNew)}</ProtectedRoute>} />
+          <Route path="/new/dashboard" element={<ProtectedRoute><DataProvider><SimplifiedLayout><DashboardNew /></SimplifiedLayout></DataProvider></ProtectedRoute>} />
+          <Route path="/new/products" element={<ProtectedRoute permission="view_products"><DataProvider><SimplifiedLayout><ProductsPageNew /></SimplifiedLayout></DataProvider></ProtectedRoute>} />
 
         </Routes>
       </Suspense>
