@@ -3484,6 +3484,10 @@ export type Database = {
         }
         Returns: Json
       }
+      update_city_order_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_customer_phone_loyalty: {
         Args: {
           p_phone: string
@@ -3497,6 +3501,10 @@ export type Database = {
       }
       update_customer_tier: {
         Args: { p_customer_id: string }
+        Returns: undefined
+      }
+      update_customer_tier_by_phone: {
+        Args: { phone_param: string }
         Returns: undefined
       }
       update_reserved_stock: {
