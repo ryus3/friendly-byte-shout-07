@@ -280,12 +280,34 @@ export const InventoryProvider = ({ children }) => {
         expenses: [newExpense, ...(prev.expenses || [])]
       }));
         
-        console.log('✅ [CONTEXT] تم تحديث الحالة المحلية للمصروف:', result.data.id);
+        console.log('✅ [CONTEXT] تم تحديث الحالة المحلية للمصروف:', newExpense.id);
+
+      // إشعار نجاح
+      if (expense.category !== 'مشتريات' && 
+          expense.category !== 'شحن ونقل' && 
+          expense.category !== 'تكاليف التحويل' && 
+          expense.category !== 'مستحقات الموظفين') {
+        toast({ 
+          title: "تمت إضافة المصروف",
+          description: `تم إضافة مصروف ${expense.description} بقيمة ${expense.amount.toLocaleString()} د.ع`,
+          variant: "success" 
+        });
       }
-      
-      return result.data;
+
+      return {
+        success: true,
+        data: newExpense,
+        message: `تم إضافة مصروف ${expense.description} بقيمة ${expense.amount.toLocaleString()} د.ع`
+      };
     } catch (error) {
       console.error('❌ [CONTEXT] فشل إضافة المصروف:', error);
+      
+      toast({
+        title: "خطأ في إضافة المصروف",
+        description: error.message || "حدث خطأ أثناء إضافة المصروف",
+        variant: "destructive"
+      });
+
       throw error;
     }
   }
