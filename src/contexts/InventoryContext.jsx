@@ -253,13 +253,13 @@ export const InventoryProvider = ({ children }) => {
 
       console.log('✅ تم إنشاء المصروف:', newExpense);
 
-      // خصم المبلغ من القاصة الرئيسية باستخدام الدالة الموحدة
+      // خصم المبلغ من القاصة الرئيسية وتسجيل الحركة المالية
       if (newExpense.status === 'approved' && (expense.expense_type || 'operational') !== 'system') {
-        console.log('🔄 بدء تسجيل الحركة المالية للمصروف باستخدام الدالة الموحدة...');
+        console.log('🔄 بدء تسجيل الحركة المالية للمصروف...');
         
         const { data: mainCashSource, error: cashError } = await supabase
           .from('cash_sources')
-          .select('id')
+          .select('id, current_balance')
           .eq('name', 'القاصة الرئيسية')
           .maybeSingle();
 
@@ -268,21 +268,46 @@ export const InventoryProvider = ({ children }) => {
         } else if (mainCashSource) {
           console.log('💰 تم العثور على القاصة الرئيسية:', mainCashSource.id);
           
-          // استخدام الدالة الموحدة لتجنب التكرار
-          const { data: cashResult, error: cashUpdateError } = await supabase.rpc('update_cash_source_balance', {
-            p_cash_source_id: mainCashSource.id,
-            p_amount: parseFloat(newExpense.amount),
-            p_movement_type: 'out',
-            p_reference_type: 'expense',
-            p_reference_id: newExpense.id,
-            p_description: `مصروف: ${newExpense.description}`,
-            p_created_by: user?.user_id
-          });
+          const oldBalance = parseFloat(mainCashSource.current_balance);
+          const newBalance = oldBalance - parseFloat(newExpense.amount);
           
-          if (cashUpdateError) {
-            console.error('❌ خطأ في تحديث رصيد القاصة:', cashUpdateError);
+          // تحديث رصيد القاصة
+          const { error: updateError } = await supabase
+            .from('cash_sources')
+            .update({ 
+              current_balance: newBalance,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', mainCashSource.id);
+            
+          if (updateError) {
+            console.error('❌ خطأ في تحديث الرصيد:', updateError);
           } else {
-            console.log('✅ تم تحديث رصيد القاصة وتسجيل الحركة المالية بنجاح:', cashResult);
+            console.log('✅ تم تحديث رصيد القاصة من', oldBalance, 'إلى', newBalance);
+            
+            // إنشاء حركة مالية
+            const { data: movementResult, error: movementError } = await supabase
+              .from('cash_movements')
+              .insert({
+                cash_source_id: mainCashSource.id,
+                amount: parseFloat(newExpense.amount),
+                movement_type: 'out',
+                reference_type: 'expense',
+                reference_id: newExpense.id,
+                description: `مصروف: ${newExpense.description}`,
+                balance_before: oldBalance,
+                balance_after: newBalance,
+                created_by: user?.user_id,
+                created_at: new Date().toISOString()
+              })
+              .select()
+              .single();
+
+            if (movementError) {
+              console.error('❌ خطأ في تسجيل الحركة المالية:', movementError);
+            } else {
+              console.log('✅ تم تسجيل الحركة المالية بنجاح:', movementResult);
+            }
           }
         } else {
           console.error('❌ لم يتم العثور على القاصة الرئيسية');

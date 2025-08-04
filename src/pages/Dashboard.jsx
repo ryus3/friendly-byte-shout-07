@@ -10,7 +10,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 
-import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle, Settings } from 'lucide-react';
+import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import StatCard from '@/components/dashboard/StatCard';
@@ -35,7 +35,6 @@ import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import PendingProfitsDialog from '@/components/dashboard/PendingProfitsDialog';
 import { supabase } from '@/lib/customSupabaseClient';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
-import FinancialIntegrityDialog from '@/components/financial/FinancialIntegrityDialog';
 import { toast } from '@/components/ui/use-toast';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
@@ -148,7 +147,6 @@ const Dashboard = () => {
     const [topProvincesOpen, setTopProvincesOpen] = useState(false);
     const [topProductsOpen, setTopProductsOpen] = useState(false);
     const [topCustomersOpen, setTopCustomersOpen] = useState(false);
-    const [financialIntegrityOpen, setFinancialIntegrityOpen] = useState(false);
 
     // جلب بيانات الأرباح من قاعدة البيانات
     const fetchProfitsData = useCallback(async () => {
@@ -533,9 +531,6 @@ const Dashboard = () => {
             key: 'aiOrders', title: 'طلبات الذكاء الاصطناعي', value: (canViewAllData ? aiOrders?.length : userAiOrders?.length) || 0, icon: Bot, colors: ['blue-500', 'sky-500'], onClick: () => setDialogs(d => ({ ...d, aiOrders: true })) 
         },
         canViewAllData && { 
-            key: 'financialIntegrity', title: 'فحص النظام المالي', value: 'فحص', icon: Settings, colors: ['red-500', 'pink-500'], format: 'text', onClick: () => setFinancialIntegrityOpen(true)
-        },
-        canViewAllData && { 
             key: 'pendingRegs', title: 'طلبات التسجيل الجديدة', value: pendingRegistrationsCount, icon: UserPlus, colors: ['indigo-500', 'violet-500'], onClick: () => setDialogs(d => ({ ...d, pendingRegs: true }))
         },
         canViewAllData && { 
@@ -703,11 +698,6 @@ const Dashboard = () => {
               onOpenChange={setTopProductsOpen} 
               employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
               productsData={dashboardData.topProducts}
-            />
-            
-            <FinancialIntegrityDialog 
-              open={financialIntegrityOpen} 
-              onOpenChange={setFinancialIntegrityOpen} 
             />
         </>
     );
