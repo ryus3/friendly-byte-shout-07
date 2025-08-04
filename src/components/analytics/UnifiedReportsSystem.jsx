@@ -1,19 +1,18 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import ProfessionalReportsSystem from './ProfessionalReportsSystem';
+import UnifiedAnalyticsSystem from './UnifiedAnalyticsSystem';
 
 /**
- * نظام التقارير الموحد
- * يعرض التقارير المناسبة حسب صلاحيات المستخدم
+ * نظام التقارير الموحد المتصل بالنظام المالي
+ * يعرض التحليلات والتقارير المناسبة حسب صلاحيات المستخدم
  */
 const UnifiedReportsSystem = () => {
-  const { hasPermission, canViewAllData, filterDataByUser } = usePermissions();
+  const { hasPermission, canViewAllData } = usePermissions();
 
   return (
     <div className="space-y-6">
-      <ProfessionalReportsSystem 
+      <UnifiedAnalyticsSystem 
         canViewAll={canViewAllData}
-        filterData={filterDataByUser}
         userPermissions={{
           viewFinancialReports: hasPermission('view_financial_reports'),
           viewInventoryReports: hasPermission('view_inventory_reports'),

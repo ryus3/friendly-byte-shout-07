@@ -334,9 +334,9 @@ const ProfessionalReportsSystem = () => {
             </div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                لوحة التحليلات الاحترافية
+                التحليلات
               </h1>
-              <p className="text-muted-foreground">تحليل شامل ومتقدم لأداء النشاط التجاري</p>
+              <p className="text-muted-foreground">تحليل شامل ومتقدم متصل بالنظام المالي الموحد</p>
             </div>
           </div>
         </div>
@@ -364,7 +364,7 @@ const ProfessionalReportsSystem = () => {
         </div>
       </motion.div>
 
-      {/* فلاتر متقدمة */}
+      {/* فلاتر الفترة الزمنية - موحد */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }} 
         animate={{ opacity: 1, y: 0 }}
@@ -374,52 +374,47 @@ const ProfessionalReportsSystem = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Filter className="w-5 h-5" />
-              فلاتر التحليل المتقدمة
+              فلتر الفترة الزمنية
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* الفترة الزمنية */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">الفترة الزمنية</Label>
-                  <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start gap-2">
-                        <CalendarIcon className="w-4 h-4" />
-                        {dateRange.from && dateRange.to ? (
-                          `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
-                        ) : (
-                          'اختر الفترة الزمنية'
-                        )}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <div className="p-3 space-y-3">
-                        <div className="grid grid-cols-2 gap-2">
-                          {quickDateRanges.map((range, index) => (
-                            <Button
-                              key={index}
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDateRangeChange(range.range)}
-                            >
-                              {range.label}
-                            </Button>
-                          ))}
-                        </div>
-                        <Separator />
-                        <Calendar
-                          mode="range"
-                          selected={{ from: dateRange.from, to: dateRange.to }}
-                          onSelect={(range) => range && handleDateRangeChange(range)}
-                          numberOfMonths={2}
-                          className="pointer-events-auto"
-                        />
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+              {quickDateRanges.map((range, index) => (
+                <Button
+                  key={index}
+                  variant={JSON.stringify(dateRange) === JSON.stringify(range.range) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleDateRangeChange(range.range)}
+                  className="transition-all duration-300"
+                >
+                  {range.label}
+                </Button>
+              ))}
+            </div>
+            
+            <div className="mt-4">
+              <Popover open={showDatePicker} onOpenChange={setShowDatePicker}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    {dateRange.from && dateRange.to ? (
+                      `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`
+                    ) : (
+                      'اختر فترة مخصصة'
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    selected={{ from: dateRange.from, to: dateRange.to }}
+                    onSelect={(range) => range && handleDateRangeChange(range)}
+                    numberOfMonths={2}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <Select value={filters.department} onValueChange={(value) => setFilters(prev => ({ ...prev, department: value }))}>
