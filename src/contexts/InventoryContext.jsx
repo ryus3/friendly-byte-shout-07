@@ -253,13 +253,13 @@ export const InventoryProvider = ({ children }) => {
 
       console.log('✅ تم إنشاء المصروف:', newExpense);
 
-      // خصم المبلغ من القاصة الرئيسية وتسجيل الحركة المالية
+      // خصم المبلغ من القاصة الرئيسية باستخدام الدالة الموحدة
       if (newExpense.status === 'approved' && (expense.expense_type || 'operational') !== 'system') {
         console.log('🔄 بدء تسجيل الحركة المالية للمصروف...');
         
         const { data: mainCashSource, error: cashError } = await supabase
           .from('cash_sources')
-          .select('id, current_balance')
+          .select('id')
           .eq('name', 'القاصة الرئيسية')
           .maybeSingle();
 
@@ -268,46 +268,21 @@ export const InventoryProvider = ({ children }) => {
         } else if (mainCashSource) {
           console.log('💰 تم العثور على القاصة الرئيسية:', mainCashSource.id);
           
-          const oldBalance = parseFloat(mainCashSource.current_balance);
-          const newBalance = oldBalance - parseFloat(newExpense.amount);
-          
-          // تحديث رصيد القاصة
-          const { error: updateError } = await supabase
-            .from('cash_sources')
-            .update({ 
-              current_balance: newBalance,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', mainCashSource.id);
-            
-          if (updateError) {
-            console.error('❌ خطأ في تحديث الرصيد:', updateError);
-          } else {
-            console.log('✅ تم تحديث رصيد القاصة من', oldBalance, 'إلى', newBalance);
-            
-            // إنشاء حركة مالية
-            const { data: movementResult, error: movementError } = await supabase
-              .from('cash_movements')
-              .insert({
-                cash_source_id: mainCashSource.id,
-                amount: parseFloat(newExpense.amount),
-                movement_type: 'out',
-                reference_type: 'expense',
-                reference_id: newExpense.id,
-                description: `مصروف: ${newExpense.description}`,
-                balance_before: oldBalance,
-                balance_after: newBalance,
-                created_by: user?.user_id,
-                created_at: new Date().toISOString()
-              })
-              .select()
-              .single();
+          // استخدام الدالة الموحدة التي تتعامل مع التحديث والحركة معاً
+          const { data: balanceResult, error: balanceError } = await supabase.rpc('update_cash_source_balance', {
+            p_cash_source_id: mainCashSource.id,
+            p_amount: parseFloat(newExpense.amount),
+            p_movement_type: 'out',
+            p_reference_type: 'expense',
+            p_reference_id: newExpense.id,
+            p_description: `مصروف: ${newExpense.description}`,
+            p_created_by: user?.user_id
+          });
 
-            if (movementError) {
-              console.error('❌ خطأ في تسجيل الحركة المالية:', movementError);
-            } else {
-              console.log('✅ تم تسجيل الحركة المالية بنجاح:', movementResult);
-            }
+          if (balanceError) {
+            console.error('❌ خطأ في تحديث رصيد القاصة:', balanceError);
+          } else {
+            console.log('✅ تم تحديث رصيد القاصة وتسجيل الحركة بنجاح:', balanceResult);
           }
         } else {
           console.error('❌ لم يتم العثور على القاصة الرئيسية');
@@ -1586,12 +1561,54 @@ export const InventoryProvider = ({ children }) => {
 
   const deleteExpense = async (expenseId) => {
     try {
-      const { error } = await supabase
+      // جلب بيانات المصروف قبل حذفه
+      const { data: expenseData, error: fetchError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('id', expenseId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // حذف المصروف من قاعدة البيانات
+      const { error: deleteError } = await supabase
         .from('expenses')
         .delete()
         .eq('id', expenseId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
+
+      // إرجاع المبلغ للقاصة الرئيسية إذا كان مصروف معتمد وليس نظام
+      if (expenseData.status === 'approved' && expenseData.expense_type !== 'system') {
+        console.log('🔄 إرجاع مبلغ المصروف المحذوف للقاصة...');
+        
+        const { data: mainCashSource, error: cashError } = await supabase
+          .from('cash_sources')
+          .select('id')
+          .eq('name', 'القاصة الرئيسية')
+          .maybeSingle();
+
+        if (cashError) {
+          console.error('خطأ في جلب القاصة الرئيسية:', cashError);
+        } else if (mainCashSource) {
+          // استخدام الدالة الموحدة لإرجاع المبلغ
+          const { data: balanceResult, error: balanceError } = await supabase.rpc('update_cash_source_balance', {
+            p_cash_source_id: mainCashSource.id,
+            p_amount: parseFloat(expenseData.amount),
+            p_movement_type: 'in',
+            p_reference_type: 'expense_refund',
+            p_reference_id: expenseId,
+            p_description: `إرجاع مصروف محذوف: ${expenseData.description}`,
+            p_created_by: user?.user_id
+          });
+
+          if (balanceError) {
+            console.error('❌ خطأ في إرجاع مبلغ المصروف:', balanceError);
+          } else {
+            console.log('✅ تم إرجاع مبلغ المصروف للقاصة بنجاح:', balanceResult);
+          }
+        }
+      }
 
       // تحديث البيانات المحلية
       setAccounting(prev => ({
@@ -1601,7 +1618,7 @@ export const InventoryProvider = ({ children }) => {
 
       toast({ 
         title: "تم بنجاح", 
-        description: "تم حذف المصروف بنجاح", 
+        description: "تم حذف المصروف وإرجاع المبلغ للقاصة", 
         variant: "default" 
       });
     } catch (error) {
