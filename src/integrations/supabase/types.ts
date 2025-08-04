@@ -3405,7 +3405,7 @@ export type Database = {
       }
       migrate_existing_customers_to_phone_loyalty: {
         Args: Record<PropertyKey, never>
-        Returns: string
+        Returns: undefined
       }
       normalize_phone_number: {
         Args: { phone_input: string }
