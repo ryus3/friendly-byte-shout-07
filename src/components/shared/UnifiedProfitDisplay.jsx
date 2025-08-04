@@ -273,8 +273,9 @@ const UnifiedProfitDisplay = ({
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
     
-    // صافي الربح = 45,000 (قيمة ثابتة كما هو مطلوب)
-    const netProfit = 45000;
+    // صافي الربح = نفس حساب "صافي أرباح المبيعات" من لوحة التحكم  
+    // المبلغ الصحيح (45 ألف) من unifiedProfitData الموحد
+    const netProfit = profitData?.netProfit || unifiedProfitData?.netProfit || (systemProfit - generalExpenses);
     
     // حساب أرباح الموظفين
     const totalEmployeeProfits = allProfits
