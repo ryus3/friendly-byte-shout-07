@@ -5,15 +5,9 @@ import { MapPin, Calendar, Eye, TrendingUp, DollarSign, Map } from 'lucide-react
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesData = [] }) => {
+const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const [provinceStats, setProvinceStats] = useState([]);
-  
-  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
-  console.log('🔥 TopProvincesDialog - البيانات الواردة:', {
-    provincesData,
-    length: provincesData?.length || 0
-  });
+  const { analytics, loading, error } = useOrdersAnalytics();
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -24,25 +18,8 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesDa
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات الممررة مباشرة
-  useEffect(() => {
-    if (provincesData && provincesData.length > 0) {
-      // تحويل البيانات إلى الهيكل المطلوب
-      const processedProvinces = provincesData.map((province) => ({
-        province: province.label || 'محافظة غير محددة',
-        orderCount: parseInt(province.value?.replace(/\D/g, '')) || 0,
-        total_orders: parseInt(province.value?.replace(/\D/g, '')) || 0,
-        total_revenue: 0,
-        totalRevenue: 0,
-        avgOrderValue: 0
-      }));
-      
-      console.log('🔥 TopProvincesDialog - البيانات المعالجة:', processedProvinces);
-      setProvinceStats(processedProvinces);
-    } else {
-      setProvinceStats([]);
-    }
-  }, [provincesData]);
+  // استخدام البيانات من useOrdersAnalytics مع أسماء الحقول الصحيحة
+  const provinceStats = analytics.topProvinces || [];
   // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
   const getFilteredProvinces = () => {
     return provinceStats;
@@ -63,7 +40,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesDa
           </DialogTitle>
         </DialogHeader>
 
-        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
+        {loading ? (
           <div className="flex items-center justify-center py-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
@@ -146,8 +123,8 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesDa
                               {index + 1}
                             </div>
                             <div>
-                              <h4 className="font-semibold text-sm text-foreground">{province.province}</h4>
-                              <p className="text-xs text-muted-foreground">{province.orderCount} طلب</p>
+                              <h4 className="font-semibold text-sm text-foreground">{province.province || 'محافظة غير محددة'}</h4>
+                              <p className="text-xs text-muted-foreground">{province.total_orders || 0} طلب</p>
                             </div>
                           </div>
                           
@@ -155,13 +132,13 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesDa
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">الإيرادات</p>
                               <p className="font-bold text-sm text-green-600 dark:text-green-400">
-                                {province.totalRevenue.toLocaleString()}
+                                {(province.total_revenue || 0).toLocaleString()}
                               </p>
                             </div>
                             <div className="text-center">
                               <p className="text-xs text-muted-foreground">المتوسط</p>
                               <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
-                                {Math.round(province.avgOrderValue).toLocaleString()}
+                                {Math.round(province.avg_order_value || 0).toLocaleString()}
                               </p>
                             </div>
                           </div>
@@ -172,14 +149,14 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesDa
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs text-muted-foreground">المساهمة</span>
                             <span className="text-xs font-bold text-primary">
-                              {totalOrders > 0 ? ((province.orderCount / totalOrders) * 100).toFixed(1) : 0}%
+                              {totalOrders > 0 ? (((province.total_orders || 0) / totalOrders) * 100).toFixed(1) : 0}%
                             </span>
                           </div>
                           <div className="w-full bg-muted/50 rounded-full h-2 overflow-hidden">
                             <div 
                               className="bg-gradient-to-r from-primary to-primary/80 h-2 rounded-full transition-all duration-300"
                               style={{ 
-                                width: `${totalOrders > 0 ? (province.orderCount / totalOrders) * 100 : 0}%`
+                                width: `${totalOrders > 0 ? ((province.total_orders || 0) / totalOrders) * 100 : 0}%`
                               }}
                             />
                           </div>
