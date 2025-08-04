@@ -38,6 +38,10 @@ const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
 const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAnalysisPage.jsx'));
 const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPage.jsx'));
 
+// النظام الجديد المبسط
+const DashboardNew = lazy(() => import('@/pages/simplified/DashboardNew.jsx'));
+const ProductsPageNew = lazy(() => import('@/pages/simplified/ProductsPageNew.jsx'));
+
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
@@ -134,6 +138,10 @@ function AppContent() {
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
           <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
           <Route path="/customers-management" element={<ProtectedRoute permission="view_customers">{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
+
+          {/* النظام الجديد للاختبار */}
+          <Route path="/new/dashboard" element={<ProtectedRoute>{childrenWithProps(DashboardNew)}</ProtectedRoute>} />
+          <Route path="/new/products" element={<ProtectedRoute permission="view_products">{childrenWithProps(ProductsPageNew)}</ProtectedRoute>} />
 
         </Routes>
       </Suspense>
