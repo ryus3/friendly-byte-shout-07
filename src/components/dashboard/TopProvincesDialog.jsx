@@ -20,11 +20,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
 
   // استخدام البيانات من useOrdersAnalytics مع أسماء الحقول الصحيحة
   const provinceStats = analytics.topProvinces || [];
-  // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
-  const getFilteredProvinces = () => {
-    return provinceStats;
-  };
-
+  // تصحيح حساب الإحصائيات باستخدام أسماء الحقول الصحيحة
   const totalOrders = provinceStats.reduce((sum, province) => sum + (province.total_orders || 0), 0);
   const totalRevenue = provinceStats.reduce((sum, province) => sum + (province.total_revenue || 0), 0);
 
