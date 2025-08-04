@@ -3080,13 +3080,11 @@ export type Database = {
         Returns: {
           final_balance: number
           capital_amount: number
-          real_sales: number
-          delivery_fees: number
-          total_revenue: number
-          real_employee_dues: number
-          general_expenses: number
-          purchase_costs: number
           net_profit: number
+          total_sales: number
+          total_expenses: number
+          total_purchases: number
+          employee_dues_paid: number
         }[]
       }
       calculate_sold_quantity: {
