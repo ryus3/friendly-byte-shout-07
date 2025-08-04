@@ -50,12 +50,6 @@ const CashManagementPage = () => {
   const [mainCashBalance, setMainCashBalance] = useState(0);
   const [totalSourcesBalance, setTotalSourcesBalance] = useState(0);
   const [enhancedFinancialData, setEnhancedFinancialData] = useState(null);
-  const [systemFinancials, setSystemFinancials] = useState({
-    realizedProfits: 0,
-    totalPurchases: 0,
-    totalExpenses: 0,
-    capitalAmount: 5000000
-  });
   const [deleteSource, setDeleteSource] = useState(null);
 
   // جلب أرصدة المصادر المختلفة - مع تحديث أكثر تكراراً
@@ -66,18 +60,12 @@ const CashManagementPage = () => {
         if (getMainCashBalance) {
           mainBalance = await getMainCashBalance();
           setMainCashBalance(mainBalance);
-          
-          console.log('💰 تفاصيل رصيد القاصة الرئيسية:', {
-            baseCapital: systemFinancials.baseCapital,
-            realizedProfits: systemFinancials.realizedProfits,
-            totalMainCashBalance: mainBalance
-          });
         }
         
         const sourcesBalance = getTotalSourcesBalance();
         setTotalSourcesBalance(sourcesBalance);
         
-        console.log('💰 الرصيد النقدي الفعلي (مجموع جميع المصادر):', mainBalance);
+        
       } catch (error) {
         console.error('خطأ في جلب الأرصدة:', error);
       }
@@ -88,18 +76,17 @@ const CashManagementPage = () => {
     // جلب البيانات المالية الشاملة
     fetchSystemFinancials();
     
-    // تحديث الأرصدة كل 3 ثوان للحصول على بيانات حية
+    // تحديث الأرصدة كل 30 ثانية للحصول على بيانات محدثة
     const interval = setInterval(() => {
       fetchBalances();
       fetchSystemFinancials();
-    }, 5000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [getMainCashBalance, getTotalSourcesBalance, cashSources, cashMovements]);
 
-  // جلب البيانات المالية المحسنة الجديدة
+  // جلب البيانات المالية الموحدة
   const fetchSystemFinancials = async () => {
     try {
-      // استخدام النظام المحسن أولاً
       const { data: enhancedData, error: enhancedError } = await supabase
         .rpc('calculate_enhanced_main_cash_balance');
 
@@ -109,60 +96,17 @@ const CashManagementPage = () => {
           capitalValue: Number(enhanced.capital_value || 0),
           totalRevenue: Number(enhanced.total_revenue || 0),
           totalCogs: Number(enhanced.total_cogs || 0),
-          grossProfit: Number(enhanced.gross_profit || 0), // للإحصائيات فقط
-          systemProfit: Number(enhanced.system_profit || 0), // ربح النظام الصحيح
+          grossProfit: Number(enhanced.gross_profit || 0),
+          systemProfit: Number(enhanced.system_profit || 0),
           totalExpenses: Number(enhanced.total_expenses || 0),
           totalPurchases: Number(enhanced.total_purchases || 0),
           employeeProfits: Number(enhanced.employee_profits || 0),
           netProfit: Number(enhanced.net_profit || 0),
           finalBalance: Number(enhanced.final_balance || 0)
         });
-        
-        // تحديث النظام القديم للتوافق - استخدام ربح النظام الصحيح
-        setSystemFinancials({
-          capitalAmount: Number(enhanced.capital_value || 0),
-          realizedProfits: Number(enhanced.system_profit || 0), // تصحيح لاستخدام ربح النظام
-          totalPurchases: Number(enhanced.total_purchases || 0),
-          totalExpenses: Number(enhanced.total_expenses || 0)
-        });
-        
-        return;
+      } else {
+        console.error('خطأ في جلب البيانات المالية المحسنة:', enhancedError);
       }
-
-      // النظام القديم للتوافق العكسي
-      const { data: capitalData } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'initial_capital')
-        .single();
-
-      const { data: profitsData } = await supabase
-        .from('cash_movements')
-        .select('amount')
-        .eq('reference_type', 'realized_profit');
-
-      const { data: purchasesData } = await supabase
-        .from('purchases')
-        .select('total_amount');
-
-      const { data: expensesData } = await supabase
-        .from('expenses')
-        .select('amount')
-        .eq('status', 'approved')
-        .neq('expense_type', 'system');
-
-      const capitalAmount = parseFloat(capitalData?.value || 0);
-      const realizedProfits = profitsData?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0;
-      const totalPurchases = purchasesData?.reduce((sum, p) => sum + (p.total_amount || 0), 0) || 0;
-      const totalExpenses = expensesData?.reduce((sum, e) => sum + (e.amount || 0), 0) || 0;
-
-      setSystemFinancials({
-        capitalAmount,
-        realizedProfits,
-        totalPurchases,
-        totalExpenses
-      });
-
     } catch (error) {
       console.error('خطأ في جلب البيانات المالية:', error);
     }
@@ -275,7 +219,7 @@ const CashManagementPage = () => {
   const weekStats = calculateStats(weekMovements);
   const monthStats = calculateStats(monthMovements);
 
-  // إحصائيات المؤشرات الرئيسية
+  // إحصائيات المؤشرات الرئيسية - النظام الموحد
   const kpiCards = [
     {
       title: 'القاصة الرئيسية',
@@ -283,18 +227,18 @@ const CashManagementPage = () => {
       format: 'currency',
       icon: Wallet,
       colors: ['indigo-600', 'purple-600'],
-      change: mainCashBalance > systemFinancials.capitalAmount 
-        ? `رأس المال: ${systemFinancials.capitalAmount.toLocaleString()} + أرباح: ${(mainCashBalance - systemFinancials.capitalAmount).toLocaleString()}` 
-        : 'رأس المال فقط (لا توجد أرباح حقيقية بعد)'
+      change: enhancedFinancialData 
+        ? `رأس المال: ${enhancedFinancialData.capitalValue.toLocaleString()} + أرباح: ${enhancedFinancialData.systemProfit.toLocaleString()}` 
+        : 'جاري تحميل البيانات...'
     },
     {
       title: 'الرصيد النقدي الفعلي',
-      value: mainCashBalance, // الرصيد الحقيقي للقاصة الرئيسية
+      value: mainCashBalance,
       format: 'currency',
       icon: DollarSign,
       colors: ['emerald-600', 'teal-600'],
-      change: systemFinancials.realizedProfits > 0 
-        ? `رأس المال + ${systemFinancials.realizedProfits.toLocaleString()} أرباح محققة`
+      change: enhancedFinancialData && enhancedFinancialData.systemProfit > 0 
+        ? `ربح النظام: ${enhancedFinancialData.systemProfit.toLocaleString()}`
         : 'رأس المال فقط'
     },
     {
@@ -435,17 +379,15 @@ const CashManagementPage = () => {
 
           {/* التحليلات */}
           <TabsContent value="analytics" className="space-y-6">
-            {/* الملخص المالي المحسن */}
+            {/* الملخص المالي الموحد */}
             <SystemProfitSummary
               enhancedData={enhancedFinancialData}
-              capitalAmount={systemFinancials.capitalAmount}
-              realizedProfits={systemFinancials.realizedProfits}
-              totalPurchases={systemFinancials.totalPurchases}
-              totalExpenses={systemFinancials.totalExpenses}
+              capitalAmount={enhancedFinancialData?.capitalValue || 0}
+              realizedProfits={enhancedFinancialData?.systemProfit || 0}
+              totalPurchases={enhancedFinancialData?.totalPurchases || 0}
+              totalExpenses={enhancedFinancialData?.totalExpenses || 0}
               inventoryValue={0}
               onFilterChange={(period, dateRange) => {
-                console.log('تم تغيير الفلتر:', period, dateRange);
-                // إعادة جلب البيانات حسب الفترة المحددة
                 fetchSystemFinancials();
               }}
             />
@@ -536,8 +478,11 @@ const CashManagementPage = () => {
               <CardContent>
                 <div className="space-y-3">
                   {cashSources.map((source) => {
-                    const percentage = getTotalBalance() > 0 
-                      ? ((source.current_balance / getTotalBalance()) * 100).toFixed(1)
+                    // استخدام الرصيد الحقيقي لكل مصدر
+                    const realBalance = source.name === 'القاصة الرئيسية' ? mainCashBalance : source.current_balance;
+                    const totalRealBalance = mainCashBalance + getTotalSourcesBalance();
+                    const percentage = totalRealBalance > 0 
+                      ? ((realBalance / totalRealBalance) * 100).toFixed(1)
                       : 0;
                     
                     return (
@@ -553,7 +498,7 @@ const CashManagementPage = () => {
                           <span className="font-medium">{source.name}</span>
                         </div>
                         <div className="text-left">
-                          <span className="font-semibold">{source.current_balance.toLocaleString()} د.ع</span>
+                          <span className="font-semibold">{realBalance.toLocaleString()} د.ع</span>
                           <span className="text-sm text-muted-foreground ml-2">({percentage}%)</span>
                         </div>
                       </div>

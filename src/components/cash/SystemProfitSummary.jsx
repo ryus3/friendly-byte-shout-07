@@ -345,7 +345,7 @@ const SystemProfitSummary = ({
                     </div>
                     <div>
                       <p className="text-xs md:text-sm text-white/80 font-medium">رأس المال</p>
-                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(capitalAmount)}</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(enhancedData?.capitalValue || 0)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -370,7 +370,7 @@ const SystemProfitSummary = ({
                     </div>
                     <div>
                       <p className="text-xs md:text-sm text-white/80 font-medium">ربح النظام</p>
-                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(calculations.systemProfit || realizedProfits)}</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">+{formatCurrency(enhancedData?.systemProfit || 0)}</p>
                       <p className="text-xs text-white/60 mt-1 flex items-center gap-1">
                         <Target className="w-3 h-3" />
                         اضغط للتحليل المتقدم
@@ -393,7 +393,7 @@ const SystemProfitSummary = ({
                     </div>
                     <div>
                       <p className="text-xs md:text-sm text-white/80 font-medium">المشتريات</p>
-                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(totalPurchases)}</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(enhancedData?.totalPurchases || 0)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -412,7 +412,7 @@ const SystemProfitSummary = ({
                     </div>
                     <div>
                       <p className="text-xs md:text-sm text-white/80 font-medium">المصاريف</p>
-                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(totalExpenses)}</p>
+                      <p className="text-sm md:text-xl font-bold text-white group-hover:scale-105 transition-transform">-{formatCurrency(enhancedData?.totalExpenses || 0)}</p>
                     </div>
                   </div>
                 </CardContent>
