@@ -154,25 +154,22 @@ const normalizePhoneNumber = (phone) => {
 };
 
 export const getTopCustomers = (orders) => {
-  if (!orders || orders.length === 0) return [];
+  if (!orders || orders.length === 0) {
+    console.log('⚠️ لا توجد طلبات للزبائن');
+    return [];
+  }
   
   console.log('📊 تحليل الزبائن - إجمالي الطلبات:', orders.length);
+  console.log('📊 أول طلب في المصفوفة:', orders[0]);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = order.delivery_status === 'delivered' || 
-                                   order.status === 'delivered' || 
-                                   order.order_status === 'delivered' ||
-                                   order.delivery_status === 'completed' ||
-                                   order.status === 'completed' ||
-                                   order.order_status === 'completed';
+    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
+                                   order.receipt_received === true;
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
-                                 order.delivery_status === 'returned' ||
-                                 order.delivery_status === 'cancelled' ||
-                                 order.order_status === 'returned' ||
-                                 order.order_status === 'cancelled';
+                                 order.status === 'returned_in_stock';
     
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
@@ -223,32 +220,35 @@ export const getTopCustomers = (orders) => {
 };
 
 export const getTopProvinces = (orders) => {
-  if (!orders) return [];
+  if (!orders) {
+    console.log('⚠️ لا توجد طلبات للمحافظات');
+    return [];
+  }
+  
+  console.log('🏙️ تحليل المحافظات - إجمالي الطلبات:', orders.length);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = order.delivery_status === 'delivered' || 
-                                   order.status === 'delivered' || 
-                                   order.order_status === 'delivered' ||
-                                   order.delivery_status === 'completed' ||
-                                   order.status === 'completed' ||
-                                   order.order_status === 'completed';
+    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
+                                   order.receipt_received === true;
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
-                                 order.delivery_status === 'returned' ||
-                                 order.delivery_status === 'cancelled' ||
-                                 order.order_status === 'returned' ||
-                                 order.order_status === 'cancelled';
+                                 order.status === 'returned_in_stock';
     
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
+  console.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);
+  
   const provinceCounts = deliveredOrders.reduce((acc, order) => {
     const city = order.customer_city || order.customer_province || 'غير محدد';
+    console.log(`🏙️ الطلب ${order.id}: المدينة = "${city}"`);
     acc[city] = (acc[city] || 0) + 1;
     return acc;
   }, {});
+  
+  console.log('🏙️ إحصائيات المحافظات:', provinceCounts);
 
   return Object.entries(provinceCounts)
     .map(([city, count]) => ({ label: city, value: `${count} طلبات` }))
@@ -257,37 +257,44 @@ export const getTopProvinces = (orders) => {
 };
 
 export const getTopProducts = (orders) => {
-  if (!orders) return [];
+  if (!orders) {
+    console.log('⚠️ لا توجد طلبات للمنتجات');
+    return [];
+  }
+  
+  console.log('📦 تحليل المنتجات - إجمالي الطلبات:', orders.length);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
-    const isDeliveredOrCompleted = order.delivery_status === 'delivered' || 
-                                   order.status === 'delivered' || 
-                                   order.order_status === 'delivered' ||
-                                   order.delivery_status === 'completed' ||
-                                   order.status === 'completed' ||
-                                   order.order_status === 'completed';
+    const isDeliveredOrCompleted = (order.status === 'delivered' || order.status === 'completed') && 
+                                   order.receipt_received === true;
     
     const isReturnedOrCancelled = order.status === 'returned' || 
                                  order.status === 'cancelled' ||
-                                 order.delivery_status === 'returned' ||
-                                 order.delivery_status === 'cancelled' ||
-                                 order.order_status === 'returned' ||
-                                 order.order_status === 'cancelled';
+                                 order.status === 'returned_in_stock';
     
     return isDeliveredOrCompleted && !isReturnedOrCancelled;
   });
   
+  console.log('📦 الطلبات المكتملة للمنتجات:', deliveredOrders.length);
+  
   const productCounts = deliveredOrders.reduce((acc, order) => {
-    if (!order.order_items || !Array.isArray(order.order_items)) return acc;
+    if (!order.items || !Array.isArray(order.items)) {
+      console.log(`📦 الطلب ${order.id}: لا يحتوي على عناصر`);
+      return acc;
+    }
     
-    order.order_items.forEach(item => {
-      const productName = item.products?.name || item.product_name || 'منتج غير محدد';
+    console.log(`📦 الطلب ${order.id}: يحتوي على ${order.items.length} عنصر`);
+    order.items.forEach(item => {
+      const productName = item.product_name || item.name || 'منتج غير محدد';
       const quantity = parseInt(item.quantity) || 1;
+      console.log(`📦 المنتج: ${productName}, الكمية: ${quantity}`);
       acc[productName] = (acc[productName] || 0) + quantity;
     });
     return acc;
   }, {});
+  
+  console.log('📦 إحصائيات المنتجات:', productCounts);
 
   return Object.entries(productCounts)
     .map(([name, count]) => ({ label: name, value: `${count} قطعة` }))

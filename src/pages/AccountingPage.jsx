@@ -478,23 +478,6 @@ const AccountingPage = () => {
                     </div>
                 </div>
                 
-                {/* قسم اختبار النظام المالي الجديد */}
-                <div className="mt-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                🔬 النظام المالي الجديد (للاختبار)
-                                <Badge variant="outline">تجريبي</Badge>
-                            </CardTitle>
-                            <CardDescription>
-                                مقارنة البيانات المحسوبة بالنظام المالي الموحد الجديد مع النظام الحالي
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <UnifiedFinancialDisplay page="accounting" />
-                        </CardContent>
-                    </Card>
-                </div>
             </div>
             <ExpensesDialog
                 open={dialogs.expenses}
