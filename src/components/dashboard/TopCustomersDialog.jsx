@@ -5,12 +5,15 @@ import { Users, Calendar, Eye, TrendingUp, DollarSign, Phone } from 'lucide-reac
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
+const TopCustomersDialog = ({ open, onOpenChange, employeeId = null, customersData = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [customerStats, setCustomerStats] = useState([]);
   
-  // استخدام النظام الموحد للحصول على البيانات
-  const { analytics, loading } = useOrdersAnalytics();
+  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
+  console.log('🔥 TopCustomersDialog - البيانات الواردة:', {
+    customersData,
+    length: customersData?.length || 0
+  });
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -21,29 +24,28 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات الموحدة مع الحفاظ على نفس الوظائف
+  // استخدام البيانات الممررة مباشرة
   useEffect(() => {
-    if (analytics.topCustomers && analytics.topCustomers.length > 0) {
-      // تحويل البيانات الموحدة إلى نفس الهيكل المتوقع
-      const unifiedCustomers = analytics.topCustomers.map(customer => ({
+    if (customersData && customersData.length > 0) {
+      // تحويل البيانات إلى الهيكل المطلوب
+      const processedCustomers = customersData.map((customer, index) => ({
         phone: customer.phone || 'غير محدد',
         normalizedPhone: normalizePhoneNumber(customer.phone),
-        name: customer.name || 'زبون غير محدد',
-        orderCount: customer.total_orders || 0,
-        totalRevenue: parseFloat(customer.total_spent) || 0,
-        avgOrderValue: customer.total_orders > 0 ? (parseFloat(customer.total_spent) / customer.total_orders) : 0,
-        orders: [{
-          id: 'unified',
-          amount: parseFloat(customer.total_spent) || 0,
-          date: new Date()
-        }],
-        city: customer.city,
-        province: customer.province
+        name: customer.label || 'زبون غير محدد',
+        orderCount: customer.count || 0,
+        totalRevenue: 0, // يمكن حسابه لاحقاً
+        avgOrderValue: 0,
+        orders: [{ id: `order-${index}`, amount: 0, date: new Date() }],
+        city: 'غير محدد',
+        province: 'غير محدد'
       }));
       
-      setCustomerStats(unifiedCustomers);
+      console.log('🔥 TopCustomersDialog - البيانات المعالجة:', processedCustomers);
+      setCustomerStats(processedCustomers);
+    } else {
+      setCustomerStats([]);
     }
-  }, [analytics.topCustomers]);
+  }, [customersData]);
 
   // دالة تطبيع رقم الهاتف
   const normalizePhoneNumber = (phone) => {
@@ -75,7 +77,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
+        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
           <div className="flex items-center justify-center py-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
@@ -237,7 +239,7 @@ const TopCustomersDialog = ({ open, onOpenChange, employeeId = null }) => {
                     <p className="text-lg font-semibold text-muted-foreground mb-2">لا توجد بيانات زبائن</p>
                     <p className="text-sm text-muted-foreground">لا توجد طلبات مكتملة للفترة المحددة</p>
                     <div className="mt-4 text-xs text-muted-foreground">
-                      <p>الطلبات المكتملة: {analytics.completedOrders || 0}</p>
+                      <p>البيانات المتاحة: {customersData?.length || 0}</p>
                       <p>الفترة المحددة: {periods.find(p => p.key === selectedPeriod)?.label}</p>
                     </div>
                   </div>

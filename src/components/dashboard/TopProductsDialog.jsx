@@ -5,12 +5,15 @@ import { Package, Calendar, Eye, TrendingUp, DollarSign, ShoppingCart } from 'lu
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
+const TopProductsDialog = ({ open, onOpenChange, employeeId = null, productsData = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [productStats, setProductStats] = useState([]);
   
-  // استخدام النظام الموحد للحصول على البيانات
-  const { analytics, loading } = useOrdersAnalytics();
+  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
+  console.log('🔥 TopProductsDialog - البيانات الواردة:', {
+    productsData,
+    length: productsData?.length || 0
+  });
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -21,12 +24,24 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات الموحدة مع الحفاظ على نفس الوظائف
+  // استخدام البيانات الممررة مباشرة
   useEffect(() => {
-    if (analytics.topProducts && analytics.topProducts.length > 0) {
-      setProductStats(analytics.topProducts);
+    if (productsData && productsData.length > 0) {
+      // تحويل البيانات إلى الهيكل المطلوب
+      const processedProducts = productsData.map((product) => ({
+        productName: product.label || 'منتج غير محدد',
+        totalQuantity: parseInt(product.value?.replace(/\D/g, '')) || 0,
+        total_sold: parseInt(product.value?.replace(/\D/g, '')) || 0,
+        total_revenue: 0,
+        orders_count: 0
+      }));
+      
+      console.log('🔥 TopProductsDialog - البيانات المعالجة:', processedProducts);
+      setProductStats(processedProducts);
+    } else {
+      setProductStats([]);
     }
-  }, [analytics.topProducts]);
+  }, [productsData]);
   // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
   const getFilteredProducts = () => {
     return productStats;
@@ -48,7 +63,7 @@ const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
+        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
           <div className="flex items-center justify-center py-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>

@@ -5,12 +5,15 @@ import { MapPin, Calendar, Eye, TrendingUp, DollarSign, Map } from 'lucide-react
 import { motion } from 'framer-motion';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
-const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
+const TopProvincesDialog = ({ open, onOpenChange, employeeId = null, provincesData = [] }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [provinceStats, setProvinceStats] = useState([]);
   
-  // استخدام النظام الموحد للحصول على البيانات
-  const { analytics, loading } = useOrdersAnalytics();
+  // استخدام البيانات الممررة من Dashboard بدلاً من useOrdersAnalytics
+  console.log('🔥 TopProvincesDialog - البيانات الواردة:', {
+    provincesData,
+    length: provincesData?.length || 0
+  });
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
@@ -21,12 +24,25 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
     { key: 'all', label: 'كل الفترات' }
   ];
 
-  // استخدام البيانات الموحدة مع الحفاظ على نفس الوظائف
+  // استخدام البيانات الممررة مباشرة
   useEffect(() => {
-    if (analytics.topProvinces && analytics.topProvinces.length > 0) {
-      setProvinceStats(analytics.topProvinces);
+    if (provincesData && provincesData.length > 0) {
+      // تحويل البيانات إلى الهيكل المطلوب
+      const processedProvinces = provincesData.map((province) => ({
+        province: province.label || 'محافظة غير محددة',
+        orderCount: parseInt(province.value?.replace(/\D/g, '')) || 0,
+        total_orders: parseInt(province.value?.replace(/\D/g, '')) || 0,
+        total_revenue: 0,
+        totalRevenue: 0,
+        avgOrderValue: 0
+      }));
+      
+      console.log('🔥 TopProvincesDialog - البيانات المعالجة:', processedProvinces);
+      setProvinceStats(processedProvinces);
+    } else {
+      setProvinceStats([]);
     }
-  }, [analytics.topProvinces]);
+  }, [provincesData]);
   // دالة فلترة البيانات حسب الفترة الزمنية (يمكن تطويرها لاحقاً)
   const getFilteredProvinces = () => {
     return provinceStats;
@@ -47,7 +63,7 @@ const TopProvincesDialog = ({ open, onOpenChange, employeeId = null }) => {
           </DialogTitle>
         </DialogHeader>
 
-        {loading ? (
+        {false ? ( // إزالة loading state لأن البيانات تأتي من Dashboard مباشرة
           <div className="flex items-center justify-center py-6">
             <div className="text-center">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
