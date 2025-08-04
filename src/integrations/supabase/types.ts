@@ -570,6 +570,71 @@ export type Database = {
           },
         ]
       }
+      customer_phone_loyalty: {
+        Row: {
+          created_at: string | null
+          current_tier_id: string | null
+          customer_city: string | null
+          customer_name: string | null
+          customer_province: string | null
+          first_order_date: string | null
+          id: string
+          last_order_date: string | null
+          last_tier_upgrade: string | null
+          original_phone: string | null
+          phone_number: string
+          points_expiry_date: string | null
+          total_orders: number | null
+          total_points: number | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          current_tier_id?: string | null
+          customer_city?: string | null
+          customer_name?: string | null
+          customer_province?: string | null
+          first_order_date?: string | null
+          id?: string
+          last_order_date?: string | null
+          last_tier_upgrade?: string | null
+          original_phone?: string | null
+          phone_number: string
+          points_expiry_date?: string | null
+          total_orders?: number | null
+          total_points?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          current_tier_id?: string | null
+          customer_city?: string | null
+          customer_name?: string | null
+          customer_province?: string | null
+          first_order_date?: string | null
+          id?: string
+          last_order_date?: string | null
+          last_tier_upgrade?: string | null
+          original_phone?: string | null
+          phone_number?: string
+          points_expiry_date?: string | null
+          total_orders?: number | null
+          total_points?: number | null
+          total_spent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_phone_loyalty_current_tier_id_fkey"
+            columns: ["current_tier_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_product_segments: {
         Row: {
           category_id: string | null
@@ -3005,48 +3070,6 @@ export type Database = {
           final_balance: number
         }[]
       }
-      calculate_enhanced_main_cash_balance_v2: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          capital_value: number
-          total_revenue: number
-          total_cogs: number
-          gross_profit: number
-          total_expenses: number
-          total_purchases: number
-          employee_profits: number
-          net_profit: number
-          final_balance: number
-        }[]
-      }
-      calculate_enhanced_main_cash_balance_v3: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          capital_value: number
-          total_revenue: number
-          total_cogs: number
-          gross_profit: number
-          total_expenses: number
-          total_purchases: number
-          employee_profits: number
-          net_profit: number
-          final_balance: number
-        }[]
-      }
-      calculate_enhanced_main_cash_balance_v5: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          capital_value: number
-          total_revenue: number
-          total_cogs: number
-          gross_profit: number
-          total_expenses: number
-          total_purchases: number
-          employee_profits: number
-          net_profit: number
-          final_balance: number
-        }[]
-      }
       calculate_fifo_cost: {
         Args: {
           p_product_id: string
@@ -3060,14 +3083,6 @@ export type Database = {
         Returns: number
       }
       calculate_main_cash_balance: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      calculate_main_cash_balance_v2: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      calculate_main_cash_balance_v3: {
         Args: Record<PropertyKey, never>
         Returns: number
       }
@@ -3322,6 +3337,37 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_city_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          city_name: string
+          total_orders: number
+          total_amount: number
+        }[]
+      }
+      get_user_customers_with_loyalty: {
+        Args: { p_user_id: string }
+        Returns: {
+          id: string
+          name: string
+          phone: string
+          email: string
+          city: string
+          province: string
+          address: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          total_points: number
+          total_orders: number
+          total_spent: number
+          current_tier_id: string
+          tier_name: string
+          tier_color: string
+          tier_icon: string
+          tier_discount_percentage: number
+        }[]
+      }
       get_user_highest_role: {
         Args: { p_user_id: string }
         Returns: string
@@ -3337,6 +3383,14 @@ export type Database = {
       link_telegram_user: {
         Args: { p_employee_code: string; p_telegram_chat_id: number }
         Returns: boolean
+      }
+      migrate_existing_customers_to_phone_loyalty: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      normalize_phone_number: {
+        Args: { phone_input: string }
+        Returns: string
       }
       pay_employee_dues_with_invoice: {
         Args: {
@@ -3411,8 +3465,27 @@ export type Database = {
         }
         Returns: Json
       }
+      update_city_order_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_customer_phone_loyalty: {
+        Args: {
+          p_phone: string
+          p_customer_name?: string
+          p_customer_city?: string
+          p_customer_province?: string
+          p_order_amount?: number
+          p_order_date?: string
+        }
+        Returns: string
+      }
       update_customer_tier: {
         Args: { p_customer_id: string }
+        Returns: undefined
+      }
+      update_customer_tier_by_phone: {
+        Args: { phone_param: string }
         Returns: undefined
       }
       update_reserved_stock: {
