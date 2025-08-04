@@ -7,6 +7,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   calculateFinancialMetrics,
   filterOrdersByPermissions,
@@ -34,6 +35,11 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     enableDebugLogs = true,
     forceRefresh = false
   } = options;
+  
+  // حالة إضافية للبيانات المالية الموحدة
+  const [capitalAmount, setCapitalAmount] = useState(0);
+  const [totalPurchases, setTotalPurchases] = useState(0);
+  const [currentBalance, setCurrentBalance] = useState(0);
   
   // فلترة البيانات حسب الصلاحيات
   const filteredOrders = useMemo(() => {
@@ -99,6 +105,44 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     }
   }, [filteredOrders, filteredExpenses, timePeriod, inventoryLoading, canViewAllData, enableDebugLogs]);
   
+  // جلب البيانات المالية الإضافية
+  useEffect(() => {
+    const fetchAdditionalFinancialData = async () => {
+      try {
+        // رأس المال من القاصة الرئيسية
+        const { data: cashData } = await supabase
+          .from('cash_sources')
+          .select('current_balance')
+          .eq('name', 'القاصة الرئيسية')
+          .single();
+        
+        // إجمالي المشتريات
+        const { data: purchasesData } = await supabase
+          .from('purchases')
+          .select('total_amount')
+          .eq('status', 'approved');
+        
+        const totalPurchasesSum = purchasesData?.reduce((sum, p) => sum + (Number(p.total_amount) || 0), 0) || 0;
+        
+        setCapitalAmount(cashData?.current_balance || 0);
+        setTotalPurchases(totalPurchasesSum);
+        setCurrentBalance(cashData?.current_balance || 0);
+        
+        if (enableDebugLogs) {
+          console.log('💰 البيانات المالية الإضافية:', {
+            capitalAmount: cashData?.current_balance || 0,
+            totalPurchases: totalPurchasesSum,
+            currentBalance: cashData?.current_balance || 0
+          });
+        }
+      } catch (error) {
+        console.error('❌ خطأ في جلب البيانات المالية الإضافية:', error);
+      }
+    };
+    
+    fetchAdditionalFinancialData();
+  }, [timePeriod, enableDebugLogs]);
+
   // تحديث حالة التحميل
   useEffect(() => {
     setLoading(inventoryLoading || financialMetrics.loading);
@@ -139,6 +183,11 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   return {
     // البيانات المالية الرئيسية
     ...financialMetrics,
+    
+    // البيانات المالية الإضافية
+    capitalAmount,
+    totalPurchases,
+    currentBalance,
     
     // حالة النظام
     loading,
