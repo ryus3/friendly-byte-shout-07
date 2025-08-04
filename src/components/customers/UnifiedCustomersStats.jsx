@@ -8,13 +8,14 @@ import CustomerStats from './CustomerStats';
  * يستخدم النظام الموحد للصلاحيات وضمان عدم خلط عملاء المستخدمين
  */
 const UnifiedCustomersStats = ({ onStatClick }) => {
-  const { user } = usePermissions();
+  const { canViewAllCustomers, filterDataByUser, user } = usePermissions();
   const { data: allCustomers, loading } = useSupabaseData('customers');
 
-  // تصفية العملاء - كل مستخدم يرى عملاءه فقط
+  // تصفية العملاء حسب صلاحيات المستخدم - كل مستخدم يرى عملاءه فقط (حتى المدير)
   const filteredCustomers = React.useMemo(() => {
     if (!allCustomers) return [];
     
+    // كل مستخدم (مدير أو موظف) يرى عملاءه الخاصين فقط
     return allCustomers.filter(customer => customer.created_by === user?.id);
   }, [allCustomers, user?.id]);
 
