@@ -28,20 +28,21 @@ export const useCashSources = () => {
     }
   };
 
-  // جلب حركات النقد بطريقة موحدة وشاملة - إصدار محسن
+  // جلب حركات النقد بطريقة موحدة وشاملة
   const fetchCashMovements = async (sourceId = null, limit = 100) => {
     try {
       let query = supabase
         .from('cash_movements')
         .select(`
           *,
-          cash_sources (
+          cash_sources!inner (
             id,
             name,
             type,
             is_active
           )
         `)
+        .eq('cash_sources.is_active', true)
         .order('created_at', { ascending: false })
         .limit(limit);
 
@@ -50,29 +51,17 @@ export const useCashSources = () => {
       }
 
       const { data, error } = await query;
-      if (error) {
-        console.error('❌ خطأ في جلب حركات النقد:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      // فلترة الحركات المرتبطة بمصادر نشطة فقط
-      const activeMovements = (data || []).filter(movement => 
-        movement.cash_sources && movement.cash_sources.is_active
-      );
-      
-      console.log('📋 حركات النقد المجلبة:', activeMovements.length, 'من إجمالي', data?.length || 0);
-      setCashMovements(activeMovements);
-      
-      return activeMovements;
+      console.log('📋 حركات النقد المجلبة:', data?.length || 0);
+      setCashMovements(data || []);
     } catch (error) {
       console.error('❌ خطأ في جلب حركات النقد:', error);
-      setCashMovements([]);
       toast({
         title: "خطأ",
-        description: "فشل في جلب حركات النقد: " + error.message,
+        description: "فشل في جلب حركات النقد",
         variant: "destructive"
       });
-      return [];
     }
   };
 
@@ -140,11 +129,9 @@ export const useCashSources = () => {
 
       if (error) throw error;
 
-      // تحديث البيانات فوراً
-      await Promise.all([
-        fetchCashSources(),
-        fetchCashMovements()
-      ]);
+      // تحديث البيانات
+      await fetchCashSources();
+      await fetchCashMovements();
 
       toast({
         title: "تم بنجاح",
@@ -181,11 +168,9 @@ export const useCashSources = () => {
 
       if (error) throw error;
 
-      // تحديث البيانات فوراً
-      await Promise.all([
-        fetchCashSources(),
-        fetchCashMovements()
-      ]);
+      // تحديث البيانات
+      await fetchCashSources();
+      await fetchCashMovements();
 
       toast({
         title: "تم بنجاح",
