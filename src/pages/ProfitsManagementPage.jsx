@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, FileText, Download } from 'lucide-react';
-import { useProfits } from '@/contexts/ProfitsContext';
+import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { motion } from 'framer-motion';
@@ -15,15 +15,21 @@ import { ar } from 'date-fns/locale';
 const ProfitsManagementPage = () => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
-  const { 
-    profits, 
-    settlementRequests, 
-    settlementInvoices,
-    loading,
-    createSettlementRequest,
-    approveSettlementRequest,
-    rejectSettlementRequest
-  } = useProfits();
+  
+  // استخدام النظام الموحد بدلاً من ProfitsContext المنفصل
+  const { profits, orders, loading } = useInventory();
+  
+  // تصفية الأرباح للمستخدم الحالي
+  const userProfits = useMemo(() => {
+    if (!profits || !user) return [];
+    const userUUID = user.user_id || user.id;
+    const userEmployeeCode = user.employee_code;
+    
+    return profits.filter(profit => 
+      profit.employee_id === userUUID || 
+      profit.employee_id === userEmployeeCode
+    );
+  }, [profits, user]);
 
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [selectedOrders, setSelectedOrders] = useState([]);

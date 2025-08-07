@@ -1,28 +1,23 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import CustomerStats from './CustomerStats';
 
 /**
- * مكون موحد لإحصائيات العملاء
- * يستخدم النظام الموحد للصلاحيات وضمان عدم خلط عملاء المستخدمين
+ * مكون موحد لإحصائيات العملاء - تم الإصلاح لاستخدام النظام الموحد
  */
 const UnifiedCustomersStats = ({ onStatClick }) => {
   const { canViewAllCustomers, filterDataByUser, user } = usePermissions();
-  const { data: allCustomers, loading } = useSupabaseData('customers');
+  const { customers, loading } = useInventory(); // البيانات من النظام الموحد
 
-  // تصفية العملاء حسب صلاحيات المستخدم - كل مستخدم يرى عملاءه فقط
+  // تصفية العملاء حسب صلاحيات المستخدم - البيانات مفلترة مسبقاً في SuperProvider
   const filteredCustomers = React.useMemo(() => {
-    if (!allCustomers) return [];
+    if (!customers) return [];
     
-    // المديرون يرون جميع العملاء إذا كان لديهم الصلاحية
-    if (canViewAllCustomers) {
-      return allCustomers;
-    }
-    
-    // الموظفون يرون عملاءهم فقط (المنشؤون بواسطتهم)
-    return allCustomers.filter(customer => customer.created_by === user?.id);
-  }, [allCustomers, canViewAllCustomers, user?.id]);
+    // البيانات مفلترة تلقائياً من SuperProvider حسب المستخدم
+    console.log('📊 UnifiedCustomersStats: العملاء من النظام الموحد:', customers.length);
+    return customers;
+  }, [customers]);
 
   if (loading) {
     return (

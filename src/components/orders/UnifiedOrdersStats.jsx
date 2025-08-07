@@ -1,28 +1,23 @@
 import React from 'react';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import OrdersStats from './OrdersStats';
 
 /**
- * مكون موحد لإحصائيات الطلبات
- * يستخدم النظام الموحد للصلاحيات وضمان عدم خلط طلبات المستخدمين
+ * مكون موحد لإحصائيات الطلبات - تم الإصلاح لاستخدام النظام الموحد
  */
 const UnifiedOrdersStats = ({ onFilterChange, onCardClick, dateRange }) => {
   const { canViewAllOrders, filterDataByUser, user } = usePermissions();
-  const { data: allOrders, loading } = useSupabaseData('orders');
+  const { orders, loading } = useInventory(); // البيانات من النظام الموحد
 
-  // تصفية الطلبات حسب صلاحيات المستخدم - كل مستخدم يرى طلباته فقط
+  // تصفية الطلبات حسب صلاحيات المستخدم - البيانات مفلترة مسبقاً في SuperProvider
   const filteredOrders = React.useMemo(() => {
-    if (!allOrders) return [];
+    if (!orders) return [];
     
-    // المديرون يرون جميع الطلبات إذا كان لديهم الصلاحية
-    if (canViewAllOrders) {
-      return allOrders;
-    }
-    
-    // الموظفون يرون طلباتهم فقط (المنشؤة بواسطتهم)
-    return allOrders.filter(order => order.created_by === user?.id);
-  }, [allOrders, canViewAllOrders, user?.id]);
+    // البيانات مفلترة تلقائياً من SuperProvider حسب المستخدم
+    console.log('📊 UnifiedOrdersStats: الطلبات من النظام الموحد:', orders.length);
+    return orders;
+  }, [orders]);
 
   if (loading) {
     return (
