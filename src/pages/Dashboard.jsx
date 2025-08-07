@@ -321,8 +321,13 @@ const Dashboard = () => {
         
         const filterByDate = (itemDateStr) => {
             if (!from || !to || !itemDateStr) return true;
-            const itemDate = parseISO(itemDateStr);
-            return isValid(itemDate) && itemDate >= from && itemDate <= to;
+            try {
+                const itemDate = parseISO(itemDateStr);
+                return isValid(itemDate) && itemDate >= from && itemDate <= to;
+            } catch (error) {
+                console.warn('Invalid date format:', itemDateStr);
+                return false;
+            }
         };
         
         const deliveredOrders = (visibleOrders || []).filter(o => 
@@ -366,16 +371,27 @@ const Dashboard = () => {
         
         const salesByDay = {};
         deliveredOrders.forEach(o => {
-          const day = format(parseISO(o.updated_at || o.created_at), 'dd');
-          if (!salesByDay[day]) salesByDay[day] = 0;
-          salesByDay[day] += o.final_amount || o.total_amount || 0;
+          const dateStr = o.updated_at || o.created_at;
+          if (!dateStr) return;
+          try {
+            const day = format(parseISO(dateStr), 'dd');
+            if (!salesByDay[day]) salesByDay[day] = 0;
+            salesByDay[day] += o.final_amount || o.total_amount || 0;
+          } catch (error) {
+            console.warn('Invalid date format in order:', dateStr);
+          }
         });
         
         const expensesByDay = {};
         expensesInRange.forEach(e => {
-            const day = format(parseISO(e.transaction_date), 'dd');
-            if (!expensesByDay[day]) expensesByDay[day] = 0;
-            expensesByDay[day] += e.amount;
+            if (!e.transaction_date) return;
+            try {
+                const day = format(parseISO(e.transaction_date), 'dd');
+                if (!expensesByDay[day]) expensesByDay[day] = 0;
+                expensesByDay[day] += e.amount;
+            } catch (error) {
+                console.warn('Invalid date format in expense:', e.transaction_date);
+            }
         });
     
         const allDays = [...new Set([...Object.keys(salesByDay), ...Object.keys(expensesByDay)])].sort();
