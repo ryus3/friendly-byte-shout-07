@@ -148,16 +148,21 @@ export const SuperProvider = ({ children }) => {
         ...filteredData,
         products: (filteredData.products || []).map(product => ({
           ...product,
-          variants: (product.product_variants || []).map(variant => ({
-            ...variant,
-            // ربط بيانات المخزون بالشكل الصحيح
-            quantity: variant.inventory?.quantity || variant.quantity || 0,
-            reserved_quantity: variant.inventory?.reserved_quantity || variant.reserved_quantity || 0,
-            min_stock: variant.inventory?.min_stock || variant.min_stock || 5,
-            location: variant.inventory?.location || variant.location || '',
-            // الحفاظ على البيانات الأصلية
-            inventory: variant.inventory
-          }))
+          variants: (product.product_variants || []).map(variant => {
+            // ربط المخزون بشكل صحيح من جدول inventory
+            const inventoryData = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
+            
+            return {
+              ...variant,
+              // ربط بيانات المخزون بالشكل الصحيح
+              quantity: inventoryData?.quantity || variant.quantity || 0,
+              reserved_quantity: inventoryData?.reserved_quantity || variant.reserved_quantity || 0,
+              min_stock: inventoryData?.min_stock || variant.min_stock || 5,
+              location: inventoryData?.location || variant.location || '',
+              // الحفاظ على البيانات الأصلية
+              inventory: inventoryData
+            }
+          })
         }))
       };
       

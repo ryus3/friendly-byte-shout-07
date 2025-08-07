@@ -135,14 +135,14 @@ class SuperAPI {
         productTypes,
         seasons
       ] = await Promise.all([
-        // المنتجات مع كل شيء
+        // المنتجات مع كل شيء - إصلاح ربط المخزون
         supabase.from('products').select(`
           *,
           product_variants (
             *,
             colors (id, name, hex_code),
             sizes (id, name, type),
-            inventory (quantity, min_stock, reserved_quantity, location)
+            inventory!inventory_variant_id_fkey (quantity, min_stock, reserved_quantity, location)
           ),
           product_categories (categories (id, name)),
           product_departments (departments (id, name, color, icon)),
