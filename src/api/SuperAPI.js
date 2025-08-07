@@ -16,6 +16,8 @@ class SuperAPI {
     this.CACHE_TTL = 3 * 60 * 1000;
     
     console.log('🚀 SuperAPI: نظام موحد لحل فوضى البيانات');
+    // مفتاح تخزين محلي
+    this.persistPrefix = 'superapi_cache_';
   }
 
   // التحقق من صحة البيانات المحفوظة
@@ -35,6 +37,27 @@ class SuperAPI {
     return isValid;
   }
 
+  // قراءة/حفظ التخزين المحلي بشكل آمن
+  readPersisted(key) {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(this.persistPrefix + key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const age = Date.now() - (parsed.ts || 0);
+      if (age < this.CACHE_TTL) return parsed.data;
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  writePersisted(key, data) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(this.persistPrefix + key, JSON.stringify({ ts: Date.now(), data }));
+    } catch {}
+  }
+
   // جلب البيانات مع منع التكرار
   async fetch(key, queryFn, options = {}) {
     const { force = false } = options;
@@ -43,6 +66,17 @@ class SuperAPI {
     if (!force && this.isCacheValid(key)) {
       console.log(`📋 استخدام cache لـ: ${key}`);
       return this.cache.get(key);
+    }
+
+    // قراءة من التخزين المحلي إذا لم تكن الذاكرة صالحة
+    if (!force && typeof window !== 'undefined') {
+      const persisted = this.readPersisted(key);
+      if (persisted) {
+        console.log(`💾 استخدام cache المحفوظ محلياً لـ: ${key}`);
+        this.cache.set(key, persisted);
+        this.timestamps.set(key, Date.now());
+        return persisted;
+      }
     }
 
     // منع الطلبات المتزامنة
@@ -76,8 +110,10 @@ class SuperAPI {
       // حفظ البيانات
       this.cache.set(key, data);
       this.timestamps.set(key, Date.now());
+      // حفظ محلي للتسريع وتقليل الاستهلاك
+      this.writePersisted(key, data);
       
-      console.log(`✅ تم حفظ ${key} (${duration}ms)`);
+      console.log(`✅ تم حفظ ${key} (${duration}ms)`) ;
       return data;
       
     } catch (error) {
