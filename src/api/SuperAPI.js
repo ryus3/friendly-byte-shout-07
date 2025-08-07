@@ -140,7 +140,7 @@ class SuperAPI {
           *,
           product_variants (
             *,
-            colors (id, name, hex_color),
+            colors (id, name, hex_code),
             sizes (id, name, type),
             inventory (quantity, min_stock, reserved_quantity, location)
           ),
@@ -158,7 +158,7 @@ class SuperAPI {
             products (id, name, images),
             product_variants (
               id, price, cost_price, images,
-              colors (name, hex_color),
+              colors (name, hex_code),
               sizes (name)
             )
           )
