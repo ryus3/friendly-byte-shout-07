@@ -505,7 +505,7 @@ export const UnifiedAuthProvider = ({ children }) => {
       const { data, error } = await supabase
         .from('profiles')
         .update(profileData)
-        .eq('user_id', user.user_id || user.id)
+        .eq('user_id', getUserUUID(user))
         .select()
         .single();
 

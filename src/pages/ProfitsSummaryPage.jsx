@@ -309,7 +309,7 @@ const ProfitsSummaryPage = () => {
         const netProfit = unifiedProfitData?.netProfit || 0;
 
         // حساب أرباح المدير الشخصية من طلباته الخاصة
-        const personalProfits = detailedProfits.filter(p => p.created_by === user.user_id || p.created_by === user.id);
+        const personalProfits = detailedProfits.filter(p => p.created_by === getUserUUID(user));
         const totalPersonalProfit = personalProfits.reduce((sum, p) => sum + p.profit, 0);
       
         // حساب أرباح المدير الشخصية المعلقة فقط (من طلباته الخاصة)

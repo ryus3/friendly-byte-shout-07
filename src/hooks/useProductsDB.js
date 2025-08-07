@@ -67,7 +67,7 @@ export const useProductsDB = () => {
         barcode: productData.barcode,
         images: uploadedGeneralImages,
         is_active: true,
-        created_by: user.id || user.user_id
+        created_by: getUserUUID(user)
       });
 
       // Create relationships for multiple categories
