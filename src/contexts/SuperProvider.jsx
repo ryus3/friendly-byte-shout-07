@@ -216,43 +216,50 @@ export const SuperProvider = ({ children }) => {
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const approveAiOrder = useCallback(async (orderId) => ({ success: true }), []);
 
-  // القيم المرجعة - نفس بنية InventoryContext بالضبط
+  // القيم المرجعة - نفس بنية InventoryContext بالضبط مع قيم آمنة
   const contextValue = {
-    // البيانات الأساسية
-    products: allData.products,
-    orders: allData.orders,
-    customers: allData.customers,
-    purchases: allData.purchases,
-    expenses: allData.expenses,
-    profits: allData.profits,
-    aiOrders: allData.aiOrders,
-    settings: allData.settings,
-    accounting,
+    // البيانات الأساسية - مع قيم افتراضية آمنة
+    products: allData.products || [],
+    orders: allData.orders || [],
+    customers: allData.customers || [],
+    purchases: allData.purchases || [],
+    expenses: allData.expenses || [],
+    profits: allData.profits || [],
+    aiOrders: allData.aiOrders || [],
+    settings: allData.settings || { 
+      deliveryFee: 5000, 
+      lowStockThreshold: 5, 
+      mediumStockThreshold: 10, 
+      sku_prefix: "PROD", 
+      lastPurchaseId: 0,
+      printer: { paperSize: 'a4', orientation: 'portrait' }
+    },
+    accounting: accounting || { capital: 10000000, expenses: [] },
     
-    // بيانات المرشحات
-    categories: allData.categories,
-    departments: allData.departments,
-    allColors: allData.colors,
-    allSizes: allData.sizes,
+    // بيانات المرشحات - مع قيم افتراضية آمنة
+    categories: allData.categories || [],
+    departments: allData.departments || [],
+    allColors: allData.colors || [],
+    allSizes: allData.sizes || [],
     
     // حالة التحميل
-    loading,
+    loading: loading || false,
     
-    // وظائف السلة - مهمة جداً
-    cart,
-    addToCart,
-    removeFromCart,
-    updateCartItemQuantity,
-    clearCart,
+    // وظائف السلة - مهمة جداً مع قيم آمنة
+    cart: cart || [],
+    addToCart: addToCart || (() => {}),
+    removeFromCart: removeFromCart || (() => {}),
+    updateCartItemQuantity: updateCartItemQuantity || (() => {}),
+    clearCart: clearCart || (() => {}),
     
     // الوظائف الأساسية
-    createOrder,
-    updateOrder,
-    deleteOrders,
-    addExpense,
-    refreshOrders,
-    refreshProducts,
-    approveAiOrder,
+    createOrder: createOrder || (async () => ({ success: false })),
+    updateOrder: updateOrder || (async () => ({ success: false })),
+    deleteOrders: deleteOrders || (async () => ({ success: false })),
+    addExpense: addExpense || (async () => ({ success: false })),
+    refreshOrders: refreshOrders || (() => {}),
+    refreshProducts: refreshProducts || (() => {}),
+    approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     
     // وظائف المنتجات (للتوافق)
     addProduct: () => console.log('addProduct - سيتم تطبيقها لاحقاً'),
@@ -265,6 +272,15 @@ export const SuperProvider = ({ children }) => {
     calculateProfit: () => 0,
     calculateManagerProfit: () => 0,
   };
+
+  // إضافة لوق للتتبع
+  console.log('🔍 SuperProvider contextValue:', {
+    hasCart: !!contextValue.cart,
+    cartLength: contextValue.cart?.length || 0,
+    loading: contextValue.loading,
+    hasProducts: !!contextValue.products,
+    productsLength: contextValue.products?.length || 0
+  });
 
   return (
     <SuperContext.Provider value={contextValue}>
