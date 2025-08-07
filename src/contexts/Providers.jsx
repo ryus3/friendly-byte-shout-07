@@ -4,6 +4,7 @@ import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
 import { SuperProvider } from '@/contexts/SuperContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
+import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
 import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
 
 export const AppProviders = ({ children }) => {
@@ -12,11 +13,13 @@ export const AppProviders = ({ children }) => {
       <UnifiedAuthProvider>
         <AiChatProvider>
           <NotificationsProvider>
-            <InventoryProvider>
-              <SuperProvider>
-                {children}
-              </SuperProvider>
-            </InventoryProvider>
+            <NotificationsSystemProvider>
+              <InventoryProvider>
+                <SuperProvider>
+                  {children}
+                </SuperProvider>
+              </InventoryProvider>
+            </NotificationsSystemProvider>
           </NotificationsProvider>
         </AiChatProvider>
       </UnifiedAuthProvider>
