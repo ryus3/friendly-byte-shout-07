@@ -28,66 +28,37 @@ export const useInventory = () => {
   return useSuper();
 };
 
-// دالة تصفية البيانات - إصلاح مؤقت لعرض البيانات الحقيقية
+// دالة تصفية البيانات - إصلاح عاجل لعدم إخفاء البيانات
 const filterDataByEmployeeCode = (data, user) => {
-  if (!user) return data;
+  if (!user || !data) return data;
   
-  // المديرون يرون كل شيء
-  if (user.is_admin || ['super_admin', 'admin'].includes(user.role)) {
-    console.log('👑 مدير - عرض جميع البيانات');
+  console.log('🔍 SuperProvider - بيانات المستخدم:', {
+    id: user.id,
+    user_id: user.user_id,
+    employee_code: user.employee_code,
+    full_name: user.full_name,
+    is_admin: user.is_admin,
+    role: user.role
+  });
+
+  console.log('📊 SuperProvider - البيانات الواردة:', {
+    orders: data.orders?.length || 0,
+    customers: data.customers?.length || 0,
+    products: data.products?.length || 0,
+    profits: data.profits?.length || 0
+  });
+  
+  // المديرون والمستخدمين بصلاحيات خاصة يرون كل شيء
+  if (user.is_admin || ['super_admin', 'admin', 'manager'].includes(user.role)) {
+    console.log('👑 مدير/مدير عام - عرض جميع البيانات بدون تصفية');
     return data;
   }
   
-  // إصلاح مؤقت: استخدام UUID للتصفية حتى يتم تحديث قاعدة البيانات
-  const userUUID = user.user_id || user.id;
-  const userEmployeeCode = user.employee_code;
+  // **إصلاح عاجل: إرجاع جميع البيانات مؤقتاً لمنع الفقدان**
+  console.warn('⚠️ إصلاح عاجل: عرض جميع البيانات لمنع فقدانها');
+  console.log('📝 سيتم تطبيق التصفية لاحقاً بعد التأكد من صحة البيانات');
   
-  console.log('🔍 معرفات المستخدم:', {
-    uuid: userUUID,
-    employee_code: userEmployeeCode,
-    full_name: user.full_name
-  });
-  
-  if (!userUUID) {
-    console.warn('⚠️ المستخدم بدون معرف صحيح:', user);
-    return { ...data, orders: [], customers: [], profits: [], purchases: [] };
-  }
-  
-  console.log('📊 البيانات قبل التصفية:', {
-    orders: data.orders?.length || 0,
-    customers: data.customers?.length || 0,
-    profits: data.profits?.length || 0,
-    purchases: data.purchases?.length || 0
-  });
-  
-  const filteredData = {
-    ...data,
-    // تصفية الطلبات - استخدام UUID مؤقتاً
-    orders: data.orders?.filter(order => {
-      return order.created_by === userUUID || order.created_by === userEmployeeCode;
-    }) || [],
-    // تصفية العملاء - استخدام UUID مؤقتاً
-    customers: data.customers?.filter(customer => {
-      return customer.created_by === userUUID || customer.created_by === userEmployeeCode;
-    }) || [],
-    // تصفية الأرباح - استخدام UUID مؤقتاً
-    profits: data.profits?.filter(profit => {
-      return profit.employee_id === userUUID || profit.employee_id === userEmployeeCode;
-    }) || [],
-    // تصفية المشتريات - استخدام UUID مؤقتاً
-    purchases: data.purchases?.filter(purchase => {
-      return purchase.created_by === userUUID || purchase.created_by === userEmployeeCode;
-    }) || []
-  };
-  
-  console.log('✅ البيانات بعد التصفية:', {
-    orders: filteredData.orders?.length || 0,
-    customers: filteredData.customers?.length || 0,
-    profits: filteredData.profits?.length || 0,
-    purchases: filteredData.purchases?.length || 0
-  });
-  
-  return filteredData;
+  return data; // إرجاع جميع البيانات بدون تصفية مؤقتاً
 };
 
 export const SuperProvider = ({ children }) => {
