@@ -1,243 +1,110 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
+import React, { useEffect, useCallback } from 'react';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
+import { getUserUUID } from '@/utils/userIdUtils';
 
-const OrdersRealtimeContext = createContext();
+/**
+ * Context للطلبات في الوقت الفعلي
+ * إصلاح جذري: يستخدم البيانات الموحدة من useInventory بدلاً من الطلبات المنفصلة
+ */
+const OrdersRealtimeContext = React.createContext();
 
-export const useOrdersRealtime = () => useContext(OrdersRealtimeContext);
+export const useOrdersRealtime = () => {
+  const context = React.useContext(OrdersRealtimeContext);
+  if (!context) {
+    throw new Error('useOrdersRealtime must be used within OrdersRealtimeProvider');
+  }
+  return context;
+};
 
 export const OrdersRealtimeProvider = ({ children }) => {
   const { user } = useAuth();
-  const [orders, setOrders] = useState([]);
-  const [aiOrders, setAiOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { addNotification } = useNotifications();
+  const { orders, refreshOrders } = useInventory(); // استخدام البيانات الموحدة فقط!
 
-  // تحديث الطلبات من قاعدة البيانات
-  const refreshOrders = useCallback(async () => {
-    try {
-      const { data: ordersData, error } = await supabase.from('orders').select(`
-        *,
-        order_items (
-          id,
-          product_id,
-          variant_id,
-          quantity,
-          unit_price,
-          total_price,
-          products (
-            id,
-            name,
-            images,
-            base_price
-          ),
-          product_variants (
-            id,
-            price,
-            cost_price,
-            images,
-            colors (name, hex_code),
-            sizes (name)
-          )
-        )
-      `).order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // معالجة وتحويل بيانات الطلبات
-      const processedOrders = (ordersData || []).map(order => {
-        const items = (order.order_items || []).map(item => ({
-          id: item.id,
-          productId: item.product_id,
-          variantId: item.variant_id,
-          productName: item.products?.name || 'منتج غير محدد',
-          product_name: item.products?.name || 'منتج غير محدد',
-          name: item.products?.name || 'منتج غير محدد',
-          quantity: item.quantity,
-          price: item.unit_price,
-          unit_price: item.unit_price,
-          total_price: item.total_price,
-          costPrice: item.product_variants?.cost_price || 0,
-          cost_price: item.product_variants?.cost_price || 0,
-          color: item.product_variants?.colors?.name || null,
-          size: item.product_variants?.sizes?.name || null,
-          image: item.product_variants?.images?.[0] || item.products?.images?.[0] || null
-        }));
-
-        return {
-          ...order,
-          items,
-          total: order.final_amount || order.total_amount,
-          order_items: order.order_items
-        };
-      });
-
-      setOrders(processedOrders || []);
-    } catch (error) {
-      console.error('❌ خطأ في تحديث الطلبات:', error);
+  // تحديث الطلبات من النظام الموحد - لا مزيد من الطلبات المنفصلة!
+  const refreshOrdersFromUnifiedSystem = useCallback(async () => {
+    console.log('🔄 تحديث الطلبات من النظام الموحد - بدون طلبات منفصلة');
+    
+    // استخدام refresh من النظام الموحد بدلاً من طلبات منفصلة
+    if (refreshOrders) {
+      await refreshOrders();
     }
-  }, []);
+    
+    console.log('✅ تم تحديث الطلبات من النظام الموحد');
+  }, [refreshOrders]);
 
-  // تحديث الطلبات الذكية
-  const refreshAiOrders = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('ai_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setAiOrders(data || []);
-    } catch (error) {
-      console.error('❌ خطأ في تحديث الطلبات الذكية:', error);
-    }
-  }, []);
-
-  // تحميل البيانات الأولية
-  useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    const loadInitialData = async () => {
-      try {
-        setLoading(true);
-        await Promise.all([refreshOrders(), refreshAiOrders()]);
-      } catch (error) {
-        console.error('خطأ في تحميل البيانات الأولية:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInitialData();
-  }, [user, refreshOrders, refreshAiOrders]);
-
-  // Realtime subscriptions
+  // الاستماع للتحديثات في الوقت الفعلي
   useEffect(() => {
     if (!user) return;
 
-    console.log('🔄 بدء subscriptions للطلبات...');
+    console.log('🔔 بدء الاستماع للطلبات في الوقت الفعلي للمستخدم:', getUserUUID(user));
 
-    // Realtime للطلبات العادية
-    const ordersChannel = supabase
+    // إعداد الاستماع لتحديثات قاعدة البيانات
+    const { supabase } = require('@/lib/customSupabaseClient');
+    
+    const channel = supabase
       .channel('orders-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('🆕 طلب جديد:', payload.new);
-          refreshOrders(); // إعادة تحميل مع العلاقات
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('🔄 تحديث طلب:', payload.new);
-          setOrders(prev => prev.map(order => 
-            order.id === payload.new.id ? { ...order, ...payload.new } : order
-          ));
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'orders'
-        },
-        (payload) => {
-          console.log('🗑️ حذف طلب:', payload.old);
-          setOrders(prev => prev.filter(order => order.id !== payload.old.id));
-        }
-      )
-      .subscribe();
-
-    // Realtime لعناصر الطلبات
-    const orderItemsChannel = supabase
-      .channel('order-items-realtime')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'order_items'
+          table: 'orders'
         },
         (payload) => {
-          console.log('🔄 تحديث عناصر الطلب:', payload);
-          refreshOrders(); // إعادة تحميل لتحديث العناصر
-        }
-      )
-      .subscribe();
-
-    // Realtime للطلبات الذكية
-    const aiOrdersChannel = supabase
-      .channel('ai-orders-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ai_orders'
-        },
-        (payload) => {
-          console.log('🤖 طلب ذكي جديد:', payload.new);
-          setAiOrders(prev => [payload.new, ...prev]);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'ai_orders'
-        },
-        (payload) => {
-          console.log('🔄 تحديث طلب ذكي:', payload.new);
-          setAiOrders(prev => prev.map(order => 
-            order.id === payload.new.id ? { ...order, ...payload.new } : order
-          ));
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'ai_orders'
-        },
-        (payload) => {
-          console.log('🗑️ حذف طلب ذكي:', payload.old);
-          setAiOrders(prev => prev.filter(order => order.id !== payload.old.id));
+          console.log('📦 تحديث طلب في الوقت الفعلي:', payload);
+          
+          // تحديث من النظام الموحد بدلاً من معالجة التحديث محلياً
+          refreshOrdersFromUnifiedSystem();
+          
+          // إضافة إشعار إذا كان الطلب للمستخدم الحالي
+          const userUUID = getUserUUID(user);
+          if (payload.new?.created_by === userUUID) {
+            addNotification({
+              title: 'تحديث طلب',
+              message: `تم تحديث الطلب #${payload.new.order_number}`,
+              type: 'order_update'
+            });
+          }
         }
       )
       .subscribe();
 
     return () => {
-      console.log('🛑 إيقاف subscriptions للطلبات...');
-      supabase.removeChannel(ordersChannel);
-      supabase.removeChannel(orderItemsChannel);
-      supabase.removeChannel(aiOrdersChannel);
+      console.log('🔕 إيقاف الاستماع للطلبات في الوقت الفعلي');
+      supabase.removeChannel(channel);
     };
-  }, [user, refreshOrders]);
+  }, [user, refreshOrdersFromUnifiedSystem, addNotification]);
+
+  // إحصائيات سريعة من البيانات الموحدة
+  const orderStats = React.useMemo(() => {
+    if (!orders || !Array.isArray(orders)) {
+      return {
+        total: 0,
+        pending: 0,
+        completed: 0,
+        delivered: 0
+      };
+    }
+
+    const userUUID = getUserUUID(user);
+    const userOrders = orders.filter(order => order.created_by === userUUID);
+
+    return {
+      total: userOrders.length,
+      pending: userOrders.filter(o => o.status === 'pending').length,
+      completed: userOrders.filter(o => o.status === 'completed').length,
+      delivered: userOrders.filter(o => o.status === 'delivered').length
+    };
+  }, [orders, user]);
 
   const value = {
-    orders,
-    aiOrders,
-    loading,
-    refreshOrders,
-    refreshAiOrders,
-    setOrders,
-    setAiOrders
+    orders, // البيانات من النظام الموحد
+    orderStats,
+    refreshOrders: refreshOrdersFromUnifiedSystem, // استخدام النظام الموحد
+    loading: false // البيانات متوفرة فوراً من النظام الموحد
   };
 
   return (
@@ -246,3 +113,5 @@ export const OrdersRealtimeProvider = ({ children }) => {
     </OrdersRealtimeContext.Provider>
   );
 };
+
+export default OrdersRealtimeContext;

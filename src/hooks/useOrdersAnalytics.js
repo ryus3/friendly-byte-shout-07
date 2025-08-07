@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useInventory } from '@/contexts/InventoryContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { getUserUUID } from '@/utils/userIdUtils';
 
 /**
  * Hook موحد لجلب جميع إحصائيات الطلبات والعملاء
- * يستبدل التكرار في TopCustomersDialog, TopProductsDialog, TopProvincesDialog, PendingProfitsDialog
+ * يستخدم البيانات الموحدة من useInventory() بدلاً من الطلبات المنفصلة
+ * إصلاح جذري: لا مزيد من استخدام supabase مباشرة!
  */
 const useOrdersAnalytics = () => {
   // Defensive check to ensure React hooks are available
@@ -30,267 +32,183 @@ const useOrdersAnalytics = () => {
   }
 
   const { canViewAllOrders, user } = usePermissions();
+  const { orders, profits, customers } = useInventory(); // استخدام البيانات الموحدة فقط!
   
-  const [analytics, setAnalytics] = useState({
-    // إحصائيات عامة
-    totalOrders: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-    totalRevenue: 0,
-    
-    // البيانات التفصيلية
-    topCustomers: [],
-    topProducts: [],
-    topProvinces: [],
-    pendingProfits: {
-      total_pending_amount: 0,
-      total_employee_profits: 0,
-      employees_count: 0,
-      orders_count: 0
-    }
+  const [dateRange, setDateRange] = useState({
+    from: null,
+    to: null
   });
-  
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const fetchAnalytics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      if (!user?.id) {
-        console.log('لا يوجد مستخدم مسجل دخول');
-        return;
-      }
-
-      // إذا كان المستخدم مدير، يرى كل البيانات
-      // إذا كان موظف، يرى بياناته فقط
-      const userFilter = canViewAllOrders ? {} : { created_by: user.id };
-      
-      console.log('جلب البيانات للمستخدم:', user.id, 'صلاحية المدير:', canViewAllOrders);
-
-      // جلب الطلبات المكتملة
-      const { data: completedOrders, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          total_amount,
-          delivery_fee,
-          status,
-          created_at,
-          created_by,
-          customer_id,
-          customers(name, phone, city, province)
-        `)
-        .match({
-          status: 'completed',
-          receipt_received: true,
-          ...userFilter
-        });
-
-      if (ordersError) {
-        console.error('خطأ في جلب الطلبات:', ordersError);
-        setError(ordersError.message);
-        return;
-      }
-
-      // جلب عناصر الطلبات مع تفاصيل المنتجات
-      const orderIds = completedOrders?.map(o => o.id) || [];
-      if (orderIds.length === 0) {
-        setAnalytics({
-          totalOrders: 0,
-          pendingOrders: 0,
-          completedOrders: 0,
-          totalRevenue: 0,
-          topCustomers: [],
-          topProducts: [],
-          topProvinces: [],
-          pendingProfits: {
-            total_pending_amount: 0,
-            total_employee_profits: 0,
-            employees_count: 0,
-            orders_count: 0
-          }
-        });
-        return;
-      }
-
-      const { data: orderItems, error: itemsError } = await supabase
-        .from('order_items')
-        .select(`
-          quantity,
-          unit_price,
-          total_price,
-          order_id,
-          product_variants(
-            id,
-            products(name),
-            colors(name),
-            sizes(name)
-          )
-        `)
-        .in('order_id', orderIds);
-
-      if (itemsError) {
-        console.error('خطأ في جلب عناصر الطلبات:', itemsError);
-        setError(itemsError.message);
-        return;
-      }
-
-      // معالجة البيانات
-      const processedData = processAnalyticsData(completedOrders, orderItems);
-      
-      // جلب إحصائيات الطلبات العامة
-      const { data: allOrders, error: allOrdersError } = await supabase
-        .from('orders')
-        .select('id, status')
-        .match(userFilter);
-
-      if (!allOrdersError && allOrders) {
-        processedData.totalOrders = allOrders.length;
-        processedData.pendingOrders = allOrders.filter(o => o.status === 'pending').length;
-        processedData.completedOrders = completedOrders.length;
-      }
-
-      // جلب الأرباح المعلقة
-      const { data: pendingProfits, error: profitsError } = await supabase
-        .from('profits')
-        .select('profit_amount, employee_profit')
-        .match({
-          status: 'pending',
-          ...(canViewAllOrders ? {} : { employee_id: user.id })
-        });
-
-      if (!profitsError && pendingProfits) {
-        processedData.pendingProfits = {
-          total_pending_amount: pendingProfits.reduce((sum, p) => sum + (p.profit_amount || 0), 0),
-          total_employee_profits: pendingProfits.reduce((sum, p) => sum + (p.employee_profit || 0), 0),
-          employees_count: canViewAllOrders ? 1 : 1, // سيتم تحسينه لاحقاً
-          orders_count: pendingProfits.length
-        };
-      }
-
-      setAnalytics(processedData);
-    } catch (err) {
-      console.error('خطأ غير متوقع في جلب إحصائيات الطلبات:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  // حساب الإحصائيات من البيانات الموحدة - بدون طلبات منفصلة
+  const analytics = useMemo(() => {
+    if (!orders || !Array.isArray(orders)) {
+      return {
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        totalRevenue: 0,
+        topCustomers: [],
+        topProducts: [],
+        topProvinces: [],
+        pendingProfits: 0,
+        pendingProfitOrders: []
+      };
     }
-  };
+    
+    console.log('📊 حساب الإحصائيات من البيانات الموحدة - بدون طلبات منفصلة');
+    
+    const userUUID = getUserUUID(user);
+    
+    // فلترة الطلبات حسب الصلاحيات
+    const visibleOrders = canViewAllOrders ? orders : orders.filter(order => 
+      order.created_by === userUUID
+    );
 
-  // دالة معالجة البيانات
-  const processAnalyticsData = (orders, orderItems) => {
-    // تجميع الزبائن حسب رقم الهاتف
-    const customerGroups = {};
-    const cityGroups = {};
-    const productGroups = {};
+    // فلترة حسب التاريخ إذا كان محدد
+    let filteredOrders = visibleOrders;
+    if (dateRange.from && dateRange.to) {
+      filteredOrders = visibleOrders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= dateRange.from && orderDate <= dateRange.to;
+      });
+    }
 
-    let totalRevenue = 0;
+    // الطلبات المكتملة
+    const completedOrders = filteredOrders.filter(order => 
+      ['completed', 'delivered'].includes(order.status) && order.receipt_received
+    );
 
-    orders.forEach(order => {
-      // حساب الإيرادات بدون رسوم التوصيل (تصحيح المشكلة)
-      const orderRevenue = (order.total_amount || 0) - (order.delivery_fee || 0);
-      totalRevenue += orderRevenue;
+    // حساب الإيرادات الإجمالية
+    const totalRevenue = completedOrders.reduce((sum, order) => 
+      sum + (order.final_amount || order.total_amount || 0), 0
+    );
+
+    // أفضل العملاء
+    const customerStats = new Map();
+    completedOrders.forEach(order => {
+      const phone = order.customer_phone;
+      const name = order.customer_name;
       
-      if (order.customers) {
-        const customer = order.customers;
-        const normalizedPhone = normalizePhoneNumber(customer.phone);
-        
-        if (!customerGroups[normalizedPhone]) {
-          customerGroups[normalizedPhone] = {
-            name: customer.name,
-            phone: customer.phone,
-            city: customer.city,
-            province: customer.province,
-            total_orders: 0,
-            total_spent: 0,
-            last_order_date: order.created_at
-          };
-        }
-        
-        customerGroups[normalizedPhone].total_orders += 1;
-        // تصحيح: حساب الإنفاق بدون رسوم التوصيل
-        customerGroups[normalizedPhone].total_spent += orderRevenue;
-        
-        if (new Date(order.created_at) > new Date(customerGroups[normalizedPhone].last_order_date)) {
-          customerGroups[normalizedPhone].last_order_date = order.created_at;
-        }
-
-        // تجميع المدن
-        const cityName = customer.city || 'غير محدد';
-        if (!cityGroups[cityName]) {
-          cityGroups[cityName] = {
-            city_name: cityName,
-            total_orders: 0,
-            total_revenue: 0
-          };
-        }
-        cityGroups[cityName].total_orders += 1;
-        // تصحيح: حساب إيرادات المدن بدون رسوم التوصيل
-        cityGroups[cityName].total_revenue += orderRevenue;
+      if (customerStats.has(phone)) {
+        const existing = customerStats.get(phone);
+        existing.orderCount++;
+        existing.totalRevenue += order.final_amount || order.total_amount || 0;
+      } else {
+        customerStats.set(phone, {
+          label: name,
+          phone,
+          orderCount: 1,
+          totalRevenue: order.final_amount || order.total_amount || 0
+        });
       }
     });
 
-    // معالجة المنتجات
-    orderItems.forEach(item => {
-      if (item.product_variants) {
-        const variant = item.product_variants;
-        const productKey = `${variant.products?.name || 'منتج غير محدد'}_${variant.colors?.name || 'بدون لون'}_${variant.sizes?.name || 'بدون حجم'}`;
-        
-        if (!productGroups[productKey]) {
-          productGroups[productKey] = {
-            product_name: variant.products?.name || 'منتج غير محدد',
-            color_name: variant.colors?.name || 'بدون لون',
-            size_name: variant.sizes?.name || 'بدون حجم',
-            total_sold: 0,
-            total_revenue: 0,
-            orders_count: 0
-          };
-        }
-        
-        productGroups[productKey].total_sold += (item.quantity || 0);
-        productGroups[productKey].total_revenue += (item.total_price || 0);
-        productGroups[productKey].orders_count += 1;
+    const topCustomers = Array.from(customerStats.values())
+      .sort((a, b) => b.orderCount - a.orderCount)
+      .slice(0, 5)
+      .map(customer => ({
+        ...customer,
+        value: `${customer.orderCount} طلب`
+      }));
+
+    // أفضل المحافظات
+    const provinceStats = new Map();
+    completedOrders.forEach(order => {
+      const province = order.customer_province || 'غير محدد';
+      
+      if (provinceStats.has(province)) {
+        const existing = provinceStats.get(province);
+        existing.orderCount++;
+        existing.totalRevenue += order.final_amount || order.total_amount || 0;
+      } else {
+        provinceStats.set(province, {
+          label: province,
+          orderCount: 1,
+          totalRevenue: order.final_amount || order.total_amount || 0
+        });
       }
+    });
+
+    const topProvinces = Array.from(provinceStats.values())
+      .sort((a, b) => b.orderCount - a.orderCount)
+      .slice(0, 5)
+      .map(province => ({
+        ...province,
+        value: `${province.orderCount} طلبات`
+      }));
+
+    // أفضل المنتجات من عناصر الطلبات
+    const productStats = new Map();
+    completedOrders.forEach(order => {
+      if (order.order_items && Array.isArray(order.order_items)) {
+        order.order_items.forEach(item => {
+          const productName = item.products?.name || item.product_name || 'منتج غير محدد';
+          const quantity = item.quantity || 0;
+          
+          if (productStats.has(productName)) {
+            const existing = productStats.get(productName);
+            existing.quantity += quantity;
+          } else {
+            productStats.set(productName, {
+              label: productName,
+              quantity
+            });
+          }
+        });
+      }
+    });
+
+    const topProducts = Array.from(productStats.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5)
+      .map(product => ({
+        ...product,
+        value: `${product.quantity} قطعة`
+      }));
+
+    // الأرباح المعلقة (من البيانات الموحدة)
+    const visibleProfits = canViewAllOrders ? profits : profits?.filter(profit => 
+      profit.employee_id === userUUID
+    );
+    
+    const pendingProfits = visibleProfits?.filter(profit => 
+      profit.status === 'pending'
+    ).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0) || 0;
+
+    console.log('✅ تم حساب الإحصائيات من البيانات الموحدة:', {
+      totalOrders: filteredOrders.length,
+      completedOrders: completedOrders.length,
+      totalRevenue,
+      topCustomersCount: topCustomers.length,
+      pendingProfits
     });
 
     return {
+      totalOrders: filteredOrders.length,
+      pendingOrders: filteredOrders.filter(o => o.status === 'pending').length,
+      completedOrders: completedOrders.length,
       totalRevenue,
-      topCustomers: Object.values(customerGroups)
-        .sort((a, b) => b.total_orders - a.total_orders)
-        .slice(0, 10),
-      topProvinces: Object.values(cityGroups)
-        .sort((a, b) => b.total_orders - a.total_orders)
-        .slice(0, 10),
-      topProducts: Object.values(productGroups)
-        .sort((a, b) => b.total_sold - a.total_sold)
-        .slice(0, 10)
+      topCustomers,
+      topProducts,
+      topProvinces,
+      pendingProfits,
+      pendingProfitOrders: visibleProfits?.filter(p => p.status === 'pending') || []
     };
+
+  }, [orders, profits, customers, canViewAllOrders, user, dateRange]);
+
+  // دالة تحديث فترة التاريخ
+  const refreshAnalytics = () => {
+    console.log('🔄 تحديث الإحصائيات (من البيانات الموحدة الحالية)');
+    // لا حاجة لطلبات منفصلة - البيانات محدثة تلقائياً من useInventory
   };
 
-  // دالة تطبيع رقم الهاتف
-  const normalizePhoneNumber = (phone) => {
-    if (!phone) return 'غير محدد';
-    let normalized = String(phone).replace(/[\s\-\(\)]/g, '');
-    normalized = normalized.replace(/^(\+964|00964)/, '');
-    normalized = normalized.replace(/^0/, '');
-    return normalized;
-  };
-
-  // جلب البيانات عند تحميل المكون أو تغيير المستخدم
-  useEffect(() => {
-    if (user?.id) {
-      fetchAnalytics();
-    }
-  }, [user?.id, canViewAllOrders]);
-
-  // إرجاع البيانات والوظائف
   return {
     analytics,
-    loading,
-    error,
-    refreshAnalytics: fetchAnalytics
+    loading: false, // لا حاجة للتحميل - البيانات متوفرة فوراً
+    error: null,
+    refreshAnalytics,
+    setDateRange
   };
 };
 
