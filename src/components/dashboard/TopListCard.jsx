@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 
 const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, sortByPhone = false, onViewAll }) => {
-  console.log(`🔥 TopListCard [${title}] - Received items:`, {
-    items,
-    itemsLength: items?.length || 0,
-    itemsType: typeof items,
-    firstItem: items?.[0]
-  });
+  // إزالة التكرار في console.log
+  React.useEffect(() => {
+    console.log(`📊 TopListCard [${title}] - البيانات:`, {
+      count: items?.length || 0,
+      hasData: !!(items && items.length > 0)
+    });
+  }, [title, items?.length]); // فقط عند تغيير العدد
 
   const handleViewAll = () => {
     if (onViewAll) {
@@ -18,16 +19,18 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, s
   };
 
   // إذا كان التصنيف حسب رقم الهاتف، نقوم بتجميع البيانات حسب رقم الهاتف
-  const processedItems = sortByPhone && items && items.length > 0 ? 
-    items.map(item => ({
-      ...item,
-      // إظهار رقم الهاتف بدلاً من الاسم كـ label إذا كان متوفراً
-      label: item.phone && item.phone !== 'غير محدد' ? item.phone : item.label,
-      phone: item.phone || 'غير محدد'
-    }))
-    : (items || []);
-
-  console.log(`🔥 TopListCard [${title}] - Processed items:`, processedItems);
+  const processedItems = React.useMemo(() => {
+    if (!items || items.length === 0) return [];
+    
+    return sortByPhone ? 
+      items.map(item => ({
+        ...item,
+        // إظهار رقم الهاتف بدلاً من الاسم كـ label إذا كان متوفراً
+        label: item.phone && item.phone !== 'غير محدد' ? item.phone : item.label,
+        phone: item.phone || 'غير محدد'
+      }))
+      : items;
+  }, [items, sortByPhone]); // memo لتجنب إعادة الحساب
 
   return (
     <Card className="glass-effect h-full border-border/60 flex flex-col">

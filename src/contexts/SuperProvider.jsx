@@ -155,7 +155,10 @@ export const SuperProvider = ({ children }) => {
         products: filteredData.products?.length || 0,
         orders: filteredData.orders?.length || 0,
         customers: filteredData.customers?.length || 0,
-        userEmployeeCode: user.employee_code || 'admin'
+        userEmployeeCode: user.employee_code || 'admin',
+        userUUID: user.user_id || user.id,
+        totalUnfilteredOrders: data.orders?.length || 0,
+        filteredOrdersAfter: filteredData.orders?.length || 0
       });
       
       setAllData(filteredData);
@@ -164,6 +167,7 @@ export const SuperProvider = ({ children }) => {
       setAccounting(prev => ({
         ...prev,
         expenses: filteredData.expenses || []
+      }));
       }));
       
     } catch (error) {
