@@ -129,10 +129,52 @@ export const SuperProvider = ({ children }) => {
         userEmployeeCode: user.employee_code || 'admin',
         userUUID: user.user_id || user.id,
         totalUnfilteredOrders: data.orders?.length || 0,
-        filteredOrdersAfter: filteredData.orders?.length || 0
+        filteredOrdersAfter: filteredData.orders?.length || 0,
+        sampleProduct: filteredData.products?.[0] ? {
+          id: filteredData.products[0].id,
+          name: filteredData.products[0].name,
+          variantsCount: filteredData.products[0].product_variants?.length || 0,
+          firstVariant: filteredData.products[0].product_variants?.[0] ? {
+            id: filteredData.products[0].product_variants[0].id,
+            quantity: filteredData.products[0].product_variants[0].quantity,
+            inventoryData: filteredData.products[0].product_variants[0].inventory
+          } : null
+        } : null
       });
       
-      setAllData(filteredData);
+      // معالجة بيانات المنتجات لضمان ربط المخزون
+      const processedData = {
+        ...filteredData,
+        products: (filteredData.products || []).map(product => ({
+          ...product,
+          variants: (product.product_variants || []).map(variant => ({
+            ...variant,
+            // ربط بيانات المخزون بالشكل الصحيح
+            quantity: variant.inventory?.quantity || variant.quantity || 0,
+            reserved_quantity: variant.inventory?.reserved_quantity || variant.reserved_quantity || 0,
+            min_stock: variant.inventory?.min_stock || variant.min_stock || 5,
+            location: variant.inventory?.location || variant.location || '',
+            // الحفاظ على البيانات الأصلية
+            inventory: variant.inventory
+          }))
+        }))
+      };
+      
+      console.log('🔗 SuperProvider: معالجة بيانات المخزون:', {
+        processedProductsCount: processedData.products?.length || 0,
+        sampleProcessedProduct: processedData.products?.[0] ? {
+          id: processedData.products[0].id,
+          name: processedData.products[0].name,
+          variantsCount: processedData.products[0].variants?.length || 0,
+          firstProcessedVariant: processedData.products[0].variants?.[0] ? {
+            id: processedData.products[0].variants[0].id,
+            quantity: processedData.products[0].variants[0].quantity,
+            originalInventory: processedData.products[0].variants[0].inventory
+          } : null
+        } : null
+      });
+      
+      setAllData(processedData);
       
       // تحديث accounting بنفس الطريقة القديمة
       setAccounting(prev => ({

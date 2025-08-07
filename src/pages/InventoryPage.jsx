@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useInventory } from '@/contexts/SuperProvider';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useVariants } from '@/contexts/VariantsContext';
@@ -139,6 +139,23 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
 
 const InventoryPage = () => {
   const { products: allProducts, orders, loading, settings, updateVariantStock } = useInventory();
+  
+  // لوق للتشخيص
+  console.log('🔍 InventoryPage: البيانات الواردة:', {
+    productsCount: allProducts?.length || 0,
+    loading,
+    hasProducts: !!allProducts,
+    firstProduct: allProducts?.[0] ? {
+      id: allProducts[0].id,
+      name: allProducts[0].name,
+      variantsCount: allProducts[0].variants?.length || 0,
+      firstVariant: allProducts[0].variants?.[0] ? {
+        id: allProducts[0].variants[0].id,
+        quantity: allProducts[0].variants[0].quantity,
+        inventory: allProducts[0].variants[0].inventory
+      } : null
+    } : null
+  });
   const products = useFilteredProducts(allProducts); // تطبيق فلترة الصلاحيات
   const { allUsers, user } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();

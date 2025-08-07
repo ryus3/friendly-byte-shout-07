@@ -9,14 +9,5 @@ export {
   SuperProvider as InventoryProvider 
 } from '@/contexts/SuperProvider';
 
-// تصدير إضافي لضمان التوافق
-export default {
-  useInventory: () => {
-    const { useSuper } = require('@/contexts/SuperProvider');
-    return useSuper();
-  },
-  InventoryProvider: ({ children }) => {
-    const { SuperProvider } = require('@/contexts/SuperProvider');
-    return SuperProvider({ children });
-  }
-};
+// تصدير default أيضاً للتوافق التام
+export default useSuper;

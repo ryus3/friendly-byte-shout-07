@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Package, TriangleAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useInventory } from '@/contexts/SuperProvider';
 import { usePermissions } from '@/hooks/usePermissions';
 import StockAlertsWindow from './StockAlertsWindow';
 import DefaultProductImage from '@/components/ui/default-product-image';
