@@ -26,6 +26,7 @@ import {
   Target
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useSuper } from '@/contexts/SuperProvider';
 
 const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,9 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
     avgOrderValue: 0,
     topPerformer: null
   });
+
+  // بيانات الطلبات من النظام الموحد (إن توفرت)
+  const { orders: ctxOrders } = useSuper();
 
   const periods = [
     { value: 'week', label: 'هذا الأسبوع', icon: Calendar },
@@ -72,23 +76,43 @@ const TopProvincesDialog = ({ trigger, isOpen, onOpenChange }) => {
           break;
       }
 
-      // جلب البيانات الخام من جدول الطلبات مباشرة لضمان الدقة
-      const { data: ordersData, error } = await supabase
-        .from('orders')
-        .select(`
-          customer_province,
-          customer_city,
-          final_amount,
-          status,
-          created_at
-        `)
-        .in('status', ['completed', 'delivered'])
-        .not('customer_province', 'is', null)
-        .neq('customer_province', '')
-        .gte('created_at', getDateRange(selectedPeriod).start)
-        .lte('created_at', getDateRange(selectedPeriod).end);
+      // استخدام بيانات السياق إن توفرت لتقليل الاستهلاك
+      let ordersData;
+      const range = getDateRange(selectedPeriod);
+      if (Array.isArray(ctxOrders) && ctxOrders.length > 0) {
+        ordersData = ctxOrders
+          .filter(o => (o.status === 'completed' || o.status === 'delivered'))
+          .filter(o => o.customer_province && o.customer_province !== '')
+          .filter(o => {
+            const d = new Date(o.updated_at || o.created_at);
+            return d >= new Date(range.start) && d <= new Date(range.end);
+          })
+          .map(o => ({
+            customer_province: o.customer_province,
+            customer_city: o.customer_city,
+            final_amount: o.final_amount || o.total_amount || 0,
+            status: o.status,
+            created_at: o.created_at
+          }));
+      } else {
+        const { data, error } = await supabase
+          .from('orders')
+          .select(`
+            customer_province,
+            customer_city,
+            final_amount,
+            status,
+            created_at
+          `)
+          .in('status', ['completed', 'delivered'])
+          .not('customer_province', 'is', null)
+          .neq('customer_province', '')
+          .gte('created_at', range.start)
+          .lte('created_at', range.end);
 
-      if (error) throw error;
+        if (error) throw error;
+        ordersData = data;
+      }
 
       // معالجة البيانات وتجميعها حسب المحافظة
       const provinceMap = {};
