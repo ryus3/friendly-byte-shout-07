@@ -6,6 +6,11 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
  * يطبق الفلترة في كل أنحاء النظام
  */
 export const useFilteredProducts = (products) => {
+  // Defensive check to ensure React hooks are available
+  if (!React || typeof useMemo !== 'function') {
+    console.error('React hooks not available in useFilteredProducts');
+    return products || [];
+  }
 
   const auth = useAuth();
   const { user, productPermissions, isAdmin } = auth || {};
