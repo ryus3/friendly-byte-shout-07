@@ -1,49 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export const useMediaQuery = (query) => {
-  // Use a simple fallback approach for media queries
+  // Safe fallback for server-side rendering
   const getMatches = (query) => {
-    if (typeof window !== 'undefined' && window.matchMedia) {
-      try {
-        return window.matchMedia(query).matches;
-      } catch (error) {
-        return false;
-      }
+    if (typeof window === 'undefined') return false;
+    
+    try {
+      return window.matchMedia ? window.matchMedia(query).matches : false;
+    } catch (error) {
+      console.warn('MediaQuery error:', error);
+      return false;
     }
-    return false;
   };
 
-  const [matches, setMatches] = useState(getMatches(query));
+  const [matches, setMatches] = useState(() => getMatches(query));
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) {
+    if (typeof window === 'undefined') return;
+
+    let media;
+    try {
+      media = window.matchMedia(query);
+    } catch (error) {
+      console.warn('MediaQuery useEffect error:', error);
       return;
     }
-
-    const media = window.matchMedia(query);
     
-    // Update state if different
-    if (media.matches !== matches) {
-      setMatches(media.matches);
-    }
-    
-    const listener = (e) => setMatches(e.matches);
-    
-    // Use addListener for compatibility with older browsers
-    if (media.addListener) {
-      media.addListener(listener);
-    } else {
-      media.addEventListener('change', listener);
-    }
-    
-    return () => {
-      if (media.removeListener) {
-        media.removeListener(listener);
-      } else {
-        media.removeEventListener('change', listener);
+    const updateMatches = () => {
+      try {
+        setMatches(media.matches);
+      } catch (error) {
+        console.warn('MediaQuery setMatches error:', error);
       }
     };
-  }, [query, matches]);
+    
+    // Initial check
+    updateMatches();
+    
+    // Add listener
+    if (media.addEventListener) {
+      media.addEventListener('change', updateMatches);
+      return () => media.removeEventListener('change', updateMatches);
+    } else if (media.addListener) {
+      media.addListener(updateMatches);
+      return () => media.removeListener(updateMatches);
+    }
+  }, [query]);
 
   return matches;
 };
