@@ -136,7 +136,7 @@ const ProductsPage = () => {
       tempProducts = tempProducts.filter(p =>
         p.name.toLowerCase().includes(term) ||
         p.sku_base?.toLowerCase().includes(term) ||
-        p.variants.some(v => v.barcode === term)
+        (p.variants && Array.isArray(p.variants) && p.variants.some(v => v.barcode === term))
       );
     }
 
@@ -176,19 +176,19 @@ const ProductsPage = () => {
     // فلترة حسب اللون
     if (filters.color !== 'all') {
       tempProducts = tempProducts.filter(p => 
-        p.variants.some(v => v.color_id === filters.color)
+        p.variants && Array.isArray(p.variants) && p.variants.some(v => v.color_id === filters.color)
       );
     }
 
     // فلترة حسب الحجم
     if (filters.size !== 'all') {
       tempProducts = tempProducts.filter(p => 
-        p.variants.some(v => v.size_id === filters.size)
+        p.variants && Array.isArray(p.variants) && p.variants.some(v => v.size_id === filters.size)
       );
     }
     
     tempProducts = tempProducts.filter(p => {
-        const price = p.variants[0]?.price || 0;
+        const price = (p.variants && Array.isArray(p.variants) && p.variants[0]) ? p.variants[0].price || 0 : 0;
         return price >= filters.price[0] && price <= filters.price[1];
     });
 
@@ -220,7 +220,7 @@ const ProductsPage = () => {
       // البحث بمعرف المنتج أو المتغير
       if (product_id) {
         foundProduct = permissionFilteredProducts.find(p => p.id === product_id);
-        if (foundProduct && variant_id) {
+        if (foundProduct && variant_id && foundProduct.variants && Array.isArray(foundProduct.variants)) {
           foundVariant = foundProduct.variants.find(v => v.id === variant_id);
         }
       }
@@ -234,10 +234,10 @@ const ProductsPage = () => {
       foundProduct = permissionFilteredProducts.find(p => 
         p.id === scanData ||
         p.barcode === scanData ||
-        p.variants.some(v => v.barcode === scanData || v.id === scanData)
+        (p.variants && Array.isArray(p.variants) && p.variants.some(v => v.barcode === scanData || v.id === scanData))
       );
       
-      if (foundProduct) {
+      if (foundProduct && foundProduct.variants && Array.isArray(foundProduct.variants)) {
         foundVariant = foundProduct.variants.find(v => v.barcode === scanData || v.id === scanData);
       }
     }
