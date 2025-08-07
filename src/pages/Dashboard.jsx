@@ -6,7 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useSuper } from '@/contexts/SuperContext';
+import { useUnifiedStats } from '@/hooks/useUnifiedStats';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 
@@ -93,7 +93,7 @@ const Dashboard = () => {
         hasPermission,
         filterDataByUser
     } = usePermissions();
-    const { orders, products, computed, isLoading } = useSuper();
+    const unifiedStats = useUnifiedStats();
     
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {
