@@ -17,18 +17,6 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   const reserved = variant.reserved_quantity || variant.reserved || 0;
   const available = stock - reserved;
   
-  // لوق للتشخيص - يساعد في فهم سبب ظهور صفر
-  console.log(`🔍 InventoryItem للمتغير ${variant.id}:`, {
-    variantQuantity: variant.quantity,
-    stock,
-    reserved,
-    available,
-    size: variant.size,
-    color: variant.color,
-    hasInventoryObj: !!variant.inventory,
-    inventoryQuantity: variant.inventory?.quantity
-  });
-  
   // استخدام النظام المركزي للحصول على الكمية المباعة
   const soldData = getVariantSoldData(variant.id);
   const sold = soldData.soldQuantity;
