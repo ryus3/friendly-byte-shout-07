@@ -89,6 +89,7 @@ export const SuperProvider = ({ children }) => {
     },
     aiOrders: [],
     profitRules: [],
+    employeeProfitRules: [],
     colors: [],
     sizes: [],
     categories: [],
@@ -396,6 +397,53 @@ export const SuperProvider = ({ children }) => {
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const approveAiOrder = useCallback(async (orderId) => ({ success: true }), []);
 
+  // وظائف قواعد أرباح الموظفين
+  const getEmployeeProfitRules = useCallback((employeeId) => {
+    if (!employeeId || !allData.employeeProfitRules) return [];
+    return allData.employeeProfitRules.filter(rule => 
+      rule.employee_id === employeeId && rule.is_active !== false
+    );
+  }, [allData.employeeProfitRules]);
+
+  const setEmployeeProfitRule = useCallback(async (employeeId, ruleData) => {
+    try {
+      console.log('📋 SuperProvider: تعديل قاعدة ربح للموظف:', { employeeId, ruleData });
+      
+      if (ruleData.id && ruleData.is_active === false) {
+        // حذف قاعدة
+        const { error } = await supabase
+          .from('employee_profit_rules')
+          .update({ is_active: false })
+          .eq('id', ruleData.id);
+        
+        if (error) throw error;
+      } else {
+        // إضافة قاعدة جديدة
+        const { error } = await supabase
+          .from('employee_profit_rules')
+          .insert({
+            employee_id: employeeId,
+            rule_type: ruleData.rule_type,
+            target_id: ruleData.target_id,
+            profit_amount: ruleData.profit_amount,
+            profit_percentage: ruleData.profit_percentage,
+            is_active: true,
+            created_by: user?.user_id || user?.id
+          });
+        
+        if (error) throw error;
+      }
+
+      // تحديث البيانات المحلية
+      await fetchAllData();
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ خطأ في تعديل قاعدة الربح:', error);
+      throw error;
+    }
+  }, [user, fetchAllData]);
+
   // القيم المرجعة - نفس بنية InventoryContext بالضبط مع قيم آمنة
   const contextValue = {
     // البيانات الأساسية - مع قيم افتراضية آمنة
@@ -451,6 +499,11 @@ export const SuperProvider = ({ children }) => {
     // وظائف أخرى للتوافق
     calculateProfit: () => 0,
     calculateManagerProfit: () => 0,
+    
+    // وظائف قواعد أرباح الموظفين
+    employeeProfitRules: allData.employeeProfitRules || [],
+    getEmployeeProfitRules,
+    setEmployeeProfitRule,
   };
 
   // إضافة لوق للتتبع

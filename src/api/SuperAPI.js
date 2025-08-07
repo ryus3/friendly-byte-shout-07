@@ -207,6 +207,7 @@ class SuperAPI {
         settings: settings.data?.[0] || {},
         aiOrders: aiOrders.data || [],
         profitRules: profitRules.data || [],
+        employeeProfitRules: profitRules.data || [],
         
         // بيانات المرشحات
         colors: colors.data || [],
