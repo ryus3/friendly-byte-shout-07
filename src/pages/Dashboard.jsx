@@ -93,7 +93,7 @@ const Dashboard = () => {
         hasPermission,
         filterDataByUser
     } = usePermissions();
-    const { orders, products, computed, isLoading } = useInventory();
+    const { orders, products, loading: inventoryLoading, aiOrders, calculateProfit, calculateManagerProfit, accounting } = useInventory();
     
     // إضافة console.log لمراقبة البيانات الواردة من InventoryContext
     useEffect(() => {
