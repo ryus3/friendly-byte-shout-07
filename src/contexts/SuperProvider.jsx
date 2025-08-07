@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
+import { useCart } from '@/hooks/useCart.jsx';
 import superAPI from '@/api/SuperAPI';
 
 const SuperContext = createContext();
@@ -21,11 +22,19 @@ export const useSuper = () => {
   return context;
 };
 
+// إضافة alias للتوافق العكسي
+export const useInventory = () => {
+  return useSuper();
+};
+
 export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   const { addNotification } = useNotifications();
   const { notifyLowStock } = useNotificationsSystem();
+  
+  // إضافة وظائف السلة
+  const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
   
   // حالة البيانات الموحدة - نفس البنية القديمة بالضبط
   const [allData, setAllData] = useState({
@@ -228,6 +237,13 @@ export const SuperProvider = ({ children }) => {
     
     // حالة التحميل
     loading,
+    
+    // وظائف السلة
+    cart,
+    addToCart,
+    removeFromCart,
+    updateCartItemQuantity,
+    clearCart,
     
     // الوظائف
     createOrder,

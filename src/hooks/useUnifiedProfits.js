@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useSuper } from '@/contexts/SuperProvider';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 
@@ -9,7 +9,7 @@ import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, 
  * يضمن عرض نفس البيانات بطريقتين مختلفتين في التصميم
  */
 export const useUnifiedProfits = (timePeriod = 'all') => {
-  const { orders, accounting, products } = useInventory();
+  const { orders, accounting, products } = useSuper();
   const { user: currentUser, allUsers } = useAuth();
   const [profitData, setProfitData] = useState(null);
   const [loading, setLoading] = useState(true);
