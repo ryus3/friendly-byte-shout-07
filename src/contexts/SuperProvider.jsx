@@ -238,14 +238,14 @@ export const SuperProvider = ({ children }) => {
     // حالة التحميل
     loading,
     
-    // وظائف السلة
+    // وظائف السلة - مهمة جداً
     cart,
     addToCart,
     removeFromCart,
     updateCartItemQuantity,
     clearCart,
     
-    // الوظائف
+    // الوظائف الأساسية
     createOrder,
     updateOrder,
     deleteOrders,
