@@ -655,6 +655,7 @@ const InventoryPage = () => {
                 {/* اسم الأرشيف */}
                 <div>
                   <h4 className="font-bold text-base">أرشيف المنتجات</h4>
+                  <p className="text-xs opacity-90 mt-1">المنتجات النافذة والمؤرشفة</p>
                 </div>
                 
                 {/* عدد المنتجات المؤرشفة */}
