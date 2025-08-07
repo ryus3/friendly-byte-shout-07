@@ -4,26 +4,41 @@ import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
 import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
-import UnifiedAppProvider from '@/contexts/UnifiedAppContext.jsx';
+import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
 import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
+import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
+import { FinancialProvider } from '@/contexts/FinancialContext.jsx';
+import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
+import NotificationsRealtimeProvider from '@/contexts/NotificationsRealtimeContext.jsx';
+import { OrdersRealtimeProvider } from '@/contexts/OrdersRealtimeContext.jsx';
 
 export const AppProviders = ({ children }) => {
   return (
     <ThemeProvider>
       <SupabaseProvider>
         <UnifiedAuthProvider>
-          <UnifiedAppProvider>
-            <NotificationsProvider>
-              <VariantsProvider>
-                <AlWaseetProvider>
-                  <AiChatProvider>
-                    {children}
-                  </AiChatProvider>
-                </AlWaseetProvider>
-              </VariantsProvider>
+          <NotificationsRealtimeProvider>
+             <NotificationsProvider>
+               <NotificationsSystemProvider>
+                 <OrdersRealtimeProvider>
+                    <VariantsProvider>
+                      <InventoryProvider>
+                        <ProfitsProvider>
+                          <FinancialProvider>
+                            <AlWaseetProvider>
+                                <AiChatProvider>
+                                {children}
+                              </AiChatProvider>
+                          </AlWaseetProvider>
+                        </FinancialProvider>
+                      </ProfitsProvider>
+                    </InventoryProvider>
+                  </VariantsProvider>
+               </OrdersRealtimeProvider>
+              </NotificationsSystemProvider>
             </NotificationsProvider>
-          </UnifiedAppProvider>
+          </NotificationsRealtimeProvider>
         </UnifiedAuthProvider>
       </SupabaseProvider>
     </ThemeProvider>
