@@ -28,39 +28,6 @@ export const useInventory = () => {
   return useSuper();
 };
 
-// دالة تصفية البيانات - إصلاح عاجل لعدم إخفاء البيانات
-const filterDataByEmployeeCode = (data, user) => {
-  if (!user || !data) return data;
-  
-  console.log('🔍 SuperProvider - بيانات المستخدم:', {
-    id: user.id,
-    user_id: user.user_id,
-    employee_code: user.employee_code,
-    full_name: user.full_name,
-    is_admin: user.is_admin,
-    role: user.role
-  });
-
-  console.log('📊 SuperProvider - البيانات الواردة:', {
-    orders: data.orders?.length || 0,
-    customers: data.customers?.length || 0,
-    products: data.products?.length || 0,
-    profits: data.profits?.length || 0
-  });
-  
-  // المديرون والمستخدمين بصلاحيات خاصة يرون كل شيء
-  if (user.is_admin || ['super_admin', 'admin', 'manager'].includes(user.role)) {
-    console.log('👑 مدير/مدير عام - عرض جميع البيانات بدون تصفية');
-    return data;
-  }
-  
-  // **إصلاح عاجل: إرجاع جميع البيانات مؤقتاً لمنع الفقدان**
-  console.warn('⚠️ إصلاح عاجل: عرض جميع البيانات لمنع فقدانها');
-  console.log('📝 سيتم تطبيق التصفية لاحقاً بعد التأكد من صحة البيانات');
-  
-  return data; // إرجاع جميع البيانات بدون تصفية مؤقتاً
-};
-
 export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -103,179 +70,136 @@ export const SuperProvider = ({ children }) => {
     expenses: [] 
   });
 
-  // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
+  // جلب البيانات الموحدة عند بدء التشغيل
   const fetchAllData = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('⚠️ SuperProvider: لا يوجد مستخدم - تخطي جلب البيانات');
+      return;
+    }
     
     try {
       setLoading(true);
-      console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
+      console.log('🚀 SuperProvider: بدء جلب البيانات للمستخدم:', user.full_name);
       
-      const data = await superAPI.getAllData();
-      
-      // التحقق من البيانات
-      if (!data) {
-        console.error('❌ SuperProvider: لم يتم جلب أي بيانات من SuperAPI');
+      // جلب البيانات مباشرة من Supabase للتشخيص
+      const { data: basicProducts, error: productsError } = await supabase
+        .from('products')
+        .select(`
+          *,
+          product_variants (
+            *,
+            colors (id, name, hex_code),
+            sizes (id, name, type),
+            inventory (quantity, min_stock, reserved_quantity, location)
+          )
+        `)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (productsError) {
+        console.error('❌ خطأ في جلب المنتجات:', productsError);
         return;
       }
-      
-      // تصفية البيانات حسب employee_code للموظفين
-      const filteredData = filterDataByEmployeeCode(data, user);
-      
-      console.log('✅ SuperProvider: تم جلب وتصفية البيانات بنجاح:', {
-        products: filteredData.products?.length || 0,
-        orders: filteredData.orders?.length || 0,
-        customers: filteredData.customers?.length || 0,
-        userEmployeeCode: user.employee_code || 'admin',
-        userUUID: user.user_id || user.id,
-        totalUnfilteredOrders: data.orders?.length || 0,
-        filteredOrdersAfter: filteredData.orders?.length || 0,
-        sampleProduct: filteredData.products?.[0] ? {
-          id: filteredData.products[0].id,
-          name: filteredData.products[0].name,
-          variantsCount: filteredData.products[0].product_variants?.length || 0,
-          firstVariant: filteredData.products[0].product_variants?.[0] ? {
-            id: filteredData.products[0].product_variants[0].id,
-            quantity: filteredData.products[0].product_variants[0].quantity,
-            inventoryData: filteredData.products[0].product_variants[0].inventory
+
+      console.log('✅ SuperProvider: البيانات محملة:', {
+        products: basicProducts?.length || 0,
+        sampleProduct: basicProducts?.[0] ? {
+          id: basicProducts[0].id,
+          name: basicProducts[0].name,
+          variants: basicProducts[0].product_variants?.length || 0,
+          firstVariantData: basicProducts[0].product_variants?.[0] ? {
+            id: basicProducts[0].product_variants[0].id,
+            inventoryQuantity: basicProducts[0].product_variants[0].inventory?.quantity,
+            directQuantity: basicProducts[0].product_variants[0].quantity,
+            size: basicProducts[0].product_variants[0].sizes?.name,
+            color: basicProducts[0].product_variants[0].colors?.name
           } : null
         } : null
       });
-      
-      // معالجة بيانات المنتجات لضمان ربط المخزون
-      const processedData = {
-        ...filteredData,
-        products: (filteredData.products || []).map(product => ({
-          ...product,
-          variants: (product.product_variants || []).map(variant => ({
-            ...variant,
-            // ربط بيانات المخزون بالشكل الصحيح
-            quantity: variant.inventory?.quantity || variant.quantity || 0,
-            reserved_quantity: variant.inventory?.reserved_quantity || variant.reserved_quantity || 0,
-            min_stock: variant.inventory?.min_stock || variant.min_stock || 5,
-            location: variant.inventory?.location || variant.location || '',
-            // الحفاظ على البيانات الأصلية
-            inventory: variant.inventory
-          }))
+
+      // معالجة البيانات مع ربط المخزون بالشكل الصحيح
+      const processedProducts = (basicProducts || []).map(product => ({
+        ...product,
+        variants: (product.product_variants || []).map(variant => ({
+          ...variant,
+          // ربط بيانات المخزون - هذا هو المفتاح!
+          quantity: variant.inventory?.quantity || variant.quantity || 0,
+          reserved_quantity: variant.inventory?.reserved_quantity || variant.reserved_quantity || 0,
+          min_stock: variant.inventory?.min_stock || variant.min_stock || 5,
+          location: variant.inventory?.location || variant.location || '',
+          // إضافة أسماء الألوان والأحجام
+          size: variant.sizes?.name || 'مقاس غير محدد',
+          color: variant.colors?.name || 'لون غير محدد',
+          // الحفاظ على البيانات الأصلية
+          inventory: variant.inventory
         }))
-      };
-      
-      console.log('🔗 SuperProvider: معالجة بيانات المخزون:', {
-        processedProductsCount: processedData.products?.length || 0,
-        sampleProcessedProduct: processedData.products?.[0] ? {
-          id: processedData.products[0].id,
-          name: processedData.products[0].name,
-          variantsCount: processedData.products[0].variants?.length || 0,
-          firstProcessedVariant: processedData.products[0].variants?.[0] ? {
-            id: processedData.products[0].variants[0].id,
-            quantity: processedData.products[0].variants[0].quantity,
-            originalInventory: processedData.products[0].variants[0].inventory
-          } : null
-        } : null
-      });
-      
-      setAllData(processedData);
-      
-      // تحديث accounting بنفس الطريقة القديمة
-      setAccounting(prev => ({
-        ...prev,
-        expenses: filteredData.expenses || []
       }));
+
+      const processedData = {
+        products: processedProducts,
+        orders: [],
+        customers: [],
+        purchases: [],
+        expenses: [],
+        profits: [],
+        cashSources: [],
+        settings: { 
+          deliveryFee: 5000, 
+          lowStockThreshold: 5, 
+          mediumStockThreshold: 10, 
+          sku_prefix: "PROD", 
+          lastPurchaseId: 0,
+          printer: { paperSize: 'a4', orientation: 'portrait' }
+        },
+        aiOrders: [],
+        profitRules: [],
+        colors: [],
+        sizes: [],
+        categories: [],
+        departments: [],
+        productTypes: [],
+        seasons: []
+      };
+
+      console.log('📦 SuperProvider: البيانات النهائية:', {
+        productsCount: processedData.products?.length || 0,
+        firstProductVariants: processedData.products?.[0]?.variants?.length || 0,
+        firstVariantQuantity: processedData.products?.[0]?.variants?.[0]?.quantity || 'غير محدد',
+        firstVariantSize: processedData.products?.[0]?.variants?.[0]?.size || 'غير محدد',
+        firstVariantColor: processedData.products?.[0]?.variants?.[0]?.color || 'غير محدد'
+      });
+
+      setAllData(processedData);
       
     } catch (error) {
       console.error('❌ SuperProvider: خطأ في جلب البيانات:', error);
       
-      // في حالة فشل SuperAPI، استخدم الطريقة القديمة
-      console.log('🔄 SuperProvider: استخدام الطريقة القديمة...');
-      
-      try {
-        console.log('🔄 SuperProvider: محاولة جلب البيانات بالطريقة التقليدية...');
-        
-        // جلب البيانات الأساسية فقط لتجنب التعقيد
-        const { data: basicProducts, error: productsError } = await supabase
-          .from('products')
-          .select(`
-            *,
-            product_variants (
-              *,
-              colors (id, name, hex_code),
-              sizes (id, name, type),
-              inventory (quantity, min_stock, reserved_quantity, location)
-            )
-          `)
-          .order('created_at', { ascending: false });
-
-        if (productsError) throw productsError;
-
-        const { data: basicOrders, error: ordersError } = await supabase
-          .from('orders')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (ordersError) throw ordersError;
-
-        console.log('✅ SuperProvider: البيانات التقليدية محملة:', {
-          products: basicProducts?.length || 0,
-          orders: basicOrders?.length || 0
-        });
-
-        // إنشاء بيانات احتياطية
-        const fallbackData = {
-          products: basicProducts || [],
-          orders: basicOrders || [],
-          customers: [],
-          purchases: [],
-          expenses: [],
-          profits: [],
-          cashSources: [],
-          settings: { 
-            deliveryFee: 5000, 
-            lowStockThreshold: 5, 
-            mediumStockThreshold: 10, 
-            sku_prefix: "PROD", 
-            lastPurchaseId: 0 
-          },
-          aiOrders: [],
-          profitRules: [],
-          colors: [],
-          sizes: [],
-          categories: [],
-          departments: [],
-          productTypes: [],
-          seasons: []
-        };
-
-        setAllData(fallbackData);
-        
-      } catch (fallbackError) {
-        console.error('❌ SuperProvider: فشل في الطريقة التقليدية أيضاً:', fallbackError);
-        
-        // بيانات افتراضية للحالات الطارئة
-        setAllData({
-          products: [],
-          orders: [],
-          customers: [],
-          purchases: [],
-          expenses: [],
-          profits: [],
-          cashSources: [],
-          settings: { 
-            deliveryFee: 5000, 
-            lowStockThreshold: 5, 
-            mediumStockThreshold: 10, 
-            sku_prefix: "PROD", 
-            lastPurchaseId: 0 
-          },
-          aiOrders: [],
-          profitRules: [],
-          colors: [],
-          sizes: [],
-          categories: [],
-          departments: [],
-          productTypes: [],
-          seasons: []
-        });
-      }
+      // بيانات افتراضية للحالات الطارئة
+      setAllData({
+        products: [],
+        orders: [],
+        customers: [],
+        purchases: [],
+        expenses: [],
+        profits: [],
+        cashSources: [],
+        settings: { 
+          deliveryFee: 5000, 
+          lowStockThreshold: 5, 
+          mediumStockThreshold: 10, 
+          sku_prefix: "PROD", 
+          lastPurchaseId: 0,
+          printer: { paperSize: 'a4', orientation: 'portrait' }
+        },
+        aiOrders: [],
+        profitRules: [],
+        colors: [],
+        sizes: [],
+        categories: [],
+        departments: [],
+        productTypes: [],
+        seasons: []
+      });
     } finally {
       setLoading(false);
     }
@@ -285,24 +209,6 @@ export const SuperProvider = ({ children }) => {
   useEffect(() => {
     fetchAllData();
   }, [fetchAllData]);
-
-  // إعداد Realtime للتحديثات الفورية
-  useEffect(() => {
-    if (!user) return;
-
-    const handleRealtimeUpdate = (table, payload) => {
-      console.log(`🔄 SuperProvider: تحديث فوري في ${table}`);
-      
-      // إعادة تحميل البيانات عند وجود تحديث
-      fetchAllData();
-    };
-
-    superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
-
-    return () => {
-      superAPI.unsubscribeAll();
-    };
-  }, [user, fetchAllData]);
 
   // ===============================
   // وظائف متوافقة مع InventoryContext
@@ -363,7 +269,6 @@ export const SuperProvider = ({ children }) => {
   // حذف طلبات
   const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
     try {
-      // TODO: تطبيق في SuperAPI
       console.log('🗑️ حذف طلبات:', orderIds);
       return { success: true };
     } catch (error) {
@@ -377,7 +282,6 @@ export const SuperProvider = ({ children }) => {
     try {
       console.log('💰 SuperProvider: إضافة مصروف:', expense.description);
       
-      // TODO: تطبيق في SuperAPI
       toast({ 
         title: "تمت إضافة المصروف",
         description: `تم إضافة مصروف ${expense.description}`,
@@ -459,7 +363,8 @@ export const SuperProvider = ({ children }) => {
     cartLength: contextValue.cart?.length || 0,
     loading: contextValue.loading,
     hasProducts: !!contextValue.products,
-    productsLength: contextValue.products?.length || 0
+    productsLength: contextValue.products?.length || 0,
+    firstProductName: contextValue.products?.[0]?.name || 'لا يوجد'
   });
 
   return (
