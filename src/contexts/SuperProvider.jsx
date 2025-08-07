@@ -147,9 +147,12 @@ export const SuperProvider = ({ children }) => {
       console.log('🔄 SuperProvider: استخدام الطريقة القديمة...');
       
       try {
-        // جلب البيانات بالطريقة التقليدية
-        const [products, orders, customers, colors, sizes, categories, departments] = await Promise.all([
-          supabase.from('products').select(`
+        console.log('🔄 SuperProvider: محاولة جلب البيانات بالطريقة التقليدية...');
+        
+        // جلب البيانات الأساسية فقط لتجنب التعقيد
+        const { data: basicProducts, error: productsError } = await supabase
+          .from('products')
+          .select(`
             *,
             product_variants (
               *,
@@ -157,17 +160,50 @@ export const SuperProvider = ({ children }) => {
               sizes (id, name, type),
               inventory (quantity, min_stock, reserved_quantity, location)
             )
-          `).order('created_at', { ascending: false }),
-          
-          supabase.from('orders').select(`
-            *,
-            order_items (
-              *,
-              products (id, name, images),
-              product_variants (
-                id, price, cost_price, images,
-                colors (name, hex_code),
-                sizes (name)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (productsError) throw productsError;
+
+        const { data: basicOrders, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (ordersError) throw ordersError;
+
+        console.log('✅ SuperProvider: البيانات التقليدية محملة:', {
+          products: basicProducts?.length || 0,
+          orders: basicOrders?.length || 0
+        });
+
+        // إنشاء بيانات احتياطية
+        const fallbackData = {
+          products: basicProducts || [],
+          orders: basicOrders || [],
+          customers: [],
+          purchases: [],
+          expenses: [],
+          profits: [],
+          cashSources: [],
+          settings: { 
+            deliveryFee: 5000, 
+            lowStockThreshold: 5, 
+            mediumStockThreshold: 10, 
+            sku_prefix: "PROD", 
+            lastPurchaseId: 0 
+          },
+          aiOrders: [],
+          profitRules: [],
+          colors: [],
+          sizes: [],
+          categories: [],
+          departments: [],
+          productTypes: [],
+          seasons: []
+        };
+
+        setAllData(fallbackData);
               )
             )
           `).order('created_at', { ascending: false }),
