@@ -1,6 +1,7 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
+import { componentTagger } from "lovable-tagger";
 
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
@@ -146,8 +147,9 @@ export default defineConfig(async ({ mode }) => {
         plugins: [
             ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
             react(),
+            mode === 'development' && componentTagger(),
             addTransformIndexHtml,
-        ],
+        ].filter(Boolean),
         server: {
             host: "::",
             cors: true,
