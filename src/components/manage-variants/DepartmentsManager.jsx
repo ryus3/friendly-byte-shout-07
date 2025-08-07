@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
 import AddEditDepartmentDialog from './AddEditDepartmentDialog';
+import { useSuper } from '@/contexts/SuperProvider';
 
 const DepartmentsManager = () => {
   const [departments, setDepartments] = useState([]);
@@ -72,9 +73,16 @@ const DepartmentsManager = () => {
     }
   };
 
+  const { departments: ctxDepartments } = useSuper();
+
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+    if (Array.isArray(ctxDepartments) && ctxDepartments.length > 0) {
+      setDepartments(ctxDepartments);
+      setLoading(false);
+    } else {
+      fetchDepartments();
+    }
+  }, [ctxDepartments]);
 
   const handleDelete = async (id) => {
     console.log('🗑️ محاولة حذف القسم:', id);

@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/components/ui/use-toast';
+import { useSuper } from '@/contexts/SuperProvider';
 
 const VariantsContext = createContext();
 
@@ -30,6 +31,15 @@ export const VariantsProvider = ({ children }) => {
   const [seasonsOccasions, setSeasonsOccasions] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // بيانات موحّدة من النظام إن توفرت
+  const superData = useSuper?.() || {};
+  const ctxCategories = superData.categories;
+  const ctxColors = superData.colors;
+  const ctxSizes = superData.sizes;
+  const ctxDepartments = superData.departments;
+  const ctxProductTypes = superData.productTypes;
+  const ctxSeasons = superData.seasons;
+
   const fetchData = useCallback(async (table, setter) => {
     const orderBy = table === 'sizes' ? 'display_order' : 'name';
     const { data, error } = await supabase.from(table).select('*').order(orderBy);
@@ -55,8 +65,21 @@ export const VariantsProvider = ({ children }) => {
   }, [fetchData]);
 
   useEffect(() => {
-    refreshData();
-  }, [refreshData]);
+    const hasCtx = [ctxCategories, ctxColors, ctxSizes, ctxDepartments, ctxProductTypes, ctxSeasons]
+      .some(arr => Array.isArray(arr) && arr.length >= 0);
+
+    if (hasCtx) {
+      if (Array.isArray(ctxCategories)) setCategories(ctxCategories);
+      if (Array.isArray(ctxColors)) setColors(ctxColors);
+      if (Array.isArray(ctxSizes)) setSizes(ctxSizes);
+      if (Array.isArray(ctxDepartments)) setDepartments(ctxDepartments);
+      if (Array.isArray(ctxProductTypes)) setProductTypes(ctxProductTypes);
+      if (Array.isArray(ctxSeasons)) setSeasonsOccasions(ctxSeasons);
+      setLoading(false);
+    } else {
+      refreshData();
+    }
+  }, [ctxCategories, ctxColors, ctxSizes, ctxDepartments, ctxProductTypes, ctxSeasons, refreshData]);
 
   const addVariant = async (table, data) => {
     const { data: result, error } = await supabase.from(table).insert(data).select().single();
