@@ -6,7 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { useUnifiedAPI } from '@/core/api';
+import { api } from '@/core/api';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/hooks/use-toast';
@@ -24,7 +24,7 @@ export const useApp = () => {
 export const UnifiedAppProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission, filterDataByUser } = usePermissions();
-  const api = useUnifiedAPI();
+  const { hasPermission, filterDataByUser } = usePermissions();
 
   // ===== الحالة الموحدة =====
   const [state, setState] = useState({
