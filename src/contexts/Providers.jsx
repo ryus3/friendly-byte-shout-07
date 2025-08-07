@@ -5,6 +5,7 @@ import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
 import { InventoryProvider } from '@/contexts/InventoryContext.jsx';
+import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 
 export const AppProviders = ({ children }) => {
   return (
@@ -13,9 +14,11 @@ export const AppProviders = ({ children }) => {
         <NotificationsSystemProvider>
           <NotificationsProvider>
             <AiChatProvider>
-              <InventoryProvider>
-                {children}
-              </InventoryProvider>
+              <ProfitsProvider>
+                <InventoryProvider>
+                  {children}
+                </InventoryProvider>
+              </ProfitsProvider>
             </AiChatProvider>
           </NotificationsProvider>
         </NotificationsSystemProvider>
