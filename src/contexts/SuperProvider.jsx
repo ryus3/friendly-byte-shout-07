@@ -10,6 +10,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
+import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
 
 const SuperContext = createContext();
@@ -79,7 +80,17 @@ export const SuperProvider = ({ children }) => {
       
       const data = await superAPI.getAllData();
       
-      console.log('✅ SuperProvider: تم جلب البيانات بنجاح:', data.totalItems);
+      // التحقق من البيانات
+      if (!data) {
+        console.error('❌ SuperProvider: لم يتم جلب أي بيانات من SuperAPI');
+        return;
+      }
+      
+      console.log('✅ SuperProvider: تم جلب البيانات بنجاح:', {
+        products: data.products?.length || 0,
+        orders: data.orders?.length || 0,
+        customers: data.customers?.length || 0
+      });
       
       setAllData(data);
       
@@ -91,11 +102,60 @@ export const SuperProvider = ({ children }) => {
       
     } catch (error) {
       console.error('❌ SuperProvider: خطأ في جلب البيانات:', error);
-      toast({
-        title: "خطأ في تحميل البيانات",
-        description: "حدث خطأ أثناء تحميل البيانات",
-        variant: "destructive"
-      });
+      
+      // في حالة فشل SuperAPI، استخدم الطريقة القديمة
+      console.log('🔄 SuperProvider: استخدام الطريقة القديمة...');
+      
+      try {
+        // جلب البيانات بالطريقة التقليدية
+        const [products, orders, customers, colors, sizes, categories, departments] = await Promise.all([
+          supabase.from('products').select(`
+            *,
+            product_variants (
+              *,
+              colors (id, name, hex_color),
+              sizes (id, name, type),
+              inventory (quantity, min_stock, reserved_quantity, location)
+            )
+          `).order('created_at', { ascending: false }),
+          
+          supabase.from('orders').select(`
+            *,
+            order_items (
+              *,
+              products (id, name, images),
+              product_variants (
+                id, price, cost_price, images,
+                colors (name, hex_color),
+                sizes (name)
+              )
+            )
+          `).order('created_at', { ascending: false }),
+          
+          supabase.from('customers').select('*').order('created_at', { ascending: false }),
+          supabase.from('colors').select('*').order('name'),
+          supabase.from('sizes').select('*').order('name'),
+          supabase.from('categories').select('*').order('name'),
+          supabase.from('departments').select('*').order('name')
+        ]);
+        
+        // تحديث البيانات
+        setAllData(prev => ({
+          ...prev,
+          products: products.data || [],
+          orders: orders.data || [],
+          customers: customers.data || [],
+          colors: colors.data || [],
+          sizes: sizes.data || [],
+          categories: categories.data || [],
+          departments: departments.data || []
+        }));
+        
+        console.log('✅ SuperProvider: تم جلب البيانات بالطريقة التقليدية');
+        
+      } catch (fallbackError) {
+        console.error('❌ SuperProvider: فشل في جلب البيانات بالطريقة التقليدية:', fallbackError);
+      }
     } finally {
       setLoading(false);
     }
