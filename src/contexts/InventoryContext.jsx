@@ -4,10 +4,12 @@
  */
 
 // إعادة توجيه كامل للنظام الموحد
+import { useSuper, SuperProvider } from '@/contexts/SuperProvider';
+
 export { 
   useSuper as useInventory,
   SuperProvider as InventoryProvider 
-} from '@/contexts/SuperProvider';
+};
 
 // تصدير default أيضاً للتوافق التام
 export default useSuper;
