@@ -28,6 +28,36 @@ export const useInventory = () => {
   return useSuper();
 };
 
+// دالة تصفية البيانات حسب employee_code
+const filterDataByEmployeeCode = (data, user) => {
+  if (!user) return data;
+  
+  // المديرون يرون كل شيء
+  if (user.is_admin || ['super_admin', 'admin'].includes(user.role)) {
+    return data;
+  }
+  
+  const userEmployeeCode = user.employee_code;
+  if (!userEmployeeCode) {
+    console.warn('⚠️ المستخدم بدون employee_code:', user);
+    return { ...data, orders: [], customers: [], profits: [], purchases: [] };
+  }
+  
+  console.log('🔍 تصفية البيانات للموظف:', userEmployeeCode);
+  
+  return {
+    ...data,
+    // تصفية الطلبات حسب employee_code
+    orders: data.orders?.filter(order => order.created_by === userEmployeeCode) || [],
+    // تصفية العملاء حسب employee_code  
+    customers: data.customers?.filter(customer => customer.created_by === userEmployeeCode) || [],
+    // تصفية الأرباح حسب employee_code
+    profits: data.profits?.filter(profit => profit.employee_id === userEmployeeCode) || [],
+    // تصفية المشتريات حسب employee_code
+    purchases: data.purchases?.filter(purchase => purchase.created_by === userEmployeeCode) || []
+  };
+};
+
 export const SuperProvider = ({ children }) => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -70,13 +100,13 @@ export const SuperProvider = ({ children }) => {
     expenses: [] 
   });
 
-  // جلب البيانات الموحدة عند بدء التشغيل
+  // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
     if (!user) return;
     
     try {
       setLoading(true);
-      console.log('🚀 SuperProvider: جلب جميع البيانات...');
+      console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
       
       const data = await superAPI.getAllData();
       
@@ -86,18 +116,22 @@ export const SuperProvider = ({ children }) => {
         return;
       }
       
-      console.log('✅ SuperProvider: تم جلب البيانات بنجاح:', {
-        products: data.products?.length || 0,
-        orders: data.orders?.length || 0,
-        customers: data.customers?.length || 0
+      // تصفية البيانات حسب employee_code للموظفين
+      const filteredData = filterDataByEmployeeCode(data, user);
+      
+      console.log('✅ SuperProvider: تم جلب وتصفية البيانات بنجاح:', {
+        products: filteredData.products?.length || 0,
+        orders: filteredData.orders?.length || 0,
+        customers: filteredData.customers?.length || 0,
+        userEmployeeCode: user.employee_code || 'admin'
       });
       
-      setAllData(data);
+      setAllData(filteredData);
       
       // تحديث accounting بنفس الطريقة القديمة
       setAccounting(prev => ({
         ...prev,
-        expenses: data.expenses || []
+        expenses: filteredData.expenses || []
       }));
       
     } catch (error) {

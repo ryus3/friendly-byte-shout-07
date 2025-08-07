@@ -1,29 +1,55 @@
 /**
- * نظام منع الطلبات المنفصلة - إصلاح جذري
- * يمنع استخدام supabase.from() مباشرة ويجبر استخدام النظام الموحد
+ * نظام مراقبة محسن للتأكد من:
+ * 1. عدم استخدام supabase.from() خارج النظام الموحد
+ * 2. استخدام employee_code بدلاً من UUID
+ * 3. منع البيانات المنفصلة
  */
 
-/**
- * مراقب الطلبات المنفصلة - يكتشف المخالفات
- */
-export const detectSeparateQueries = () => {
+const ALLOWED_FILES = [
+  'SuperAPI.js',
+  'customSupabaseClient.js', 
+  'realtime-setup.js',
+  'UnifiedAuthContext.jsx'
+];
+
+const VIOLATION_MESSAGES = {
+  directSupabase: '🚫 استخدام supabase.from() مباشرة محظور! استخدم useInventory() من SuperProvider',
+  incorrectImport: '🚫 استيراد supabase محظور! استخدم النظام الموحد',
+  directFetch: '🚫 استخدام fetch مباشر محظور! استخدم SuperAPI',
+  wrongIdUsage: '🚫 استخدام user.id أو user.user_id محظور! استخدم user.employee_code فقط'
+};
+
+const isFileAllowed = (filename) => {
+  return ALLOWED_FILES.some(allowed => filename.includes(allowed));
+};
+
+export const detectViolations = () => {
   const violations = [];
   
-  // قائمة الملفات المخالفة المكتشفة
-  const knownViolations = [
-    'src/hooks/useOrdersAnalytics.js - تم إصلاحه ✅',
-    'src/contexts/OrdersRealtimeContext.jsx - تم إصلاحه ✅', 
-    'src/pages/CustomersManagementPage.jsx - تم إصلاحه ✅',
-    'src/contexts/ProfitsContext.jsx - يحتاج إصلاح ❌',
-    'src/components/accounting/SettledDuesDialog.jsx - يحتاج إصلاح ❌',
-    'src/components/dashboard/AiOrdersManager.jsx - يحتاج إصلاح ❌'
-  ];
-  
-  console.group('🚨 تقرير الطلبات المنفصلة المكتشفة');
-  console.log('المخالفات المعروفة:', knownViolations);
-  console.groupEnd();
-  
-  return knownViolations;
+  // فحص استخدام supabase.from() المباشر
+  const scripts = document.querySelectorAll('script');
+  scripts.forEach(script => {
+    if (script.src && !isFileAllowed(script.src)) {
+      if (script.textContent?.includes('supabase.from(')) {
+        violations.push({
+          type: 'directSupabase',
+          file: script.src,
+          message: VIOLATION_MESSAGES.directSupabase
+        });
+      }
+      
+      // فحص استخدام user.id بدلاً من employee_code
+      if (script.textContent?.includes('user.id') || script.textContent?.includes('user.user_id')) {
+        violations.push({
+          type: 'wrongIdUsage', 
+          file: script.src,
+          message: VIOLATION_MESSAGES.wrongIdUsage
+        });
+      }
+    }
+  });
+
+  return violations;
 };
 
 /**
@@ -117,18 +143,37 @@ export const generateSystemReport = () => {
 };
 
 /**
- * بدء النظام المحسن
+ * نظام مراقبة شامل
+ */
+export const improvedSystemMonitor = {
+  initialize: () => {
+    console.log('🚀 بدء نظام المراقبة المحسن...');
+    
+    // تفعيل الحماية
+    enforceUnifiedSystem();
+    
+    // فحص المخالفات
+    const violations = detectViolations();
+    if (violations.length > 0) {
+      console.warn('🚨 تم اكتشاف مخالفات:', violations);
+    }
+    
+    // إنشاء التقرير
+    const report = generateSystemReport();
+    
+    console.log('✅ تم تفعيل نظام المراقبة بنجاح!');
+    
+    return report;
+  },
+  
+  detectViolations,
+  generateSystemReport,
+  enforceUnifiedSystem
+};
+
+/**
+ * بدء النظام المحسن - للتوافق العكسي
  */
 export const initializeImprovedSystem = () => {
-  console.log('🚀 بدء النظام المحسن...');
-  
-  // تفعيل الحماية
-  enforceUnifiedSystem();
-  
-  // إنشاء التقرير
-  const report = generateSystemReport();
-  
-  console.log('✅ تم تفعيل النظام المحسن بنجاح!');
-  
-  return report;
+  return improvedSystemMonitor.initialize();
 };
