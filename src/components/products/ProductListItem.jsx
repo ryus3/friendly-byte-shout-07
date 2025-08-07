@@ -53,7 +53,7 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
         <div className="flex-1 text-right">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-semibold text-foreground text-lg truncate">{product.name}</h3>
-            <p className="font-bold text-primary text-lg">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
+            <p className="font-bold text-primary text-lg">{parseFloat((product.variants && product.variants[0]) ? (product.variants[0].price || product.base_price || 0) : (product.base_price || 0)).toLocaleString()} د.ع</p>
           </div>
           
           <div className="flex items-center justify-between">
