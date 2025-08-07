@@ -81,7 +81,7 @@ export const SuperProvider = ({ children }) => {
       setLoading(true);
       console.log('🚀 SuperProvider: بدء جلب البيانات للمستخدم:', user.full_name);
       
-      // جلب البيانات مباشرة من Supabase للتشخيص
+      // جلب البيانات مباشرة من Supabase مع جميع العلاقات
       const { data: basicProducts, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -95,6 +95,23 @@ export const SuperProvider = ({ children }) => {
         `)
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+
+      console.log('🔍 خام البيانات من قاعدة البيانات:', {
+        error: productsError,
+        productsCount: basicProducts?.length || 0,
+        rawSample: basicProducts?.[0] ? {
+          id: basicProducts[0].id,
+          name: basicProducts[0].name,
+          rawVariants: basicProducts[0].product_variants?.map(v => ({
+            variantId: v.id,
+            variantRawQuantity: v.quantity,
+            inventoryObject: v.inventory,
+            inventoryQuantity: v.inventory?.quantity,
+            sizeName: v.sizes?.name,
+            colorName: v.colors?.name
+          })) || []
+        } : 'لا توجد منتجات'
+      });
 
       if (productsError) {
         console.error('❌ خطأ في جلب المنتجات:', productsError);
@@ -117,23 +134,45 @@ export const SuperProvider = ({ children }) => {
         } : null
       });
 
-      // معالجة البيانات مع ربط المخزون بالشكل الصحيح
-      const processedProducts = (basicProducts || []).map(product => ({
-        ...product,
-        variants: (product.product_variants || []).map(variant => ({
-          ...variant,
-          // ربط بيانات المخزون - هذا هو المفتاح!
-          quantity: variant.inventory?.quantity || variant.quantity || 0,
-          reserved_quantity: variant.inventory?.reserved_quantity || variant.reserved_quantity || 0,
-          min_stock: variant.inventory?.min_stock || variant.min_stock || 5,
-          location: variant.inventory?.location || variant.location || '',
-          // إضافة أسماء الألوان والأحجام
-          size: variant.sizes?.name || 'مقاس غير محدد',
-          color: variant.colors?.name || 'لون غير محدد',
-          // الحفاظ على البيانات الأصلية
-          inventory: variant.inventory
-        }))
-      }));
+      // معالجة البيانات مع ربط المخزون بالشكل الصحيح - تركيز على المشكلة الجذرية
+      const processedProducts = (basicProducts || []).map(product => {
+        console.log(`🔧 معالجة المنتج: ${product.name}`);
+        
+        const processedVariants = (product.product_variants || []).map(variant => {
+          // التحقق من مصادر الكمية المختلفة
+          const quantityFromInventory = variant.inventory?.quantity;
+          const quantityFromVariant = variant.quantity;
+          const finalQuantity = quantityFromInventory ?? quantityFromVariant ?? 0;
+          
+          console.log(`📦 معالجة المتغير ${variant.id}:`, {
+            quantityFromInventory,
+            quantityFromVariant, 
+            finalQuantity,
+            sizeName: variant.sizes?.name,
+            colorName: variant.colors?.name,
+            hasInventoryObj: !!variant.inventory
+          });
+          
+          return {
+            ...variant,
+            // ضمان ربط الكمية بالشكل الصحيح
+            quantity: finalQuantity,
+            reserved_quantity: variant.inventory?.reserved_quantity ?? variant.reserved_quantity ?? 0,
+            min_stock: variant.inventory?.min_stock ?? variant.min_stock ?? 5,
+            location: variant.inventory?.location ?? variant.location ?? '',
+            // إضافة أسماء الألوان والأحجام
+            size: variant.sizes?.name || 'مقاس غير محدد',
+            color: variant.colors?.name || 'لون غير محدد',
+            // الحفاظ على البيانات الأصلية
+            inventory: variant.inventory
+          };
+        });
+        
+        return {
+          ...product,
+          variants: processedVariants
+        };
+      });
 
       const processedData = {
         products: processedProducts,
@@ -161,15 +200,25 @@ export const SuperProvider = ({ children }) => {
         seasons: []
       };
 
-      console.log('📦 SuperProvider: البيانات النهائية:', {
+      console.log('📦 SuperProvider: البيانات النهائية المُعالجة:', {
         productsCount: processedData.products?.length || 0,
-        firstProductVariants: processedData.products?.[0]?.variants?.length || 0,
-        firstVariantQuantity: processedData.products?.[0]?.variants?.[0]?.quantity || 'غير محدد',
-        firstVariantSize: processedData.products?.[0]?.variants?.[0]?.size || 'غير محدد',
-        firstVariantColor: processedData.products?.[0]?.variants?.[0]?.color || 'غير محدد'
+        detailedFirstProduct: processedData.products?.[0] ? {
+          name: processedData.products[0].name,
+          variantsCount: processedData.products[0].variants?.length || 0,
+          variantsDetails: processedData.products[0].variants?.map(v => ({
+            id: v.id,
+            quantity: v.quantity,
+            size: v.size,
+            color: v.color,
+            hasInventory: !!v.inventory
+          })) || []
+        } : 'لا توجد منتجات'
       });
 
       setAllData(processedData);
+      
+      // تسجيل إضافي للتأكد من التحديث
+      console.log('✅ تم تحديث allData بنجاح');
       
     } catch (error) {
       console.error('❌ SuperProvider: خطأ في جلب البيانات:', error);
