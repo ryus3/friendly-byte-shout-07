@@ -62,7 +62,7 @@ export const convertToEmployeeCode = (user) => {
 };
 
 /**
- * إنشاء فلتر موحد باستخدام employee_code
+ * إنشاء فلتر موحد - إصلاح مؤقت لاستخدام UUID
  */
 export const createEmployeeCodeFilter = (user, isAdmin = false, fieldName = 'created_by') => {
   // المديرون يرون كل شيء
@@ -70,13 +70,18 @@ export const createEmployeeCodeFilter = (user, isAdmin = false, fieldName = 'cre
     return {};
   }
   
-  const employeeCode = convertToEmployeeCode(user);
-  if (!employeeCode) {
-    console.error('🚫 فشل في إنشاء فلتر - المستخدم بدون employee_code');
+  // إصلاح مؤقت: استخدام UUID حتى يتم تحديث قاعدة البيانات
+  const userUUID = user?.user_id || user?.id;
+  const employeeCode = user?.employee_code;
+  
+  if (!userUUID) {
+    console.error('🚫 فشل في إنشاء فلتر - المستخدم بدون معرف صحيح');
     return { [fieldName]: 'INVALID_USER' }; // فلتر لن يجد أي نتائج
   }
   
-  return { [fieldName]: employeeCode };
+  console.log('🔧 إنشاء فلتر مؤقت باستخدام UUID:', userUUID);
+  
+  return { [fieldName]: userUUID };
 };
 
 /**

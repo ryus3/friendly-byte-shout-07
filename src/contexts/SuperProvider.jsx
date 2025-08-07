@@ -28,34 +28,66 @@ export const useInventory = () => {
   return useSuper();
 };
 
-// دالة تصفية البيانات حسب employee_code
+// دالة تصفية البيانات - إصلاح مؤقت لعرض البيانات الحقيقية
 const filterDataByEmployeeCode = (data, user) => {
   if (!user) return data;
   
   // المديرون يرون كل شيء
   if (user.is_admin || ['super_admin', 'admin'].includes(user.role)) {
+    console.log('👑 مدير - عرض جميع البيانات');
     return data;
   }
   
+  // إصلاح مؤقت: استخدام UUID للتصفية حتى يتم تحديث قاعدة البيانات
+  const userUUID = user.user_id || user.id;
   const userEmployeeCode = user.employee_code;
-  if (!userEmployeeCode) {
-    console.warn('⚠️ المستخدم بدون employee_code:', user);
+  
+  console.log('🔍 معرفات المستخدم:', {
+    uuid: userUUID,
+    employee_code: userEmployeeCode,
+    full_name: user.full_name
+  });
+  
+  if (!userUUID) {
+    console.warn('⚠️ المستخدم بدون معرف صحيح:', user);
     return { ...data, orders: [], customers: [], profits: [], purchases: [] };
   }
   
-  console.log('🔍 تصفية البيانات للموظف:', userEmployeeCode);
+  console.log('📊 البيانات قبل التصفية:', {
+    orders: data.orders?.length || 0,
+    customers: data.customers?.length || 0,
+    profits: data.profits?.length || 0,
+    purchases: data.purchases?.length || 0
+  });
   
-  return {
+  const filteredData = {
     ...data,
-    // تصفية الطلبات حسب employee_code
-    orders: data.orders?.filter(order => order.created_by === userEmployeeCode) || [],
-    // تصفية العملاء حسب employee_code  
-    customers: data.customers?.filter(customer => customer.created_by === userEmployeeCode) || [],
-    // تصفية الأرباح حسب employee_code
-    profits: data.profits?.filter(profit => profit.employee_id === userEmployeeCode) || [],
-    // تصفية المشتريات حسب employee_code
-    purchases: data.purchases?.filter(purchase => purchase.created_by === userEmployeeCode) || []
+    // تصفية الطلبات - استخدام UUID مؤقتاً
+    orders: data.orders?.filter(order => {
+      return order.created_by === userUUID || order.created_by === userEmployeeCode;
+    }) || [],
+    // تصفية العملاء - استخدام UUID مؤقتاً
+    customers: data.customers?.filter(customer => {
+      return customer.created_by === userUUID || customer.created_by === userEmployeeCode;
+    }) || [],
+    // تصفية الأرباح - استخدام UUID مؤقتاً
+    profits: data.profits?.filter(profit => {
+      return profit.employee_id === userUUID || profit.employee_id === userEmployeeCode;
+    }) || [],
+    // تصفية المشتريات - استخدام UUID مؤقتاً
+    purchases: data.purchases?.filter(purchase => {
+      return purchase.created_by === userUUID || purchase.created_by === userEmployeeCode;
+    }) || []
   };
+  
+  console.log('✅ البيانات بعد التصفية:', {
+    orders: filteredData.orders?.length || 0,
+    customers: filteredData.customers?.length || 0,
+    profits: filteredData.profits?.length || 0,
+    purchases: filteredData.purchases?.length || 0
+  });
+  
+  return filteredData;
 };
 
 export const SuperProvider = ({ children }) => {
