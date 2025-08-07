@@ -7,6 +7,28 @@ import { usePermissions } from '@/hooks/usePermissions';
  * يستبدل التكرار في TopCustomersDialog, TopProductsDialog, TopProvincesDialog, PendingProfitsDialog
  */
 const useOrdersAnalytics = () => {
+  // Defensive check to ensure React hooks are available
+  if (!React || typeof useState !== 'function') {
+    console.error('React hooks not available in useOrdersAnalytics');
+    return {
+      analytics: {
+        totalOrders: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        totalRevenue: 0,
+        topCustomers: [],
+        topProducts: [],
+        topProvinces: [],
+        pendingProfits: 0,
+        pendingProfitOrders: []
+      },
+      loading: false,
+      error: null,
+      refreshAnalytics: () => {},
+      setDateRange: () => {}
+    };
+  }
+
   const { canViewAllOrders, user } = usePermissions();
   
   const [analytics, setAnalytics] = useState({
