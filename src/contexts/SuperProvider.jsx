@@ -204,30 +204,36 @@ export const SuperProvider = ({ children }) => {
         };
 
         setAllData(fallbackData);
-              )
-            )
-          `).order('created_at', { ascending: false }),
-          
-          supabase.from('customers').select('*').order('created_at', { ascending: false }),
-          supabase.from('colors').select('*').order('name'),
-          supabase.from('sizes').select('*').order('name'),
-          supabase.from('categories').select('*').order('name'),
-          supabase.from('departments').select('*').order('name')
-        ]);
         
-        // تحديث البيانات
-        setAllData(prev => ({
-          ...prev,
-          products: products.data || [],
-          orders: orders.data || [],
-          customers: customers.data || [],
-          colors: colors.data || [],
-          sizes: sizes.data || [],
-          categories: categories.data || [],
-          departments: departments.data || []
-        }));
+      } catch (fallbackError) {
+        console.error('❌ SuperProvider: فشل في الطريقة التقليدية أيضاً:', fallbackError);
         
-        console.log('✅ SuperProvider: تم جلب البيانات بالطريقة التقليدية');
+        // بيانات افتراضية للحالات الطارئة
+        setAllData({
+          products: [],
+          orders: [],
+          customers: [],
+          purchases: [],
+          expenses: [],
+          profits: [],
+          cashSources: [],
+          settings: { 
+            deliveryFee: 5000, 
+            lowStockThreshold: 5, 
+            mediumStockThreshold: 10, 
+            sku_prefix: "PROD", 
+            lastPurchaseId: 0 
+          },
+          aiOrders: [],
+          profitRules: [],
+          colors: [],
+          sizes: [],
+          categories: [],
+          departments: [],
+          productTypes: [],
+          seasons: []
+        });
+      }
         
       } catch (fallbackError) {
         console.error('❌ SuperProvider: فشل في جلب البيانات بالطريقة التقليدية:', fallbackError);
