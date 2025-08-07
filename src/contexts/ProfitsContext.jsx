@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
+import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import { useAuth } from './UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
+
+// إعادة توجيه ProfitsContext للنظام الموحد
 
 const ProfitsContext = createContext();
 

@@ -234,10 +234,6 @@ export const SuperProvider = ({ children }) => {
           seasons: []
         });
       }
-        
-      } catch (fallbackError) {
-        console.error('❌ SuperProvider: فشل في جلب البيانات بالطريقة التقليدية:', fallbackError);
-      }
     } finally {
       setLoading(false);
     }

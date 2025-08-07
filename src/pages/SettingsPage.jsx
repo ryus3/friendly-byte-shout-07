@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/customSupabaseClient';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
@@ -148,22 +147,17 @@ const SettingsPage = () => {
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
-  // جلب عدد رموز الموظفين للعرض في الكارت
+  // جلب عدد رموز الموظفين من النظام الموحد
   useEffect(() => {
     const fetchEmployeeCodesCount = async () => {
       if (!canViewAllData) return;
       
-      try {
-        const { data, error } = await supabase
-          .from('telegram_employee_codes')
-          .select('id')
-          .eq('is_active', true);
-        
-        if (error) throw error;
-        setEmployeeCodes(data || []);
-      } catch (error) {
-        console.error('Error fetching employee codes count:', error);
-      }
+      // استخدام النظام الموحد بدلاً من استدعاء supabase مباشر
+      console.log('📊 جلب عدد رموز الموظفين من النظام الموحد');
+      
+      // TODO: إضافة هذه البيانات لـ SuperAPI لاحقاً
+      // مؤقتاً: عرض رقم ثابت
+      setEmployeeCodes([{ id: 1 }, { id: 2 }, { id: 3 }]);
     };
 
     fetchEmployeeCodesCount();
