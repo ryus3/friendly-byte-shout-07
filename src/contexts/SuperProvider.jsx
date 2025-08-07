@@ -168,7 +168,6 @@ export const SuperProvider = ({ children }) => {
         ...prev,
         expenses: filteredData.expenses || []
       }));
-      }));
       
     } catch (error) {
       console.error('❌ SuperProvider: خطأ في جلب البيانات:', error);
