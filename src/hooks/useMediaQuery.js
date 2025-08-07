@@ -1,12 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export const useMediaQuery = (query) => {
-  // Defensive check to ensure React hooks are available
-  if (!React || typeof useState !== 'function') {
-    console.error('React hooks not available in useMediaQuery');
-    return false;
-  }
-
   // Safe fallback for server-side rendering
   const getMatches = (query) => {
     if (typeof window === 'undefined') return false;
