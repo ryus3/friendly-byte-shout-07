@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
-import { useInventory } from '@/contexts/InventoryContext';
+import { useApp } from '@/contexts/UnifiedAppContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -25,7 +25,7 @@ import { toast } from '@/components/ui/use-toast';
 
 const ProductsPage = () => {
   const location = useLocation();
-  const { products, loading, addToCart, clearCart } = useInventory();
+  const { products, loading, computedData } = useApp();
   const { user, isAdmin, productPermissions, filterProductsByPermissions } = useAuth();
   const { hasPermission } = usePermissions();
   
@@ -196,8 +196,9 @@ const ProductsPage = () => {
   }, [permissionFilteredProducts, filters]);
   
   const handleCreateOrder = (product, variant, quantity) => {
-    clearCart();
-    addToCart(product, variant, quantity, false);
+    // TODO: تحديث هذا ليستخدم النظام الجديد
+    // clearCart();
+    // addToCart(product, variant, quantity, false);
     setDialogs(prev => ({ ...prev, productVariant: false, quickOrder: true }));
     setSelectedProduct(null);
   };
@@ -359,7 +360,8 @@ const ProductsPage = () => {
           open={dialogs.quickOrder}
           onOpenChange={(open) => setDialogs(prev => ({ ...prev, quickOrder: open }))}
           onOrderCreated={() => {
-            clearCart();
+            // TODO: تحديث هذا ليستخدم النظام الجديد
+            // clearCart();
             setDialogs(prev => ({ ...prev, quickOrder: false }));
           }}
         />
