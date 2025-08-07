@@ -68,11 +68,17 @@ const iconMap = {
 export function Toaster() {
 	let toasts = [];
 	
+	// فحص أمان شامل لتجنب أخطاء hooks
 	try {
-		const result = useToast();
-		toasts = result?.toasts || [];
+		// التأكد من أن React context متاح
+		if (typeof React !== 'undefined' && React.useState) {
+			const result = useToast();
+			toasts = Array.isArray(result?.toasts) ? result.toasts : [];
+		} else {
+			console.warn('Toaster: React context not available, using empty toasts');
+		}
 	} catch (error) {
-		console.warn('Toaster component failed to get toasts, using empty array');
+		console.warn('Toaster component failed to get toasts:', error.message);
 		toasts = [];
 	}
 

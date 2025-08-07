@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 
 const TOAST_LIMIT = 1
 
@@ -66,11 +66,20 @@ export const toast = ({ ...props }) => {
 }
 
 export function useToast() {
-  // حماية من null React context
+  // فحص إذا كنا داخل React component قبل استخدام hooks
+  if (typeof React === 'undefined' || typeof React.useState !== 'function') {
+    console.warn('useToast: React hooks not available, returning fallback');
+    return {
+      toast,
+      toasts: [],
+    };
+  }
+  
+  // حماية من null React context  
   let state, setState;
   
   try {
-    [state, setState] = useState(toastStore.getState());
+    [state, setState] = useState(() => toastStore.getState());
   } catch (error) {
     console.warn('useToast hook called outside React context, using fallback');
     return {
