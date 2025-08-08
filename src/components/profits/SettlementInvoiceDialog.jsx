@@ -146,43 +146,30 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                             <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
                                              <p className="text-sm sm:text-base md:text-xl font-bold text-slate-800 dark:text-slate-100">
                                                  {(() => {
-                                                   // استخدام البيانات الحقيقية للفاتورة أولاً مع إعطاء الأولوية لتاريخ التسوية
-                                                   const realData = realInvoiceData;
-                                                   let dateToShow;
+                                                   // أولاً: نستخدم settlement_date الحقيقي فقط إن وجد، ثم الاحتياط من كائن الفاتورة
+                                                   const settlementDateStr = realInvoiceData?.settlement_date || invoice?.settlement_date || null;
+                                                   const createdAtStr = realInvoiceData?.created_at || invoice?.created_at || null;
+                                                   let dateToShow = null;
                                                    
-                                                   // أولوية التاريخ: settlement_date من البيانات الحقيقية أولاً
-                                                   if (realData?.settlement_date) {
-                                                     dateToShow = new Date(realData.settlement_date);
-                                                   } else if (realData?.created_at) {
-                                                     dateToShow = new Date(realData.created_at);
-                                                   } else if (invoice.settlement_date) {
-                                                     // احتياط من البيانات المُمررة
-                                                     dateToShow = new Date(invoice.settlement_date);
-                                                   } else if (invoice.created_at) {
-                                                     dateToShow = new Date(invoice.created_at);
-                                                   } else {
-                                                     dateToShow = new Date();
+                                                   if (settlementDateStr) {
+                                                     const parsed = parseISO(settlementDateStr);
+                                                     if (!isNaN(parsed.getTime())) dateToShow = parsed;
                                                    }
                                                    
-                                                   // التأكد من صحة التاريخ
-                                                   if (isNaN(dateToShow.getTime())) {
-                                                     dateToShow = new Date();
+                                                   // لا نعرض تاريخ اليوم أبداً كافتراضي؛ إن لم يوجد تاريخ صالح نستخدم created_at وإلا نعرض "غير محدد"
+                                                   if (!dateToShow && createdAtStr) {
+                                                     const parsedCreated = parseISO(createdAtStr);
+                                                     if (!isNaN(parsedCreated.getTime())) dateToShow = parsedCreated;
                                                    }
                                                    
-                                                   console.log('🔥 تاريخ التسوية النهائي:', {
-                                                     realSettlementDate: realData?.settlement_date,
-                                                     realCreatedAt: realData?.created_at,
-                                                     invoiceSettlementDate: invoice.settlement_date,
-                                                     invoiceCreatedAt: invoice.created_at,
-                                                     finalDateUsed: dateToShow
-                                                   });
+                                                   if (!dateToShow) return 'غير محدد';
                                                    
                                                    try {
                                                       return formatInTimeZone(dateToShow, IRAQ_TIMEZONE, "dd MMMM yyyy - HH:mm", { locale: ar });
                                                     } catch (error) {
-                                                      console.error("خطأ في تنسيق التاريخ:", error, "البيانات الحقيقية:", realData);
-                                                      return formatInTimeZone(new Date(), IRAQ_TIMEZONE, "dd MMMM yyyy - HH:mm", { locale: ar });
-                                                   }
+                                                      console.error("خطأ في تنسيق التاريخ:", error, "البيانات:", { settlementDateStr, createdAtStr });
+                                                      return 'غير محدد';
+                                                    }
                                                  })()}
                                              </p>
                                         </div>
