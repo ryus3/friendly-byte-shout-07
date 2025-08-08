@@ -390,7 +390,7 @@ const filteredOrders = useMemo(() => {
     // فلتر الأرشيف والتسوية
     const isManuallyArchived = (order.isarchived === true || order.isArchived === true) && order.status !== 'completed';
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    const isSettled = order.status === 'completed' && profitRecord?.status === 'settled';
+    const isSettled = order.status === 'completed' && (profitRecord?.status === 'settled' || profitRecord?.settled_at);
 
     let archiveMatch;
     if (showSettlementArchive) {
@@ -564,7 +564,7 @@ const filteredOrders = useMemo(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
+      return employeeMatch && o.status === 'completed' && (profitRecord?.status === 'settled' || profitRecord?.settled_at);
     }).length;
 
     return {
