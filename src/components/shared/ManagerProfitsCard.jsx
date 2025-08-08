@@ -75,24 +75,44 @@ const ManagerProfitsCard = ({
     console.log('🔍 ManagerProfitsCard: حساب أرباح المدير من الموظفين:', {
       totalOrders: finalOrders.length,
       deliveredOrders: deliveredOrders.length,
-      excludedAdminId: ADMIN_ID
+      excludedAdminId: ADMIN_ID,
+      profitsCount: finalProfits?.length || 0
     });
 
     // أرباح المدير من الموظفين - استخدام البيانات الحقيقية من جدول profits
     const totalManagerProfits = deliveredOrders.reduce((sum, order) => {
       // البحث عن سجل الربح الحقيقي
       const profitRecord = finalProfits?.find(p => p.order_id === order.id);
-      if (profitRecord) {
+      if (profitRecord && (profitRecord.status === 'settled' || profitRecord.settled_at || order.is_archived)) {
         // ربح النظام = إجمالي الربح - ربح الموظف
         const systemProfit = (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0);
         return sum + systemProfit;
       }
+
+      // 🔁 احتساب بديل في حال عدم وجود سجل أرباح - بدون فقدان بيانات
+      if (order.items && Array.isArray(order.items)) {
+        const totalProfit = order.items.reduce((acc, item) => {
+          const qty = item.quantity || 1;
+          const price = item.price ?? item.selling_price ?? 0;
+          const cost = item.cost_price ?? 0;
+          return acc + (price - cost) * qty;
+        }, 0);
+
+        const employeeProfit = typeof finalCalculateProfit === 'function'
+          ? order.items.reduce((acc, item) => acc + (finalCalculateProfit(item, order.created_by) || 0), 0)
+          : 0;
+
+        const systemProfit = totalProfit - employeeProfit;
+        return sum + Math.max(0, systemProfit);
+      }
+
       return sum;
     }, 0);
 
     console.log('✅ ManagerProfitsCard: النتيجة النهائية:', {
       managerProfitFromEmployees: totalManagerProfits,
-      deliveredOrdersCount: deliveredOrders.length
+      deliveredOrdersCount: deliveredOrders.length,
+      usedProfitsRecords: finalProfits?.length || 0
     });
 
     return totalManagerProfits;

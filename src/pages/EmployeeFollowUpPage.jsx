@@ -5,7 +5,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useProfits } from '@/contexts/ProfitsContext';
+
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -38,9 +38,10 @@ const EmployeeFollowUpPage = () => {
     refetchProducts, 
     settlementInvoices, 
     deleteOrders,
-    expenses
+    expenses,
+    profits
   } = useInventory();
-  const { profits } = useProfits();
+  
   const [searchParams] = useSearchParams();
   
   // استخراج المعاملات من URL مباشرة
@@ -383,14 +384,16 @@ const filteredOrders = useMemo(() => {
     let profitStatusMatch = true;
     if (filters.profitStatus !== 'all') {
       const profitRecord = profits?.find(p => p.order_id === order.id);
-      const profitStatus = profitRecord ? (profitRecord.settled_at ? 'settled' : 'pending') : 'pending';
+      const isArchived = (order.is_archived === true || order.isArchived === true || order.isarchived === true);
+      const isSettled = profitRecord ? (profitRecord.settled_at || profitRecord.status === 'settled') : false;
+      const profitStatus = (isSettled || isArchived) ? 'settled' : 'pending';
       profitStatusMatch = profitStatus === filters.profitStatus;
     }
 
     // فلتر الأرشيف والتسوية
-    const isManuallyArchived = (order.isarchived === true || order.isArchived === true) && order.status !== 'completed';
+    const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    const isSettled = order.status === 'completed' && (profitRecord?.status === 'settled' || profitRecord?.settled_at);
+    const isSettled = order.status === 'completed' && ((profitRecord?.status === 'settled' || profitRecord?.settled_at) || (order.is_archived === true || order.isArchived === true || order.isarchived === true));
 
     let archiveMatch;
     if (showSettlementArchive) {
