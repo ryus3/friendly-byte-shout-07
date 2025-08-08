@@ -156,7 +156,7 @@ export const SuperProvider = ({ children }) => {
         } : null
       });
       
-      // معالجة بيانات المنتجات لضمان ربط المخزون
+      // معالجة بيانات المنتجات وضمان ربط المخزون + توحيد بنية الطلبات (items)
       const processedData = {
         ...filteredData,
         products: (filteredData.products || []).map(product => ({
@@ -176,6 +176,21 @@ export const SuperProvider = ({ children }) => {
               inventory: inventoryData
             }
           })
+        })),
+        // توحيد items بحيث تعتمد كل المكونات عليه (OrderCard, ManagerProfitsCard)
+        orders: (filteredData.orders || []).map(o => ({
+          ...o,
+          items: Array.isArray(o.order_items)
+            ? o.order_items.map(oi => ({
+                quantity: oi.quantity || 1,
+                price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
+                cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
+                productname: oi.products?.name,
+                product_name: oi.products?.name,
+                sku: oi.product_variants?.id,
+                product_variants: oi.product_variants
+              }))
+            : (o.items || [])
         }))
       };
       
@@ -410,6 +425,90 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
+  // تسوية مستحقات الموظف - بديل متوافق مع EmployeeSettlementCard
+  const settleEmployeeProfits = useCallback(async (employeeId, totalSettlement = 0, employeeName = '', orderIds = []) => {
+    try {
+      if (!orderIds || orderIds.length === 0) {
+        throw new Error('لا توجد طلبات لتسويتها');
+      }
+
+      const now = new Date().toISOString();
+      const ordersMap = new Map((allData.orders || []).map(o => [o.id, o]));
+
+      const calcOrderProfit = (order) => {
+        if (!order) return 0;
+        const items = Array.isArray(order.items) ? order.items : [];
+        return items.reduce((sum, it) => {
+          const qty = it.quantity || 1;
+          const price = it.price ?? it.selling_price ?? it.product_variants?.price ?? 0;
+          const cost = it.cost_price ?? it.product_variants?.cost_price ?? 0;
+          return sum + (price - cost) * qty;
+        }, 0);
+      };
+
+      const perOrderBase = orderIds.map(id => ({ id, amount: calcOrderProfit(ordersMap.get(id)) }));
+      const baseSum = perOrderBase.reduce((s, r) => s + (r.amount || 0), 0);
+
+      // توزيع مستحقات الموظف على الطلبات بشكل نسبي حسب ربح الطلب
+      const perOrderEmployee = perOrderBase.map(r => ({
+        id: r.id,
+        employee: baseSum > 0 ? Math.round((totalSettlement * (r.amount || 0)) / baseSum) : Math.round((totalSettlement || 0) / orderIds.length)
+      }));
+
+      // جلب السجلات الحالية
+      const { data: existing, error: existingErr } = await supabase
+        .from('profits')
+        .select('id, order_id, profit_amount, employee_profit, employee_id, status, settled_at')
+        .in('order_id', orderIds);
+      if (existingErr) throw existingErr;
+      const existingMap = new Map((existing || []).map(e => [e.order_id, e]));
+
+      // تحضير upsert
+      const upserts = orderIds.map(orderId => {
+        const order = ordersMap.get(orderId);
+        const existingRow = existingMap.get(orderId);
+        const base = perOrderBase.find(x => x.id === orderId)?.amount || 0;
+        const emp = perOrderEmployee.find(x => x.id === orderId)?.employee || 0;
+        return {
+          ...(existingRow ? { id: existingRow.id } : {}),
+          order_id: orderId,
+          employee_id: employeeId || order?.created_by,
+          total_revenue: order?.final_amount || order?.total_amount || 0,
+          total_cost: null,
+          profit_amount: base,
+          employee_profit: emp,
+          status: 'settled',
+          settled_at: now
+        };
+      });
+
+      const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
+      if (upsertErr) throw upsertErr;
+
+      // أرشفة الطلبات بعد التسوية + تثبيت استلام الفاتورة
+      const { error: ordersErr } = await supabase
+        .from('orders')
+        .update({ is_archived: true, receipt_received: true, receipt_received_at: now, receipt_received_by: user?.user_id || user?.id })
+        .in('id', orderIds);
+      if (ordersErr) throw ordersErr;
+
+      // تحديث الذاكرة وCache
+      superAPI.invalidate('all_data');
+      await fetchAllData();
+
+      toast({
+        title: 'تم دفع مستحقات الموظف',
+        description: `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length}`,
+        variant: 'success'
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('❌ خطأ في تسوية مستحقات الموظف:', error);
+      toast({ title: 'خطأ في التسوية', description: error.message, variant: 'destructive' });
+      return { success: false, error: error.message };
+    }
+  }, [allData.orders, user, fetchAllData]);
   // دوال أخرى مطلوبة للتوافق
   const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
