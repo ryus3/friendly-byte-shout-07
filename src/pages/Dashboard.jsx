@@ -466,17 +466,17 @@ const Dashboard = () => {
             pendingSalesOrders,
             // إذا لم يكن بإمكان المستخدم رؤية جميع البيانات، فلترة البيانات للموظف فقط
             topCustomers: (() => {
-                const customers = canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                const customers = canViewAllData ? getTopCustomers(visibleOrders) : getTopCustomers(visibleOrders.filter(o => o.created_by === getUserUUID(user)));
                 console.log('🔥 Dashboard - Top Customers Result:', customers);
                 return customers;
             })(),
             topProvinces: (() => {
-                const provinces = canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                const provinces = canViewAllData ? getTopProvinces(visibleOrders) : getTopProvinces(visibleOrders.filter(o => o.created_by === getUserUUID(user)));
                 console.log('🔥 Dashboard - Top Provinces Result:', provinces);
                 return provinces;
             })(),
             topProducts: (() => {
-                const products = canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === user?.id || o.created_by === user?.user_id));
+                const products = canViewAllData ? getTopProducts(visibleOrders) : getTopProducts(visibleOrders.filter(o => o.created_by === getUserUUID(user)));
                 console.log('🔥 Dashboard - Top Products Result:', products);
                 return products;
             })(),
@@ -520,7 +520,7 @@ const Dashboard = () => {
             ? allProfits 
             : allProfits.filter(profit => {
                 const employeeId = profit.employee_id;
-                return employeeId === user?.id || employeeId === user?.user_id;
+                return employeeId === getUserUUID(user);
             });
             
         const personalPending = userProfits.filter(p => p.status === 'pending');
@@ -696,21 +696,21 @@ const Dashboard = () => {
             <TopCustomersDialog 
               open={topCustomersOpen} 
               onOpenChange={setTopCustomersOpen} 
-              employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
+              employeeId={canViewAllData ? null : getUserUUID(user)}
               customersData={dashboardData.topCustomers}
             />
             
             <TopProvincesDialog 
               open={topProvincesOpen} 
               onOpenChange={setTopProvincesOpen} 
-              employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
+              employeeId={canViewAllData ? null : getUserUUID(user)}
               provincesData={dashboardData.topProvinces}
             />
             
             <TopProductsDialog 
               open={topProductsOpen} 
               onOpenChange={setTopProductsOpen} 
-              employeeId={canViewAllData ? null : (user?.id || user?.user_id)}
+              employeeId={canViewAllData ? null : getUserUUID(user)}
               productsData={dashboardData.topProducts}
             />
         </>
