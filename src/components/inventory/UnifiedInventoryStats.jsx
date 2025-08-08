@@ -6,14 +6,13 @@ import DepartmentOverviewCards from './DepartmentOverviewCards';
  * مكون موحد لعرض إحصائيات المخزون وكروت الأقسام
  * يستخدم النظام الموحد لجلب البيانات
  */
-const UnifiedInventoryStats = ({ onFilterChange, onDepartmentFilter }) => {
+const UnifiedInventoryStats = ({ onFilterChange, onDepartmentFilter, extraCard = null }) => {
   return (
     <div className="space-y-6">
       {/* إحصائيات سريعة */}
       <InventoryStats onFilterChange={onFilterChange} />
-      
-      {/* كروت الأقسام */}
-      <DepartmentOverviewCards onDepartmentFilter={onDepartmentFilter} />
+      {/* كروت الأقسام + بطاقة إضافية إن وجدت */}
+      <DepartmentOverviewCards onDepartmentFilter={onDepartmentFilter} extraCard={extraCard} />
     </div>
   );
 };

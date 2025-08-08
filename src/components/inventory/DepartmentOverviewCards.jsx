@@ -12,7 +12,7 @@ import {
   Archive
 } from 'lucide-react';
 
-const DepartmentOverviewCards = ({ onDepartmentFilter }) => {
+const DepartmentOverviewCards = ({ onDepartmentFilter, extraCard = null }) => {
   const { stats, loading } = useInventoryStats();
   const departments = stats.departments || [];
 

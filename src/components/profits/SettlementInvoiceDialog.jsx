@@ -146,30 +146,17 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                             <p className="text-sm text-slate-600 dark:text-slate-400">تاريخ التسوية</p>
                                              <p className="text-sm sm:text-base md:text-xl font-bold text-slate-800 dark:text-slate-100">
                                                  {(() => {
-                                                   // أولاً: نستخدم settlement_date الحقيقي فقط إن وجد، ثم الاحتياط من كائن الفاتورة
+                                                   // يعتمد فقط على settlement_date من جدول الفاتورة
                                                    const settlementDateStr = realInvoiceData?.settlement_date || invoice?.settlement_date || null;
-                                                   const createdAtStr = realInvoiceData?.created_at || invoice?.created_at || null;
-                                                   let dateToShow = null;
-                                                   
-                                                   if (settlementDateStr) {
-                                                     const parsed = parseISO(settlementDateStr);
-                                                     if (!isNaN(parsed.getTime())) dateToShow = parsed;
-                                                   }
-                                                   
-                                                   // لا نعرض تاريخ اليوم أبداً كافتراضي؛ إن لم يوجد تاريخ صالح نستخدم created_at وإلا نعرض "غير محدد"
-                                                   if (!dateToShow && createdAtStr) {
-                                                     const parsedCreated = parseISO(createdAtStr);
-                                                     if (!isNaN(parsedCreated.getTime())) dateToShow = parsedCreated;
-                                                   }
-                                                   
-                                                   if (!dateToShow) return 'غير محدد';
-                                                   
+                                                   if (!settlementDateStr) return 'غير محدد';
                                                    try {
-                                                      return formatInTimeZone(dateToShow, IRAQ_TIMEZONE, "dd MMMM yyyy - HH:mm", { locale: ar });
-                                                    } catch (error) {
-                                                      console.error("خطأ في تنسيق التاريخ:", error, "البيانات:", { settlementDateStr, createdAtStr });
-                                                      return 'غير محدد';
-                                                    }
+                                                     const d = parseISO(settlementDateStr);
+                                                     if (isNaN(d.getTime())) return 'غير محدد';
+                                                     return formatInTimeZone(d, IRAQ_TIMEZONE, "dd MMMM yyyy - HH:mm", { locale: ar });
+                                                   } catch (e) {
+                                                     console.error('تنسيق تاريخ التسوية فشل:', e);
+                                                     return 'غير محدد';
+                                                   }
                                                  })()}
                                              </p>
                                         </div>

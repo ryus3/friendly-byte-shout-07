@@ -83,19 +83,8 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
   return (
     <div className="bg-card rounded-xl p-4 border space-y-4 flex-grow">
         <div className="flex flex-col gap-4">
-          {/* الصف الأول للهاتف: البحث وزر QR */}
           <div className="flex items-center gap-2">
-            <div className="relative flex-grow">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                placeholder="البحث..."
-                value={filters.searchTerm}
-                onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                className="pr-10"
-              />
-            </div>
-            
-            {/* QR Scanner button في طرف الشريط */}
+            {/* زر قارئ QR أولاً (عكس الترتيب السابق) */}
             <Button
               variant="outline"
               size="icon"
@@ -105,6 +94,17 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
             >
               <QrCode className="w-5 h-5" />
             </Button>
+
+            {/* حقل البحث */}
+            <div className="relative flex-grow">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="البحث..."
+                value={filters.searchTerm}
+                onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                className="pr-10"
+              />
+            </div>
           </div>
           
           {/* الصف الثاني: فلاتر المخزون والأقسام */}
