@@ -1,7 +1,5 @@
 
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSalesStats } from '@/hooks/useSalesStats';
@@ -82,19 +80,6 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
         </Badge>
       </div>
       
-      {/* زر التعديل مخفي إذا لم تُمرر الوظيفة */}
-      {onEditStock && (
-        <div className="col-span-1 text-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onEditStock(variant)}
-            className="w-full md:w-auto"
-          >
-            <Edit className="h-3 w-3 md:h-4 md:w-4" />
-          </Button>
-        </div>
-      )}
     </div>
   );
 });
