@@ -509,13 +509,35 @@ const filteredOrders = useMemo(() => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة (من المصاريف المحاسبية) - فورية بدون تحميل
+    // المستحقات المدفوعة (من المصاريف المحاسبية) - مفلترة حسب الفترة الزمنية المحددة
     const paidDues = expenses && Array.isArray(expenses)
-      ? expenses.filter(expense => 
-          expense.category === 'مستحقات الموظفين' && 
-          expense.expense_type === 'system' && 
-          expense.status === 'approved'
-        ).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+      ? expenses.filter(expense => {
+          const isPaidDues = (
+            expense.category === 'مستحقات الموظفين' &&
+            expense.expense_type === 'system' &&
+            expense.status === 'approved'
+          );
+          if (!isPaidDues) return false;
+
+          // فلترة حسب الفترة الزمنية المختارة
+          if (filters.timePeriod === 'all') return true;
+          const createdAt = expense.created_at || expense.date || expense.expense_date;
+          if (!createdAt) return false;
+          const expenseDate = new Date(createdAt);
+          const now = new Date();
+          switch (filters.timePeriod) {
+            case 'today':
+              return expenseDate.toDateString() === now.toDateString();
+            case 'week':
+              return expenseDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            case 'month':
+              return expenseDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            case '3months':
+              return expenseDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            default:
+              return true;
+          }
+        }).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
       : 0;
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
@@ -868,7 +890,7 @@ const filteredOrders = useMemo(() => {
             format="currency" 
           />
           <ManagerProfitsCard 
-            orders={filteredOrders || orders || []}
+            orders={orders || []}
             allUsers={allUsers || []}
             calculateProfit={calculateProfit}
             profits={profits || []}
