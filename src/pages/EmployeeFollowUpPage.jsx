@@ -359,9 +359,8 @@ const EmployeeFollowUpPage = () => {
 
     const filtered = orders.filter(order => {
       if (!order) return false;
-      
-      // استبعاد طلبات المدير الرئيسي
-      if (order.created_by === ADMIN_ID) return false;
+      // تضمين طلبات المدير فقط إن كانت منسوبة لموظف
+      if (order.created_by === ADMIN_ID && !(order.employee_id || order.employee_code)) return false;
       
       // فلتر الفترة الزمنية
       if (!filterByTimePeriod(order)) return false;
@@ -413,7 +412,7 @@ const EmployeeFollowUpPage = () => {
       return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
     }).map(order => ({
       ...order,
-      created_by_name: usersMap.get(order.created_by) || 'غير معروف'
+      created_by_name: usersMap.get(order.employee_id) || usersMap.get(order.created_by) || 'غير معروف'
     }));
 
     console.log('✅ الطلبات المفلترة النهائية:', {
@@ -468,8 +467,8 @@ const EmployeeFollowUpPage = () => {
     const statsOrders = orders.filter(order => {
       if (!order) return false;
       
-      // استبعاد طلبات المدير
-      if (order.created_by === ADMIN_ID) return false;
+      // تضمين طلبات المدير فقط إن كانت منسوبة لموظف
+      if (order.created_by === ADMIN_ID && !(order.employee_id || order.employee_code)) return false;
       
       // فلتر الموظف
       let employeeMatch = true;
@@ -699,12 +698,13 @@ const EmployeeFollowUpPage = () => {
     });
     
     selectedOrdersData.forEach(order => {
+      const employeeKey = order.employee_id || order.employee_code || order.created_by;
       const employee = employees.find(emp => 
-        emp.user_id === order.created_by || 
-        emp.id === order.created_by || 
-        emp.employee_code === order.created_by
+        emp.user_id === employeeKey || 
+        emp.id === employeeKey || 
+        emp.employee_code === employeeKey
       );
-      const groupKey = employee ? employee.user_id : order.created_by;
+      const groupKey = employee ? employee.user_id : employeeKey;
 
       if (!employeeGroups[groupKey]) {
         if (employee) {
