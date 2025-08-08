@@ -422,6 +422,8 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const [showPreview, setShowPreview] = useState(false);
   const [dateRange, setDateRange] = useState(null);
   const [settledProfits, setSettledProfits] = useState([]);
+  const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
+  const [loadingRealInvoices, setLoadingRealInvoices] = useState(false);
   // استرجاع إعداد الفترة من localStorage أو استخدام الافتراضي "all"
   // إذا تم تمرير فترة من الخارج، استخدمها، وإلا استخدم المحفوظ محلياً
   const [timePeriod, setTimePeriod] = useState(() => {
