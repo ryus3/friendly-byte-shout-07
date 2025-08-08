@@ -348,21 +348,24 @@ const Dashboard = () => {
         }, 0);
         const grossProfit = salesWithoutDelivery - cogs;
         
-        // المصاريف العامة - استبعاد جميع المصاريف النظامية ومستحقات الموظفين
         const generalExpenses = expensesInRange.filter(e => {
           // استبعاد جميع المصاريف النظامية
           if (e.expense_type === 'system') return false;
-          
-          // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
-          if (e.category === 'مستحقات الموظفين') return false;
-          
-          // استبعاد مصاريف الشراء المرتبطة بالمشتريات
-          if (e.related_data?.category === 'شراء بضاعة') return false;
-          
+          // استبعاد مستحقات الموظفين من أي حقل
+          if (
+            e.category === 'مستحقات الموظفين' ||
+            e.related_data?.category === 'مستحقات الموظفين' ||
+            e.metadata?.category === 'مستحقات الموظفين'
+          ) return false;
+          // استبعاد مصاريف الشراء من أي حقل
+          if (
+            e.related_data?.category === 'شراء بضاعة' ||
+            e.metadata?.category === 'شراء بضاعة'
+          ) return false;
           return true;
         }).reduce((sum, e) => sum + e.amount, 0);
         
-        const employeeSettledDues = expensesInRange.filter(e => e.related_data?.category === 'مستحقات الموظفين').reduce((sum, e) => sum + e.amount, 0);
+        const employeeSettledDues = expensesInRange.filter(e => (e.category === 'مستحقات الموظفين' || e.related_data?.category === 'مستحقات الموظفين' || e.metadata?.category === 'مستحقات الموظفين')).reduce((sum, e) => sum + e.amount, 0);
         
         // صافي الربح = مجمل الربح - المصاريف العامة (لا يشمل المستحقات المدفوعة)
         const netProfit = grossProfit - generalExpenses;

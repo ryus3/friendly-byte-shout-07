@@ -265,11 +265,20 @@ const UnifiedProfitDisplay = ({
     
     // المصاريف العامة (استبعاد المصاريف النظامية ومستحقات الموظفين)
     const generalExpenses = expensesInRange.filter(e => {
-      if (e.expense_type === 'system') return false;
-      if (e.category === 'مستحقات الموظفين') return false;
-      if (e.related_data?.category === 'شراء بضاعة') return false;
-      if (e.related_data?.type === 'employee_settlement') return false;
-      if (e.related_data?.type === 'purchase') return false;
+      const isSystem = e.expense_type === 'system';
+      const isEmployeeDue = (
+        e.category === 'مستحقات الموظفين' ||
+        e.related_data?.category === 'مستحقات الموظفين' ||
+        e.metadata?.category === 'مستحقات الموظفين'
+      );
+      const isPurchaseRelated = (
+        e.related_data?.category === 'شراء بضاعة' ||
+        e.metadata?.category === 'شراء بضاعة'
+      );
+      if (isSystem) return false;
+      if (isEmployeeDue) return false;
+      if (isPurchaseRelated) return false;
+      if (e.status && e.status !== 'approved') return false;
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
     
@@ -283,11 +292,15 @@ const UnifiedProfitDisplay = ({
     
     // المستحقات المدفوعة - نفس منطق متابعة الموظفين (من المصاريف المحاسبية)
     const totalSettledDues = expensesInRange
-      .filter(expense => 
-        expense.category === 'مستحقات الموظفين' && 
-        expense.expense_type === 'system' && 
-        expense.status === 'approved'
-      )
+      .filter(expense => {
+        const isEmployeeDue = (
+          expense.category === 'مستحقات الموظفين' ||
+          expense.related_data?.category === 'مستحقات الموظفين' ||
+          expense.metadata?.category === 'مستحقات الموظفين'
+        );
+        const isApproved = expense.status ? expense.status === 'approved' : true;
+        return isApproved && isEmployeeDue;
+      })
       .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
     
     console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {

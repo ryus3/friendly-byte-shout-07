@@ -275,28 +275,37 @@ const ProfitsSummaryPage = () => {
                 console.log('🚫 [DEBUG] استبعاد مصروف نظامي:', e.category, e.amount);
                 return false;
             }
-            
-            // استبعاد مستحقات الموظفين حتى لو لم تكن نظامية
-            if (e.category === 'مستحقات الموظفين') {
+            // استبعاد مستحقات الموظفين من أي حقل
+            if (
+                e.category === 'مستحقات الموظفين' ||
+                e.related_data?.category === 'مستحقات الموظفين' ||
+                e.metadata?.category === 'مستحقات الموظفين'
+            ) {
                 console.log('🚫 [DEBUG] استبعاد مستحقات موظفين:', e.amount);
                 return false;
             }
-            
-            // استبعاد مصاريف الشراء المرتبطة بالمشتريات
-            if (e.related_data?.category === 'شراء بضاعة') {
+            // استبعاد مصاريف الشراء المرتبطة بالمشتريات من أي حقل
+            if (
+                e.related_data?.category === 'شراء بضاعة' ||
+                e.metadata?.category === 'شراء بضاعة'
+            ) {
                 console.log('🚫 [DEBUG] استبعاد مصاريف شراء:', e.amount);
                 return false;
             }
-            
-            console.log('✅ [DEBUG] مصروف عام صحيح:', e.category, e.amount);
             return true;
         }).reduce((sum, e) => sum + e.amount, 0);
 
         console.log('📊 [DEBUG] النتائج في ملخص الأرباح:', { generalExpenses });
 
-        const employeeSettledDues = expensesInPeriod.filter(e => 
-            e.related_data?.category === 'مستحقات الموظفين'
-        ).reduce((sum, e) => sum + e.amount, 0);
+        const employeeSettledDues = expensesInPeriod.filter(e => {
+            const isEmployeeDue = (
+                e.category === 'مستحقات الموظفين' ||
+                e.related_data?.category === 'مستحقات الموظفين' ||
+                e.metadata?.category === 'مستحقات الموظفين'
+            );
+            const isApproved = e.status ? e.status === 'approved' : true;
+            return isApproved && isEmployeeDue;
+        }).reduce((sum, e) => sum + e.amount, 0);
 
         const totalExpenses = generalExpenses + employeeSettledDues;
 

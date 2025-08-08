@@ -167,16 +167,32 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
 
       // المصاريف العامة
       const generalExpenses = expensesInRange.filter(e => {
-        if (e.expense_type === 'system') return false;
-        if (e.category === 'مستحقات الموظفين') return false;
-        if (e.related_data?.category === 'شراء بضاعة') return false;
+        const isSystem = e.expense_type === 'system';
+        const isEmployeeDue = (
+          e.category === 'مستحقات الموظفين' ||
+          e.related_data?.category === 'مستحقات الموظفين' ||
+          e.metadata?.category === 'مستحقات الموظفين'
+        );
+        const isPurchaseRelated = (
+          e.related_data?.category === 'شراء بضاعة' ||
+          e.metadata?.category === 'شراء بضاعة'
+        );
+        if (isSystem) return false;
+        if (isEmployeeDue) return false;
+        if (isPurchaseRelated) return false;
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
       // مستحقات الموظفين المسددة
-      const employeeSettledDues = expensesInRange.filter(e => 
-        e.related_data?.category === 'مستحقات الموظفين'
-      ).reduce((sum, e) => sum + (e.amount || 0), 0);
+      const employeeSettledDues = expensesInRange.filter(e => {
+        const isEmployeeDue = (
+          e.category === 'مستحقات الموظفين' ||
+          e.related_data?.category === 'مستحقات الموظفين' ||
+          e.metadata?.category === 'مستحقات الموظفين'
+        );
+        const isApproved = e.status ? e.status === 'approved' : true;
+        return isApproved && isEmployeeDue;
+      }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
       // صافي الربح
       const netProfit = systemProfit - generalExpenses;

@@ -94,14 +94,22 @@ const AdvancedAccountingSystem = () => {
     const grossProfit = salesWithoutDelivery - cogs;
     const grossProfitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
 
-    // النفقات التشغيلية
     const operatingExpenses = filteredExpenses
-      .filter(e => e.related_data?.category !== 'مستحقات الموظفين' && e.related_data?.category !== 'شراء بضاعة')
+      .filter(e => (
+        e.related_data?.category !== 'مستحقات الموظفين' &&
+        e.metadata?.category !== 'مستحقات الموظفين' &&
+        e.related_data?.category !== 'شراء بضاعة' &&
+        e.metadata?.category !== 'شراء بضاعة'
+      ))
       .reduce((sum, e) => sum + (e.amount || 0), 0);
 
     // مستحقات الموظفين
     const employeeExpenses = filteredExpenses
-      .filter(e => e.related_data?.category === 'مستحقات الموظفين')
+      .filter(e => (
+        e.category === 'مستحقات الموظفين' ||
+        e.related_data?.category === 'مستحقات الموظفين' ||
+        e.metadata?.category === 'مستحقات الموظفين'
+      ))
       .reduce((sum, e) => sum + (e.amount || 0), 0);
 
     // مشتريات البضاعة

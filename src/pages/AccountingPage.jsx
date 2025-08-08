@@ -306,8 +306,15 @@ const AccountingPage = () => {
         return accounting.expenses.filter(expense => {
             if (!filterByDate(expense.transaction_date)) return false;
             if (expense.expense_type === 'system') return false;
-            if (expense.category === 'مستحقات الموظفين') return false;
-            if (expense.related_data?.category === 'شراء بضاعة') return false;
+            if (
+                expense.category === 'مستحقات الموظفين' ||
+                expense.related_data?.category === 'مستحقات الموظفين' ||
+                expense.metadata?.category === 'مستحقات الموظفين'
+            ) return false;
+            if (
+                expense.related_data?.category === 'شراء بضاعة' ||
+                expense.metadata?.category === 'شراء بضاعة'
+            ) return false;
             return true;
         });
     }, [accounting?.expenses, calculatedDateRange, selectedTimePeriod]);
@@ -431,7 +438,6 @@ const AccountingPage = () => {
                         </CardHeader>
                         <CardContent className="flex flex-col justify-center gap-4">
                             <Button variant="outline" className="w-full" onClick={() => setDialogs(d => ({...d, settledDues: true}))}>
-                                <CheckCircle className="w-4 h-4 ml-2 text-green-500"/>
                                 <span>المستحقات المدفوعة:</span>
                                 <span className="font-bold mr-2">{(unifiedProfitData?.employeeSettledDues || 0).toLocaleString()} د.ع</span>
                             </Button>
