@@ -249,7 +249,7 @@ const Dashboard = () => {
         
         return canViewAllData 
             ? orders 
-            : orders.filter(order => order.created_by === getUserUUID(user));
+            : orders.filter(order => order.created_by === user?.id || order.created_by === user?.user_id);
     }, [orders, canViewAllData, user?.id, user?.user_id]);
     
     const [userEmployeeCode, setUserEmployeeCode] = useState(null);
@@ -303,7 +303,7 @@ const Dashboard = () => {
 
         // فلترة الطلبات حسب صلاحيات المستخدم
         const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
-            order.created_by === getUserUUID(user)
+            order.created_by === user?.id || order.created_by === user?.user_id
         )) : [];
         
         console.log('🔥 Dashboard - Orders for Analysis:', {

@@ -36,9 +36,11 @@ const filterDataByEmployeeCode = (data, user) => {
   const userUUID = getUserUUID(user);
   const employeeCode = getEmployeeCode(user);
   const isAdmin = user.is_admin || ['super_admin', 'admin', 'manager'].includes(user.role);
+  const ids = Array.from(new Set([userUUID, user?.id, user?.user_id].filter(Boolean)));
 
   console.log('🔍 SuperProvider - المستخدم:', {
     uuid: userUUID,
+    alt_ids: ids,
     employee_code: employeeCode,
     role: user.role,
     is_admin: user.is_admin
@@ -55,7 +57,7 @@ const filterDataByEmployeeCode = (data, user) => {
     return data;
   }
 
-  const byUUID = (item, fields = []) => fields.some(f => item && item[f] && item[f] === userUUID);
+  const byUUID = (item, fields = []) => fields.some(f => item && ids.includes(item[f]));
   const byCode = (item, fields = []) => fields.some(f => item && item[f] && item[f] === employeeCode);
 
   const filtered = {
