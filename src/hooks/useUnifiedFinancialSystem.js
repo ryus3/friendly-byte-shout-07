@@ -124,7 +124,7 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
       };
 
       const safeOrders = applyTimeFilter(allOrders, (o) => o.created_at || o.delivered_at || o.updated_at);
-      const safeExpenses = applyTimeFilter(allExpenses, (e) => e.created_at || e.date || e.expense_date);
+      const safeExpenses = applyTimeFilter(allExpenses, (e) => e.created_at || e.transaction_date || e.date || e.expense_date);
 
       // 1. إجمالي الإيرادات
       const totalRevenue = safeOrders.reduce((sum, order) => {
@@ -155,12 +155,32 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
 
       // 6. المصاريف العامة (استثناء المستحقات)
       const generalExpenses = safeExpenses.filter(expense => {
-        return expense.expense_type !== 'system' || expense.category !== 'مستحقات الموظفين';
+        const isEmployeeDue = (
+          expense.category === 'مستحقات الموظفين' ||
+          expense.related_data?.category === 'مستحقات الموظفين' ||
+          expense.metadata?.category === 'مستحقات الموظفين'
+        );
+        const isSystem = expense.expense_type === 'system';
+        const isPurchaseRelated = (
+          expense.related_data?.category === 'شراء بضاعة' ||
+          expense.metadata?.category === 'شراء بضاعة'
+        );
+        if (isSystem) return false;
+        if (isEmployeeDue) return false;
+        if (isPurchaseRelated) return false;
+        if (expense.status && expense.status !== 'approved') return false;
+        return true;
       }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
       // 7. المستحقات المدفوعة
       const employeeDuesPaid = safeExpenses.filter(expense => {
-        return expense.expense_type === 'system' && expense.category === 'مستحقات الموظفين';
+        const isEmployeeDue = (
+          expense.category === 'مستحقات الموظفين' ||
+          expense.related_data?.category === 'مستحقات الموظفين' ||
+          expense.metadata?.category === 'مستحقات الموظفين'
+        );
+        const isApproved = expense.status ? expense.status === 'approved' : true;
+        return isApproved && isEmployeeDue;
       }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
       // 8. صافي ربح النظام

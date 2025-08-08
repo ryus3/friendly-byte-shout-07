@@ -132,16 +132,26 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
   const filteredExpenses = filterByDateRange(expenses, dateRange, 'transaction_date');
   
   return filteredExpenses.filter(expense => {
-    // استبعاد المصاريف النظامية
-    if (expense.expense_type === EXCLUDED_EXPENSE_TYPES.SYSTEM) return false;
-    
-    // استبعاد مستحقات الموظفين
-    if (expense.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES) return false;
-    
-    // استبعاد مصاريف الشراء (إذا كان هناك حقل metadata)
-    if (expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED) return false;
-    
-    return expense.status === 'approved';
+    const isSystemExpense = expense.expense_type === EXCLUDED_EXPENSE_TYPES.SYSTEM;
+    const isEmployeeDue = (
+      expense.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES ||
+      expense.related_data?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES ||
+      expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES
+    );
+    const isPurchaseRelated = (
+      expense.related_data?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED ||
+      expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.PURCHASE_RELATED
+    );
+
+    // استبعاد: مصاريف نظامية + مستحقات الموظفين + مصاريف الشراء
+    if (isSystemExpense) return false;
+    if (isEmployeeDue) return false;
+    if (isPurchaseRelated) return false;
+
+    // اعتماد الحالة إذا وُجدت فقط
+    if (expense.status && expense.status !== 'approved') return false;
+
+    return true;
   }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
 };
 
@@ -154,12 +164,13 @@ export const calculateEmployeeDuesPaid = (expenses, dateRange) => {
   const filteredExpenses = filterByDateRange(expenses, dateRange, 'transaction_date');
   
   return filteredExpenses.filter(expense => {
-    const isSystemEmployeeDue = expense.expense_type === EXCLUDED_EXPENSE_TYPES.SYSTEM && 
-                               expense.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES;
-    
-    const isMetadataEmployeeDue = expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES;
-    
-    return expense.status === 'approved' && (isSystemEmployeeDue || isMetadataEmployeeDue);
+    const isEmployeeDue = (
+      expense.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES ||
+      expense.related_data?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES ||
+      expense.metadata?.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES
+    );
+    const isApproved = expense.status ? expense.status === 'approved' : true;
+    return isApproved && isEmployeeDue;
   }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
 };
 
