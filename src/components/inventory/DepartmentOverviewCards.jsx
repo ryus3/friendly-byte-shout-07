@@ -15,11 +15,18 @@ import {
 const DepartmentOverviewCards = ({ onDepartmentFilter, extraCard = null }) => {
   const { stats, loading } = useInventoryStats();
   const departments = stats.departments || [];
-  // تحديد موضع قسم الأحذية لإدراج كرت الأرشيف بعده
+
+  // تحديد موضع قسم الأحذية لإدراج كرت لاحقًا
   const shoesIndex = departments.findIndex((d) => {
     const n = (d?.name || '').toLowerCase();
     return n.includes('أحذية') || n.includes('shoes');
   });
+  // تحديد موضع قسم المواد العامة لعكسه مع الأرشيف
+  const generalIndex = departments.findIndex((d) => {
+    const n = (d?.name || '').toLowerCase();
+    return n.includes('مواد عامة') || n.includes('general');
+  });
+  const generalDept = generalIndex >= 0 ? departments[generalIndex] : null;
 
   // أيقونات للأقسام المختلفة
   const getIconForDepartment = (name, index) => {
@@ -67,58 +74,12 @@ const DepartmentOverviewCards = ({ onDepartmentFilter, extraCard = null }) => {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {departments.map((dept, index) => {
           const IconComponent = getIconForDepartment(dept.name, index);
-          
-          return (
-            <React.Fragment key={`dept-${dept.id}`}>
-              <Card 
-                className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
-                onClick={() => onDepartmentFilter && onDepartmentFilter(dept)}
-              >
-                <CardContent className="p-4">
-                  <div className={`text-center space-y-3 bg-gradient-to-br ${getGradientForIndex(index)} text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between`}>
-                    {/* رقم القسم */}
-                    <div className="absolute top-2 right-2">
-                      <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
-                        {dept.display_order || (index + 1)}
-                      </Badge>
-                    </div>
-                    
-                    {/* الأيقونة */}
-                    <div className="flex justify-center">
-                      <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-                        <IconComponent className="w-8 h-8" />
-                      </div>
-                    </div>
-                    
-                    {/* اسم القسم */}
-                    <div>
-                      <h4 className="font-bold text-lg">{dept.name}</h4>
-                      {dept.description && (
-                        <p className="text-xs opacity-90 mt-1">{dept.description}</p>
-                      )}
-                    </div>
-                    
-                    {/* عدد المنتجات */}
-                    <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                      <div className="text-right">
-                        <p className="text-xl font-bold">{dept.product_count || 0}</p>
-                        <p className="text-white/80 text-xs">منتج</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-white/70">
-                        <Package className="w-4 h-4" />
-                        <span className="text-xs">متاح</span>
-                      </div>
-                    </div>
-                    
-                    {/* تأثير الخلفية */}
-                    <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                    <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
-                  </div>
-                </CardContent>
-              </Card>
+          const isGeneral = index === generalIndex;
 
-              {/* كرت أرشيف المنتجات أسفل كرت الأحذية مباشرة */}
-              {index === shoesIndex && (
+          return (
+            <React.Fragment key={`dept-${dept.id}-${index}`}>
+              {/* إن كان هذا موضع المواد العامة فنستبدله بكرت الأرشيف */}
+              {isGeneral ? (
                 <Card
                   className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
                   onClick={() => onDepartmentFilter && onDepartmentFilter({ id: 'archived', name: 'أرشيف المنتجات', archived: true })}
@@ -145,6 +106,97 @@ const DepartmentOverviewCards = ({ onDepartmentFilter, extraCard = null }) => {
                         <div className="flex items-center gap-1 text-white/70">
                           <Archive className="w-4 h-4" />
                           <span className="text-xs">أرشيف</span>
+                        </div>
+                      </div>
+                      <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                      <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card 
+                  className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
+                  onClick={() => onDepartmentFilter && onDepartmentFilter(dept)}
+                >
+                  <CardContent className="p-4">
+                    <div className={`text-center space-y-3 bg-gradient-to-br ${getGradientForIndex(index)} text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between`}>
+                      {/* رقم القسم */}
+                      <div className="absolute top-2 right-2">
+                        <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+                          {dept.display_order || (index + 1)}
+                        </Badge>
+                      </div>
+                      
+                      {/* الأيقونة */}
+                      <div className="flex justify-center">
+                        <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                          <IconComponent className="w-8 h-8" />
+                        </div>
+                      </div>
+                      
+                      {/* اسم القسم */}
+                      <div>
+                        <h4 className="font-bold text-lg">{dept.name}</h4>
+                        {dept.description && (
+                          <p className="text-xs opacity-90 mt-1">{dept.description}</p>
+                        )}
+                      </div>
+                      
+                      {/* عدد المنتجات */}
+                      <div className="flex items-center justify-between pt-2 border-t border-white/20">
+                        <div className="text-right">
+                          <p className="text-xl font-bold">{dept.product_count || 0}</p>
+                          <p className="text-white/80 text-xs">منتج</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-white/70">
+                          <Package className="w-4 h-4" />
+                          <span className="text-xs">متاح</span>
+                        </div>
+                      </div>
+                      
+                      {/* تأثير الخلفية */}
+                      <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
+                      <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* كرت المواد العامة أسفل كرت الأحذية مباشرة (عكس الموضع) */}
+              {index === shoesIndex && generalDept && (
+                <Card
+                  className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
+                  onClick={() => onDepartmentFilter && onDepartmentFilter(generalDept)}
+                >
+                  <CardContent className="p-4">
+                    <div className={`text-center space-y-3 bg-gradient-to-br ${getGradientForIndex(generalIndex)} text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between`}>
+                      <div className="absolute top-2 right-2">
+                        <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">
+                          {generalDept.display_order || (generalIndex + 1)}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-center">
+                        <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
+                          {(() => {
+                            const IconGen = getIconForDepartment(generalDept.name, generalIndex);
+                            return <IconGen className="w-8 h-8" />;
+                          })()}
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg">{generalDept.name}</h4>
+                        {generalDept.description && (
+                          <p className="text-xs opacity-90 mt-1">{generalDept.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-white/20">
+                        <div className="text-right">
+                          <p className="text-xl font-bold">{generalDept.product_count || 0}</p>
+                          <p className="text-white/80 text-xs">منتج</p>
+                        </div>
+                        <div className="flex items-center gap-1 text-white/70">
+                          <Package className="w-4 h-4" />
+                          <span className="text-xs">متاح</span>
                         </div>
                       </div>
                       <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
