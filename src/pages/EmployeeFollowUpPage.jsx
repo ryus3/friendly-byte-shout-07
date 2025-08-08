@@ -369,7 +369,16 @@ const EmployeeFollowUpPage = () => {
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        employeeMatch = order.created_by === effectiveEmployeeId;
+        const selectedUser = allUsers?.find(u => 
+          u?.user_id === effectiveEmployeeId || u?.id === effectiveEmployeeId || u?.employee_code === effectiveEmployeeId
+        );
+        const accepted = new Set([
+          effectiveEmployeeId,
+          selectedUser?.user_id,
+          selectedUser?.id,
+          selectedUser?.employee_code
+        ].filter(Boolean));
+        employeeMatch = accepted.has(order.created_by) || accepted.has(order.employee_id) || (order.employee_code && accepted.has(order.employee_code));
       }
       
       // فلتر الحالة
@@ -465,7 +474,16 @@ const EmployeeFollowUpPage = () => {
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        employeeMatch = order.created_by === effectiveEmployeeId;
+        const selectedUser = allUsers?.find(u => 
+          u?.user_id === effectiveEmployeeId || u?.id === effectiveEmployeeId || u?.employee_code === effectiveEmployeeId
+        );
+        const accepted = new Set([
+          effectiveEmployeeId,
+          selectedUser?.user_id,
+          selectedUser?.id,
+          selectedUser?.employee_code
+        ].filter(Boolean));
+        employeeMatch = accepted.has(order.created_by) || accepted.has(order.employee_id) || (order.employee_code && accepted.has(order.employee_code));
       }
       
       // فلتر الفترة
@@ -556,7 +574,16 @@ const EmployeeFollowUpPage = () => {
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        employeeMatch = o.created_by === effectiveEmployeeId;
+        const selectedUser = allUsers?.find(u => 
+          u?.user_id === effectiveEmployeeId || u?.id === effectiveEmployeeId || u?.employee_code === effectiveEmployeeId
+        );
+        const accepted = new Set([
+          effectiveEmployeeId,
+          selectedUser?.user_id,
+          selectedUser?.id,
+          selectedUser?.employee_code
+        ].filter(Boolean));
+        employeeMatch = accepted.has(o.created_by) || accepted.has(o.employee_id) || (o.employee_code && accepted.has(o.employee_code));
       }
       
       // فلتر الفترة
@@ -672,23 +699,26 @@ const EmployeeFollowUpPage = () => {
     });
     
     selectedOrdersData.forEach(order => {
-      if (!employeeGroups[order.created_by]) {
-        const employee = employees.find(emp => emp.user_id === order.created_by);
-        console.log('🔍 البحث عن الموظف:', { 
-          orderCreatedBy: order.created_by, 
-          employeeFound: !!employee, 
-          employeeName: employee?.full_name 
-        });
+      const employee = employees.find(emp => 
+        emp.user_id === order.created_by || 
+        emp.id === order.created_by || 
+        emp.employee_code === order.created_by
+      );
+      const groupKey = employee ? employee.user_id : order.created_by;
+
+      if (!employeeGroups[groupKey]) {
         if (employee) {
-          employeeGroups[order.created_by] = {
+          employeeGroups[groupKey] = {
             employee,
             orders: []
           };
+        } else {
+          // في حال لم نجد موظفاً مطابقاً، نتجاهل التجميع لهذا الطلب
+          return;
         }
       }
-      if (employeeGroups[order.created_by]) {
-        employeeGroups[order.created_by].orders.push(order);
-      }
+
+      employeeGroups[groupKey].orders.push(order);
     });
     
     const result = Object.values(employeeGroups);
