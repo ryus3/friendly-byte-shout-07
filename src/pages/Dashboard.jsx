@@ -28,6 +28,7 @@ import StockAlertsCard from '@/components/dashboard/StockAlertsCard';
 import StockMonitoringSystem from '@/components/dashboard/StockMonitoringSystem';
 import RecentOrdersCard from '@/components/dashboard/RecentOrdersCard';
 import { ArrowRight } from 'lucide-react';
+import { getUserUUID } from '@/utils/userIdUtils';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import { startOfMonth, endOfMonth, parseISO, isValid, startOfWeek, startOfYear, subDays, format } from 'date-fns';
@@ -248,10 +249,7 @@ const Dashboard = () => {
         
         return canViewAllData 
             ? orders 
-            : orders.filter(order => {
-                const createdBy = order.created_by;
-                return createdBy === user?.id || createdBy === user?.user_id;
-            });
+            : orders.filter(order => order.created_by === getUserUUID(user));
     }, [orders, canViewAllData, user?.id, user?.user_id]);
     
     const [userEmployeeCode, setUserEmployeeCode] = useState(null);
@@ -305,7 +303,7 @@ const Dashboard = () => {
 
         // فلترة الطلبات حسب صلاحيات المستخدم
         const visibleOrders = orders ? (canViewAllData ? orders : orders.filter(order => 
-            order.created_by === user?.id || order.created_by === user?.user_id
+            order.created_by === getUserUUID(user)
         )) : [];
         
         console.log('🔥 Dashboard - Orders for Analysis:', {
