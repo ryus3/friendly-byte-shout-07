@@ -28,37 +28,50 @@ export const useInventory = () => {
   return useSuper();
 };
 
-// دالة تصفية البيانات - إصلاح عاجل لعدم إخفاء البيانات
+// دالة تصفية البيانات - تطبيق فعلي بدون فقدان بيانات
 const filterDataByEmployeeCode = (data, user) => {
   if (!user || !data) return data;
-  
-  console.log('🔍 SuperProvider - بيانات المستخدم:', {
-    id: user.id,
-    user_id: user.user_id,
-    employee_code: user.employee_code,
-    full_name: user.full_name,
-    is_admin: user.is_admin,
-    role: user.role
-  });
 
-  console.log('📊 SuperProvider - البيانات الواردة:', {
-    orders: data.orders?.length || 0,
-    customers: data.customers?.length || 0,
-    products: data.products?.length || 0,
-    profits: data.profits?.length || 0
-  });
-  
-  // المديرون والمستخدمين بصلاحيات خاصة يرون كل شيء
-  if (user.is_admin || ['super_admin', 'admin', 'manager'].includes(user.role)) {
-    console.log('👑 مدير/مدير عام - عرض جميع البيانات بدون تصفية');
+  // تحديد صلاحيات عليا
+  const isPrivileged = (
+    Array.isArray(user?.roles) && user.roles.some(r => ['super_admin','admin','manager','owner','department_manager'].includes(r))
+  ) || user?.is_admin === true || ['super_admin','admin','manager'].includes(user?.role);
+
+  // المديرون يرون كل شيء
+  if (isPrivileged) {
+    console.log('👑 عرض جميع البيانات بدون تصفية (صلاحيات المدير)');
     return data;
   }
-  
-  // **إصلاح عاجل: إرجاع جميع البيانات مؤقتاً لمنع الفقدان**
-  console.warn('⚠️ إصلاح عاجل: عرض جميع البيانات لمنع فقدانها');
-  console.log('📝 سيتم تطبيق التصفية لاحقاً بعد التأكد من صحة البيانات');
-  
-  return data; // إرجاع جميع البيانات بدون تصفية مؤقتاً
+
+  const matchUser = (val) => {
+    return val === user?.user_id || val === user?.id || val === user?.employee_code;
+  };
+
+  // ربط الطلبات بالأرباح لضمان عدم فقدان أي طلب يعود للموظف حتى لو أنشأه المدير
+  const userOrderIdsFromProfits = new Set(
+    (data.profits || [])
+      .filter(p => matchUser(p.employee_id))
+      .map(p => p.order_id)
+  );
+
+  const filtered = {
+    ...data,
+    orders: (data.orders || []).filter(o => matchUser(o.created_by) || userOrderIdsFromProfits.has(o.id)),
+    profits: (data.profits || []).filter(p => matchUser(p.employee_id)),
+    purchases: (data.purchases || []).filter(p => matchUser(p.created_by)),
+    expenses: (data.expenses || []).filter(e => matchUser(e.created_by)),
+    cashSources: (data.cashSources || []).filter(c => matchUser(c.created_by)),
+  };
+
+  console.log('🛡️ تصفية حسب المستخدم العادي:', {
+    user: { id: user?.id, user_id: user?.user_id, employee_code: user?.employee_code },
+    ordersBefore: data.orders?.length || 0,
+    ordersAfter: filtered.orders.length,
+    profitsBefore: data.profits?.length || 0,
+    profitsAfter: filtered.profits.length,
+  });
+
+  return filtered;
 };
 
 export const SuperProvider = ({ children }) => {

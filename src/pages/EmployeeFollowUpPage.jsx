@@ -315,106 +315,106 @@ const EmployeeFollowUpPage = () => {
   // حالة أرشيف التسوية المنفصلة
   const [showSettlementArchive, setShowSettlementArchive] = useState(false);
 
-  // الطلبات المفلترة مع تحديث منطق الأرشيف
-  const filteredOrders = useMemo(() => {
-    const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
-    
-    console.log('🔄 تفلتر الطلبات DETAILED:', { 
-      ordersLength: orders?.length, 
-      filters,
-      showSettlementArchive,
-      effectiveEmployeeId,
-      ordersArray: Array.isArray(orders),
-      ordersDataSample: orders?.slice(0, 3)?.map(o => ({ id: o.id, created_by: o.created_by, status: o.status }))
-    });
-    
-    if (!orders || !Array.isArray(orders)) {
-      console.log('❌ لا توجد طلبات في البيانات');
-      return [];
+// الطلبات المفلترة مع تحديث منطق الأرشيف
+const filteredOrders = useMemo(() => {
+  const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
+  
+  console.log('🔄 تفلتر الطلبات DETAILED:', { 
+    ordersLength: orders?.length, 
+    filters,
+    showSettlementArchive,
+    effectiveEmployeeId,
+    ordersArray: Array.isArray(orders),
+    ordersDataSample: orders?.slice(0, 3)?.map(o => ({ id: o.id, created_by: o.created_by, status: o.status }))
+  });
+  
+  if (!orders || !Array.isArray(orders)) {
+    console.log('❌ لا توجد طلبات في البيانات');
+    return [];
+  }
+
+  // بناء خرائط مساعدة
+  const employeeIdSelected = effectiveEmployeeId && effectiveEmployeeId !== 'all' ? effectiveEmployeeId : null;
+  const employeeCodeMap = new Map((employees || []).map(e => [e.user_id, e.employee_code]));
+  const selectedEmployeeCode = employeeIdSelected ? employeeCodeMap.get(employeeIdSelected) : null;
+
+  // فلتر الفترة الزمنية
+  const filterByTimePeriod = (order) => {
+    if (filters.timePeriod === 'all') return true;
+    const orderDate = new Date(order.created_at);
+    const now = new Date();
+    switch (filters.timePeriod) {
+      case 'today':
+        return orderDate.toDateString() === now.toDateString();
+      case 'week':
+        return orderDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'month':
+        return orderDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case '3months':
+        return orderDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      default:
+        return true;
     }
+  };
+
+  const filtered = orders.filter(order => {
+    if (!order) return false;
+
+    const isAdminCreated = order.created_by === ADMIN_ID;
 
     // فلتر الفترة الزمنية
-    const filterByTimePeriod = (order) => {
-      if (filters.timePeriod === 'all') return true;
-      
-      const orderDate = new Date(order.created_at);
-      const now = new Date();
-      
-      switch (filters.timePeriod) {
-        case 'today':
-          return orderDate.toDateString() === now.toDateString();
-        case 'week':
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-          return orderDate >= weekAgo;
-        case 'month':
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-          return orderDate >= monthAgo;
-        case '3months':
-          const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-          return orderDate >= threeMonthsAgo;
-        default:
-          return true;
-      }
-    };
+    if (!filterByTimePeriod(order)) return false;
 
-    const filtered = orders.filter(order => {
-      if (!order) return false;
-      
-      // استبعاد طلبات المدير الرئيسي
-      if (order.created_by === ADMIN_ID) return false;
-      
-      // فلتر الفترة الزمنية
-      if (!filterByTimePeriod(order)) return false;
-      
-      // فلتر الموظف
-      let employeeMatch = true;
-      if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        employeeMatch = order.created_by === effectiveEmployeeId;
-      }
-      
-      // فلتر الحالة
-      const statusMatch = filters.status === 'all' || order.status === filters.status;
-      
-      // فلتر حالة الربح
-      let profitStatusMatch = true;
-      if (filters.profitStatus !== 'all') {
-        const profitRecord = profits?.find(p => p.order_id === order.id);
-        const profitStatus = profitRecord ? (profitRecord.settled_at ? 'settled' : 'pending') : 'pending';
-        profitStatusMatch = profitStatus === filters.profitStatus;
-      }
-      
-      // فلتر الأرشيف والتسوية
-      const isManuallyArchived = (order.isarchived === true || order.isArchived === true) && order.status !== 'completed';
+    // ربط الطلب بالموظف عبر created_by أو عبر سجل الأرباح
+    let employeeMatch = true;
+    if (employeeIdSelected) {
+      const byCreator = (order.created_by === employeeIdSelected) || (order.created_by === selectedEmployeeCode);
+      const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === employeeIdSelected || p.employee_id === selectedEmployeeCode));
+      employeeMatch = byCreator || byProfit;
+
+      // استبعاد طلبات المدير فقط إذا لم تكن مرتبطة بالموظف عبر الأرباح
+      if (isAdminCreated && !employeeMatch) return false;
+    }
+
+    // فلتر الحالة
+    const statusMatch = filters.status === 'all' || order.status === filters.status;
+
+    // فلتر حالة الربح
+    let profitStatusMatch = true;
+    if (filters.profitStatus !== 'all') {
       const profitRecord = profits?.find(p => p.order_id === order.id);
-      const isSettled = order.status === 'completed' && profitRecord?.status === 'settled';
-      
-      let archiveMatch;
-      
-      if (showSettlementArchive) {
-        // عرض الطلبات المسواة فقط
-        archiveMatch = isSettled;
-      } else if (filters.archived) {
-        // عرض الأرشيف اليدوي فقط
-        archiveMatch = isManuallyArchived;
-      } else {
-        // الطلبات العادية - إخفاء المؤرشفة والمسواة
-        archiveMatch = !isManuallyArchived && !isSettled;
-      }
-      
-      return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
-    }).map(order => ({
-      ...order,
-      created_by_name: usersMap.get(order.created_by) || 'غير معروف'
-    }));
+      const profitStatus = profitRecord ? (profitRecord.settled_at ? 'settled' : 'pending') : 'pending';
+      profitStatusMatch = profitStatus === filters.profitStatus;
+    }
 
-    console.log('✅ الطلبات المفلترة النهائية:', {
-      count: filtered.length,
-      showSettlementArchive,
-      orders: filtered.map(o => ({ id: o.id, number: o.order_number, status: o.status }))
-    });
-    
-    return filtered;
-  }, [orders, filters, usersMap, profits, showSettlementArchive]);
+    // فلتر الأرشيف والتسوية
+    const isManuallyArchived = (order.isarchived === true || order.isArchived === true) && order.status !== 'completed';
+    const profitRecord = profits?.find(p => p.order_id === order.id);
+    const isSettled = order.status === 'completed' && profitRecord?.status === 'settled';
+
+    let archiveMatch;
+    if (showSettlementArchive) {
+      archiveMatch = isSettled;
+    } else if (filters.archived) {
+      archiveMatch = isManuallyArchived;
+    } else {
+      archiveMatch = !isManuallyArchived && !isSettled;
+    }
+
+    return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
+  }).map(order => ({
+    ...order,
+    created_by_name: usersMap.get(order.created_by) || 'غير معروف'
+  }));
+
+  console.log('✅ الطلبات المفلترة النهائية:', {
+    count: filtered.length,
+    showSettlementArchive,
+    orders: filtered.map(o => ({ id: o.id, number: o.order_number, status: o.status }))
+  });
+  
+  return filtered;
+}, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
 
   // الإحصائيات
   const stats = useMemo(() => {
