@@ -359,8 +359,9 @@ const EmployeeFollowUpPage = () => {
 
     const filtered = orders.filter(order => {
       if (!order) return false;
-      // تضمين طلبات المدير فقط إن كانت منسوبة لموظف
-      if (order.created_by === ADMIN_ID && !(order.employee_id || order.employee_code)) return false;
+      
+      // استبعاد طلبات المدير الرئيسي
+      if (order.created_by === ADMIN_ID) return false;
       
       // فلتر الفترة الزمنية
       if (!filterByTimePeriod(order)) return false;
@@ -368,16 +369,7 @@ const EmployeeFollowUpPage = () => {
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const selectedUser = allUsers?.find(u => 
-          u?.user_id === effectiveEmployeeId || u?.id === effectiveEmployeeId || u?.employee_code === effectiveEmployeeId
-        );
-        const accepted = new Set([
-          effectiveEmployeeId,
-          selectedUser?.user_id,
-          selectedUser?.id,
-          selectedUser?.employee_code
-        ].filter(Boolean));
-        employeeMatch = accepted.has(order.created_by) || accepted.has(order.employee_id) || (order.employee_code && accepted.has(order.employee_code));
+        employeeMatch = order.created_by === effectiveEmployeeId;
       }
       
       // فلتر الحالة
@@ -412,7 +404,7 @@ const EmployeeFollowUpPage = () => {
       return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
     }).map(order => ({
       ...order,
-      created_by_name: usersMap.get(order.employee_id) || usersMap.get(order.created_by) || 'غير معروف'
+      created_by_name: usersMap.get(order.created_by) || 'غير معروف'
     }));
 
     console.log('✅ الطلبات المفلترة النهائية:', {
@@ -467,22 +459,13 @@ const EmployeeFollowUpPage = () => {
     const statsOrders = orders.filter(order => {
       if (!order) return false;
       
-      // تضمين طلبات المدير فقط إن كانت منسوبة لموظف
-      if (order.created_by === ADMIN_ID && !(order.employee_id || order.employee_code)) return false;
+      // استبعاد طلبات المدير
+      if (order.created_by === ADMIN_ID) return false;
       
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const selectedUser = allUsers?.find(u => 
-          u?.user_id === effectiveEmployeeId || u?.id === effectiveEmployeeId || u?.employee_code === effectiveEmployeeId
-        );
-        const accepted = new Set([
-          effectiveEmployeeId,
-          selectedUser?.user_id,
-          selectedUser?.id,
-          selectedUser?.employee_code
-        ].filter(Boolean));
-        employeeMatch = accepted.has(order.created_by) || accepted.has(order.employee_id) || (order.employee_code && accepted.has(order.employee_code));
+        employeeMatch = order.created_by === effectiveEmployeeId;
       }
       
       // فلتر الفترة
@@ -573,16 +556,7 @@ const EmployeeFollowUpPage = () => {
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const selectedUser = allUsers?.find(u => 
-          u?.user_id === effectiveEmployeeId || u?.id === effectiveEmployeeId || u?.employee_code === effectiveEmployeeId
-        );
-        const accepted = new Set([
-          effectiveEmployeeId,
-          selectedUser?.user_id,
-          selectedUser?.id,
-          selectedUser?.employee_code
-        ].filter(Boolean));
-        employeeMatch = accepted.has(o.created_by) || accepted.has(o.employee_id) || (o.employee_code && accepted.has(o.employee_code));
+        employeeMatch = o.created_by === effectiveEmployeeId;
       }
       
       // فلتر الفترة
@@ -698,27 +672,23 @@ const EmployeeFollowUpPage = () => {
     });
     
     selectedOrdersData.forEach(order => {
-      const employeeKey = order.employee_id || order.employee_code || order.created_by;
-      const employee = employees.find(emp => 
-        emp.user_id === employeeKey || 
-        emp.id === employeeKey || 
-        emp.employee_code === employeeKey
-      );
-      const groupKey = employee ? employee.user_id : employeeKey;
-
-      if (!employeeGroups[groupKey]) {
+      if (!employeeGroups[order.created_by]) {
+        const employee = employees.find(emp => emp.user_id === order.created_by);
+        console.log('🔍 البحث عن الموظف:', { 
+          orderCreatedBy: order.created_by, 
+          employeeFound: !!employee, 
+          employeeName: employee?.full_name 
+        });
         if (employee) {
-          employeeGroups[groupKey] = {
+          employeeGroups[order.created_by] = {
             employee,
             orders: []
           };
-        } else {
-          // في حال لم نجد موظفاً مطابقاً، نتجاهل التجميع لهذا الطلب
-          return;
         }
       }
-
-      employeeGroups[groupKey].orders.push(order);
+      if (employeeGroups[order.created_by]) {
+        employeeGroups[order.created_by].orders.push(order);
+      }
     });
     
     const result = Object.values(employeeGroups);

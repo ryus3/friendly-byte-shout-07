@@ -14,7 +14,6 @@ import { ar } from 'date-fns/locale';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { CheckCircle, FileText, Calendar, User, DollarSign, Receipt, Eye, TrendingUp, Banknote, Clock, Star, Award } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
-import { useInventory } from '@/contexts/InventoryContext';
 
 // مكون معاينة الفاتورة
 const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, allOrders }) => {
@@ -422,8 +421,6 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   const [showPreview, setShowPreview] = useState(false);
   const [dateRange, setDateRange] = useState(null);
   const [settledProfits, setSettledProfits] = useState([]);
-  const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
-  const [loadingRealInvoices, setLoadingRealInvoices] = useState(false);
   // استرجاع إعداد الفترة من localStorage أو استخدام الافتراضي "all"
   // إذا تم تمرير فترة من الخارج، استخدمها، وإلا استخدم المحفوظ محلياً
   const [timePeriod, setTimePeriod] = useState(() => {
@@ -439,33 +436,66 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
     }
   }, [externalTimePeriod]);
 
-  // جلب الأرباح المسواة والطلبات من النظام الموحد أو من الخصائص الممررة
-  const { profits: ctxProfits, orders: ctxOrders } = useInventory();
+  // جلب فواتير التسوية الحقيقية
+  const [realSettlementInvoices, setRealSettlementInvoices] = useState([]);
+  const [loadingRealInvoices, setLoadingRealInvoices] = useState(false);
 
+  // جلب الأرباح المسواة والطلبات
   useEffect(() => {
-    if (!open) return;
+    const fetchSettledProfits = async () => {
+      try {
+        console.log('🔄 جلب الأرباح المسواة...');
+        const { data, error } = await supabase
+          .from('profits')
+          .select(`
+            *,
+            orders!inner(order_number, customer_name, total_amount, created_at)
+          `)
+          .eq('status', 'settled');
 
-    try {
-      console.log('🔄 إعداد بيانات الأرباح المسواة من النظام الموحد/الخصائص...');
-      const sourceProfits = (profits && profits.length ? profits : (ctxProfits || [])).filter(p => p.status === 'settled');
-      const ordersSource = orders && orders.length ? orders : (ctxOrders || []);
+        if (error) {
+          console.error('❌ خطأ في جلب الأرباح المسواة:', error);
+        } else {
+          console.log('✅ تم جلب الأرباح المسواة:', data?.length || 0);
+          const profitsWithOrderData = data?.map(profit => ({
+            ...profit,
+            order_number: profit.orders?.order_number,
+            customer_name: profit.orders?.customer_name,
+            employee_name: allUsers?.find(user => user.user_id === profit.employee_id)?.full_name || 'غير محدد'
+          })) || [];
+          
+          setSettledProfits(profitsWithOrderData);
+          console.log('📊 الأرباح مع بيانات الطلبات:', profitsWithOrderData);
+        }
+      } catch (error) {
+        console.error('❌ خطأ غير متوقع:', error);
+      }
+    };
 
-      const profitsWithOrderData = sourceProfits.map(profit => {
-        const ord = ordersSource.find(o => o.id === profit.order_id) || {};
-        return {
-          ...profit,
-          order_number: profit.order_number || ord.order_number,
-          customer_name: profit.customer_name || ord.customer_name,
-          employee_name: allUsers?.find(user => (user.user_id === profit.employee_id || user.id === profit.employee_id))?.full_name || 'غير محدد'
-        };
-      });
+    // جلب جميع الطلبات للموظف المحدد
+    const fetchAllOrdersForEmployee = async () => {
+      try {
+        console.log('🔄 جلب جميع الطلبات للموظف المحدد...');
+        const { data, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('created_by', 'fba59dfc-451c-4906-8882-ae4601ff34d4'); // معرف موظف احمد
 
-      setSettledProfits(profitsWithOrderData);
-      console.log('📊 الأرباح المسواة (موحدة):', profitsWithOrderData.length);
-    } catch (error) {
-      console.error('❌ خطأ غير متوقع في تجهيز الأرباح المسواة:', error);
+        if (error) {
+          console.error('❌ خطأ في جلب الطلبات:', error);
+        } else {
+          console.log('✅ تم جلب طلبات الموظف:', data?.length || 0, data);
+        }
+      } catch (error) {
+        console.error('❌ خطأ غير متوقع في جلب الطلبات:', error);
+      }
+    };
+
+    if (open) {
+      fetchSettledProfits();
+      fetchAllOrdersForEmployee();
     }
-  }, [open, profits, orders, ctxProfits, ctxOrders, allUsers]);
+  }, [open, allUsers]);
 
   // جلب فواتير التسوية الحقيقية مع فلتر الفترة الزمنية
   useEffect(() => {

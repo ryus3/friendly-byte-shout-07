@@ -12,7 +12,6 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
-import { getUserUUID, getEmployeeCode } from '@/utils/userIdUtils';
 
 const SuperContext = createContext();
 
@@ -29,73 +28,37 @@ export const useInventory = () => {
   return useSuper();
 };
 
-// دالة تصفية البيانات - تصفية حسب UUID/employee_code للموظفين فقط
+// دالة تصفية البيانات - إصلاح عاجل لعدم إخفاء البيانات
 const filterDataByEmployeeCode = (data, user) => {
   if (!user || !data) return data;
-
-  const userUUID = getUserUUID(user);
-  const employeeCode = getEmployeeCode(user);
-  const isAdmin = user.is_admin || ['super_admin', 'admin', 'manager'].includes(user.role);
-  const ids = Array.from(new Set([userUUID, user?.id, user?.user_id].filter(Boolean)));
-
-  console.log('🔍 SuperProvider - المستخدم:', {
-    uuid: userUUID,
-    alt_ids: ids,
-    employee_code: employeeCode,
-    role: user.role,
-    is_admin: user.is_admin
+  
+  console.log('🔍 SuperProvider - بيانات المستخدم:', {
+    id: user.id,
+    user_id: user.user_id,
+    employee_code: user.employee_code,
+    full_name: user.full_name,
+    is_admin: user.is_admin,
+    role: user.role
   });
-  console.log('📊 SuperProvider - إحصاءات قبل التصفية:', {
+
+  console.log('📊 SuperProvider - البيانات الواردة:', {
     orders: data.orders?.length || 0,
     customers: data.customers?.length || 0,
     products: data.products?.length || 0,
     profits: data.profits?.length || 0
   });
-
-  if (isAdmin) {
-    console.log('👑 مدير - عرض جميع البيانات');
+  
+  // المديرون والمستخدمين بصلاحيات خاصة يرون كل شيء
+  if (user.is_admin || ['super_admin', 'admin', 'manager'].includes(user.role)) {
+    console.log('👑 مدير/مدير عام - عرض جميع البيانات بدون تصفية');
     return data;
   }
-
-  const byUUID = (item, fields = []) => fields.some(f => item && ids.includes(item[f]));
-  const byCode = (item, fields = []) => fields.some(f => item && item[f] && item[f] === employeeCode);
-
-  const filtered = {
-    ...data,
-    orders: (data.orders || []).filter(o => 
-      byUUID(o, ['created_by', 'employee_id']) ||
-      byCode(o, ['created_by', 'employee_code'])
-    ),
-    customers: (data.customers || []).filter(c => 
-      byUUID(c, ['created_by']) ||
-      byCode(c, ['created_by', 'employee_code'])
-    ),
-    purchases: (data.purchases || []).filter(p => 
-      byUUID(p, ['created_by']) ||
-      byCode(p, ['created_by', 'employee_code'])
-    ),
-    expenses: (data.expenses || []).filter(e => byUUID(e, ['created_by', 'employee_id']) || byCode(e, ['employee_code'])),
-    profits: (data.profits || []).filter(p => (employeeCode ? byCode(p, ['employee_code']) : false) || byUUID(p, ['employee_id', 'created_by'])),
-    aiOrders: (data.aiOrders || []).filter(o => 
-      byUUID(o, ['created_by']) ||
-      byCode(o, ['created_by', 'employee_code'])
-    ),
-    // قوائم الفلاتر تبقى كما هي للجميع
-    colors: data.colors || [],
-    sizes: data.sizes || [],
-    categories: data.categories || [],
-    departments: data.departments || [],
-    productTypes: data.productTypes || [],
-    seasons: data.seasons || [],
-  };
-
-  console.log('✅ SuperProvider - بعد التصفية:', {
-    orders: filtered.orders.length,
-    customers: filtered.customers.length,
-    profits: filtered.profits.length
-  });
-
-  return filtered;
+  
+  // **إصلاح عاجل: إرجاع جميع البيانات مؤقتاً لمنع الفقدان**
+  console.warn('⚠️ إصلاح عاجل: عرض جميع البيانات لمنع فقدانها');
+  console.log('📝 سيتم تطبيق التصفية لاحقاً بعد التأكد من صحة البيانات');
+  
+  return data; // إرجاع جميع البيانات بدون تصفية مؤقتاً
 };
 
 export const SuperProvider = ({ children }) => {
@@ -374,7 +337,7 @@ export const SuperProvider = ({ children }) => {
         tracking_number: trackingNumber || `RYUS-${Date.now().toString().slice(-6)}`,
         delivery_partner: deliveryPartnerData?.delivery_partner || 'محلي',
         notes: customerInfo.notes,
-        created_by: getUserUUID(user),
+        created_by: user?.user_id || user?.id,
       };
 
       const createdOrder = await superAPI.createOrder(orderData);

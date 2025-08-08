@@ -14,7 +14,6 @@ import {
   filterExpensesByPermissions,
   calculateDateRange
 } from '@/lib/financial-calculations';
-import { getUserUUID } from '@/utils/userIdUtils';
 import { 
   TIME_PERIODS, 
   DEFAULT_FINANCIAL_VALUES,
@@ -45,13 +44,13 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   // فلترة البيانات حسب الصلاحيات
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return filterOrdersByPermissions(orders, canViewAllData, getUserUUID(user));
-  }, [orders, canViewAllData, user]);
+    return filterOrdersByPermissions(orders, canViewAllData, user?.id || user?.user_id);
+  }, [orders, canViewAllData, user?.id, user?.user_id]);
   
   const filteredExpenses = useMemo(() => {
     if (!accounting?.expenses) return [];
-    return filterExpensesByPermissions(accounting.expenses, canViewAllData, getUserUUID(user));
-  }, [accounting?.expenses, canViewAllData, user]);
+    return filterExpensesByPermissions(accounting.expenses, canViewAllData, user?.id || user?.user_id);
+  }, [accounting?.expenses, canViewAllData, user?.id, user?.user_id]);
   
   // حساب المؤشرات المالية
   const financialMetrics = useMemo(() => {
