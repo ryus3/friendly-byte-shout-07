@@ -219,8 +219,9 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                         <div className="bg-white dark:bg-slate-800 rounded-xl overflow-hidden">
                                             {/* Header */}
                                             <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
-                                                <div className="grid grid-cols-4 gap-6 text-center font-bold text-lg">
+                                            <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
                                                     <div className="text-blue-300">رقم الطلب</div>
+                                                    <div className="text-slate-300">تاريخ الطلب</div>
                                                     <div className="text-green-300">العميل</div>
                                                     <div className="text-orange-300">المبلغ</div>
                                                     <div className="text-purple-300">الإجراءات</div>
@@ -241,22 +242,28 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                     finalOrdersDetails.map((order, index) => (
                                                         <div 
                                                             key={order.id} 
-                                                            className={`grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-6 py-4 md:py-6 px-4 md:px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
+                                                            className={`grid grid-cols-1 md:grid-cols-5 gap-3 md:gap-6 py-4 md:py-6 px-4 md:px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
                                                                 index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
                                                             }`}
                                                         >
-                                                             {/* رقم الطلب والتاريخ - متوافق مع الهاتف */}
+                                                             {/* رقم الطلب - متوافق مع الهاتف */}
                                                              <div className="flex flex-col items-center justify-center gap-2">
                                                                  <span className="text-xs md:hidden text-slate-500">رقم الطلب:</span>
                                                                  <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-3 py-2 md:px-4 md:py-3 rounded-xl shadow-lg text-sm md:text-lg hover:scale-105 transition-transform">
                                                                      #{order.order_number || order.trackingnumber || 'غير محدد'}
                                                                  </span>
-                                                                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                             </div>
+                                                             {/* تاريخ الطلب - عمود مستقل */}
+                                                             <div className="flex flex-col items-center justify-center">
+                                                                 <span className="text-xs md:hidden text-slate-500 mb-1">تاريخ الطلب:</span>
+                                                                 <div className="text-sm md:text-base text-slate-700 dark:text-slate-300">
                                                                      {(() => {
                                                                          if (order.created_at) {
                                                                              try {
-                                                                                  return formatInTimeZone(new Date(order.created_at), IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar });
-                                                                              } catch (error) {
+                                                                                 const d = parseISO(order.created_at);
+                                                                                 if (isNaN(d.getTime())) return 'تاريخ غير صحيح';
+                                                                                 return formatInTimeZone(d, IRAQ_TIMEZONE, 'dd/MM/yyyy', { locale: ar });
+                                                                             } catch (error) {
                                                                                  return 'تاريخ غير صحيح';
                                                                              }
                                                                          }
@@ -264,7 +271,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                      })()}
                                                                  </div>
                                                              </div>
-                                                            
+                                                             
                                                             {/* العميل - متوافق مع الهاتف */}
                                                             <div className="flex flex-col items-center justify-center">
                                                                 <span className="text-xs md:hidden text-slate-500 mb-1">العميل:</span>
