@@ -78,7 +78,10 @@ export const useUnifiedProfitCalculator = ({
 
     // المستحقات المدفوعة والمعلقة
     const employeeSettledDues = expensesInRange
-      .filter(e => e.expense_type === 'system' && e.category === 'مستحقات الموظفين')
+      .filter(e => (
+        e.category === 'مستحقات الموظفين' ||
+        e.related_data?.category === 'مستحقات الموظفين'
+      ))
       .reduce((sum, e) => sum + e.amount, 0);
 
     const employeePendingDues = (allProfits || [])
@@ -96,8 +99,8 @@ export const useUnifiedProfitCalculator = ({
       })
       .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
-    // صافي الربح = ربح المبيعات (بدون طرح المصاريف العامة)
-    const netProfit = grossProfit;
+    // صافي الربح = مجمل الربح - المصاريف العامة (لا يشمل المستحقات المدفوعة)
+    const netProfit = grossProfit - generalExpenses;
 
     return {
       totalRevenue,

@@ -33,9 +33,9 @@ export const FINANCIAL_FORMULAS = {
   // الربح الإجمالي = المبيعات بدون التوصيل - تكلفة البضائع المباعة
   GROSS_PROFIT: (salesWithoutDelivery, cogs) => salesWithoutDelivery - cogs,
   
-  // صافي الربح = الربح الإجمالي - المصاريف العامة - مستحقات الموظفين المدفوعة
+  // صافي الربح = الربح الإجمالي - المصاريف العامة (المستحقات المدفوعة لا تدخل في صافي الربح)
   NET_PROFIT: (grossProfit, generalExpenses, employeeDuesPaid) => 
-    grossProfit - generalExpenses - employeeDuesPaid,
+    grossProfit - generalExpenses,
   
   // هامش الربح الإجمالي
   GROSS_PROFIT_MARGIN: (grossProfit, salesWithoutDelivery) => 
