@@ -62,12 +62,24 @@ const filterDataByEmployeeCode = (data, user) => {
 
   const filtered = {
     ...data,
-    orders: (data.orders || []).filter(o => byUUID(o, ['created_by', 'employee_id'])),
-    customers: (data.customers || []).filter(c => byUUID(c, ['created_by'])),
-    purchases: (data.purchases || []).filter(p => byUUID(p, ['created_by'])),
+    orders: (data.orders || []).filter(o => 
+      byUUID(o, ['created_by', 'employee_id']) ||
+      byCode(o, ['created_by', 'employee_code'])
+    ),
+    customers: (data.customers || []).filter(c => 
+      byUUID(c, ['created_by']) ||
+      byCode(c, ['created_by', 'employee_code'])
+    ),
+    purchases: (data.purchases || []).filter(p => 
+      byUUID(p, ['created_by']) ||
+      byCode(p, ['created_by', 'employee_code'])
+    ),
     expenses: (data.expenses || []).filter(e => byUUID(e, ['created_by', 'employee_id']) || byCode(e, ['employee_code'])),
     profits: (data.profits || []).filter(p => (employeeCode ? byCode(p, ['employee_code']) : false) || byUUID(p, ['employee_id', 'created_by'])),
-    aiOrders: (data.aiOrders || []).filter(o => byUUID(o, ['created_by'])),
+    aiOrders: (data.aiOrders || []).filter(o => 
+      byUUID(o, ['created_by']) ||
+      byCode(o, ['created_by', 'employee_code'])
+    ),
     // قوائم الفلاتر تبقى كما هي للجميع
     colors: data.colors || [],
     sizes: data.sizes || [],
