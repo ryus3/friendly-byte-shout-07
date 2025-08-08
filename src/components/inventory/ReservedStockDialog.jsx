@@ -16,37 +16,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import usePermissions from '@/hooks/usePermissions';
 import { useInventory } from '@/contexts/InventoryContext';
-import { supabase } from '@/lib/customSupabaseClient';
 
 
 
 const ReservedStockDialog = ({ open, onOpenChange }) => {
   const [selectedEmployee, setSelectedEmployee] = useState('all');
   const [employees, setEmployees] = useState([]);
-  const { user } = useAuth();
+  const { user, allUsers } = useAuth();
   const { isAdmin } = usePermissions();
   const { orders } = useInventory();
 
-  // تحميل بيانات الموظفين فوراً عند فتح النافذة
+  // تحميل بيانات الموظفين من سياق التوثيق عند فتح النافذة
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, username, email, employee_code')
-          .eq('is_active', true);
-        
-        if (error) throw error;
-        setEmployees(data || []);
-      } catch (error) {
-        console.error('خطأ في تحميل بيانات الموظفين:', error);
-      }
-    };
-
-    if (open && employees.length === 0) {
-      fetchEmployees();
+    if (open) {
+      setEmployees(allUsers || []);
     }
-  }, [open, employees.length]);
+  }, [open, allUsers]);
 
 
   // الطلبات المحجوزة (pending, shipped, delivery)

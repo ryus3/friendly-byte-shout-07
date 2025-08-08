@@ -416,4 +416,60 @@ class SuperAPI {
 // إنشاء النسخة الوحيدة المشتركة
 const superAPI = new SuperAPI();
 
+// عمليات مالية موحدة لكتابة البيانات (بدون تغيير سلوك)
+superAPI.markOrdersReceiptReceived = async (orderIds, userId) => {
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      receipt_received: true,
+      receipt_received_at: new Date().toISOString(),
+      receipt_received_by: userId
+    })
+    .in('id', orderIds);
+  if (error) throw error;
+  superAPI.invalidate('all_data');
+  superAPI.invalidate('orders_only');
+  return true;
+};
+
+superAPI.calculateProfitsForOrders = async (orderIds = []) => {
+  for (const orderId of orderIds) {
+    try {
+      await supabase.rpc('calculate_order_profit', { order_id_input: orderId });
+    } catch (e) {
+      console.error('RPC calculate_order_profit failed for', orderId, e);
+    }
+  }
+  superAPI.invalidate('all_data');
+  return true;
+};
+
+// الأقسام: ملخص الاستخدام + حذف
+superAPI.getDepartmentUsageSummary = async (deptId) => {
+  const { data: used, error: checkError } = await supabase
+    .from('product_departments')
+    .select('id')
+    .eq('department_id', deptId)
+    .limit(1);
+  if (checkError) throw checkError;
+
+  let sampleNames = [];
+  if (used && used.length > 0) {
+    const { data: productNames } = await supabase
+      .from('product_departments')
+      .select('products(name)')
+      .eq('department_id', deptId)
+      .limit(3);
+    sampleNames = productNames?.map(pd => pd.products?.name).filter(Boolean) || [];
+  }
+  return { isUsed: !!(used && used.length > 0), sampleNames };
+};
+
+superAPI.deleteDepartment = async (deptId) => {
+  const { error } = await supabase.from('departments').delete().eq('id', deptId);
+  if (error) throw error;
+  superAPI.invalidate('all_data');
+  return true;
+};
+
 export default superAPI;

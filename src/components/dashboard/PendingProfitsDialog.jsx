@@ -8,7 +8,7 @@ import { PackageCheck, DollarSign, Calendar, User, MapPin, Phone } from 'lucide-
 import { format, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/components/ui/use-toast';
-import { supabase } from '@/lib/customSupabaseClient';
+import superAPI from '@/api/SuperAPI';
 
 const PendingProfitsDialog = ({ 
   open, 
@@ -75,28 +75,9 @@ const PendingProfitsDialog = ({
     try {
       setIsProcessing(true);
 
-      // تحديث حالة استلام الفواتير للطلبات المختارة
-      const { error } = await supabase
-        .from('orders')
-        .update({
-          receipt_received: true,
-          receipt_received_at: new Date().toISOString(),
-          receipt_received_by: user?.user_id || user?.id
-        })
-        .in('id', selectedOrders);
-
-      if (error) {
-        throw new Error(`خطأ في تحديث حالة استلام الفواتير: ${error.message}`);
-      }
-
-      // حساب الأرباح وإدخالها في جدول profits
-      for (const orderId of selectedOrders) {
-        try {
-          await supabase.rpc('calculate_order_profit', { order_id_input: orderId });
-        } catch (profitError) {
-          console.error('خطأ في حساب الأرباح للطلب:', orderId, profitError);
-        }
-      }
+      // تحديث حالة استلام الفواتير + حساب الأرباح عبر API الموحد
+      await superAPI.markOrdersReceiptReceived(selectedOrders, user?.user_id || user?.id);
+      await superAPI.calculateProfitsForOrders(selectedOrders);
 
       toast({
         title: "تم استلام الفواتير بنجاح",
