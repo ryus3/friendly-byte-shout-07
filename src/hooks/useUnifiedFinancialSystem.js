@@ -79,9 +79,52 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
 
       if (inventoryError) throw inventoryError;
 
-      // الحسابات الأساسية
-      const safeOrders = completedOrders || [];
-      const safeExpenses = approvedExpenses || [];
+      // القوائم الأساسية قبل الفلترة الزمنية
+      const allOrders = completedOrders || [];
+      const allExpenses = approvedExpenses || [];
+
+      // فلترة حسب الفترة الزمنية (مع الحفاظ على الافتراضي = الكل)
+      const applyTimeFilter = (items, getDate) => {
+        if (timePeriod === 'all') return items || [];
+        const now = new Date();
+        const toDate = (v) => {
+          const d = getDate(v);
+          return d ? new Date(d) : null;
+        };
+        switch (timePeriod) {
+          case 'today':
+            return (items || []).filter(i => {
+              const d = toDate(i);
+              return d && d.toDateString() === now.toDateString();
+            });
+          case 'week': {
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return (items || []).filter(i => {
+              const d = toDate(i);
+              return d && d >= weekAgo;
+            });
+          }
+          case 'month': {
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return (items || []).filter(i => {
+              const d = toDate(i);
+              return d && d >= monthAgo;
+            });
+          }
+          case '3months': {
+            const threeMonthsAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+            return (items || []).filter(i => {
+              const d = toDate(i);
+              return d && d >= threeMonthsAgo;
+            });
+          }
+          default:
+            return items || [];
+        }
+      };
+
+      const safeOrders = applyTimeFilter(allOrders, (o) => o.created_at || o.delivered_at || o.updated_at);
+      const safeExpenses = applyTimeFilter(allExpenses, (e) => e.created_at || e.date || e.expense_date);
 
       // 1. إجمالي الإيرادات
       const totalRevenue = safeOrders.reduce((sum, order) => {
