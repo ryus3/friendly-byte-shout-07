@@ -452,31 +452,76 @@ const InventoryPage = () => {
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
-    // تطبيق فلتر الأقسام من الكروت والفلاتر العادية
-    if (filters.department && filters.department !== 'all') {
-      items = items.filter(product => {
-        // علاقات الأقسام عبر product_departments بأشكال متعددة
-        const hasDepartmentRelation = product.product_departments?.some(pd => (
-          pd.department_id === filters.department ||
-          pd.department?.id === filters.department ||
-          pd.department === filters.department
-        ));
-        
-        // حقول مباشرة أو داخل categories
-        const hasDirectDepartment = (
-          product.department_id === filters.department ||
-          product.department === filters.department ||
-          product?.categories?.department_id === filters.department ||
-          product?.categories?.department?.id === filters.department ||
-          product?.categories?.department === filters.department
-        );
-        
-        return hasDepartmentRelation || hasDirectDepartment;
-      });
-    }
+    // Helpers to robustly check relations from multiple schemas
+    const hasDept = (p, id) => {
+      if (!id || id === 'all') return true;
+      return (
+        Array.isArray(p.product_departments) && p.product_departments.some(pd => (
+          pd.department_id === id ||
+          pd.department?.id === id ||
+          pd.departments?.id === id ||
+          pd.department === id
+        )) ||
+        p.department_id === id ||
+        p.department === id ||
+        p?.categories?.department_id === id ||
+        p?.categories?.department?.id === id ||
+        p?.categories?.department === id
+      );
+    };
 
-    // إزالة فلتر categoryFilter المضاعف
-    // if (categoryFilter) { ... } // تم إزالته لتجنب التعارض
+    const hasCategory = (p, id) => {
+      if (!id || id === 'all') return true;
+      const c = p?.categories || {};
+      return (
+        Array.isArray(p.product_categories) && p.product_categories.some(pc => (
+          pc.category_id === id ||
+          pc.category?.id === id ||
+          pc.categories?.id === id ||
+          pc.category === id
+        )) ||
+        c?.main_category_id === id ||
+        c?.main_category?.id === id ||
+        c?.main_category === id
+      );
+    };
+
+    const hasProductType = (p, id) => {
+      if (!id || id === 'all') return true;
+      const c = p?.categories || {};
+      return (
+        Array.isArray(p.product_product_types) && p.product_product_types.some(ppt => (
+          ppt.product_type_id === id ||
+          ppt.product_type?.id === id ||
+          ppt.product_types?.id === id ||
+          ppt.product_type === id
+        )) ||
+        c?.product_type_id === id ||
+        c?.product_type?.id === id ||
+        c?.product_type === id
+      );
+    };
+
+    const hasSeason = (p, id) => {
+      if (!id || id === 'all') return true;
+      const c = p?.categories || {};
+      return (
+        Array.isArray(p.product_seasons_occasions) && p.product_seasons_occasions.some(pso => (
+          pso.season_occasion_id === id ||
+          pso.season_occasion?.id === id ||
+          pso.seasons_occasions?.id === id ||
+          pso.season_occasion === id
+        )) ||
+        c?.season_occasion_id === id ||
+        c?.season_occasion?.id === id ||
+        c?.season_occasion === id
+      );
+    };
+
+    // Department filter (from cards or dropdown)
+    if (filters.department && filters.department !== 'all') {
+      items = items.filter(p => hasDept(p, filters.department));
+    }
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
@@ -487,69 +532,25 @@ const InventoryPage = () => {
       );
     }
 
-    if (filters.category !== 'all') {
-      items = items.filter(p => {
-        const c = p?.categories || {};
-        const inCategoriesRel = p?.product_categories?.some(pc => (
-          pc.category_id === filters.category ||
-          pc.category?.id === filters.category ||
-          pc.category === filters.category
-        ));
-        return (
-          inCategoriesRel ||
-          c?.main_category_id === filters.category ||
-          c?.main_category?.id === filters.category ||
-          c?.main_category === filters.category
-        );
-      });
+    if (filters.category && filters.category !== 'all') {
+      items = items.filter(p => hasCategory(p, filters.category));
     }
-    
-    if (filters.productType !== 'all') {
-      items = items.filter(p => {
-        const c = p?.categories || {};
-        const inTypesRel = p?.product_product_types?.some(ppt => (
-          ppt.product_type_id === filters.productType ||
-          ppt.product_type?.id === filters.productType ||
-          ppt.product_type === filters.productType
-        ));
-        return (
-          inTypesRel ||
-          c?.product_type_id === filters.productType ||
-          c?.product_type?.id === filters.productType ||
-          c?.product_type === filters.productType
-        );
-      });
+
+    if (filters.productType && filters.productType !== 'all') {
+      items = items.filter(p => hasProductType(p, filters.productType));
     }
-    
-    // تم إزالة فلترة القسم المضاعفة لأنها تعارض الفلترة الصحيحة أعلاه
-    // if (filters.department !== 'all') {
-    //   items = items.filter(p => p?.categories?.department === filters.department);
-    // }
-    
-    if (filters.seasonOccasion !== 'all') {
-      items = items.filter(p => {
-        const c = p?.categories || {};
-        const inSeasonRel = p?.product_seasons_occasions?.some(pso => (
-          pso.season_occasion_id === filters.seasonOccasion ||
-          pso.season_occasion?.id === filters.seasonOccasion ||
-          pso.season_occasion === filters.seasonOccasion
-        ));
-        return (
-          inSeasonRel ||
-          c?.season_occasion_id === filters.seasonOccasion ||
-          c?.season_occasion?.id === filters.seasonOccasion ||
-          c?.season_occasion === filters.seasonOccasion
-        );
-      });
+
+    if (filters.seasonOccasion && filters.seasonOccasion !== 'all') {
+      items = items.filter(p => hasSeason(p, filters.seasonOccasion));
     }
-    
-    if (filters.color !== 'all') {
+
+    if (filters.color && filters.color !== 'all') {
       items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => (
         v?.color_id === filters.color || v?.colors?.id === filters.color || v?.color === filters.color
       )));
     }
-    
-    if (filters.size !== 'all') {
+
+    if (filters.size && filters.size !== 'all') {
       items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => (
         v?.size_id === filters.size || v?.sizes?.id === filters.size || v?.size === filters.size
       )));
@@ -559,23 +560,20 @@ const InventoryPage = () => {
       items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.price >= filters.price[0] && v?.price <= filters.price[1]));
     }
 
-    if (filters.stockFilter !== 'all') {
+    if (filters.stockFilter && filters.stockFilter !== 'all') {
       if (filters.stockFilter === 'reserved') {
         items = items.filter(item => (item?.totalReserved || 0) > 0);
       } else if (filters.stockFilter === 'out-of-stock') {
         items = items.filter(item => Array.isArray(item?.variants) && item.variants.some(v => (v?.quantity || 0) === 0));
       } else if (filters.stockFilter === 'archived') {
-        items = items.filter(item => 
-          Array.isArray(item?.variants) && item.variants.length > 0 && 
-          item.variants.every(v => (v?.quantity || 0) === 0)
-        );
+        items = items.filter(item => Array.isArray(item?.variants) && item.variants.length > 0 && item.variants.every(v => (v?.quantity || 0) === 0));
       } else {
         items = items.filter(item => Array.isArray(item?.variants) && item.variants.some(v => v?.stockLevel === filters.stockFilter));
       }
     }
 
     return items;
-  }, [inventoryItems, filters, categoryFilter]);
+  }, [inventoryItems, filters]);
 
   // تم نقل حسابات الإحصائيات إلى useInventoryStats Hook
 

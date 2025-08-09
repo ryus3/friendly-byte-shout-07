@@ -45,20 +45,20 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
       // أقسام
       if (Array.isArray(p?.product_departments)) {
         p.product_departments.forEach(pd => {
-          const id = pd.department_id || pd.department?.id || pd.id || pd;
-          const name = pd.department?.name || pd.name || p?.categories?.department_name || 'قسم';
+          const id = pd.department_id || pd.department?.id || pd.departments?.id || pd.id || pd;
+          const name = pd.department?.name || pd.departments?.name || pd.name || p?.categories?.department_name || 'قسم';
           if (id && !fallbackDepartmentsMap.has(id)) fallbackDepartmentsMap.set(id, { id, name });
         });
       }
-      const depId = p.department_id || p?.categories?.department_id || p?.categories?.department?.id;
-      const depName = p.department || p.department_name || p?.categories?.department?.name || p?.categories?.department_name;
+      const depId = p.department_id || p?.categories?.department_id || p?.categories?.department?.id || p?.categories?.departments?.id;
+      const depName = p.department || p.department_name || p?.categories?.department?.name || p?.categories?.departments?.name || p?.categories?.department_name;
       if (depId && !fallbackDepartmentsMap.has(depId)) fallbackDepartmentsMap.set(depId, { id: depId, name: depName || 'قسم' });
 
       // تصنيفات
       if (Array.isArray(p?.product_categories)) {
         p.product_categories.forEach(pc => {
-          const id = pc.category_id || pc.category?.id || pc.id || pc;
-          const name = pc.category?.name || pc.name || p?.categories?.main_category_name || 'تصنيف';
+          const id = pc.category_id || pc.category?.id || pc.categories?.id || pc.id || pc;
+          const name = pc.category?.name || pc.categories?.name || pc.name || p?.categories?.main_category_name || 'تصنيف';
           if (id && !fallbackCategoriesMap.has(id)) fallbackCategoriesMap.set(id, { id, name });
         });
       }
