@@ -84,11 +84,11 @@ export function Toaster() {
 
 	return (
 		<ToastProvider>
-			{toasts.map(({ id, title, description, action, variant, ...props }) => {
-				const Icon = iconMap[variant] || iconMap.default;
-				return (
-					<Toast key={id} variant={variant} {...props}>
-						<div className="flex items-start gap-3">
+      {toasts.map(({ id, title, description, action, variant, dismiss, icon, ...props }) => {
+        const Icon = iconMap[variant] || iconMap.default;
+        return (
+          <Toast key={id} variant={variant} {...props}>
+            <div className="flex items-start gap-3">
               <div className="mt-0.5">{Icon}</div>
   						<div className="grid gap-1">
   							{title && <ToastTitle>{title}</ToastTitle>}

@@ -13,6 +13,7 @@ import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
 import { useProductsDB } from '@/hooks/useProductsDB';
+import { useProfits } from '@/contexts/ProfitsContext.jsx';
 
 const SuperContext = createContext();
 
@@ -83,6 +84,8 @@ export const SuperProvider = ({ children }) => {
   
   // إضافة وظائف السلة
   const { cart, addToCart, removeFromCart, updateCartItemQuantity, clearCart } = useCart();
+  // أرباح وفواتير التسوية من السياق المتخصص (مع بقاء التوصيل عبر المزود الموحد)
+  const { settlementInvoices } = useProfits() || { settlementInvoices: [] };
   
   // حالة البيانات الموحدة - نفس البنية القديمة بالضبط
   const [allData, setAllData] = useState({
@@ -613,11 +616,13 @@ export const SuperProvider = ({ children }) => {
   const contextValue = {
     // البيانات الأساسية - مع قيم افتراضية آمنة
     products: allData.products || [],
+    allProducts: allData.products || [],
     orders: allData.orders || [],
     customers: allData.customers || [],
     purchases: allData.purchases || [],
     expenses: allData.expenses || [],
     profits: allData.profits || [],
+    settlementInvoices: settlementInvoices || [],
     aiOrders: allData.aiOrders || [],
     settings: allData.settings || { 
       deliveryFee: 5000, 
@@ -652,8 +657,8 @@ export const SuperProvider = ({ children }) => {
     addExpense: addExpense || (async () => ({ success: false })),
     refreshOrders: refreshOrders || (() => {}),
     refreshProducts: refreshProducts || (() => {}),
+    refetchProducts: refreshProducts || (() => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
-
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
       const res = await dbAddProduct(...args);
