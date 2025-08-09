@@ -372,41 +372,155 @@ export const SuperProvider = ({ children }) => {
     refetch: dbRefetchProducts,
   } = useProductsDB();
 
-  // إنشاء طلب جديد - نفس الواجهة القديمة بالضبط
-  const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => {
+  // إنشاء طلب جديد - يدعم النموذجين: (payload) أو (customerInfo, cartItems, ...)
+  const createOrder = useCallback(async (arg1, cartItemsArg, trackingNumberArg, discountArg, statusArg, qrLinkArg, deliveryPartnerDataArg) => {
     try {
-      const subtotal = cartItems.reduce((sum, item) => sum + item.quantity * item.price, 0);
-      const deliveryFee = deliveryPartnerData?.delivery_fee || allData.settings?.deliveryFee || 0;
-      const total = subtotal - (discount || 0) + deliveryFee;
+      // إذا تم تمرير كائن واحد، اعتبره Payload كامل يحتوي على items
+      const isPayload = typeof arg1 === 'object' && Array.isArray(arg1?.items);
 
-      const orderData = {
-        customer_name: customerInfo.name,
-        customer_phone: customerInfo.phone,
-        customer_address: customerInfo.address,
-        customer_city: customerInfo.city,
-        customer_province: customerInfo.province,
+      // تجهيز العناصر المراد إدراجها
+      const items = isPayload
+        ? (arg1.items || []).map(i => ({
+            product_id: i.product_id,
+            variant_id: i.variant_id,
+            quantity: i.quantity,
+            unit_price: i.unit_price || i.price || 0,
+            total_price: i.total_price || (i.quantity * (i.unit_price || i.price || 0))
+          }))
+        : (cartItemsArg || []).map(i => ({
+            product_id: i.productId || i.id,
+            variant_id: i.variantId || i.sku,
+            quantity: i.quantity,
+            unit_price: i.price,
+            total_price: i.quantity * i.price
+          }));
+
+      if (!items.length) return { success: false, error: 'لا توجد عناصر في الطلب' };
+
+      // حساب المجاميع
+      const subtotal = items.reduce((s, it) => s + (it.total_price || 0), 0);
+      const discount = isPayload ? (arg1.discount || 0) : (discountArg || 0);
+      const deliveryFee = isPayload
+        ? (arg1.delivery_fee || allData.settings?.deliveryFee || 0)
+        : (deliveryPartnerDataArg?.delivery_fee || allData.settings?.deliveryFee || 0);
+      const total = subtotal - discount + deliveryFee;
+
+      // إنشاء رقم الطلب
+      const { data: orderNumber, error: orderNumberError } = await supabase.rpc('generate_order_number');
+      if (orderNumberError) {
+        console.error('Error generating order number:', orderNumberError);
+        return { success: false, error: 'فشل في إنشاء رقم الطلب' };
+      }
+
+      // رقم التتبع
+      const trackingNumber = isPayload
+        ? (arg1.tracking_number || `RYUS-${Date.now().toString().slice(-6)}`)
+        : (trackingNumberArg || `RYUS-${Date.now().toString().slice(-6)}`);
+
+      // محاولة حجز المخزون لكل عنصر
+      const reservedSoFar = [];
+      for (const it of items) {
+        const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
+          p_product_id: it.product_id,
+          p_variant_id: it.variant_id || null,
+          p_quantity: it.quantity
+        });
+        if (reserveErr || reserveRes?.success === false) {
+          // تراجع عن أي حجوزات سابقة
+          for (const r of reservedSoFar) {
+            await supabase.rpc('release_stock_item', {
+              p_product_id: r.product_id,
+              p_variant_id: r.variant_id || null,
+              p_quantity: r.quantity
+            });
+          }
+          const msg = reserveErr?.message || reserveRes?.error || 'المخزون المتاح غير كافٍ';
+          return { success: false, error: msg };
+        }
+        reservedSoFar.push(it);
+      }
+
+      // بيانات الطلب للإدراج
+      const baseOrder = isPayload ? arg1 : {
+        customer_name: arg1?.name,
+        customer_phone: arg1?.phone,
+        customer_address: arg1?.address,
+        customer_city: arg1?.city,
+        customer_province: arg1?.province,
+        notes: arg1?.notes,
+      };
+
+      const orderRow = {
+        order_number: orderNumber,
+        customer_name: baseOrder.customer_name,
+        customer_phone: baseOrder.customer_phone,
+        customer_address: baseOrder.customer_address,
+        customer_city: baseOrder.customer_city,
+        customer_province: baseOrder.customer_province,
         total_amount: subtotal,
-        discount: discount || 0,
+        discount,
         delivery_fee: deliveryFee,
         final_amount: total,
         status: 'pending',
         delivery_status: 'pending',
         payment_status: 'pending',
-        tracking_number: trackingNumber || `RYUS-${Date.now().toString().slice(-6)}`,
-        delivery_partner: deliveryPartnerData?.delivery_partner || 'محلي',
-        notes: customerInfo.notes,
+        tracking_number: trackingNumber,
+        delivery_partner: isPayload ? (arg1.delivery_partner || 'محلي') : (deliveryPartnerDataArg?.delivery_partner || 'محلي'),
+        notes: baseOrder.notes,
         created_by: user?.user_id || user?.id,
       };
 
-      const createdOrder = await superAPI.createOrder(orderData);
-      
-      return { 
-        success: true, 
-        trackingNumber: orderData.tracking_number, 
-        qr_id: createdOrder.qr_id,
-        orderId: createdOrder.id 
+      // إنشاء الطلب
+      const { data: createdOrder, error: orderErr } = await supabase
+        .from('orders')
+        .insert(orderRow)
+        .select()
+        .single();
+      if (orderErr) {
+        // إلغاء الحجوزات
+        for (const r of reservedSoFar) {
+          await supabase.rpc('release_stock_item', {
+            p_product_id: r.product_id,
+            p_variant_id: r.variant_id || null,
+            p_quantity: r.quantity
+          });
+        }
+        return { success: false, error: orderErr.message };
+      }
+
+      // إدراج عناصر الطلب
+      const itemsRows = items.map(it => ({
+        order_id: createdOrder.id,
+        product_id: it.product_id,
+        variant_id: it.variant_id || null,
+        quantity: it.quantity,
+        unit_price: it.unit_price,
+        total_price: it.total_price
+      }));
+      const { error: itemsErr } = await supabase.from('order_items').insert(itemsRows);
+      if (itemsErr) {
+        // حذف الطلب والتراجع عن الحجوزات
+        await supabase.from('orders').delete().eq('id', createdOrder.id);
+        for (const r of reservedSoFar) {
+          await supabase.rpc('release_stock_item', {
+            p_product_id: r.product_id,
+            p_variant_id: r.variant_id || null,
+            p_quantity: r.quantity
+          });
+        }
+        return { success: false, error: 'فشل في إضافة عناصر الطلب' };
+      }
+
+      // إنجاح العملية وإبطال الكاش
+      superAPI.invalidate('all_data');
+      superAPI.invalidate('orders_only');
+
+      return {
+        success: true,
+        trackingNumber,
+        qr_id: trackingNumber,
+        orderId: createdOrder.id
       };
-      
     } catch (error) {
       console.error('Error in createOrder:', error);
       return { success: false, error: error.message };
@@ -427,14 +541,29 @@ export const SuperProvider = ({ children }) => {
   // حذف طلبات
   const deleteOrders = useCallback(async (orderIds, isAiOrder = false) => {
     try {
-      // TODO: تطبيق في SuperAPI
-      console.log('🗑️ حذف طلبات:', orderIds);
+      if (isAiOrder) {
+        const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
+        if (error) throw error;
+        // تحديث الحالة محلياً
+        setAllData(prev => ({
+          ...prev,
+          aiOrders: (prev.aiOrders || []).filter(o => !orderIds.includes(o.id))
+        }));
+        superAPI.invalidate('all_data');
+        toast({ title: 'تم الحذف', description: 'تم حذف الطلبات الذكية نهائياً', variant: 'success' });
+        return { success: true };
+      }
+      // حذف طلبات عادية (قيد التجهيز فقط) بدون تعقيد زائد هنا
+      const { error } = await supabase.from('orders').delete().in('id', orderIds);
+      if (error) throw error;
+      superAPI.invalidate('all_data');
+      await fetchAllData();
       return { success: true };
     } catch (error) {
       console.error('Error deleting orders:', error);
       return { success: false, error: error.message };
     }
-  }, []);
+  }, [fetchAllData]);
 
   // إضافة مصروف - نفس الواجهة القديمة
   const addExpense = useCallback(async (expense) => {
@@ -542,7 +671,21 @@ export const SuperProvider = ({ children }) => {
   // دوال أخرى مطلوبة للتوافق
   const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
-  const approveAiOrder = useCallback(async (orderId) => ({ success: true }), []);
+  const approveAiOrder = useCallback(async (orderId) => {
+    try {
+      const { error } = await supabase.from('ai_orders').delete().eq('id', orderId);
+      if (error) throw error;
+      setAllData(prev => ({
+        ...prev,
+        aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
+      }));
+      superAPI.invalidate('all_data');
+      return { success: true };
+    } catch (err) {
+      console.error('❌ فشل الموافقة/الحذف لطلب ذكي:', err);
+      return { success: false, error: err.message };
+    }
+  }, []);
 
   // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
   const toggleProductVisibility = useCallback(async (productId, newState) => {

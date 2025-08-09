@@ -157,11 +157,20 @@ const AiOrdersManager = ({ onClose }) => {
                     <div className="flex items-center gap-2">
                       <Button 
                         size="sm" 
-                        onClick={handleBulkApprove}
+                        onClick={() => {
+                          const firstId = selectedOrders[0];
+                          const firstOrder = userAiOrders.find(o => o.id === firstId);
+                          if (firstOrder) {
+                            setEditingOrder(firstOrder);
+                            setQuickOrderDialogOpen(true);
+                          } else {
+                            toast({ title: 'تنبيه', description: 'يرجى اختيار طلب للمراجعة', variant: 'default' });
+                          }
+                        }}
                         disabled={isProcessing}
                       >
                         {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                        موافقة على المحدد
+                        مراجعة وتحويل
                       </Button>
                       <Button 
                         variant="destructive" 

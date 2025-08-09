@@ -21,32 +21,16 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     }
 
     const handleApproveClick = async () => {
-        if (!hasPermission('approve_orders')) {
-            toast({ 
-                title: "ليس لديك صلاحية", 
-                description: "ليس لديك صلاحية للموافقة على الطلبات", 
-                variant: "destructive" 
-            });
-            return;
-        }
-        
-        setIsProcessing(true);
+        // افتح محرر الطلب لمراجعته وتحويله إلى طلب حقيقي
         try {
-            await approveAiOrder(order.id);
-            toast({ 
-                title: "نجاح", 
-                description: "تمت الموافقة على الطلب بنجاح", 
-                variant: "success" 
-            });
+            onEdit?.();
         } catch (error) {
-            console.error('Error approving order:', error);
+            console.error('Error opening AI order for review:', error);
             toast({ 
                 title: "خطأ", 
-                description: error.message || "فشل في الموافقة على الطلب", 
+                description: error.message || "فشل فتح نافذة المراجعة", 
                 variant: "destructive" 
             });
-        } finally {
-            setIsProcessing(false);
         }
     }
 
