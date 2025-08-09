@@ -600,19 +600,40 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               // حفظ معرف التنويع للاستخدام لاحقاً
               item.variant_id = selectedVariant.id;
               item.product_id = bestMatch.id;
+
+              // فحص توفر المخزون الحقيقي (المتاح = الكمية - المحجوز)
+              const { data: invRow } = await supabase
+                .from('inventory')
+                .select('quantity, reserved_quantity')
+                .eq('product_id', bestMatch.id)
+                .eq('variant_id', selectedVariant.id)
+                .maybeSingle();
+              const qty = Number(invRow?.quantity || 0);
+              const reserved = Number(invRow?.reserved_quantity || 0);
+              const availableQty = Math.max(0, qty - reserved);
+              const requested = Number(item.quantity || 1);
+
+              item.available_quantity = availableQty;
+              item.available = availableQty >= requested;
+              item.availability = item.available ? 'ok' : (availableQty > 0 ? 'insufficient' : 'out');
             }
           }
           
           // تحديث سعر المنتج في القائمة
           item.price = productPrice;
           item.product_name = bestMatch.name; // حفظ الاسم الصحيح
-          calculatedPrice += productPrice * item.quantity;
+          if (item.available !== false) {
+            calculatedPrice += productPrice * item.quantity;
+          }
           
-          console.log(`Product found: ${productData.name}, Price: ${productPrice}, Variant ID: ${item.variant_id}`);
+          console.log(`Product found: ${bestMatch?.name}, Price: ${productPrice}, Variant ID: ${item.variant_id}`);
         } else {
           console.log(`Product not found for: ${item.name}`);
           // إذا لم نجد المنتج، اتركه بسعر 0 أو سعر افتراضي
           item.price = 0;
+          item.available = false;
+          item.availability = 'not_found';
+          item.available_quantity = 0;
         }
       }
       
@@ -657,19 +678,20 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
     // رسالة مختصرة ومفيدة
     const itemsList = items.slice(0, 3).map(item => {
       const itemTotal = (item.price || 0) * (item.quantity || 1);
-      const priceDisplay = item.price > 0 ? `${itemTotal.toLocaleString()} د.ع` : '❌';
-      const productStatus = item.product_name ? '✅' : '⚠️';
-      return `${productStatus} ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} = ${priceDisplay}`;
+      const priceDisplay = (item.price > 0 && item.available !== false) ? `${itemTotal.toLocaleString()} د.ع` : '—';
+      const productStatus = item.available === false ? '❌ غير متاح' : (item.product_name ? '✅' : '⚠️');
+      return `${productStatus} ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} ${priceDisplay !== '—' ? `= ${priceDisplay}` : ''}`;
     }).join('\n');
     
     // حساب إحصائيات سريعة
-    const itemsTotal = items.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+    const itemsTotal = items.reduce((sum, item) => sum + ((item.available === false ? 0 : (item.price || 0) * (item.quantity || 1))), 0);
     const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
-    const foundItemsCount = items.filter(item => item.product_name).length;
+    const availableItemsCount = items.filter(item => item.available !== false).length;
+    const unavailableItemsCount = items.length - availableItemsCount;
     const totalItemsCount = items.length;
     
     await sendTelegramMessage(chatId, `
-✅ <b>تم استلام الطلب!</b>
+${unavailableItemsCount > 0 ? '⚠️ <b>تنبيه توفر</b>' : '✅ <b>تم استلام الطلب!</b>'}
 
 🆔 <b>رقم:</b> <code>${orderId.toString().slice(-8)}</code>
 👤 <b>الزبون:</b> ${customerName}
@@ -680,16 +702,16 @@ ${deliveryIcon} <b>التسليم:</b> ${deliveryType}
 ${itemsList}
 ${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
 
-📊 <b>حالة المنتجات:</b>
-• تم العثور على: ${foundItemsCount}/${totalItemsCount} منتجات ${foundItemsCount === totalItemsCount ? '✅' : '⚠️'}
-${foundItemsCount < totalItemsCount ? `• غير موجود: ${totalItemsCount - foundItemsCount} منتجات ⚠️` : ''}
+📊 <b>الحالة:</b>
+• المتاح: ${availableItemsCount}/${totalItemsCount} ${unavailableItemsCount === 0 ? '✅' : ''}
+${unavailableItemsCount > 0 ? `• غير متاح/محجوز: ${unavailableItemsCount} ❌` : ''}
 
-💰 <b>تفاصيل السعر:</b>
-• المنتجات الموجودة: ${itemsTotal.toLocaleString()} د.ع
+💰 <b>التسعير:</b>
+• المنتجات المتاحة: ${itemsTotal.toLocaleString()} د.ع
 ${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.toLocaleString()} د.ع` : ''}
 • <b>المجموع المؤقت: ${totalPrice.toLocaleString()} د.ع</b>
 
-⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>
+${unavailableItemsCount > 0 ? '⚠️ <b>بعض المنتجات غير متوفرة حالياً أو محجوزة.</b> الرجاء اختيار بديل داخل الموقع قبل الموافقة.' : '⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>'}
 
 ${employee?.full_name ? `<i>شكراً لك ${employee.full_name}! 🙏</i>` : ''}
     `);

@@ -392,7 +392,7 @@ return this.fetch('all_data', async () => {
    * اشتراك موحد للتحديثات الفورية
    */
   setupRealtimeSubscriptions(callback) {
-    const tables = ['orders', 'products', 'inventory', 'expenses'];
+    const tables = ['orders', 'products', 'inventory', 'expenses', 'ai_orders'];
     
     tables.forEach(table => {
       const channel = supabase

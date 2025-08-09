@@ -75,6 +75,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     };
 
     const sourceInfo = getSourceInfo(order.source);
+    const hasUnavailable = Array.isArray(order.items) && order.items.some(it => it?.available === false || (it?.availability && it.availability !== 'ok'));
 
     return (
         <motion.div
@@ -106,6 +107,12 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                     {order.total_amount?.toLocaleString() || 0} د.ع
                 </Badge>
             </div>
+
+            {hasUnavailable && (
+                <div className="rounded-lg p-3 bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+                    ⚠️ بعض العناصر غير متاحة حالياً أو محجوزة. يرجى اختيار بديل قبل الموافقة.
+                </div>
+            )}
 
             <div className="space-y-2 text-sm">
                 {order.customer_phone && (
@@ -181,9 +188,9 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                 
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button size="sm" disabled={isProcessing}>
+                        <Button size="sm" disabled={isProcessing || hasUnavailable}>
                             {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                            موافقة
+                            {hasUnavailable ? 'حلّ التعارض أولاً' : 'موافقة'}
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
