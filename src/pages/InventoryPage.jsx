@@ -191,7 +191,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                           </AccordionTrigger>
                           <AccordionContent className="px-2 md:px-3 pb-3">
                             <div className="grid grid-cols-7 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
-                              <div className="col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
+                              <div className="col-span-1 md:col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
                               <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">المخزون</div>
                               <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">محجوز</div>
                               <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">متاح</div>

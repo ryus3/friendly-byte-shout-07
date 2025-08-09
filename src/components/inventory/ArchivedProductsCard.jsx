@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const ArchivedProductsCard = ({ archivedCount = 0, onViewArchive, onRestoreProduct }) => {
   return (
     <Card className={cn(
-      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale",
+      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale h-full min-h-[196px] md:min-h-[208px]",
       "shadow-lg shadow-black/10 dark:shadow-black/30",
       "hover:shadow-2xl hover:shadow-primary/10",
       "dark:hover:shadow-primary/20",

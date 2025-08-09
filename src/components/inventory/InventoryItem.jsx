@@ -40,7 +40,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
       )}
     >
       {/* القياس */}
-      <div className="col-span-2 text-center">
+      <div className="col-span-1 md:col-span-2 text-center">
         <p className="font-semibold text-sm md:text-base">{displaySize}</p>
       </div>
 
@@ -80,7 +80,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
       </div>
       
       {/* حالة المخزون */}
-      <div className="col-span-1 text-center">
+      <div className="col-span-1 flex justify-center">
         <Badge className={cn("text-xs px-1 md:px-2 py-0.5 whitespace-nowrap leading-none", status.color)}>
           {status.text}
         </Badge>
