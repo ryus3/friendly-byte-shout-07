@@ -11,10 +11,10 @@ const ProductList = React.memo(({ products, onProductSelect }) => {
           <motion.div
             key={product.id}
             layout
-            initial={{ opacity: 0, x: -10 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3, delay: index * 0.05 }}
           >
             <ProductListItem
               product={product}

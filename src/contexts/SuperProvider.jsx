@@ -12,9 +12,8 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
-// import { useProductsDB } from '@/hooks/useProductsDB';
+import { useProductsDB } from '@/hooks/useProductsDB';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
-import { useSupabase } from '@/contexts/SupabaseContext';
 
 const SuperContext = createContext();
 
@@ -130,7 +129,7 @@ export const SuperProvider = ({ children }) => {
       setLoading(true);
       console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
       
-      const data = await superAPI.getAllData({ light: true });
+      const data = await superAPI.getAllData();
       
       // التحقق من البيانات
       if (!data) {
@@ -347,7 +346,7 @@ export const SuperProvider = ({ children }) => {
       fetchAllData();
     };
 
-    superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate, { tables: ['orders'] });
+    superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
 
     return () => {
       superAPI.unsubscribeAll();
@@ -358,217 +357,15 @@ export const SuperProvider = ({ children }) => {
   // وظائف متوافقة مع InventoryContext
   // ===============================
 
-  // استبدال useProductsDB بوظائف داخلية تعتمد على SupabaseContext لتجنب مشاكل hooks
-  const { db, storage } = useSupabase();
-
-  const dbRefetchProducts = useCallback(async () => {
-    await fetchAllData();
-  }, [fetchAllData]);
-
-  const dbGetLowStockProducts = useCallback((limit, threshold = 5) => {
-    const lowStockItems = [];
-    (allData.products || []).forEach(product => {
-      const invList = product.inventory || [];
-      invList.forEach(inv => {
-        if (inv.quantity <= threshold && inv.quantity > 0) {
-          lowStockItems.push({
-            ...inv,
-            productName: product.name,
-            productId: product.id,
-            productImage: product.images?.[0] || null,
-            lowStockThreshold: threshold
-          });
-        }
-      });
-    });
-    const sorted = lowStockItems.sort((a, b) => a.quantity - b.quantity);
-    return limit ? sorted.slice(0, limit) : sorted;
-  }, [allData.products]);
-
-  const dbAddProduct = useCallback(async (productData, imageFiles = { general: [], colorImages: {} }, setUploadProgress) => {
-    try {
-      if (!user) throw new Error('يجب تسجيل الدخول أولاً');
-
-      // 1) أنشئ المنتج أولاً بدون صور للحصول على المعرف
-      const mainCategoryId = productData.selectedCategories?.[0]?.id || null;
-      const newProduct = await db.products.create({
-        name: productData.name,
-        description: productData.description,
-        category_id: mainCategoryId,
-        base_price: productData.price || 0,
-        cost_price: productData.costPrice || 0,
-        profit_amount: productData.profitAmount || 0,
-        barcode: productData.barcode,
-        images: [],
-        is_active: true,
-        created_by: user?.user_id || user?.id
-      });
-
-      // 2) رفع الصور العامة بعد الحصول على المعرف
-      let uploadedGeneralImages = [];
-      if (imageFiles.general && imageFiles.general.length > 0) {
-        const uploadPromises = imageFiles.general.map(async (file, index) => {
-          if (typeof file === 'string') return file;
-          if (!file) return null;
-          try {
-            return await storage.uploadProductImage(file, newProduct.id);
-          } catch (err) {
-            console.error('Error uploading image:', err);
-            return null;
-          }
-        });
-        uploadedGeneralImages = (await Promise.all(uploadPromises)).filter(Boolean);
-        // تحديث المنتج بالصور المرفوعة
-        await db.products.update(newProduct.id, { images: uploadedGeneralImages });
-      }
-
-      // 3) العلاقات: الفئات والأنواع والمواسم والأقسام
-      if (productData.selectedCategories?.length > 0) {
-        await Promise.all(productData.selectedCategories.map(category =>
-          supabase.from('product_categories').insert({ product_id: newProduct.id, category_id: category.id })
-        ));
-      }
-      if (productData.selectedProductTypes?.length > 0) {
-        await Promise.all(productData.selectedProductTypes.map(pt =>
-          supabase.from('product_product_types').insert({ product_id: newProduct.id, product_type_id: pt.id })
-        ));
-      }
-      if (productData.selectedSeasonsOccasions?.length > 0) {
-        await Promise.all(productData.selectedSeasonsOccasions.map(so =>
-          supabase.from('product_seasons_occasions').insert({ product_id: newProduct.id, season_occasion_id: so.id })
-        ));
-      }
-      if (productData.selectedDepartments?.length > 0) {
-        await Promise.all(productData.selectedDepartments.map(dep =>
-          supabase.from('product_departments').insert({ product_id: newProduct.id, department_id: dep.id })
-        ));
-      }
-
-      // 4) إنشاء المتغيرات وصور الألوان
-      if (productData.variants && productData.variants.length > 0) {
-        const createdVariants = [];
-        for (const variant of productData.variants) {
-          let variantImageUrl = null;
-          if (variant.colorId && imageFiles.colorImages && imageFiles.colorImages[variant.colorId]) {
-            const file = imageFiles.colorImages[variant.colorId];
-            if (typeof file !== 'string' && file) {
-              try {
-                variantImageUrl = await storage.uploadProductImage(file, newProduct.id);
-              } catch (err) {
-                console.error('Error uploading variant image:', err);
-              }
-            } else if (typeof file === 'string') {
-              variantImageUrl = file;
-            }
-          }
-
-          const created = await db.variants.create({
-            product_id: newProduct.id,
-            color_id: variant.colorId,
-            size_id: variant.sizeId,
-            price: variant.price || (productData.price || 0),
-            cost_price: variant.costPrice || (productData.costPrice || 0),
-            profit_amount: variant.profitAmount || (productData.profitAmount || 0),
-            hint: variant.hint || '',
-            barcode: variant.barcode,
-            images: variantImageUrl ? [variantImageUrl] : []
-          });
-          createdVariants.push({ createdId: created.id, src: variant });
-        }
-
-        // 5) إنشاء سجلات المخزون الأولية
-        for (const v of createdVariants) {
-          await db.inventory.updateStock(newProduct.id, v.createdId, v.src.quantity || 0);
-        }
-      } else {
-        // منتج بدون متغيرات: أنشئ مخزون أساسي
-        await db.inventory.updateStock(newProduct.id, null, productData.quantity || 0);
-      }
-
-      await dbRefetchProducts();
-      toast({ title: 'تم إضافة المنتج بنجاح', description: `تم إضافة ${productData.name} إلى قاعدة البيانات` });
-      if (setUploadProgress) setUploadProgress(100);
-      return { success: true, data: newProduct };
-    } catch (error) {
-      console.error('Error adding product:', error);
-      toast({ title: 'خطأ في إضافة المنتج', description: error.message, variant: 'destructive' });
-      return { success: false, error: error.message };
-    }
-  }, [db, storage, user, dbRefetchProducts]);
-
-  const dbUpdateProduct = useCallback(async (productId, productData, imageFiles = { general: [], colorImages: {} }, setUploadProgress) => {
-    try {
-      // رفع صور جديدة إن وجدت
-      let updatedGeneralImages = [...(productData.existingImages || [])];
-      if (imageFiles.general && imageFiles.general.length > 0) {
-        const newImagePromises = imageFiles.general.map(async (file) => {
-          if (typeof file === 'string') return file;
-          if (!file) return null;
-          try { return await storage.uploadProductImage(file, productId); } catch { return null; }
-        });
-        const newImages = (await Promise.all(newImagePromises)).filter(Boolean);
-        updatedGeneralImages = [...updatedGeneralImages, ...newImages];
-      }
-
-      await db.products.update(productId, {
-        name: productData.name,
-        description: productData.description,
-        category_id: productData.categoryId,
-        base_price: productData.price || 0,
-        cost_price: productData.costPrice || 0,
-        profit_amount: productData.profitAmount || 0,
-        barcode: productData.barcode,
-        images: updatedGeneralImages
-      });
-
-      if (productData.variants && productData.variants.length > 0) {
-        const updates = productData.variants
-          .filter(v => v.id)
-          .map(v => db.variants.update(v.id, {
-            price: v.price || productData.price || 0,
-            cost_price: v.costPrice || productData.costPrice || 0,
-            profit_amount: v.profitAmount || productData.profitAmount || 0,
-            hint: v.hint || '',
-            barcode: v.barcode
-          }));
-        await Promise.all(updates);
-      }
-
-      await dbRefetchProducts();
-      toast({ title: 'تم تحديث المنتج بنجاح', description: `تم تحديث ${productData.name}` });
-      if (setUploadProgress) setUploadProgress(100);
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating product:', error);
-      toast({ title: 'خطأ في تحديث المنتج', description: error.message, variant: 'destructive' });
-      return { success: false, error: error.message };
-    }
-  }, [db, storage, dbRefetchProducts]);
-
-  const dbDeleteProducts = useCallback(async (productIds) => {
-    try {
-      await Promise.all(productIds.map(id => db.products.delete(id)));
-      await dbRefetchProducts();
-      toast({ title: 'تم حذف المنتجات', description: `تم حذف ${productIds.length} منتج بنجاح` });
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting products:', error);
-      toast({ title: 'خطأ في حذف المنتجات', description: error.message, variant: 'destructive' });
-      return { success: false, error: error.message };
-    }
-  }, [db, dbRefetchProducts]);
-
-  const dbUpdateVariantStock = useCallback(async (productId, variantId, newQuantity) => {
-    try {
-      await db.inventory.updateStock(productId, variantId, newQuantity);
-      await dbRefetchProducts();
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating variant stock:', error);
-      toast({ title: 'خطأ في تحديث المخزون', description: error.message, variant: 'destructive' });
-      return { success: false };
-    }
-  }, [db, dbRefetchProducts]);
+  // توصيل وظائف قاعدة البيانات القديمة (CRUD) عبر hook موحد
+  const {
+    addProduct: dbAddProduct,
+    updateProduct: dbUpdateProduct,
+    deleteProducts: dbDeleteProducts,
+    updateVariantStock: dbUpdateVariantStock,
+    getLowStockProducts: dbGetLowStockProducts,
+    refetch: dbRefetchProducts,
+  } = useProductsDB();
 
   // إنشاء طلب جديد - نفس الواجهة القديمة بالضبط
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => {

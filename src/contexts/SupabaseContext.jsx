@@ -408,11 +408,7 @@ export const SupabaseProvider = ({ children }) => {
       const fileName = `${Date.now()}-${file.name}`;
       const { data, error } = await supabase.storage
         .from('product-images')
-        .upload(`${productId}/${fileName}`, file, {
-          cacheControl: '86400',
-          upsert: true,
-          contentType: file.type || 'image/webp'
-        });
+        .upload(`${productId}/${fileName}`, file);
       
       if (error) throw error;
       
@@ -427,11 +423,7 @@ export const SupabaseProvider = ({ children }) => {
       const fileName = `${Date.now()}-${file.name}`;
       const { data, error } = await supabase.storage
         .from('avatars')
-        .upload(`${userId}/${fileName}`, file, {
-          cacheControl: '86400',
-          upsert: true,
-          contentType: file.type || 'image/webp'
-        });
+        .upload(`${userId}/${fileName}`, file);
       
       if (error) throw error;
       

@@ -146,198 +146,129 @@ class SuperAPI {
   /**
    * جلب جميع البيانات مرة واحدة - بدلاً من 170+ طلب!
    */
-  async getAllData(options = {}) {
-    const { light = false, limits = { products: 50, orders: 50, customers: 50 } } = options;
-    const key = light ? 'all_data_light' : 'all_data';
-    return this.fetch(key, async () => {
-      console.log(light ? '🔥 جلب بيانات خفيفة (تمهيد سريع)...' : '🔥 جلب جميع البيانات في طلب واحد موحد...');
+  async getAllData() {
+return this.fetch('all_data', async () => {
+  console.log('🔥 جلب جميع البيانات في طلب واحد موحد...');
+  
+  // طلب واحد كبير بدلاً من 170+ طلب منفصل
+  const [
+    products,
+    orders,
+    customers,
+    purchases,
+    expenses,
+    profits,
+    cashSources,
+    settings,
+    aiOrders,
+    profitRules,
+    profiles,
+    
+    // بيانات المرشحات
+    colors,
+    sizes,
+    categories,
+    departments,
+    productTypes,
+    seasons
+  ] = await Promise.all([
+    // المنتجات مع كل شيء - إصلاح ربط المخزون
+    supabase.from('products').select(`
+      *,
+      product_variants (
+        *,
+        colors (id, name, hex_code),
+        sizes (id, name, type),
+        inventory!inventory_variant_id_fkey (quantity, min_stock, reserved_quantity, location)
+      ),
+      product_categories (categories (id, name)),
+      product_departments (departments (id, name, color, icon)),
+      product_product_types (product_types (id, name)),
+      product_seasons_occasions (seasons_occasions (id, name, type))
+    `).order('created_at', { ascending: false }),
+    
+    // الطلبات مع العناصر
+    supabase.from('orders').select(`
+      *,
+      order_items (
+        *,
+        products (id, name, images),
+        product_variants (
+          id, price, cost_price, images,
+          colors (name, hex_code),
+          sizes (name)
+        )
+      )
+    `).order('created_at', { ascending: false }),
+    
+    // البيانات الأساسية
+    supabase.from('customers').select('*').order('created_at', { ascending: false }),
+    supabase.from('purchases').select('*').order('created_at', { ascending: false }),
+    supabase.from('expenses').select('*').order('created_at', { ascending: false }),
+    supabase.from('profits').select('*').order('created_at', { ascending: false }),
+    supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
+    supabase.from('settings').select('*'),
+    supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
+    supabase.from('employee_profit_rules').select('*'),
+    supabase.from('profiles').select('user_id, full_name, employee_code, status'),
+    
+    // بيانات المرشحات
+    supabase.from('colors').select('*').order('name'),
+    supabase.from('sizes').select('*').order('name'),
+    supabase.from('categories').select('*').order('name'),
+    supabase.from('departments').select('*').order('name'),
+    supabase.from('product_types').select('*').order('name'),
+    supabase.from('seasons_occasions').select('*').order('name')
+  ]);
 
-      if (light) {
-        // نمط خفيف لتقليل الإخراج: أعمدة محددة + حدود
-        const [
-          products,
-          orders,
-          settings,
-          colors,
-          sizes,
-          categories,
-          departments,
-          productTypes,
-          seasons
-        ] = await Promise.all([
-          supabase.from('products').select(`
-            id, name, images, created_at,
-            product_variants (
-              id, price, cost_price, images,
-              colors (id, name, hex_code),
-              sizes (id, name, type),
-              inventory!inventory_variant_id_fkey (quantity, reserved_quantity, min_stock, location)
-            )
-          `).order('created_at', { ascending: false }).limit(limits.products),
+  // التحقق من الأخطاء
+  const responses = [products, orders, customers, purchases, expenses, profits, 
+                    cashSources, settings, aiOrders, profitRules, profiles, colors, sizes, 
+                    categories, departments, productTypes, seasons];
+  
+  for (const response of responses) {
+    if (response.error) {
+      console.error('❌ خطأ في جلب البيانات:', response.error);
+      throw response.error;
+    }
+  }
 
-          supabase.from('orders').select(`
-            id, order_number, status, final_amount, created_at, created_by,
-            order_items (
-              id, quantity, unit_price,
-              products (id, name, images),
-              product_variants (id, price, cost_price)
-            )
-          `).order('created_at', { ascending: false }).limit(limits.orders),
+  const allData = {
+    // البيانات الأساسية
+    products: products.data || [],
+    orders: orders.data || [],
+    customers: customers.data || [],
+    purchases: purchases.data || [],
+    expenses: expenses.data || [],
+    profits: profits.data || [],
+    cashSources: cashSources.data || [],
+    settings: settings.data?.[0] || {},
+    aiOrders: aiOrders.data || [],
+    profitRules: profitRules.data || [],
+    employeeProfitRules: profitRules.data || [],
+    users: profiles.data || [],
+    
+    // بيانات المرشحات
+    colors: colors.data || [],
+    sizes: sizes.data || [],
+    categories: categories.data || [],
+    departments: departments.data || [],
+    productTypes: productTypes.data || [],
+    seasons: seasons.data || [],
+    
+    // معلومات النظام
+    fetchedAt: new Date(),
+    totalItems: {
+      products: products.data?.length || 0,
+      orders: orders.data?.length || 0,
+      customers: customers.data?.length || 0
+    }
+  };
 
-          supabase.from('settings').select('*'),
-
-          // بيانات المرشحات الخفيفة
-          supabase.from('colors').select('id, name, hex_code').order('name'),
-          supabase.from('sizes').select('id, name, type').order('name'),
-          supabase.from('categories').select('id, name').order('name'),
-          supabase.from('departments').select('id, name, color, icon').order('name'),
-          supabase.from('product_types').select('id, name').order('name'),
-          supabase.from('seasons_occasions').select('id, name, type').order('name')
-        ]);
-
-        const responses = [products, orders, settings, colors, sizes, categories, departments, productTypes, seasons];
-        for (const res of responses) {
-          if (res.error) {
-            console.error('❌ خطأ في جلب البيانات (light):', res.error);
-            throw res.error;
-          }
-        }
-
-        return {
-          products: products.data || [],
-          orders: orders.data || [],
-          customers: [],
-          purchases: [],
-          expenses: [],
-          profits: [],
-          cashSources: [],
-          settings: settings.data?.[0] || {},
-          aiOrders: [],
-          profitRules: [],
-          employeeProfitRules: [],
-          users: [],
-          colors: colors.data || [],
-          sizes: sizes.data || [],
-          categories: categories.data || [],
-          departments: departments.data || [],
-          productTypes: productTypes.data || [],
-          seasons: seasons.data || [],
-          fetchedAt: new Date(),
-          totalItems: {
-            products: products.data?.length || 0,
-            orders: orders.data?.length || 0,
-            customers: 0
-          }
-        };
-      }
-
-      // الطلب الكامل الافتراضي
-      const [
-        products,
-        orders,
-        customers,
-        purchases,
-        expenses,
-        profits,
-        cashSources,
-        settings,
-        aiOrders,
-        profitRules,
-        profiles,
-        // بيانات المرشحات
-        colors,
-        sizes,
-        categories,
-        departments,
-        productTypes,
-        seasons
-      ] = await Promise.all([
-        // المنتجات مع كل شيء - إصلاح ربط المخزون
-        supabase.from('products').select(`
-          *,
-          product_variants (
-            *,
-            colors (id, name, hex_code),
-            sizes (id, name, type),
-            inventory!inventory_variant_id_fkey (quantity, min_stock, reserved_quantity, location)
-          ),
-          product_categories (categories (id, name)),
-          product_departments (departments (id, name, color, icon)),
-          product_product_types (product_types (id, name)),
-          product_seasons_occasions (seasons_occasions (id, name, type))
-        `).order('created_at', { ascending: false }),
-        // الطلبات مع العناصر
-        supabase.from('orders').select(`
-          *,
-          order_items (
-            *,
-            products (id, name, images),
-            product_variants (
-              id, price, cost_price, images,
-              colors (name, hex_code),
-              sizes (name)
-            )
-          )
-        `).order('created_at', { ascending: false }),
-        // البيانات الأساسية
-        supabase.from('customers').select('*').order('created_at', { ascending: false }),
-        supabase.from('purchases').select('*').order('created_at', { ascending: false }),
-        supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-        supabase.from('profits').select('*').order('created_at', { ascending: false }),
-        supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
-        supabase.from('settings').select('*'),
-        supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
-        supabase.from('employee_profit_rules').select('*'),
-        supabase.from('profiles').select('user_id, full_name, employee_code, status'),
-        // بيانات المرشحات
-        supabase.from('colors').select('*').order('name'),
-        supabase.from('sizes').select('*').order('name'),
-        supabase.from('categories').select('*').order('name'),
-        supabase.from('departments').select('*').order('name'),
-        supabase.from('product_types').select('*').order('name'),
-        supabase.from('seasons_occasions').select('*').order('name')
-      ]);
-
-      const responses = [products, orders, customers, purchases, expenses, profits,
-                        cashSources, settings, aiOrders, profitRules, profiles, colors, sizes,
-                        categories, departments, productTypes, seasons];
-      for (const response of responses) {
-        if (response.error) {
-          console.error('❌ خطأ في جلب البيانات:', response.error);
-          throw response.error;
-        }
-      }
-
-      const allData = {
-        products: products.data || [],
-        orders: orders.data || [],
-        customers: customers.data || [],
-        purchases: purchases.data || [],
-        expenses: expenses.data || [],
-        profits: profits.data || [],
-        cashSources: cashSources.data || [],
-        settings: settings.data?.[0] || {},
-        aiOrders: aiOrders.data || [],
-        profitRules: profitRules.data || [],
-        employeeProfitRules: profitRules.data || [],
-        users: profiles.data || [],
-        colors: colors.data || [],
-        sizes: sizes.data || [],
-        categories: categories.data || [],
-        departments: departments.data || [],
-        productTypes: productTypes.data || [],
-        seasons: seasons.data || [],
-        fetchedAt: new Date(),
-        totalItems: {
-          products: products.data?.length || 0,
-          orders: orders.data?.length || 0,
-          customers: customers.data?.length || 0
-        }
-      };
-
-      console.log('✅ تم جلب جميع البيانات بنجاح:', allData.totalItems);
-      return allData;
-    });
+  console.log('✅ تم جلب جميع البيانات بنجاح:', allData.totalItems);
+  
+  return allData;
+});
   }
 
   /**
@@ -446,29 +377,30 @@ class SuperAPI {
   /**
    * اشتراك موحد للتحديثات الفورية
    */
-  setupRealtimeSubscriptions(callback, options = {}) {
-    const { tables = ['orders'] } = options; // افتراضي: طلبات فقط لتقليل الاستهلاك
-
+  setupRealtimeSubscriptions(callback) {
+    const tables = ['orders', 'products', 'inventory', 'expenses'];
+    
     tables.forEach(table => {
       const channel = supabase
         .channel(`unified_${table}`)
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table
+          table: table
         }, (payload) => {
           console.log(`🔄 تحديث فوري في ${table}:`, payload);
-          // حذف البيانات المحفوظة لإعادة تحميلها بشكل خفيف
+          
+          // حذف البيانات المحفوظة لإعادة تحميلها
           this.invalidate('all_data');
-          this.invalidate('all_data_light');
+          
           if (callback) callback(table, payload);
         })
         .subscribe();
-
+      
       this.subscriptions.set(table, channel);
     });
-
-    console.log('📡 تم تفعيل الاشتراكات الفورية الموحدة للجداول:', tables);
+    
+    console.log('📡 تم تفعيل الاشتراكات الفورية الموحدة');
   }
 
   /**

@@ -102,7 +102,6 @@ const ProductsPage = () => {
     advancedFilters: false,
   });
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [visibleCount, setVisibleCount] = useState(24);
 
   const isMobile = useMediaQuery("(max-width: 768px)");
 
@@ -317,21 +316,11 @@ const ProductsPage = () => {
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {filteredProducts.length > 0 ? (
-            <>
-              {viewMode === 'grid' ? (
-                <PermissionBasedProductGrid products={filteredProducts.slice(0, visibleCount)} onProductSelect={handleProductSelect} onCreateOrder={handleCreateOrder} />
-              ) : (
-                <ProductList products={filteredProducts.slice(0, visibleCount)} onProductSelect={handleProductSelect} />
-              )}
-
-              {filteredProducts.length > visibleCount && (
-                <div className="flex justify-center mt-6">
-                  <Button variant="secondary" onClick={() => setVisibleCount((c) => c + 24)}>
-                    عرض المزيد ({filteredProducts.length - visibleCount})
-                  </Button>
-                </div>
-              )}
-            </>
+            viewMode === 'grid' ? (
+              <PermissionBasedProductGrid products={filteredProducts} onProductSelect={handleProductSelect} onCreateOrder={handleCreateOrder} />
+            ) : (
+              <ProductList products={filteredProducts} onProductSelect={handleProductSelect} />
+            )
           ) : (
             <div className="text-center py-16">
               <h2 className="text-2xl font-bold mb-2">لا توجد منتجات مطابقة</h2>

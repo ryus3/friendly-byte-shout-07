@@ -74,7 +74,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                   onClick={(e) => e.stopPropagation()}
                 />
                 {product.images?.[0] ? (
-                  <img src={product.images[0]} alt={product.name} className="w-12 h-12 rounded-md object-cover" loading="lazy" />
+                  <img src={product.images[0]} alt={product.name} className="w-12 h-12 rounded-md object-cover" />
                 ) : (
                   <div className="w-12 h-12 rounded-md bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
                     <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
