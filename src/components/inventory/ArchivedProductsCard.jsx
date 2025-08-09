@@ -25,12 +25,12 @@ const ArchivedProductsCard = ({ archivedCount = 0, onViewArchive, onRestoreProdu
       <CardHeader className="pb-4">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+            <CardTitle className="text-base md:text-lg leading-none whitespace-nowrap truncate text-foreground flex items-center gap-2">
               <Archive className="w-5 h-5 text-gray-500" />
               أرشيف المنتجات
             </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              المنتجات النافذة والمؤرشفة
+            <p className="text-xs text-muted-foreground mt-1 whitespace-nowrap truncate">
+              المنتجات المؤرشفة
             </p>
           </div>
           <div className="bg-gradient-to-tr from-gray-500 to-gray-600 rounded-lg p-3 transition-transform duration-300 group-hover:scale-110">
