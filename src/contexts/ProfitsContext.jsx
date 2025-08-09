@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
 import { useAuth } from './UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/customSupabaseClient';
 
 // إعادة توجيه ProfitsContext للنظام الموحد
 

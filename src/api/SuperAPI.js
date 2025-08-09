@@ -185,7 +185,7 @@ return this.fetch('all_data', async () => {
       product_departments (departments (id, name, color, icon)),
       product_product_types (product_types (id, name)),
       product_seasons_occasions (seasons_occasions (id, name, type))
-    `).eq('is_active', true).order('created_at', { ascending: false }),
+    `).order('created_at', { ascending: false }),
     
     // الطلبات مع العناصر
     supabase.from('orders').select(`

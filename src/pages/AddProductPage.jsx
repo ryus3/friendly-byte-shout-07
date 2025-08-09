@@ -159,6 +159,10 @@ const AddProductPage = () => {
             if (editProductData.inventory) {
               const variantInventory = editProductData.inventory.find(inv => inv.variant_id === variant.id);
               inventoryQuantity = variantInventory?.quantity || 0;
+            } else if (variant.inventory) {
+              // fallback من البيانات الموحدة حيث تكون بيانات المخزون داخل كل متغير
+              const inv = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
+              inventoryQuantity = inv?.quantity || 0;
             }
             
             return {
