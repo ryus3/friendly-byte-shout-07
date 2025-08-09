@@ -75,8 +75,27 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     };
 
     const sourceInfo = getSourceInfo(order.source);
-    const hasUnavailable = Array.isArray(order.items) && order.items.some(it => it?.available === false || (it?.availability && it.availability !== 'ok'));
 
+    // فحص توفر بديل احتياطي للطلبات القديمة التي لا تحتوي حقول availability
+    const { products } = useInventory();
+    const isItemAvailable = (it) => {
+        if (it?.available === false) return false;
+        if (it?.availability) return it.availability === 'ok';
+        // احتياطي: حساب التوفر من بيانات المخزون عند توفر variant_id
+        if (it?.variant_id) {
+            const variant = products?.flatMap(p => p.variants || []).find(v => v.id === it.variant_id);
+            if (variant) {
+                const qty = Number(variant.quantity || 0);
+                const reserved = Number(variant.reserved_quantity || 0);
+                const availableQty = Math.max(0, qty - reserved);
+                const requested = Number(it.quantity || 1);
+                return availableQty >= requested;
+            }
+        }
+        return true; // إذا لم نستطع التحقق نعتبره متاح لتجنب الإيجابيات الكاذبة
+    };
+
+    const hasUnavailable = Array.isArray(order.items) && order.items.some(it => !isItemAvailable(it));
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}

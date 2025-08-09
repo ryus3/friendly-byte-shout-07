@@ -1,11 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useInventory } from '@/contexts/InventoryContext';
 
 /**
  * Hook موحد لإحصائيات المخزون
- * يستخدم الدالة الموحدة get_inventory_stats()
+ * يستخدم الدالة الموحدة get_inventory_stats() معFallback محلي عند غياب البيانات
  */
 const useInventoryStats = () => {
+  const { orders, products } = useInventory();
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalVariants: 0,
@@ -20,6 +22,15 @@ const useInventoryStats = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const computeReservedFallback = () => {
+    try {
+      const reservedOrders = (orders || []).filter(o => ['pending','delivery','shipped'].includes(o.status));
+      return reservedOrders.length;
+    } catch {
+      return 0;
+    }
+  };
 
   const fetchInventoryStats = async () => {
     try {
@@ -41,14 +52,15 @@ const useInventoryStats = () => {
         const statsData = data[0];
         console.log('✅ [InventoryStats] البيانات المستلمة:', statsData);
         
+        const reservedFallback = computeReservedFallback();
         const newStats = {
-          totalProducts: parseInt(statsData.total_products) || 0,
+          totalProducts: parseInt(statsData.total_products) || (products?.length || 0),
           totalVariants: parseInt(statsData.total_variants) || 0,
           highStockCount: parseInt(statsData.high_stock_count) || 0,
           mediumStockCount: parseInt(statsData.medium_stock_count) || 0,
           lowStockCount: parseInt(statsData.low_stock_count) || 0,
           outOfStockCount: parseInt(statsData.out_of_stock_count) || 0,
-          reservedStockCount: parseInt(statsData.reserved_stock_count) || 0,
+          reservedStockCount: (statsData.reserved_stock_count != null ? parseInt(statsData.reserved_stock_count) : 0) || reservedFallback,
           archivedProductsCount: parseInt(statsData.archived_products_count) || 0,
           totalInventoryValue: parseFloat(statsData.total_inventory_value) || 0,
           departments: statsData.departments_data || []
@@ -57,10 +69,14 @@ const useInventoryStats = () => {
         console.log('🎯 [InventoryStats] الإحصائيات المحسوبة:', newStats);
         setStats(newStats);
       } else {
-        console.warn('⚠️ [InventoryStats] لا توجد بيانات في الاستجابة');
+        console.warn('⚠️ [InventoryStats] لا توجد بيانات في الاستجابة، استخدام Fallback محلي');
+        const reservedFallback = computeReservedFallback();
+        setStats(prev => ({ ...prev, reservedStockCount: reservedFallback, totalProducts: products?.length || prev.totalProducts }));
       }
     } catch (err) {
-      console.error('❌ [InventoryStats] خطأ في جلب إحصائيات المخزون:', err);
+      console.error('❌ [InventoryStats] خطأ في جلب إحصائيات المخزون، سيتم استخدام Fallback:', err);
+      const reservedFallback = computeReservedFallback();
+      setStats(prev => ({ ...prev, reservedStockCount: reservedFallback, totalProducts: products?.length || prev.totalProducts }));
       setError(err.message);
     } finally {
       setLoading(false);
@@ -69,7 +85,14 @@ const useInventoryStats = () => {
 
   useEffect(() => {
     fetchInventoryStats();
+    // أعد الحساب محلياً عند تغير الطلبات لضمان تطابق البطاقة مع النافذة
   }, []);
+
+  // عندما تتغير الطلبات، حدّث قيمة المحجوز فوراً محلياً
+  useEffect(() => {
+    const reservedFallback = computeReservedFallback();
+    setStats(prev => ({ ...prev, reservedStockCount: reservedFallback }));
+  }, [orders]);
 
   return {
     stats,
