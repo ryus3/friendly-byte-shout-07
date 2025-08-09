@@ -8,7 +8,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 
-const AiOrderCard = ({ order, isSelected, onSelect, onEdit, onDeleted }) => {
+const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     const { approveAiOrder, deleteOrders } = useInventory();
     const { user, hasPermission } = useAuth();
     const [isProcessing, setIsProcessing] = React.useState(false);
@@ -17,17 +17,25 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit, onDeleted }) => {
         setIsProcessing(true);
         await deleteOrders([order.id], true);
         setIsProcessing(false);
-        onDeleted?.(order.id);
         toast({ title: "تم حذف الطلب الذكي", variant: "success" });
     }
 
     const handleApproveClick = async () => {
+        if (!hasPermission('approve_orders')) {
+            toast({ 
+                title: "ليس لديك صلاحية", 
+                description: "ليس لديك صلاحية للموافقة على الطلبات", 
+                variant: "destructive" 
+            });
+            return;
+        }
+        
         setIsProcessing(true);
         try {
-            await approveAiOrder(order.id, { convert: true });
+            await approveAiOrder(order.id);
             toast({ 
                 title: "نجاح", 
-                description: "تمت الموافقة على الطلب وتحويله لطلب حقيقي", 
+                description: "تمت الموافقة على الطلب بنجاح", 
                 variant: "success" 
             });
         } catch (error) {
@@ -46,11 +54,11 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit, onDeleted }) => {
     const getSourceInfo = (source) => {
         switch (source) {
             case 'telegram':
-                return { icon: MessageCircle, label: 'تليغرام', color: 'text-primary' };
+                return { icon: MessageCircle, label: 'تليغرام', color: 'text-blue-500' };
             case 'whatsapp':
-                return { icon: MessageCircle, label: 'واتساب', color: 'text-primary' };
+                return { icon: MessageCircle, label: 'واتساب', color: 'text-green-500' };
             default:
-                return { icon: Bot, label: 'ذكي', color: 'text-primary' };
+                return { icon: Bot, label: 'ذكي', color: 'text-purple-500' };
         }
     };
 
@@ -161,11 +169,11 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit, onDeleted }) => {
                 
                 <Button 
                     size="sm"
-                    onClick={onEdit}
+                    onClick={handleApproveClick}
                     disabled={isProcessing}
                 >
-                    <ShieldCheck className="w-4 h-4 ml-2" />
-                    مراجعة وتحويل
+                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
+                    موافقة
                 </Button>
             </div>
         </motion.div>

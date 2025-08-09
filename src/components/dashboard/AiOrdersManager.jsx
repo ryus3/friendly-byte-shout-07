@@ -21,7 +21,6 @@ const AiOrdersManager = ({ onClose }) => {
   const [editingOrder, setEditingOrder] = React.useState(null);
   const [quickOrderDialogOpen, setQuickOrderDialogOpen] = React.useState(false);
   const [userEmployeeCode, setUserEmployeeCode] = React.useState(null);
-  const [removedIds, setRemovedIds] = React.useState([]);
 
   // جلب رمز الموظف للمستخدم الحالي
   React.useEffect(() => {
@@ -48,12 +47,17 @@ const AiOrdersManager = ({ onClose }) => {
 
   const userAiOrders = React.useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
-    const base = hasPermission('view_all_data')
-      ? aiOrders
-      : (userEmployeeCode ? aiOrders.filter(o => o.created_by === userEmployeeCode) : []);
-    // إخفاء العناصر المحذوفة/المحوّلة محلياً فوراً (تجربة تفاعلية سلسة)
-    return base.filter(o => !removedIds.includes(o.id));
-  }, [aiOrders, userEmployeeCode, hasPermission, removedIds]);
+    
+    // للمدير - عرض كل الطلبات
+    if (hasPermission('view_all_data')) return aiOrders;
+    
+    // للموظفين - فلترة حسب رمز الموظف
+    if (!userEmployeeCode) return [];
+    
+    return aiOrders.filter(order => {
+      return order.created_by === userEmployeeCode;
+    });
+  }, [aiOrders, userEmployeeCode, hasPermission]);
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -72,9 +76,18 @@ const AiOrdersManager = ({ onClose }) => {
   };
 
   const handleBulkApprove = async () => {
+    if (!hasPermission('approve_orders')) {
+      toast({ 
+        title: "ليس لديك صلاحية", 
+        description: "ليس لديك صلاحية للموافقة على الطلبات", 
+        variant: "destructive" 
+      });
+      return;
+    }
+    
     setIsProcessing(true);
     for (const orderId of selectedOrders) {
-      await approveAiOrder(orderId, { convert: true });
+      await approveAiOrder(orderId);
     }
     setSelectedOrders([]);
     setIsProcessing(false);
@@ -84,10 +97,10 @@ const AiOrdersManager = ({ onClose }) => {
   const handleBulkDelete = async () => {
     setIsProcessing(true);
     await deleteOrders(selectedOrders, true);
-    setRemovedIds(prev => Array.from(new Set([...prev, ...selectedOrders])));
     setSelectedOrders([]);
     setIsProcessing(false);
   };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -186,7 +199,6 @@ const AiOrdersManager = ({ onClose }) => {
                         setEditingOrder(order);
                         setQuickOrderDialogOpen(true);
                       }}
-                      onDeleted={(id) => setRemovedIds(prev => Array.from(new Set([...prev, id])))}
                     />
                   ))}
                 </div>
@@ -197,7 +209,7 @@ const AiOrdersManager = ({ onClose }) => {
 
         {/* استخدام QuickOrderContent بدلاً من EditAiOrderDialog */}
         {quickOrderDialogOpen && editingOrder && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4" role="dialog" aria-label="مراجعة وتحويل الطلب الذكي">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
             <div className="bg-background rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <div className="p-4 border-b flex items-center justify-between">
                 <h2 className="text-lg font-semibold">تعديل الطلب الذكي</h2>
@@ -219,10 +231,8 @@ const AiOrdersManager = ({ onClose }) => {
                   aiOrderData={editingOrder}
                   onOrderCreated={() => {
                     setQuickOrderDialogOpen(false);
-                    setRemovedIds(prev => Array.from(new Set([...prev, editingOrder.id])));
-                    setSelectedOrders(prev => prev.filter(id => id !== editingOrder.id));
                     setEditingOrder(null);
-                    toast({ title: "تم التحويل", description: "تم إنشاء طلب حقيقي وحذف الطلب الذكي", variant: "success" });
+                    toast({ title: "نجاح", description: "تم تحديث الطلب بنجاح" });
                   }}
                 />
               </div>
