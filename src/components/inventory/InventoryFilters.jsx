@@ -165,7 +165,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
               <SelectTrigger className="w-full flex-grow">
                 <SelectValue placeholder="القسم" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-popover border shadow-md z-[9999]">
                 <SelectItem value="all">جميع الأقسام</SelectItem>
                 {allowedData.allowedDepartments.map(dept => (
                   <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
@@ -180,7 +180,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                   فلترة متقدمة
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80">
+              <PopoverContent className="w-80 z-[9999] bg-popover border shadow-md">
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <h4 className="font-medium leading-none">الفلاتر</h4>
@@ -191,7 +191,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                   <div className="grid gap-3">
                     <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
                       <SelectTrigger><SelectValue placeholder="التصنيف" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover border shadow-md z-[9999]">
                         <SelectItem value="all">جميع التصنيفات</SelectItem>
                         {allowedData.allowedCategories.map(c => (
                           <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
@@ -201,7 +201,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                     
                     <Select value={filters.productType || 'all'} onValueChange={(value) => handleFilterChange('productType', value)}>
                       <SelectTrigger><SelectValue placeholder="نوع المنتج" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover border shadow-md z-[9999]">
                         <SelectItem value="all">جميع الأنواع</SelectItem>
                         {allowedData.allowedProductTypes.map(pt => (
                           <SelectItem key={pt.id} value={pt.id}>{pt.name}</SelectItem>
@@ -211,7 +211,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                     
                     <Select value={filters.department || 'all'} onValueChange={(value) => handleFilterChange('department', value)}>
                       <SelectTrigger><SelectValue placeholder="القسم" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover border shadow-md z-[9999]">
                         <SelectItem value="all">جميع الأقسام</SelectItem>
                         {allowedData.allowedDepartments.map(dept => <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>)}
                       </SelectContent>
@@ -219,7 +219,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                     
                     <Select value={filters.seasonOccasion || 'all'} onValueChange={(value) => handleFilterChange('seasonOccasion', value)}>
                       <SelectTrigger><SelectValue placeholder="الموسم/المناسبة" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover border shadow-md z-[9999]">
                         <SelectItem value="all">جميع المواسم والمناسبات</SelectItem>
                         {allowedData.allowedSeasonsOccasions.map(so => (
                           <SelectItem key={so.id} value={so.id}>
@@ -231,7 +231,7 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                     
                     <Select value={filters.color} onValueChange={(value) => handleFilterChange('color', value)}>
                       <SelectTrigger><SelectValue placeholder="اللون" /></SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-popover border shadow-md z-[9999]">
                         <SelectItem value="all">جميع الألوان</SelectItem>
                          {allowedData.allowedColors.map(c => (
                            <SelectItem key={c.id} value={c.id}>
@@ -249,8 +249,8 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
                       </SelectContent>
                     </Select>
                     <Select value={filters.size} onValueChange={(value) => handleFilterChange('size', value)}>
-                      <SelectTrigger><SelectValue placeholder="القياس" /></SelectTrigger>
-                      <SelectContent>
+                     <SelectTrigger><SelectValue placeholder="القياس" /></SelectTrigger>
+                      <SelectContent className="bg-popover border shadow-md z-[9999]">
                         <SelectItem value="all">جميع القياسات</SelectItem>
                         {allowedData.allowedSizes.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                       </SelectContent>
