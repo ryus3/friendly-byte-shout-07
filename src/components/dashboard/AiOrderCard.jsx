@@ -46,11 +46,11 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit, onDeleted }) => {
     const getSourceInfo = (source) => {
         switch (source) {
             case 'telegram':
-                return { icon: MessageCircle, label: 'تليغرام', color: 'text-blue-500' };
+                return { icon: MessageCircle, label: 'تليغرام', color: 'text-primary' };
             case 'whatsapp':
-                return { icon: MessageCircle, label: 'واتساب', color: 'text-green-500' };
+                return { icon: MessageCircle, label: 'واتساب', color: 'text-primary' };
             default:
-                return { icon: Bot, label: 'ذكي', color: 'text-purple-500' };
+                return { icon: Bot, label: 'ذكي', color: 'text-primary' };
         }
     };
 

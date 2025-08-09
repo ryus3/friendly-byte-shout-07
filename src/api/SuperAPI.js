@@ -529,20 +529,27 @@ return this.fetch('all_data', async () => {
     return { success: true, orderId, warnings };
   }
 
-/**
- * حذف طلب ذكي نهائياً
- */
-superAPI.deleteAiOrder = async (aiOrderId) => {
-  const { error } = await supabase.from('ai_orders').delete().eq('id', aiOrderId);
-  if (error) throw error;
-  superAPI.invalidate('all_data');
-  return true;
-};
+
+
 
 /**
  * Realtime موحد
  */
-
+setupRealtimeSubscriptions(callback) {
+  // إلغاء الاشتراكات القديمة
+  this.unsubscribeAll();
+  const tables = ['ai_orders', 'orders', 'order_items', 'inventory', 'products'];
+  tables.forEach((table) => {
+    const channel = supabase
+      .channel(`realtime:${table}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+        try { callback?.(table, payload); } catch (e) { console.error('Realtime callback error', e); }
+      })
+      .subscribe();
+    this.subscriptions.set(table, channel);
+    console.log(`📡 تم إنشاء اشتراك: ${table}`);
+  });
+}
 
   /**
    * إلغاء جميع الاشتراكات
@@ -559,6 +566,15 @@ superAPI.deleteAiOrder = async (aiOrderId) => {
 
 // إنشاء النسخة الوحيدة المشتركة
 const superAPI = new SuperAPI();
+
+// توسيع: حذف طلب ذكي نهائياً (خارج الكلاس لتفادي تعديل هيكل كبير)
+superAPI.deleteAiOrder = async (aiOrderId) => {
+  const { error } = await supabase.from('ai_orders').delete().eq('id', aiOrderId);
+  if (error) throw error;
+  superAPI.invalidate('all_data');
+  superAPI.invalidate('orders_only');
+  return true;
+};
 
 // عمليات مالية موحدة لكتابة البيانات (بدون تغيير سلوك)
 superAPI.markOrdersReceiptReceived = async (orderIds, userId) => {
