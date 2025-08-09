@@ -89,7 +89,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
                   {/* الألوان المتوفرة كنقاط صغيرة */}
-                  <div className="hidden sm:flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     {(() => {
                       const seen = new Set();
                       const dots = [];
@@ -104,7 +104,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                             dots.push(
                               <span
                                 key={key}
-                                className="inline-block w-2.5 h-2.5 rounded-full border border-border"
+                                className="inline-block w-3 h-3 rounded-full border border-border"
                                 style={{ backgroundColor: (v?.color_hex || v?.colors?.hex_code || 'transparent') }}
                                 title={v?.color || v?.color_name || ''}
                               />
@@ -155,20 +155,38 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                       {groups.map(group => (
                         <AccordionItem key={group.id} value={String(group.id)} className="bg-accent/40 border border-border/60 rounded-lg">
                           <AccordionTrigger className="px-3 md:px-4 py-2 md:py-3 hover:no-underline">
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-3">
-                                {group.image ? (
-                                  <img src={group.image} alt={`${product.name} - ${group.name}`} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" loading="lazy" />
-                                ) : (
-                                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-md bg-muted" />
-                                )}
-                                <div className="flex items-center gap-2 font-semibold">
-                                  {group.hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: group.hex }} />}
-                                  <span>{group.name}</span>
+                            {(() => {
+                              const totals = (group.variants || []).reduce((acc, v) => {
+                                const qty = v?.quantity || 0;
+                                const res = v?.reserved_quantity || v?.reserved || 0;
+                                acc.stock += qty; acc.reserved += res; acc.available += (qty - res); return acc;
+                              }, { stock: 0, reserved: 0, available: 0 });
+                              const hasLow = (group.variants || []).some(v => v?.stockLevel === 'low');
+                              const hasMedium = (group.variants || []).some(v => v?.stockLevel === 'medium');
+                              let level = 'high';
+                              if (totals.stock === 0) level = 'out-of-stock';
+                              else if (hasLow) level = 'low';
+                              else if (hasMedium) level = 'medium';
+                              const text = level === 'out-of-stock' ? 'نافذ' : level === 'low' ? 'منخفض' : level === 'medium' ? 'متوسط' : 'جيد';
+                              const cls = level === 'out-of-stock' ? 'bg-gray-500/20 text-gray-400' : level === 'low' ? 'bg-red-500/20 text-red-400' : level === 'medium' ? 'bg-orange-500/20 text-orange-400' : 'bg-green-500/20 text-green-400';
+                              return (
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-3">
+                                    {group.image ? (
+                                      <img src={group.image} alt={`${product.name} - ${group.name}`} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" loading="lazy" />
+                                    ) : (
+                                      <div className="w-8 h-8 md:w-10 md:h-10 rounded-md bg-muted" />
+                                    )}
+                                    <div className="flex items-center gap-2 font-semibold">
+                                      {group.hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: group.hex }} />}
+                                      <span>{group.name}</span>
+                                      <Badge className={cn("text-[10px] md:text-xs px-1.5 py-0.5", cls)}>{text}</Badge>
+                                    </div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground hidden md:block">لون</div>
                                 </div>
-                              </div>
-                              <div className="text-xs text-muted-foreground hidden md:block">لون</div>
-                            </div>
+                              );
+                            })()}
                           </AccordionTrigger>
                           <AccordionContent className="px-2 md:px-3 pb-3">
                             <div className="grid grid-cols-7 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
@@ -436,13 +454,21 @@ const InventoryPage = () => {
     // تطبيق فلتر الأقسام من الكروت والفلاتر العادية
     if (filters.department && filters.department !== 'all') {
       items = items.filter(product => {
-        // البحث في علاقات الأقسام عبر product_departments
-        const hasDepartmentRelation = product.product_departments?.some(pd => 
-          pd.department_id === filters.department
-        );
+        // علاقات الأقسام عبر product_departments بأشكال متعددة
+        const hasDepartmentRelation = product.product_departments?.some(pd => (
+          pd.department_id === filters.department ||
+          pd.department?.id === filters.department ||
+          pd.department === filters.department
+        ));
         
-        // للتوافق: البحث في الحقل المباشر أيضاً
-        const hasDirectDepartment = product.department_id === filters.department;
+        // حقول مباشرة أو داخل categories
+        const hasDirectDepartment = (
+          product.department_id === filters.department ||
+          product.department === filters.department ||
+          product?.categories?.department_id === filters.department ||
+          product?.categories?.department?.id === filters.department ||
+          product?.categories?.department === filters.department
+        );
         
         return hasDepartmentRelation || hasDirectDepartment;
       });
@@ -463,7 +489,13 @@ const InventoryPage = () => {
     if (filters.category !== 'all') {
       items = items.filter(p => {
         const c = p?.categories || {};
+        const inCategoriesRel = p?.product_categories?.some(pc => (
+          pc.category_id === filters.category ||
+          pc.category?.id === filters.category ||
+          pc.category === filters.category
+        ));
         return (
+          inCategoriesRel ||
           c?.main_category_id === filters.category ||
           c?.main_category?.id === filters.category ||
           c?.main_category === filters.category
@@ -474,7 +506,13 @@ const InventoryPage = () => {
     if (filters.productType !== 'all') {
       items = items.filter(p => {
         const c = p?.categories || {};
+        const inTypesRel = p?.product_product_types?.some(ppt => (
+          ppt.product_type_id === filters.productType ||
+          ppt.product_type?.id === filters.productType ||
+          ppt.product_type === filters.productType
+        ));
         return (
+          inTypesRel ||
           c?.product_type_id === filters.productType ||
           c?.product_type?.id === filters.productType ||
           c?.product_type === filters.productType
@@ -490,7 +528,13 @@ const InventoryPage = () => {
     if (filters.seasonOccasion !== 'all') {
       items = items.filter(p => {
         const c = p?.categories || {};
+        const inSeasonRel = p?.product_seasons_occasions?.some(pso => (
+          pso.season_occasion_id === filters.seasonOccasion ||
+          pso.season_occasion?.id === filters.seasonOccasion ||
+          pso.season_occasion === filters.seasonOccasion
+        ));
         return (
+          inSeasonRel ||
           c?.season_occasion_id === filters.seasonOccasion ||
           c?.season_occasion?.id === filters.seasonOccasion ||
           c?.season_occasion === filters.seasonOccasion
