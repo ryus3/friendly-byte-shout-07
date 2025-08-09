@@ -190,14 +190,14 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                             })()}
                           </AccordionTrigger>
                           <AccordionContent className="px-2 md:px-3 pb-3">
-                            <div className="grid grid-cols-7 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
-                              <div className="col-span-1 md:col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
-                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">المخزون</div>
-                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">محجوز</div>
-                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">متاح</div>
-                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">مباع</div>
-                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">الحالة</div>
-                            </div>
+                              <div className="grid grid-cols-6 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
+                                <div className="col-span-1 md:col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
+                                <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">المخزون</div>
+                                <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">محجوز</div>
+                                <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">متاح</div>
+                                <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">مباع</div>
+                                <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">الحالة</div>
+                              </div>
                             {group.variants.map(variant => (
                               <InventoryItem
                                 key={variant.id}
@@ -768,39 +768,11 @@ const InventoryPage = () => {
             }));
           }}
           extraCard={(
-            <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden min-h-[180px]"
-                  onClick={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}>
-              <CardContent className="p-4">
-                <div className="text-center space-y-3 bg-gradient-to-br from-slate-600 to-slate-800 text-white rounded-lg p-4 relative overflow-hidden h-full flex flex-col justify-between">
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="secondary" className="bg-white/20 text-white border-0 text-xs">A</Badge>
-                  </div>
-                  <div className="flex justify-center">
-                    <div className="p-3 bg-white/10 rounded-full backdrop-blur-sm">
-                      <Archive className="w-8 h-8" />
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-base">أرشيف المنتجات</h4>
-                    <p className="text-xs opacity-90 mt-1">المنتجات النافذة والمؤرشفة</p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                    <div className="text-right">
-                      <span className="text-xl font-bold">
-                        {inventoryItems.filter(item => item.variants && item.variants.length > 0 && item.variants.every(v => (v.quantity || 0) === 0)).length}
-                        <span className="text-white/80 text-sm"> مؤرشف</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-white/70">
-                      <Archive className="w-4 h-4" />
-                      <span className="text-xs">عرض</span>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-4 -right-4 w-16 h-16 bg-white/5 rounded-full"></div>
-                  <div className="absolute -top-2 -left-2 w-12 h-12 bg-white/5 rounded-full"></div>
-                </div>
-              </CardContent>
-            </Card>
+            <ArchivedProductsCard
+              archivedCount={inventoryItems.filter(item => item.variants && item.variants.length > 0 && item.variants.every(v => (v.quantity || 0) === 0)).length}
+              onViewArchive={() => setFilters(prev => ({ ...prev, stockFilter: 'archived' }))}
+              onRestoreProduct={() => toast({ title: 'تنبيه', description: 'ميزة الاستعادة قيد الإعداد' })}
+            />
           )}
         />
         

@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { useFiltersData } from '@/hooks/useFiltersData';
+import { useInventory } from '@/contexts/SuperProvider';
 
 const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch }) => {
   const { user } = useAuth();
@@ -27,6 +28,8 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
   } = useFiltersData();
 
   // استخدام البيانات المفلترة من النظام التوحيدي
+  const { products: allProducts = [] } = useInventory();
+
   const allowedData = useMemo(() => {
     console.log('🔍 InventoryFilters - البيانات المتوفرة:', {
       hasFullAccess,
@@ -35,26 +38,58 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
       allCategories: allCategories
     });
 
+    // اشتقاق بدائل من المنتجات عند غياب بيانات التصفية الموحدة
+    const fallbackDepartmentsMap = new Map();
+    const fallbackCategoriesMap = new Map();
+    (allProducts || []).forEach(p => {
+      // أقسام
+      if (Array.isArray(p?.product_departments)) {
+        p.product_departments.forEach(pd => {
+          const id = pd.department_id || pd.department?.id || pd.id || pd;
+          const name = pd.department?.name || pd.name || p?.categories?.department_name || 'قسم';
+          if (id && !fallbackDepartmentsMap.has(id)) fallbackDepartmentsMap.set(id, { id, name });
+        });
+      }
+      const depId = p.department_id || p?.categories?.department_id || p?.categories?.department?.id;
+      const depName = p.department || p.department_name || p?.categories?.department?.name || p?.categories?.department_name;
+      if (depId && !fallbackDepartmentsMap.has(depId)) fallbackDepartmentsMap.set(depId, { id: depId, name: depName || 'قسم' });
+
+      // تصنيفات
+      if (Array.isArray(p?.product_categories)) {
+        p.product_categories.forEach(pc => {
+          const id = pc.category_id || pc.category?.id || pc.id || pc;
+          const name = pc.category?.name || pc.name || p?.categories?.main_category_name || 'تصنيف';
+          if (id && !fallbackCategoriesMap.has(id)) fallbackCategoriesMap.set(id, { id, name });
+        });
+      }
+      const catId = p?.categories?.main_category_id || p?.categories?.main_category?.id;
+      const catName = p?.categories?.main_category?.name || p?.categories?.main_category_name || p?.categories?.main_category;
+      if (catId && !fallbackCategoriesMap.has(catId)) fallbackCategoriesMap.set(catId, { id: catId, name: catName || 'تصنيف' });
+    });
+
+    const fallbackDepartments = Array.from(fallbackDepartmentsMap.values());
+    const fallbackCategories = Array.from(fallbackCategoriesMap.values());
+
     if (hasFullAccess) {
       return {
-        allowedCategories: allCategories || [], // استخدام البيانات من النظام الموحد
+        allowedCategories: (allCategories && allCategories.length ? allCategories : fallbackCategories),
         allowedColors: colors || [],
         allowedSizes: sizes || [],
         allowedProductTypes: productTypes || [],
-        allowedDepartments: departments || [],
+        allowedDepartments: (departments && departments.length ? departments : fallbackDepartments),
         allowedSeasonsOccasions: seasonsOccasions || []
       };
     }
 
     return {
-      allowedCategories: allowedCategories || [], // استخدام البيانات المفلترة من النظام الموحد
+      allowedCategories: (allowedCategories && allowedCategories.length ? allowedCategories : fallbackCategories),
       allowedColors: colors || [],
       allowedSizes: sizes || [],
       allowedProductTypes: productTypes || [],
-      allowedDepartments: allowedDepartments || [],
+      allowedDepartments: (allowedDepartments && allowedDepartments.length ? allowedDepartments : fallbackDepartments),
       allowedSeasonsOccasions: seasonsOccasions || []
     };
-  }, [hasFullAccess, allCategories, colors, sizes, productTypes, departments, seasonsOccasions, allowedCategories, allowedDepartments]);
+  }, [hasFullAccess, allCategories, colors, sizes, productTypes, departments, seasonsOccasions, allowedCategories, allowedDepartments, allProducts]);
   
   const handleFilterChange = (key, value) => {
     console.log('InventoryFilters handleFilterChange called with:', key, value);

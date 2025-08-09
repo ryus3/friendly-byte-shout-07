@@ -35,7 +35,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
   return (
     <div
       className={cn(
-        `${hideColorColumn ? 'grid grid-cols-7' : 'grid grid-cols-10'} items-center gap-2 md:gap-6 p-2 md:p-3 rounded-lg border transition-colors`,
+        `${hideColorColumn ? 'grid grid-cols-6' : 'grid grid-cols-10'} items-center gap-2 md:gap-6 p-2 md:p-3 rounded-lg border transition-colors`,
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
