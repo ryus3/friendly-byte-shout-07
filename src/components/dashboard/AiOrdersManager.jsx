@@ -76,18 +76,9 @@ const AiOrdersManager = ({ onClose }) => {
   };
 
   const handleBulkApprove = async () => {
-    if (!hasPermission('approve_orders')) {
-      toast({ 
-        title: "ليس لديك صلاحية", 
-        description: "ليس لديك صلاحية للموافقة على الطلبات", 
-        variant: "destructive" 
-      });
-      return;
-    }
-    
     setIsProcessing(true);
     for (const orderId of selectedOrders) {
-      await approveAiOrder(orderId);
+      await approveAiOrder(orderId, { convert: true });
     }
     setSelectedOrders([]);
     setIsProcessing(false);

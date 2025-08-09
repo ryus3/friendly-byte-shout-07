@@ -649,7 +649,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const result = await createOrder(orderData);
           if (result.success) {
             // حذف الطلب الذكي بعد الموافقة عليه
-            await approveAiOrder(aiOrderData.id);
+            await approveAiOrder(aiOrderData.id, { convert: false });
             
             toast({
               title: "تم بنجاح!",

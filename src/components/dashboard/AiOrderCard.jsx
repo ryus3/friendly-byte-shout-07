@@ -21,21 +21,12 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     }
 
     const handleApproveClick = async () => {
-        if (!hasPermission('approve_orders')) {
-            toast({ 
-                title: "ليس لديك صلاحية", 
-                description: "ليس لديك صلاحية للموافقة على الطلبات", 
-                variant: "destructive" 
-            });
-            return;
-        }
-        
         setIsProcessing(true);
         try {
-            await approveAiOrder(order.id);
+            await approveAiOrder(order.id, { convert: true });
             toast({ 
                 title: "نجاح", 
-                description: "تمت الموافقة على الطلب بنجاح", 
+                description: "تمت الموافقة على الطلب وتحويله لطلب حقيقي", 
                 variant: "success" 
             });
         } catch (error) {
