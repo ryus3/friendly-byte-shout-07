@@ -669,6 +669,7 @@ export const SuperProvider = ({ children }) => {
     }
   }, [allData.orders, user, fetchAllData]);
   // دوال أخرى مطلوبة للتوافق
+  const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId) => {
