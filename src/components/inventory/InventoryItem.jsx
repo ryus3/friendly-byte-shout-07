@@ -19,6 +19,9 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   const soldData = getVariantSoldData(variant.id);
   const sold = soldData.soldQuantity;
 
+  const displaySize = variant.size || variant.size_name || variant.sizes?.name || variant.size_label || '-';
+  const displayColor = variant.color || variant.color_name || variant.colors?.name || variant.color_label || '-';
+
   const getStockStatus = () => {
     if (stock === 0) return { text: 'نافذ', color: 'bg-gray-500/20 text-gray-400' };
     if (available <= 0) return { text: 'محجوز بالكامل', color: 'bg-yellow-500/20 text-yellow-400' };
@@ -32,12 +35,12 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   return (
     <div
       className={cn(
-        "grid grid-cols-11 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
+        "grid grid-cols-12 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
-      {/* معلومات المنتج */}
-      <div className="col-span-4 md:col-span-3 flex items-center gap-2 md:gap-3">
+      {/* المتغير (الصورة + اسم المنتج) */}
+      <div className="col-span-3 flex items-center gap-2 md:gap-3">
         {variant.image || product.images?.[0] ? (
           <img src={variant.image || product.images?.[0]} alt={product.name} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" />
         ) : (
@@ -48,18 +51,30 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="font-semibold text-xs md:text-sm truncate">{variant.size}</p>
-          <p className="text-xs text-muted-foreground truncate">{variant.color}</p>
+          <p className="font-semibold text-xs md:text-sm truncate">{product?.name || 'متغير'}</p>
         </div>
+      </div>
+
+      {/* القياس */}
+      <div className="col-span-2 text-center">
+        <p className="font-mono font-semibold text-sm md:text-base">{displaySize}</p>
+      </div>
+
+      {/* اللون */}
+      <div className="col-span-2 text-center">
+        <p className="font-mono font-semibold text-sm md:text-base flex items-center justify-center gap-2">
+          {variant.color_hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: variant.color_hex }} />}
+          {displayColor}
+        </p>
       </div>
       
       {/* المخزون */}
-      <div className="col-span-1 md:col-span-2 text-center">
+      <div className="col-span-1 text-center">
         <p className="font-mono font-semibold text-sm md:text-base">{stock}</p>
       </div>
       
       {/* محجوز */}
-      <div className="col-span-1 md:col-span-2 text-center">
+      <div className="col-span-1 text-center">
         <p className="font-mono font-semibold text-sm md:text-base text-yellow-600">{reserved}</p>
       </div>
       
