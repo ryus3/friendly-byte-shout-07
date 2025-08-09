@@ -97,7 +97,7 @@ const OrderCard = ({
   const StatusIcon = statusConfig.icon;
   
   // تحديد نوع التوصيل - ألوان أجمل ومبهرة
-  const isLocalOrder = order.delivery_partner === 'محلي';
+  const isLocalOrder = !order.delivery_partner || order.delivery_partner === 'محلي';
   const deliveryBadgeColor = isLocalOrder ? 
     'bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-500 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40 font-bold' : 
     'bg-gradient-to-r from-blue-400 via-blue-500 to-cyan-500 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40 font-bold';

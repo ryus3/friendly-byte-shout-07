@@ -153,10 +153,11 @@ class SuperAPI {
       console.log(light ? '🔥 جلب بيانات خفيفة (تمهيد سريع)...' : '🔥 جلب جميع البيانات في طلب واحد موحد...');
 
       if (light) {
-        // نمط خفيف لتقليل الإخراج: أعمدة محددة + حدود
+        // نمط خفيف لتقليل الإخراج: أعمدة محددة + حدود (مع الحقول اللازمة للحسابات)
         const [
           products,
           orders,
+          expenses,
           settings,
           colors,
           sizes,
@@ -176,13 +177,19 @@ class SuperAPI {
           `).order('created_at', { ascending: false }).limit(limits.products),
 
           supabase.from('orders').select(`
-            id, order_number, status, final_amount, created_at, created_by,
+            id, order_number, status, final_amount, total_amount, delivery_fee, delivery_partner, is_archived, receipt_received, created_at, updated_at, created_by,
+            customer_name, customer_phone, customer_address, customer_city, customer_province,
             order_items (
               id, quantity, unit_price,
               products (id, name, images),
               product_variants (id, price, cost_price)
             )
           `).order('created_at', { ascending: false }).limit(limits.orders),
+
+          // مصاريف خفيفة لعرض "مستحقات مدفوعة" وحسابات الربح
+          supabase.from('expenses').select(`
+            id, amount, status, category, expense_type, receipt_number, vendor_name, created_at, approved_at, created_by, metadata
+          `).order('created_at', { ascending: false }).limit(500),
 
           supabase.from('settings').select('*'),
 
@@ -195,7 +202,7 @@ class SuperAPI {
           supabase.from('seasons_occasions').select('id, name, type').order('name')
         ]);
 
-        const responses = [products, orders, settings, colors, sizes, categories, departments, productTypes, seasons];
+        const responses = [products, orders, expenses, settings, colors, sizes, categories, departments, productTypes, seasons];
         for (const res of responses) {
           if (res.error) {
             console.error('❌ خطأ في جلب البيانات (light):', res.error);
@@ -208,7 +215,7 @@ class SuperAPI {
           orders: orders.data || [],
           customers: [],
           purchases: [],
-          expenses: [],
+          expenses: expenses.data || [],
           profits: [],
           cashSources: [],
           settings: settings.data?.[0] || {},
