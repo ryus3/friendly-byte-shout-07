@@ -35,27 +35,29 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
   return (
     <div
       className={cn(
-        "grid grid-cols-10 items-center gap-2 md:gap-6 p-2 md:p-3 rounded-lg border transition-colors",
+        `${hideColorColumn ? 'grid grid-cols-7' : 'grid grid-cols-10'} items-center gap-2 md:gap-6 p-2 md:p-3 rounded-lg border transition-colors`,
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
-
       {/* القياس */}
       <div className="col-span-2 text-center">
         <p className="font-semibold text-sm md:text-base">{displaySize}</p>
       </div>
 
       {/* اللون */}
-      <div className="col-span-3 text-center">
-        <p className="font-semibold text-sm md:text-base flex items-center justify-center gap-2">
-          {!hideColorColumn && (
-            <>
-              {variant.color_hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: variant.color_hex }} />}
-              {displayColor}
-            </>
-          )}
-        </p>
-      </div>
+      {!hideColorColumn && (
+        <div className="col-span-3 text-center">
+          <p className="font-semibold text-sm md:text-base flex items-center justify-center gap-2">
+            {variant.color_hex && (
+              <span
+                className="inline-block w-3 h-3 rounded-full border"
+                style={{ backgroundColor: variant.color_hex }}
+              />
+            )}
+            {displayColor}
+          </p>
+        </div>
+      )}
       
       {/* المخزون */}
       <div className="col-span-1 text-center">
@@ -83,7 +85,6 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
           {status.text}
         </Badge>
       </div>
-      
     </div>
   );
 });

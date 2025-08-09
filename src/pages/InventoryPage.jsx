@@ -87,7 +87,34 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                     {product.variants?.length || 0} متغيرات • إجمالي المخزون: {product.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0}
                   </p>
                 </div>
-                <div className="flex gap-2 flex-shrink-0 min-w-0">
+                <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
+                  {/* الألوان المتوفرة كنقاط صغيرة */}
+                  <div className="hidden sm:flex items-center gap-1.5">
+                    {(() => {
+                      const seen = new Set();
+                      const dots = [];
+                      (product.variants || []).forEach(v => {
+                        const qty = v?.quantity || 0;
+                        const reserved = v?.reserved_quantity || v?.reserved || 0;
+                        const available = qty - reserved;
+                        if (available > 0) {
+                          const key = v?.color_hex || v?.colors?.hex_code || v?.color || v?.color_name || v?.color_label || 'unknown';
+                          if (!seen.has(key)) {
+                            seen.add(key);
+                            dots.push(
+                              <span
+                                key={key}
+                                className="inline-block w-2.5 h-2.5 rounded-full border border-border"
+                                style={{ backgroundColor: (v?.color_hex || v?.colors?.hex_code || 'transparent') }}
+                                title={v?.color || v?.color_name || ''}
+                              />
+                            );
+                          }
+                        }
+                      });
+                      return dots.slice(0, 12);
+                    })()}
+                  </div>
                   <Badge 
                     variant={
                       product.stockLevel === 'out-of-stock' ? 'destructive' : 
@@ -105,63 +132,68 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="space-y-3">
-                <div className="grid grid-cols-10 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
-                  <div className="col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
-                  <div className="col-span-3 text-center whitespace-nowrap truncate leading-none">اللون</div>
-                  <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">المخزون</div>
-                  <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">محجوز</div>
-                  <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">متاح</div>
-                  <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">مباع</div>
-                  <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">الحالة</div>
-                </div>
-                {
-                  (() => {
-                    const groupsMap = {};
-                    (product.variants || []).forEach(v => {
-                      const colorId = v.color_id || v.colors?.id || v.color || v.color_name || v.color_label || 'unknown';
-                      const colorName = v.color || v.color_name || v.colors?.name || v.color_label || 'غير محدد';
-                      const colorHex = v.color_hex || v.colors?.hex_code;
-                      const image = (Array.isArray(v.images) && v.images[0]) || v.image || (product.images_by_color && (product.images_by_color[colorId] || product.images_by_color[colorName])) || (product.images && product.images[0]);
-                      if (!groupsMap[colorId]) groupsMap[colorId] = { id: colorId, name: colorName, hex: colorHex, image, variants: [] };
-                      groupsMap[colorId].variants.push(v);
-                    });
-                    const groups = Object.values(groupsMap);
-                    if (groups.length === 0) {
-                      return (
-                        <div className="text-center py-4 text-muted-foreground">
-                          <p>لا توجد متغيرات لهذا المنتج</p>
-                        </div>
-                      );
-                    }
-                    return groups.map(group => (
-                      <div key={group.id} className="space-y-2">
-                        <div className="flex items-center justify-between bg-accent/40 border border-border/60 rounded-lg p-2 md:p-3">
-                          <div className="flex items-center gap-3">
-                            {group.image ? (
-                              <img src={group.image} alt={`${product.name} - ${group.name}`} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" loading="lazy" />
-                            ) : (
-                              <div className="w-8 h-8 md:w-10 md:h-10 rounded-md bg-muted" />
-                            )}
-                            <div className="flex items-center gap-2 font-semibold">
-                              {group.hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: group.hex }} />}
-                              <span>{group.name}</span>
-                            </div>
-                          </div>
-                          <div className="text-xs text-muted-foreground hidden md:block">لون</div>
-                        </div>
-                        {group.variants.map(variant => (
-                          <InventoryItem
-                            key={variant.id}
-                            variant={variant}
-                            product={product}
-                            onEditStock={canEdit ? () => onEditStock(product, variant) : null}
-                            hideColorColumn={true}
-                          />
-                        ))}
+                {(() => {
+                  const groupsMap = {};
+                  (product.variants || []).forEach(v => {
+                    const colorId = v.color_id || v.colors?.id || v.color || v.color_name || v.color_label || 'unknown';
+                    const colorName = v.color || v.color_name || v.colors?.name || v.color_label || 'غير محدد';
+                    const colorHex = v.color_hex || v.colors?.hex_code;
+                    const image = (Array.isArray(v.images) && v.images[0]) || v.image || (product.images_by_color && (product.images_by_color[colorId] || product.images_by_color[colorName])) || (product.images && product.images[0]);
+                    if (!groupsMap[colorId]) groupsMap[colorId] = { id: colorId, name: colorName, hex: colorHex, image, variants: [] };
+                    groupsMap[colorId].variants.push(v);
+                  });
+                  const groups = Object.values(groupsMap);
+                  if (groups.length === 0) {
+                    return (
+                      <div className="text-center py-4 text-muted-foreground">
+                        <p>لا توجد متغيرات لهذا المنتج</p>
                       </div>
-                    ));
-                  })()
-                }
+                    );
+                  }
+                  return (
+                    <Accordion type="multiple" className="w-full space-y-2">
+                      {groups.map(group => (
+                        <AccordionItem key={group.id} value={String(group.id)} className="bg-accent/40 border border-border/60 rounded-lg">
+                          <AccordionTrigger className="px-3 md:px-4 py-2 md:py-3 hover:no-underline">
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-3">
+                                {group.image ? (
+                                  <img src={group.image} alt={`${product.name} - ${group.name}`} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" loading="lazy" />
+                                ) : (
+                                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-md bg-muted" />
+                                )}
+                                <div className="flex items-center gap-2 font-semibold">
+                                  {group.hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: group.hex }} />}
+                                  <span>{group.name}</span>
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground hidden md:block">لون</div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-2 md:px-3 pb-3">
+                            <div className="grid grid-cols-7 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
+                              <div className="col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
+                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">المخزون</div>
+                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">محجوز</div>
+                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">متاح</div>
+                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">مباع</div>
+                              <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">الحالة</div>
+                            </div>
+                            {group.variants.map(variant => (
+                              <InventoryItem
+                                key={variant.id}
+                                variant={variant}
+                                product={product}
+                                onEditStock={canEdit ? () => onEditStock(product, variant) : null}
+                                hideColorColumn={true}
+                              />
+                            ))}
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  );
+                })()}
               </div>
             </AccordionContent>
           </AccordionItem>
