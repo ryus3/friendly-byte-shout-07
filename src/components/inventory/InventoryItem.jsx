@@ -35,23 +35,19 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   return (
     <div
       className={cn(
-        "grid grid-cols-12 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
+        "grid grid-cols-10 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
-      {/* المتغير (رمز المتغير فقط) */}
-      <div className="col-span-3 text-center">
-        <p className="font-mono font-semibold text-xs md:text-sm truncate">{variant.sku || variant.id || '-'}</p>
-      </div>
 
       {/* القياس */}
       <div className="col-span-2 text-center">
-        <p className="font-mono font-semibold text-sm md:text-base">{displaySize}</p>
+        <p className="font-semibold text-sm md:text-base">{displaySize}</p>
       </div>
 
       {/* اللون */}
-      <div className="col-span-2 text-center">
-        <p className="font-mono font-semibold text-sm md:text-base flex items-center justify-center gap-2">
+      <div className="col-span-3 text-center">
+        <p className="font-semibold text-sm md:text-base flex items-center justify-center gap-2">
           {variant.color_hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: variant.color_hex }} />}
           {displayColor}
         </p>
