@@ -249,25 +249,26 @@ const Layout = ({ children }) => {
         <meta name="description" content="نظام احترافي لإدارة المخزون والطلبات والإحصائيات والفلاتر في RYUS." />
         <link rel="canonical" href={canonicalUrl} />
       </Helmet>
-      <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-[60] bg-card border-l border-border">
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            initial={{ x: 300 }}
-            animate={{ x: 0 }}
-            exit={{ x: 300 }}
-            transition={{ type: "spring", damping: 30, stiffness: 250 }}
-            className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
-            dir="rtl"
-          >
-            <SidebarContent onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+<div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-[60] bg-card border-l border-border">
+  {/* Sidebar ثابتة لسطح المكتب */}
+  <SidebarContent isMobile={false} />
+</div>
 
-      {/* Sidebar ثابتة لسطح المكتب */}
-      <SidebarContent isMobile={false} />
-      </div>
+{/* Sidebar متحركة للجوال - خارج حاوية سطح المكتب حتى لا تُخفى */}
+<AnimatePresence>
+  {sidebarOpen && (
+    <motion.div
+      initial={{ x: 300 }}
+      animate={{ x: 0 }}
+      exit={{ x: 300 }}
+      transition={{ type: "spring", damping: 30, stiffness: 250 }}
+      className="fixed inset-y-0 right-0 z-[60] w-72 bg-card border-l border-border lg:hidden"
+      dir="rtl"
+    >
+      <SidebarContent onClose={() => setSidebarOpen(false)} isMobile={isMobile} />
+    </motion.div>
+  )}
+</AnimatePresence>
 
       <motion.div 
         className="flex-1 flex flex-col lg:mr-72"
