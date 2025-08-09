@@ -81,7 +81,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColu
       
       {/* حالة المخزون */}
       <div className="col-span-1 text-center">
-        <Badge className={cn("text-xs px-1 md:px-2 py-1", status.color)}>
+        <Badge className={cn("text-xs px-1 md:px-2 py-0.5 whitespace-nowrap leading-none", status.color)}>
           {status.text}
         </Badge>
       </div>

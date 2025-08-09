@@ -122,7 +122,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                       product.stockLevel === 'low' ? 'secondary' : 
                       'default'
                     }
-                    className="text-xs px-2 py-1 truncate max-w-20"
+                    className="text-xs px-2 py-0.5 whitespace-nowrap leading-none shrink-0"
                   >
                     {product.stockLevel === 'out-of-stock' ? 'نفد' : 
                      product.stockLevel === 'low' ? 'منخفض' : 
@@ -181,7 +181,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                                     <div className="flex items-center gap-2 font-semibold">
                                       {group.hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: group.hex }} />}
                                       <span>{group.name}</span>
-                                      <Badge className={cn("text-[10px] md:text-xs px-1.5 py-0.5", cls)}>{text}</Badge>
+                                      <Badge className={cn("text-[10px] md:text-xs px-1.5 py-0.5 whitespace-nowrap leading-none shrink-0", cls)}>{text}</Badge>
                                     </div>
                                   </div>
                                   <div className="text-xs text-muted-foreground hidden md:block">لون</div>
