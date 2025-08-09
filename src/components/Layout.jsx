@@ -265,6 +265,10 @@ const Layout = ({ children }) => {
         )}
       </AnimatePresence>
 
+      {/* Sidebar ثابتة لسطح المكتب */}
+      <SidebarContent isMobile={false} />
+      </div>
+
       <motion.div 
         className="flex-1 flex flex-col lg:mr-72"
         onPan={handlePan}

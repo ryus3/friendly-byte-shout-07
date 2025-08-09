@@ -108,22 +108,34 @@ async function determineUserRole(userId: string): Promise<'admin' | 'manager' | 
   return 'employee';
 }
 
+// توحيد سجل الموظف القادم من أي استعلام
+function normalizeEmployeeRecord(raw: any) {
+  if (!raw) return null;
+  const user_id = raw.user_id || raw.id || null;
+  const full_name = raw.full_name || raw.employee_name || raw.name || null;
+  const employee_code = raw.employee_code || raw.code || null;
+  const role = raw.role || 'unknown';
+  return { user_id, full_name, employee_code, role };
+}
+
+// يربط رمز المستخدم بحسابه في التليغرام مع دعم كلا الجدولين
 async function linkEmployeeCode(code: string, chatId: number) {
   try {
-    // 1) حاول عبر الإجراء المخزن الحالي (للتوافق مع الإصدارات السابقة)
+    // 1) الإجراء المخزن الأساسي
     const { data, error } = await supabase.rpc('link_telegram_user', {
       p_employee_code: code,
       p_telegram_chat_id: chatId
     });
     if (!error && data) return true;
 
-    // 2) fallback ذكي: اعتبره رمز تليغرام (مثل RYU7604) في جدول employee_telegram_codes
     const normalized = code.trim().toUpperCase();
+
+    // 2) إذا كان normalized هو telegram_code في employee_telegram_codes
     const { data: codeRow, error: codeErr } = await supabase
       .from('employee_telegram_codes')
       .select('id,user_id,telegram_chat_id,is_active')
       .eq('telegram_code', normalized)
-      .single();
+      .maybeSingle();
 
     if (!codeErr && codeRow && codeRow.is_active !== false) {
       const { error: updErr } = await supabase
@@ -137,7 +149,7 @@ async function linkEmployeeCode(code: string, chatId: number) {
       if (!updErr) return true;
     }
 
-    // 3) fallback إضافي: إن كان الرمز فعلياً employee_code (مثل EMP001) مخزن في telegram_employee_codes
+    // 3) إذا كان normalized هو employee_code في telegram_employee_codes
     const { data: telRows, error: telErr } = await supabase
       .from('telegram_employee_codes')
       .select('id,employee_code,telegram_chat_id,is_active')
@@ -159,7 +171,7 @@ async function linkEmployeeCode(code: string, chatId: number) {
 
     return false;
   } catch (error) {
-    console.error('Error linking employee code (fallback):', error);
+    console.error('Error linking employee code:', error);
     return false;
   }
 }
@@ -170,7 +182,14 @@ async function getEmployeeByTelegramId(chatId: number) {
     const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
       p_telegram_chat_id: chatId
     });
-    if (!error && data && data.length > 0) return data[0];
+    if (!error && data && data.length > 0) {
+      const raw = data[0];
+      const norm = normalizeEmployeeRecord(raw);
+      if (norm) {
+        const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
+        return { ...norm, role: finalRole };
+      }
+    }
   } catch (err) {
     console.error('Error getting employee via RPC, will try fallback:', err);
   }
@@ -825,11 +844,12 @@ serve(async (req) => {
           const newEmployee = await getEmployeeByTelegramId(chatId);
           const roleTitle = newEmployee?.role === 'admin' ? '👑 مدير' : 
                            newEmployee?.role === 'manager' ? '👨‍💼 مشرف' : '👤 موظف';
+          const displayName = newEmployee?.full_name || [update.message.from.first_name, (update.message as any).from?.last_name].filter(Boolean).join(' ') || update.message.from.username || 'الموظف';
           
           await sendTelegramMessage(chatId, `
 🎉 <b>تم ربط حسابك بنجاح!</b>
 
-👋 أهلاً وسهلاً <b>${newEmployee?.full_name}</b>!
+👋 أهلاً وسهلاً <b>${displayName}</b>!
 🎯 صلاحيتك: ${roleTitle}
 
 🚀 <b>الآن يمكنك:</b>
