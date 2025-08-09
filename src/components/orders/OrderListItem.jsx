@@ -117,12 +117,10 @@ const OrderListItem = ({
   };
 
   const handleDelete = () => {
-    // إضافة رسالة تأكيد قبل الحذف
-    if (confirm(`هل أنت متأكد من حذف الطلب ${order.qr_id || order.order_number}؟\n\nسيتم تحرير المخزون المحجوز تلقائياً.`)) {
-      if (onDeleteOrder && canDelete) {
-        onDeleteOrder([order.id]); // تمرير array كما هو متوقع
-      }
+    if (onDeleteOrder && canDelete) {
+      onDeleteOrder([order.id]); // تمرير array كما هو متوقع
     }
+    setShowDeleteDialog(false);
   };
 
   const formatDate = (dateString) => {

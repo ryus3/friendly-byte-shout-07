@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
+import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 const OrderCard = ({ 
@@ -40,6 +41,7 @@ const OrderCard = ({
   additionalButtons // أزرار إضافية
 }) => {
   const { hasPermission } = useAuth();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   // تحديد لون وأيقونة الحالة
   const getStatusConfig = (status) => {
@@ -113,12 +115,10 @@ const OrderCard = ({
   };
 
   const handleDelete = () => {
-    // إضافة رسالة تأكيد قبل الحذف
-    if (confirm(`هل أنت متأكد من حذف الطلب ${order.qr_id || order.order_number}؟\n\nسيتم تحرير المخزون المحجوز تلقائياً.`)) {
-      if (onDeleteOrder) {
-        onDeleteOrder(order); // تمرير الطلب كاملاً بدلاً من الـ ID فقط
-      }
+    if (onDeleteOrder) {
+      onDeleteOrder(order); // تمرير الطلب كاملاً بدلاً من الـ ID فقط
     }
+    setShowDeleteDialog(false);
   };
 
   const cardVariants = {
@@ -369,7 +369,7 @@ const OrderCard = ({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={handleDelete}
+                      onClick={() => setShowDeleteDialog(true)}
                       className="h-8 w-8 p-0 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:scale-110 transition-all duration-300 shadow-md"
                       title="حذف"
                     >
@@ -488,6 +488,15 @@ const OrderCard = ({
           </div>
         </CardContent>
       </Card>
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDelete}
+        title={`حذف الطلب ${order.qr_id || order.order_number}`}
+        description="سيتم تحرير المخزون المحجوز تلقائياً."
+        confirmText="حذف"
+        cancelText="إلغاء"
+      />
     </motion.div>
   );
 };
