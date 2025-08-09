@@ -2,6 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 
+// Cache موحّد لتقليل الاستهلاك وتجنب الازدواج
+const FILTERS_CACHE_TTL = 3 * 60 * 1000; // 3 دقائق
+const filtersCache = new Map(); // key -> { ts, data, pending }
+/**
+ * مفتاح الكاش حسب المستخدم وإعدادات الصلاحيات
+ */
+const getCacheKey = (user, isAdmin, includePermissions) => {
+  const uid = isAdmin ? 'admin' : (user?.id || 'anon');
+  return `${uid}:${includePermissions ? 'withPerm' : 'noPerm'}`;
+};
+
 /**
  * Hook توحيدي لجلب وإدارة بيانات المرشحات
  * يقلل التكرار ويحسن الأداء ويوحد منطق الصلاحيات
@@ -32,18 +43,36 @@ export const useFiltersData = (options = {}) => {
 
   // جلب البيانات من النظام التوحيدي الموحد
   const fetchFiltersData = async () => {
-    try {
-      setFiltersData(prev => ({ ...prev, loading: true, error: null }));
+    const cacheKey = getCacheKey(user, isAdmin, includePermissions);
+    // استخدام الكاش إن كان صالحاً
+    const cached = filtersCache.get(cacheKey);
+    const now = Date.now();
 
-      // استخدام database function الموحدة فقط
-      const { data: baseData, error: baseError } = await supabase
-        .rpc('get_filters_data');
+    if (cached && cached.data && now - cached.ts < FILTERS_CACHE_TTL) {
+      setFiltersData({ ...cached.data, loading: false, error: null });
+      return;
+    }
 
+    // تجنب الازدواج: مشاركة الطلب الجاري
+    if (cached?.pending) {
+      try {
+        const data = await cached.pending;
+        setFiltersData({ ...data, loading: false, error: null });
+        return;
+      } catch (e) {
+        // تجاهل ونستمر بجلب جديد
+      }
+    }
+
+    // set loading
+    setFiltersData(prev => ({ ...prev, loading: true, error: null }));
+
+    const pendingPromise = (async () => {
+      // قاعدة البيانات الأساسية
+      const { data: baseData, error: baseError } = await supabase.rpc('get_filters_data');
       if (baseError) throw baseError;
-
       const result = baseData?.[0] || {};
-      
-      // البيانات المباشرة من database function
+
       const parsedData = {
         departments: result.departments || [],
         categories: result.categories || [],
@@ -53,7 +82,7 @@ export const useFiltersData = (options = {}) => {
         seasonsOccasions: result.seasons_occasions || []
       };
 
-      // نظام الصلاحيات الموحد
+      // الصلاحيات
       let permissionsData = {
         allowedDepartments: parsedData.departments,
         allowedCategories: parsedData.categories,
@@ -76,29 +105,39 @@ export const useFiltersData = (options = {}) => {
         }
       }
 
-      setFiltersData({
+      const finalData = {
         ...parsedData,
         ...permissionsData,
         loading: false,
         error: null
-      });
+      };
+
+      // حفظ في الكاش
+      filtersCache.set(cacheKey, { ts: Date.now(), data: finalData, pending: null });
+      return finalData;
+    })();
+
+    // تسجيل الطلب الجاري ليتشاركه بقية النسخ
+    filtersCache.set(cacheKey, { ts: cached?.ts || 0, data: cached?.data || null, pending: pendingPromise });
+
+    try {
+      const data = await pendingPromise;
+      setFiltersData(data);
 
       console.log('🔍 useFiltersData - تم جلب البيانات بنجاح:', {
-        departments: parsedData.departments?.length || 0,
-        categories: parsedData.categories?.length || 0,
-        colors: parsedData.colors?.length || 0,
-        sizes: parsedData.sizes?.length || 0,
-        hasFullAccess: permissionsData.hasFullAccess,
-        categoriesData: parsedData.categories
+        departments: data.departments?.length || 0,
+        categories: data.categories?.length || 0,
+        colors: data.colors?.length || 0,
+        sizes: data.sizes?.length || 0,
+        hasFullAccess: data.hasFullAccess,
+        categoriesData: data.categories
       });
-
     } catch (error) {
       console.error('❌ خطأ في جلب بيانات المرشحات:', error);
-      setFiltersData(prev => ({
-        ...prev,
-        loading: false,
-        error: error.message
-      }));
+      setFiltersData(prev => ({ ...prev, loading: false, error: error.message }));
+      // تنظيف الطلب الجاري الفاشل
+      const curr = filtersCache.get(cacheKey);
+      if (curr?.pending) filtersCache.set(cacheKey, { ts: curr.ts, data: curr.data, pending: null });
     }
   };
 
@@ -158,6 +197,8 @@ export const useFiltersData = (options = {}) => {
 
   // دالة إعادة تحميل البيانات
   const refreshFiltersData = () => {
+    const cacheKey = getCacheKey(user, isAdmin, includePermissions);
+    filtersCache.delete(cacheKey);
     fetchFiltersData();
   };
 

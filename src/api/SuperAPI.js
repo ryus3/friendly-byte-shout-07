@@ -18,6 +18,8 @@ class SuperAPI {
     console.log('🚀 SuperAPI: نظام موحد لحل فوضى البيانات');
     // مفتاح تخزين محلي
     this.persistPrefix = 'superapi_cache_';
+    // مؤقت لتجميع الإبطال
+    this._invalidateTimer = null;
   }
 
   // التحقق من صحة البيانات المحفوظة
@@ -137,6 +139,18 @@ class SuperAPI {
     this.timestamps.clear();
     this.loading.clear();
     console.log('🧹 تم حذف جميع البيانات المحفوظة');
+  }
+
+  // تقليل الاستهلاك: إبطال مجمّع لتفادي إعادة الجلب المتكرر
+  debouncedInvalidateAll(delay = 800) {
+    if (this._invalidateTimer) return;
+    this._invalidateTimer = setTimeout(() => {
+      try {
+        this.invalidate('all_data');
+      } finally {
+        this._invalidateTimer = null;
+      }
+    }, delay);
   }
 
   // ==============
@@ -390,8 +404,8 @@ return this.fetch('all_data', async () => {
         }, (payload) => {
           console.log(`🔄 تحديث فوري في ${table}:`, payload);
           
-          // حذف البيانات المحفوظة لإعادة تحميلها
-          this.invalidate('all_data');
+          // حذف البيانات المحفوظة بشكل مجمّع لتقليل إعادة الجلب
+          this.debouncedInvalidateAll();
           
           if (callback) callback(table, payload);
         })
