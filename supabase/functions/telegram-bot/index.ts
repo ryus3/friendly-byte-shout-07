@@ -138,6 +138,7 @@ async function linkEmployeeCode(code: string, chatId: number) {
       .maybeSingle();
 
     if (!codeErr && codeRow && codeRow.is_active !== false) {
+      // اربط بالجدول الحالي
       const { error: updErr } = await supabase
         .from('employee_telegram_codes')
         .update({
@@ -146,7 +147,32 @@ async function linkEmployeeCode(code: string, chatId: number) {
           updated_at: new Date().toISOString()
         })
         .eq('id', codeRow.id);
-      if (!updErr) return true;
+      if (!updErr) {
+        // مزامنة مع جدول telegram_employee_codes باستخدام employee_code من الملف الشخصي
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('employee_code')
+          .eq('user_id', codeRow.user_id)
+          .maybeSingle();
+        if (profile?.employee_code) {
+          const { data: existingTel } = await supabase
+            .from('telegram_employee_codes')
+            .select('id')
+            .eq('employee_code', profile.employee_code)
+            .limit(1);
+          if (existingTel && existingTel.length > 0) {
+            await supabase
+              .from('telegram_employee_codes')
+              .update({ telegram_chat_id: chatId, linked_at: new Date().toISOString(), updated_at: new Date().toISOString(), is_active: true })
+              .eq('id', existingTel[0].id);
+          } else {
+            await supabase
+              .from('telegram_employee_codes')
+              .insert({ employee_code: profile.employee_code, telegram_chat_id: chatId, is_active: true, linked_at: new Date().toISOString() });
+          }
+        }
+        return true;
+      }
     }
 
     // 3) إذا كان normalized هو employee_code في telegram_employee_codes
