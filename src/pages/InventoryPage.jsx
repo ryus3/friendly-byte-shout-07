@@ -105,7 +105,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
               <div className="space-y-3">
-                <div className="grid grid-cols-10 items-center gap-1 md:gap-3 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg">
+                <div className="grid grid-cols-10 items-center gap-2 md:gap-6 p-2 md:p-3 text-xs sm:text-sm md:text-base font-semibold text-foreground border-b-2 border-primary/20 bg-muted/50 rounded-lg tracking-wide">
                   <div className="col-span-2 text-center whitespace-nowrap truncate leading-none">القياس</div>
                   <div className="col-span-3 text-center whitespace-nowrap truncate leading-none">اللون</div>
                   <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">المخزون</div>
@@ -114,19 +114,54 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                   <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">مباع</div>
                   <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">الحالة</div>
                 </div>
-                {(product.variants || []).map(variant => (
-                  <InventoryItem
-                    key={variant.id}
-                    variant={variant}
-                    product={product}
-                    onEditStock={canEdit ? () => onEditStock(product, variant) : null}
-                  />
-                ))}
-                {(!product.variants || product.variants.length === 0) && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <p>لا توجد متغيرات لهذا المنتج</p>
-                  </div>
-                )}
+                {
+                  (() => {
+                    const groupsMap = {};
+                    (product.variants || []).forEach(v => {
+                      const colorId = v.color_id || v.colors?.id || v.color || v.color_name || v.color_label || 'unknown';
+                      const colorName = v.color || v.color_name || v.colors?.name || v.color_label || 'غير محدد';
+                      const colorHex = v.color_hex || v.colors?.hex_code;
+                      const image = (Array.isArray(v.images) && v.images[0]) || v.image || (product.images_by_color && (product.images_by_color[colorId] || product.images_by_color[colorName])) || (product.images && product.images[0]);
+                      if (!groupsMap[colorId]) groupsMap[colorId] = { id: colorId, name: colorName, hex: colorHex, image, variants: [] };
+                      groupsMap[colorId].variants.push(v);
+                    });
+                    const groups = Object.values(groupsMap);
+                    if (groups.length === 0) {
+                      return (
+                        <div className="text-center py-4 text-muted-foreground">
+                          <p>لا توجد متغيرات لهذا المنتج</p>
+                        </div>
+                      );
+                    }
+                    return groups.map(group => (
+                      <div key={group.id} className="space-y-2">
+                        <div className="flex items-center justify-between bg-accent/40 border border-border/60 rounded-lg p-2 md:p-3">
+                          <div className="flex items-center gap-3">
+                            {group.image ? (
+                              <img src={group.image} alt={`${product.name} - ${group.name}`} className="w-8 h-8 md:w-10 md:h-10 rounded-md object-cover" loading="lazy" />
+                            ) : (
+                              <div className="w-8 h-8 md:w-10 md:h-10 rounded-md bg-muted" />
+                            )}
+                            <div className="flex items-center gap-2 font-semibold">
+                              {group.hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: group.hex }} />}
+                              <span>{group.name}</span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-muted-foreground hidden md:block">لون</div>
+                        </div>
+                        {group.variants.map(variant => (
+                          <InventoryItem
+                            key={variant.id}
+                            variant={variant}
+                            product={product}
+                            onEditStock={canEdit ? () => onEditStock(product, variant) : null}
+                            hideColorColumn={true}
+                          />
+                        ))}
+                      </div>
+                    ));
+                  })()
+                }
               </div>
             </AccordionContent>
           </AccordionItem>
@@ -394,11 +429,25 @@ const InventoryPage = () => {
     }
 
     if (filters.category !== 'all') {
-      items = items.filter(p => p?.categories?.main_category === filters.category);
+      items = items.filter(p => {
+        const c = p?.categories || {};
+        return (
+          c?.main_category_id === filters.category ||
+          c?.main_category?.id === filters.category ||
+          c?.main_category === filters.category
+        );
+      });
     }
     
     if (filters.productType !== 'all') {
-      items = items.filter(p => p?.categories?.product_type === filters.productType);
+      items = items.filter(p => {
+        const c = p?.categories || {};
+        return (
+          c?.product_type_id === filters.productType ||
+          c?.product_type?.id === filters.productType ||
+          c?.product_type === filters.productType
+        );
+      });
     }
     
     // تم إزالة فلترة القسم المضاعفة لأنها تعارض الفلترة الصحيحة أعلاه
@@ -407,15 +456,26 @@ const InventoryPage = () => {
     // }
     
     if (filters.seasonOccasion !== 'all') {
-      items = items.filter(p => p?.categories?.season_occasion === filters.seasonOccasion);
+      items = items.filter(p => {
+        const c = p?.categories || {};
+        return (
+          c?.season_occasion_id === filters.seasonOccasion ||
+          c?.season_occasion?.id === filters.seasonOccasion ||
+          c?.season_occasion === filters.seasonOccasion
+        );
+      });
     }
     
     if (filters.color !== 'all') {
-      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.color === filters.color));
+      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => (
+        v?.color_id === filters.color || v?.colors?.id === filters.color || v?.color === filters.color
+      )));
     }
     
     if (filters.size !== 'all') {
-      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => v?.size === filters.size));
+      items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => (
+        v?.size_id === filters.size || v?.sizes?.id === filters.size || v?.size === filters.size
+      )));
     }
 
     if (filters.price && (filters.price[0] > 0 || filters.price[1] < 500000)) {

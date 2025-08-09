@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useSalesStats } from '@/hooks/useSalesStats';
 
-const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
+const InventoryItem = React.memo(({ variant, product, onEditStock, hideColorColumn = false }) => {
   const { getVariantSoldData } = useSalesStats();
   
   if (!variant) {
@@ -35,7 +35,7 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
   return (
     <div
       className={cn(
-        "grid grid-cols-10 items-center gap-1 md:gap-3 p-2 md:p-3 rounded-lg border transition-colors",
+        "grid grid-cols-10 items-center gap-2 md:gap-6 p-2 md:p-3 rounded-lg border transition-colors",
         "bg-card/50 border-border/60 hover:bg-accent/50 animate-fade-in"
       )}
     >
@@ -48,8 +48,12 @@ const InventoryItem = React.memo(({ variant, product, onEditStock }) => {
       {/* اللون */}
       <div className="col-span-3 text-center">
         <p className="font-semibold text-sm md:text-base flex items-center justify-center gap-2">
-          {variant.color_hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: variant.color_hex }} />}
-          {displayColor}
+          {!hideColorColumn && (
+            <>
+              {variant.color_hex && <span className="inline-block w-3 h-3 rounded-full border" style={{ backgroundColor: variant.color_hex }} />}
+              {displayColor}
+            </>
+          )}
         </p>
       </div>
       
