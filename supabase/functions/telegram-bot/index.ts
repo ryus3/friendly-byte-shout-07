@@ -108,6 +108,32 @@ async function determineUserRole(userId: string): Promise<'admin' | 'manager' | 
   return 'employee';
 }
 
+// جلب المسمى الوظيفي الحقيقي من جداول الأدوار (display_name)
+async function getRoleDisplayName(userId: string, fallbackRole: 'admin' | 'manager' | 'employee' = 'employee'): Promise<string> {
+  try {
+    const { data: userRoles, error } = await supabase
+      .from('user_roles')
+      .select('roles(name, display_name, hierarchy_level)')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    if (!error && Array.isArray(userRoles) && userRoles.length > 0) {
+      const roles = userRoles
+        .map((r: any) => r.roles)
+        .filter((r: any) => !!r);
+      if (roles.length > 0) {
+        // اختر الدور الأعلى حسب hierarchy_level إن وجد
+        roles.sort((a: any, b: any) => (b?.hierarchy_level || 0) - (a?.hierarchy_level || 0));
+        const top = roles[0];
+        return top?.display_name || top?.name || (fallbackRole === 'admin' ? 'مدير عام' : fallbackRole === 'manager' ? 'مشرف' : 'موظف مبيعات');
+      }
+    }
+  } catch (_) {}
+
+  // محاكاة بسيطة في حال تعذر الجلب
+  return fallbackRole === 'admin' ? 'مدير عام' : fallbackRole === 'manager' ? 'مشرف' : 'موظف مبيعات';
+}
+
 // توحيد سجل الموظف القادم من أي استعلام
 function normalizeEmployeeRecord(raw: any) {
   if (!raw) return null;
@@ -213,7 +239,8 @@ async function getEmployeeByTelegramId(chatId: number) {
       const norm = normalizeEmployeeRecord(raw);
       if (norm) {
         const finalRole = norm.role && norm.role !== 'unknown' ? norm.role : await determineUserRole(norm.user_id);
-        return { ...norm, role: finalRole };
+        const role_title = await getRoleDisplayName(norm.user_id, finalRole);
+        return { ...norm, role: finalRole, role_title };
       }
     }
   } catch (err) {
@@ -236,10 +263,12 @@ async function getEmployeeByTelegramId(chatId: number) {
         .single();
       if (profile) {
         const role = await determineUserRole(profile.user_id);
+        const role_title = await getRoleDisplayName(profile.user_id, role);
         return {
           user_id: profile.user_id,
           full_name: profile.full_name,
           role,
+          role_title,
           employee_code: profile.employee_code || null
         };
       }
@@ -250,23 +279,41 @@ async function getEmployeeByTelegramId(chatId: number) {
   try {
     const { data: telRows } = await supabase
       .from('telegram_employee_codes')
-      .select('employee_code')
+      .select('employee_code, user_id')
       .eq('telegram_chat_id', chatId)
       .limit(1);
 
     if (telRows && telRows.length > 0) {
       const empCode = telRows[0].employee_code;
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, employee_code')
-        .eq('employee_code', empCode)
-        .single();
+      const userId = telRows[0].user_id;
+
+      let profile: any = null;
+      if (userId) {
+        const res = await supabase
+          .from('profiles')
+          .select('user_id, full_name, employee_code')
+          .eq('user_id', userId)
+          .maybeSingle();
+        profile = res.data;
+      }
+
+      if (!profile) {
+        const res2 = await supabase
+          .from('profiles')
+          .select('user_id, full_name, employee_code')
+          .eq('employee_code', empCode)
+          .maybeSingle();
+        profile = res2.data;
+      }
+
       if (profile) {
         const role = await determineUserRole(profile.user_id);
+        const role_title = await getRoleDisplayName(profile.user_id, role);
         return {
           user_id: profile.user_id,
           full_name: profile.full_name,
           role,
+          role_title,
           employee_code: profile.employee_code || empCode
         };
       }
