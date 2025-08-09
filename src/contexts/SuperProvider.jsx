@@ -700,8 +700,8 @@ export const SuperProvider = ({ children }) => {
     deleteOrders: deleteOrders || (async () => ({ success: false })),
     addExpense: addExpense || (async () => ({ success: false })),
     refreshOrders: refreshOrders || (() => {}),
-    refreshProducts: refreshProducts || (() => {}),
-    refetchProducts: refreshProducts || (() => {}),
+    refreshProducts: fetchAllData,
+    refetchProducts: fetchAllData,
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
