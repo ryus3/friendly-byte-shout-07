@@ -143,28 +143,27 @@ const ProductsPage = () => {
     // فلترة حسب القسم
     if (filters.department !== 'all') {
       tempProducts = tempProducts.filter(p => 
-        p.product_departments?.some(pd => pd.department_id === filters.department)
+        p.product_departments?.some(pd => [pd.department_id, pd.department?.id, pd.departments?.id].includes(filters.department))
       );
     }
 
-    // فلترة حسب التصنيف
     if (filters.category !== 'all') {
       tempProducts = tempProducts.filter(p => 
-        p.product_categories?.some(pc => pc.category_id === filters.category)
+        p.product_categories?.some(pc => [pc.category_id, pc.category?.id, pc.categories?.id].includes(filters.category))
       );
     }
 
     // فلترة حسب الموسم/المناسبة
     if (filters.seasonOccasion !== 'all') {
       tempProducts = tempProducts.filter(p => 
-        p.product_seasons_occasions?.some(pso => pso.season_occasion_id === filters.seasonOccasion)
+        p.product_seasons_occasions?.some(pso => [pso.season_occasion_id, pso.season_occasion?.id, pso.seasons_occasions?.id].includes(filters.seasonOccasion))
       );
     }
 
     // فلترة حسب نوع المنتج
     if (filters.productType !== 'all') {
       tempProducts = tempProducts.filter(p => 
-        p.product_product_types?.some(ppt => ppt.product_type_id === filters.productType)
+        p.product_product_types?.some(ppt => [ppt.product_type_id, ppt.product_type?.id, ppt.product_types?.id].includes(filters.productType))
       );
     }
 

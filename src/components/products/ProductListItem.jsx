@@ -24,12 +24,21 @@ const ProductListItem = React.memo(({ product, onSelect }) => {
 
   const availableColorsWithHex = useMemo(() => {
     if (!product || !product.variants) return [];
-    const availableVariants = product.variants.filter(v => (v.inventory?.[0]?.quantity || v.quantity || 0) > 0);
-    const uniqueVariantColors = [...new Set(availableVariants.map(item => item.color?.name || item.color))];
-    return uniqueVariantColors.map(colorName => {
-        const colorInfo = allColors.find(c => c.name === colorName);
-        return { name: colorName, hex: colorInfo?.hex_code };
-    }).filter(c => c.name).slice(0, 5);
+    const seen = new Set();
+    const list = [];
+    product.variants.forEach(v => {
+      const invObj = Array.isArray(v.inventory) ? v.inventory[0] : v.inventory;
+      const qty = (invObj?.quantity ?? v.quantity ?? 0);
+      if (qty > 0) {
+        const name = v.color || v.color_name || v.colors?.name;
+        if (name && !seen.has(name)) {
+          seen.add(name);
+          const hex = v.color_hex || v.colors?.hex_code || allColors.find(c => c.name === name)?.hex_code;
+          list.push({ name, hex });
+        }
+      }
+    });
+    return list.slice(0, 5);
   }, [product, allColors]);
 
   const availableSizes = useMemo(() => {
