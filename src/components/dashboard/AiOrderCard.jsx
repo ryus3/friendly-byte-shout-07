@@ -8,7 +8,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 
-const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
+const AiOrderCard = ({ order, isSelected, onSelect, onEdit, onDeleted }) => {
     const { approveAiOrder, deleteOrders } = useInventory();
     const { user, hasPermission } = useAuth();
     const [isProcessing, setIsProcessing] = React.useState(false);
@@ -17,6 +17,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
         setIsProcessing(true);
         await deleteOrders([order.id], true);
         setIsProcessing(false);
+        onDeleted?.(order.id);
         toast({ title: "تم حذف الطلب الذكي", variant: "success" });
     }
 
@@ -160,11 +161,11 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                 
                 <Button 
                     size="sm"
-                    onClick={handleApproveClick}
+                    onClick={onEdit}
                     disabled={isProcessing}
                 >
-                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                    موافقة
+                    <ShieldCheck className="w-4 h-4 ml-2" />
+                    مراجعة وتحويل
                 </Button>
             </div>
         </motion.div>

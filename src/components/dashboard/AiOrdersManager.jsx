@@ -21,6 +21,7 @@ const AiOrdersManager = ({ onClose }) => {
   const [editingOrder, setEditingOrder] = React.useState(null);
   const [quickOrderDialogOpen, setQuickOrderDialogOpen] = React.useState(false);
   const [userEmployeeCode, setUserEmployeeCode] = React.useState(null);
+  const [removedIds, setRemovedIds] = React.useState([]);
 
   // جلب رمز الموظف للمستخدم الحالي
   React.useEffect(() => {
@@ -47,17 +48,12 @@ const AiOrdersManager = ({ onClose }) => {
 
   const userAiOrders = React.useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
-    
-    // للمدير - عرض كل الطلبات
-    if (hasPermission('view_all_data')) return aiOrders;
-    
-    // للموظفين - فلترة حسب رمز الموظف
-    if (!userEmployeeCode) return [];
-    
-    return aiOrders.filter(order => {
-      return order.created_by === userEmployeeCode;
-    });
-  }, [aiOrders, userEmployeeCode, hasPermission]);
+    const base = hasPermission('view_all_data')
+      ? aiOrders
+      : (userEmployeeCode ? aiOrders.filter(o => o.created_by === userEmployeeCode) : []);
+    // إخفاء العناصر المحذوفة/المحوّلة محلياً فوراً (تجربة تفاعلية سلسة)
+    return base.filter(o => !removedIds.includes(o.id));
+  }, [aiOrders, userEmployeeCode, hasPermission, removedIds]);
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -88,10 +84,10 @@ const AiOrdersManager = ({ onClose }) => {
   const handleBulkDelete = async () => {
     setIsProcessing(true);
     await deleteOrders(selectedOrders, true);
+    setRemovedIds(prev => Array.from(new Set([...prev, ...selectedOrders])));
     setSelectedOrders([]);
     setIsProcessing(false);
   };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -190,6 +186,7 @@ const AiOrdersManager = ({ onClose }) => {
                         setEditingOrder(order);
                         setQuickOrderDialogOpen(true);
                       }}
+                      onDeleted={(id) => setRemovedIds(prev => Array.from(new Set([...prev, id])))}
                     />
                   ))}
                 </div>
@@ -222,8 +219,10 @@ const AiOrdersManager = ({ onClose }) => {
                   aiOrderData={editingOrder}
                   onOrderCreated={() => {
                     setQuickOrderDialogOpen(false);
+                    setRemovedIds(prev => Array.from(new Set([...prev, editingOrder.id])));
+                    setSelectedOrders(prev => prev.filter(id => id !== editingOrder.id));
                     setEditingOrder(null);
-                    toast({ title: "نجاح", description: "تم تحديث الطلب بنجاح" });
+                    toast({ title: "تم التحويل", description: "تم إنشاء طلب حقيقي وحذف الطلب الذكي", variant: "success" });
                   }}
                 />
               </div>
