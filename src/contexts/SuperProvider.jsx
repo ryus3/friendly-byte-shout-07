@@ -536,6 +536,32 @@ export const SuperProvider = ({ children }) => {
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
   const approveAiOrder = useCallback(async (orderId) => ({ success: true }), []);
 
+  // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
+  const toggleProductVisibility = useCallback(async (productId, newState) => {
+    // تحديث تفاؤلي
+    setAllData(prev => ({
+      ...prev,
+      products: (prev.products || []).map(p => p.id === productId ? { ...p, is_active: newState } : p)
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: newState })
+        .eq('id', productId);
+      if (error) throw error;
+      return { success: true };
+    } catch (err) {
+      // تراجع في حال الفشل
+      setAllData(prev => ({
+        ...prev,
+        products: (prev.products || []).map(p => p.id === productId ? { ...p, is_active: !newState } : p)
+      }));
+      console.error('❌ فشل تبديل ظهور المنتج:', err);
+      return { success: false, error: err.message };
+    }
+  }, []);
+
   // وظائف قواعد أرباح الموظفين
   const getEmployeeProfitRules = useCallback((employeeId) => {
     if (!employeeId || !allData.employeeProfitRules) return [];
@@ -627,7 +653,7 @@ export const SuperProvider = ({ children }) => {
     refreshOrders: refreshOrders || (() => {}),
     refreshProducts: refreshProducts || (() => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
-    
+
     // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
     addProduct: async (...args) => {
       const res = await dbAddProduct(...args);
@@ -650,6 +676,9 @@ export const SuperProvider = ({ children }) => {
       return res;
     },
     getLowStockProducts: dbGetLowStockProducts,
+
+    // تبديل الظهور الفوري
+    toggleProductVisibility,
     
     // وظائف أخرى للتوافق
     calculateProfit: () => 0,

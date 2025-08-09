@@ -6,13 +6,13 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/customSupabaseClient';
+// supabase handled centrally via SuperProvider
 import ProductDetailsDialog from './ProductDetailsDialog';
 import PrintLabelsDialog from './PrintLabelsDialog';
 
 const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => {
   const navigate = useNavigate();
-  const { deleteProducts, refreshProducts } = useInventory();
+  const { deleteProducts, refreshProducts, toggleProductVisibility } = useInventory();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
@@ -21,32 +21,23 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
   const handleToggleVisibility = async () => {
     setIsUpdatingVisibility(true);
     const newState = !product.is_active; // تبديل بسيط
-    
+
+    // تحديث تفاؤلي فوري بدون أي إعادة تحميل
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({ is_active: newState })
-        .eq('id', product.id);
-      
-      if (error) throw error;
-      
+      const res = await toggleProductVisibility?.(product.id, newState);
+
+      if (!res || !res.success) {
+        throw new Error(res?.error || 'فشل تحديث حالة الظهور');
+      }
+
       toast({
         title: `تم ${newState ? 'إظهار' : 'إخفاء'} المنتج`,
         description: `"${product.name}" الآن ${newState ? 'مرئي للعملاء' : 'مخفي عن العملاء'}.`,
       });
-      
-      // تحديث البيانات بدون إعادة تحميل الصفحة
-      if (onProductUpdate) {
-        await onProductUpdate();
-      } else if (typeof refetchProducts === 'function') {
-        await refetchProducts();
-      } else if (typeof refreshProducts === 'function') {
-        await refreshProducts();
-      }
-      
+      // لا داعي لأي refetch هنا؛ الحالة تم تحديثها مركزياً بشكل فوري
     } catch (error) {
       console.error('Error updating product visibility:', error);
-      toast({ title: "خطأ", description: "حدث خطأ أثناء تحديث ظهور المنتج.", variant: "destructive" });
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء تحديث ظهور المنتج.', variant: 'destructive' });
     } finally {
       setIsUpdatingVisibility(false);
     }
