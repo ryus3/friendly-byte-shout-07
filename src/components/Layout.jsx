@@ -20,6 +20,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
+import { Helmet } from 'react-helmet-async';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
@@ -239,12 +240,16 @@ const Layout = ({ children }) => {
     navigate(user?.default_page || '/');
   };
 
+  const canonicalUrl = typeof window !== 'undefined' ? `${window.location.origin}${location.pathname}` : '';
+
   return (
     <div className="flex h-dvh bg-background">
+      <Helmet>
+        <title>RYUS | نظام إدارة المخزون والطلبات</title>
+        <meta name="description" content="نظام احترافي لإدارة المخزون والطلبات والإحصائيات والفلاتر في RYUS." />
+        <link rel="canonical" href={canonicalUrl} />
+      </Helmet>
       <div className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:right-0 lg:z-[60] bg-card border-l border-border">
-        <SidebarContent isMobile={isMobile} />
-      </div>
-
       <AnimatePresence>
         {sidebarOpen && (
           <motion.div
@@ -273,8 +278,8 @@ const Layout = ({ children }) => {
                 </Button>
               )}
               <div className="cursor-pointer" onClick={handleHomeClick}>
-                <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/2e94508b11f0bf0fa626aea4716f1658.png" />
-                <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" />
+                <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/2e94508b11f0bf0fa626aea4716f1658.png" loading="lazy" decoding="async" fetchpriority="low" />
+                <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src="https://storage.googleapis.com/hostinger-horizons-assets-prod/1f3b5d57-e29a-4462-965e-89e9a8cac3f1/c5b1cd2be0f791e7e3cb0e078059203a.png" loading="lazy" decoding="async" fetchpriority="low" />
               </div>
             </div>
             
