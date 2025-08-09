@@ -125,10 +125,8 @@ const AiOrdersManager = ({ onClose }) => {
               <div className="flex items-center gap-3">
                 <Bot className="w-6 h-6 text-primary" />
                 <div>
-                  <CardTitle>إدارة الطلبات الذكية</CardTitle>
-                  <CardDescription>
-                    {userAiOrders.length} طلبات ذكية في انتظار المراجعة
-                  </CardDescription>
+                  <CardTitle className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-l from-primary to-foreground">إدارة الطلبات الذكية</CardTitle>
+                  <CardDescription className="text-sm md:text-base text-muted-foreground/80">{userAiOrders.length} طلبات ذكية في انتظار المراجعة</CardDescription>
                 </div>
               </div>
               <Button 
@@ -144,7 +142,7 @@ const AiOrdersManager = ({ onClose }) => {
 
           <CardContent className="p-0 flex flex-col h-[calc(90vh-100px)]">
             {userAiOrders.length > 0 && (
-              <div className="p-4 border-b bg-muted/50">
+              <div className="p-3 md:p-4 border-b bg-gradient-to-l from-muted/50 to-background/50 supports-[backdrop-filter]:backdrop-blur">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Checkbox

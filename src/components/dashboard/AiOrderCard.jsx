@@ -80,7 +80,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="border rounded-lg p-4 space-y-4 hover:shadow-md transition-shadow"
+            className="group rounded-2xl p-4 md:p-5 space-y-4 bg-card/70 backdrop-blur ring-1 ring-border/50 hover:ring-primary/40 hover:shadow-xl transition-all hover-scale"
         >
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
@@ -102,7 +102,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                         </div>
                     </div>
                 </div>
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="bg-primary/10 text-primary ring-1 ring-primary/20 shadow-sm">
                     {order.total_amount?.toLocaleString() || 0} د.ع
                 </Badge>
             </div>
