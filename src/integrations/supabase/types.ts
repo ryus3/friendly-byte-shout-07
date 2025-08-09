@@ -3127,8 +3127,16 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_old_notifications: {
+        Args: { p_days?: number }
+        Returns: number
+      }
       cleanup_reserved_stock: {
         Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      cleanup_stock_notification_history: {
+        Args: { p_days?: number }
         Returns: number
       }
       delete_purchase_completely: {
@@ -3440,6 +3448,10 @@ export type Database = {
       }
       reserve_stock_for_order: {
         Args: { p_product_id: string; p_variant_id: string; p_quantity: number }
+        Returns: Json
+      }
+      run_maintenance: {
+        Args: Record<PropertyKey, never>
         Returns: Json
       }
       select_random_city_for_monthly_discount: {
