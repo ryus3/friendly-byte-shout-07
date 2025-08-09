@@ -12,7 +12,7 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
-import { useProductsDB } from '@/hooks/useProductsDB';
+// import { useProductsDB } from '@/hooks/useProductsDB';
 import { useProfits } from '@/contexts/ProfitsContext.jsx';
 
 const SuperContext = createContext();
@@ -129,7 +129,7 @@ export const SuperProvider = ({ children }) => {
       setLoading(true);
       console.log('🚀 SuperProvider: جلب جميع البيانات للمستخدم:', user.employee_code || user.user_id);
       
-      const data = await superAPI.getAllData();
+      const data = await superAPI.getAllData({ light: true });
       
       // التحقق من البيانات
       if (!data) {
@@ -346,7 +346,7 @@ export const SuperProvider = ({ children }) => {
       fetchAllData();
     };
 
-    superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
+    superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate, { tables: ['orders'] });
 
     return () => {
       superAPI.unsubscribeAll();
