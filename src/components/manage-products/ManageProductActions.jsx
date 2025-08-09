@@ -12,7 +12,7 @@ import PrintLabelsDialog from './PrintLabelsDialog';
 
 const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => {
   const navigate = useNavigate();
-  const { deleteProducts, updateProduct } = useInventory();
+  const { deleteProducts, refreshProducts } = useInventory();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
@@ -35,8 +35,14 @@ const ManageProductActions = ({ product, onProductUpdate, refetchProducts }) => 
         description: `"${product.name}" الآن ${newState ? 'مرئي للعملاء' : 'مخفي عن العملاء'}.`,
       });
       
-      // إعادة تحميل الصفحة لضمان التحديث
-      window.location.reload();
+      // تحديث البيانات بدون إعادة تحميل الصفحة
+      if (onProductUpdate) {
+        await onProductUpdate();
+      } else if (typeof refetchProducts === 'function') {
+        await refetchProducts();
+      } else if (typeof refreshProducts === 'function') {
+        await refreshProducts();
+      }
       
     } catch (error) {
       console.error('Error updating product visibility:', error);

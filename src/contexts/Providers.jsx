@@ -8,7 +8,7 @@ import { SuperProvider } from '@/contexts/SuperProvider.jsx';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
-
+import { VariantsProvider } from '@/contexts/VariantsContext.jsx';
 export const AppProviders = ({ children }) => {
   return (
     <SupabaseProvider>
@@ -20,7 +20,9 @@ export const AppProviders = ({ children }) => {
                 <AiChatProvider>
                   <ProfitsProvider>
                     <SuperProvider>
-                      {children}
+                      <VariantsProvider>
+                        {children}
+                      </VariantsProvider>
                     </SuperProvider>
                   </ProfitsProvider>
                 </AiChatProvider>
