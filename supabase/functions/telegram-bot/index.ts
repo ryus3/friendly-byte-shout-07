@@ -672,49 +672,52 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
       return false;
     }
 
-    // إرسال تأكيد مفصل ومحسن
-    const deliveryIcon = deliveryType === 'محلي' ? '🏪' : '🚚';
-    
-    // رسالة مختصرة ومفيدة
-    const itemsList = items.slice(0, 3).map(item => {
-      const itemTotal = (item.price || 0) * (item.quantity || 1);
-      const priceDisplay = (item.price > 0 && item.available !== false) ? `${itemTotal.toLocaleString()} د.ع` : '—';
-      const productStatus = item.available === false ? '❌ غير متاح' : (item.product_name ? '✅' : '⚠️');
-      return `${productStatus} ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity} ${priceDisplay !== '—' ? `= ${priceDisplay}` : ''}`;
-    }).join('\n');
-    
-    // حساب إحصائيات سريعة
-    const itemsTotal = items.reduce((sum, item) => sum + ((item.available === false ? 0 : (item.price || 0) * (item.quantity || 1))), 0);
-    const deliveryFeeForDisplay = deliveryType === 'توصيل' ? defaultDeliveryFee : 0;
-    const availableItemsCount = items.filter(item => item.available !== false).length;
-    const unavailableItemsCount = items.length - availableItemsCount;
-    const totalItemsCount = items.length;
-    
-    await sendTelegramMessage(chatId, `
-${unavailableItemsCount > 0 ? '⚠️ <b>تنبيه توفر</b>' : '✅ <b>تم استلام الطلب!</b>'}
+// إرسال ردود مختصرة وفق القالب المطلوب
+const unavailableItems = items.filter(item => item.available === false);
+const availableItems = items.filter(item => item.available !== false);
+const totalItemsCount = items.length;
+const availableItemsCount = availableItems.length;
+const unavailableItemsCount = unavailableItems.length;
 
-🆔 <b>رقم:</b> <code>${orderId.toString().slice(-8)}</code>
-👤 <b>الزبون:</b> ${customerName}
-📱 <b>الهاتف:</b> ${customerPhone || 'غير محدد'}
-${deliveryIcon} <b>التسليم:</b> ${deliveryType}
+// قوائم المنتجات لكل حالة
+const warnList = (unavailableItems.length ? unavailableItems : items).map(item => {
+  return `❌ غير متاح ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+}).join('\n');
 
-📦 <b>المنتجات (${totalItemsCount}):</b>
-${itemsList}
-${items.length > 3 ? `... و ${items.length - 3} منتجات أخرى` : ''}
+const okList = availableItems.map(item => {
+  return `✅ ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+}).join('\n');
 
-📊 <b>الحالة:</b>
-• المتاح: ${availableItemsCount}/${totalItemsCount} ${unavailableItemsCount === 0 ? '✅' : ''}
-${unavailableItemsCount > 0 ? `• غير متاح/محجوز: ${unavailableItemsCount} ❌` : ''}
+// المجموع يُحسب من المنتجات المتاحة فقط
+const totalAvailable = availableItems.reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
 
-💰 <b>التسعير:</b>
-• المنتجات المتاحة: ${itemsTotal.toLocaleString()} د.ع
-${deliveryType === 'توصيل' ? `• التوصيل: ${deliveryFeeForDisplay.toLocaleString()} د.ع` : ''}
-• <b>المجموع المؤقت: ${totalPrice.toLocaleString()} د.ع</b>
+let message = '';
+if (unavailableItemsCount > 0) {
+  message = [
+    '⚠ تنبيه توفر',
+    `📱 الهاتف : ${customerPhone || '—'}`,
+    `📦 المنتجات (${unavailableItemsCount}):`,
+    warnList,
+    '',
+    '⚠ بعض المنتجات غير متوفرة حالياً أو محجوزة. الرجاء اختيار بديل داخل الموقع قبل الموافقة',
+    '————'
+  ].join('\n');
+} else {
+  message = [
+    '✅ تم استلام الطلب! للمراجعة',
+    '',
+    `📱 الهاتف : ${customerPhone || '—'}`,
+    `📦 المنتجات ( ${totalItemsCount} ) :`,
+    okList,
+    '',
+    '📊 حالة المنتجات',
+    `• تم العثور على: ${availableItemsCount}/${totalItemsCount} منتجات ✅`,
+    '',
+    `• المجموع : ${totalAvailable.toLocaleString()} د.ع`
+  ].join('\n');
+}
 
-${unavailableItemsCount > 0 ? '⚠️ <b>بعض المنتجات غير متوفرة حالياً أو محجوزة.</b> الرجاء اختيار بديل داخل الموقع قبل الموافقة.' : '⏳ <b>تم إرسال الطلب للمراجعة والموافقة</b>'}
-
-${employee?.full_name ? `<i>شكراً لك ${employee.full_name}! 🙏</i>` : ''}
-    `);
+await sendTelegramMessage(chatId, message, 'HTML');
 
     console.log('Order creation result:', { orderId, error: null });
     return orderId;

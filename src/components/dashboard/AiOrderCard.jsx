@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { User, Phone, MapPin, Package, Edit, Trash2, ShieldCheck, Loader2, MessageCircle, Bot } from 'lucide-react';
+import { User, Phone, MapPin, Package, Edit, Trash2, ShieldCheck, Loader2, MessageCircle, Bot, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -128,8 +128,14 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
             </div>
 
             {hasUnavailable && (
-                <div className="rounded-lg p-3 bg-destructive/10 text-destructive ring-1 ring-destructive/20">
-                    ⚠️ بعض العناصر غير متاحة حالياً أو محجوزة. يرجى اختيار بديل قبل الموافقة.
+                <div className="rounded-xl p-4 bg-destructive/15 text-destructive ring-1 ring-destructive/30 shadow-sm animate-fade-in">
+                    <div className="flex items-start gap-2">
+                        <AlertTriangle className="w-5 h-5 mt-0.5" />
+                        <div>
+                            <p className="font-semibold">بعض العناصر غير متاحة أو محجوزة</p>
+                            <p className="text-sm opacity-90">يرجى اختيار بديل قبل الموافقة. لا نبيع بالسالب أو العناصر النافذة.</p>
+                        </div>
+                    </div>
                 </div>
             )}
 

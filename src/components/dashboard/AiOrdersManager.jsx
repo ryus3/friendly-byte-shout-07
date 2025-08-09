@@ -4,7 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { X, Bot, FileDown, Trash2, ShieldCheck, Loader2 } from 'lucide-react';
+import { X, Bot, FileDown, Trash2, ShieldCheck, Loader2, AlertTriangle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/use-toast';
 import AiOrderCard from './AiOrderCard';
@@ -58,7 +58,11 @@ const AiOrdersManager = ({ onClose }) => {
     return aiOrders.filter(order => {
       return order.created_by === userEmployeeCode;
     });
-  }, [aiOrders, userEmployeeCode, hasPermission]);
+}, [aiOrders, userEmployeeCode, hasPermission]);
+
+  const hasAnyUnavailable = React.useMemo(() => {
+    return userAiOrders.some(o => Array.isArray(o.items) && o.items.some(it => it?.available === false || it?.availability === 'out' || it?.availability === 'insufficient'));
+  }, [userAiOrders]);
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -195,6 +199,17 @@ const AiOrdersManager = ({ onClose }) => {
             )}
 
             <div className="flex-1 overflow-y-auto p-4">
+              {hasAnyUnavailable && (
+                <div className="mb-4 rounded-xl p-4 bg-destructive/15 text-destructive ring-1 ring-destructive/30 shadow-sm animate-fade-in">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 mt-0.5" />
+                    <div>
+                      <p className="font-semibold">هناك طلبات تحتوي عناصر غير متاحة/محجوزة</p>
+                      <p className="text-sm opacity-90">يرجى تعديل الطلب واختيار بديل قبل الموافقة. لا تتم الموافقة على الطلبات التي تحتوي عناصر غير متاحة.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {userAiOrders.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <Bot className="w-16 h-16 text-muted-foreground mb-4" />
