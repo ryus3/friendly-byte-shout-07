@@ -362,8 +362,6 @@ const filteredOrders = useMemo(() => {
     if (!order) return false;
 
     const isAdminCreated = order.created_by === ADMIN_ID;
-    // استبعاد طلبات المدير دائماً من صفحة متابعة الموظفين
-    if (isAdminCreated) return false;
 
     // فلتر الفترة الزمنية
     if (!filterByTimePeriod(order)) return false;
@@ -374,6 +372,9 @@ const filteredOrders = useMemo(() => {
       const byCreator = (order.created_by === employeeIdSelected) || (order.created_by === selectedEmployeeCode);
       const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === employeeIdSelected || p.employee_id === selectedEmployeeCode));
       employeeMatch = byCreator || byProfit;
+
+      // استبعاد طلبات المدير فقط إذا لم تكن مرتبطة بالموظف عبر الأرباح
+      if (isAdminCreated && !employeeMatch) return false;
     }
 
     // فلتر الحالة
