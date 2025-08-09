@@ -49,7 +49,9 @@ export const useFilteredProducts = (products) => {
         
         // التحقق من وجود تصنيف مسموح
         const hasAllowedCategory = product.product_categories.some(pc => 
-          categoryPerm.allowed_items.includes(pc.category_id)
+          categoryPerm.allowed_items.includes(pc.category_id) ||
+          categoryPerm.allowed_items.includes(pc.category?.id) ||
+          categoryPerm.allowed_items.includes(pc.categories?.id)
         );
         if (!hasAllowedCategory) {
           return false;
@@ -66,7 +68,9 @@ export const useFilteredProducts = (products) => {
         
         // التحقق من وجود قسم مسموح
         const hasAllowedDepartment = product.product_departments.some(pd => 
-          departmentPerm.allowed_items.includes(pd.department_id)
+          departmentPerm.allowed_items.includes(pd.department_id) ||
+          departmentPerm.allowed_items.includes(pd.department?.id) ||
+          departmentPerm.allowed_items.includes(pd.departments?.id)
         );
         if (!hasAllowedDepartment) {
           return false;
@@ -83,7 +87,9 @@ export const useFilteredProducts = (products) => {
         
         // التحقق من وجود نوع مسموح
         const hasAllowedProductType = product.product_product_types.some(ppt => 
-          productTypePerm.allowed_items.includes(ppt.product_type_id)
+          productTypePerm.allowed_items.includes(ppt.product_type_id) ||
+          productTypePerm.allowed_items.includes(ppt.product_type?.id) ||
+          productTypePerm.allowed_items.includes(ppt.product_types?.id)
         );
         if (!hasAllowedProductType) {
           return false;
@@ -100,7 +106,9 @@ export const useFilteredProducts = (products) => {
         
         // التحقق من وجود موسم مسموح
         const hasAllowedSeason = product.product_seasons_occasions.some(pso => 
-          seasonPerm.allowed_items.includes(pso.season_occasion_id)
+          seasonPerm.allowed_items.includes(pso.season_occasion_id) ||
+          seasonPerm.allowed_items.includes(pso.season_occasion?.id) ||
+          seasonPerm.allowed_items.includes(pso.seasons_occasions?.id)
         );
         if (!hasAllowedSeason) {
           return false;

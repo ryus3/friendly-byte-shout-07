@@ -164,14 +164,25 @@ export const SuperProvider = ({ children }) => {
           variants: (product.product_variants || []).map(variant => {
             // ربط المخزون بشكل صحيح من جدول inventory
             const inventoryData = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
-            
+
+            // توحيد حقول اللون والقياس ليستعملها كل المكونات
+            const colorName = variant.colors?.name || variant.color_name || variant.color || null;
+            const colorHex = variant.colors?.hex_code || variant.color_hex || null;
+            const sizeName = variant.sizes?.name || variant.size_name || variant.size || null;
+
             return {
               ...variant,
+              // الحقول الموحدة للاعتماد عليها عبر الواجهة
+              color: colorName || undefined,
+              color_name: colorName || undefined,
+              color_hex: colorHex || undefined,
+              size: sizeName || undefined,
+              size_name: sizeName || undefined,
               // ربط بيانات المخزون بالشكل الصحيح
-              quantity: inventoryData?.quantity || variant.quantity || 0,
-              reserved_quantity: inventoryData?.reserved_quantity || variant.reserved_quantity || 0,
-              min_stock: inventoryData?.min_stock || variant.min_stock || 5,
-              location: inventoryData?.location || variant.location || '',
+              quantity: inventoryData?.quantity ?? variant.quantity ?? 0,
+              reserved_quantity: inventoryData?.reserved_quantity ?? variant.reserved_quantity ?? 0,
+              min_stock: inventoryData?.min_stock ?? variant.min_stock ?? 5,
+              location: inventoryData?.location ?? variant.location ?? '',
               // الحفاظ على البيانات الأصلية
               inventory: inventoryData
             }
