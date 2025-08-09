@@ -12,6 +12,7 @@ import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
 import superAPI from '@/api/SuperAPI';
+import { useProductsDB } from '@/hooks/useProductsDB';
 
 const SuperContext = createContext();
 
@@ -353,6 +354,16 @@ export const SuperProvider = ({ children }) => {
   // وظائف متوافقة مع InventoryContext
   // ===============================
 
+  // توصيل وظائف قاعدة البيانات القديمة (CRUD) عبر hook موحد
+  const {
+    addProduct: dbAddProduct,
+    updateProduct: dbUpdateProduct,
+    deleteProducts: dbDeleteProducts,
+    updateVariantStock: dbUpdateVariantStock,
+    getLowStockProducts: dbGetLowStockProducts,
+    refetch: dbRefetchProducts,
+  } = useProductsDB();
+
   // إنشاء طلب جديد - نفس الواجهة القديمة بالضبط
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink, deliveryPartnerData) => {
     try {
@@ -617,12 +628,28 @@ export const SuperProvider = ({ children }) => {
     refreshProducts: refreshProducts || (() => {}),
     approveAiOrder: approveAiOrder || (async () => ({ success: false })),
     
-    // وظائف المنتجات (للتوافق)
-    addProduct: () => console.log('addProduct - سيتم تطبيقها لاحقاً'),
-    updateProduct: () => console.log('updateProduct - سيتم تطبيقها لاحقاً'),
-    deleteProducts: () => console.log('deleteProducts - سيتم تطبيقها لاحقاً'),
-    updateVariantStock: () => console.log('updateVariantStock - سيتم تطبيقها لاحقاً'),
-    getLowStockProducts: () => [],
+    // وظائف المنتجات (توصيل فعلي مع التحديث المركزي)
+    addProduct: async (...args) => {
+      const res = await dbAddProduct(...args);
+      await fetchAllData();
+      return res;
+    },
+    updateProduct: async (...args) => {
+      const res = await dbUpdateProduct(...args);
+      await fetchAllData();
+      return res;
+    },
+    deleteProducts: async (...args) => {
+      const res = await dbDeleteProducts(...args);
+      await fetchAllData();
+      return res;
+    },
+    updateVariantStock: async (...args) => {
+      const res = await dbUpdateVariantStock(...args);
+      await fetchAllData();
+      return res;
+    },
+    getLowStockProducts: dbGetLowStockProducts,
     
     // وظائف أخرى للتوافق
     calculateProfit: () => 0,

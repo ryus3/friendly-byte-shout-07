@@ -128,8 +128,8 @@ const ProductsPage = () => {
   }, [location]);
 
   const filteredProducts = useMemo(() => {
-    // للمدير: لا نطبق فلتر is_active، للموظفين نطبقه
-    let tempProducts = isAdmin ? permissionFilteredProducts : permissionFilteredProducts.filter(p => p.is_active !== false);
+    // دائماً نخفي المنتجات غير النشطة من واجهة العرض والاستخدام
+    let tempProducts = permissionFilteredProducts.filter(p => p.is_active !== false);
 
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();

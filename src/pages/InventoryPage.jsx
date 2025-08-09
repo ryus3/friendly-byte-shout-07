@@ -349,7 +349,7 @@ const InventoryPage = () => {
   const inventoryItems = useMemo(() => {
     // استخدام المنتجات المفلترة حسب صلاحيات المستخدم
     // للمدير: يرى كل المنتجات، للموظفين: فقط المنتجات المرئية
-    const productsToUse = isAdmin ? products : products.filter(p => p.is_active !== false);
+    const productsToUse = (products || []).filter(p => p.is_active !== false);
     
     if (!Array.isArray(productsToUse) || !settings) {
       return [];
