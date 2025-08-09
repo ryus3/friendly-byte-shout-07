@@ -669,23 +669,140 @@ export const SuperProvider = ({ children }) => {
     }
   }, [allData.orders, user, fetchAllData]);
   // دوال أخرى مطلوبة للتوافق
-  const refreshOrders = useCallback(() => fetchAllData(), [fetchAllData]);
   const refreshProducts = useCallback(() => fetchAllData(), [fetchAllData]);
+  // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId) => {
     try {
-      const { error } = await supabase.from('ai_orders').delete().eq('id', orderId);
-      if (error) throw error;
+      // 1) جلب الطلب الذكي
+      const { data: aiOrder, error: aiErr } = await supabase
+        .from('ai_orders')
+        .select('*')
+        .eq('id', orderId)
+        .maybeSingle();
+      if (aiErr) throw aiErr;
+      if (!aiOrder) return { success: false, error: 'الطلب الذكي غير موجود' };
+
+      const items = Array.isArray(aiOrder.items) ? aiOrder.items : [];
+      if (!items.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
+
+      // تجهيز العناصر بترتيب موحّد
+      const normalizedItems = items.map(i => ({
+        product_id: i.product_id || i.productId || i.id,
+        variant_id: i.variant_id || i.variantId || i.sku || null,
+        quantity: i.quantity || 1,
+        unit_price: i.unit_price || i.price || 0,
+      }));
+
+      // 2) إنشاء رقم طلب
+      const { data: orderNumber, error: numErr } = await supabase.rpc('generate_order_number');
+      if (numErr) throw numErr;
+
+      // 3) حجز المخزون لكل عنصر مع إمكانية التراجع
+      const reservedSoFar = [];
+      for (const it of normalizedItems) {
+        const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
+          p_product_id: it.product_id,
+          p_variant_id: it.variant_id,
+          p_quantity: it.quantity
+        });
+        if (reserveErr || reserveRes?.success === false) {
+          // تراجع عن أي حجوزات تمت
+          for (const r of reservedSoFar) {
+            await supabase.rpc('release_stock_item', {
+              p_product_id: r.product_id,
+              p_variant_id: r.variant_id,
+              p_quantity: r.quantity
+            });
+          }
+          const msg = reserveErr?.message || reserveRes?.error || 'المخزون غير كافٍ لأحد العناصر';
+          return { success: false, error: msg };
+        }
+        reservedSoFar.push(it);
+      }
+
+      // 4) حساب المجاميع
+      const subtotal = normalizedItems.reduce((s, it) => s + it.quantity * it.unit_price, 0);
+      const deliveryFee = 0; // افتراضي محلي هنا
+      const discount = 0;
+      const total = subtotal - discount + deliveryFee;
+
+      // 5) إنشاء طلب حقيقي
+      const trackingNumber = `RYUS-${Date.now().toString().slice(-6)}`;
+      const orderRow = {
+        order_number: orderNumber,
+        customer_name: aiOrder.customer_name,
+        customer_phone: aiOrder.customer_phone,
+        customer_address: aiOrder.customer_address,
+        customer_city: aiOrder.customer_city,
+        customer_province: aiOrder.customer_province,
+        total_amount: subtotal,
+        discount,
+        delivery_fee: deliveryFee,
+        final_amount: total,
+        status: 'pending',
+        delivery_status: 'pending',
+        payment_status: 'pending',
+        tracking_number: trackingNumber,
+        delivery_partner: aiOrder.source === 'telegram' ? 'محلي' : 'محلي',
+        notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
+        created_by: user?.user_id || user?.id,
+      };
+
+      const { data: createdOrder, error: createErr } = await supabase
+        .from('orders')
+        .insert(orderRow)
+        .select()
+        .single();
+      if (createErr) {
+        for (const r of reservedSoFar) {
+          await supabase.rpc('release_stock_item', {
+            p_product_id: r.product_id,
+            p_variant_id: r.variant_id,
+            p_quantity: r.quantity
+          });
+        }
+        throw createErr;
+      }
+
+      // 6) إدراج عناصر الطلب
+      const orderItemsRows = normalizedItems.map(it => ({
+        order_id: createdOrder.id,
+        product_id: it.product_id,
+        variant_id: it.variant_id,
+        quantity: it.quantity,
+        unit_price: it.unit_price,
+        total_price: it.quantity * it.unit_price
+      }));
+      const { error: itemsErr } = await supabase.from('order_items').insert(orderItemsRows);
+      if (itemsErr) {
+        await supabase.from('orders').delete().eq('id', createdOrder.id);
+        for (const r of reservedSoFar) {
+          await supabase.rpc('release_stock_item', {
+            p_product_id: r.product_id,
+            p_variant_id: r.variant_id,
+            p_quantity: r.quantity
+          });
+        }
+        throw itemsErr;
+      }
+
+      // 7) حذف الطلب الذكي نهائياً
+      const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
+      if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
+
+      // تحديث الذاكرة
       setAllData(prev => ({
         ...prev,
         aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
       }));
       superAPI.invalidate('all_data');
-      return { success: true };
+
+      return { success: true, orderId: createdOrder.id, trackingNumber };
     } catch (err) {
-      console.error('❌ فشل الموافقة/الحذف لطلب ذكي:', err);
+      console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };
     }
-  }, []);
+  }, [user, fetchAllData]);
 
   // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
   const toggleProductVisibility = useCallback(async (productId, newState) => {

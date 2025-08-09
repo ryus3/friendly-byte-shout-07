@@ -7,11 +7,35 @@ import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     const { approveAiOrder, deleteOrders } = useInventory();
     const { user, hasPermission } = useAuth();
     const [isProcessing, setIsProcessing] = React.useState(false);
+    const [creatorName, setCreatorName] = React.useState(null);
+
+    // عرض اسم المستخدم بدلاً من كود الموظف
+    React.useEffect(() => {
+        let isMounted = true;
+        const fetchName = async () => {
+            if (!order?.created_by) return;
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('full_name, username')
+                    .eq('employee_code', order.created_by)
+                    .maybeSingle();
+                if (!error && isMounted) {
+                    setCreatorName(data?.full_name || data?.username || order.created_by);
+                }
+            } catch (err) {
+                console.error('Error fetching creator name:', err);
+            }
+        };
+        fetchName();
+        return () => { isMounted = false; };
+    }, [order?.created_by]);
 
     const handleDelete = async () => {
         setIsProcessing(true);
@@ -21,16 +45,19 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     }
 
     const handleApproveClick = async () => {
-        // افتح محرر الطلب لمراجعته وتحويله إلى طلب حقيقي
+        setIsProcessing(true);
         try {
-            onEdit?.();
+            const res = await approveAiOrder(order.id);
+            if (res?.success) {
+                toast({ title: "تم التحويل", description: "تم إنشاء طلب حقيقي وحذف الذكي", variant: "success" });
+            } else {
+                toast({ title: "لم يكتمل", description: res?.error || "فشل التحويل", variant: "destructive" });
+            }
         } catch (error) {
-            console.error('Error opening AI order for review:', error);
-            toast({ 
-                title: "خطأ", 
-                description: error.message || "فشل فتح نافذة المراجعة", 
-                variant: "destructive" 
-            });
+            console.error('Error approving order:', error);
+            toast({ title: "خطأ", description: error.message || "فشل في تحويل الطلب", variant: "destructive" });
+        } finally {
+            setIsProcessing(false);
         }
     }
 
@@ -38,11 +65,11 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     const getSourceInfo = (source) => {
         switch (source) {
             case 'telegram':
-                return { icon: MessageCircle, label: 'تليغرام', color: 'text-blue-500' };
+                return { icon: MessageCircle, label: 'تليغرام', color: 'text-primary' };
             case 'whatsapp':
-                return { icon: MessageCircle, label: 'واتساب', color: 'text-green-500' };
+                return { icon: MessageCircle, label: 'واتساب', color: 'text-primary' };
             default:
-                return { icon: Bot, label: 'ذكي', color: 'text-purple-500' };
+                return { icon: Bot, label: 'ذكي', color: 'text-primary' };
         }
     };
 
@@ -97,7 +124,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                 {order.created_by && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <User className="w-4 h-4" />
-                        <span>بواسطة: {order.created_by}</span>
+                        <span>بواسطة: {creatorName || order.created_by}</span>
                     </div>
                 )}
 

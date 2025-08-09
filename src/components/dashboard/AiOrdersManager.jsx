@@ -32,7 +32,7 @@ const AiOrdersManager = ({ onClose }) => {
           .from('telegram_employee_codes')
           .select('employee_code')
           .eq('user_id', user.user_id)
-          .single();
+          .maybeSingle();
         
         if (!error && data) {
           setUserEmployeeCode(data.employee_code);
@@ -86,12 +86,14 @@ const AiOrdersManager = ({ onClose }) => {
     }
     
     setIsProcessing(true);
+    let success = 0, failed = 0;
     for (const orderId of selectedOrders) {
-      await approveAiOrder(orderId);
+      const res = await approveAiOrder(orderId);
+      if (res?.success) success++; else failed++;
     }
     setSelectedOrders([]);
     setIsProcessing(false);
-    toast({ title: "نجاح", description: `تمت الموافقة على ${selectedOrders.length} طلبات ذكية.` });
+    toast({ title: "تمت المعالجة", description: `تم تحويل ${success} وحصول ${failed} على أخطاء`, variant: failed ? "destructive" : "success" });
   };
 
   const handleBulkDelete = async () => {
@@ -157,20 +159,11 @@ const AiOrdersManager = ({ onClose }) => {
                     <div className="flex items-center gap-2">
                       <Button 
                         size="sm" 
-                        onClick={() => {
-                          const firstId = selectedOrders[0];
-                          const firstOrder = userAiOrders.find(o => o.id === firstId);
-                          if (firstOrder) {
-                            setEditingOrder(firstOrder);
-                            setQuickOrderDialogOpen(true);
-                          } else {
-                            toast({ title: 'تنبيه', description: 'يرجى اختيار طلب للمراجعة', variant: 'default' });
-                          }
-                        }}
+                        onClick={handleBulkApprove}
                         disabled={isProcessing}
                       >
                         {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                        مراجعة وتحويل
+                        موافقة على المحدد
                       </Button>
                       <Button 
                         variant="destructive" 
