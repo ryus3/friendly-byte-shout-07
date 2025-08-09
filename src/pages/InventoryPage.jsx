@@ -198,7 +198,7 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
                                 <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">مباع</div>
                                 <div className="col-span-1 text-center whitespace-nowrap truncate leading-none">الحالة</div>
                               </div>
-                            {group.variants.map(variant => (
+                            {(group.variants || []).map(variant => (
                               <InventoryItem
                                 key={variant.id}
                                 variant={variant}

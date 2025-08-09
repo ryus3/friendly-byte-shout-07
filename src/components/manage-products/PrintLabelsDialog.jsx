@@ -244,7 +244,7 @@ const PrintLabelsDialog = ({ open, onOpenChange, products }) => {
                   <div key={product.id} className="bg-muted/30 rounded-lg p-4 border border-border/50">
                     <h3 className="font-bold text-lg mb-3 text-primary">{product.name}</h3>
                     <div className="grid gap-3">
-                      {product.variants.map(variant => (
+                      {(product.variants || []).map(variant => (
                         <div key={variant.sku} className="bg-background rounded-lg p-3 border border-border/30">
                           <div className="flex justify-between items-center mb-2">
                             <div className="flex-1">

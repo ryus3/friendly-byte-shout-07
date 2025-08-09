@@ -85,11 +85,11 @@ const ProductDetailsDialog = ({ product, open, onOpenChange, onAddToCart, onDire
             <div>
               <h4 className="font-semibold text-lg mb-2">اختر اللون</h4>
               <div className="flex flex-wrap gap-2">
-                {[...new Map(product.variants.map(item => [item['color'], item])).values()].map(variant => (
+                {[...new Map(((product.variants || []).map(item => [item['color'], item]))).values()].map(variant => (
                   <Button
                     key={variant.color}
                     variant={selectedVariant?.color === variant.color ? 'default' : 'outline'}
-                    onClick={() => handleVariantSelect(product.variants.find(v => v.color === variant.color && v.quantity > 0) || variant)}
+                    onClick={() => handleVariantSelect(((product.variants || []).find(v => v.color === variant.color && v.quantity > 0)) || variant)}
                     className="flex items-center gap-2"
                   >
                     <div className="w-4 h-4 rounded-full border" style={{ backgroundColor: variant.color_hex }}></div>

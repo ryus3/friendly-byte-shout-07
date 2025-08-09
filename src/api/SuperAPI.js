@@ -280,7 +280,7 @@ return this.fetch('all_data', async () => {
         *,
         product_variants (
           *,
-          colors (name, hex_color),
+          colors (name, hex_code),
           sizes (name),
           inventory (quantity, min_stock, reserved_quantity)
         )

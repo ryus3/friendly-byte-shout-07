@@ -250,7 +250,7 @@ export const useProducts = (initialProducts, settings, addNotification, user, de
           *,
           variants:product_variants(
             *,
-            color:colors(id, name, hex_color),
+            color:colors(id, name, hex_code),
             size:sizes(id, name),
             inventory(quantity, min_stock, reserved_stock)
           ),

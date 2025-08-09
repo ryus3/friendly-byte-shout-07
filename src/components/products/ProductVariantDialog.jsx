@@ -40,11 +40,11 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
     }
   }, [selectedColor]);
 
-  const totalStock = useMemo(() => product?.variants.reduce((sum, v) => sum + v.quantity, 0) || 0, [product]);
+const totalStock = useMemo(() => product?.variants?.reduce((sum, v) => sum + (v.quantity || 0), 0) || 0, [product]);
 
   const getAvailableColors = () => {
     if (!product) return [];
-    const colorNames = [...new Set(product.variants.map(v => v.color))];
+    const colorNames = [...new Set((product.variants || []).map(v => v.color))];
     return colorNames.map(name => {
       const colorInfo = allColors.find(c => c.name === name);
       return { name, hex: colorInfo?.hex_code || '#ccc' };
@@ -53,18 +53,18 @@ const ProductVariantDialog = ({ product, open, onClose, onCreateOrder }) => {
 
   const getAvailableSizesForColor = () => {
     if (!product || !selectedColor) return [];
-    return product.variants.filter(v => v.color === selectedColor.name);
+    return (product.variants || []).filter(v => v.color === selectedColor.name);
   };
 
   const selectedVariant = useMemo(() => {
     if (!product || !selectedColor || !selectedSize) return null;
-    const variant = product.variants.find(v => v.color === selectedColor.name && v.size === selectedSize);
+    const variant = (product.variants || []).find(v => v.color === selectedColor.name && v.size === selectedSize);
     if (variant) {
       // التأكد من وجود جميع البيانات المطلوبة
       return {
         ...variant,
-        id: variant.id, // التأكد من وجود ID
-        sku: variant.sku || variant.barcode, // استخدام sku أو barcode
+        id: variant.id,
+        sku: variant.sku || variant.barcode,
         quantity: variant.quantity || 0,
         reserved: variant.reserved || 0,
         cost_price: variant.cost_price || 0

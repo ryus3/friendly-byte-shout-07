@@ -3,7 +3,7 @@
  * يستبدل InventoryContext بنظام أكثر كفاءة مع ضمان عدم تغيير أي وظيفة
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -339,17 +339,22 @@ export const SuperProvider = ({ children }) => {
   useEffect(() => {
     if (!user) return;
 
+    const reloadTimerRef = { current: null };
+
     const handleRealtimeUpdate = (table, payload) => {
       console.log(`🔄 SuperProvider: تحديث فوري في ${table}`);
-      
-      // إعادة تحميل البيانات عند وجود تحديث
-      fetchAllData();
+      // منع الإغراق بالطلبات: تأجيل وإلغاء السابق
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+      reloadTimerRef.current = setTimeout(() => {
+        fetchAllData();
+      }, 800);
     };
 
     superAPI.setupRealtimeSubscriptions(handleRealtimeUpdate);
 
     return () => {
       superAPI.unsubscribeAll();
+      if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
     };
   }, [user, fetchAllData]);
 
