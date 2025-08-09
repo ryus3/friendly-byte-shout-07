@@ -109,7 +109,7 @@ const AiOrdersManager = ({ onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 flex items-center justify-center p-4 animate-enter"
+      className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[1200] flex items-center justify-center p-4 sm:p-6 animate-enter"
       onClick={onClose}
     >
       <motion.div
