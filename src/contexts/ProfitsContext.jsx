@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useInventory } from '@/contexts/InventoryContext'; // النظام الموحد
+// import removed to avoid circular dependency with SuperProvider
 import { useAuth } from './UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
