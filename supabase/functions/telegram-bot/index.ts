@@ -89,36 +89,125 @@ async function sendTelegramMessage(chatId: number, text: string, parseMode = 'HT
   }
 }
 
-async function linkEmployeeCode(employeeCode: string, chatId: number) {
+async function linkEmployeeCode(code: string, chatId: number) {
   try {
+    // 1) حاول عبر الإجراء المخزن الحالي (للتوافق مع الإصدارات السابقة)
     const { data, error } = await supabase.rpc('link_telegram_user', {
-      p_employee_code: employeeCode,
+      p_employee_code: code,
       p_telegram_chat_id: chatId
     });
+    if (!error && data) return true;
 
-    return !error && data;
+    // 2) fallback ذكي: اعتبره رمز تليغرام (مثل RYU7604) في جدول employee_telegram_codes
+    const normalized = code.trim().toUpperCase();
+    const { data: codeRow, error: codeErr } = await supabase
+      .from('employee_telegram_codes')
+      .select('id,user_id,telegram_chat_id,is_active')
+      .eq('telegram_code', normalized)
+      .single();
+
+    if (!codeErr && codeRow && codeRow.is_active !== false) {
+      const { error: updErr } = await supabase
+        .from('employee_telegram_codes')
+        .update({
+          telegram_chat_id: chatId,
+          linked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', codeRow.id);
+      if (!updErr) return true;
+    }
+
+    // 3) fallback إضافي: إن كان الرمز فعلياً employee_code (مثل EMP001) مخزن في telegram_employee_codes
+    const { data: telRows, error: telErr } = await supabase
+      .from('telegram_employee_codes')
+      .select('id,employee_code,telegram_chat_id,is_active')
+      .eq('employee_code', normalized)
+      .limit(1);
+
+    if (!telErr && telRows && telRows.length > 0 && telRows[0].is_active !== false) {
+      const row = telRows[0];
+      const { error: upd2Err } = await supabase
+        .from('telegram_employee_codes')
+        .update({
+          telegram_chat_id: chatId,
+          linked_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', row.id);
+      if (!upd2Err) return true;
+    }
+
+    return false;
   } catch (error) {
-    console.error('Error linking employee code:', error);
+    console.error('Error linking employee code (fallback):', error);
     return false;
   }
 }
 
 async function getEmployeeByTelegramId(chatId: number) {
+  // المحاولة الأولى: عبر الإجراء المخزن
   try {
     const { data, error } = await supabase.rpc('get_employee_by_telegram_id', {
       p_telegram_chat_id: chatId
     });
-
-    if (error) {
-      console.error('Error getting employee:', error);
-      return null;
-    }
-
-    return data && data.length > 0 ? data[0] : null;
-  } catch (error) {
-    console.error('Error getting employee:', error);
-    return null;
+    if (!error && data && data.length > 0) return data[0];
+  } catch (err) {
+    console.error('Error getting employee via RPC, will try fallback:', err);
   }
+
+  // fallback 1: عبر جدول employee_telegram_codes باستخدام telegram_chat_id
+  try {
+    const { data: codeRow } = await supabase
+      .from('employee_telegram_codes')
+      .select('user_id')
+      .eq('telegram_chat_id', chatId)
+      .single();
+
+    if (codeRow?.user_id) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, role, employee_code')
+        .eq('user_id', codeRow.user_id)
+        .single();
+      if (profile) {
+        return {
+          user_id: profile.user_id,
+          full_name: profile.full_name,
+          role: profile.role || 'employee',
+          employee_code: profile.employee_code || null
+        };
+      }
+    }
+  } catch (_) {}
+
+  // fallback 2: عبر جدول telegram_employee_codes (مربوط مباشرة برمز الموظف)
+  try {
+    const { data: telRows } = await supabase
+      .from('telegram_employee_codes')
+      .select('employee_code')
+      .eq('telegram_chat_id', chatId)
+      .limit(1);
+
+    if (telRows && telRows.length > 0) {
+      const empCode = telRows[0].employee_code;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, role, employee_code')
+        .eq('employee_code', empCode)
+        .single();
+      if (profile) {
+        return {
+          user_id: profile.user_id,
+          full_name: profile.full_name,
+          role: profile.role || 'employee',
+          employee_code: profile.employee_code || empCode
+        };
+      }
+    }
+  } catch (_) {}
+
+  return null;
 }
 
 async function processOrderText(text: string, chatId: number, employeeCode: string) {
@@ -906,6 +995,7 @@ ${employee.role === 'admin' ?
     } else {
       // Process order
       console.log('Processing order for employee:', employee.employee_code);
+      await sendTelegramMessage(chatId, '✅ تم استلام رسالتك، جاري المعالجة خلال ثوانٍ...');
       await processOrderText(text, chatId, employee.employee_code);
     }
 
