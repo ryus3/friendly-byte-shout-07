@@ -384,38 +384,166 @@ return this.fetch('all_data', async () => {
     return data;
   }
 
-  // ==============
-  // Realtime موحد
-  // ==============
+// ==============
+// Realtime موحد
+// ==============
 
-  /**
-   * اشتراك موحد للتحديثات الفورية
-   */
-  setupRealtimeSubscriptions(callback) {
-    const tables = ['orders', 'products', 'inventory', 'expenses'];
-    
-    tables.forEach(table => {
-      const channel = supabase
-        .channel(`unified_${table}`)
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: table
-        }, (payload) => {
-          console.log(`🔄 تحديث فوري في ${table}:`, payload);
-          
-          // حذف البيانات المحفوظة بشكل مجمّع لتقليل إعادة الجلب
-          this.debouncedInvalidateAll();
-          
-          if (callback) callback(table, payload);
-        })
-        .subscribe();
-      
-      this.subscriptions.set(table, channel);
-    });
-    
-    console.log('📡 تم تفعيل الاشتراكات الفورية الموحدة');
+/**
+ * اعتماد طلب ذكي وتحويله لطلب حقيقي مع عناصر المخزون
+ */
+superAPI.approveAiOrder = async (aiOrderId, currentUser) => {
+  // 1) جلب الطلب الذكي
+  const { data: aiOrder, error: aiErr } = await supabase
+    .from('ai_orders')
+    .select('*')
+    .eq('id', aiOrderId)
+    .single();
+  if (aiErr || !aiOrder) throw (aiErr || new Error('AI order not found'));
+
+  // 2) تجهيز بيانات الطلب الحقيقي
+  const orderPayload = {
+    customer_name: aiOrder.customer_name || 'زبون',
+    customer_phone: aiOrder.customer_phone || null,
+    customer_address: aiOrder.customer_address || null,
+    customer_city: aiOrder.customer_city || null,
+    customer_province: aiOrder.customer_province || null,
+    total_amount: aiOrder.total_amount || 0,
+    discount: 0,
+    delivery_fee: 0,
+    final_amount: aiOrder.total_amount || 0,
+    status: 'pending',
+    delivery_status: 'pending',
+    payment_status: 'pending',
+    tracking_number: `RYUS-${Date.now().toString().slice(-6)}`,
+    delivery_partner: 'محلي',
+    notes: 'تحويل من طلب ذكي'
+      + (aiOrder.source ? ` - المصدر: ${aiOrder.source}` : ''),
+    created_by: currentUser?.user_id || currentUser?.id || null,
+  };
+
+  // 3) إنشاء الطلب
+  const { data: createdOrder, error: createErr } = await supabase
+    .from('orders')
+    .insert(orderPayload)
+    .select()
+    .single();
+  if (createErr) throw createErr;
+
+  const orderId = createdOrder.id;
+  const warnings = [];
+  const items = Array.isArray(aiOrder.items) ? aiOrder.items : [];
+
+  // 4) تحويل عناصر الطلب الذكي إلى عناصر فعلية ومحاولة ربط المتغيرات
+  for (const rawItem of items) {
+    try {
+      const quantity = Number(rawItem.quantity || 1);
+      let variantId = rawItem.variant_id || null;
+      let productId = rawItem.product_id || null;
+      let unitPrice = Number(rawItem.price || 0);
+
+      // أولوية: الباركود للعثور على المتغير
+      if (!variantId && rawItem.barcode) {
+        const { data: pvByBarcode } = await supabase
+          .from('product_variants')
+          .select('id, product_id, price')
+          .eq('barcode', rawItem.barcode)
+          .maybeSingle();
+        if (pvByBarcode) {
+          variantId = pvByBarcode.id;
+          productId = pvByBarcode.product_id;
+          unitPrice = unitPrice || pvByBarcode.price || 0;
+        }
+      }
+
+      // إن لم نجد، نبحث بالاسم تقريبياً
+      if (!variantId && (rawItem.name || rawItem.product_name)) {
+        const name = (rawItem.product_name || rawItem.name).trim();
+        const { data: foundProducts } = await supabase
+          .from('products')
+          .select('id, name, product_variants(id, product_id, price)')
+          .or(`name.ilike.%${name.replace(/\s+/g, '%')}%`)
+          .limit(1);
+        if (foundProducts && foundProducts.length > 0) {
+          const pv = foundProducts[0].product_variants?.[0];
+          if (pv) {
+            variantId = pv.id;
+            productId = pv.product_id;
+            unitPrice = unitPrice || pv.price || 0;
+          }
+        }
+      }
+
+      if (!variantId || !productId) {
+        warnings.push(`لم يتم العثور على منتج: ${rawItem.name || rawItem.product_name || ''}`);
+        continue;
+      }
+
+      // 5) فحص المخزون والمتاح وحجزه
+      let canReserve = true;
+      try {
+        const { data: inv } = await supabase
+          .from('inventory')
+          .select('quantity, reserved_quantity')
+          .eq('variant_id', variantId)
+          .maybeSingle();
+        const available = (inv?.quantity || 0) - (inv?.reserved_quantity || 0);
+        if (available < quantity) {
+          canReserve = false;
+          warnings.push(`كمية غير كافية للمتغير ${variantId}: المتاح ${available} والمطلوب ${quantity}`);
+        }
+      } catch {}
+
+      // إدراج عنصر الطلب
+      await supabase.from('order_items').insert({
+        order_id: orderId,
+        product_id: productId,
+        variant_id: variantId,
+        quantity: quantity,
+        unit_price: unitPrice,
+        total_price: unitPrice * quantity,
+      });
+
+      // محاولة الحجز إن أمكن
+      if (canReserve) {
+        try {
+          await supabase.rpc('reserve_stock_for_order', {
+            p_product_id: productId,
+            p_variant_id: variantId,
+            p_quantity: quantity,
+          });
+        } catch (e) {
+          warnings.push(`تعذر حجز المخزون للمتغير ${variantId}`);
+        }
+      }
+    } catch (e) {
+      warnings.push('خطأ أثناء معالجة عنصر من عناصر الطلب');
+    }
   }
+
+  // 6) حذف الطلب الذكي بعد التحويل
+  await supabase.from('ai_orders').delete().eq('id', aiOrderId);
+
+  // إبطال الكاش وإرجاع النتيجة
+  superAPI.invalidate('all_data');
+  superAPI.invalidate('orders_only');
+
+  return { success: true, orderId, warnings };
+};
+
+/**
+ * حذف طلب ذكي نهائياً
+ */
+superAPI.deleteAiOrder = async (aiOrderId) => {
+  const { error } = await supabase.from('ai_orders').delete().eq('id', aiOrderId);
+  if (error) throw error;
+  superAPI.invalidate('all_data');
+  return true;
+};
+
+/**
+ * Realtime موحد
+ */
+
 
   /**
    * إلغاء جميع الاشتراكات
