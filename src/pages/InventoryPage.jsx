@@ -452,75 +452,61 @@ const InventoryPage = () => {
     if (!Array.isArray(inventoryItems)) return [];
     let items = [...inventoryItems];
 
-    // Helpers to robustly check relations from multiple schemas
+    const norm = (v) => (v == null ? '' : String(v));
+
+    // Helpers to robustly check relations from multiple schemas (normalize IDs)
     const hasDept = (p, id) => {
       if (!id || id === 'all') return true;
+      const target = norm(id);
       return (
-        Array.isArray(p.product_departments) && p.product_departments.some(pd => (
-          pd.department_id === id ||
-          pd.department?.id === id ||
-          pd.departments?.id === id ||
-          pd.department === id
-        )) ||
-        p.department_id === id ||
-        p.department === id ||
-        p?.categories?.department_id === id ||
-        p?.categories?.department?.id === id ||
-        p?.categories?.department === id
+        (Array.isArray(p.product_departments) && p.product_departments.some(pd => [
+          pd.department_id, pd.department?.id, pd.departments?.id, pd.department
+        ].some(x => norm(x) === target))) ||
+        [p.department_id, p.department, p?.categories?.department_id, p?.categories?.department?.id, p?.categories?.department].some(x => norm(x) === target)
       );
     };
 
     const hasCategory = (p, id) => {
       if (!id || id === 'all') return true;
+      const target = norm(id);
       const c = p?.categories || {};
       return (
-        Array.isArray(p.product_categories) && p.product_categories.some(pc => (
-          pc.category_id === id ||
-          pc.category?.id === id ||
-          pc.categories?.id === id ||
-          pc.category === id
-        )) ||
-        c?.main_category_id === id ||
-        c?.main_category?.id === id ||
-        c?.main_category === id
+        (Array.isArray(p.product_categories) && p.product_categories.some(pc => [
+          pc.category_id, pc.category?.id, pc.categories?.id, pc.category
+        ].some(x => norm(x) === target))) ||
+        [c?.main_category_id, c?.main_category?.id, c?.main_category].some(x => norm(x) === target)
       );
     };
 
     const hasProductType = (p, id) => {
       if (!id || id === 'all') return true;
+      const target = norm(id);
       const c = p?.categories || {};
       return (
-        Array.isArray(p.product_product_types) && p.product_product_types.some(ppt => (
-          ppt.product_type_id === id ||
-          ppt.product_type?.id === id ||
-          ppt.product_types?.id === id ||
-          ppt.product_type === id
-        )) ||
-        c?.product_type_id === id ||
-        c?.product_type?.id === id ||
-        c?.product_type === id
+        (Array.isArray(p.product_product_types) && p.product_product_types.some(ppt => [
+          ppt.product_type_id, ppt.product_type?.id, ppt.product_types?.id, ppt.product_type
+        ].some(x => norm(x) === target))) ||
+        [c?.product_type_id, c?.product_type?.id, c?.product_type].some(x => norm(x) === target)
       );
     };
 
     const hasSeason = (p, id) => {
       if (!id || id === 'all') return true;
+      const target = norm(id);
       const c = p?.categories || {};
       return (
-        Array.isArray(p.product_seasons_occasions) && p.product_seasons_occasions.some(pso => (
-          pso.season_occasion_id === id ||
-          pso.season_occasion?.id === id ||
-          pso.seasons_occasions?.id === id ||
-          pso.season_occasion === id
-        )) ||
-        c?.season_occasion_id === id ||
-        c?.season_occasion?.id === id ||
-        c?.season_occasion === id
+        (Array.isArray(p.product_seasons_occasions) && p.product_seasons_occasions.some(pso => [
+          pso.season_occasion_id, pso.season_occasion?.id, pso.seasons_occasions?.id, pso.season_occasion
+        ].some(x => norm(x) === target))) ||
+        [c?.season_occasion_id, c?.season_occasion?.id, c?.season_occasion].some(x => norm(x) === target)
       );
     };
 
     // Department filter (from cards or dropdown)
     if (filters.department && filters.department !== 'all') {
+      const before = items.length;
       items = items.filter(p => hasDept(p, filters.department));
+      console.log('⚙️ فلترة القسم:', { dept: filters.department, before, after: items.length });
     }
 
     if (filters.searchTerm) {
@@ -533,26 +519,34 @@ const InventoryPage = () => {
     }
 
     if (filters.category && filters.category !== 'all') {
+      const before = items.length;
       items = items.filter(p => hasCategory(p, filters.category));
+      console.log('⚙️ فلترة التصنيف:', { cat: filters.category, before, after: items.length });
     }
 
     if (filters.productType && filters.productType !== 'all') {
+      const before = items.length;
       items = items.filter(p => hasProductType(p, filters.productType));
+      console.log('⚙️ فلترة النوع:', { type: filters.productType, before, after: items.length });
     }
 
     if (filters.seasonOccasion && filters.seasonOccasion !== 'all') {
+      const before = items.length;
       items = items.filter(p => hasSeason(p, filters.seasonOccasion));
+      console.log('⚙️ فلترة الموسم/المناسبة:', { season: filters.seasonOccasion, before, after: items.length });
     }
 
     if (filters.color && filters.color !== 'all') {
+      const target = norm(filters.color);
       items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => (
-        v?.color_id === filters.color || v?.colors?.id === filters.color || v?.color === filters.color
+        [v?.color_id, v?.colors?.id, v?.color].some(x => norm(x) === target)
       )));
     }
 
     if (filters.size && filters.size !== 'all') {
+      const target = norm(filters.size);
       items = items.filter(p => Array.isArray(p?.variants) && p.variants.some(v => (
-        v?.size_id === filters.size || v?.sizes?.id === filters.size || v?.size === filters.size
+        [v?.size_id, v?.sizes?.id, v?.size].some(x => norm(x) === target)
       )));
     }
 
