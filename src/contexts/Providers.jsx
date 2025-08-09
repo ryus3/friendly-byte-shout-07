@@ -4,7 +4,7 @@ import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
-import { SuperProvider } from '@/contexts/SuperProvider.jsx';
+import { SuperProvider } from '@/contexts/SuperProvider';
 import { ProfitsProvider } from '@/contexts/ProfitsContext.jsx';
 import { AlWaseetProvider } from '@/contexts/AlWaseetContext.jsx';
 import { SupabaseProvider } from '@/contexts/SupabaseContext.jsx';
