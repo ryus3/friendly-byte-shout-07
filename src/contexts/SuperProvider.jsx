@@ -683,22 +683,76 @@ export const SuperProvider = ({ children }) => {
       if (aiErr) throw aiErr;
       if (!aiOrder) return { success: false, error: 'الطلب الذكي غير موجود' };
 
-      const items = Array.isArray(aiOrder.items) ? aiOrder.items : [];
-      if (!items.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
+      const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
+      if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
 
-      // تجهيز العناصر بترتيب موحّد
-      const normalizedItems = items.map(i => ({
-        product_id: i.product_id || i.productId || i.id,
-        variant_id: i.variant_id || i.variantId || i.sku || null,
-        quantity: i.quantity || 1,
-        unit_price: i.unit_price || i.price || 0,
-      }));
+      // 2) مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
+      const products = Array.isArray(allData.products) ? allData.products : [];
+      const lowercase = (v) => (v || '').toString().trim().toLowerCase();
+      const notMatched = [];
 
-      // 2) إنشاء رقم طلب
+      const matchedItems = itemsInput.map((it) => {
+        const name = lowercase(it.product_name || it.name);
+        const color = lowercase(it.color);
+        const size = lowercase(it.size);
+        const qty = Number(it.quantity || 1);
+        const price = Number(it.unit_price || it.price || 0);
+
+        // إذا كانت المعرّفات موجودة بالفعل استخدمها مباشرة
+        if (it.product_id && it.variant_id) {
+          return {
+            product_id: it.product_id,
+            variant_id: it.variant_id,
+            quantity: qty,
+            unit_price: price,
+          };
+        }
+
+        // ابحث بالاسم
+        let product = products.find(p => lowercase(p.name) === name) 
+          || products.find(p => lowercase(p.name).includes(name));
+
+        if (!product) {
+          notMatched.push(it.product_name || it.name || 'منتج غير معروف');
+          return null;
+        }
+
+        // مطابقة المتغير (اللون/المقاس)
+        const variants = Array.isArray(product.variants) ? product.variants : (product.product_variants || []);
+        let variant = null;
+        if (variants.length === 1) {
+          variant = variants[0];
+        } else {
+          variant = variants.find(v => lowercase(v.color || v.color_name) === color && lowercase(v.size || v.size_name) === size)
+                 || variants.find(v => lowercase(v.color || v.color_name) === color)
+                 || variants.find(v => lowercase(v.size || v.size_name) === size);
+        }
+
+        if (!variant) {
+          notMatched.push(`${product.name}${it.color || it.size ? ` (${it.color || ''} ${it.size || ''})` : ''}`);
+          return null;
+        }
+
+        return {
+          product_id: product.id,
+          variant_id: variant.id,
+          quantity: qty,
+          unit_price: price || Number(variant.price || 0),
+        };
+      });
+
+      if (notMatched.length > 0) {
+        return { success: false, error: `تعذر مطابقة المنتجات التالية مع المخزون: ${notMatched.join('، ')}` };
+      }
+
+      const normalizedItems = matchedItems.filter(Boolean);
+      if (!normalizedItems.length) return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
+
+      // 3) إنشاء رقم طلب
       const { data: orderNumber, error: numErr } = await supabase.rpc('generate_order_number');
       if (numErr) throw numErr;
 
-      // 3) حجز المخزون لكل عنصر مع إمكانية التراجع
+      // 4) حجز المخزون لكل عنصر مع إمكانية التراجع
       const reservedSoFar = [];
       for (const it of normalizedItems) {
         const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
@@ -721,13 +775,13 @@ export const SuperProvider = ({ children }) => {
         reservedSoFar.push(it);
       }
 
-      // 4) حساب المجاميع
-      const subtotal = normalizedItems.reduce((s, it) => s + it.quantity * it.unit_price, 0);
+      // 5) حساب المجاميع
+      const subtotal = normalizedItems.reduce((s, it) => s + it.quantity * (it.unit_price || 0), 0);
       const deliveryFee = 0; // افتراضي محلي هنا
       const discount = 0;
       const total = subtotal - discount + deliveryFee;
 
-      // 5) إنشاء طلب حقيقي
+      // 6) إنشاء طلب حقيقي
       const trackingNumber = `RYUS-${Date.now().toString().slice(-6)}`;
       const orderRow = {
         order_number: orderNumber,
@@ -744,7 +798,7 @@ export const SuperProvider = ({ children }) => {
         delivery_status: 'pending',
         payment_status: 'pending',
         tracking_number: trackingNumber,
-        delivery_partner: aiOrder.source === 'telegram' ? 'محلي' : 'محلي',
+        delivery_partner: 'محلي',
         notes: aiOrder.order_data?.note || aiOrder.order_data?.original_text || null,
         created_by: user?.user_id || user?.id,
       };
@@ -765,14 +819,14 @@ export const SuperProvider = ({ children }) => {
         throw createErr;
       }
 
-      // 6) إدراج عناصر الطلب
+      // 7) إدراج عناصر الطلب
       const orderItemsRows = normalizedItems.map(it => ({
         order_id: createdOrder.id,
         product_id: it.product_id,
         variant_id: it.variant_id,
         quantity: it.quantity,
-        unit_price: it.unit_price,
-        total_price: it.quantity * it.unit_price
+        unit_price: it.unit_price || 0,
+        total_price: it.quantity * (it.unit_price || 0)
       }));
       const { error: itemsErr } = await supabase.from('order_items').insert(orderItemsRows);
       if (itemsErr) {
@@ -787,7 +841,7 @@ export const SuperProvider = ({ children }) => {
         throw itemsErr;
       }
 
-      // 7) حذف الطلب الذكي نهائياً
+      // 8) حذف الطلب الذكي نهائياً
       const { error: delErr } = await supabase.from('ai_orders').delete().eq('id', orderId);
       if (delErr) console.error('تنبيه: فشل حذف الطلب الذكي بعد التحويل', delErr);
 
@@ -803,7 +857,7 @@ export const SuperProvider = ({ children }) => {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };
     }
-  }, [user, fetchAllData]);
+  }, [user, allData.products]);
 
   // تبديل ظهور المنتج بتحديث تفاؤلي فوري دون إعادة تحميل كاملة
   const toggleProductVisibility = useCallback(async (productId, newState) => {
