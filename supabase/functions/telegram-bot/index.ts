@@ -89,6 +89,25 @@ async function sendTelegramMessage(chatId: number, text: string, parseMode = 'HT
   }
 }
 
+// تحديد صلاحية المستخدم بدقة من جدول الأدوار
+async function determineUserRole(userId: string): Promise<'admin' | 'manager' | 'employee'> {
+  try {
+    const { data: isAdmin } = await supabase.rpc('check_user_role', {
+      p_user_id: userId,
+      p_role_name: 'admin'
+    });
+    if (isAdmin) return 'admin';
+  } catch (_) {}
+  try {
+    const { data: isManager } = await supabase.rpc('check_user_role', {
+      p_user_id: userId,
+      p_role_name: 'manager'
+    });
+    if (isManager) return 'manager';
+  } catch (_) {}
+  return 'employee';
+}
+
 async function linkEmployeeCode(code: string, chatId: number) {
   try {
     // 1) حاول عبر الإجراء المخزن الحالي (للتوافق مع الإصدارات السابقة)
@@ -167,14 +186,15 @@ async function getEmployeeByTelegramId(chatId: number) {
     if (codeRow?.user_id) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_id, full_name, role, employee_code')
+        .select('user_id, full_name, employee_code')
         .eq('user_id', codeRow.user_id)
         .single();
       if (profile) {
+        const role = await determineUserRole(profile.user_id);
         return {
           user_id: profile.user_id,
           full_name: profile.full_name,
-          role: profile.role || 'employee',
+          role,
           employee_code: profile.employee_code || null
         };
       }
@@ -193,14 +213,15 @@ async function getEmployeeByTelegramId(chatId: number) {
       const empCode = telRows[0].employee_code;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_id, full_name, role, employee_code')
+        .select('user_id, full_name, employee_code')
         .eq('employee_code', empCode)
         .single();
       if (profile) {
+        const role = await determineUserRole(profile.user_id);
         return {
           user_id: profile.user_id,
           full_name: profile.full_name,
-          role: profile.role || 'employee',
+          role,
           employee_code: profile.employee_code || empCode
         };
       }
