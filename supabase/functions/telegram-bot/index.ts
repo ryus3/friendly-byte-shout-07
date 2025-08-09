@@ -29,26 +29,38 @@ interface TelegramUpdate {
   };
 }
 
-// Get bot token from database settings
+// Get bot token from database settings with env fallback
 async function getBotToken(): Promise<string | null> {
   try {
+    // 1) Try from settings table
     const { data, error } = await supabase
       .from('settings')
       .select('value')
       .eq('key', 'telegram_bot_config')
       .single();
-    
-    if (error || !data) {
-      console.log('No bot config found in settings');
-      return null;
+
+    if (!error && data) {
+      const val = data.value;
+      const tokenFromDb = typeof val === 'string' ? val : (val?.bot_token ?? null);
+      if (tokenFromDb && String(tokenFromDb).trim().length > 0) {
+        return String(tokenFromDb).trim();
+      }
+      console.log('Bot token not found in settings payload, will try env fallback');
+    } else {
+      console.log('No bot config found in settings, will try env fallback');
     }
-    
-    return data.value?.bot_token || null;
-  } catch (error) {
-    console.error('Error getting bot token:', error);
-    return null;
+  } catch (err) {
+    console.error('Error getting bot token from DB, will try env fallback:', err);
   }
+
+  // 2) Fallback to environment variable
+  const envToken = Deno.env.get('TELEGRAM_BOT_TOKEN');
+  if (envToken && envToken.trim().length > 0) return envToken.trim();
+
+  console.error('Bot token not available (DB nor ENV)');
+  return null;
 }
+
 
 async function sendTelegramMessage(chatId: number, text: string, parseMode = 'HTML') {
   const botToken = await getBotToken();

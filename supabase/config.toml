@@ -1,1 +1,10 @@
 project_id = "tkheostkubborwkwzugl"
+
+[functions.telegram-bot]
+verify_jwt = false
+
+[functions.telegram-bot-alwaseet]
+verify_jwt = false
+
+[functions.telegram-webhook-check]
+verify_jwt = false
