@@ -11,6 +11,7 @@ import AiOrderCard from './AiOrderCard';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { supabase } from '@/lib/customSupabaseClient';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const AiOrdersManager = ({ onClose }) => {
   const { user, hasPermission } = useAuth();
@@ -119,7 +120,7 @@ const AiOrdersManager = ({ onClose }) => {
         onClick={e => e.stopPropagation()}
       >
         <Card className="border-0 h-full">
-          <CardHeader className="border-b">
+          <CardHeader className="border-b bg-gradient-to-l from-primary/10 to-transparent backdrop-blur supports-[backdrop-filter]:bg-background/80 sticky top-0 z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bot className="w-6 h-6 text-primary" />
@@ -157,14 +158,29 @@ const AiOrdersManager = ({ onClose }) => {
                   
                   {selectedOrders.length > 0 && (
                     <div className="flex items-center gap-2">
-                      <Button 
-                        size="sm" 
-                        onClick={handleBulkApprove}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                        موافقة على المحدد
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            size="sm" 
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
+                            موافقة على المحدد
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>تأكيد تحويل الطلبات المحددة</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              سيتم تحويل {selectedOrders.length} طلب ذكي إلى طلبات حقيقية مع التحقق من المخزون وحجزه.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleBulkApprove}>تأكيد التحويل</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                       <Button 
                         variant="destructive" 
                         size="sm" 

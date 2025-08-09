@@ -8,6 +8,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
     const { approveAiOrder, deleteOrders } = useInventory();
@@ -178,14 +179,26 @@ const AiOrderCard = ({ order, isSelected, onSelect, onEdit }) => {
                     </Button>
                 </div>
                 
-                <Button 
-                    size="sm"
-                    onClick={handleApproveClick}
-                    disabled={isProcessing}
-                >
-                    {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
-                    موافقة
-                </Button>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button size="sm" disabled={isProcessing}>
+                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
+                            موافقة
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>تأكيد تحويل الطلب</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                سيتم تحويل هذا الطلب الذكي إلى طلب حقيقي مع التحقق من المخزون وحجزه.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleApproveClick}>تأكيد التحويل</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </motion.div>
     );
