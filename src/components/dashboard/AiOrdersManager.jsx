@@ -116,6 +116,7 @@ const AiOrdersManager = ({ onClose }) => {
       return o?.ai_generated === true || o?.is_ai === true || o?.meta?.ai === true || aiKeys.includes(src);
     }).length;
   }, [userAiOrders]);
+
   const handleSelectAll = (checked) => {
     if (checked) {
       setSelectedOrders(userAiOrders.map(order => order.id));
@@ -165,63 +166,115 @@ const AiOrdersManager = ({ onClose }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/90 to-slate-900/90 backdrop-blur-md z-[1200] flex items-center justify-center p-4 sm:p-6 animate-enter"
+      className="fixed inset-0 z-[1200] flex items-center justify-center p-4 sm:p-6"
       onClick={onClose}
+      style={{
+        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 50%, rgba(15, 23, 42, 0.95) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)'
+      }}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.95, opacity: 0 }}
-        className="bg-gradient-to-br from-slate-800/95 via-slate-700/95 to-slate-800/95 backdrop-blur-2xl rounded-3xl shadow-2xl ring-1 ring-white/10 w-full max-w-3xl lg:max-w-5xl max-h-[90vh] overflow-y-auto border border-white/5"
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        transition={{ type: "spring", duration: 0.5 }}
+        className="w-full max-w-7xl max-h-[95vh] overflow-hidden"
         onClick={e => e.stopPropagation()}
+        style={{
+          background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 50%, rgba(30, 41, 59, 0.95) 100%)',
+          backdropFilter: 'blur(25px)',
+          WebkitBackdropFilter: 'blur(25px)',
+          borderRadius: '24px',
+          border: '1px solid rgba(148, 163, 184, 0.2)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 100px rgba(59, 130, 246, 0.1)'
+        }}
       >
-        <Card className="border-0 h-full">
-          <CardHeader className="border-b border-white/10 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-pink-600/20 backdrop-blur supports-[backdrop-filter]:bg-background/20">
+        <Card className="border-0 h-full bg-transparent shadow-none">
+          {/* Header */}
+          <CardHeader 
+            className="border-b border-white/10 p-6"
+            style={{
+              background: 'linear-gradient(90deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 50%, rgba(236, 72, 153, 0.15) 100%)',
+              backdropFilter: 'blur(10px)'
+            }}
+          >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bot className="w-6 h-6 text-blue-400" />
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/20">
+                  <Bot className="w-8 h-8 text-blue-400" />
+                </div>
                 <div>
-                  <CardTitle className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300">إدارة الطلبات الذكية</CardTitle>
-                  <CardDescription className="text-sm md:text-base text-white/70">{userAiOrders.length} طلبات ذكية في انتظار المراجعة</CardDescription>
+                  <CardTitle 
+                    className="text-3xl md:text-4xl font-black tracking-tight"
+                    style={{
+                      background: 'linear-gradient(90deg, #60A5FA 0%, #A78BFA 50%, #F472B6 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text'
+                    }}
+                  >
+                    إدارة الطلبات الذكية
+                  </CardTitle>
+                  <CardDescription className="text-lg text-white/70 mt-1">
+                    نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي
+                  </CardDescription>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
                 onClick={onClose}
-                className="rounded-lg w-8 h-8 bg-white/10 backdrop-blur-sm border border-white/20 text-white/80 hover:text-white hover:bg-white/20 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-white/40"
+                className="rounded-2xl w-12 h-12 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-300 hover:scale-110 border border-white/20"
               >
-                <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
+                <X className="w-6 h-6" />
               </Button>
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex flex-col">
-            <div className="p-5 md:p-6 border-b border-white/10 bg-gradient-to-r from-slate-800/50 via-slate-700/50 to-slate-800/50 supports-[backdrop-filter]:backdrop-blur-sm">
+          <CardContent className="p-0 h-[calc(95vh-120px)] overflow-y-auto custom-scrollbar">
+            {/* Stats Header */}
+            <div 
+              className="p-6 border-b border-white/10"
+              style={{
+                background: 'linear-gradient(180deg, rgba(51, 65, 85, 0.3) 0%, rgba(30, 41, 59, 0.3) 100%)',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
               <AiOrdersHeaderStats totalCount={totalCount} telegramCount={telegramCount} aiCount={aiCount} needReviewCount={needReviewCount} />
             </div>
+
+            {/* Bulk Actions */}
             {userAiOrders.length > 0 && (
-              <div className="p-4 md:p-5 border-b border-white/10 bg-gradient-to-r from-slate-800/30 via-slate-700/30 to-slate-800/30 supports-[backdrop-filter]:backdrop-blur">
+              <div 
+                className="p-5 border-b border-white/10"
+                style={{
+                  background: 'linear-gradient(90deg, rgba(30, 41, 59, 0.4) 0%, rgba(51, 65, 85, 0.4) 100%)',
+                  backdropFilter: 'blur(10px)'
+                }}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Checkbox
                       checked={selectedOrders.length === userAiOrders.length}
                       onCheckedChange={handleSelectAll}
+                      className="border-white/30 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500"
                     />
-                    <span className="text-sm font-medium text-white/90">
+                    <span className="text-lg font-bold text-white/90">
                       تحديد الكل ({selectedOrders.length}/{userAiOrders.length})
                     </span>
                   </div>
                   
                   {selectedOrders.length > 0 && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button 
-                            size="sm" 
+                            size="lg"
                             disabled={isProcessing}
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300"
                           >
-                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <ShieldCheck className="w-4 h-4 ml-2" />}
+                            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <ShieldCheck className="w-5 h-5 ml-2" />}
                             موافقة على المحدد
                           </Button>
                         </AlertDialogTrigger>
@@ -240,11 +293,12 @@ const AiOrdersManager = ({ onClose }) => {
                       </AlertDialog>
                       <Button 
                         variant="destructive" 
-                        size="sm" 
+                        size="lg"
                         onClick={handleBulkDelete}
                         disabled={isProcessing}
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 shadow-lg hover:shadow-xl transition-all duration-300"
                       >
-                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Trash2 className="w-4 h-4 ml-2" />}
+                        {isProcessing ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <Trash2 className="w-5 h-5 ml-2" />}
                         حذف المحدد
                       </Button>
                     </div>
@@ -253,34 +307,72 @@ const AiOrdersManager = ({ onClose }) => {
               </div>
             )}
 
-            <div className="flex-1 overflow-y-auto p-4">
+            {/* Content */}
+            <div 
+              className="flex-1 p-6"
+              style={{
+                background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.2) 0%, rgba(30, 41, 59, 0.2) 100%)'
+              }}
+            >
               {needReviewCount > 0 && (
-                <div className="mb-6 rounded-2xl p-5 md:p-6 bg-gradient-to-br from-red-500/20 via-red-600/15 to-red-700/20 ring-1 ring-red-400/30 shadow-xl hover-scale animate-enter border border-red-400/20">
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 rounded-3xl p-6 border border-red-400/30 shadow-2xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(220, 38, 38, 0.2) 100%)',
+                    backdropFilter: 'blur(15px)'
+                  }}
+                >
                   <div className="flex items-start gap-4">
-                    <div className="shrink-0 bg-red-500/25 text-red-300 rounded-xl p-3 ring-1 ring-red-400/30 shadow-lg">
-                      <AlertTriangle className="w-6 h-6" />
+                    <div className="shrink-0 p-4 rounded-2xl bg-red-500/25 border border-red-400/30">
+                      <AlertTriangle className="w-8 h-8 text-red-300" />
                     </div>
                     <div className="flex-1">
-                      <p className="font-bold leading-6 text-red-200 text-lg">هناك {needReviewCount} طلب تحتاج إلى مراجعة</p>
-                      <p className="text-sm text-red-300/80 mt-2">يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة.</p>
+                      <p className="font-black text-xl text-red-200 mb-2">
+                        🚨 هناك {needReviewCount} طلب تحتاج إلى مراجعة عاجلة
+                      </p>
+                      <p className="text-red-300/80 text-lg">
+                        يرجى تعديل العناصر غير المتاحة أو اختيار بدائل قبل الموافقة على هذه الطلبات.
+                      </p>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
+
               {userAiOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-center">
-                  <Bot className="w-20 h-20 text-white/40 mb-6" />
-                  <h3 className="text-xl font-bold mb-3 text-white/90">لا توجد طلبات ذكية</h3>
-                  <p className="text-white/60 max-w-sm">
-                    عندما تصل طلبات ذكية جديدة، ستظهر هنا للمراجعة والموافقة.
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="flex flex-col items-center justify-center h-96 text-center"
+                >
+                  <div className="p-8 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-600/20 border border-white/20 mb-8">
+                    <Bot className="w-24 h-24 text-blue-400" />
+                  </div>
+                  <h3 className="text-3xl font-black text-white/90 mb-4">لا توجد طلبات ذكية</h3>
+                  <p className="text-white/60 text-xl max-w-md">
+                    عندما تصل طلبات ذكية جديدة من التليغرام أو الذكاء الاصطناعي، ستظهر هنا للمراجعة والموافقة.
                   </p>
-                </div>
+                </motion.div>
               ) : (
-                <div className="space-y-5">
-                  {userAiOrders.map(order => (
-                    <div key={order.id} className="rounded-2xl bg-gradient-to-br from-slate-700/40 via-slate-600/30 to-slate-700/40 backdrop-blur-sm border border-white/10 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-[1.01] overflow-hidden">
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="space-y-6"
+                >
+                  {userAiOrders.map((order, index) => (
+                    <motion.div
+                      key={order.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="rounded-3xl overflow-hidden border border-white/10 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.01]"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(51, 65, 85, 0.6) 0%, rgba(30, 41, 59, 0.6) 100%)',
+                        backdropFilter: 'blur(20px)'
+                      }}
+                    >
                       <AiOrderCard
-                        key={order.id}
                         order={order}
                         isSelected={selectedOrders.includes(order.id)}
                         onSelect={(checked) => handleSelectOrder(order.id, checked)}
@@ -289,20 +381,34 @@ const AiOrdersManager = ({ onClose }) => {
                           setQuickOrderDialogOpen(true);
                         }}
                       />
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* استخدام QuickOrderContent بدلاً من EditAiOrderDialog */}
+        {/* Edit Dialog */}
         {quickOrderDialogOpen && editingOrder && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-background rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-              <div className="p-4 border-b flex items-center justify-between">
-                <h2 className="text-lg font-semibold">تعديل الطلب الذكي</h2>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl border border-white/20 shadow-2xl"
+              style={{
+                background: 'linear-gradient(145deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.95) 100%)',
+                backdropFilter: 'blur(25px)'
+              }}
+            >
+              <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                <h2 className="text-2xl font-black text-white">تعديل الطلب الذكي</h2>
                 <Button 
                   variant="ghost" 
                   size="icon" 
@@ -310,12 +416,12 @@ const AiOrdersManager = ({ onClose }) => {
                     setQuickOrderDialogOpen(false);
                     setEditingOrder(null);
                   }}
-                  className="rounded-lg w-8 h-8 bg-background/90 backdrop-blur-sm border border-border/60 text-muted-foreground hover:text-foreground hover:bg-background transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl group hover:border-primary/50"
+                  className="rounded-2xl w-10 h-10 text-white/80 hover:text-white hover:bg-white/10 border border-white/20"
                 >
-                  <X className="w-4 h-4 transition-all duration-300 group-hover:rotate-90 group-hover:scale-110" />
+                  <X className="w-5 h-5" />
                 </Button>
               </div>
-              <div className="p-4 max-h-[calc(90vh-80px)] overflow-y-auto">
+              <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
                 <QuickOrderContent 
                   isDialog={true}
                   aiOrderData={editingOrder}
@@ -326,10 +432,27 @@ const AiOrdersManager = ({ onClose }) => {
                   }}
                 />
               </div>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         )}
       </motion.div>
+
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, rgba(59, 130, 246, 0.6), rgba(147, 51, 234, 0.6));
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, rgba(59, 130, 246, 0.8), rgba(147, 51, 234, 0.8));
+        }
+      `}</style>
     </motion.div>
   );
 };
