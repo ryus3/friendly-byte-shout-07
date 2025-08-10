@@ -543,6 +543,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
               barcode,
               colors (name),
               sizes (name)
+            ),
+            product_departments (
+              departments ( name )
             )
           `)
           .or(`name.ilike.%${item.name.split(' ').join('%')}%,barcode.eq.${item.name}`)
@@ -567,6 +570,9 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
                   barcode,
                   colors (name),
                   sizes (name)
+                ),
+                product_departments (
+                  departments ( name )
                 )
               `)
               .or(searchQuery)
@@ -597,6 +603,24 @@ async function processOrderText(text: string, chatId: number, employeeCode: stri
         if (bestMatch) {
           let productPrice = bestMatch.base_price || 0;
           let selectedVariant = null;
+
+          // تحديد إن كان المنتج من قسم الملابس أو الأحذية → يجب تحديد اللون والقياس
+          const depNames = (bestMatch.product_departments || []).map((pd: any) => (pd?.departments?.name || '').toString().toLowerCase());
+          const nameLc = (bestMatch.name || '').toString().toLowerCase();
+          const isClothingOrShoes = depNames.some((n: string) => ['ملابس','أحذية','احذية','clothing','clothes','shoes','footwear'].some(k => n.includes(k)))
+            || /(قميص|بنطال|بنطلون|سوت|بدلة|تيشيرت|هودي|جاكيت|حذاء|بوت|سنيكر|صندل|نعال|خف)/i.test(nameLc);
+
+          // إذا كان من هذه الأقسام ولم يذكر اللون أو القياس → لا نعتمد على أول تنويع، ونوسم العنصر كمعلومات ناقصة
+          if (isClothingOrShoes && (!item.size || !item.color)) {
+            item.available = false;
+            item.availability = 'missing_attributes';
+            item.product_id = bestMatch.id;
+            item.product_name = bestMatch.name;
+            item.available_quantity = 0;
+            // لا نضيف للسعر وننتقل للعنصر التالي
+            console.log(`Missing attributes (color/size) for clothing/shoes: ${bestMatch.name}`);
+            continue;
+          }
           
           // البحث عن التنويع المطابق للون والمقاس
           if (bestMatch.product_variants && bestMatch.product_variants.length > 0) {
@@ -708,7 +732,9 @@ const unavailableItemsCount = unavailableItems.length;
 
 // قوائم المنتجات لكل حالة
 const warnList = (unavailableItems.length ? unavailableItems : items).map(item => {
-  return `❌ غير متاح ${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+  const base = `${item.product_name || item.name}${item.color ? ` (${item.color})` : ''}${item.size ? ` ${item.size}` : ''} × ${item.quantity}`;
+  const reason = item.availability === 'missing_attributes' ? ' — يرجى تحديد اللون والقياس' : '';
+  return `❌ ${item.availability === 'missing_attributes' ? 'معلومات ناقصة' : 'غير متاح'} ${base}${reason}`;
 }).join('\n');
 
 const okList = availableItems.map(item => {
