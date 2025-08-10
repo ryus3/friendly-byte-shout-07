@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSuper } from '@/contexts/SuperProvider';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 const AiOrderCard = ({ order, isSelected, onSelect }) => {
   // المعاينة ملغاة - التفاصيل تظهر دائماً
   const formatDateEnglish = (date) => {
@@ -109,7 +111,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       default: return <AlertTriangle className="w-3 h-3 ml-1" />;
     }
   };
-  const { products = [], users = [] } = useSuper();
+  const { products = [], users = [], approveAiOrder } = useSuper();
 
   const items = useMemo(() => (
     Array.isArray(order.items) ? order.items : (order.order_data?.items || [])
@@ -172,6 +174,7 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
 
   const gradientToUse = useMemo(() => {
     if (availability === 'out') return 'bg-gradient-to-br from-red-500 via-orange-500 to-rose-600';
+    if (availability === 'available' && !needsReview) return 'bg-gradient-to-br from-emerald-400 via-green-500 to-teal-600';
     if (needsReview) return 'bg-gradient-to-br from-amber-500 via-orange-500 to-red-500';
     return getStatusColor(order.status).gradient;
   }, [availability, needsReview, order.status]);
@@ -207,7 +210,14 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
                 })}
               </div>
               <div>
-                <h4 className="font-bold text-sm">{getSourceIcon(order.source).label}</h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-sm">{getSourceIcon(order.source).label}</h4>
+                  {availability !== 'available' && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] bg-white text-red-600 font-semibold shadow-md">
+                      غير متاح بالمخزون
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs opacity-90">بواسطة: {createdByName}</p>
               </div>
             </div>
@@ -316,6 +326,14 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               <Button 
                 size="sm"
                 className="h-8 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 flex items-center justify-center gap-1"
+                onClick={async () => {
+                  const res = await approveAiOrder(order.id);
+                  if (res?.success) {
+                    toast({ title: 'تمت الموافقة', description: 'تم إنشاء الطلب وحذف الطلب الذكي', variant: 'success' });
+                  } else {
+                    toast({ title: 'فشل الموافقة', description: res?.error || 'حدث خطأ غير متوقع', variant: 'destructive' });
+                  }
+                }}
               >
                 <CheckCircle2 className="w-3 h-3" />
                 موافقة
@@ -324,6 +342,9 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             <Button 
               size="sm"
               className="h-8 text-xs bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-0 flex items-center justify-center gap-1"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('openQuickOrderWithAi', { detail: order }));
+              }}
             >
               <Edit className="w-3 h-3" />
               تعديل
@@ -331,6 +352,14 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
             <Button 
               size="sm"
               className="h-8 text-xs bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0 flex items-center justify-center gap-1"
+              onClick={async () => {
+                const { error } = await supabase.from('ai_orders').delete().eq('id', order.id);
+                if (error) {
+                  toast({ title: 'فشل الحذف', description: error.message, variant: 'destructive' });
+                } else {
+                  toast({ title: 'تم الحذف', description: 'تم حذف الطلب الذكي نهائياً', variant: 'success' });
+                }
+              }}
             >
               <Trash2 className="w-3 h-3" />
               حذف
@@ -374,30 +403,6 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               </div>
             )}
             
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
-                <span className="font-medium text-xs block">وقت الإنشاء:</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatTimeEnglish(order.created_at)}
-                </span>
-              </div>
-              <div className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
-                <span className="font-medium text-xs block">آخر تحديث:</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatTimeEnglish(order.updated_at || order.created_at)}
-                </span>
-              </div>
-            </div>
-
-            {/* Full Order Data Debug */}
-            {order.order_data && (
-              <details className="bg-slate-100 dark:bg-slate-700 rounded-md p-2">
-                <summary className="font-medium text-xs cursor-pointer">عرض البيانات الكاملة</summary>
-                <pre className="text-xs mt-2 overflow-auto max-h-32 bg-slate-200 dark:bg-slate-600 p-2 rounded">
-                  {JSON.stringify(order, null, 2)}
-                </pre>
-              </details>
-            )}
           </div>
       </CardContent>
     </Card>

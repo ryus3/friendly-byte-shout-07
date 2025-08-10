@@ -384,7 +384,11 @@ const Layout = ({ children }) => {
       />
         <QuickOrderDialog 
           open={dialogs.quickOrder} 
-          onOpenChange={(open) => setDialogs(prev => ({ ...prev, quickOrder: open }))} 
+          onOpenChange={(open) => {
+            if (!open) setAiOrderForEdit(null);
+            setDialogs(prev => ({ ...prev, quickOrder: open }));
+          }} 
+          aiOrderData={aiOrderForEdit}
         />
         
         <AnimatePresence>

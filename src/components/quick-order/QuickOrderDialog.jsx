@@ -5,7 +5,7 @@ import { X, Loader2 } from 'lucide-react';
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useInventory } from '@/contexts/InventoryContext';
 
-const QuickOrderDialog = ({ open, onOpenChange, onOrderCreated }) => {
+const QuickOrderDialog = ({ open, onOpenChange, onOrderCreated, aiOrderData = null }) => {
   const formRef = useRef(null);
   const { cart } = useInventory();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,6 +53,7 @@ const QuickOrderDialog = ({ open, onOpenChange, onOrderCreated }) => {
               }}
               setIsSubmitting={setIsSubmitting}
               isSubmittingState={isSubmitting}
+              aiOrderData={aiOrderData}
             />
           </div>
 
