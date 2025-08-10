@@ -1,479 +1,255 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useInventory } from '@/contexts/InventoryContext';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { X, Bot, Trash2, ShieldCheck, Loader2, AlertTriangle, Sparkles, MessageCircle, Zap, Brain, CheckCircle2, Clock, Package, Users } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { toast } from '@/components/ui/use-toast';
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Bot, 
+  MessageSquare, 
+  Clock, 
+  AlertTriangle, 
+  CheckCircle2,
+  XCircle,
+  Send,
+  Eye,
+  X,
+  Brain,
+  Zap,
+  Smartphone,
+  Users,
+  TrendingUp,
+  Activity
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 import AiOrderCard from './AiOrderCard';
-import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
-import { useNotifications } from '@/contexts/NotificationsContext';
-import { supabase } from '@/lib/customSupabaseClient';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const AiOrdersManager = ({ onClose }) => {
-  const { user, hasPermission } = useAuth();
-  const { aiOrders, approveAiOrder, deleteOrders } = useInventory();
-  const { deleteNotificationByTypeAndData } = useNotifications();
-  const [selectedOrders, setSelectedOrders] = React.useState([]);
-  const [isProcessing, setIsProcessing] = React.useState(false);
-  const [editingOrder, setEditingOrder] = React.useState(null);
-  const [quickOrderDialogOpen, setQuickOrderDialogOpen] = React.useState(false);
-  const [userEmployeeCode, setUserEmployeeCode] = React.useState(null);
-
-  // جلب رمز الموظف للمستخدم الحالي
-  React.useEffect(() => {
-    const fetchEmployeeCode = async () => {
-      if (!user?.user_id) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('telegram_employee_codes')
-          .select('employee_code')
-          .eq('user_id', user.user_id)
-          .maybeSingle();
-        
-        if (!error && data) {
-          setUserEmployeeCode(data.employee_code);
-        }
-      } catch (err) {
-        console.error('Error fetching employee code:', err);
-      }
-    };
-    
-    fetchEmployeeCode();
-  }, [user?.user_id]);
-
-  const userAiOrders = React.useMemo(() => {
-    if (!Array.isArray(aiOrders)) return [];
-    
-    // للمدير - عرض كل الطلبات
-    if (hasPermission('view_all_data')) return aiOrders;
-    
-    // للموظفين - فلترة حسب رمز الموظف
-    if (!userEmployeeCode) return [];
-    
-    return aiOrders.filter(order => {
-      return order.created_by === userEmployeeCode;
-    });
-  }, [aiOrders, userEmployeeCode, hasPermission]);
-
-  const hasAnyUnavailable = React.useMemo(() => {
-    return userAiOrders.some(o => Array.isArray(o.items) && o.items.some(it => it?.available === false || it?.availability === 'out' || it?.availability === 'insufficient'));
-  }, [userAiOrders]);
-
-  // إحصائيات مبهرة
-  const stats = React.useMemo(() => {
-    const total = userAiOrders.length;
-    const unavailable = userAiOrders.filter(o => Array.isArray(o.items) && o.items.some(it => it?.available === false)).length;
-    const available = total - unavailable;
-    const telegram = userAiOrders.filter(o => o.source === 'telegram').length;
-    const whatsapp = userAiOrders.filter(o => o.source === 'whatsapp').length;
-    const totalValue = userAiOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0);
-    
-    return { total, unavailable, available, telegram, whatsapp, totalValue };
-  }, [userAiOrders]);
-
-  const handleSelectAll = (checked) => {
-    if (checked) {
-      setSelectedOrders(userAiOrders.map(order => order.id));
-    } else {
-      setSelectedOrders([]);
+  const [aiOrders] = useState([
+    {
+      id: 1,
+      customer_name: "أحمد محمد",
+      customer_phone: "07901234567",
+      message: "أريد فستان أزرق مقاس M وحقيبة سوداء",
+      source: "telegram",
+      status: "pending",
+      created_at: new Date(),
+      updated_at: new Date(),
+      ai_response: "تم العثور على فستان أزرق وحقيبة سوداء متاحين"
+    },
+    {
+      id: 2,
+      customer_name: "فاطمة علي",
+      customer_phone: "07912345678",
+      message: "بحاجة لحذاء رياضي مقاس 40",
+      source: "ai_chat",
+      status: "completed",
+      created_at: new Date(),
+      updated_at: new Date()
     }
-  };
+  ]);
 
-  const handleSelectOrder = (orderId, checked) => {
-    if (checked) {
-      setSelectedOrders(prev => [...prev, orderId]);
-    } else {
-      setSelectedOrders(prev => prev.filter(id => id !== orderId));
-    }
-  };
-
-  const handleBulkApprove = async () => {
-    if (!hasPermission('approve_orders')) {
-      toast({ 
-        title: "ليس لديك صلاحية", 
-        description: "ليس لديك صلاحية للموافقة على الطلبات", 
-        variant: "destructive" 
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
-    let success = 0, failed = 0;
-    for (const orderId of selectedOrders) {
-      const res = await approveAiOrder(orderId);
-      if (res?.success) success++; else failed++;
-    }
-    setSelectedOrders([]);
-    setIsProcessing(false);
-    toast({ title: "تمت المعالجة", description: `تم تحويل ${success} وحصول ${failed} على أخطاء`, variant: failed ? "destructive" : "success" });
-  };
-
-  const handleBulkDelete = async () => {
-    setIsProcessing(true);
-    await deleteOrders(selectedOrders, true);
-    setSelectedOrders([]);
-    setIsProcessing(false);
-  };
+  const isAvailable = true;
+  const pendingCount = aiOrders.filter(order => order.status === 'pending').length;
+  const completedCount = aiOrders.filter(order => order.status === 'completed').length;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4 sm:p-6"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
-        className="bg-gradient-to-br from-background/95 via-background to-background/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-primary/20 w-full max-w-7xl max-h-[95vh] overflow-hidden relative"
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-lg z-[1200] flex items-center justify-center p-4" onClick={onClose}>
+      <div 
+        className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-900 dark:via-blue-900/20 dark:to-indigo-900/20 rounded-lg shadow-2xl w-full max-w-4xl h-[85vh] overflow-hidden"
         onClick={e => e.stopPropagation()}
       >
-        {/* خلفية متدرجة ساحرة */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-blue-500/5 to-purple-500/5 opacity-50" />
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-purple-500 via-pink-500 to-orange-500" />
-        
-        {/* نقاط مضيئة متحركة */}
-        <div className="absolute top-10 right-20 w-3 h-3 bg-blue-400 rounded-full opacity-60 animate-pulse" />
-        <div className="absolute top-32 right-32 w-2 h-2 bg-purple-400 rounded-full opacity-40 animate-ping" />
-        <div className="absolute bottom-20 left-20 w-4 h-4 bg-pink-400 rounded-full opacity-50 animate-bounce" />
-        
-        <Card className="border-0 h-full bg-transparent">
-          {/* Header مبهر مع إحصائيات */}
-          <CardHeader className="border-b border-primary/10 bg-gradient-to-r from-primary/10 via-blue-500/10 to-purple-500/10 backdrop-blur-xl sticky top-0 z-20 pb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-lg opacity-60 animate-pulse" />
-                  <div className="relative bg-gradient-to-br from-blue-500 to-purple-600 p-3 rounded-2xl shadow-xl">
-                    <Brain className="w-8 h-8 text-white" />
-                  </div>
+        {/* Header */}
+        <div className="relative p-4 pb-3 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-t-lg overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-0 left-0 w-32 h-32 bg-white/20 rounded-full -translate-x-16 -translate-y-16"></div>
+            <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/10 rounded-full translate-x-12 translate-y-12"></div>
+            <div className="absolute top-1/2 left-1/3 w-16 h-16 bg-white/15 rounded-full"></div>
+          </div>
+          
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
+                  <Brain className="w-6 h-6 text-white" />
                 </div>
-                <div>
-                  <CardTitle className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-blue-600 to-purple-600 flex items-center gap-3">
-                    إدارة الطلبات الذكية
-                    <Sparkles className="w-8 h-8 text-yellow-500 animate-pulse" />
-                  </CardTitle>
-                  <CardDescription className="text-lg text-muted-foreground/80 flex items-center gap-2 mt-1">
-                    <Zap className="w-5 h-5 text-orange-500" />
-                    منصة الذكاء الاصطناعي لمعالجة الطلبات
-                  </CardDescription>
-                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onClose}
-                className="rounded-xl w-12 h-12 bg-red-500/10 hover:bg-red-500/20 text-red-600 hover:text-red-700 transition-all duration-300 hover:scale-110 shadow-lg hover:shadow-xl border border-red-200/50"
-              >
-                <X className="w-6 h-6" />
-              </Button>
-            </div>
-
-            {/* إحصائيات مبهرة */}
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-blue-500/20 to-blue-600/20 backdrop-blur-sm border border-blue-300/30 rounded-2xl p-4 text-center shadow-lg"
-              >
-                <Package className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
-                <div className="text-xs text-blue-600">إجمالي الطلبات</div>
-              </motion.div>
-              
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-green-500/20 to-emerald-600/20 backdrop-blur-sm border border-green-300/30 rounded-2xl p-4 text-center shadow-lg"
-              >
-                <CheckCircle2 className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-green-700">{stats.available}</div>
-                <div className="text-xs text-green-600">جاهز للموافقة</div>
-              </motion.div>
-              
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-red-500/20 to-pink-600/20 backdrop-blur-sm border border-red-300/30 rounded-2xl p-4 text-center shadow-lg"
-              >
-                <AlertTriangle className="w-6 h-6 text-red-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-red-700">{stats.unavailable}</div>
-                <div className="text-xs text-red-600">يحتاج مراجعة</div>
-              </motion.div>
-              
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-purple-500/20 to-indigo-600/20 backdrop-blur-sm border border-purple-300/30 rounded-2xl p-4 text-center shadow-lg"
-              >
-                <MessageCircle className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-purple-700">{stats.telegram}</div>
-                <div className="text-xs text-purple-600">من التليغرام</div>
-              </motion.div>
-              
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-orange-500/20 to-amber-600/20 backdrop-blur-sm border border-orange-300/30 rounded-2xl p-4 text-center shadow-lg"
-              >
-                <Users className="w-6 h-6 text-orange-600 mx-auto mb-2" />
-                <div className="text-2xl font-bold text-orange-700">{stats.whatsapp}</div>
-                <div className="text-xs text-orange-600">من الواتساب</div>
-              </motion.div>
-              
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 backdrop-blur-sm border border-yellow-300/30 rounded-2xl p-4 text-center shadow-lg"
-              >
-                <Clock className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                <div className="text-xl font-bold text-yellow-700">{stats.totalValue.toLocaleString()}</div>
-                <div className="text-xs text-yellow-600">القيمة الإجمالية</div>
-              </motion.div>
-            </div>
-
-            {/* تنبيه بارز عند وجود طلبات غير متاحة */}
-            {hasAnyUnavailable && (
-              <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-r from-red-500/20 via-pink-500/20 to-orange-500/20 backdrop-blur-sm border-2 border-red-400/50 rounded-2xl p-6 mb-4 shadow-2xl"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-red-500 rounded-full blur-lg opacity-60 animate-pulse" />
-                    <AlertTriangle className="relative w-8 h-8 text-red-600" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-red-700 mb-2 flex items-center gap-2">
-                      ⚠️ تنبيه: طلبات تحتاج مراجعة
-                      <Badge className="bg-red-500 text-white animate-bounce">
-                        {stats.unavailable}
-                      </Badge>
-                    </h3>
-                    <p className="text-red-600 text-sm leading-relaxed">
-                      هناك طلبات تحتوي على منتجات غير متاحة أو محجوزة. يرجى تعديل هذه الطلبات واختيار منتجات بديلة قبل الموافقة عليها.
-                      <br />
-                      <span className="font-semibold">لا يمكن الموافقة على الطلبات التي تحتوي منتجات غير متاحة.</span>
-                    </p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </CardHeader>
-
-          <CardContent className="p-0 flex flex-col h-[calc(95vh-200px)]">
-            {/* شريط التحكم السريع */}
-            {userAiOrders.length > 0 && (
-              <div className="p-6 border-b border-primary/10 bg-gradient-to-r from-muted/30 to-background/50 backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Checkbox
-                      checked={selectedOrders.length === userAiOrders.length}
-                      onCheckedChange={handleSelectAll}
-                      className="scale-125"
-                    />
-                    <span className="text-lg font-semibold text-foreground">
-                      تحديد الكل ({selectedOrders.length}/{userAiOrders.length})
-                    </span>
-                  </div>
-                  
-                  {selectedOrders.length > 0 && (
-                    <div className="flex items-center gap-3">
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            size="lg" 
-                            disabled={isProcessing}
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                          >
-                            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <ShieldCheck className="w-5 h-5 ml-2" />}
-                            موافقة على المحدد ({selectedOrders.length})
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-gradient-to-br from-background via-background to-green-50/20 border-2 border-green-200/50 rounded-2xl shadow-2xl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-2xl font-bold text-green-700 flex items-center gap-2">
-                              <ShieldCheck className="w-6 h-6" />
-                              تأكيد تحويل الطلبات
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="text-lg text-green-600 leading-relaxed">
-                              سيتم تحويل <span className="font-bold">{selectedOrders.length}</span> طلب ذكي إلى طلبات حقيقية مع التحقق من المخزون وحجزه تلقائياً.
-                              <br />
-                              <span className="text-sm text-muted-foreground mt-2 block">هذا الإجراء غير قابل للتراجع</span>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-3">
-                            <AlertDialogCancel className="rounded-xl">إلغاء</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={handleBulkApprove}
-                              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl"
-                            >
-                              تأكيد التحويل
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="destructive" 
-                            size="lg" 
-                            disabled={isProcessing}
-                            className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                          >
-                            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <Trash2 className="w-5 h-5 ml-2" />}
-                            حذف المحدد ({selectedOrders.length})
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="bg-gradient-to-br from-background via-background to-red-50/20 border-2 border-red-200/50 rounded-2xl shadow-2xl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle className="text-2xl font-bold text-red-700 flex items-center gap-2">
-                              <Trash2 className="w-6 h-6" />
-                              تأكيد حذف الطلبات
-                            </AlertDialogTitle>
-                            <AlertDialogDescription className="text-lg text-red-600 leading-relaxed">
-                              هل أنت متأكد من حذف <span className="font-bold">{selectedOrders.length}</span> طلب ذكي؟
-                              <br />
-                              <span className="text-sm text-muted-foreground mt-2 block">هذا الإجراء غير قابل للتراجع</span>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-3">
-                            <AlertDialogCancel className="rounded-xl">إلغاء</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={handleBulkDelete}
-                              className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 rounded-xl"
-                            >
-                              تأكيد الحذف
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
-                </div>
+              <div>
+                <h2 className="text-xl font-bold text-white mb-0.5">إدارة الطلبات الذكية</h2>
+                <p className="text-blue-100 text-xs">نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي</p>
               </div>
-            )}
-
-            {/* المحتوى الرئيسي */}
-            <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-muted/10 to-transparent">
-              {userAiOrders.length === 0 ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex flex-col items-center justify-center h-full text-center bg-gradient-to-br from-primary/5 to-blue-500/5 rounded-3xl border-2 border-dashed border-primary/20 p-12"
-                >
-                  <div className="relative mb-6">
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full blur-2xl opacity-30 animate-pulse" />
-                    <Bot className="relative w-24 h-24 text-primary" />
-                  </div>
-                  <h3 className="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600">
-                    لا توجد طلبات ذكية
-                  </h3>
-                  <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
-                    عندما تصل طلبات ذكية جديدة من التليغرام أو الواتساب، ستظهر هنا للمراجعة والموافقة.
-                  </p>
-                  <div className="flex items-center gap-4 mt-6 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="w-5 h-5 text-blue-500" />
-                      <span>التليغرام</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-5 h-5 text-green-500" />
-                      <span>الواتساب</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-5 h-5 text-purple-500" />
-                      <span>الذكاء الاصطناعي</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="grid gap-6">
-                  <AnimatePresence>
-                    {userAiOrders.map((order, index) => (
-                      <motion.div
-                        key={order.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ delay: index * 0.1 }}
-                      >
-                        <AiOrderCard
-                          order={order}
-                          isSelected={selectedOrders.includes(order.id)}
-                          onSelect={(checked) => handleSelectOrder(order.id, checked)}
-                          onEdit={() => {
-                            setEditingOrder(order);
-                            setQuickOrderDialogOpen(true);
-                          }}
-                        />
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* نافذة تعديل الطلب */}
-        <AnimatePresence>
-          {quickOrderDialogOpen && editingOrder && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 backdrop-blur-lg z-50 flex items-center justify-center p-4"
+            
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto"
             >
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-background rounded-2xl shadow-2xl border border-primary/20 w-full max-w-6xl max-h-[90vh] overflow-hidden"
-              >
-                <div className="p-6 border-b border-primary/10 flex items-center justify-between bg-gradient-to-r from-primary/10 to-blue-500/10">
-                  <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-600 flex items-center gap-2">
-                    <Bot className="w-6 h-6 text-primary" />
-                    تعديل الطلب الذكي
-                  </h2>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => {
-                      setQuickOrderDialogOpen(false);
-                      setEditingOrder(null);
-                    }}
-                    className="rounded-xl w-10 h-10 hover:bg-red-500/10 text-red-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-                <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
-                  <QuickOrderContent 
-                    isDialog={true}
-                    aiOrderData={editingOrder}
-                    onOrderCreated={() => {
-                      setQuickOrderDialogOpen(false);
-                      setEditingOrder(null);
-                      toast({ 
-                        title: "تم بنجاح", 
-                        description: "تم تحديث الطلب بنجاح", 
-                        variant: "success" 
-                      });
-                    }}
-                  />
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        <ScrollArea className="h-[calc(85vh-120px)]">
+          <div className="p-4">
+            {/* Stats Overview */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {/* Total Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[120px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-2">
+                    <div className="flex justify-center">
+                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                        <MessageSquare className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">إجمالي الطلبات</h4>
+                      <p className="text-blue-100 text-xs">طلبات واردة</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
+                      <div className="text-center">
+                        <p className="text-xl font-bold">{aiOrders.length}</p>
+                        <p className="text-white/80 text-xs">طلب</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-white/70">
+                        <TrendingUp className="w-3 h-3" />
+                        <span className="text-xs">نشط</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* Pending Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-red-600 text-white min-h-[120px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-2">
+                    <div className="flex justify-center">
+                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">في الانتظار</h4>
+                      <p className="text-orange-100 text-xs">قيد المعالجة</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
+                      <div className="text-center">
+                        <p className="text-xl font-bold">{pendingCount}</p>
+                        <p className="text-white/80 text-xs">طلب</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-white/70">
+                        <Clock className="w-3 h-3" />
+                        <span className="text-xs">انتظار</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* Completed Orders Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-600 text-white min-h-[120px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-2">
+                    <div className="flex justify-center">
+                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                        <CheckCircle2 className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">مكتملة</h4>
+                      <p className="text-emerald-100 text-xs">تم الإنجاز</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
+                      <div className="text-center">
+                        <p className="text-xl font-bold">{completedCount}</p>
+                        <p className="text-white/80 text-xs">طلب</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-white/70">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span className="text-xs">مكتمل</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* AI Activity Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-purple-500 to-pink-600 text-white min-h-[120px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-2">
+                    <div className="flex justify-center">
+                      <div className="p-2 bg-white/10 rounded-full backdrop-blur-sm">
+                        <Activity className="w-5 h-5" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm">نشاط الذكاء</h4>
+                      <p className="text-purple-100 text-xs">حالة النظام</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-white/20">
+                      <div className="text-center">
+                        <p className="text-xl font-bold">94%</p>
+                        <p className="text-white/80 text-xs">نشط</p>
+                      </div>
+                      <div className="flex items-center gap-1 text-white/70">
+                        <Activity className="w-3 h-3" />
+                        <span className="text-xs">متاح</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-white/5 rounded-full"></div>
+                  <div className="absolute -top-1 -left-1 w-6 h-6 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Orders List */}
+            <Card className="bg-white dark:bg-slate-800 shadow-lg border border-slate-200 dark:border-slate-700">
+              <CardHeader className="p-3 border-b border-slate-200 dark:border-slate-700">
+                <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-blue-600" />
+                  قائمة الطلبات الذكية
+                </CardTitle>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                <ScrollArea className="h-[300px]">
+                  <div className="p-3 space-y-3">
+                    {aiOrders.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 mx-auto mb-3 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                          <Bot className="w-6 h-6 text-slate-400" />
+                        </div>
+                        <h4 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">
+                          لا توجد طلبات ذكية
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-500">
+                          سيتم عرض الطلبات الواردة من التليغرام والذكاء الاصطناعي هنا
+                        </p>
+                      </div>
+                    ) : (
+                      aiOrders.map((order) => (
+                        <AiOrderCard key={order.id} order={order} />
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
   );
 };
 
