@@ -380,18 +380,11 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
   const deleteOrders = async (orderIds, isAiOrder = false) => {
     try {
       if (isAiOrder) {
-        // حذف طلبات الذكاء الاصطناعي عبر RPC آمن مع صلاحيات
-        const results = await Promise.all(orderIds.map(async (id) => {
-          const { data: rpcRes, error: rpcErr } = await supabase.rpc('delete_ai_order_safe', { p_order_id: id });
-          if (rpcErr || rpcRes?.success === false) {
-            throw new Error(rpcErr?.message || rpcRes?.error || 'تعذر حذف الطلب الذكي');
-          }
-          return id;
-        }));
-        // تحديث الحالة محليًا + بث حدث عام
-        setAiOrders(prev => prev.filter(o => !results.includes(o.id)));
-        try { window.dispatchEvent(new CustomEvent('aiOrderDeletedBulk', { detail: { ids: results } })); } catch {}
-
+        // حذف طلبات الذكاء الاصطناعي
+        const { error } = await supabase.from('ai_orders').delete().in('id', orderIds);
+        if (error) throw error;
+        
+        setAiOrders(prev => prev.filter(o => !orderIds.includes(o.id)));
       } else {
         // حذف الطلبات العادية - فقط قيد التجهيز (للنظامين)
         const ordersToDelete = orders.filter(o => 
