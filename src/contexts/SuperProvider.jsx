@@ -959,6 +959,8 @@ export const SuperProvider = ({ children }) => {
     departments: allData.departments || [],
     allColors: allData.colors || [],
     allSizes: allData.sizes || [],
+    // المستخدمون/الملفات للتطابق مع created_by
+    users: allData.users || [],
     
     // حالة التحميل
     loading: loading || false,

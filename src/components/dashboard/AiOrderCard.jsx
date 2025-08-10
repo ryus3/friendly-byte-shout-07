@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,7 @@ import {
   Package
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
+import { useSuper } from '@/contexts/SuperProvider';
 const AiOrderCard = ({ order, isSelected, onSelect }) => {
   const [showDetails, setShowDetails] = useState(false);
   
@@ -112,6 +112,63 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
       default: return <AlertTriangle className="w-3 h-3 ml-1" />;
     }
   };
+  const { products = [], users = [] } = useSuper();
+
+  const items = useMemo(() => (
+    Array.isArray(order.items) ? order.items : (order.order_data?.items || [])
+  ), [order]);
+
+  const createdByName = useMemo(() => {
+    const by = order.created_by || order.order_data?.created_by || order.user_id || order.created_by_employee_code;
+    if (!by) return 'غير محدد';
+    const profile = users.find(u => u?.employee_code === by || u?.user_id === by || u?.id === by);
+    return profile?.full_name || by;
+  }, [users, order]);
+
+  const availability = useMemo(() => {
+    if (!items.length) return 'unknown';
+    const lower = (v) => (v || '').toString().trim().toLowerCase();
+
+    // جمع كل المتغيرات مع أسماء المنتجات
+    const variants = [];
+    for (const p of (products || [])) {
+      const list = Array.isArray(p.variants) ? p.variants : (p.product_variants || []);
+      list.forEach(v => variants.push({ ...v, product_id: p.id, product_name: p.name }));
+    }
+
+    const findByVariantId = (id) => variants.find(v => v.id === id);
+    const findByProductId = (pid) => variants.find(v => v.product_id === pid);
+    const findByName = (name, color, size) => {
+      const vname = lower(name);
+      const matches = variants.filter(v => lower(v.product_name) === vname || lower(v.product_name).includes(vname));
+      if (!matches.length) return null;
+      if (color || size) {
+        return matches.find(v => lower(v.color || v.color_name) === lower(color) && lower(v.size || v.size_name) === lower(size))
+          || matches.find(v => lower(v.color || v.color_name) === lower(color))
+          || matches.find(v => lower(v.size || v.size_name) === lower(size))
+          || matches[0];
+      }
+      return matches[0];
+    };
+
+    let allMatched = true;
+    let allAvailable = true;
+
+    for (const it of items) {
+      const qty = Number(it.quantity || 1);
+      let variant = null;
+      if (it.variant_id) variant = findByVariantId(it.variant_id);
+      else if (it.product_id) variant = findByProductId(it.product_id);
+      else variant = findByName(it.product_name || it.name || it.product, it.color, it.size);
+
+      if (!variant) { allMatched = false; continue; }
+      const available = (Number(variant.quantity ?? 0) - Number(variant.reserved_quantity ?? 0));
+      if (available < qty) { allAvailable = false; }
+    }
+
+    if (!allMatched) return 'unknown';
+    return allAvailable ? 'available' : 'out';
+  }, [items, products]);
 
   return (
     <Card className={cn(
@@ -145,20 +202,23 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               </div>
               <div>
                 <h4 className="font-bold text-sm">{getSourceIcon(order.source).label}</h4>
-                <p className="text-xs opacity-90">
-                  بواسطة: {order.customer_name || order.order_data?.customer_name || order.user_name || 'غير محدد'}
-                </p>
+                <p className="text-xs opacity-90">بواسطة: {createdByName}</p>
               </div>
             </div>
             
             <div className="text-left">
-              <Badge className="bg-white/20 text-white border-0 text-xs mb-1">
-                {getStatusIcon(order.status)}
-                {getStatusText(order.status)}
-              </Badge>
-              <div className="text-xs opacity-90">
-                {formatDateEnglish(order.created_at)}
+              <div className="flex items-center gap-1 mb-1">
+                <Badge className="bg-white/20 text-white border-0 text-[10px]">
+                  {getStatusIcon(order.status)}
+                  {getStatusText(order.status)}
+                </Badge>
+                {availability !== 'available' && (
+                  <Badge className="bg-white/20 text-white border-0 text-[10px]">
+                    {availability === 'out' ? 'غير متاح بالمخزون' : 'بحاجة مطابقة'}
+                  </Badge>
+                )}
               </div>
+              <div className="text-xs opacity-90">{formatDateEnglish(order.created_at)}</div>
             </div>
           </div>
 
@@ -248,13 +308,15 @@ const AiOrderCard = ({ order, isSelected, onSelect }) => {
               معاينة
             </Button>
             
-            <Button 
-              size="sm"
-              className="h-8 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 flex items-center justify-center gap-1"
-            >
-              <CheckCircle2 className="w-3 h-3" />
-              موافقة
-            </Button>
+            {availability === 'available' && (
+              <Button 
+                size="sm"
+                className="h-8 text-xs bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white border-0 flex items-center justify-center gap-1"
+              >
+                <CheckCircle2 className="w-3 h-3" />
+                موافقة
+              </Button>
+            )}
             
             <Button 
               size="sm"
