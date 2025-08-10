@@ -50,6 +50,15 @@ const AiOrdersManager = ({ onClose }) => {
           </div>
           
           <div className="relative flex items-center justify-between">
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              size="sm"
+              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto mr-2"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+            
             <div className="flex items-center gap-3">
               <div className="relative">
                 <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
@@ -62,22 +71,13 @@ const AiOrdersManager = ({ onClose }) => {
                 <p className="text-blue-100 text-xs">نظام ذكي متطور لإدارة طلبات التليغرام والذكاء الاصطناعي</p>
               </div>
             </div>
-            
-            <Button
-              onClick={onClose}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/10 rounded-lg p-2 h-auto ml-2"
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
         </div>
 
         <ScrollArea className="h-[calc(90vh-120px)]">
           <div className="p-4">
             {/* Stats Overview */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+            <div className="grid grid-cols-4 gap-3 mb-4">
               {/* Total Orders Card */}
               <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-blue-500 to-blue-700 text-white min-h-[100px]">
                 <CardContent className="p-3">
@@ -93,50 +93,6 @@ const AiOrdersManager = ({ onClose }) => {
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{totalCount}</p>
-                      <p className="text-white/80 text-xs">طلب</p>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
-                </CardContent>
-              </Card>
-
-              {/* Pending Orders Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-orange-500 to-red-600 text-white min-h-[100px]">
-                <CardContent className="p-3">
-                  <div className="text-center space-y-1">
-                    <div className="flex justify-center">
-                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs">في الانتظار</h4>
-                      <p className="text-orange-100 text-xs">قيد المعالجة</p>
-                    </div>
-                    <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{pendingCount}</p>
-                      <p className="text-white/80 text-xs">طلب</p>
-                    </div>
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
-                </CardContent>
-              </Card>
-
-              {/* Needs Review Card */}
-              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
-                <CardContent className="p-3">
-                  <div className="text-center space-y-1">
-                    <div className="flex justify-center">
-                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
-                        <AlertTriangle className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs">تحتاج مراجعة</h4>
-                      <p className="text-red-100 text-xs">مراجعة عاجلة</p>
-                    </div>
-                    <div className="pt-1 border-t border-white/20">
-                      <p className="text-lg font-bold">{needsReviewCount}</p>
                       <p className="text-white/80 text-xs">طلب</p>
                     </div>
                   </div>
@@ -181,6 +137,28 @@ const AiOrdersManager = ({ onClose }) => {
                     </div>
                     <div className="pt-1 border-t border-white/20">
                       <p className="text-lg font-bold">{aiChatCount}</p>
+                      <p className="text-white/80 text-xs">طلب</p>
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white/5 rounded-full"></div>
+                </CardContent>
+              </Card>
+
+              {/* Needs Review Card */}
+              <Card className="relative overflow-hidden border-0 shadow-lg bg-gradient-to-br from-red-500 to-red-700 text-white min-h-[100px]">
+                <CardContent className="p-3">
+                  <div className="text-center space-y-1">
+                    <div className="flex justify-center">
+                      <div className="p-1.5 bg-white/10 rounded-full backdrop-blur-sm">
+                        <AlertTriangle className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs">تحتاج مراجعة</h4>
+                      <p className="text-red-100 text-xs">مراجعة عاجلة</p>
+                    </div>
+                    <div className="pt-1 border-t border-white/20">
+                      <p className="text-lg font-bold">{needsReviewCount}</p>
                       <p className="text-white/80 text-xs">طلب</p>
                     </div>
                   </div>
