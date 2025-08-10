@@ -33,7 +33,7 @@ const AiOrdersManager = ({ onClose }) => {
 
   const totalCount = orders.length;
   const pendingCount = orders.filter(order => order.status === 'pending').length;
-  const needsReviewStatuses = ['needs_review','review','error','failed'];
+  const needsReviewStatuses = ['pending','needs_review','review','error','failed'];
   const needsReviewCount = orders.filter(order => needsReviewStatuses.includes(order.status)).length;
   const telegramCount = orders.filter(order => order.source === 'telegram').length;
   const aiChatCount = orders.filter(order => order.source === 'ai_chat').length;

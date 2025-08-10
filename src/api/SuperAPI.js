@@ -240,12 +240,23 @@ return this.fetch('all_data', async () => {
                     cashSources, settings, aiOrders, profitRules, profiles, colors, sizes, 
                     categories, departments, productTypes, seasons];
   
-  for (const response of responses) {
-    if (response.error) {
-      console.error('❌ خطأ في جلب البيانات:', response.error);
-      throw response.error;
-    }
+  // لا نفشل الطلب بالكامل إلا إذا فشلت الجداول الحرجة (products أو orders)
+  if (products.error) {
+    console.error('❌ خطأ في جلب المنتجات:', products.error);
+    throw products.error;
   }
+  if (orders.error) {
+    console.error('❌ خطأ في جلب الطلبات:', orders.error);
+    throw orders.error;
+  }
+  
+  // السجلات غير الحرجة: نسجل تحذيراً ونكمل بجداول فارغة لضمان تحميل الواجهة
+  const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, colors, sizes, categories, departments, productTypes, seasons };
+  Object.entries(nonCritical).forEach(([key, resp]) => {
+    if (resp.error) {
+      console.warn(`⚠️ خطأ غير حرج في جلب ${key}:`, resp.error);
+    }
+  });
 
   const allData = {
     // البيانات الأساسية
